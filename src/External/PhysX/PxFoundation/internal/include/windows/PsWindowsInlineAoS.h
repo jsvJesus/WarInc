@@ -195,10 +195,17 @@ PX_FORCE_INLINE Vec4V Vec4V_From_F32Array(const PxF32* const f)
 	return (_mm_loadu_ps(f));
 }
 
-PX_FORCE_INLINE BoolV BoolV_From_Bool32Array(const bool* const f)			
+PX_FORCE_INLINE BoolV BoolV_From_Bool32Array(const bool* const f)
 {
-	const PX_ALIGN(16, PxU32 b[4])={-(PxI32)f[0],-(PxI32)f[1],-(PxI32)f[2],-(PxI32)f[3]};
-	return _mm_load1_ps((float*)&b);
+	const PX_ALIGN(16, PxU32 b[4]) =
+	{
+		f[0] ? 0xFFFFFFFFu : 0u,
+		f[1] ? 0xFFFFFFFFu : 0u,
+		f[2] ? 0xFFFFFFFFu : 0u,
+		f[3] ? 0xFFFFFFFFu : 0u
+	};
+
+	return _mm_load_ps(reinterpret_cast<const float*>(&b[0]));
 }
 
 PX_FORCE_INLINE PxF32 PxF32_From_FloatV(const FloatV a)		

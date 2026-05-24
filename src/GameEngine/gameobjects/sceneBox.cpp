@@ -61,13 +61,13 @@ SceneBox::~SceneBox()
 float gSceneBox_LevelBase = 10.0f;
 unsigned int gSceneBox_MinObjCount = 1;
 #define LEVEL_COUNT 5
-int LevelMask[LEVEL_COUNT] =
+unsigned int LevelMask[LEVEL_COUNT] =
 {
-	0xfff0fff0,
-	0xfff8fff8,
-	0xfffcfffc,
-	0xfffefffe,
-	0xffffffff,
+	0xfff0fff0u,
+	0xfff8fff8u,
+	0xfffcfffcu,
+	0xfffefffeu,
+	0xffffffffu,
 };
 
 int LevelFromSize(float radius)

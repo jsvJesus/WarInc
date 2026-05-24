@@ -159,41 +159,51 @@ r3dPoint3D r3dSpline3D::Bezier4(const r3dPoint3D& p1, const r3dPoint3D& p2, cons
 
 //   General Bezier curve
 //   Number of control points is n+1 (IMPORTANT: the last point is not computed)
-r3dPoint3D r3dSpline3D::Bezier(r3dPoint3D *p, int n, float mu)
+r3dPoint3D r3dSpline3D::Bezier(r3dPoint3D* p, int n, float mu)
 {
-   int k,kn,nn,nkn;
-   float blend,muk,munk;
-   r3dPoint3D b(0.0f, 0.0f, 0.0f);
+  int k, kn, nn, nkn;
+  float blend, muk, munk;
+  r3dPoint3D b(0.0f, 0.0f, 0.0f);
 
-   muk  = 1;
-   munk = pow(1.0f - mu, n);
+  muk = 1.0f;
+  munk = powf(1.0f - mu, static_cast<float>(n));
 
-   for (k=0;k<=n;k++) {
-      nn = n;
-      kn = k;
-      nkn = n - k;
-      blend = muk * munk;
-      muk *= mu;
-	  if ( fabsf(1-mu) > 0.00001f )
-		munk /= (1-mu);
-      while (nn >= 1) {
-         blend *= nn;
-         nn--;
-         if (kn > 1) {
-            blend /= (float)kn;
-            kn--;
-         }
-         if (nkn > 1) {
-            blend /= (float)nkn;
-            nkn--;
-         }
+  for(k = 0; k <= n; k++)
+  {
+    nn = n;
+    kn = k;
+    nkn = n - k;
+
+    blend = muk * munk;
+    muk *= mu;
+
+    if(fabsf(1.0f - mu) > 0.00001f)
+      munk /= (1.0f - mu);
+
+    while(nn >= 1)
+    {
+      blend *= static_cast<float>(nn);
+      nn--;
+
+      if(kn > 1)
+      {
+        blend /= static_cast<float>(kn);
+        kn--;
       }
-      b.X += p[k].X * blend;
-      b.Y += p[k].Y * blend;
-      b.Z += p[k].Z * blend;
-   }
 
-   return(b);
+      if(nkn > 1)
+      {
+        blend /= static_cast<float>(nkn);
+        nkn--;
+      }
+    }
+
+    b.X += p[k].X * blend;
+    b.Y += p[k].Y * blend;
+    b.Z += p[k].Z * blend;
+  }
+
+  return b;
 }
 
 

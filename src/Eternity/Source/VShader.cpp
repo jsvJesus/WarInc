@@ -129,10 +129,21 @@ int r3dCompileShader(
 	  pFilesIncluded->Swap( include.AccumIncludes );
   }
 
-  if(FAILED(hr)) {
-	  _snprintf( LastCompilationError, sizeof LastCompilationError - 1, "Shader compilation Error %s\n%s\n", fname, pError ? pError->GetBufferPointer() : "unknown error" );
-    return 0;
-  }
+	if(FAILED(hr))
+	{
+		const char* errorText = pError ? static_cast<const char*>(pError->GetBufferPointer()) : "unknown error";
+
+		_snprintf_s(
+		  LastCompilationError,
+		  sizeof(LastCompilationError),
+		  _TRUNCATE,
+		  "Shader compilation Error %s\n%s\n",
+		  fname,
+		  errorText
+		);
+
+		return 0;
+	}
   
   return 1;
 }

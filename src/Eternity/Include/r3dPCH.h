@@ -57,7 +57,7 @@
 #include <list>
 #include <map>
 #include <string>
-#include <hash_map>
+#include <unordered_map> // old <hash_map>
 
 // starsafe
 #define STRSAFE_NO_DEPRECATE 1

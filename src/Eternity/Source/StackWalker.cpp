@@ -340,18 +340,19 @@ public:
     BOOL     Publics;                // contains public symbols
 };
 */
-typedef struct IMAGEHLP_MODULE64_V2 {
-    DWORD    SizeOfStruct;           // set to sizeof(IMAGEHLP_MODULE64)
-    DWORD64  BaseOfImage;            // base load address of module
-    DWORD    ImageSize;              // virtual size of the loaded module
-    DWORD    TimeDateStamp;          // date/time stamp from pe header
-    DWORD    CheckSum;               // checksum from the pe header
-    DWORD    NumSyms;                // number of symbols in the symbol table
-    SYM_TYPE SymType;                // type of symbols loaded
-    CHAR     ModuleName[32];         // module name
-    CHAR     ImageName[256];         // image name
-    CHAR     LoadedImageName[256];   // symbol file name
-};
+  struct IMAGEHLP_MODULE64_V2
+  {
+    DWORD    SizeOfStruct;
+    DWORD64  BaseOfImage;
+    DWORD    ImageSize;
+    DWORD    TimeDateStamp;
+    DWORD    CheckSum;
+    DWORD    NumSyms;
+    SYM_TYPE SymType;
+    CHAR     ModuleName[32];
+    CHAR     ImageName[256];
+    CHAR     LoadedImageName[256];
+  };
 
 
   // SymCleanup()
@@ -547,7 +548,7 @@ private:
     pGMI = (tGMI) GetProcAddress( hPsapi, "GetModuleInformation" );
     if ( (pEPM == NULL) || (pGMFNE == NULL) || (pGMBN == NULL) || (pGMI == NULL) )
     {
-      // we couldn´t find all functions
+      // we couldnï¿½t find all functions
       FreeLibrary(hPsapi);
       return FALSE;
     }
@@ -1204,15 +1205,48 @@ void StackWalker::OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUser
     OnOutput(buffer);
   }
 #else
-  OSVERSIONINFOEXA ver;
-  ZeroMemory(&ver, sizeof(OSVERSIONINFOEXA));
+  OSVERSIONINFOEXW ver;
+  ZeroMemory(&ver, sizeof(ver));
   ver.dwOSVersionInfoSize = sizeof(ver);
-  if (GetVersionExA( (OSVERSIONINFOA*) &ver) != FALSE)
+
+  HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+
+  if (ntdll)
   {
-    _snprintf_s(buffer, STACKWALK_MAX_NAMELEN, "OS-Version: %d.%d.%d (%s) 0x%x-0x%x\n", 
-      ver.dwMajorVersion, ver.dwMinorVersion, ver.dwBuildNumber,
-      ver.szCSDVersion, ver.wSuiteMask, ver.wProductType);
-    OnOutput(buffer);
+    typedef LONG (WINAPI* RtlGetVersionFunc)(OSVERSIONINFOEXW*);
+    RtlGetVersionFunc RtlGetVersionPtr = (RtlGetVersionFunc)GetProcAddress(ntdll, "RtlGetVersion");
+
+    if (RtlGetVersionPtr && RtlGetVersionPtr(&ver) == 0)
+    {
+      char servicePack[128];
+      ZeroMemory(servicePack, sizeof(servicePack));
+
+      WideCharToMultiByte(
+        CP_ACP,
+        0,
+        ver.szCSDVersion,
+        -1,
+        servicePack,
+        sizeof(servicePack),
+        NULL,
+        NULL
+      );
+
+      _snprintf_s(
+        buffer,
+        STACKWALK_MAX_NAMELEN,
+        _TRUNCATE,
+        "OS-Version: %lu.%lu.%lu (%s) 0x%x-0x%x\n",
+        ver.dwMajorVersion,
+        ver.dwMinorVersion,
+        ver.dwBuildNumber,
+        servicePack,
+        ver.wSuiteMask,
+        ver.wProductType
+      );
+
+      OnOutput(buffer);
+    }
   }
 #endif
 }

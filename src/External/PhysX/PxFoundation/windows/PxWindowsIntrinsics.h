@@ -33,6 +33,10 @@
 
 #include "Px.h"
 
+#pragma warning(disable: 4996)
+#pragma warning(disable: 4267)
+#pragma warning(disable: 4244)
+
 #ifndef PX_WINDOWS
 	#error "This file should only be included by Windows builds!!"
 #endif

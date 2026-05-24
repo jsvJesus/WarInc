@@ -9215,7 +9215,7 @@ static bool MeshPolyComp( GameObject* obj1, GameObject* obj2 )
 void Editor_Level::ProcessMeshes()
 {
 	std::vector< GameObject* > objects;
-	typedef stdext::hash_map< std::string, int > TObjectsList;
+	typedef std::unordered_map<std::string, int> TObjectsList;
 	TObjectsList tmpObjectNames;
 	GameObject* pObject = GameWorld().GetFirstObject();
 	while ( pObject )
@@ -15301,7 +15301,7 @@ void ProcessZombieMod()
 	v1 ? g_ZombieModDebugVisFlags |= 1 : g_ZombieModDebugVisFlags &= ~1;
 	if (g_ZombieModDebugVisFlags & 1)
 	{
-		SliderY += imgui_Static(SliderX, SliderY, "Blue – visibility, green – sound, yellow – smell");
+		SliderY += imgui_Static(SliderX, SliderY, "Blue ï¿½ visibility, green ï¿½ sound, yellow ï¿½ smell");
 	}
 #endif
 }

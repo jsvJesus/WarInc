@@ -36,7 +36,7 @@
 #include "Ps.h"
 
 #if (defined(PX_WINDOWS) || defined (PX_WINMODERN) || defined(PX_X360))
-#include <typeinfo.h>
+#include <typeinfo>
 #endif
 #if (defined(PX_APPLE))
 #include <typeinfo>

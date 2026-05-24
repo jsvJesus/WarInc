@@ -92,20 +92,26 @@ struct GBGameInfo
 	
 	GBGameInfo()
 	{
-	  sprintf(name, "g%08X", this);
-	  mapId = 0xFF;
-	  mapType = 0xFF;
-	  maxPlayers = 0;
-	  minPlayers = 0;
-	  startTickets = 100;
-	  timeLimit = 0;
-	  respawnDelay = 0;
-	  friendlyFire = 0;
-	  autoBalance = 0;
-	  permGameIdx = 0;
-	  minLevel = 0;
-	  maxLevel = 99;
-	  region = GBNET_REGION_Unknown;
+		sprintf_s(
+		  name,
+		  sizeof(name),
+		  "g%08X",
+		  static_cast<unsigned int>(reinterpret_cast<ULONG_PTR>(this) & 0xFFFFFFFFu)
+		);
+
+		mapId = 0xFF;
+		mapType = 0xFF;
+		maxPlayers = 0;
+		minPlayers = 0;
+		startTickets = 100;
+		timeLimit = 0;
+		respawnDelay = 0;
+		friendlyFire = 0;
+		autoBalance = 0;
+		permGameIdx = 0;
+		minLevel = 0;
+		maxLevel = 99;
+		region = GBNET_REGION_Unknown;
 	}
 	
 	bool IsValid() const
@@ -119,45 +125,68 @@ struct GBGameInfo
 	  return true;
 	}
 	
-	bool FromString(const char* arg) 
+	bool FromString(const char* arg)
 	{
-	  int v[13];
-	  int args = sscanf(arg, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d", 
-	    &v[0], &v[1], &v[2], &v[3], &v[4], &v[5], &v[6], &v[7], &v[8], &v[9], &v[10], &v[11], &v[12]);
-	  if(args != 13) return false;
-	  
-	  mapId         = (BYTE)v[0];
-	  maxPlayers    = (BYTE)v[1];
-	  timeLimit     = (WORD)v[2];
-	  respawnDelay  = (WORD)v[3];
-	  friendlyFire  = (BYTE)v[4];
-	  autoBalance   = (BYTE)v[5];
-	  permGameIdx   = (BYTE)v[6];
-	  mapType       = (BYTE)v[7];
-	  minPlayers    = (BYTE)v[8];
-	  region        = (BYTE)v[9];
-	  minLevel      = (BYTE)v[10];
-	  maxLevel      = (BYTE)v[11];
-	  startTickets =  (WORD)v[12];
-	  return true;
+		int v[13];
+
+		int args = sscanf_s(
+		  arg,
+		  "%d %d %d %d %d %d %d %d %d %d %d %d %d",
+		  &v[0],
+		  &v[1],
+		  &v[2],
+		  &v[3],
+		  &v[4],
+		  &v[5],
+		  &v[6],
+		  &v[7],
+		  &v[8],
+		  &v[9],
+		  &v[10],
+		  &v[11],
+		  &v[12]
+		);
+
+		if(args != 13)
+			return false;
+
+		mapId        = static_cast<BYTE>(v[0]);
+		maxPlayers   = static_cast<BYTE>(v[1]);
+		timeLimit    = static_cast<WORD>(v[2]);
+		respawnDelay = static_cast<WORD>(v[3]);
+		friendlyFire = static_cast<BYTE>(v[4]);
+		autoBalance  = static_cast<BYTE>(v[5]);
+		permGameIdx  = static_cast<BYTE>(v[6]);
+		mapType      = static_cast<BYTE>(v[7]);
+		minPlayers   = static_cast<BYTE>(v[8]);
+		region       = static_cast<BYTE>(v[9]);
+		minLevel     = static_cast<BYTE>(v[10]);
+		maxLevel     = static_cast<BYTE>(v[11]);
+		startTickets = static_cast<WORD>(v[12]);
+
+		return true;
 	}
-	
+
 	void ToString(char* arg) const
 	{
-	  sprintf(arg, "%d %d %d %d %d %d %d %d %d %d %d %d %d", 
-	    mapId,
-	    maxPlayers,
-	    timeLimit,
-	    respawnDelay,
-	    friendlyFire,
-	    autoBalance,
-	    permGameIdx,
-	    mapType,
-	    minPlayers,
-	    region,
-	    minLevel,
-	    maxLevel,
-		startTickets);
+		sprintf_s(
+		  arg,
+		  128,
+		  "%u %u %u %u %u %u %u %u %u %u %u %u %u",
+		  static_cast<unsigned int>(mapId),
+		  static_cast<unsigned int>(maxPlayers),
+		  static_cast<unsigned int>(timeLimit),
+		  static_cast<unsigned int>(respawnDelay),
+		  static_cast<unsigned int>(friendlyFire),
+		  static_cast<unsigned int>(autoBalance),
+		  static_cast<unsigned int>(permGameIdx),
+		  static_cast<unsigned int>(mapType),
+		  static_cast<unsigned int>(minPlayers),
+		  static_cast<unsigned int>(region),
+		  static_cast<unsigned int>(minLevel),
+		  static_cast<unsigned int>(maxLevel),
+		  static_cast<unsigned int>(startTickets)
+		);
 	}
 };
 

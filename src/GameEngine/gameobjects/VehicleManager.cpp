@@ -17,6 +17,9 @@
 #include "PxBatchQueryDesc.h"
 
 #include "VehicleManager.h"
+
+#include <memory>
+
 #include "obj_Vehicle.h"
 #include "VehicleDescriptor.h"
 

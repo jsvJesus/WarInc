@@ -554,13 +554,25 @@ public:
     }    
 
     // 3D stereo support
-    virtual void SetStereoParams(StereoParams sParams)  
-    { 
-        if (sParams.DisplayWidthCm == 0)
+    virtual void SetStereoParams(StereoParams sParams)
+    {
+        if(sParams.DisplayWidthCm == 0.0f)
         {
-            sParams.DisplayWidthCm = sParams.DisplayDiagInches / sqrt(1.0f + 1.f/sParams.DisplayAspectRatio * 
-            1.f/sParams.DisplayAspectRatio) * 2.54f /* inches to cm */; 
+            const float aspect = sParams.DisplayAspectRatio;
+
+            if(aspect > 0.00001f)
+            {
+                const float invAspect = 1.0f / aspect;
+                const float widthInches = sParams.DisplayDiagInches / sqrtf(1.0f + invAspect * invAspect);
+
+                sParams.DisplayWidthCm = widthInches * 2.54f;
+            }
+            else
+            {
+                sParams.DisplayWidthCm = 0.0f;
+            }
         }
+
         Matrices.S3DParams = sParams;
     }
 
