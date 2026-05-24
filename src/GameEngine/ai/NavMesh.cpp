@@ -215,12 +215,21 @@ bool r3dNavigationMesh::BuildForCurrentLevel()
 			continue;
 		}
 
-		PxActor *a = obj->PhysicsObject->getPhysicsActor();
-		PxRigidActor *ra = a->isRigidActor();
-		if (!ra)
+		PxActor* a = obj->PhysicsObject->getPhysicsActor();
+
+		if (!a)
 		{
 			continue;
 		}
+
+		PxActorType::Enum actorType = a->getType();
+
+		if (actorType != PxActorType::eRIGID_STATIC && actorType != PxActorType::eRIGID_DYNAMIC)
+		{
+			continue;
+		}
+
+		PxRigidActor* ra = static_cast<PxRigidActor*>(a);
 
 		PxU32 nbShapes = ra->getNbShapes();
 		for (PxU32 i = 0; i < nbShapes; ++i)
@@ -469,10 +478,9 @@ bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield& hf, const PxTriang
 	PxU32 numIndices = nbTris * 3;
 	int* tris = new int[numIndices];
 
-	if (tm->has16BitTriangleIndices())
+	if (tm->getTriangleMeshFlags() & PxTriangleMeshFlag::e16_BIT_INDICES)
 	{
-		//	Convert indices to 32 bit
-		const short *i16 = reinterpret_cast<const short*>(typelessTris);
+		const PxU16* i16 = reinterpret_cast<const PxU16*>(typelessTris);
 
 		for (PxU32 i = 0; i < numIndices; ++i)
 		{
@@ -481,8 +489,12 @@ bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield& hf, const PxTriang
 	}
 	else
 	{
-		int size = numIndices * sizeof(*tris);
-		memcpy_s(tris, size, typelessTris, size);
+		const PxU32* i32 = reinterpret_cast<const PxU32*>(typelessTris);
+
+		for (PxU32 i = 0; i < numIndices; ++i)
+		{
+			tris[i] = i32[i];
+		}
 	}
 
 	//	Transform vertices to world space

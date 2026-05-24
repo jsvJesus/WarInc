@@ -58,12 +58,15 @@ void CamouflageDataManager::UpdateCamouflageData(const GameObject &o)
 		);
 		if(g_pPhysicsWorld->raycastSingle(orig, dirs[i], 5.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter))
 		{
-			r3dVector hitPos(hit.impact.x, hit.impact.y, hit.impact.z);
+			r3dVector hitPos(hit.position.x, hit.position.y, hit.position.z);
 			float dist = (hitPos - pos).LengthSq();
+
 			if (dist < closest)
 			{
 				r3d_assert(hit.shape);
-				target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData);
+				r3d_assert(hit.actor);
+
+				target = static_cast<PhysicsCallbackObject*>(hit.actor->userData);
 				faceId = hit.faceIndex;
 				closest = dist;
 				impactPos = hitPos;

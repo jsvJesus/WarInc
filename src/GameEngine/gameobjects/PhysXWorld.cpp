@@ -209,10 +209,10 @@ public:
 		PxU32 nbPairs
 	) OVERRIDE
 	{
-		if (pairHeader.flags & PxContactPairHeaderFlag::eDELETED_ACTOR_0)
+		if (pairHeader.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_0)
 			return;
 
-		if (pairHeader.flags & PxContactPairHeaderFlag::eDELETED_ACTOR_1)
+		if (pairHeader.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_1)
 			return;
 
 		if (!pairHeader.actors[0] || !pairHeader.actors[1])
@@ -645,15 +645,15 @@ void PhysXWorld::EndSimulation()
 	if(!DisablePhysXSimulation)
 	{
 #if !APEX_ENABLED
-        if(m_needFetchResults)
+		if(m_needFetchResults)
 		{
-			r3dCSHolder block(concurrencyGuard) ;
-		    PhysXScene->fetchResults(true);
+			r3dCSHolder block(concurrencyGuard);
+			PhysXScene->fetchResults(true);
+			m_needFetchResults = false;
 		}
 #endif
-		CharacterManager->updateControllers();
 	}
-    g_bAllowPhysObjCreation = true;
+	g_bAllowPhysObjCreation = true;
 }
 
 bool PhysXWorld::raycastSingle(
@@ -848,32 +848,41 @@ bool PhysXWorld::CookConvexMesh(const r3dMesh* orig_mesh, const char* save_as)
 {
 #ifndef FINAL_BUILD
 	r3d_assert(orig_mesh);
+
 	const r3dMesh* mesh = orig_mesh;
 
-	r3d_assert(mesh->NumVertices >0 && mesh->NumIndices>0);
+	r3d_assert(mesh->NumVertices > 0);
 
-	//Build physical model 
-	PxConvexMeshDesc meshDesc;    
-	meshDesc.points.count = mesh->NumVertices;    
-	meshDesc.points.stride = sizeof(r3dPoint3D);   
-	meshDesc.points.data = mesh->GetVertexPositions();  
-	meshDesc.triangles.count = mesh->NumIndices/3;    
-	meshDesc.triangles.stride = 3*sizeof(uint32_t);   
-	meshDesc.triangles.data = mesh->GetIndices();   
+	PxConvexMeshDesc meshDesc;
+	meshDesc.points.count = mesh->NumVertices;
+	meshDesc.points.stride = sizeof(r3dPoint3D);
+	meshDesc.points.data = mesh->GetVertexPositions();
 
-	r3d_assert( meshDesc.points.data && meshDesc.triangles.data ) ;
+	r3d_assert(meshDesc.points.data);
 
-	meshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX; // let physX compute convex mesh. even if we are providing it a convex mesh, maybe it can optimize it better. also in that case if don't have to worry about 256 faces limit
+	meshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+	meshDesc.vertexLimit = 255;
 
-	char cookedMeshFilename[256]; memset(cookedMeshFilename, 0, 256);
+	char cookedMeshFilename[256];
+	memset(cookedMeshFilename, 0, sizeof(cookedMeshFilename));
+
 	if(save_as)
 		r3dscpy(cookedMeshFilename, save_as);
 	else
 		r3dscpy(cookedMeshFilename, orig_mesh->FileName.c_str());
+
 	int len = strlen(cookedMeshFilename);
-	r3dscpy(&cookedMeshFilename[len-3], "cpx");
+	r3dscpy(&cookedMeshFilename[len - 3], "cpx");
+
 	UserStream outputStream(cookedMeshFilename, false);
-	bool res = Cooking->cookConvexMesh(meshDesc, outputStream);
+
+	PxConvexMeshCookingResult::Enum result;
+	bool res = Cooking->cookConvexMesh(meshDesc, outputStream, &result);
+
+	if(!res)
+	{
+		r3dOutToLog("PhysX: CookConvexMesh failed for %s. Result=%d\n", cookedMeshFilename, (int)result);
+	}
 
 	return res;
 #else

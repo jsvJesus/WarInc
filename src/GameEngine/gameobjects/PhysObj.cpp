@@ -9,8 +9,12 @@
 #include "PxCapsuleController.h"
 #include "PxBoxController.h"
 #include "extensions/PxRigidBodyExt.h"
-#include "PhysX/PhysXCharacterKinematic/src/CctCapsuleController.h"
-#include "PhysX/PhysXAPI/vehicle/PxVehicleUtils.h"
+
+#ifndef WO_SERVER
+#if VEHICLES_ENABLED
+#include "vehicle/PxVehicleUtil.h"
+#endif
+#endif
 
 #include "../TrueNature/Terrain.h"
 
@@ -24,6 +28,10 @@ public:
 	}
 
 	virtual void onControllerHit(const PxControllersHit& hit)
+	{
+	}
+
+	virtual void onObstacleHit(const PxControllerObstacleHit& hit)
 	{
 	}
 } myControllerCallback;
@@ -81,18 +89,18 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 	desc.climbingMode	= PxCapsuleClimbingMode::eCONSTRAINED;
 
 	desc.position = PxExtendedVec3(objectPos.x, objectPos.y, objectPos.z);
-	desc.upDirection = PxCCTUpAxis::eY;
+	desc.upDirection = PxVec3(0.0f, 1.0f, 0.0f);
 	desc.slopeLimit = cosf(R3D_DEG2RAD(45.0f));
 	desc.invisibleWallHeight = 0.0f;
 	desc.maxJumpHeight = 0.0f;
 	desc.contactOffset = 0.01f;
 	desc.stepOffset = 0.5f;
-	desc.callback = &myControllerCallback;
+	desc.reportCallback = &myControllerCallback;
 	desc.interactionMode = PxCCTInteractionMode::eEXCLUDE;
 	desc.material = g_pPhysicsWorld->PhysXSDK->createMaterial(0.5f, 0.5f, 0.1f);
 	desc.userData = (void*)physCallbackObj;
 
-	PxController* Controller = g_pPhysicsWorld->CharacterManager->createController(*g_pPhysicsWorld->PhysXSDK, g_pPhysicsWorld->PhysXScene, desc);
+	PxController* Controller = g_pPhysicsWorld->CharacterManager->createController(desc);
 	r3d_assert(Controller);
 
 	PxRigidDynamic* actor = Controller->getActor();
@@ -699,8 +707,6 @@ void PhysObj::AddImpulseAtLocalPos(const r3dPoint3D& impulse, const r3dPoint3D& 
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
-
-
 
 void PhysObj::Move(const r3dPoint3D& move, float sharpness)
 {
