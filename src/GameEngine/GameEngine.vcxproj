@@ -70,7 +70,7 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\cloth;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\cloth;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -662,6 +662,7 @@
     <ClInclude Include="gameobjects\sceneBox.h" />
     <ClInclude Include="gameobjects\VehicleDescriptor.h" />
     <ClInclude Include="gameobjects\VehicleManager.h" />
+    <ClInclude Include="gameobjects\WarIncPhysX34Compat.h" />
     <ClInclude Include="TrueNature2\Terrain2.h" />
     <ClInclude Include="TrueNature\CloudPlane\Cloud.h" />
     <ClInclude Include="TrueNature\CloudPlane\CloudGrid.h" />

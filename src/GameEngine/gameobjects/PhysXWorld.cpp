@@ -1,16 +1,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
-#include "PxAllocatorCallback.h"
-#include "PxErrorCallback.h"
-#include "extensions/PxExtensionsAPI.h"
-#include "extensions/PxVisualDebuggerExt.h"
-#include "extensions/PxDefaultCpuDispatcher.h"
-#include "extensions/PxDefaultSimulationFilterShader.h"
-#include "cooking/PxTriangleMeshDesc.h"
-#include "cooking/PxConvexMeshDesc.h"
-#include "characterkinematic/PxControllerManager.h"
-
 #include "PhysXWorld.h"
 #include "GameObj.h"
 
@@ -20,63 +10,8 @@
 #include "PhysXRepXHelpers.h"
 #include "VehicleManager.h"
 
-//#define PHYSX_DEBUG_LIBS
-
-// libs
-#ifdef _DEBUG
-#pragma comment(lib, "PhysX3CookingCHECKED_x86.lib")
-#pragma comment(lib, "PhysX3CHECKED_x86.lib")
-#pragma comment(lib, "SceneQueryCHECKED.lib")
-#pragma comment(lib, "SimulationControllerCHECKED.lib")
-#pragma comment(lib, "PvdRuntimeCHECKED.lib")
-#pragma comment(lib, "LowLevelCHECKED.lib")
-#ifdef PHYSX_DEBUG_LIBS
-	#pragma comment(lib, "FoundationDEBUG.lib")
-	#pragma comment(lib, "PhysX3CommonDEBUG.lib")
-	#pragma comment(lib, "PhysX3ExtensionsDEBUG.lib")
-	#pragma comment(lib, "PhysX3VehicleDEBUG.lib")
-	#pragma comment(lib, "GeomUtilsDEBUG.lib")
-	#pragma comment(lib, "RepX3DEBUG.lib")
-	#pragma comment(lib, "RepXUpgrader3DEBUG.lib")
-#else
-	#pragma comment(lib, "FoundationCHECKED.lib")
-	#pragma comment(lib, "PhysX3CommonCHECKED.lib")
-	#pragma comment(lib, "PhysX3ExtensionsCHECKED.lib")
-	#pragma comment(lib, "PhysX3VehicleCHECKED.lib")
-	#pragma comment(lib, "GeomUtilsCHECKED.lib")
-	#pragma comment(lib, "RepX3CHECKED.lib")
-	#pragma comment(lib, "RepXUpgrader3CHECKED.lib")
-#endif
-#elif defined(FINAL_BUILD)
-#pragma comment(lib, "Foundation.lib")
-#pragma comment(lib, "PhysX3Common.lib")
-#pragma comment(lib, "PhysX3Cooking_x86.lib")
-#pragma comment(lib, "PhysX3_x86.lib")
-#pragma comment(lib, "PhysX3Extensions.lib")
-#pragma comment(lib, "LowLevel.lib")
-#pragma comment(lib, "GeomUtils.lib")
-#pragma comment(lib, "SceneQuery.lib")
-#pragma comment(lib, "SimulationController.lib")
-#pragma comment(lib, "PvdRuntime.lib")
-#pragma comment(lib, "RepX3.lib")
-#pragma comment(lib, "RepXUpgrader3.lib")
-#pragma comment(lib, "PhysX3Vehicle.lib")
-#else // RELEASE
-#pragma comment(lib, "FoundationPROFILE.lib")
-#pragma comment(lib, "PhysX3CommonPROFILE.lib")
-#pragma comment(lib, "PhysX3CookingPROFILE_x86.lib")
-#pragma comment(lib, "PhysX3PROFILE_x86.lib")
-#pragma comment(lib, "PhysX3ExtensionsPROFILE.lib")
-#pragma comment(lib, "LowLevelPROFILE.lib")
-#pragma comment(lib, "GeomUtilsPROFILE.lib")
-#pragma comment(lib, "SceneQueryPROFILE.lib")
-#pragma comment(lib, "SimulationControllerPROFILE.lib")
-#pragma comment(lib, "PvdRuntimePROFILE.lib")
-#pragma comment(lib, "RepX3PROFILE.lib")
-#pragma comment(lib, "RepXUpgrader3PROFILE.lib")
-#pragma comment(lib, "PhysX3VehiclePROFILE.lib")
-#endif
-
+// PhysX 3.4 libs are linked from .vcxproj.
+// Do not use old hardcoded PhysX 3.1.1 pragma libs here.
 
 PhysXWorld* g_pPhysicsWorld = 0;
 // because we might re-cook meshes in physics editor, let's be able to disable cache
@@ -175,15 +110,19 @@ void r3dFreePhysicsConvexMeshes()
 	gob_NumConvexMeshesInPhysicsFactoryCache = 0;
 }
 
-
 PhysXWorld::PhysXWorld()
-: m_VehicleManager( NULL )
+: m_needFetchResults(false)
+, Foundation(NULL)
+, Pvd(NULL)
+, PvdTransport(NULL)
+, PhysXSDK(NULL)
+, PhysXScene(NULL)
+, Cooking(NULL)
+, CharacterManager(NULL)
+, CpuDispatcher(NULL)
+, defaultMaterial(NULL)
+, m_VehicleManager(NULL)
 {
-	PhysXSDK = 0;
-	PhysXScene = 0;
-	CharacterManager = 0;
-	Cooking = 0;
-	defaultMaterial = NULL;
 }
 
 PhysXWorld::~PhysXWorld()
@@ -248,72 +187,110 @@ public:
 	}
 } myErrorCallback;
 
-class MySimulationEventCallback : public PxSimulationEventCallback     
-{        
+class MySimulationEventCallback : public PxSimulationEventCallback
+{
 public:
-	virtual void onContact(PxContactPair& pair, PxU32 events)       
-	{      
-		if(events == PxPairFlag::eNOTIFY_TOUCH_FOUND)
-		{
-			if(pair.isDeletedActor[0] || pair.isDeletedActor[1])
-				return;
+	virtual void onContact(
+		const PxContactPairHeader& pairHeader,
+		const PxContactPair* pairs,
+		PxU32 nbPairs
+	) OVERRIDE
+	{
+		if (pairHeader.flags & PxContactPairHeaderFlag::eDELETED_ACTOR_0)
+			return;
 
-			PhysicsCallbackObject* obj1 = (PhysicsCallbackObject*)pair.actors[0]->userData;
-			PhysicsCallbackObject* obj2 = (PhysicsCallbackObject*)pair.actors[1]->userData;
-			
-			// Iterate through contact points
-			PxContactStreamIterator i(pair.stream);
-			//user can call getNumPairs() here
-			bool done = false;
+		if (pairHeader.flags & PxContactPairHeaderFlag::eDELETED_ACTOR_1)
+			return;
+
+		if (!pairHeader.actors[0] || !pairHeader.actors[1])
+			return;
+
+		PhysicsCallbackObject* obj1 = static_cast<PhysicsCallbackObject*>(pairHeader.actors[0]->userData);
+		PhysicsCallbackObject* obj2 = static_cast<PhysicsCallbackObject*>(pairHeader.actors[1]->userData);
+
+		for (PxU32 pairIndex = 0; pairIndex < nbPairs; ++pairIndex)
+		{
+			const PxContactPair& pair = pairs[pairIndex];
+
+			if (!(pair.events & PxPairFlag::eNOTIFY_TOUCH_FOUND))
+				continue;
+
+			PxContactPairPoint contactPoints[16];
+			const PxU32 contactCount = pair.extractContacts(contactPoints, 16);
+
+			if (contactCount == 0)
+				continue;
+
 			CollisionInfo collInfo;
 			collInfo.Type = CLT_Vertex;
-			while(i.goNextPair())
+
+			for (PxU32 contactIndex = 0; contactIndex < contactCount; ++contactIndex)
 			{
-				//user can also call getShape() and getNumPatches() here
-				while(i.goNextPatch())
-				{
-					//user can also call getPatchNormal() and getNumPoints() here
-					collInfo.Normal = *(r3dPoint3D*)&i.getPatchNormal();
-					while(i.goNextPoint())
-					{
-						collInfo.NewPosition = *(r3dPoint3D*)&i.getPoint();			
-						collInfo.Distance = i.getSeparation();
-						if(!done)
-						{
-							collInfo.pObj = obj2;
-							if(obj1)
-								obj1->OnCollide(obj2, collInfo);
+				const PxContactPairPoint& contact = contactPoints[contactIndex];
 
-							collInfo.pObj = obj1;
-							if(obj2)
-								obj2->OnCollide(obj1, collInfo);
+				collInfo.Normal = *(r3dPoint3D*)&contact.normal;
+				collInfo.NewPosition = *(r3dPoint3D*)&contact.position;
+				collInfo.Distance = contact.separation;
 
-							done = true;
-						}
-					}
-				}
+				collInfo.pObj = obj2;
+				if (obj1)
+					obj1->OnCollide(obj2, collInfo);
+
+				collInfo.pObj = obj1;
+				if (obj2)
+					obj2->OnCollide(obj1, collInfo);
+
+				break;
 			}
-		}
-	};
-
-	void onTrigger(PxTriggerPair *  pairs,  PxU32  count)
-	{
-		for(PxU32 i=0; i<count; ++i)
-		{
-            if(pairs[i].status == PxPairFlag::eNOTIFY_TOUCH_FOUND)
-            {
-                r3d_assert(pairs[i].triggerShape);
-                r3d_assert(pairs[i].otherShape);
-                PhysicsCallbackObject* triggerObj = (PhysicsCallbackObject*)pairs[i].triggerShape->getActor().userData;
-                r3d_assert(triggerObj);
-
-                PhysicsCallbackObject* otherObj = (PhysicsCallbackObject*)pairs[i].otherShape->getActor().userData;
-
-                triggerObj->OnTrigger(pairs[i].status, otherObj);
-            }
 		}
 	}
 
+	virtual void onTrigger(PxTriggerPair* pairs, PxU32 count) OVERRIDE
+	{
+		for (PxU32 i = 0; i < count; ++i)
+		{
+			if (pairs[i].flags & PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER)
+				continue;
+
+			if (pairs[i].flags & PxTriggerPairFlag::eREMOVED_SHAPE_OTHER)
+				continue;
+
+			if (pairs[i].status != PxPairFlag::eNOTIFY_TOUCH_FOUND)
+				continue;
+
+			if (!pairs[i].triggerShape || !pairs[i].otherShape)
+				continue;
+
+			PhysicsCallbackObject* triggerObj = static_cast<PhysicsCallbackObject*>(
+				pairs[i].triggerShape->getActor()->userData
+			);
+
+			if (!triggerObj)
+				continue;
+
+			PhysicsCallbackObject* otherObj = static_cast<PhysicsCallbackObject*>(
+				pairs[i].otherShape->getActor()->userData
+			);
+
+			triggerObj->OnTrigger(pairs[i].status, otherObj);
+		}
+	}
+
+	virtual void onConstraintBreak(PxConstraintInfo*, PxU32) OVERRIDE
+	{
+	}
+
+	virtual void onWake(PxActor**, PxU32) OVERRIDE
+	{
+	}
+
+	virtual void onSleep(PxActor**, PxU32) OVERRIDE
+	{
+	}
+
+	virtual void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) OVERRIDE
+	{
+	}
 } mySimulationEventCallback;
 
 PxU32 groupCollisionFlags[32];
@@ -372,106 +349,125 @@ PxFilterFlags MyCollisionFilterShader(
 
 void PhysXWorld::Init()
 {
-    m_needFetchResults = false;
+	m_needFetchResults = false;
 
 	InitializeCriticalSection(&concurrencyGuard);
 
-	//init all group pairs to true:
-	for (unsigned i = 0; i < 32; i ++)
+	for (unsigned i = 0; i < 32; i++)
 		groupCollisionFlags[i] = 0xffffffff;
-
 
 	PxTolerancesScale tolerancesScale;
 	tolerancesScale.length = 1.0f;
 	tolerancesScale.mass = 1000.0f;
 	tolerancesScale.speed = 10.0f;
 
-	bool recordMemoryAllocations = false;
-#ifdef _DEBUG
-	recordMemoryAllocations = true; // track memory allocations
-#endif
-	PhysXSDK = PxCreatePhysics(PX_PHYSICS_VERSION, myPhysXAllocator, myErrorCallback, tolerancesScale, recordMemoryAllocations);
-	if(!PhysXSDK)
+	Foundation = PxCreateFoundation(PX_PHYSICS_VERSION, myPhysXAllocator, myErrorCallback);
+	if (!Foundation)
 	{
-		r3dError("Failed to init PhysX SDK");
-	}
-
-	if(!PxInitExtensions(*PhysXSDK))
-	{
-		r3dError("Failed to init PhysX Extensions");
-	}
-
-	PxCookingParams cookingParams;
-	Cooking = PxCreateCooking(PX_PHYSICS_VERSION, &PhysXSDK->getFoundation(), cookingParams);
-	if(!Cooking)
-	{
-		r3dError("Failed to init PhysX Cooking");
+		r3dError("PhysX: Failed to create foundation");
 	}
 
 #ifndef FINAL_BUILD
-	PxExtensionVisualDebugger::connect(PhysXSDK->getPvdConnectionManager(), "localhost", 5425, 1000, true, PxGetDefaultDebuggerFlags());
+	Pvd = PxCreatePvd(*Foundation);
+	if (Pvd)
+	{
+		PvdTransport = PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+		if (PvdTransport)
+			Pvd->connect(*PvdTransport, PxPvdInstrumentationFlag::eALL);
+	}
 #endif
 
-	// set collision group BEFORE creating scene and cannot change after that
-//#if !ENABLE_RAGDOLL
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_LOCALPLAYER, false); // do not collide between local player and weapons that local player fires
-	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_NETWORKPLAYER, false);
-//#endif
+	bool recordMemoryAllocations = false;
 
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_TINY_GEOMETRY, false); 
+#ifdef _DEBUG
+	recordMemoryAllocations = true;
+#endif
+
+	PhysXSDK = PxCreatePhysics(
+		PX_PHYSICS_VERSION,
+		*Foundation,
+		tolerancesScale,
+		recordMemoryAllocations,
+		Pvd
+	);
+
+	if (!PhysXSDK)
+	{
+		r3dError("PhysX: Failed to create physics SDK");
+	}
+
+	if (!PxInitExtensions(*PhysXSDK, Pvd))
+	{
+		r3dError("PhysX: Failed to init extensions");
+	}
+
+	PxCookingParams cookingParams(tolerancesScale);
+
+	Cooking = PxCreateCooking(PX_PHYSICS_VERSION, *Foundation, cookingParams);
+	if (!Cooking)
+	{
+		r3dError("PhysX: Failed to init cooking");
+	}
+
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_LOCALPLAYER, false);
+	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_NETWORKPLAYER, false);
+
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_TINY_GEOMETRY, false);
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_TINY_GEOMETRY, false);
 
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false); 
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false);
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false);
-	
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_PROJECTILES, false); 
 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_LOCALPLAYER, false); 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_NETWORKPLAYER, false); 
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_PROJECTILES, false);
 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false); 
-	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false); 
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_LOCALPLAYER, false);
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_NETWORKPLAYER, false);
+
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
+	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_CHARACTERCONTROLLER, false); 
-	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_CHARACTERCONTROLLER, false); 
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_CHARACTERCONTROLLER, false);
+	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_CHARACTERCONTROLLER, false);
 	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_CHARACTERCONTROLLER, false);
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_CHARACTERCONTROLLER, false);
 
-	//	Prevent collision between player and character ragdoll
 	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NETWORKPLAYER, false);
 
-#if VEHICLES_ENABLED
-	//	Vehicle related collision detection
-	setGroupCollisionFlag(PHYSCOLL_COLLISION_GEOMETRY, PHYSCOLL_VEHICLE_WHEEL, false);
-	setGroupCollisionFlag(PHYSCOLL_STATIC_GEOMETRY, PHYSCOLL_VEHICLE_WHEEL, false);
-#endif
-
-	// create scene
 	PxSceneDesc sceneDesc(PhysXSDK->getTolerancesScale());
-	sceneDesc.gravity = PxVec3(0, -9.81f, 0);
+	sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
+
 	sceneDesc.filterShaderData = groupCollisionFlags;
 	sceneDesc.filterShaderDataSize = 32 * sizeof(PxU32);
 
-	sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2, NULL);
-	if(!sceneDesc.cpuDispatcher)
+	CpuDispatcher = PxDefaultCpuDispatcherCreate(2);
+	if (!CpuDispatcher)
+	{
 		r3dError("PhysX: Failed to create CPU dispatcher");
-	
+	}
+
+	sceneDesc.cpuDispatcher = CpuDispatcher;
 	sceneDesc.filterShader = MyCollisionFilterShader;
 
-	sceneDesc.gpuDispatcher = NULL;
-
-	//sceneDesc.flags |= PxSceneFlag::eENABLE_SWEPT_INTEGRATION;
-
-	PhysXScene = PhysXSDK->createScene(sceneDesc);	
-	if (!PhysXScene) 
-		r3dError("PhysX: can't create physics scene!");
+	PhysXScene = PhysXSDK->createScene(sceneDesc);
+	if (!PhysXScene)
+	{
+		r3dError("PhysX: Failed to create scene");
+	}
 
 	PhysXScene->setSimulationEventCallback(&mySimulationEventCallback);
 
 	defaultMaterial = PhysXSDK->createMaterial(0.8f, 0.8f, 0.05f);
-	
-	CharacterManager = PxCreateControllerManager(PhysXSDK->getFoundation());
+	if (!defaultMaterial)
+	{
+		r3dError("PhysX: Failed to create default material");
+	}
+
+	CharacterManager = PxCreateControllerManager(*PhysXScene);
+	if (!CharacterManager)
+	{
+		r3dError("PhysX: Failed to create character controller manager");
+	}
 
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
@@ -482,7 +478,7 @@ void PhysXWorld::Init()
 
 void PhysXWorld::Destroy()
 {
-	if(defaultMaterial)
+	if (defaultMaterial)
 	{
 		defaultMaterial->release();
 		defaultMaterial = NULL;
@@ -493,35 +489,62 @@ void PhysXWorld::Destroy()
 	if (m_VehicleManager)
 	{
 		delete m_VehicleManager;
-		m_VehicleManager = 0;
+		m_VehicleManager = NULL;
 	}
 #endif
 #endif
 
-	if(CharacterManager) {
+	if (CharacterManager)
+	{
 		CharacterManager->release();
 		CharacterManager = NULL;
 	}
-	
+
 	r3dFreePhysicsMeshes();
 	r3dFreePhysicsConvexMeshes();
-	
-	if(Cooking) {
+
+	if (Cooking)
+	{
 		Cooking->release();
 		Cooking = NULL;
 	}
 
 	PxCloseExtensions();
-	
-	if(PhysXScene)
+
+	if (PhysXScene)
 	{
 		PhysXScene->release();
 		PhysXScene = NULL;
 	}
 
-	if(PhysXSDK) {
+	if (CpuDispatcher)
+	{
+		CpuDispatcher->release();
+		CpuDispatcher = NULL;
+	}
+
+	if (PhysXSDK)
+	{
 		PhysXSDK->release();
 		PhysXSDK = NULL;
+	}
+
+	if (Pvd)
+	{
+		PxPvdTransport* transport = Pvd->getTransport();
+		Pvd->release();
+		Pvd = NULL;
+
+		if (transport)
+			transport->release();
+
+		PvdTransport = NULL;
+	}
+
+	if (Foundation)
+	{
+		Foundation->release();
+		Foundation = NULL;
 	}
 
 	DeleteCriticalSection(&concurrencyGuard);
@@ -620,32 +643,58 @@ void PhysXWorld::EndSimulation()
     g_bAllowPhysObjCreation = true;
 }
 
-bool PhysXWorld::raycastSingle(const PxVec3& origin, const PxVec3& unitDir, const PxReal distance, PxSceneQueryFlags outputFlags, PxRaycastHit& hit, const PxSceneQueryFilterData& filterData /* = PxSceneQueryFilterData */)
+bool PhysXWorld::raycastSingle(
+	const PxVec3& origin,
+	const PxVec3& unitDir,
+	const PxReal distance,
+	PxSceneQueryFlags outputFlags,
+	PxRaycastHit& hit,
+	const PxSceneQueryFilterData& filterData
+)
 {
-    PxRaycastHit hits[32];
-    bool blockingHit;
-    // some weird PhysX shit. Sometimes raycastSingle will just return distance 0 and show collision with terrain!!! even though there is no even close terrain to the ray
-    outputFlags |= PxSceneQueryFlag::eDISTANCE; // always add, as we need distance to check for physX bug
-    int numHits = g_pPhysicsWorld->PhysXScene->raycastMultiple(origin, unitDir, distance, outputFlags, hits, 32, blockingHit, filterData);
-    bool foundProperHit = false;
-    float closestHit = 99999999.0f;
-    if(numHits)
-    {
-        for(int i=0; i<numHits; ++i)
-        {
-            if(hits[i].distance > 0)
-            {
-                if(hits[i].distance < closestHit)
-                {
-                    hit = hits[i];
-                    closestHit = hits[i].distance;
-                    foundProperHit = true;
-                }
-            }					
-        }
-    }
+	outputFlags |= PxSceneQueryFlag::eDISTANCE;
 
-    return foundProperHit;
+	PxRaycastHit touchHits[32];
+	PxRaycastBuffer hitBuffer(touchHits, 32);
+
+	const bool raycastResult = PhysXScene->raycast(
+		origin,
+		unitDir,
+		distance,
+		hitBuffer,
+		outputFlags,
+		filterData
+	);
+
+	if (!raycastResult)
+		return false;
+
+	bool foundProperHit = false;
+	float closestHit = 99999999.0f;
+
+	if (hitBuffer.hasBlock)
+	{
+		if (hitBuffer.block.distance > 0.0f && hitBuffer.block.distance < closestHit)
+		{
+			hit = hitBuffer.block;
+			closestHit = hitBuffer.block.distance;
+			foundProperHit = true;
+		}
+	}
+
+	for (PxU32 i = 0; i < hitBuffer.nbTouches; ++i)
+	{
+		const PxRaycastHit& currentHit = hitBuffer.touches[i];
+
+		if (currentHit.distance > 0.0f && currentHit.distance < closestHit)
+		{
+			hit = currentHit;
+			closestHit = currentHit.distance;
+			foundProperHit = true;
+		}
+	}
+
+	return foundProperHit;
 }
 
 extern	r3dCamera	gCam;

@@ -112,12 +112,9 @@
 #endif
 
 // physX
+#define WARINC_PHYSX_34 1
 #define APEX_ENABLED 0
-#ifdef FINAL_BUILD
-	#define VEHICLES_ENABLED 0
-#else 
-	#define VEHICLES_ENABLED 1
-#endif
+#define VEHICLES_ENABLED 0
 
 #define ENABLE_RECAST_NAVIGATION 1
 #if ENABLE_RECAST_NAVIGATION
