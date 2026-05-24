@@ -1,0 +1,22 @@
+<Project>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <TreatWarningAsError>false</TreatWarningAsError>
+
+      <PreprocessorDefinitions>
+        _CRT_SECURE_NO_WARNINGS;
+        _SCL_SECURE_NO_WARNINGS;
+        _WINSOCK_DEPRECATED_NO_WARNINGS;
+        %(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+
+      <DisableSpecificWarnings>
+        4091;
+        4996;
+        4244;
+        4477;
+        %(DisableSpecificWarnings)
+      </DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
