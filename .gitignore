@@ -1,64 +1,67 @@
-# =========================
 # Rider / JetBrains
-# =========================
 .idea/
 *.sln.iml
 
-# =========================
-# Visual Studio / MSVC
-# =========================
+# Visual Studio
 .vs/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+ipch/
 
-# =========================
-# CMake / build folders
-# =========================
-build/
-Build/
-builds/
-Builds/
-out/
-cmake-build-*/
+# Build folders
+[Bb]uild/
+[Bb]uilds/
+[Oo]ut/
+[Cc]make-build-*/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 compile_commands.json
 
-# =========================
-# Binary output folders
-# =========================
-bin/
-Bin/
-obj/
-Obj/
-x64/
-x86/
-Debug/
-Release/
-RelWithDebInfo/
-MinSizeRel/
+# MSVC config output folders anywhere
+**/Debug/
+**/Release/
+**/Final/
+**/Debug_Server/
+**/Release_Server/
+**/Debug_NoCrashRpt/
+**/Release_NoCrashRpt/
+**/x64/
+**/x86/
+**/Win32/
 
-# =========================
-# Executables / libraries / debug files
-# =========================
+# MSVC object/intermediate files
+*.obj
+*.pch
+*.pdb
+*.idb
+*.ilk
+*.ipdb
+*.iobj
+*.tlog
+*.lastbuildstate
+*.log
+*.tmp
+*.rsp
+*.res
+*.exp
+*.map
+*.manifest
+*.intermediate.manifest
+
+# Binaries / libs
 *.exe
 *.dll
 *.lib
-*.pdb
-*.ilk
-*.exp
-*.obj
-*.o
 *.a
 *.so
 *.dylib
 
-# =========================
-# WarInc / WarZ / game asset formats
-# =========================
+# Game binary assets - do not push
 *.sco
 *.wgt
 *.wgts
@@ -67,49 +70,16 @@ MinSizeRel/
 *.mat
 *.dds
 
-# =========================
-# Scripts you do NOT want in repo
-# ВАЖНО: если build.bat нужен для сборки проекта — убери эту строку
-# =========================
+# Optional scripts
 *.bat
 
-# =========================
-# Logs / temp / cache
-# =========================
-*.log
-*.tmp
-*.temp
-*.cache
+# Junk
+Thumbs.db
+Desktop.ini
 *.bak
 *.old
 *.orig
-
-# =========================
-# Windows junk
-# =========================
-Thumbs.db
-Desktop.ini
-
-# =========================
-# Archives / packages
-# =========================
+*.cache
 *.zip
 *.rar
 *.7z
-*.tar
-*.gz
-
-# =========================
-# Large media / raw assets
-# =========================
-*.psd
-*.blend
-*.fbx
-*.max
-*.mb
-*.ma
-*.wav
-*.mp3
-*.mp4
-*.avi
-*.mov

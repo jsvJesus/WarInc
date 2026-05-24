@@ -505,5 +505,6 @@
     </ClInclude>
     <ClInclude Include="CamouflageDataManager.h" />
     <ClInclude Include="DebugHelpers.h" />
+    <ClInclude Include="gameobjects\WarIncPhysX34Compat.h" />
   </ItemGroup>
 </Project>
