@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+    ProjectType="Visual C++"
+    Version="9.00"
+    Name="SampleRenderer-MT">
+  <Platforms>
+    <Platform Name="Win32" />
+  </Platforms>
+  <Configurations>
+    <Configuration
+        Name="debug|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SampleRenderer-MT/debug"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="RENDERER_CG_DIR=..\..\..\..\..\externals\cg;WIN32;AGPERFMON;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Renderer_debug.lib"
+          ProgramDatabaseFile="$(OutDir)/Renderer_debug.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SampleRenderer-MT/release"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="RENDERER_CG_DIR=..\..\..\..\..\externals\cg;WIN32;AGPERFMON;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Renderer_release.lib"
+          ProgramDatabaseFile="$(OutDir)/Renderer_release.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release_shipping|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SampleRenderer-MT/release_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="RENDERER_CG_DIR=..\..\..\..\..\externals\cg;WIN32;AGPERFMON;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Renderer_release.lib"
+          ProgramDatabaseFile="$(OutDir)/Renderer_release.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="debug_shipping|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SampleRenderer-MT/debug_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="RENDERER_CG_DIR=..\..\..\..\..\externals\cg;WIN32;AGPERFMON;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Renderer_debug.lib"
+          ProgramDatabaseFile="$(OutDir)/Renderer_debug.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release_agperfmon|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SampleRenderer-MT/release_agperfmon"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="RENDERER_CG_DIR=..\..\..\..\..\externals\cg;WIN32;AGPERFMON;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Renderer_release.lib"
+          ProgramDatabaseFile="$(OutDir)/Renderer_release.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+  </Configurations>
+  <References></References>
+  <Files>
+    <Filter
+        Name="include"
+        Filter="">
+      <!--  -->
+      <Filter
+          Name="windows"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\include\windows\WindowsGLIncludes.h" />
+      </Filter>
+      <File RelativePath="..\..\include\GLIncludes.h" />
+      <File RelativePath="..\..\include\Renderer.h" />
+      <File RelativePath="..\..\include\RendererBoxShape.h" />
+      <File RelativePath="..\..\include\RendererCapsuleShape.h" />
+      <File RelativePath="..\..\include\RendererColor.h" />
+      <File RelativePath="..\..\include\RendererConfig.h" />
+      <File RelativePath="..\..\include\RendererDesc.h" />
+      <File RelativePath="..\..\include\RendererDirectionalLight.h" />
+      <File RelativePath="..\..\include\RendererDirectionalLightDesc.h" />
+      <File RelativePath="..\..\include\RendererGridShape.h" />
+      <File RelativePath="..\..\include\RendererIndexBuffer.h" />
+      <File RelativePath="..\..\include\RendererIndexBufferDesc.h" />
+      <File RelativePath="..\..\include\RendererInstanceBuffer.h" />
+      <File RelativePath="..\..\include\RendererInstanceBufferDesc.h" />
+      <File RelativePath="..\..\include\RendererInteropableBuffer.h" />
+      <File RelativePath="..\..\include\RendererLight.h" />
+      <File RelativePath="..\..\include\RendererLightDesc.h" />
+      <File RelativePath="..\..\include\RendererMaterial.h" />
+      <File RelativePath="..\..\include\RendererMaterialDesc.h" />
+      <File RelativePath="..\..\include\RendererMaterialInstance.h" />
+      <File RelativePath="..\..\include\RendererMemoryMacros.h" />
+      <File RelativePath="..\..\include\RendererMesh.h" />
+      <File RelativePath="..\..\include\RendererMeshContext.h" />
+      <File RelativePath="..\..\include\RendererMeshDesc.h" />
+      <File RelativePath="..\..\include\RendererMeshShape.h" />
+      <File RelativePath="..\..\include\RendererParticleSystemShape.h" />
+      <File RelativePath="..\..\include\RendererProjection.h" />
+      <File RelativePath="..\..\include\RendererShape.h" />
+      <File RelativePath="..\..\include\RendererSpotLight.h" />
+      <File RelativePath="..\..\include\RendererSpotLightDesc.h" />
+      <File RelativePath="..\..\include\RendererTarget.h" />
+      <File RelativePath="..\..\include\RendererTargetDesc.h" />
+      <File RelativePath="..\..\include\RendererTerrainShape.h" />
+      <File RelativePath="..\..\include\RendererTexture2D.h" />
+      <File RelativePath="..\..\include\RendererTexture2DDesc.h" />
+      <File RelativePath="..\..\include\RendererVertexBuffer.h" />
+      <File RelativePath="..\..\include\RendererVertexBufferDesc.h" />
+      <File RelativePath="..\..\include\RendererWindow.h" />
+    </Filter>
+    <Filter
+        Name="src"
+        Filter="">
+      <!--  -->
+      <Filter
+          Name="ogl"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\src\ogl\OGLRenderer.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererDirectionalLight.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererIndexBuffer.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererInstanceBuffer.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererMaterial.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererMesh.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererSpotLight.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererTexture2D.h" />
+        <File RelativePath="..\..\src\ogl\OGLRendererVertexBuffer.h" />
+        <File RelativePath="..\..\src\ogl\OGLRenderer.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererDirectionalLight.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererIndexBuffer.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererInstanceBuffer.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererMaterial.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererMesh.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererSpotLight.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererTexture2D.cpp" />
+        <File RelativePath="..\..\src\ogl\OGLRendererVertexBuffer.cpp" />
+      </Filter>
+      <Filter
+          Name="d3d9"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\src\d3d9\D3D9Renderer.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererDirectionalLight.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererIndexBuffer.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererInstanceBuffer.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererMaterial.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererMesh.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererSpotLight.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererTarget.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererTexture2D.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererVertexBuffer.h" />
+        <File RelativePath="..\..\src\d3d9\D3D9Renderer.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererDirectionalLight.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererIndexBuffer.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererInstanceBuffer.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererMaterial.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererMesh.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererSpotLight.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererTarget.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererTexture2D.cpp" />
+        <File RelativePath="..\..\src\d3d9\D3D9RendererVertexBuffer.cpp" />
+      </Filter>
+      <File RelativePath="..\..\src\Renderer.cpp" />
+      <File RelativePath="..\..\src\RendererBoxShape.cpp" />
+      <File RelativePath="..\..\src\RendererCapsuleShape.cpp" />
+      <File RelativePath="..\..\src\RendererColor.cpp" />
+      <File RelativePath="..\..\src\RendererDesc.cpp" />
+      <File RelativePath="..\..\src\RendererDirectionalLight.cpp" />
+      <File RelativePath="..\..\src\RendererDirectionalLightDesc.cpp" />
+      <File RelativePath="..\..\src\RendererGridShape.cpp" />
+      <File RelativePath="..\..\src\RendererIndexBuffer.cpp" />
+      <File RelativePath="..\..\src\RendererIndexBufferDesc.cpp" />
+      <File RelativePath="..\..\src\RendererInstanceBuffer.cpp" />
+      <File RelativePath="..\..\src\RendererInstanceBufferDesc.cpp" />
+      <File RelativePath="..\..\src\RendererLight.cpp" />
+      <File RelativePath="..\..\src\RendererLightDesc.cpp" />
+      <File RelativePath="..\..\src\RendererMaterial.cpp" />
+      <File RelativePath="..\..\src\RendererMaterialDesc.cpp" />
+      <File RelativePath="..\..\src\RendererMaterialInstance.cpp" />
+      <File RelativePath="..\..\src\RendererMesh.cpp" />
+      <File RelativePath="..\..\src\RendererMeshContext.cpp" />
+      <File RelativePath="..\..\src\RendererMeshDesc.cpp" />
+      <File RelativePath="..\..\src\RendererMeshShape.cpp" />
+      <File RelativePath="..\..\src\RendererParticleSystemShape.cpp" />
+      <File RelativePath="..\..\src\RendererProjection.cpp" />
+      <File RelativePath="..\..\src\RendererShape.cpp" />
+      <File RelativePath="..\..\src\RendererSpotLight.cpp" />
+      <File RelativePath="..\..\src\RendererSpotLightDesc.cpp" />
+      <File RelativePath="..\..\src\RendererTarget.cpp" />
+      <File RelativePath="..\..\src\RendererTargetDesc.cpp" />
+      <File RelativePath="..\..\src\RendererTerrainShape.cpp" />
+      <File RelativePath="..\..\src\RendererTexture2D.cpp" />
+      <File RelativePath="..\..\src\RendererTexture2DDesc.cpp" />
+      <File RelativePath="..\..\src\RendererVertexBuffer.cpp" />
+      <File RelativePath="..\..\src\RendererVertexBufferDesc.cpp" />
+      <File RelativePath="..\..\src\RendererWindow.cpp" />
+    </Filter>
+  </Files>
+  <Globals></Globals>
+</VisualStudioProject>

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+    ProjectType="Visual C++"
+    Version="9.00"
+    Name="SamplePlatform-MT">
+  <Platforms>
+    <Platform Name="Win32" />
+  </Platforms>
+  <Configurations>
+    <Configuration
+        Name="debug|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SamplePlatform-MT/debug"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;"
+          PreprocessorDefinitions="WIN32;PHYSX_PROFILE_SDK;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/PlatformDEBUG-MT.lib"
+          ProgramDatabaseFile="$(OutDir)/PlatformDEBUG-MT.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SamplePlatform-MT/release"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;"
+          PreprocessorDefinitions="WIN32;PHYSX_PROFILE_SDK;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Platform-MT.lib"
+          ProgramDatabaseFile="$(OutDir)/Platform-MT.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release_shipping|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SamplePlatform-MT/release_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;"
+          PreprocessorDefinitions="WIN32;PHYSX_PROFILE_SDK;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Platform_SHIPPING-MT.lib"
+          ProgramDatabaseFile="$(OutDir)/Platform_SHIPPING-MT.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="debug_shipping|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SamplePlatform-MT/debug_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;"
+          PreprocessorDefinitions="WIN32;PHYSX_PROFILE_SDK;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/PlatformDEBUG_SHIPPING-MT.lib"
+          ProgramDatabaseFile="$(OutDir)/PlatformDEBUG_SHIPPING-MT.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="profile|Win32"
+        OutputDirectory="../../lib/WIN32"
+        IntermediateDirectory="Win32/SamplePlatform-MT/profile"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\..\..\externals\glew\include&quot;;&quot;..\..\..\..\..\externals\cg\include&quot;;&quot;F:/src/sw/physx/APEXSDK/1.0/RELEASE/shared/pxtask/include&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\framework\include&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;;&quot;..\..\..\..\..\..\..\..\..\tools\sdk\DirectX_Jun2010\Include&quot;"
+          PreprocessorDefinitions="WIN32;PHYSX_PROFILE_SDK;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR-"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/Platform-MT.lib"
+          ProgramDatabaseFile="$(OutDir)/Platform-MT.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+  </Configurations>
+  <References></References>
+  <Files>
+    <Filter
+        Name="include"
+        Filter="">
+      <!--  -->
+      <Filter
+          Name="windows"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\include\windows\WindowsSamplePlatform.h" />
+      </Filter>
+      <File RelativePath="..\..\include\SamplePlatform.h" />
+    </Filter>
+    <Filter
+        Name="src"
+        Filter="">
+      <!--  -->
+      <Filter
+          Name="windows"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\src\windows\WindowsSamplePlatform.cpp" />
+      </Filter>
+      <File RelativePath="..\..\src\SamplePlatform.cpp" />
+    </Filter>
+  </Files>
+  <Globals></Globals>
+</VisualStudioProject>

@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Final|Win32">
+      <Configuration>Final</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{D14FACF2-B61D-445F-A307-FDC587F901F4}</ProjectGuid>
+    <RootNamespace>GameEngine</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>17.0.36915.8</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\cloth;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>lib\GameEngineD.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\cloth;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>lib\GameEngine.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\cloth;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>lib\GameEngineF.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctBoxController.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCapsuleController.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterController.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerCallbacks.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerManager.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctController.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptBox.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptCapsule.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptVolume.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PxFoundation\internal\src\PsAllocator.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DebugDraw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourAlloc.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourCommon.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourCrowd.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourDebugDraw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourLocalBoundary.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMesh.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshBuilder.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshQuery.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNode.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourObstacleAvoidance.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourPathCorridor.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourPathQueue.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourProximityGrid.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourTileCache.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourTileCacheBuilder.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\Recast.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastAlloc.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastArea.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastContour.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastDebugDraw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastDump.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</TreatWarningAsError>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">false</TreatWarningAsError>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatWarningAsError>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastFilter.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastLayers.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastMesh.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastMeshDetail.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastRasterization.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastRegion.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HALSetup.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderManager.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="ai\NavigationDebugVisualizer.cpp" />
+    <ClCompile Include="ai\NavMesh.cpp" />
+    <ClCompile Include="ai\NavMeshActor.cpp" />
+    <ClCompile Include="APIScaleformGfx.cpp" />
+    <ClCompile Include="CamouflageDataManager.cpp" />
+    <ClCompile Include="DebugHelpers.cpp" />
+    <ClCompile Include="fmod\SoundSys.cpp" />
+    <ClCompile Include="gameobjects\AObject.cpp" />
+    <ClCompile Include="gameobjects\ApexActor.cpp" />
+    <ClCompile Include="gameobjects\ApexFileStream.cpp" />
+    <ClCompile Include="gameobjects\ApexRenderer.cpp" />
+    <ClCompile Include="gameobjects\ApexWorld.cpp" />
+    <ClCompile Include="gameobjects\GameObj.cpp" />
+    <ClCompile Include="gameobjects\ObjManag.cpp" />
+    <ClCompile Include="gameobjects\obj_Apex.cpp" />
+    <ClCompile Include="gameobjects\obj_Dummy.cpp">
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </BrowseInformation>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Mesh.cpp" />
+    <ClCompile Include="gameobjects\obj_Sprite.cpp" />
+    <ClCompile Include="gameobjects\obj_Vehicle.cpp" />
+    <ClCompile Include="gameobjects\PhysObj.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="gameobjects\PhysXRepXHelpers.cpp" />
+    <ClCompile Include="gameobjects\PhysXWorld.cpp" />
+    <ClCompile Include="gameobjects\sceneBox.cpp" />
+    <ClCompile Include="gameobjects\VehicleDescriptor.cpp" />
+    <ClCompile Include="gameobjects\VehicleManager.cpp" />
+    <ClCompile Include="r3dPCH.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="TrueNature2\Terrain2.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\Cloud.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\CloudGrid.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\CloudPlane.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\SceneParameter.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\Shader.cpp" />
+    <ClCompile Include="TrueNature\CloudPlane\Shaders.cpp" />
+    <ClCompile Include="TrueNature\HoffmanScatter.cpp" />
+    <ClCompile Include="TrueNature\ITerrain.cpp" />
+    <ClCompile Include="TrueNature\SkyDome.cpp" />
+    <ClCompile Include="TrueNature\Sun.cpp" />
+    <ClCompile Include="TrueNature\Terrain.cpp" />
+    <ClCompile Include="TrueNature\Terrain_Erosion.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctBoxController.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCapsuleController.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterController.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerManager.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctController.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptBox.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptCapsule.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptVolume.h" />
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctUtils.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DebugDraw.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourAlloc.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourAssert.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourCommon.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourCrowd.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourDebugDraw.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourLocalBoundary.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMesh.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMeshBuilder.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMeshQuery.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourNode.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourObstacleAvoidance.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourPathCorridor.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourPathQueue.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourProximityGrid.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourStatus.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourTileCache.h" />
+    <ClInclude Include="..\External\RecastAndDetour\DetourTileCacheBuilder.h" />
+    <ClInclude Include="..\External\RecastAndDetour\Recast.h" />
+    <ClInclude Include="..\External\RecastAndDetour\RecastAlloc.h" />
+    <ClInclude Include="..\External\RecastAndDetour\RecastAssert.h" />
+    <ClInclude Include="..\External\RecastAndDetour\RecastDebugDraw.h" />
+    <ClInclude Include="..\External\RecastAndDetour\RecastDump.h" />
+    <ClInclude Include="ai\NavigationDebugVisualizer.h" />
+    <ClInclude Include="ai\NavMesh.h" />
+    <ClInclude Include="ai\NavMeshActor.h" />
+    <ClInclude Include="APIScaleformGfx.h" />
+    <ClInclude Include="CamouflageDataManager.h" />
+    <ClInclude Include="DebugHelpers.h" />
+    <ClInclude Include="fmod\SoundSys.h" />
+    <ClInclude Include="gameobjects\AObject.h" />
+    <ClInclude Include="gameobjects\ApexActor.h" />
+    <ClInclude Include="gameobjects\ApexCommon.h" />
+    <ClInclude Include="gameobjects\ApexFileStream.h" />
+    <ClInclude Include="gameobjects\ApexRenderer.h" />
+    <ClInclude Include="gameobjects\ApexWorld.h" />
+    <ClInclude Include="gameobjects\CollFunc.hpp" />
+    <ClInclude Include="gameobjects\CollMain.h" />
+    <ClInclude Include="gameobjects\CollMain.hpp" />
+    <ClInclude Include="gameobjects\EventTransport.h" />
+    <ClInclude Include="gameobjects\GameObj.h" />
+    <ClInclude Include="gameobjects\ObjectRegistration.h" />
+    <ClInclude Include="gameobjects\ObjManag.h" />
+    <ClInclude Include="gameobjects\obj_Apex.hpp" />
+    <ClInclude Include="gameobjects\obj_Dummy.h" />
+    <ClInclude Include="gameobjects\obj_Mesh.h" />
+    <ClInclude Include="gameobjects\obj_Sprite.h" />
+    <ClInclude Include="gameobjects\obj_Vehicle.h" />
+    <ClInclude Include="gameobjects\PhysObj.h" />
+    <ClInclude Include="gameobjects\PhysXRepXHelpers.h" />
+    <ClInclude Include="gameobjects\PhysXWorld.h" />
+    <ClInclude Include="gameobjects\sceneBox.h" />
+    <ClInclude Include="gameobjects\VehicleDescriptor.h" />
+    <ClInclude Include="gameobjects\VehicleManager.h" />
+    <ClInclude Include="TrueNature2\Terrain2.h" />
+    <ClInclude Include="TrueNature\CloudPlane\Cloud.h" />
+    <ClInclude Include="TrueNature\CloudPlane\CloudGrid.h" />
+    <ClInclude Include="TrueNature\CloudPlane\CloudPlane.h" />
+    <ClInclude Include="TrueNature\CloudPlane\SceneParameter.h" />
+    <ClInclude Include="TrueNature\CloudPlane\Shader.h" />
+    <ClInclude Include="TrueNature\CloudPlane\Shaders.h" />
+    <ClInclude Include="TrueNature\cubemap.h" />
+    <ClInclude Include="TrueNature\HeightNormalVert.h" />
+    <ClInclude Include="TrueNature\HoffmanScatter.h" />
+    <ClInclude Include="TrueNature\ITerrain.h" />
+    <ClInclude Include="TrueNature\SkyDome.h" />
+    <ClInclude Include="TrueNature\Sun.h" />
+    <ClInclude Include="TrueNature\Terrain.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

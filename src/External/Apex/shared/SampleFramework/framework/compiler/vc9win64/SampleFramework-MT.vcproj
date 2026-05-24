@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+    ProjectType="Visual C++"
+    Version="9.00"
+    Name="SampleFramework-MT">
+  <Platforms>
+    <Platform Name="x64" />
+  </Platforms>
+  <Configurations>
+    <Configuration
+        Name="debug|x64"
+        OutputDirectory="../../lib/WIN64"
+        IntermediateDirectory="x64/SampleFramework-MT/debug"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\rapidxml\include&quot;;&quot;..\..\..\..\..\externals\OpenAutomate\inc&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="WIN32;WIN64;AGPERFMON;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR- /D MEDIA_FROM_BIN=F:/src/sw/physx/APEXSDK/1.0/RELEASE/media"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/SampleFramework_debug.lib"
+          ProgramDatabaseFile="$(OutDir)/SampleFramework_debug.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release|x64"
+        OutputDirectory="../../lib/WIN64"
+        IntermediateDirectory="x64/SampleFramework-MT/release"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\rapidxml\include&quot;;&quot;..\..\..\..\..\externals\OpenAutomate\inc&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="WIN32;WIN64;AGPERFMON;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR- /D MEDIA_FROM_BIN=F:/src/sw/physx/APEXSDK/1.0/RELEASE/media"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/SampleFramework_release.lib"
+          ProgramDatabaseFile="$(OutDir)/SampleFramework_release.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="release_shipping|x64"
+        OutputDirectory="../../lib/WIN64"
+        IntermediateDirectory="x64/SampleFramework-MT/release_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\rapidxml\include&quot;;&quot;..\..\..\..\..\externals\OpenAutomate\inc&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="WIN32;WIN64;AGPERFMON;NDEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR- /D MEDIA_FROM_BIN=F:/src/sw/physx/APEXSDK/1.0/RELEASE/media"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="0"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/SampleFramework_release.lib"
+          ProgramDatabaseFile="$(OutDir)/SampleFramework_release.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+    <Configuration
+        Name="debug_shipping|x64"
+        OutputDirectory="../../lib/WIN64"
+        IntermediateDirectory="x64/SampleFramework-MT/debug_shipping"
+        ConfigurationType="4"
+        InheritedPropertySheets=""
+        CharacterSet="2">
+      <Tool
+          Name="VCCLCompilerTool"
+          AdditionalIncludeDirectories="&quot;..\..\include&quot;;&quot;..\..\..\renderer\include&quot;;&quot;..\..\..\platform\include&quot;;&quot;..\..\..\..\..\externals\rapidxml\include&quot;;&quot;..\..\..\..\..\externals\OpenAutomate\inc&quot;;&quot;..\..\..\..\..\public\foundation&quot;;&quot;..\..\..\..\shared\include&quot;;&quot;..\..\..\..\reviewed\include&quot;;&quot;..\..\..\..\..\public\foundation\windows&quot;;&quot;..\..\..\..\reviewed\include\windows&quot;"
+          PreprocessorDefinitions="WIN32;WIN64;AGPERFMON;_DEBUG"
+          WarningLevel="4"
+          Optimization="4"
+          AdditionalOptions="/WX /GR- /D MEDIA_FROM_BIN=F:/src/sw/physx/APEXSDK/1.0/RELEASE/media"
+          ExceptionHandling="1"
+          DebugInformationFormat="3"
+          RuntimeLibrary="1"
+      />
+      <Tool Name="VCCustomBuildTool" />
+      <Tool
+          Name="VCLibrarianTool"
+          OutputFile="$(OutDir)/SampleFramework_debug.lib"
+          ProgramDatabaseFile="$(OutDir)/SampleFramework_debug.lib.pdb"
+          LinkLibraryDependencies="true"
+          AdditionalOptions=""
+          AdditionalDependencies=""
+          AdditionalLibraryDirectories=""
+      />
+      <Tool Name="VCMIDLTool" />
+      <Tool Name="VCPreBuildEventTool" />
+      <Tool Name="VCPostBuildEventTool" />
+      <Tool Name="VCPreLinkEventTool" />
+      <Tool Name="VCResourceCompilerTool" />
+      <Tool Name="VCWebServiceProxyGeneratorTool" />
+      <Tool Name="VCXMLDataGeneratorTool" />
+      <Tool Name="VCWebDeploymentTool" />
+      <Tool Name="VCManagedWrapperGeneratorTool" />
+      <Tool Name="VCAuxiliaryManagedWrapperGeneratorTool" />
+    </Configuration>
+  </Configurations>
+  <References></References>
+  <Files>
+    <Filter
+        Name="include"
+        Filter="">
+      <!--  -->
+      <File RelativePath="..\..\include\AgPerfMonEventAPI.h" />
+      <File RelativePath="..\..\include\AgPerfMonEventDefs.h" />
+      <File RelativePath="..\..\include\AgPerfMonEventSrcAPI.h" />
+      <File RelativePath="..\..\include\SampleActor.h" />
+      <File RelativePath="..\..\include\SampleApplication.h" />
+      <File RelativePath="..\..\include\SampleAsset.h" />
+      <File RelativePath="..\..\include\SampleAssetManager.h" />
+      <File RelativePath="..\..\include\SampleCommandLine.h" />
+      <File RelativePath="..\..\include\SampleFilesystem.h" />
+      <File RelativePath="..\..\include\SampleLineDebugRender.h" />
+      <File RelativePath="..\..\include\SampleMaterialAsset.h" />
+      <File RelativePath="..\..\include\SamplePhysXDebugRender.h" />
+      <File RelativePath="..\..\include\SamplePointDebugRender.h" />
+      <File RelativePath="..\..\include\SampleTextureAsset.h" />
+      <File RelativePath="..\..\include\SampleTriangleDebugRender.h" />
+      <File RelativePath="..\..\include\targa.h" />
+    </Filter>
+    <Filter
+        Name="src"
+        Filter="">
+      <!--  -->
+      <Filter
+          Name="windows"
+          Filter="">
+        <!--  -->
+        <File RelativePath="..\..\src\windows\WindowsSampleAssetManager.cpp" />
+      </Filter>
+      <File RelativePath="..\..\src\nv_dds.h" />
+      <File RelativePath="..\..\src\AgPerfMonEventSrcAPI.cpp" />
+      <File RelativePath="..\..\src\nv_dds.cpp" />
+      <File RelativePath="..\..\src\SampleActor.cpp" />
+      <File RelativePath="..\..\src\SampleApplication.cpp" />
+      <File RelativePath="..\..\src\SampleAsset.cpp" />
+      <File RelativePath="..\..\src\SampleAssetManager.cpp" />
+      <File RelativePath="..\..\src\SampleCommandLine.cpp" />
+      <File RelativePath="..\..\src\SampleFilesystem.cpp" />
+      <File RelativePath="..\..\src\SampleLineDebugRender.cpp" />
+      <File RelativePath="..\..\src\SampleMaterialAsset.cpp" />
+      <File RelativePath="..\..\src\SamplePhysXDebugRender.cpp" />
+      <File RelativePath="..\..\src\SamplePointDebugRender.cpp" />
+      <File RelativePath="..\..\src\SampleTextureAsset.cpp" />
+      <File RelativePath="..\..\src\SampleTriangleDebugRender.cpp" />
+      <File RelativePath="..\..\src\targa.cpp" />
+    </Filter>
+  </Files>
+  <Globals></Globals>
+</VisualStudioProject>

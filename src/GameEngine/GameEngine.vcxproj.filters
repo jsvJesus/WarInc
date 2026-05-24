@@ -1,0 +1,509 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="fmod">
+      <UniqueIdentifier>{c6fb6539-5ae1-46ce-adb2-3575d14cc1fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gameobjects">
+      <UniqueIdentifier>{ce7c4f72-9a9e-49b5-a9af-a34155b3cd27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TrueNature">
+      <UniqueIdentifier>{230d596b-30cf-42fe-87e5-9b963fd9d829}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TrueNature\CloudPlane">
+      <UniqueIdentifier>{6fac87fc-964e-473f-859d-3923b869847f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RecastAndDetour">
+      <UniqueIdentifier>{8a664468-218d-4f3b-84d9-de9109da7b0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scaleform">
+      <UniqueIdentifier>{61bce70b-e2e7-4792-b303-aac22f6e3556}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PhysX">
+      <UniqueIdentifier>{592abdea-e027-4368-b009-5f5cccf329c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PhysX\nxCharacter">
+      <UniqueIdentifier>{4e8e04b7-219f-4b84-906f-e5b31b83f4f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TrueNature2">
+      <UniqueIdentifier>{41b87048-3c0d-48a2-ab8c-fc0946b78fca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ai">
+      <UniqueIdentifier>{efefb1d4-7122-41bb-887d-7b321a2324e5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="fmod\SoundSys.cpp">
+      <Filter>fmod</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\AObject.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\ApexActor.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\ApexFileStream.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\ApexRenderer.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\ApexWorld.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\GameObj.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Apex.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Dummy.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Mesh.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Sprite.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\obj_Vehicle.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\ObjManag.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\PhysObj.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\PhysXRepXHelpers.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\PhysXWorld.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\sceneBox.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\VehicleDescriptor.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="gameobjects\VehicleManager.cpp">
+      <Filter>gameobjects</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\HoffmanScatter.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\ITerrain.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\SkyDome.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\Sun.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\Terrain.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\Terrain_Erosion.cpp">
+      <Filter>TrueNature</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\Cloud.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\CloudGrid.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\CloudPlane.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\SceneParameter.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\Shader.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature\CloudPlane\Shaders.cpp">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DebugDraw.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourAlloc.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourCommon.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourCrowd.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourDebugDraw.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourLocalBoundary.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMesh.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshBuilder.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshQuery.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourNode.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourObstacleAvoidance.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourPathCorridor.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourPathQueue.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourProximityGrid.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourTileCache.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\DetourTileCacheBuilder.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\Recast.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastAlloc.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastArea.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastContour.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastDebugDraw.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastDump.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastFilter.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastLayers.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastMesh.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastMeshDetail.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastRasterization.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\RecastAndDetour\RecastRegion.cpp">
+      <Filter>RecastAndDetour</Filter>
+    </ClCompile>
+    <ClCompile Include="APIScaleformGfx.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HALSetup.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderManager.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp">
+      <Filter>Scaleform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PxFoundation\internal\src\PsAllocator.cpp">
+      <Filter>PhysX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctBoxController.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCapsuleController.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterController.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerCallbacks.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerManager.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctController.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptBox.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptCapsule.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptVolume.cpp">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueNature2\Terrain2.cpp">
+      <Filter>TrueNature2</Filter>
+    </ClCompile>
+    <ClCompile Include="ai\NavigationDebugVisualizer.cpp">
+      <Filter>ai</Filter>
+    </ClCompile>
+    <ClCompile Include="ai\NavMesh.cpp">
+      <Filter>ai</Filter>
+    </ClCompile>
+    <ClCompile Include="ai\NavMeshActor.cpp">
+      <Filter>ai</Filter>
+    </ClCompile>
+    <ClCompile Include="CamouflageDataManager.cpp" />
+    <ClCompile Include="DebugHelpers.cpp" />
+    <ClCompile Include="r3dPCH.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="fmod\SoundSys.h">
+      <Filter>fmod</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\AObject.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ApexActor.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ApexCommon.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ApexFileStream.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ApexRenderer.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ApexWorld.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\CollFunc.hpp">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\CollMain.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\CollMain.hpp">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\EventTransport.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\GameObj.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\obj_Apex.hpp">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\obj_Dummy.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\obj_Mesh.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\obj_Sprite.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\obj_Vehicle.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ObjectRegistration.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\ObjManag.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\PhysObj.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\PhysXRepXHelpers.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\PhysXWorld.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\sceneBox.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\VehicleDescriptor.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="gameobjects\VehicleManager.h">
+      <Filter>gameobjects</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\cubemap.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\HeightNormalVert.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\HoffmanScatter.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\ITerrain.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\SkyDome.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\Sun.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\Terrain.h">
+      <Filter>TrueNature</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\Cloud.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\CloudGrid.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\CloudPlane.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\SceneParameter.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\Shader.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature\CloudPlane\Shaders.h">
+      <Filter>TrueNature\CloudPlane</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DebugDraw.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourAlloc.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourAssert.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourCommon.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourCrowd.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourDebugDraw.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourLocalBoundary.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMesh.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMeshBuilder.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourNavMeshQuery.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourNode.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourObstacleAvoidance.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourPathCorridor.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourPathQueue.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourProximityGrid.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourStatus.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourTileCache.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\DetourTileCacheBuilder.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\Recast.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\RecastAlloc.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\RecastAssert.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\RecastDebugDraw.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\RecastAndDetour\RecastDump.h">
+      <Filter>RecastAndDetour</Filter>
+    </ClInclude>
+    <ClInclude Include="APIScaleformGfx.h">
+      <Filter>Scaleform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctBoxController.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCapsuleController.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterController.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerManager.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctController.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptBox.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptCapsule.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptVolume.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="..\External\PhysX\PhysXCharacterKinematic\src\CctUtils.h">
+      <Filter>PhysX\nxCharacter</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueNature2\Terrain2.h">
+      <Filter>TrueNature2</Filter>
+    </ClInclude>
+    <ClInclude Include="ai\NavigationDebugVisualizer.h">
+      <Filter>ai</Filter>
+    </ClInclude>
+    <ClInclude Include="ai\NavMesh.h">
+      <Filter>ai</Filter>
+    </ClInclude>
+    <ClInclude Include="ai\NavMeshActor.h">
+      <Filter>ai</Filter>
+    </ClInclude>
+    <ClInclude Include="CamouflageDataManager.h" />
+    <ClInclude Include="DebugHelpers.h" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,507 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{EECC71E8-2419-4049-883E-BC74F437BC6E}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>WOAdmin</RootNamespace>
+    <AssemblyName>WOAdmin</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddItemToUser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddItemToUser.Designer.cs">
+      <DependentUpon>AddItemToUser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SQL\DBClanEvent.cs" />
+    <Compile Include="ViewClans\EditClanEvents.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewClans\EditClanEvents.Designer.cs">
+      <DependentUpon>EditClanEvents.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewClans\EditClanMembers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewClans\EditClanMembers.Designer.cs">
+      <DependentUpon>EditClanMembers.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewClans\FormEditClan.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewClans\FormEditClan.Designer.cs">
+      <DependentUpon>FormEditClan.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewClans\ViewClans.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewClans\ViewClans.Designer.cs">
+      <DependentUpon>ViewClans.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditItemUpgradeData.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditItemUpgradeData.Designer.cs">
+      <DependentUpon>EditItemUpgradeData.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditLootDrop.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditLootDrop.Designer.cs">
+      <DependentUpon>EditLootDrop.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditUserItems.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditUserItems.Designer.cs">
+      <DependentUpon>EditUserItems.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SQL\WOClans.cs" />
+    <Compile Include="SQL\DBClanData.cs" />
+    <Compile Include="SQL\WOAttachments.cs" />
+    <Compile Include="SQL\DBAttachment.cs" />
+    <Compile Include="SQL\DBItemUpgradeData.cs" />
+    <Compile Include="SQL\DBStats.cs" />
+    <Compile Include="SQL\DBWOAdminChange.cs" />
+    <Compile Include="SQL\DBLootEntry.cs" />
+    <Compile Include="SQL\DBInventory.cs" />
+    <Compile Include="SQL\WOPackages.cs" />
+    <Compile Include="SQL\DBPackage.cs" />
+    <Compile Include="SQL\DBAccountInfo.cs" />
+    <Compile Include="ViewItems\FormEditUsableItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditUsableItem.Designer.cs">
+      <DependentUpon>FormEditUsableItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormAddPackage.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormAddPackage.Designer.cs">
+      <DependentUpon>FormAddPackage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormAddAttachment.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormAddAttachment.Designer.cs">
+      <DependentUpon>FormAddAttachment.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormEditAttachment.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditAttachment.Designer.cs">
+      <DependentUpon>FormEditAttachment.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormEditPackage.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditPackage.Designer.cs">
+      <DependentUpon>FormEditPackage.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewSecurityLog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewSecurityLog.Designer.cs">
+      <DependentUpon>ViewSecurityLog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditFields\EditField_DateTime.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="SerialKeyGenerator.cs" />
+    <Compile Include="SQL\DBSecurityLog.cs" />
+    <Compile Include="SQL\DBCommonItem.cs" />
+    <Compile Include="SQL\WOItems.cs" />
+    <Compile Include="SQL\DBItem.cs" />
+    <Compile Include="UI\GSButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\GSButton.designer.cs">
+      <DependentUpon>GSButton.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SQL\DBCoupon.cs" />
+    <Compile Include="SQL\WOCoupons.cs" />
+    <Compile Include="SQL\WOUsers.cs" />
+    <Compile Include="SQL\WOGears.cs" />
+    <Compile Include="SQL\UIDBListView.cs" />
+    <Compile Include="SQL\WOWeapons.cs" />
+    <Compile Include="SQL\DBTransaction.cs" />
+    <Compile Include="ViewItems\FormAddItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormAddItem.Designer.cs">
+      <DependentUpon>FormAddItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormEditItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditItem.Designer.cs">
+      <DependentUpon>FormEditItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormAddGear.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormAddGear.Designer.cs">
+      <DependentUpon>FormAddGear.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormAddWeapon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormAddWeapon.Designer.cs">
+      <DependentUpon>FormAddWeapon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewServers\FormViewServerInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewServers\FormViewServerInfo.Designer.cs">
+      <DependentUpon>FormViewServerInfo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewServers\GameServerInfo.cs" />
+    <Compile Include="ViewTransactions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewTransactions.Designer.cs">
+      <DependentUpon>ViewTransactions.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EditFields\IEditField.cs">
+    </Compile>
+    <Compile Include="EditFields\EditField_Int.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="EditFields\EditField_Text.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="EditFields\EditField_Combo.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="EditFields\EditField_Float.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="EditFields\EditRecord.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditFields\EditRecord.Designer.cs">
+      <DependentUpon>EditRecord.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItemMall\FormEditSKU.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItemMall\FormEditSKU.designer.cs">
+      <DependentUpon>FormEditSKU.cs</DependentUpon>
+    </Compile>
+    <Compile Include="EnterPassword.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EnterPassword.designer.cs">
+      <DependentUpon>EnterPassword.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormProcess.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormProcess.Designer.cs">
+      <DependentUpon>FormProcess.cs</DependentUpon>
+    </Compile>
+    <Compile Include="IAdminView.cs" />
+    <Compile Include="ListViewColumnSorter.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AddItemToUser.resx">
+      <DependentUpon>AddItemToUser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewClans\EditClanEvents.resx">
+      <DependentUpon>EditClanEvents.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewClans\EditClanMembers.resx">
+      <DependentUpon>EditClanMembers.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewClans\FormEditClan.resx">
+      <DependentUpon>FormEditClan.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewClans\ViewClans.resx">
+      <DependentUpon>ViewClans.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditItemUpgradeData.resx">
+      <DependentUpon>EditItemUpgradeData.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditLootDrop.resx">
+      <DependentUpon>EditLootDrop.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditUserItems.resx">
+      <DependentUpon>EditUserItems.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditUsableItem.resx">
+      <DependentUpon>FormEditUsableItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormAddPackage.resx">
+      <DependentUpon>FormAddPackage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormAddAttachment.resx">
+      <DependentUpon>FormAddAttachment.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditAttachment.resx">
+      <DependentUpon>FormEditAttachment.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditPackage.resx">
+      <DependentUpon>FormEditPackage.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewSecurityLog.resx">
+      <DependentUpon>ViewSecurityLog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\GSButton.resx">
+      <DependentUpon>GSButton.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormAddItem.resx">
+      <DependentUpon>FormAddItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditItem.resx">
+      <DependentUpon>FormEditItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormAddGear.resx">
+      <DependentUpon>FormAddGear.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormAddWeapon.resx">
+      <DependentUpon>FormAddWeapon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewServers\FormViewServerInfo.resx">
+      <DependentUpon>FormViewServerInfo.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewTransactions.resx">
+      <DependentUpon>ViewTransactions.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditFields\EditRecord.resx">
+      <DependentUpon>EditRecord.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItemMall\FormEditSKU.resx">
+      <DependentUpon>FormEditSKU.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EnterPassword.resx">
+      <DependentUpon>EnterPassword.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormProcess.resx">
+      <DependentUpon>FormProcess.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditGear.resx">
+      <DependentUpon>FormEditGear.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\FormEditWeapon.resx">
+      <DependentUpon>FormEditWeapon.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewItems\ViewItems.resx">
+      <DependentUpon>ViewItems.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewUsers\FormAddUser.resx">
+      <DependentUpon>FormAddUser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewHome.resx">
+      <DependentUpon>ViewHome.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewUsers\FormEditUser.resx">
+      <DependentUpon>FormEditUser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewUsers\ViewUsers.resx">
+      <DependentUpon>ViewUsers.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ViewServers\ViewServers.resx">
+      <DependentUpon>ViewServers.cs</DependentUpon>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="SQL\DBUser.cs" />
+    <Compile Include="SQL\DBGear.cs" />
+    <Compile Include="SQL\DBWeapon.cs" />
+    <Compile Include="SQL\SQLBase.cs" />
+    <Compile Include="SQL\SQLRec.cs" />
+    <Compile Include="ViewItems\FormEditGear.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditGear.Designer.cs">
+      <DependentUpon>FormEditGear.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\FormEditWeapon.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\FormEditWeapon.Designer.cs">
+      <DependentUpon>FormEditWeapon.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewUsers\FormAddUser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewUsers\FormAddUser.Designer.cs">
+      <DependentUpon>FormAddUser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewHome.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewHome.Designer.cs">
+      <DependentUpon>ViewHome.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewItems\ViewItems.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewItems\ViewItems.Designer.cs">
+      <DependentUpon>ViewItems.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewServers\ViewServers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewServers\ViewServers.Designer.cs">
+      <DependentUpon>ViewServers.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewUsers\FormEditUser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewUsers\FormEditUser.Designer.cs">
+      <DependentUpon>FormEditUser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ViewUsers\ViewUsers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ViewUsers\ViewUsers.Designer.cs">
+      <DependentUpon>ViewUsers.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="UI\gfx\ADCouponsNormal.png" />
+    <Content Include="UI\gfx\ADCouponsOver.png" />
+    <Content Include="UI\gfx\ADCouponsUp.png" />
+    <Content Include="UI\gfx\ADExitNormal.png" />
+    <Content Include="UI\gfx\ADExitOver.png" />
+    <Content Include="UI\gfx\ADExitUp.png" />
+    <Content Include="UI\gfx\ADHomeNormal.png" />
+    <Content Include="UI\gfx\ADHomeOver.png" />
+    <Content Include="UI\gfx\ADHomeUp.png" />
+    <Content Include="UI\gfx\ADItemsNormal.png" />
+    <Content Include="UI\gfx\ADItemsOver.png" />
+    <Content Include="UI\gfx\ADItemsUp.png" />
+    <Content Include="UI\gfx\ADMallNormal.png" />
+    <Content Include="UI\gfx\ADMallOver.png" />
+    <Content Include="UI\gfx\ADMallUp.png" />
+    <Content Include="UI\gfx\AdminDashBoardBackground.png" />
+    <Content Include="UI\gfx\AdminDashBoardLogo.png" />
+    <Content Include="UI\gfx\ADPartnersNormal.png" />
+    <Content Include="UI\gfx\ADPartnersOver.png" />
+    <Content Include="UI\gfx\ADPartnersUp.png" />
+    <Content Include="UI\gfx\ADServersNormal.png" />
+    <Content Include="UI\gfx\ADServersOver.png" />
+    <Content Include="UI\gfx\ADServersUp.png" />
+    <Content Include="UI\gfx\ADTransactionsNormal.png" />
+    <Content Include="UI\gfx\ADTransactionsOver.png" />
+    <Content Include="UI\gfx\ADTransactionsUp.png" />
+    <Content Include="UI\gfx\ADUsersNormal.png" />
+    <Content Include="UI\gfx\ADUsersOver.png" />
+    <Content Include="UI\gfx\ADUsersUp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PostBuildEvent>copy $(TargetPath) $(SolutionDir)..\..\bin</PostBuildEvent>
+  </PropertyGroup>
+</Project>

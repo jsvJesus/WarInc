@@ -1,0 +1,115 @@
+# =========================
+# Rider / JetBrains
+# =========================
+.idea/
+*.sln.iml
+
+# =========================
+# Visual Studio / MSVC
+# =========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =========================
+# CMake / build folders
+# =========================
+build/
+Build/
+builds/
+Builds/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# =========================
+# Binary output folders
+# =========================
+bin/
+Bin/
+obj/
+Obj/
+x64/
+x86/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+
+# =========================
+# Executables / libraries / debug files
+# =========================
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.obj
+*.o
+*.a
+*.so
+*.dylib
+
+# =========================
+# WarInc / WarZ / game asset formats
+# =========================
+*.sco
+*.wgt
+*.wgts
+*.scb
+*.anm
+*.mat
+*.dds
+
+# =========================
+# Scripts you do NOT want in repo
+# ВАЖНО: если build.bat нужен для сборки проекта — убери эту строку
+# =========================
+*.bat
+
+# =========================
+# Logs / temp / cache
+# =========================
+*.log
+*.tmp
+*.temp
+*.cache
+*.bak
+*.old
+*.orig
+
+# =========================
+# Windows junk
+# =========================
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Archives / packages
+# =========================
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# =========================
+# Large media / raw assets
+# =========================
+*.psd
+*.blend
+*.fbx
+*.max
+*.mb
+*.ma
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mov
