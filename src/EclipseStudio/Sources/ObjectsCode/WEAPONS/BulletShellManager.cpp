@@ -75,19 +75,42 @@ BulletShellMngr::BulletShellMngr()
 {
 	m_numActiveShells = 0;
 
-	m_shellMeshes[0] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Pistol.sco", true, false, false, true); r3d_assert(m_shellMeshes[0]);
-	m_shellMeshes[1] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Rifle.sco", true, false, false, true); r3d_assert(m_shellMeshes[1]);
-	m_shellMeshes[2] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Shotgun.sco", true, false, false, true); r3d_assert(m_shellMeshes[2]);
+	m_shellMeshes[0] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Pistol.sco", true, false, false, true);
+	m_shellMeshes[1] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Rifle.sco", true, false, false, true);
+	m_shellMeshes[2] = r3dGOBAddMesh("Data/ObjectsDepot/Weapons/Shell_Shotgun.sco", true, false, false, true);
 
-	m_shellPhysConfigs[0] = GameObject::LoadPhysicsConfig(m_shellMeshes[0]); r3d_assert(m_shellPhysConfigs[0].ready);
-	m_shellPhysConfigs[1] = GameObject::LoadPhysicsConfig(m_shellMeshes[1]); r3d_assert(m_shellPhysConfigs[1].ready);
-	m_shellPhysConfigs[2] = GameObject::LoadPhysicsConfig(m_shellMeshes[2]); r3d_assert(m_shellPhysConfigs[2].ready);
-	m_shellPhysConfigs[0].group = PHYSCOLL_TINY_GEOMETRY;
-	m_shellPhysConfigs[1].group = PHYSCOLL_TINY_GEOMETRY;
-	m_shellPhysConfigs[2].group = PHYSCOLL_TINY_GEOMETRY;
+	r3d_assert(m_shellMeshes[0]);
+	r3d_assert(m_shellMeshes[1]);
+	r3d_assert(m_shellMeshes[2]);
 
-	m_shellPhysConfigs[0].isFastMoving = m_shellPhysConfigs[1].isFastMoving = m_shellPhysConfigs[2].isFastMoving = true;
-};
+	for(int i = 0; i < 3; ++i)
+	{
+		m_shellPhysConfigs[i] = GameObject::LoadPhysicsConfig(m_shellMeshes[i]);
+
+		if(!m_shellPhysConfigs[i].ready)
+		{
+			m_shellPhysConfigs[i].group = PHYSCOLL_TINY_GEOMETRY;
+			m_shellPhysConfigs[i].type = PHYSICS_TYPE_BOX;
+			m_shellPhysConfigs[i].mass = 0.02f;
+			m_shellPhysConfigs[i].offset = r3dPoint3D(0, 0, 0);
+			m_shellPhysConfigs[i].isDynamic = true;
+			m_shellPhysConfigs[i].isKinematic = false;
+			m_shellPhysConfigs[i].isTrigger = false;
+			m_shellPhysConfigs[i].needBoxCollision = false;
+			m_shellPhysConfigs[i].needExplicitCollisionMesh = false;
+			m_shellPhysConfigs[i].ready = true;
+
+			r3dOutToLog("BulletShellMngr: missing .phx for shell mesh %s, using default BOX physics\n", m_shellMeshes[i]->FileName.c_str());
+		}
+
+		m_shellPhysConfigs[i].group = PHYSCOLL_TINY_GEOMETRY;
+		m_shellPhysConfigs[i].isFastMoving = true;
+	}
+
+	m_shellPhysConfigs[0].mass = 0.01f;
+	m_shellPhysConfigs[1].mass = 0.015f;
+	m_shellPhysConfigs[2].mass = 0.03f;
+}
 
 BulletShellMngr::~BulletShellMngr()
 {

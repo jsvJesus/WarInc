@@ -42,22 +42,7 @@ WeaponArmory::WeaponArmory()
 
 WeaponArmory::~WeaponArmory()
 {
-	r3d_assert(m_WeaponArray[0]==NULL);
-	r3d_assert(m_NumWeaponsLoaded==0);
-	r3d_assert(m_WeaponAttmArray[0]==NULL);
-	r3d_assert(m_NumWeaponAttmLoaded==0);
-	r3d_assert(m_GearArray[0]==NULL);
-	r3d_assert(m_NumGearLoaded==0);
-	r3d_assert(m_AmmoArray[0]==NULL);
-	r3d_assert(m_NumAmmoLoaded==0);
-	r3d_assert(m_ItemArray[0]==NULL);
-	r3d_assert(m_NumItemLoaded==0);
-	r3d_assert(m_PackageArray[0]==NULL);
-	r3d_assert(m_NumPackageLoaded==0);
-	r3d_assert(m_ScopeArray[0]==NULL);
-	r3d_assert(m_NumScopeLoaded==0);
-	r3d_assert(m_AchievementArray[0]==NULL);
-	r3d_assert(m_NumAchievementLoaded==0);
+	Destroy();
 }
 
 bool WeaponArmory::Init()

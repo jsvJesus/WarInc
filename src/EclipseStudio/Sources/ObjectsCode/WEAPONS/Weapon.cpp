@@ -96,42 +96,91 @@ int ItemConfig::getMeshRefs() const
 
 //------------------------------------------------------------------------
 
-r3dMesh* WeaponConfig::getMesh( bool allow_async_loading, bool first_person ) const
+r3dMesh* WeaponConfig::getMesh(bool allow_async_loading, bool first_person) const
 {
 	extern bool g_bEditMode;
-	if(!g_bEditMode) // do not check this in editor to allow artists to test models without changing DB
+
+	if(!g_bEditMode)
+	{
 		if(!IsFPS)
 			first_person = false;
+	}
 
-	if( first_person )
+	if(first_person)
 	{
 		if(m_Model_FPS == 0)
 		{
+			char fpsModelPathLower[512];
+			char fpsModelPathUpper[512];
 
-#ifndef FINAL_BUILD
-			if(g_bEditMode && !r3dFileExists(m_ModelPath_1st))
+			r3dscpy(fpsModelPathLower, m_ModelPath);
+			int lenLower = strlen(fpsModelPathLower);
+			r3dscpy(&fpsModelPathLower[lenLower - 4], "_fps.sco");
+
+			r3dscpy(fpsModelPathUpper, m_ModelPath);
+			int lenUpper = strlen(fpsModelPathUpper);
+			r3dscpy(&fpsModelPathUpper[lenUpper - 4], "_FPS.sco");
+
+			const char* fpsModelPath = NULL;
+
+			if(r3dFileExists(m_ModelPath_1st))
+				fpsModelPath = m_ModelPath_1st;
+			else if(r3dFileExists(fpsModelPathLower))
+				fpsModelPath = fpsModelPathLower;
+			else if(r3dFileExists(fpsModelPathUpper))
+				fpsModelPath = fpsModelPathUpper;
+
+			if(fpsModelPath)
 			{
-				char buf[128];
-				sprintf(buf, "FPS model isn't available for %s", FNAME);
-				MessageBox(NULL, buf, "Warning", MB_OK);
-				m_Model_FPS = m_Model;
-			}
-			else
-#endif
-			{
-				m_Model_FPS = r3dGOBAddMesh(m_ModelPath_1st, true, false, allow_async_loading, true );
-				if(m_Model_FPS==0)
+				m_Model_FPS = r3dGOBAddMesh(fpsModelPath, true, false, allow_async_loading, true);
+				if(m_Model_FPS == 0)
 				{
-					r3dError("ART: failed to load mesh '%s'\n", m_ModelPath_1st);
+					r3dError("ART: failed to load FPS weapon mesh '%s'\n", fpsModelPath);
 				}
 				r3d_assert(m_Model_FPS);
+			}
+			else
+			{
+#ifndef FINAL_BUILD
+				if(g_bEditMode)
+				{
+					char buf[256];
+					sprintf(buf, "FPS model isn't available for %s\nExpected: %s", FNAME ? FNAME : "UNKNOWN", m_ModelPath_1st ? m_ModelPath_1st : "");
+					MessageBox(NULL, buf, "Weapon FPS model missing", MB_OK);
+				}
+#endif
+
+				r3dOutToLog("WeaponConfig::getMesh: missing FPS model for %s. TPS='%s' FPS='%s'\n",
+					FNAME ? FNAME : "UNKNOWN",
+					m_ModelPath ? m_ModelPath : "",
+					m_ModelPath_1st ? m_ModelPath_1st : "");
+
+				if(m_Model == 0)
+				{
+					m_Model = r3dGOBAddMesh(m_ModelPath, true, false, allow_async_loading, true);
+					if(m_Model == 0)
+					{
+						r3dError("ART: failed to load mesh '%s'\n", m_ModelPath);
+					}
+					r3d_assert(m_Model);
+				}
+
+				m_Model_FPS = m_Model;
 			}
 		}
 
 		return m_Model_FPS;
 	}
 
-	r3d_assert( m_Model ) ;
+	if(m_Model == 0)
+	{
+		m_Model = r3dGOBAddMesh(m_ModelPath, true, false, allow_async_loading, true);
+		if(m_Model == 0)
+		{
+			r3dError("ART: failed to load mesh '%s'\n", m_ModelPath);
+		}
+		r3d_assert(m_Model);
+	}
 
 	return m_Model;
 }
@@ -410,8 +459,20 @@ void Weapon::checkForSkeleton()
 	{
 		m_pConfig->m_Model_FPS_Skeleton = new r3dSkeleton();
 		char tmpStr[512];
-		r3dscpy(tmpStr, m_pConfig->m_ModelPath);
-		r3dscpy(&tmpStr[strlen(tmpStr)-4], "_FPS.skl");
+		char tmpStrLower[512];
+		char tmpStrUpper[512];
+
+		r3dscpy(tmpStrLower, m_pConfig->m_ModelPath);
+		r3dscpy(&tmpStrLower[strlen(tmpStrLower) - 4], "_fps.skl");
+
+		r3dscpy(tmpStrUpper, m_pConfig->m_ModelPath);
+		r3dscpy(&tmpStrUpper[strlen(tmpStrUpper) - 4], "_FPS.skl");
+
+		if(r3dFileExists(tmpStrLower))
+			r3dscpy(tmpStr, tmpStrLower);
+		else
+			r3dscpy(tmpStr, tmpStrUpper);
+
 		m_pConfig->m_Model_FPS_Skeleton->LoadBinary(tmpStr);
 
 		m_pConfig->m_AnimPool_FPS = new r3dAnimPool();

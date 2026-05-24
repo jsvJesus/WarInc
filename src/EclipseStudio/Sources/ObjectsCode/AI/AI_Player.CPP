@@ -295,7 +295,20 @@ DECLARE_CMD(cw)
 
 	// equip new player weapon
 	SAFE_DELETE(plr->m_Weapons[0]);
-	plr->m_Weapons[0] = gWeaponArmory.createWeapon(weapId, plr, false, false);
+	{
+		const bool isFirstPerson = g_camera_mode->GetInt() == 2 && plr->NetworkLocal;
+
+		if(plr->uberEquip_)
+			plr->uberEquip_->isFirstPerson = isFirstPerson;
+
+		plr->m_Weapons[0] = gWeaponArmory.createWeapon(weapId, plr, isFirstPerson, false);
+
+		if(isFirstPerson && plr->m_Weapons[0])
+		{
+			plr->m_Weapons[0]->getModel(true, true);
+			plr->m_Weapons[0]->checkForSkeleton();
+		}
+	}
 	plr->m_SelectedWeapon = -1;
 	plr->ChangeWeaponByIndex(0);
 	plr->SyncAnimation(true);
@@ -388,6 +401,15 @@ void obj_AI_Player::UpdateLoadoutSlot(const wiLoadoutSlot& slot, const wiWeaponA
 		SAFE_DELETE(m_Weapons[i]);
 
 	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
+
+	if(uberEquip_)
+		uberEquip_->isFirstPerson = isFirstPerson;
+
+	if(isFirstPerson && m_SelectedWeapon >= 0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER && m_Weapons[m_SelectedWeapon])
+	{
+		m_Weapons[m_SelectedWeapon]->getModel(true, true);
+		m_Weapons[m_SelectedWeapon]->checkForSkeleton();
+	}
 
 	uberEquip_->isFirstPerson = isFirstPerson;
 
@@ -6240,6 +6262,17 @@ obj_AI_Player::AppendShadowRenderables( RenderArray & rarr, const r3dCamera& Cam
 #endif
 
 	int firstPerson = g_camera_mode->GetInt() == 2 && NetworkLocal && !bDead && !uavViewActive_;
+
+	if(uberEquip_)
+	{
+		uberEquip_->isFirstPerson = firstPerson ? true : false;
+
+		if(firstPerson && m_SelectedWeapon >= 0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER && m_Weapons[m_SelectedWeapon])
+		{
+			m_Weapons[m_SelectedWeapon]->getModel(true, true);
+			m_Weapons[m_SelectedWeapon]->checkForSkeleton();
+		}
+	}
 
 	if(firstPerson) // do not render our own shadow in FPS mode (same as in BF3)
 		return;

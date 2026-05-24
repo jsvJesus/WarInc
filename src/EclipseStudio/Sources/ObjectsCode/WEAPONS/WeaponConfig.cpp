@@ -51,9 +51,9 @@ bool WeaponConfig::loadBaseFromXml(pugi::xml_node& xmlWeapon)
 	m_ModelPath = strdup(xmlWeapon.child("Model").attribute("file").value());
 	{
 		int len = strlen(m_ModelPath);
-		m_ModelPath_1st = (char*)malloc(sizeof(char)*(len+32));
+		m_ModelPath_1st = (char*)malloc(sizeof(char) * (len + 32));
 		r3dscpy(m_ModelPath_1st, m_ModelPath);
-		r3dscpy(&m_ModelPath_1st[len-4], "_FPS.sco");
+		r3dscpy(&m_ModelPath_1st[len - 4], "_fps.sco");
 	}
 
 	m_AnimPrefix = strdup(xmlWeapon.child("Model").attribute("AnimPrefix").value());

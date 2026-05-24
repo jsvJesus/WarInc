@@ -13,6 +13,7 @@
 #include "ObjectsCode/AI/AI_PlayerAnim.h"
 #include "ObjectsCode/Gameplay/BaseControlPoint.h"
 #include "ObjectsCode/weapons/WeaponArmory.h"
+#include "ObjectsCode/weapons/Weapon.h"
 #include "ObjectsCode/Gameplay/obj_UAV.h"
 
 #include "APIScaleformGfx.h"
@@ -1576,6 +1577,82 @@ bool SetCameraPlayerVehicle(const obj_AI_Player* pl, r3dCamera &Cam)
 
 }
 
+static int g_LastTPSCameraMode = 1;
+
+static bool ToggleTPSFPSCamera(obj_AI_Player* pl)
+{
+	if(!pl)
+		return false;
+
+	if(!pl->NetworkLocal)
+		return false;
+
+	if(pl->bDead)
+		return false;
+
+	if(pl->uavViewActive_ || pl->laserViewActive_)
+		return false;
+
+	if(Mouse->GetMouseVisibility())
+		return false;
+
+	if(hudMain && hudMain->isChatVisible())
+		return false;
+
+	if(hudPause && hudPause->isActive())
+		return false;
+
+	if(hudCommCalls && hudCommCalls->isCommRoseVisible())
+		return false;
+
+	if(!Keyboard->WasPressed(kbsC))
+		return false;
+
+	const int oldCameraMode = g_camera_mode->GetInt();
+	int newCameraMode = 2;
+
+	if(oldCameraMode == 2)
+	{
+		newCameraMode = g_LastTPSCameraMode;
+	}
+	else
+	{
+		if(oldCameraMode == 0 || oldCameraMode == 1)
+			g_LastTPSCameraMode = oldCameraMode;
+
+		newCameraMode = 2;
+	}
+
+	g_camera_mode->SetInt(newCameraMode);
+
+	const bool isFirstPerson = newCameraMode == 2;
+
+	if(pl->uberEquip_)
+		pl->uberEquip_->isFirstPerson = isFirstPerson;
+
+	if(pl->m_SelectedWeapon >= 0 && pl->m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER)
+	{
+		Weapon* wpn = pl->m_Weapons[pl->m_SelectedWeapon];
+		if(wpn)
+		{
+			wpn->getModel(true, isFirstPerson);
+
+			if(isFirstPerson)
+				wpn->checkForSkeleton();
+		}
+	}
+
+	pl->UpdateCharWeaponMeshes();
+	pl->SyncAnimation(true);
+
+	if(hudMain)
+		hudMain->updateReticlePosition();
+
+	r3dOutToLog("Camera mode switched: %s\n", isFirstPerson ? "FPS" : "TPS");
+
+	return true;
+}
+
 void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 {
 	r3d_assert(pl->NetworkLocal);
@@ -1605,11 +1682,16 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 	if(pl->bDead)
 		return;
 
-	if(pl->m_siegeArmingTimer>0)
+	if(pl->m_siegeArmingTimer > 0)
 		disablePlayerMovement = true;
 
 	if(hudLaserDesignator && hudLaserDesignator->disablePlayerMovement())
 		disablePlayerMovement = true;
+
+	bool cameraModeWasToggled = false;
+
+	if(!disablePlayerMovement)
+		cameraModeWasToggled = ToggleTPSFPSCamera(pl);
 
 	const Weapon* wpn = pl->m_Weapons[pl->m_SelectedWeapon];
 
@@ -1739,7 +1821,12 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		force_crouch = g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, filter);
 	}
 	bool crouching = pl->bCrouch;
-	if(pl->bOnGround)
+
+	if(cameraModeWasToggled)
+	{
+		crouching = pl->bCrouch;
+	}
+	else if(pl->bOnGround)
 	{
 		if(g_toggle_crouch->GetBool())
 		{
@@ -1747,10 +1834,14 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 				crouching = !crouching;
 		}
 		else
+		{
 			crouching = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_CROUCH) || Gamepad->IsPressed(gpB);
+		}
 	}
 	else
+	{
 		crouching = false;
+	}
 
 	if(disablePlayerMovement)
 		crouching = false;

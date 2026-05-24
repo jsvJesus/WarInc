@@ -720,20 +720,25 @@ void CUberEquip::DrawSlot(ESlot slotId, const D3DXMATRIX& world, DrawType dt, bo
 {
 	if(slotId == SLOT_WeaponSide)
 		return;
+
 	if(draw_firstperson)
 	{
 		if(slotId == SLOT_Armor || slotId == SLOT_Head1 || slotId == SLOT_Head2 || slotId == SLOT_Head3)
 			return;
 	}
 
+	const bool useFirstPersonModel = draw_firstperson ? true : false;
+
 	r3dMesh* mesh = NULL;
+
 	if(slots_[slotId].gear)
-		mesh = slots_[slotId].gear->getModel(isFirstPerson&&draw_firstperson);
+		mesh = slots_[slotId].gear->getModel(useFirstPersonModel);
 	else if(slots_[slotId].wpn)
-		mesh = slots_[slotId].wpn->getModel(true, isFirstPerson&&draw_firstperson);
+		mesh = slots_[slotId].wpn->getModel(true, useFirstPersonModel);
 
 	if(mesh == NULL)
 		return;
+
 	if(!mesh->IsDrawable())
 		return;
 
@@ -742,9 +747,10 @@ void CUberEquip::DrawSlot(ESlot slotId, const D3DXMATRIX& world, DrawType dt, bo
 	if(slots_[slotId].wpn && wpnSkeleton)
 	{
 		Weapon* wpn = slots_[slotId].wpn;
-		for(int i=0; i<WPN_ATTM_MAX; ++i)
+
+		for(int i = 0; i < WPN_ATTM_MAX; ++i)
 		{
-			mesh = wpn->getWeaponAttachmentMesh((WeaponAttachmentTypeEnum)i, player->m_isAiming && (i==WPN_ATTM_UPPER_RAIL));
+			mesh = wpn->getWeaponAttachmentMesh((WeaponAttachmentTypeEnum)i, player->m_isAiming && (i == WPN_ATTM_UPPER_RAIL));
 			if(mesh)
 			{
 				D3DXMATRIX attmWorld;

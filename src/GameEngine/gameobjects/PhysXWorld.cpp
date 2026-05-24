@@ -374,7 +374,7 @@ void PhysXWorld::Init()
 	tolerancesScale.mass = 1000.0f;
 	tolerancesScale.speed = 10.0f;
 
-	Foundation = PxCreateFoundation(PX_PHYSICS_VERSION, myPhysXAllocator, myErrorCallback);
+	Foundation = PxCreateFoundation(PX_FOUNDATION_VERSION, myPhysXAllocator, myErrorCallback);
 	if (!Foundation)
 	{
 		r3dError("PhysX: Failed to create foundation");
