@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -31,7 +31,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -78,7 +78,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>Win32</TargetEnvironment>
@@ -92,8 +92,8 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -109,14 +109,14 @@
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/PhysX/lib/Win32;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +131,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>Win32</TargetEnvironment>
@@ -141,8 +141,8 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -154,14 +154,14 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX3DEBUG_x86.lib;PhysX3CommonDEBUG_x86.lib;PhysX3CookingDEBUG_x86.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x86.lib;PxPvdSDKDEBUG_x86.lib;PsFastXmlDEBUG_x86.lib;PxTaskDEBUG_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio_d.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Debug_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Debug_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -175,7 +175,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>Win32</TargetEnvironment>
@@ -189,8 +189,8 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -206,14 +206,14 @@
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\WarInc.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

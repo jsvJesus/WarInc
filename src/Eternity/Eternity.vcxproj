@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_NoCrashRpt|Win32">
       <Configuration>Debug_NoCrashRpt</Configuration>
@@ -39,26 +39,26 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Server|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Server|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -72,7 +72,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -153,8 +153,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -181,8 +181,8 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -208,8 +208,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -239,8 +239,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;DISABLE_CRASHRPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;DISABLE_CRASHRPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -267,8 +267,8 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -291,8 +291,8 @@
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT; WO_SERVER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT;WO_SERVER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -318,8 +318,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitFramePointers>true</OmitFramePointers>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;DISABLE_CRASHRPT; WO_SERVER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;DISABLE_CRASHRPT;WO_SERVER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
