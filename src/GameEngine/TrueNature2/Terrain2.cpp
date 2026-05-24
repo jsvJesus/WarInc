@@ -5124,7 +5124,7 @@ r3dTerrain2::PreparePhysXHeightFieldDesc_NoAlloc( PxHeightFieldDesc* hfDesc )
 	hfDesc->nbColumns			= w;
 	hfDesc->nbRows				= h;
 	hfDesc->convexEdgeThreshold	= 0;
-	hfDesc->thickness			= -1000.0f;
+	// PhysX 3.4: thickness is deprecated.
 
 	// allocate storage for samples
 	hfDesc->samples.stride		= sizeof(PxU32);
@@ -5191,7 +5191,10 @@ r3dTerrain2::UpdatePhysHeightField( const Shorts& source )
 		currentByte += m_PhysicsHeightFieldDesc.samples.stride;		
 	}
 
-	m_PhysicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField( m_PhysicsHeightFieldDesc ) ;
+	m_PhysicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		m_PhysicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 
 	FinishPhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc );
 
@@ -5274,7 +5277,10 @@ r3dTerrain2::UpdatePhysHeightField ( const Floats& heightFieldData )
 		}
 	}
 
-	m_PhysicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(m_PhysicsHeightFieldDesc);
+	m_PhysicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		m_PhysicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 
 	FinishPhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc ); 
 

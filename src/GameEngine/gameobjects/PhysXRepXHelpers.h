@@ -1,109 +1,66 @@
-//=========================================================================
-//	Module: PhysXRepXHelpers.h
-//	Copyright (C) 2011.
-//=========================================================================
-
 #pragma once
 
-//////////////////////////////////////////////////////////////////////////
+#include "PxPhysicsAPI.h"
 
-namespace physx
-{
-	namespace repx
-	{
-		class RepXCollection;
-	}
-}
-//////////////////////////////////////////////////////////////////////////
+using namespace physx;
 
-physx::repx::RepXCollection* loadCollection(const char* inPath, PxAllocatorCallback& inCallback);
-
-
-class UserStream : public PxStream
+class UserStream : public PxInputData, public PxOutputStream
 {
 public:
 	UserStream(const char* filename, bool load);
-	virtual                     ~UserStream();
+	virtual ~UserStream();
 
-	virtual     PxU8            readByte()                              const;
-	virtual     PxU16           readWord()                              const;
-	virtual     PxU32           readDword()                             const;
-	virtual     float           readFloat()                             const;
-	virtual     double          readDouble()                            const;
-	virtual     void            readBuffer(void* buffer, PxU32 size)    const;
+	virtual PxU32 read(void* dest, PxU32 count);
+	virtual PxU32 write(const void* src, PxU32 count);
 
-	virtual     PxStream&       storeByte(PxU8 b);
-	virtual     PxStream&       storeWord(PxU16 w);
-	virtual     PxStream&       storeDword(PxU32 d);
-	virtual     PxStream&       storeFloat(PxReal f);
-	virtual     PxStream&       storeDouble(PxF64 f);
-	virtual     PxStream&       storeBuffer(const void* buffer, PxU32 size);
+	virtual PxU32 getLength() const;
+	virtual void seek(PxU32 offset);
+	virtual PxU32 tell() const;
 
-	FILE*       fpw;	// direct writing stream
-	r3dFile*    fpr;	// reading stream can be used from archives
+	FILE* fpw;
+	r3dFile* fpr;
 };
 
-class MemoryWriteBuffer : public PxStream
+class MemoryWriteBuffer : public PxOutputStream
 {
 public:
 	MemoryWriteBuffer();
-	virtual						~MemoryWriteBuffer();
-	void			clear();
+	virtual ~MemoryWriteBuffer();
 
-	virtual		PxU8			readByte()								const;
-	virtual		PxU16			readWord()								const;
-	virtual		PxU32			readDword()								const;
-	virtual		float			readFloat()								const;
-	virtual		double			readDouble()							const;
-	virtual		void			readBuffer(void* buffer, PxU32 size)	const;
+	void clear();
 
-	virtual		PxStream&		storeByte(PxU8 b);
-	virtual		PxStream&		storeWord(PxU16 w);
-	virtual		PxStream&		storeDword(PxU32 d);
-	virtual		PxStream&		storeFloat(PxReal f);
-	virtual		PxStream&		storeDouble(PxF64 f);
-	virtual		PxStream&		storeBuffer(const void* buffer, PxU32 size);
+	virtual PxU32 write(const void* src, PxU32 count);
 
-	PxU32			currentSize;
-	PxU32			maxSize;
-	PxU8*			data;
+	PxU32 currentSize;
+	PxU32 maxSize;
+	PxU8* data;
 };
 
-//////////////////////////////////////////////////////////////////////////
-
-class MemoryReadBuffer : public PxStream
+class MemoryReadBuffer : public PxInputData
 {
 public:
-	MemoryReadBuffer(const PxU8* data);
-	virtual						~MemoryReadBuffer();
+	MemoryReadBuffer(const PxU8* data, PxU32 length);
+	virtual ~MemoryReadBuffer();
 
-	virtual		PxU8			readByte()								const;
-	virtual		PxU16			readWord()								const;
-	virtual		PxU32			readDword()								const;
-	virtual		float			readFloat()								const;
-	virtual		double			readDouble()							const;
-	virtual		void			readBuffer(void* buffer, PxU32 size)	const;
+	virtual PxU32 read(void* dest, PxU32 count);
+	virtual PxU32 getLength() const;
+	virtual void seek(PxU32 offset);
+	virtual PxU32 tell() const;
 
-	virtual		PxStream&		storeByte(PxU8 b);
-	virtual		PxStream&		storeWord(PxU16 w);
-	virtual		PxStream&		storeDword(PxU32 d);
-	virtual		PxStream&		storeFloat(PxReal f);
-	virtual		PxStream&		storeDouble(PxF64 f);
-	virtual		PxStream&		storeBuffer(const void* buffer, PxU32 size);
-
-	mutable		const PxU8*		buffer;
+	const PxU8* buffer;
+	PxU32 size;
+	PxU32 pos;
 };
 
-//////////////////////////////////////////////////////////////////////////
-
-class FileSerialStream: public PxSerialStream
+class FileSerialStream : public PxOutputStream
 {
-	uint32_t writtenBytes;
-	FILE *f;
+	PxU32 writtenBytes;
+	FILE* f;
 
 public:
-	explicit FileSerialStream(const char *fileName);
-	~FileSerialStream();
-	virtual void storeBuffer(const void* buffer, PxU32 size);
-	virtual PxU32 getTotalStoredSize();
+	explicit FileSerialStream(const char* fileName);
+	virtual ~FileSerialStream();
+
+	virtual PxU32 write(const void* src, PxU32 count);
+	PxU32 getTotalStoredSize() const;
 };

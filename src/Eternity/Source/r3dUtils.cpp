@@ -208,7 +208,7 @@ const char * Va( const char * str, ... )
 		_index_string = 0;
 
 	va_start( args, str );
-	vsnprintf( buffer, MAX_VA_STRING, str, args );
+	_vsnprintf_s(buffer, MAX_VA_STRING, _TRUNCATE, str, args);
 	va_end( args );
 
 	return buffer;

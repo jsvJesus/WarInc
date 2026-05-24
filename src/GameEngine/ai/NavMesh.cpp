@@ -392,7 +392,7 @@ bool r3dNavigationMesh::CreateDetourNavData()
 
 //////////////////////////////////////////////////////////////////////////
 
-bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield &hf, PxHeightFieldGeometry &g)
+bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield& hf, const PxHeightFieldGeometry& g)
 {
 	const PxReal rs = g.rowScale;
 	const PxReal hs = g.heightScale;
@@ -457,7 +457,7 @@ bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield &hf, PxHeightFieldG
 
 //////////////////////////////////////////////////////////////////////////
 
-bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield &hf, PxTriangleMeshGeometry &g, const PxTransform &globalPose)
+bool r3dNavigationMesh::SubmitNavmeshTriangles(rcHeightfield& hf, const PxTriangleMeshGeometry& g, const PxTransform& globalPose)
 {
 	PxTriangleMesh *tm = g.triangleMesh;
 

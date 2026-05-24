@@ -71,8 +71,8 @@ private:
 	r3dNavConvexRegionsManager *regionsMgr;
 
 	/**	Submit navmesh triangles form different physics body. */
-	bool SubmitNavmeshTriangles(rcHeightfield &hf, PxHeightFieldGeometry &g);
-	bool SubmitNavmeshTriangles(rcHeightfield &hf, PxTriangleMeshGeometry &g, const PxTransform &globalPose);
+	bool SubmitNavmeshTriangles(rcHeightfield& hf, const PxHeightFieldGeometry& g);
+	bool SubmitNavmeshTriangles(rcHeightfield& hf, const PxTriangleMeshGeometry& g, const PxTransform& globalPose);
 
 	/**	Create detour navigation data. */
 	bool CreateDetourNavData();

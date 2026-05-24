@@ -52,8 +52,11 @@ void CamouflageDataManager::UpdateCamouflageData(const GameObject &o)
 
 	for (int i = 0; i < _countof(dirs); ++i)
 	{
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC));
-		if(g_pPhysicsWorld->raycastSingle(orig, dirs[i], 5.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+		PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC)
+		);
+		if(g_pPhysicsWorld->raycastSingle(orig, dirs[i], 5.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter))
 		{
 			r3dVector hitPos(hit.impact.x, hit.impact.y, hit.impact.z);
 			float dist = (hitPos - pos).LengthSq();

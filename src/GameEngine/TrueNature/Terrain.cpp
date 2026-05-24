@@ -2109,7 +2109,10 @@ r3dTerrain::UpdatePhysHeightField ()
 		}
 	}
 
-	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
+	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		physicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc ); 
 
@@ -2132,66 +2135,6 @@ r3dTerrain::UpdatePhysHeightField ()
 	UpdateHFShape();
 
 	r3d_assert(_CrtCheckMemory());
-
-/*	
-	r3d_assert( physicsHeightField );
-	const Floats& source = HeightFieldData;
-
-	r3d_assert( source.Count() == (int)Width * (int)Height );
-
-	r3d_assert(_CrtCheckMemory());
-	PreparePhysXHeightFieldDesc( physicsHeightFieldDesc );
-	r3d_assert(_CrtCheckMemory());
-
-	char* currentByte = (char*)physicsHeightFieldDesc.samples.data;
-
-	m_fMaxHeight = -FLT_MAX;
-	m_fMinHeight = FLT_MAX;
-
-	for( uint32_t i = 0, e = source.Count(); i < e; i ++ )
-	{
-		m_fMaxHeight = R3D_MAX( source[ i ], m_fMaxHeight );
-		m_fMinHeight = R3D_MIN( source[ i ], m_fMinHeight );
-	}
-
-	r3d_assert(_CrtCheckMemory());
-	SetupHFScale();
-
-	r3d_assert(_CrtCheckMemory());
-	float norm = m_HFScale;
-
-	PxU32	w = (PxU32)Width,
-		h = (PxU32)Height;
-
-	for (PxU32 column = 0; column < w; column++)
-	{
-		for (PxU32 row = 0; row < h; row++)
-		{
-			PxI16 height = (PxI32)( R3D_MIN( source[ row * w + column ] * norm + 0.5f, 32767.f ) );
-
-			PxHeightFieldSample* currentSample = (PxHeightFieldSample*)currentByte;
-			currentSample->height = height;
-			currentSample->materialIndex0 = 1;
-			currentSample->materialIndex1 = 1;
-			currentSample->clearTessFlag();
-			currentByte += physicsHeightFieldDesc.samples.stride;
-		}
-	}
-
-	r3d_assert(_CrtCheckMemory());
-
-	if(physicsHeightField)
-	{
-		physicsHeightField->release();
-		physicsHeightField = NULL;
-	}
-	r3d_assert(_CrtCheckMemory());
-	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
-r3d_assert(_CrtCheckMemory());
-	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
-r3d_assert(_CrtCheckMemory());
-	UpdateHFShape();
-	r3d_assert(_CrtCheckMemory());*/
 }
 
 //------------------------------------------------------------------------
@@ -2324,7 +2267,11 @@ r3dTerrain::UpdatePhysHeightField( PxU32* source )
 		physicsHeightField->release();
 		physicsHeightField = NULL;
 	}
-	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
+	
+	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		physicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
 
@@ -2363,7 +2310,10 @@ void r3dTerrain::CreateDefaultHeightField()
 		currentSample->clearTessFlag();
 	}
 
-	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
+	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		physicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
 }
 
@@ -2435,7 +2385,10 @@ void r3dTerrain::CreatePhysicsData ( const Shorts& source )
 		currentByte += physicsHeightFieldDesc.samples.stride;
 	}
 
-	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
+	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
+		physicsHeightFieldDesc,
+		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
+	);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc ); 
 

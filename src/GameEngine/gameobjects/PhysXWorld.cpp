@@ -30,7 +30,8 @@ PxTriangleMesh *r3dGOBAddPhysicsMesh(const char* fname)
 {
 	if(gPhysics_DisableCacheForEditor)
 	{
-		return g_pPhysicsWorld->PhysXSDK->createTriangleMesh(UserStream(fname, true));
+		UserStream stream(fname, true);
+		return g_pPhysicsWorld->PhysXSDK->createTriangleMesh(stream);
 	}
 
 	for (int i=0;i<gob_NumMeshesInPhysicsFactoryCache;i++)
@@ -45,10 +46,15 @@ PxTriangleMesh *r3dGOBAddPhysicsMesh(const char* fname)
 
 	int i = gob_NumMeshesInPhysicsFactoryCache;
 	gob_PhysicsFactoryCache[i] = new PhysicsMesh;
-	gob_PhysicsFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createTriangleMesh(UserStream(fname, true));
+
+	UserStream stream(fname, true);
+	gob_PhysicsFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createTriangleMesh(stream);
+
 	r3dscpy(gob_PhysicsFactoryCache[i]->filename, fname);
+
 	if(!gob_PhysicsFactoryCache[i]->mesh) 
 		return NULL;
+
 	gob_NumMeshesInPhysicsFactoryCache++;
 	return gob_PhysicsFactoryCache[gob_NumMeshesInPhysicsFactoryCache-1]->mesh;
 }
@@ -77,8 +83,10 @@ PxConvexMesh *r3dGOBAddPhysicsConvexMesh(const char* fname)
 {
 	if(gPhysics_DisableCacheForEditor)
 	{
-		return g_pPhysicsWorld->PhysXSDK->createConvexMesh(UserStream(fname, true));
+		UserStream stream(fname, true);
+		return g_pPhysicsWorld->PhysXSDK->createConvexMesh(stream);
 	}
+
 	for (int i=0;i<gob_NumConvexMeshesInPhysicsFactoryCache;i++)
 		if (strcmp(gob_PhysicsConvexFactoryCache[i]->filename, fname)==0) 
 			return gob_PhysicsConvexFactoryCache[i]->mesh;
@@ -91,10 +99,15 @@ PxConvexMesh *r3dGOBAddPhysicsConvexMesh(const char* fname)
 
 	int i = gob_NumConvexMeshesInPhysicsFactoryCache;
 	gob_PhysicsConvexFactoryCache[i] = new PhysicsConvexMesh;
-	gob_PhysicsConvexFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createConvexMesh(UserStream(fname, true));
+
+	UserStream stream(fname, true);
+	gob_PhysicsConvexFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createConvexMesh(stream);
+
 	r3dscpy(gob_PhysicsConvexFactoryCache[i]->filename, fname);
+
 	if(!gob_PhysicsConvexFactoryCache[i]->mesh) 
 		return NULL;
+
 	gob_NumConvexMeshesInPhysicsFactoryCache++;
 	return gob_PhysicsConvexFactoryCache[gob_NumConvexMeshesInPhysicsFactoryCache-1]->mesh;
 }
@@ -262,7 +275,7 @@ public:
 				continue;
 
 			PhysicsCallbackObject* triggerObj = static_cast<PhysicsCallbackObject*>(
-				pairs[i].triggerShape->getActor()->userData
+			pairs[i].triggerShape->getActor()->userData
 			);
 
 			if (!triggerObj)
@@ -531,13 +544,13 @@ void PhysXWorld::Destroy()
 
 	if (Pvd)
 	{
-		PxPvdTransport* transport = Pvd->getTransport();
 		Pvd->release();
 		Pvd = NULL;
+	}
 
-		if (transport)
-			transport->release();
-
+	if (PvdTransport)
+	{
+		PvdTransport->release();
 		PvdTransport = NULL;
 	}
 
@@ -652,8 +665,6 @@ bool PhysXWorld::raycastSingle(
 	const PxSceneQueryFilterData& filterData
 )
 {
-	outputFlags |= PxSceneQueryFlag::eDISTANCE;
-
 	PxRaycastHit touchHits[32];
 	PxRaycastBuffer hitBuffer(touchHits, 32);
 
@@ -674,7 +685,7 @@ bool PhysXWorld::raycastSingle(
 
 	if (hitBuffer.hasBlock)
 	{
-		if (hitBuffer.block.distance > 0.0f && hitBuffer.block.distance < closestHit)
+		if (hitBuffer.block.distance >= 0.0f && hitBuffer.block.distance < closestHit)
 		{
 			hit = hitBuffer.block;
 			closestHit = hitBuffer.block.distance;
@@ -686,7 +697,7 @@ bool PhysXWorld::raycastSingle(
 	{
 		const PxRaycastHit& currentHit = hitBuffer.touches[i];
 
-		if (currentHit.distance > 0.0f && currentHit.distance < closestHit)
+		if (currentHit.distance >= 0.0f && currentHit.distance < closestHit)
 		{
 			hit = currentHit;
 			closestHit = currentHit.distance;
@@ -801,7 +812,8 @@ bool PhysXWorld::CookMesh(const r3dMesh* orig_mesh, const char* save_as)
 		r3dscpy(cookedMeshFilename, orig_mesh->FileName.c_str());
 	int len = strlen(cookedMeshFilename);
 	r3dscpy(&cookedMeshFilename[len-3], "mpx");
-	bool res = Cooking->cookTriangleMesh(meshDesc, UserStream(cookedMeshFilename, false));
+	UserStream outputStream(cookedMeshFilename, false);
+	bool res = Cooking->cookTriangleMesh(meshDesc, outputStream);
 
 	return res;
 #else
@@ -860,7 +872,8 @@ bool PhysXWorld::CookConvexMesh(const r3dMesh* orig_mesh, const char* save_as)
 		r3dscpy(cookedMeshFilename, orig_mesh->FileName.c_str());
 	int len = strlen(cookedMeshFilename);
 	r3dscpy(&cookedMeshFilename[len-3], "cpx");
-	bool res = Cooking->cookConvexMesh(meshDesc, UserStream(cookedMeshFilename, false));
+	UserStream outputStream(cookedMeshFilename, false);
+	bool res = Cooking->cookConvexMesh(meshDesc, outputStream);
 
 	return res;
 #else
@@ -892,23 +905,9 @@ void PhysXWorld::RemoveActor(PxActor &actor)
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef FINAL_BUILD
-bool PhysXWorld::ExportWholeScene(const char *filename) const
+bool PhysXWorld::ExportWholeScene(const char* filename) const
 {
-	if (!PhysXSDK || !PhysXScene)
-		return false;
-
-	PxCollection *cl = PhysXSDK->createCollection();
-	if (!cl)
-		return false;
-
-	PxCollectForExportSDK(*PhysXSDK, *cl);
-	PxCollectForExportScene(*PhysXScene, *cl);
-
-	FileSerialStream fs(filename);
-	cl->serialize(fs);
-
-	PhysXSDK->releaseCollection(cl);
-
-	return true;
+	r3dOutToLog("PhysXWorld::ExportWholeScene is disabled for PhysX 3.4 migration. File: %s\n", filename ? filename : "");
+	return false;
 }
 #endif
