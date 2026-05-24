@@ -199,11 +199,23 @@ BOOL obj_ZombieSpawn::Update()
 		pos += offset;
 
 		const float rayCastDist = 20000.0f;
-		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC));
-		if (g_pPhysicsWorld->PhysXScene->raycastSingle(PxVec3(pos.x, rayCastDist, pos.z), PxVec3(0, -1, 0), rayCastDist * 2, PxSceneQueryFlag::eIMPACT, hit, filter))
+
+		PxRaycastBuffer hit;
+		PxQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+			PxQueryFlag::eSTATIC | PxQueryFlag::eANY_HIT
+		);
+
+		if (g_pPhysicsWorld->PhysXScene->raycast(
+			PxVec3(pos.x, rayCastDist, pos.z),
+			PxVec3(0.0f, -1.0f, 0.0f),
+			rayCastDist * 2.0f,
+			hit,
+			PxHitFlag::ePOSITION,
+			filter
+		))
 		{
-			pos.y = hit.impact.y;
+			pos.y = hit.block.position.y;
 		}
 
 		obj_Zombie *z = static_cast<obj_Zombie*>(srv_CreateGameObject("obj_Zombie", "Data/ObjectsDepot/Characters/Hero_Girl_01.sco", pos));

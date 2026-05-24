@@ -122,10 +122,21 @@ void HUDLaserDesignator::Update()
 	float distance = 20000;
 	{
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dir.x, dir.y, dir.z), MAX_CASTING_DISTANCE, PxSceneQueryFlag::eIMPACT, hit, filter))
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC
+		);
+
+		if(g_pPhysicsWorld->raycastSingle(
+			PxVec3(gCam.x, gCam.y, gCam.z),
+			PxVec3(dir.x, dir.y, dir.z),
+			MAX_CASTING_DISTANCE,
+			PxSceneQueryFlag::ePOSITION,
+			hit,
+			filter
+		))
 		{
-			m_TargetPos.Assign(hit.impact.x, hit.impact.y, hit.impact.z);
+			m_TargetPos.Assign(hit.position.x, hit.position.y, hit.position.z);
 			distance = (gCam - m_TargetPos).Length();
 		}
 	}
@@ -247,10 +258,21 @@ void HUDLaserDesignator::eventLockSuccess(r3dScaleformMovie* pMovie, const Scale
 	// check where it should collide and send server pos (todo: fix this when server will have physics enabled)
 	{
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(m_TargetPos.x, m_TargetPos.y+200, m_TargetPos.z), PxVec3(0, -1, 0), 2000, PxSceneQueryFlag::eIMPACT, hit, filter))
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC
+		);
+
+		if(g_pPhysicsWorld->raycastSingle(
+			PxVec3(m_TargetPos.x, m_TargetPos.y + 200.0f, m_TargetPos.z),
+			PxVec3(0.0f, -1.0f, 0.0f),
+			2000.0f,
+			PxSceneQueryFlag::ePOSITION,
+			hit,
+			filter
+		))
 		{
-			r3dVector hitPos(hit.impact.x, hit.impact.y, hit.impact.z);
+			r3dVector hitPos(hit.position.x, hit.position.y, hit.position.z);
 			
 			PKT_C2S_RequestAirstrike_s n;
 			n.pos = hitPos; 

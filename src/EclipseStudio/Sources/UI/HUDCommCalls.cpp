@@ -222,10 +222,21 @@ void HUDCommCalls::eventPressButton(r3dScaleformMovie* pMovie, const Scaleform::
 			r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH2, &dir);
 
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dir.x, dir.y, dir.z), MAX_CASTING_DISTANCE, PxSceneQueryFlag::eIMPACT, hit, filter))
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC
+		);
+
+		if(g_pPhysicsWorld->raycastSingle(
+			PxVec3(gCam.x, gCam.y, gCam.z),
+			PxVec3(dir.x, dir.y, dir.z),
+			MAX_CASTING_DISTANCE,
+			PxSceneQueryFlag::ePOSITION,
+			hit,
+			filter
+		))
 		{
-			r3dVector pos(hit.impact.x, hit.impact.y, hit.impact.z);
+			r3dVector pos(hit.position.x, hit.position.y, hit.position.z);
 			showHUDIcon(gClientLogic().localPlayer_, btnID, pos);
 
 			// send msg to server

@@ -206,15 +206,29 @@ bool CheckCameraCollision(r3dPoint3D& camPos, const r3dPoint3D& target, bool che
 		PxTransform camPose(PxVec3(target.x, target.y, target.z), PxQuat(0,0,0,1));
 
 		PxSweepHit sweepResults[32];
-		bool blockingHit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-		while(int numRes=g_pPhysicsWorld->PhysXScene->sweepMultiple(camSphere, camPose, PxVec3(motion.x, motion.y, motion.z), motionLen, PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eNORMAL, sweepResults, 32, blockingHit, filter) && LoopBreaker<MaxLoopBreaker)
+		PxSweepBuffer sweepBuffer(sweepResults, 32);
+
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
+		);
+
+		while(LoopBreaker < MaxLoopBreaker)
 		{
-			if(numRes == -1)
-			{
-				r3d_assert(false);
+			bool hasSweepHit = g_pPhysicsWorld->PhysXScene->sweep(
+				camSphere,
+				camPose,
+				PxVec3(motion.x, motion.y, motion.z),
+				motionLen,
+				sweepBuffer,
+				PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eNORMAL,
+				filter
+			);
+
+			int numRes = hasSweepHit ? (int)sweepBuffer.getNbAnyHits() : 0;
+			if(numRes <= 0)
 				break;
-			}
+			
 			/* PxVec3 collNormal = PxVec3(0,0,0);
 			for(int i=0; i<numRes; ++i)
 			{
@@ -495,13 +509,24 @@ r3dPoint3D getAdjustedPointTo(obj_AI_Player* pl, const r3dPoint3D& PointTo, cons
             else
                 r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &dir);
 
-            PxRaycastHit hit;
-            PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-            if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dir.x, dir.y, dir.z), 2000.0f, PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eDISTANCE, hit, filter))
-            {
-                currentLookAt.Assign(hit.impact.x, hit.impact.y, hit.impact.z);
-                currentLookAtDist = hit.distance;
-            }
+        	PxRaycastHit hit;
+        	PxSceneQueryFilterData filter(
+				PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+				PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
+			);
+
+        	if(g_pPhysicsWorld->raycastSingle(
+				PxVec3(gCam.x, gCam.y, gCam.z),
+				PxVec3(dir.x, dir.y, dir.z),
+				2000.0f,
+				PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eDISTANCE,
+				hit,
+				filter
+			))
+        	{
+        		currentLookAt.Assign(hit.position.x, hit.position.y, hit.position.z);
+        		currentLookAtDist = hit.distance;
+        	}
             else
             {
                 currentLookAt = CamPos + dir * 1000.0f;
@@ -792,7 +817,14 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 						raydir.Normalize();
 						PxRaycastHit hit;
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-						if(!g_pPhysicsWorld->raycastSingle(PxVec3(camPointTo.x, camPointTo.y, camPointTo.z), PxVec3(raydir.x, raydir.y, raydir.z), rayLen, PxSceneQueryFlag::eIMPACT, hit, filter))
+						if(!g_pPhysicsWorld->raycastSingle(
+							PxVec3(camPointTo.x, camPointTo.y, camPointTo.z),
+							PxVec3(raydir.x, raydir.y, raydir.z),
+							rayLen,
+							PxSceneQueryFlag::ePOSITION,
+							hit,
+							filter
+						))
 						{
 							found = i;
 							break;
@@ -1703,8 +1735,8 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		PxBoxGeometry bbox(0.2f, 0.9f, 0.2f);
 		PxTransform pose(PxVec3(pl->GetPosition().x, pl->GetPosition().y+1.1f, pl->GetPosition().z), PxQuat(0,0,0,1));
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		PxShape* shape;
-		force_crouch = g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter);
+		PxOverlapBuffer overlapHit;
+		force_crouch = g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, filter);
 	}
 	bool crouching = pl->bCrouch;
 	if(pl->bOnGround)
@@ -1892,7 +1924,7 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		else
 			pl->PhysicsObject->AdjustControllerSize(0.3f, 1.1f, 0.85f);
 		pl->PhysicsObject->SetPosition(pos + r3dPoint3D(0, 0.01f, 0));
-		g_pPhysicsWorld->CharacterManager->updateControllers();// need to update internal position on character controller, otherwise camera jerks a little bit
+		g_pPhysicsWorld->CharacterManager->computeInteractions(0.0f);// update internal character controller interactions
 	}
 	
 	pl->bCrouch = crouching;

@@ -7,20 +7,22 @@
 
 #include "r3dPhysSkeleton.h"
 
+#include "PxPhysicsAPI.h"
 #include "extensions/PxRigidBodyExt.h"
+#include "extensions/PxSerialization.h"
+#include "extensions/PxRepXSerializer.h"
+#include "extensions/PxStringTableExt.h"
 
-#include "PhysX\RepX\include\RepX.h"
-#include "PhysX\RepX\include\RepXUtility.h"
-#include "PhysX\PhysXAPI\extensions\PxStringTableExt.h"
-#include "PhysX\PxFoundation\internal\PxIOStream\public\PxFileBuf.h"
 #include "../../../../GameEngine/gameobjects/PhysXRepXHelpers.h"
+
 #include "r3dBackgroundTaskDispatcher.h"
 #include "../../multiplayer/ClientGameLogic.h"
 
 extern MyPhysXAllocator myPhysXAllocator;
 
-static class physx::repx::RepXCollection* m_sCollection = NULL;
-static class PxStringTable* m_sStringTable = NULL;
+static PxCollection* m_sCollection = NULL;
+static PxSerializationRegistry* m_sSerializationRegistry = NULL;
+static PxStringTable* m_sStringTable = NULL;
 static int m_sCollectionRef = 0;
 
 namespace
@@ -86,7 +88,7 @@ struct RepXItemAdder
 		// not sure if that is too much mass, or if it should be set from Max, but otherwise PhysX outputs a lot of warnings
 		//PxRigidBodyExt::setMassAndUpdateInertia(*inActor, 10.0f);
 
-		inActor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, true);
+		inActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 		inActor->setSleepThreshold(0.1f);
 
 		mScene->addActor(*inActor);
@@ -150,11 +152,17 @@ r3dPhysSkeleton::~r3dPhysSkeleton()
 	--m_sCollectionRef;
 	if(m_sCollectionRef == 0)
 	{
-		m_sCollection->destroy();
+		m_sCollection->release();
 		m_sCollection = NULL;
 
 		m_sStringTable->release();
 		m_sStringTable = NULL;
+
+		if(m_sSerializationRegistry)
+		{
+			m_sSerializationRegistry->release();
+			m_sSerializationRegistry = NULL;
+		}
 	}
 
 	for(int i=0; i<m_NumBones; ++i)
@@ -169,35 +177,70 @@ bool r3dPhysSkeleton::loadSkeleton(const char* fname)
 {
 	R3DPROFILE_FUNCTION("r3dPhysSkeleton::loadSkeleton");
 
-	r3dCSHolder block( g_pPhysicsWorld->GetConcurrencyGuard() ) ;
+	r3dCSHolder block(g_pPhysicsWorld->GetConcurrencyGuard());
 
 	if(m_sCollectionRef == 0)
 	{
-		m_sStringTable = &PxStringTableExt::createStringTable( myPhysXAllocator );
-		m_sCollection = loadCollection( fname, g_pPhysicsWorld->PhysXSDK->getFoundation().getAllocator() );
+		m_sStringTable = &PxStringTableExt::createStringTable(myPhysXAllocator);
+		m_sSerializationRegistry = PxSerialization::createSerializationRegistry(*g_pPhysicsWorld->PhysXSDK);
+
+		UserStream inputStream(fname, true);
+		if(inputStream.getLength() == 0)
+		{
+			r3dOutToLog("r3dPhysSkeleton: failed to open RepX file: %s\n", fname);
+			return false;
+		}
+
+		m_sCollection = PxSerialization::createCollectionFromXml(
+			inputStream,
+			*g_pPhysicsWorld->Cooking,
+			*m_sSerializationRegistry,
+			NULL,
+			m_sStringTable
+		);
+
+		if(!m_sCollection)
+		{
+			r3dOutToLog("r3dPhysSkeleton: failed to load RepX collection: %s\n", fname);
+			return false;
+		}
 	}
+
 	++m_sCollectionRef;
 
 	int numActors = 0;
-	for(const physx::repx::RepXCollectionItem* iter=m_sCollection->begin(); iter!=m_sCollection->end(); ++iter)
+	const PxU32 nbObjects = m_sCollection->getNbObjects();
+
+	for(PxU32 i = 0; i < nbObjects; ++i)
 	{
-		if(strcmp(iter->mLiveObject.mTypeName, "PxRigidDynamic")==0)
+		PxBase& base = m_sCollection->getObject(i);
+		if(base.is<PxRigidDynamic>())
 			++numActors;
 	}
 
 	m_CurrentBone = 0;
 	m_NumBones = numActors;
 	m_Bones = new ActorBone[m_NumBones];
-	
-	RepXItemAdder itemAdder(g_pPhysicsWorld->PhysXScene, this);
 
-	//R3D_LOG_TIMESPAN_START(instantiateCollection);
-	instantiateCollection( m_sCollection, g_pPhysicsWorld->PhysXSDK, g_pPhysicsWorld->Cooking, m_sStringTable, true, itemAdder );
-	//R3D_LOG_TIMESPAN_END(instantiateCollection);
+	for(PxU32 i = 0; i < nbObjects; ++i)
+	{
+		PxBase& base = m_sCollection->getObject(i);
 
-	unlink() ;
+		if(PxRigidDynamic* actor = base.is<PxRigidDynamic>())
+		{
+			RepXItemAdder itemAdder(g_pPhysicsWorld->PhysXScene, this);
+			itemAdder(NULL, actor);
+		}
+		else if(PxJoint* joint = base.is<PxJoint>())
+		{
+			RepXItemAdder itemAdder(g_pPhysicsWorld->PhysXScene, this);
+			itemAdder(NULL, joint);
+		}
+	}
 
-	isLoaded = 1 ;
+	unlink();
+
+	isLoaded = 1;
 
 	return true;
 }
@@ -253,7 +296,7 @@ void r3dPhysSkeleton::linkParent(const r3dSkeleton *skel, const D3DXMATRIX &Draw
 
 	for( int i = 0, e = m_NumBones ; i < e; i ++ )
 	{
-		m_Bones[ i ].actor->enableInScene() ;
+		g_pPhysicsWorld->AddActor(*m_Bones[i].actor);
 	}
 }
 
@@ -263,7 +306,7 @@ void r3dPhysSkeleton::unlink()
 	{
 		PxRigidDynamic* actor = m_Bones[ i ].actor ;
 
-		actor->disableInScene() ;
+		g_pPhysicsWorld->RemoveActor(*actor);
 		actor->userData = 0 ;
 
 		PxShape* shapes[64] = {0};
@@ -299,7 +342,7 @@ void r3dPhysSkeleton::syncAnimation(r3dSkeleton *skel, const D3DXMATRIX &DrawFul
 				PxVec3(mat._31, mat._32, mat._33));
 			actorPose.q = PxQuat(orientation);
 
-			m_Bones[i].actor->moveKinematic(actorPose); // bones are kinematic, need to call moveGlobalPose for them
+			m_Bones[i].actor->setKinematicTarget(actorPose); // bones are kinematic, need to call moveGlobalPose for them
 		}
 	}
 	else
@@ -359,16 +402,16 @@ void r3dPhysSkeleton::SwitchToRagdoll(bool toRagdoll)
 		return;
 
 	m_isRagdollMode = toRagdoll;
-	const PxTransform identity(PxTransform::createIdentity());
+	const PxTransform identity(PxIdentity);
 	for (int i = 0; i < m_NumBones; ++i)
 	{
 		PxRigidDynamic *a = m_Bones[i].actor;
 		if (!a) continue;
 
 		if (m_isRagdollMode)
-			a->moveKinematic(identity);
+			a->setKinematicTarget(identity);
 
-		a->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, !m_isRagdollMode);
+		a->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, !m_isRagdollMode);
 
 		if(m_isRagdollMode)
 		{
@@ -436,7 +479,7 @@ r3dBoundBox r3dPhysSkeleton::getWorldBBox() const
 			for (PxU32 j = 0; j < numShapes; ++j)
 			{
 				PxShape *s = shapes[j];
-				PxBounds3 shapeBox = s->getWorldBounds();
+				PxBounds3 shapeBox = PxShapeExt::getWorldBounds(*s, *a);
 				bbox.include(shapeBox);
 			}
 		}

@@ -869,12 +869,24 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 					r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &laserCastDir);
 
 				PxRaycastHit hit;
-				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-				bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z), PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z), 500.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
-				if( hitResult )
-					m_LaserHitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
+				PxSceneQueryFilterData filter(
+					PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+					PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
+				);
+
+				bool hitResult = g_pPhysicsWorld->raycastSingle(
+					PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z),
+					PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z),
+					500.0f,
+					PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
+					hit,
+					filter
+				);
+
+				if(hitResult)
+					m_LaserHitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
 				else
-					m_LaserHitPoint.Assign(0,0,0);
+					m_LaserHitPoint.Assign(0, 0, 0);
 			}
 			if(m_FlashlightParticle)
 			{
@@ -926,12 +938,24 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 					r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &laserCastDir);
 
 				PxRaycastHit hit;
-				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-				bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z), PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z), 500.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
-				if( hitResult )
-					m_LaserHitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
+				PxSceneQueryFilterData filter(
+					PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+					PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
+				);
+
+				bool hitResult = g_pPhysicsWorld->raycastSingle(
+					PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z),
+					PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z),
+					500.0f,
+					PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
+					hit,
+					filter
+				);
+
+				if(hitResult)
+					m_LaserHitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
 				else
-					m_LaserHitPoint.Assign(0,0,0);
+					m_LaserHitPoint.Assign(0, 0, 0);
 			}
 			if(m_FlashlightParticle)
 			{

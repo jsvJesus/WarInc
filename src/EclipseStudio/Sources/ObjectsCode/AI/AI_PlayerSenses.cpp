@@ -98,11 +98,22 @@ bool PlayerLifeProps::DetectByZombie(const obj_Zombie &z, bool &hardLock)
 		{
 			//	Issue raycast query to check visibility occluders
 			PxVec3 origin(zombiePos.x, zombiePos.y + 1.0f, zombiePos.z);
-			PxVec3 dir(-dir.x, -dir.y, -dir.z);
-			PxSceneQueryFlags flags = PxSceneQueryFlag::eDISTANCE;
-			PxRaycastHit h;
-			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC));
-			if (!g_pPhysicsWorld->PhysXScene->raycastSingle(origin, dir, dist, flags, h, filter))
+			PxVec3 rayDir(-dir.x, -dir.y, -dir.z);
+
+			PxRaycastBuffer hit;
+			PxQueryFilterData filter(
+				PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+				PxQueryFlag::eDYNAMIC | PxQueryFlag::eSTATIC | PxQueryFlag::eANY_HIT
+			);
+
+			if (!g_pPhysicsWorld->PhysXScene->raycast(
+				origin,
+				rayDir,
+				dist,
+				hit,
+				PxHitFlag::eDISTANCE,
+				filter
+			))
 			{
 				detected = true;
 			}

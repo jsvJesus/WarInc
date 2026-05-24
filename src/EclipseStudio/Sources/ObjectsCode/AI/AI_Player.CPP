@@ -1,6 +1,9 @@
 #include "r3dpch.h"
 #include "r3d.h"
 
+#include "PxQueryFiltering.h"
+#include "PxQueryReport.h"
+
 #include "APIScaleformGfx.h"
 #include "AI_Player.h"
 #include "AI_PlayerAnim.h"
@@ -1315,15 +1318,15 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 		PhysicsCallbackObject* target = NULL;
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 		g_pPhysicsWorld->raycastSingle(PxVec3(shootFrom.x, shootFrom.y, shootFrom.z), PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z), MAX_CASTING_DISTANCE, 
-													PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter);
+													PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit, filter);
 		// check if target position is still visible from muzzler (prevent against shooting from wall edges
 		if( recheckCollisionAgainsMuzzler && hit.shape )
 		{
-			PxVec3 dir2(hit.impact.x - muzzlePos.x, hit.impact.y - muzzlePos.y, hit.impact.z - muzzlePos.z);
+			PxVec3 dir2(hit.position.x - muzzlePos.x, hit.position.y - muzzlePos.y, hit.position.z - muzzlePos.z);
 			dir2.normalize();
 
 			PxRaycastHit hit2;
-			g_pPhysicsWorld->raycastSingle(PxVec3(muzzlePos.x, muzzlePos.y, muzzlePos.z), dir2, MAX_CASTING_DISTANCE, PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit2, filter);
+			g_pPhysicsWorld->raycastSingle(PxVec3(muzzlePos.x, muzzlePos.y, muzzlePos.z), dir2, MAX_CASTING_DISTANCE, PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit2, filter);
 			if(hit2.shape != hit.shape)
 			{
 				// replace old collision data with new one
@@ -1331,10 +1334,10 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 			}
 		}
 		
-		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
 		{
 			if(actorName)
-				*actorName = hit.shape->getActor().getName();
+				*actorName = hit.shape->getActor()->getName();
 
 			*gameObj = target->isGameObject();
 			if(*gameObj)
@@ -1349,9 +1352,9 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 			if (!*sMat)
 				*sMat = target->GetMaterial(hit.faceIndex);
 
-			sPos.x = hit.impact.x;
-			sPos.y = hit.impact.y;
-			sPos.z = hit.impact.z;
+			sPos.x = hit.position.x;
+			sPos.y = hit.position.y;
+			sPos.z = hit.position.z;
 
 			sNorm.x = hit.normal.x;
 			sNorm.y = hit.normal.y;
@@ -1404,9 +1407,9 @@ static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, co
 			PhysicsCallbackObject* target = NULL;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 			g_pPhysicsWorld->raycastSingle(PxVec3(shootFrom.x, shootFrom.y, shootFrom.z), PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z), MAX_CASTING_DISTANCE, 
-				PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter);
+				PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit, filter);
 
-			if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+			if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
 			{
 				*gameObj = target->isGameObject();
 				if(!*gameObj)
@@ -1417,11 +1420,11 @@ static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, co
 				*sMat = NULL;
 
 				if(actorName)
-					*actorName = hit.shape->getActor().getName();
+					*actorName = hit.shape->getActor()->getName();
 
-				sPos.x = hit.impact.x;
-				sPos.y = hit.impact.y;
-				sPos.z = hit.impact.z;
+				sPos.x = hit.position.x;
+				sPos.y = hit.position.y;
+				sPos.z = hit.position.z;
 
 				sNorm.x = hit.normal.x;
 				sNorm.y = hit.normal.y;
@@ -1466,7 +1469,7 @@ static bool isMuzzlerBlocked(obj_AI_Player* pl, const r3dPoint3D& muzzlePos)
 		{
 			PxRaycastHit hit;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::eSTATIC));
-			muzzlerBlocked = g_pPhysicsWorld->raycastSingle( PxVec3(gCam.x,gCam.y,gCam.z), PxVec3(temp.x, temp.y, temp.z), len, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+			muzzlerBlocked = g_pPhysicsWorld->raycastSingle( PxVec3(gCam.x,gCam.y,gCam.z), PxVec3(temp.x, temp.y, temp.z), len, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
 		}
 	}
 	if(muzzlerBlocked)
@@ -1775,8 +1778,8 @@ void obj_AI_Player::CheckFireWeapon()
 						{
 							PxRaycastHit hit;
 							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC));
-							if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y, n.pos.z), PxVec3(0,-1,0), 3.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
-								n.pos = r3dPoint3D(hit.impact.x, hit.impact.y+0.1f, hit.impact.z);
+							if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y, n.pos.z), PxVec3(0,-1,0), 3.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter))
+								n.pos = r3dPoint3D(hit.position.x, hit.position.y+0.1f, hit.position.z);
 						}
 
 						p2pSendToHost(this, &n, sizeof(n), true);
@@ -2678,11 +2681,11 @@ void obj_AI_Player::DoRespawn(int newTeamId, int slotNum, const wiLoadoutSlot& l
 	r3dVector spawnPosition = pos;
 	PxRaycastHit hit;
 	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-	if(g_pPhysicsWorld->raycastSingle(PxVec3(spawnPosition.x, spawnPosition.y+1, spawnPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::eIMPACT, hit, filter))
+	if(g_pPhysicsWorld->raycastSingle(PxVec3(spawnPosition.x, spawnPosition.y+1, spawnPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::ePOSITION, hit, filter))
 	{
-		spawnPosition.x = hit.impact.x;
-		spawnPosition.y = hit.impact.y;
-		spawnPosition.z = hit.impact.z;
+		spawnPosition.x = hit.position.x;
+		spawnPosition.y = hit.position.y;
+		spawnPosition.z = hit.position.z;
 	}
 
 	//r3dOutToLog("respawning player %s at %0.2f, %0.2f, %0.2f\n", UserName, pos.x, pos.y, pos.z);
@@ -3281,11 +3284,11 @@ BOOL obj_AI_Player::Update()
 				n.pos = GetPosition() + GetvForw() * 4.0f;
 				PxRaycastHit hit;
 				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-				if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y+2, n.pos.z), PxVec3(0, -1, 0), 4, PxSceneQueryFlag::eIMPACT, hit, filter))
+				if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y+2, n.pos.z), PxVec3(0, -1, 0), 4, PxSceneQueryFlag::ePOSITION, hit, filter))
 				{
-					n.pos.x = hit.impact.x;
-					n.pos.y = hit.impact.y;
-					n.pos.z = hit.impact.z;
+					n.pos.x = hit.position.x;
+					n.pos.y = hit.position.y;
+					n.pos.z = hit.position.z;
 				}
 
 				p2pSendToHost(this, &n, sizeof(n));
@@ -3743,7 +3746,7 @@ BOOL obj_AI_Player::Update()
 					PxRaycastHit hit;
 					PhysicsCallbackObject* target = NULL;
 					PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-					if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(viewVec.x, viewVec.y, viewVec.z), rayLen, PxSceneQueryFlag::eIMPACT, hit, filter))
+					if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(viewVec.x, viewVec.y, viewVec.z), rayLen, PxSceneQueryFlag::ePOSITION, hit, filter))
 						showTag = false;
 				}
 
@@ -4688,8 +4691,8 @@ bool obj_AI_Player::GetUAVSpawnPos(r3dPoint3D* pos)
 		PxBoxGeometry bbox(uavSizeX, (uavBelowSpace+uavTopSpace)*0.5f, uavSizeX);
 		PxTransform pose(PxVec3(uavPos.x, uavPos.y+3.0f, uavPos.z), PxQuat(0,0,0,1));
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-		PxShape* shape;
-		if(!g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter))
+		PxOverlapBuffer overlapHit;
+		if(!g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, filter))
 		{
 			*pos = uavPos;
 			return true;
@@ -4724,9 +4727,9 @@ void obj_AI_Player::AddBloodOnGround(const r3dPoint3D& posOfShot)
 		{
 			PxRaycastHit hit;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-			if(g_pPhysicsWorld->raycastSingle(PxVec3(posOfShot.x, posOfShot.y, posOfShot.z), PxVec3(0, -1, 0), 10.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL), hit, filter))
+			if(g_pPhysicsWorld->raycastSingle(PxVec3(posOfShot.x, posOfShot.y, posOfShot.z), PxVec3(0, -1, 0), 10.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL), hit, filter))
 			{
-				blood_pos = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
+				blood_pos = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
 				blood_norm = r3dPoint3D(hit.normal.x, hit.normal.y, hit.normal.z);
 				has_collision = true;
 			}
@@ -5586,7 +5589,7 @@ void obj_AI_Player::DrawReticle()
 					PxRaycastHit hit;
 					PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
 					r3dPoint3D dirToAttm = (attmPos - gCam).NormalizeTo();
-					bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dirToAttm.x, dirToAttm.y, dirToAttm.z), distToCamera, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+					bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dirToAttm.x, dirToAttm.y, dirToAttm.z), distToCamera, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
 					if(!hitResult)
 					{
 						/*{
@@ -6338,37 +6341,83 @@ struct PlaceableConsumableItemRenderable : MeshDeferredRenderable
 
 //------------------------------------------------------------------------
 // special callback to ignore terrain for beacon placement, as otherwise it is almost impossible to place beacon on uneven terrain
-class beaconFilterCallback : public PxSceneQueryFilterCallback
+class beaconFilterCallback : public PxQueryFilterCallback
 {
 public:
-	beaconFilterCallback(){};
-
-	virtual PxSceneQueryHitType::Enum preFilter(const PxFilterData& filterData, PxShape* shape, PxSceneQueryFilterFlags& filterFlags)
+	beaconFilterCallback()
 	{
-		if(shape)
-		{
-			PxRigidActor& actor = shape->getActor();
-			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor.userData);
-			if(target)
-			{
-				GameObject *gameObj = target->isGameObject();
-				if(gameObj)
-				{
-					if(gameObj->isObjType(OBJTYPE_Terrain))
-						return PxSceneQueryHitType::eNONE;
-				}
-			}
-		}
-		return PxSceneQueryHitType::eBLOCK;
 	}
 
-	virtual PxSceneQueryHitType::Enum postFilter(const PxFilterData& filterData, const PxSceneQueryHit& hit)
+	virtual PxQueryHitType::Enum preFilter(
+		const PxFilterData& filterData,
+		const PxShape* shape,
+		const PxRigidActor* actor,
+		PxHitFlags& queryFlags
+	)
 	{
-		// shouldn't be called!
-		return PxSceneQueryHitType::eBLOCK;
+		if(actor)
+		{
+			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor->userData);
+			if(target)
+			{
+				GameObject* gameObj = target->isGameObject();
+				if(gameObj && gameObj->isObjType(OBJTYPE_Terrain))
+					return PxQueryHitType::eNONE;
+			}
+		}
+
+		return PxQueryHitType::eBLOCK;
+	}
+
+	virtual PxQueryHitType::Enum postFilter(
+		const PxFilterData& filterData,
+		const PxQueryHit& hit
+	)
+	{
+		return PxQueryHitType::eBLOCK;
 	}
 };
 
+static bool AIPlayer_OverlapAny(
+	PxScene* scene,
+	const PxGeometry& geometry,
+	const PxTransform& pose,
+	const PxSceneQueryFilterData& filter,
+	PxQueryFilterCallback* callback = NULL
+)
+{
+	PxOverlapBuffer hit;
+	return scene->overlap(geometry, pose, hit, filter, callback);
+}
+
+static int AIPlayer_OverlapMultipleShapes(
+	PxScene* scene,
+	const PxGeometry& geometry,
+	const PxTransform& pose,
+	PxShape** outShapes,
+	int maxShapes,
+	const PxSceneQueryFilterData& filter,
+	PxQueryFilterCallback* callback = NULL
+)
+{
+	if(!outShapes || maxShapes <= 0)
+		return 0;
+
+	PxOverlapHit hits[64];
+	const int maxHits = R3D_MIN(maxShapes, 64);
+
+	PxOverlapBuffer buffer(hits, maxHits);
+	if(!scene->overlap(geometry, pose, buffer, filter, callback))
+		return 0;
+
+	const PxU32 numHits = buffer.getNbAnyHits();
+	const int count = R3D_MIN((int)numHits, maxHits);
+
+	for(int i = 0; i < count; ++i)
+		outShapes[i] = buffer.getAnyHit(i).shape;
+
+	return count;
+}
 
 void
 obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )
@@ -6497,17 +6546,17 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 						PxTransform pose(PxVec3(pos.x, pos.y+(riotMesh->localBBox.Size.y*0.5f)+0.5f, pos.z), PxQuat(0,0,0,1));
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 						PxShape* shape;
-						m_canPlaceConsumableItem = !g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter) && bOnGround;
+						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter) && bOnGround;
 						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
 						{
 							bbox.halfExtents.y *= 4.0f;
 							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
 							PxShape* results[64] = {0};
-							int numRes = g_pPhysicsWorld->PhysXScene->overlapMultiple(bbox, pose, results, 64, filter);
+							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
 							for(int i=0; i<numRes; ++i)
 							{
 								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor().userData)))
+								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
 								{
 									GameObject* gameObj = clbObj->isGameObject();
 									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
@@ -6577,17 +6626,17 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 						PxTransform pose(PxVec3(pos.x, pos.y+(turretMesh->localBBox.Size.y*0.5f)+0.5f - 1.0f, pos.z), PxQuat(0,0,0,1));
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 						PxShape* shape;
-						m_canPlaceConsumableItem = !g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter) && bOnGround;
+						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter) && bOnGround;
 						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
 						{
 							bbox.halfExtents.y *= 4.0f;
 							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
 							PxShape* results[64] = {0};
-							int numRes = g_pPhysicsWorld->PhysXScene->overlapMultiple(bbox, pose, results, 64, filter);
+							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
 							for(int i=0; i<numRes; ++i)
 							{
 								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor().userData)))
+								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
 								{
 									GameObject* gameObj = clbObj->isGameObject();
 									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
@@ -6658,17 +6707,17 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::ePREFILTER);
 						PxShape* shape;
 						beaconFilterCallback filterCallback;
-						m_canPlaceConsumableItem = !g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter, &filterCallback) && bOnGround;
+						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter, &filterCallback) && bOnGround;
 						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
 						{
 							bbox.halfExtents.y *= 4.0f;
 							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
 							PxShape* results[64] = {0};
-							int numRes = g_pPhysicsWorld->PhysXScene->overlapMultiple(bbox, pose, results, 64, filter);
+							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
 							for(int i=0; i<numRes; ++i)
 							{
 								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor().userData)))
+								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
 								{
 									GameObject* gameObj = clbObj->isGameObject();
 									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
@@ -6764,10 +6813,10 @@ void obj_AI_Player::UpdateFootsteps()
 	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
 
 	// did we hit anything?
-	bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 1.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+	bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 1.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
 	if( hitResult )
 	{
-		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
 		{
 			r3dMaterial* material = 0;
 			GameObject *gameObj = target->isGameObject();
@@ -7099,11 +7148,11 @@ bool obj_AI_Player::TestExitPosition( r3dVector& exitPosition, bool ignoreGround
 		// first find out if there's ground. 
 		PxRaycastHit hit;
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(exitPosition.x, exitPosition.y+1, exitPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::eIMPACT, hit, filter))
+		if(g_pPhysicsWorld->raycastSingle(PxVec3(exitPosition.x, exitPosition.y+1, exitPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::ePOSITION, hit, filter))
 		{
-			exitPosition.x = hit.impact.x;
-			exitPosition.y = hit.impact.y;
-			exitPosition.z = hit.impact.z;
+			exitPosition.x = hit.position.x;
+			exitPosition.y = hit.position.y;
+			exitPosition.z = hit.position.z;
 		} 
 		else 
 		{

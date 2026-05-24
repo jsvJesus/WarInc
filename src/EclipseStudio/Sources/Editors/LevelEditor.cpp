@@ -1,5 +1,7 @@
 #include "r3dPCH.h"
 
+#include <functional>
+
 #define R3D_PROBEUNDO_ENABLE 0
 
 #ifndef FINAL_BUILD
@@ -3978,10 +3980,21 @@ void Editor_Level :: Process(bool enable)
 			r3dScreenTo3D(mx, my, &dir);
 
 			PxRaycastHit hit;
-			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-			if(g_pPhysicsWorld->raycastSingle(PxVec3(pos.x, pos.y, pos.z), PxVec3(dir.x, dir.y, dir.z), 20000, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
+			PxSceneQueryFilterData filter(
+				PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+				PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
+			);
+
+			if(g_pPhysicsWorld->raycastSingle(
+				PxVec3(pos.x, pos.y, pos.z),
+				PxVec3(dir.x, dir.y, dir.z),
+				20000.0f,
+				PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
+				hit,
+				filter
+			))
 			{
-				gExplosionVisualController.AddExplosion(r3dVector(hit.impact.x, hit.impact.y, hit.impact.z), 20.0f);
+				gExplosionVisualController.AddExplosion(r3dVector(hit.position.x, hit.position.y, hit.position.z), 20.0f);
 			}
 		}
 	}

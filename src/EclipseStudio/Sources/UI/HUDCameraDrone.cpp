@@ -63,32 +63,49 @@ static void updateAimTarget(GameObject* uav, GameObject** gameObj)
 		PxSweepHit hits[32];
 		PhysicsCallbackObject* target = NULL;
 		// we only interested in players
-		PxSceneQueryFilterData filter(PxFilterData((1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-		bool blockingHit;
-		int numHits = 0;
+		PxSceneQueryFilterData filter(
+			PxFilterData((1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
+			PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
+		);
 
 		PxSphereGeometry camSphere(1.0f);
-		PxTransform camPose(PxVec3(gCam.x, gCam.y, gCam.z), PxQuat(0,0,0,1));
-		numHits=g_pPhysicsWorld->PhysXScene->sweepMultiple(camSphere, camPose, PxVec3(dir.x, dir.y, dir.z), MAX_CASTING_DISTANCE, PxSceneQueryFlag::eIMPACT, hits, 32, blockingHit, filter);
-//		numHits=g_pPhysicsWorld->PhysXScene->raycastMultiple(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dir.x, dir.y, dir.z), MAX_CASTING_DISTANCE, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hits, 32, blockingHit, filter);
+		PxTransform camPose(PxVec3(gCam.x, gCam.y, gCam.z), PxQuat(0, 0, 0, 1));
+
+		PxSweepBuffer sweepBuffer(hits, 32);
+
+		bool hasHits = g_pPhysicsWorld->PhysXScene->sweep(
+			camSphere,
+			camPose,
+			PxVec3(dir.x, dir.y, dir.z),
+			MAX_CASTING_DISTANCE,
+			sweepBuffer,
+			PxSceneQueryFlag::ePOSITION,
+			filter
+		);
+
+		int numHits = hasHits ? (int)sweepBuffer.getNbAnyHits() : 0;
+
 		if(numHits > 0)
 		{
 			float closestHit = 99999999.0f;
 			GameObject* closestObj = NULL;
-			for(int i =0; i<numHits; ++i)
+
+			for(int i = 0; i < numHits; ++i)
 			{
-				if(hits[i].shape && (target = static_cast<PhysicsCallbackObject*>(hits[i].shape->getActor().userData)))
+				const PxSweepHit& curHit = sweepBuffer.getAnyHit(i);
+				PxRigidActor* hitActor = curHit.shape ? curHit.shape->getActor() : NULL;
+
+				if(hitActor && (target = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
 				{
 					GameObject* obj = target->isGameObject();
-					if(obj != uav && hits[i].distance < closestHit)
+					if(obj != uav && curHit.distance < closestHit)
 					{
 						closestObj = obj;
-						closestHit = hits[i].distance;
+						closestHit = curHit.distance;
 					}
-				}					
+				}
 			}
 			*gameObj = closestObj;
-			return;
 		}
 	}
 }

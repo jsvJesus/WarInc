@@ -1,6 +1,9 @@
 #include "r3dpch.h"
 #include "r3d.h"
 
+#include "PxRigidDynamic.h"
+#include "PxQueryFiltering.h"
+
 #include "GameCommon.h"
 #include "Ammo.h"
 #include "ObjectsCode\Effects\obj_ParticleSystem.h"
@@ -178,35 +181,43 @@ void obj_Rocket::OnCollide(PhysicsCallbackObject *tobj, CollisionInfo &trace)
 
 void MatrixGetYawPitchRoll ( const D3DXMATRIX & , float &, float &, float & );
 
-class rocketFilterCallback : public PxSceneQueryFilterCallback
+class rocketFilterCallback : public PxQueryFilterCallback
 {
 	const GameObject* owner;
-public:
-	rocketFilterCallback(const GameObject* _owner) : owner(_owner) {};
 
-	virtual PxSceneQueryHitType::Enum preFilter(const PxFilterData& filterData, PxShape* shape, PxSceneQueryFilterFlags& filterFlags)
+public:
+	rocketFilterCallback(const GameObject* _owner)
+		: owner(_owner)
 	{
-		if(shape)
-		{
-			PxRigidActor& actor = shape->getActor();
-			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor.userData);
-			if(target)
-			{
-				GameObject *gameObj = target->isGameObject();
-				if(gameObj)
-				{
-					if(gameObj == owner)
-						return PxSceneQueryHitType::eNONE;
-				}
-			}
-		}
-		return PxSceneQueryHitType::eBLOCK;
 	}
 
-	virtual PxSceneQueryHitType::Enum postFilter(const PxFilterData& filterData, const PxSceneQueryHit& hit)
+	virtual PxQueryHitType::Enum preFilter(
+		const PxFilterData& filterData,
+		const PxShape* shape,
+		const PxRigidActor* actor,
+		PxHitFlags& queryFlags
+	)
 	{
-		// shouldn't be called!
-		return PxSceneQueryHitType::eBLOCK;
+		if(actor)
+		{
+			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor->userData);
+			if(target)
+			{
+				GameObject* gameObj = target->isGameObject();
+				if(gameObj && gameObj == owner)
+					return PxQueryHitType::eNONE;
+			}
+		}
+
+		return PxQueryHitType::eBLOCK;
+	}
+
+	virtual PxQueryHitType::Enum postFilter(
+		const PxFilterData& filterData,
+		const PxQueryHit& hit
+	)
+	{
+		return PxQueryHitType::eBLOCK;
 	}
 };
 
@@ -244,13 +255,30 @@ BOOL obj_Rocket::Update()
 		PxSphereGeometry sphere(0.2f);
 		PxTransform pose(PxVec3(GetPosition().x, GetPosition().y, GetPosition().z), PxQuat(0,0,0,1));
 
-		PxSweepHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(collisionFlag, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::ePREFILTER);
+		PxSweepBuffer hit;
+		PxSceneQueryFilterData filter(
+			PxFilterData(collisionFlag, 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::ePREFILTER
+		);
+
 		rocketFilterCallback callback(owner);
-		if(g_pPhysicsWorld->PhysXScene->sweepSingle(sphere, pose, PxVec3(motion.x, motion.y, motion.z), motionLen, PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter, &callback))
+
+		if(g_pPhysicsWorld->PhysXScene->sweep(
+			sphere,
+			pose,
+			PxVec3(motion.x, motion.y, motion.z),
+			motionLen,
+			hit,
+			PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eNORMAL | PxSceneQueryFlag::eFACE_INDEX,
+			filter,
+			&callback
+		))
 		{
-			m_CollisionPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
-			m_CollisionNormal = r3dPoint3D(hit.normal.x, hit.normal.y, hit.normal.z);
+			PxSweepHit& sweepHit = hit.block;
+
+			m_CollisionPoint = r3dPoint3D(sweepHit.position.x, sweepHit.position.y, sweepHit.position.z);
+			m_CollisionNormal = r3dPoint3D(sweepHit.normal.x, sweepHit.normal.y, sweepHit.normal.z);
+
 			if(m_DistanceTraveled > 10.0f || m_DisableDistanceTraveled)
 			{
 				onHit(m_CollisionPoint, m_CollisionNormal, dir);
@@ -259,12 +287,18 @@ BOOL obj_Rocket::Update()
 			else
 			{
 				m_isFlying = false;
-				// remove kinematic flag from physX object
-				r3d_assert(PhysicsObject->getPhysicsActor()->isRigidDynamic());
-				PhysicsObject->getPhysicsActor()->isRigidDynamic()->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, false);
-				PhysicsObject->addImpulse(m_AppliedVelocity/5);
+
+				PxActor* physActor = PhysicsObject->getPhysicsActor();
+				PxRigidDynamic* dynActor = physActor ? physActor->is<PxRigidDynamic>() : NULL;
+
+				r3d_assert(dynActor);
+				if(dynActor)
+				{
+					dynActor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
+				}
+
+				PhysicsObject->addImpulse(m_AppliedVelocity / 5);
 			}
-			
 		}
 	}
 

@@ -81,10 +81,21 @@ BOOL obj_AutoTurret::OnCreate()
 
 	// raycast and see where the ground is and place dropped box there
 	PxRaycastHit hit;
-	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-	if(g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y+1, GetPosition().z), PxVec3(0, -1, 0), 50.0f, PxSceneQueryFlag::eIMPACT, hit, filter))
+	PxSceneQueryFilterData filter(
+		PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+		PxSceneQueryFilterFlag::eSTATIC
+	);
+
+	if(g_pPhysicsWorld->raycastSingle(
+		PxVec3(GetPosition().x, GetPosition().y + 1.0f, GetPosition().z),
+		PxVec3(0.0f, -1.0f, 0.0f),
+		50.0f,
+		PxSceneQueryFlag::ePOSITION,
+		hit,
+		filter
+	))
 	{
-		SetPosition(r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z));
+		SetPosition(r3dPoint3D(hit.position.x, hit.position.y, hit.position.z));
 		SetRotationVector(r3dPoint3D(m_RotX, 0, 0));
 	}
 
@@ -236,17 +247,28 @@ BOOL obj_AutoTurret::Update()
 				PxSceneQueryFilterData filter2(PxFilterData(COLLIDABLE_STATIC_MASK|collisionGroupToCheck, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 				r3dPoint3D dirToTarget = (plr->GetPosition() - GetPosition()).NormalizeTo();
 				r3dPoint3D startScanFrom = GetPosition() + r3dPoint3D(0,0.5f,0) + dirToTarget.Normalize()*0.5f;
-				g_pPhysicsWorld->raycastSingle(PxVec3(startScanFrom.x, startScanFrom.y, startScanFrom.z), PxVec3(dirToTarget.x, dirToTarget.y, dirToTarget.z), dist, 
-					PxSceneQueryFlag::eIMPACT, hit, filter2);
+				g_pPhysicsWorld->raycastSingle(
+					PxVec3(startScanFrom.x, startScanFrom.y, startScanFrom.z),
+					PxVec3(dirToTarget.x, dirToTarget.y, dirToTarget.z),
+					dist,
+					PxSceneQueryFlag::ePOSITION,
+					hit,
+					filter2
+				);
+
 				PhysicsCallbackObject* clbObj = NULL;
-				if(hit.shape && (clbObj = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+				PxRigidActor* hitActor = hit.shape ? hit.shape->getActor() : NULL;
+
+				if(hitActor && (clbObj = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
 				{
 					GameObject* gameObj = clbObj->isGameObject();
 					if(gameObj != plr)
 						lostTarget = true;
 				}
 				else
+				{
 					lostTarget = true;
+				}
 
 			}
 		}
@@ -273,17 +295,32 @@ BOOL obj_AutoTurret::Update()
 		PxSphereGeometry visionGeom(m_Range); // physX doesn't support cones, so use sphere for now
 		PxTransform pose(PxVec3(GetPosition().x, GetPosition().y, GetPosition().z), PxQuat(0,0,0,1));
 		PxSceneQueryFilterData filter(PxFilterData(collisionGroupToCheck, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-		PxShape* results[2048] = {0}; // 2048 - because each player has about 22 meshes that will get hit (ragdoll)
-		int numRes = g_pPhysicsWorld->PhysXScene->overlapMultiple(visionGeom, pose, results, 2048, filter);
+		PxOverlapHit overlapHits[2048];
+		PxOverlapBuffer overlapBuffer(overlapHits, 2048);
+
+		bool hasOverlap = g_pPhysicsWorld->PhysXScene->overlap(
+			visionGeom,
+			pose,
+			overlapBuffer,
+			filter
+		);
+
+		const PxU32 numRes = hasOverlap ? overlapBuffer.getNbAnyHits() : 0;
+
 		if(numRes)
 		{
 			obj_AI_Player* closestTarget = NULL;
 			float			closestDist = 999999.0f;
 			// find target
-			for(int i=0; i<numRes; ++i)
+			for(PxU32 i = 0; i < numRes; ++i)
 			{
+				const PxOverlapHit& overlapHit = overlapBuffer.getAnyHit(i);
+				PxShape* resultShape = overlapHit.shape;
+
 				PhysicsCallbackObject* clbObj = NULL;
-				if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor().userData)))
+				PxRigidActor* resultActor = resultShape ? resultShape->getActor() : NULL;
+
+				if(resultActor && (clbObj = static_cast<PhysicsCallbackObject*>(resultActor->userData)))
 				{
 					GameObject* gameObj = clbObj->isGameObject();
 					if(gameObj && gameObj->isObjType(OBJTYPE_Human))
@@ -310,9 +347,16 @@ BOOL obj_AutoTurret::Update()
 						PxSceneQueryFilterData filter2(PxFilterData(COLLIDABLE_STATIC_MASK|collisionGroupToCheck, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 						r3dPoint3D dirToTarget = (target->GetPosition() - GetPosition()).NormalizeTo();
 						r3dPoint3D startScanFrom = GetPosition() + r3dPoint3D(0,0.5f,0) + dirToTarget.Normalize()*0.5f;
-						g_pPhysicsWorld->raycastSingle(PxVec3(startScanFrom.x, startScanFrom.y, startScanFrom.z), PxVec3(dirToTarget.x, dirToTarget.y, dirToTarget.z), dist, 
-							PxSceneQueryFlag::eIMPACT, hit, filter2);
-						if(hit.shape == results[i])
+						g_pPhysicsWorld->raycastSingle(
+							PxVec3(startScanFrom.x, startScanFrom.y, startScanFrom.z),
+							PxVec3(dirToTarget.x, dirToTarget.y, dirToTarget.z),
+							dist,
+							PxSceneQueryFlag::ePOSITION,
+							hit,
+							filter2
+						);
+
+						if(hit.shape == resultShape)
 						{
 							closestDist = dist;
 							closestTarget = target;
@@ -377,16 +421,25 @@ BOOL obj_AutoTurret::Update()
 				PxRaycastHit hit;
 				PhysicsCallbackObject* target = NULL;
 				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|collisionGroupToCheck, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-				g_pPhysicsWorld->raycastSingle(PxVec3(shootFrom.x, shootFrom.y, shootFrom.z), PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z), m_Range, 
-					PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter);
+				g_pPhysicsWorld->raycastSingle(
+					PxVec3(shootFrom.x, shootFrom.y, shootFrom.z),
+					PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z),
+					m_Range,
+					PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eNORMAL | PxSceneQueryFlag::eFACE_INDEX,
+					hit,
+					filter
+				);
 
 				GameObject* hitTarget = NULL;
 				r3dMaterial* hitMat = NULL;
-				r3dPoint3D hitPos(shootFrom + dirWithSpread*500), hitNorm(-dirWithSpread);
+				r3dPoint3D hitPos(shootFrom + dirWithSpread * 500), hitNorm(-dirWithSpread);
 				const char* hitTargetName = NULL;
-				if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+
+				PxRigidActor* hitActor = hit.shape ? hit.shape->getActor() : NULL;
+
+				if(hitActor && (target = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
 				{
-					hitTargetName = hit.shape->getActor().getName();
+					hitTargetName = hitActor->getName();
 
 					hitTarget = target->isGameObject();
 					if(hitTarget)
@@ -402,9 +455,9 @@ BOOL obj_AutoTurret::Update()
 						hitMat = target->GetMaterial(hit.faceIndex);
 
 
-					hitPos.x = hit.impact.x;
-					hitPos.y = hit.impact.y;
-					hitPos.z = hit.impact.z;
+					hitPos.x = hit.position.x;
+					hitPos.y = hit.position.y;
+					hitPos.z = hit.position.z;
 
 					hitNorm.x = hit.normal.x;
 					hitNorm.y = hit.normal.y;

@@ -6,7 +6,7 @@
 #pragma once
 
 #include "GameObj.h"
-#include "vehicle/PxVehicle.h"
+//#include "vehicle/PxVehicle.h"
 #include "../../EclipseStudio/Sources/multiplayer/NetCellMover.h"
 //////////////////////////////////////////////////////////////////////////
 

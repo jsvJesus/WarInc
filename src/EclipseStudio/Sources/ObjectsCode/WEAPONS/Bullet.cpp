@@ -137,21 +137,34 @@ BOOL obj_Bullet::Update()
 	PxSphereGeometry sphere(0.0025f); // Make it tiny. 5 milimeter diameter
 	PxTransform pose(PxVec3(GetPosition().x, GetPosition().y, GetPosition().z), PxQuat(0,0,0,1));
 
-	PxSweepHit hit;
-	PxSceneQueryFilterData filter(PxFilterData(collisionFlag, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-	
-	
-	if(g_pPhysicsWorld->PhysXScene->sweepSingle(sphere, pose, PxVec3(motion.x, motion.y, motion.z), motionLen, PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter))
-	{
+	PxSweepBuffer hit;
+	PxSceneQueryFilterData filter(
+		PxFilterData(collisionFlag, 0, 0, 0),
+		PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
+	);
 
-		// if the hit is the final stop. 
-		if ( OnHit(hit) ) {
+	PxSceneQueryFlags hitFlags =
+		PxSceneQueryFlag::ePOSITION |
+		PxSceneQueryFlag::eNORMAL |
+		PxSceneQueryFlag::eFACE_INDEX;
+
+	if(g_pPhysicsWorld->PhysXScene->sweep(
+		sphere,
+		pose,
+		PxVec3(motion.x, motion.y, motion.z),
+		motionLen,
+		hit,
+		hitFlags,
+		filter
+	))
+	{
+		if(OnHit(hit.block))
+		{
 			return false;
 		}
 	}
-	else 
+	else
 	{
-		// perform movement
 		SetPosition(GetPosition() + m_AppliedVelocity * r3dGetFrameTime());
 	}
 
@@ -176,13 +189,15 @@ bool obj_Bullet::OnHit( PxSweepHit &hit )
 	PhysicsCallbackObject* target = NULL;
 	const char * hitActorName = NULL;
 
-	r3dVector hitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
+	r3dVector hitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
 	r3dVector hitNormal = r3dPoint3D(hit.normal.x, hit.normal.y, hit.normal.z);
-	if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
-	{
 
-		hitActorName = hit.shape->getActor().getName(); 
-		shootTarget= target->isGameObject();
+	PxRigidActor* hitActor = hit.shape ? hit.shape->getActor() : NULL;
+
+	if(hitActor && (target = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
+	{
+		hitActorName = hitActor->getName();
+		shootTarget = target->isGameObject();
 
 		if( shootTarget)
 		{

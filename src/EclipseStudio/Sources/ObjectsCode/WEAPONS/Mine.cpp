@@ -168,7 +168,7 @@ void obj_Mine::OnTrigger(PxPairFlag::Enum flag, PhysicsCallbackObject* otherObj)
 				PxRaycastHit hit;
 				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
 
-				bool hitResult = g_pPhysicsWorld->raycastSingle(physxMinePosition,  physxDirection, mag, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+				bool hitResult = g_pPhysicsWorld->raycastSingle(physxMinePosition, physxDirection, mag, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
 
 				if( hitResult == false ) 
 				{

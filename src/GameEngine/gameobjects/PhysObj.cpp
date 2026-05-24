@@ -8,7 +8,48 @@
 #include "PxController.h"
 #include "PxCapsuleController.h"
 #include "PxBoxController.h"
+#include "PxRigidActor.h"
+#include "PxRigidBody.h"
+#include "PxRigidDynamic.h"
+#include "PxRigidStatic.h"
+#include "PxScene.h"
+#include "PxQueryReport.h"
 #include "extensions/PxRigidBodyExt.h"
+
+static inline PxRigidStatic* WarInc_AsRigidStatic(PxActor* actor)
+{
+	return actor ? actor->is<PxRigidStatic>() : NULL;
+}
+
+static inline PxRigidDynamic* WarInc_AsRigidDynamic(PxActor* actor)
+{
+	return actor ? actor->is<PxRigidDynamic>() : NULL;
+}
+
+static inline PxRigidActor* WarInc_AsRigidActor(PxActor* actor)
+{
+	return actor ? actor->is<PxRigidActor>() : NULL;
+}
+
+static inline const PxRigidActor* WarInc_AsRigidActor(const PxActor* actor)
+{
+	return actor ? actor->is<PxRigidActor>() : NULL;
+}
+
+static inline PxRigidBody* WarInc_AsRigidBody(PxActor* actor)
+{
+	return actor ? actor->is<PxRigidBody>() : NULL;
+}
+
+static inline const PxRigidBody* WarInc_AsRigidBody(const PxActor* actor)
+{
+	return actor ? actor->is<PxRigidBody>() : NULL;
+}
+
+static inline bool WarInc_IsKinematic(const PxRigidDynamic* actor)
+{
+	return actor && actor->getRigidBodyFlags().isSet(PxRigidBodyFlag::eKINEMATIC);
+}
 
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
@@ -96,7 +137,6 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 	desc.contactOffset = 0.01f;
 	desc.stepOffset = 0.5f;
 	desc.reportCallback = &myControllerCallback;
-	desc.interactionMode = PxCCTInteractionMode::eEXCLUDE;
 	desc.material = g_pPhysicsWorld->PhysXSDK->createMaterial(0.5f, 0.5f, 0.1f);
 	desc.userData = (void*)physCallbackObj;
 
@@ -318,7 +358,7 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 		//boxDesc.shapeFlags		|= NX_SF_VISUALIZATION | NX_SF_DISABLE_RESPONSE | NX_SF_DISABLE_COLLISION;
 		//actorDesc.flags			|= NX_AF_DISABLE_COLLISION | NX_AF_DISABLE_RESPONSE;
 
-		actor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, true);
+		actor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 
 		nowWhoIsTheDummy = true;
 	}
@@ -352,7 +392,7 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 
 	if(params.isKinematic)
 	{
-		actor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, true);
+		actor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 	}
 
 	PxRigidBodyExt::setMassAndUpdateInertia(*actor, params.mass);
@@ -671,12 +711,8 @@ PhysObj::PhysObj()
 bool
 BasePhysicsObject::IsStatic()
 {
-	if( PxActor* actor = getPhysicsActor() )
-	{
-		return actor->isRigidStatic() ? true : false ;
-	}
-
-	return false ;
+	PxActor* actor = getPhysicsActor();
+	return WarInc_AsRigidStatic(actor) ? true : false;
 }
 
 PhysObj::~PhysObj()
@@ -684,7 +720,7 @@ PhysObj::~PhysObj()
 	if(Actor)
 	{
         r3d_assert(g_bAllowPhysObjCreation);
-		Actor->userData = NULL; // pt: not sure, but I keep getting physics objects that have a pointers to dead game object
+		Actor->userData = NULL;
 		Actor->release();
 		Actor = NULL;
 	}
@@ -692,27 +728,27 @@ PhysObj::~PhysObj()
 
 void PhysObj::AddImpulseAtPos(const r3dPoint3D& impulse, const r3dPoint3D& pos)
 {
-	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
+	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
+	if(dyn && !WarInc_IsKinematic(dyn))
 	{
-		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
 
 void PhysObj::AddImpulseAtLocalPos(const r3dPoint3D& impulse, const r3dPoint3D& pos)
 {
-	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
+	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
+	if(dyn && !WarInc_IsKinematic(dyn))
 	{
-		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
 
 void PhysObj::Move(const r3dPoint3D& move, float sharpness)
 {
-	if(Actor->isRigidActor())
+	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
+	if(dyn)
 	{
-		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.p.x += move.x;
 		trans.p.y += move.y;
@@ -724,9 +760,10 @@ void PhysObj::Move(const r3dPoint3D& move, float sharpness)
 void PhysObj::SetPosition(const r3dPoint3D& pos)
 {
 	r3dPoint3D correctPos = pos + m_PositionDifference;
-	if(Actor->isRigidActor())
+
+	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
+	if(dyn)
 	{
-		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.p.x = correctPos.x;
 		trans.p.y = correctPos.y;
@@ -739,13 +776,16 @@ void PhysObj::SetRotation(const r3dVector& Angles)
 {
 	D3DXMATRIX rotation;
 	D3DXMatrixRotationYawPitchRoll(&rotation, R3D_DEG2RAD(Angles.X), R3D_DEG2RAD(Angles.Y), R3D_DEG2RAD(Angles.Z));
-	PxMat33 orientation(PxVec3(rotation._11, rotation._12, rotation._13),
-		PxVec3(rotation._21, rotation._22, rotation._23),
-		PxVec3(rotation._31, rotation._32, rotation._33));
 
-	if(Actor->isRigidActor())
+	PxMat33 orientation(
+		PxVec3(rotation._11, rotation._12, rotation._13),
+		PxVec3(rotation._21, rotation._22, rotation._23),
+		PxVec3(rotation._31, rotation._32, rotation._33)
+	);
+
+	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
+	if(dyn)
 	{
-		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.q = PxQuat(orientation);
 		dyn->setGlobalPose(trans);
@@ -754,33 +794,36 @@ void PhysObj::SetRotation(const r3dVector& Angles)
 
 void PhysObj::SetVelocity(const r3dPoint3D& vel)
 {
-	if(Actor && Actor->isRigidBody())
+	PxRigidBody* dyn = WarInc_AsRigidBody(Actor);
+	if(dyn)
 	{
-		PxRigidBody* dyn = Actor->isRigidBody();
 		dyn->setLinearVelocity(*(PxVec3*)&vel);
 	}
 }
 
 r3dPoint3D PhysObj::GetPosition() const
 {
-	if(Actor->isRigidActor())
+	const PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
+	if(dyn)
 	{
-		const PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		r3dPoint3D correctPos = r3dPoint3D(trans.p.x, trans.p.y, trans.p.z);
 		correctPos -= m_PositionDifference;
 		return correctPos;
 	}
+
 	r3d_assert(false);
-	return r3dPoint3D(0,0,0);
+	return r3dPoint3D(0, 0, 0);
 }
 
 D3DXMATRIX PhysObj::GetRotation() const
 {
-	D3DXMATRIX res; D3DXMatrixIdentity(&res);
-	if(Actor->isRigidActor())
+	D3DXMATRIX res;
+	D3DXMatrixIdentity(&res);
+
+	const PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
+	if(dyn)
 	{
-		const PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		PxMat33 mat(trans.q);
 
@@ -798,44 +841,46 @@ D3DXMATRIX PhysObj::GetRotation() const
 
 		return res;
 	}
+
 	r3d_assert(false);
 	return res;
 }
 
 r3dPoint3D PhysObj::GetVelocity() const
 {
-	if(Actor && Actor->isRigidBody())
+	const PxRigidBody* dyn = WarInc_AsRigidBody(Actor);
+	if(dyn)
 	{
-		const PxRigidBody* dyn = Actor->isRigidBody();
 		PxVec3 vel = dyn->getLinearVelocity();
-		return r3dPoint3D(vel.x,vel.y,vel.z);
+		return r3dPoint3D(vel.x, vel.y, vel.z);
 	}
-	else
-		return r3dPoint3D(0,0,0);
+
+	return r3dPoint3D(0, 0, 0);
 }
 
-bool PhysObj::IsSleeping() 
-{ 
-	if(Actor && Actor->isRigidDynamic())
-		return Actor->isRigidDynamic()->isSleeping(); 
+bool PhysObj::IsSleeping()
+{
+	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
+	if(dyn)
+		return dyn->isSleeping();
 
-	return true; // static
+	return true;
 }
 
 void PhysObj::addSmoothVelocity(const r3dVector& vel)
 {
-	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
+	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
+	if(dyn && !WarInc_IsKinematic(dyn))
 	{
-		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&vel, PxForceMode::eIMPULSE);
 	}
 }
 
 void PhysObj::addImpulse(const r3dVector& impulse)
 {
-	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
+	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
+	if(dyn && !WarInc_IsKinematic(dyn))
 	{
-		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
@@ -928,71 +973,95 @@ ControllerPhysObj::~ControllerPhysObj()
 
 void ControllerPhysObj::Move(const r3dPoint3D& move, float sharpness)
 {
-	//r3dOutToLog("move: %.2f, %.2f, %.2f\n", move.x, move.y, move.z);
 	static PxVec3 prevFramePos;
 
-	PxU32 collisionFlags;
 	PxVec3 d(move.x, move.y, move.z);
 
 	PxVec3 old_pos;
 	PxVec3 new_pos;
-	old_pos.x = (float)Controller->getPosition().x;
-	old_pos.y = (float)Controller->getPosition().y;
-	old_pos.z = (float)Controller->getPosition().z;
-	
-	// iterate movement by 0.2meter steps
+
+	const PxExtendedVec3 oldControllerPos = Controller->getPosition();
+	old_pos.x = (float)oldControllerPos.x;
+	old_pos.y = (float)oldControllerPos.y;
+	old_pos.z = (float)oldControllerPos.z;
+
+	PxFilterData controllerFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0);
+	PxControllerFilters controllerFilters(&controllerFilterData);
+
+	const float elapsedTime = r3dGetFrameTime();
+	const float minMoveDistance = 0.001f;
+
 	const int steps = int(move.Length() / 0.2f) + 1;
 	PxVec3 dstep = d / (float)steps;
-	for(int cur_step=0; cur_step<steps; cur_step++) 
-	{
-		{
-			PxFilterData filterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0); //COLLIDABLE_PLAYER_COLLIDABLE_MASK
-			Controller->move(dstep, 0, 0.001f, collisionFlags, sharpness, &filterData);
-		}
-	
-		// SPECIAL CODE TO PREVENT PLAYER FROM GOING THROUGH WALLS
-		new_pos.x = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().x; //getDebugPosition will return new updated position from Controller->move. getPosition() returns previous frame position
-		new_pos.y = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().y;
-		new_pos.z = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().z;
 
-		// check if for any reason we fell through geometry (that will check terrain too)
-		float heighOffset = 0.8f;
-		if(((PxCapsuleController*)Controller)->getHeight()<0.5f)
-			heighOffset = 0.4f;
-		PxBoxGeometry bbox(0.05f, heighOffset, 0.05f);
-		PxTransform pose(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxQuat(0,0,0,1));
-		PxShape* hit = NULL;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-		if(!g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, hit, filter)) 
+	for(int cur_step = 0; cur_step < steps; cur_step++)
+	{
+		Controller->move(dstep, minMoveDistance, elapsedTime, controllerFilters);
+
+		const PxExtendedVec3 currentControllerPos = Controller->getPosition();
+		new_pos.x = (float)currentControllerPos.x;
+		new_pos.y = (float)currentControllerPos.y;
+		new_pos.z = (float)currentControllerPos.z;
+
+		float heightOffset = 0.8f;
+		if(((PxCapsuleController*)Controller)->getHeight() < 0.5f)
+			heightOffset = 0.4f;
+
+		PxBoxGeometry bbox(0.05f, heightOffset, 0.05f);
+		PxTransform pose(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxQuat(0, 0, 0, 1));
+
+		PxOverlapBuffer overlapHit;
+		PxQueryFilterData overlapFilter(
+			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
+			PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::eANY_HIT
+		);
+
+		if(!g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, overlapFilter))
 		{
 			continue;
 		}
-			
-		// player somehow ended up in geometry, move him back
+
 		Controller->setPosition(PxExtendedVec3(old_pos.x, old_pos.y, old_pos.z));
 
-		// after returning him back to his previous position, try to add some gravity to prevent player being stuck to geometry, but check that previously we have any horizontal movement
 		PxVec3 dd = d;
-		dd.y = 0;
-		if(dd.magnitudeSquared() > 0)
+		dd.y = 0.0f;
+
+		if(dd.magnitudeSquared() > 0.0f)
 		{
-			dd = PxVec3(0.0f, -9.81f*r3dGetFrameTime(), 0.0f);
-			Controller->move(dd, COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0.001f, collisionFlags, 1.0f);
+			dd = PxVec3(0.0f, -9.81f * r3dGetFrameTime(), 0.0f);
+			Controller->move(dd, minMoveDistance, elapsedTime, controllerFilters);
 		}
+
 		break;
 	}
 
-	new_pos.x = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().x; //getDebugPosition()
-	new_pos.y = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().y;
-	new_pos.z = (float)((Cct::CapsuleController*)Controller)->getDebugPosition().z;
+	const PxExtendedVec3 finalControllerPos = Controller->getPosition();
+	new_pos.x = (float)finalControllerPos.x;
+	new_pos.y = (float)finalControllerPos.y;
+	new_pos.z = (float)finalControllerPos.z;
 
-	// check if player fell through world and don't allow him to do this
 	{
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlag::eSTATIC);
-		PxSceneQueryHit hit;
-		if(!g_pPhysicsWorld->PhysXScene->raycastAny(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxVec3(0,-1,0), 1000.0f, hit, filter)) // nothing below our feet?
+		PxRaycastBuffer rayHit;
+		PxQueryFilterData rayFilter(
+			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
+			PxQueryFlag::eSTATIC | PxQueryFlag::eANY_HIT
+		);
+
+		if(!g_pPhysicsWorld->PhysXScene->raycast(
+			PxVec3(new_pos.x, new_pos.y, new_pos.z),
+			PxVec3(0.0f, -1.0f, 0.0f),
+			1000.0f,
+			rayHit,
+			PxHitFlag::eDEFAULT,
+			rayFilter
+		))
 		{
-			r3dOutToLog("Player falling through world. Auto correcting. Current pos: %.2f, %.2f, %.2f, Corrected Pos: %.2f, %.2f, %2.f\n", new_pos.x, new_pos.y, new_pos.z, prevFramePos.x, prevFramePos.y, prevFramePos.z);
+			r3dOutToLog(
+				"Player falling through world. Auto correcting. Current pos: %.2f, %.2f, %.2f, Corrected Pos: %.2f, %.2f, %2.f\n",
+				new_pos.x, new_pos.y, new_pos.z,
+				prevFramePos.x, prevFramePos.y, prevFramePos.z
+			);
+
 			Controller->setPosition(PxExtendedVec3(prevFramePos.x, prevFramePos.y, prevFramePos.z));
 		}
 	}

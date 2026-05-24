@@ -81,13 +81,24 @@ void Ammo::Fire(const r3dPoint3D& hitPos, const r3dPoint3D& muzzlerPos, const D3
 	{
 		// cast ray down and find where we should place mine. should be in front of character, facing away from him
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC
+		);
+
 		// muzzlePos is the correct position for the hands.
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(muzzlerPos.x, muzzlerPos.y+1, muzzlerPos.z), PxVec3(0, -1, 0), 50.0f, PxSceneQueryFlag::eIMPACT, hit, filter))
+		if(g_pPhysicsWorld->raycastSingle(
+			PxVec3(muzzlerPos.x, muzzlerPos.y + 1.0f, muzzlerPos.z),
+			PxVec3(0.0f, -1.0f, 0.0f),
+			50.0f,
+			PxSceneQueryFlag::ePOSITION,
+			hit,
+			filter
+		))
 		{
-			spawnPos.x = hit.impact.x;
-			spawnPos.y = hit.impact.y;
-			spawnPos.z = hit.impact.z;
+			spawnPos.x = hit.position.x;
+			spawnPos.y = hit.position.y;
+			spawnPos.z = hit.position.z;
 		}
 			
 		spawnRot.x = (plr->m_fPlayerRotation) + R3D_RAD2DEG(plr->bodyAdjust_x) + 180;

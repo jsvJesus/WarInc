@@ -275,11 +275,24 @@ r3dPoint3D ClientGameLogic::AdjustSpawnPositionToGround(const r3dPoint3D& pos)
 	// because server now send exact position and it might be under geometry if it was changed
 	//
 	PxRaycastHit hit;
-	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC));
-	if(!g_pPhysicsWorld->raycastSingle(PxVec3(pos.x, pos.y+1.0f, pos.z), PxVec3(0,-1,0), 1.2f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
+	PxSceneQueryFilterData filter(
+		PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
+		PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC)
+	);
+
+	if(!g_pPhysicsWorld->raycastSingle(
+		PxVec3(pos.x, pos.y + 1.0f, pos.z),
+		PxVec3(0.0f, -1.0f, 0.0f),
+		1.2f,
+		PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
+		hit,
+		filter
+	))
+	{
 		return pos + r3dPoint3D(0, 1.0f, 0);
-		
-	return r3dPoint3D(hit.impact.x, hit.impact.y + 0.1f, hit.impact.z);
+	}
+
+	return r3dPoint3D(hit.position.x, hit.position.y + 0.1f, hit.position.z);
 }
 
 IMPL_PACKET_FUNC(ClientGameLogic, PKT_C2S_ValidateConnectingPeer)
@@ -1494,16 +1507,34 @@ void ClientGameLogic::ApplyExplosionDamage( const r3dVector& pos, float radius, 
 					if(rayLen > 0)
 					{
 						PxRaycastHit hit;
-						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::eSTATIC);
-						if(g_pPhysicsWorld->raycastSingle(PxVec3(orig.x, orig.y, orig.z), PxVec3(dir.x, dir.y, dir.z), rayLen, PxSceneQueryFlag::eIMPACT, hit, filter))
+						PxSceneQueryFilterData filter(
+							PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+							PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC
+						);
+
+						if(g_pPhysicsWorld->raycastSingle(
+							PxVec3(orig.x, orig.y, orig.z),
+							PxVec3(dir.x, dir.y, dir.z),
+							rayLen,
+							PxSceneQueryFlag::ePOSITION,
+							hit,
+							filter
+						))
 						{
 							// check distance to collision
-							float len = r3dPoint3D(hit.impact.x-obj->GetPosition().x, hit.impact.y-(obj->GetPosition().y+2.0f), hit.impact.z-obj->GetPosition().z).Length();
-							if((len+0.01f) < rayLen)
+							float len = r3dPoint3D(
+								hit.position.x - obj->GetPosition().x,
+								hit.position.y - (obj->GetPosition().y + 2.0f),
+								hit.position.z - obj->GetPosition().z
+							).Length();
+
+							if((len + 0.01f) < rayLen)
 							{
-								// human is behind a wall						
-								PhysicsCallbackObject* target;
-								if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
+								// human is behind a wall
+								PhysicsCallbackObject* target = NULL;
+								PxRigidActor* hitActor = hit.shape ? hit.shape->getActor() : NULL;
+
+								if(hitActor && (target = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
 								{
 									// this currently only handles one piercable object between the player and explosion.  More complexity might be valid here. 
 									GameObject* obj = target->isGameObject();

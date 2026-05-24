@@ -43,10 +43,21 @@ BOOL DroppedLootbox::OnCreate()
 	if(GetRotationVector().AlmostEqual(r3dPoint3D(0,0,0)))
 	{
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y+1, GetPosition().z), PxVec3(0, -1, 0), 50.0f, PxSceneQueryFlag::eIMPACT, hit, filter))
+		PxSceneQueryFilterData filter(
+			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
+			PxSceneQueryFilterFlag::eSTATIC
+		);
+
+		if(g_pPhysicsWorld->raycastSingle(
+			PxVec3(GetPosition().x, GetPosition().y + 1.0f, GetPosition().z),
+			PxVec3(0.0f, -1.0f, 0.0f),
+			50.0f,
+			PxSceneQueryFlag::ePOSITION,
+			hit,
+			filter
+		))
 		{
-			SetPosition(r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z));
+			SetPosition(r3dPoint3D(hit.position.x, hit.position.y, hit.position.z));
 			SetRotationVector(r3dPoint3D(0, 0, 0));
 		}
 		else
