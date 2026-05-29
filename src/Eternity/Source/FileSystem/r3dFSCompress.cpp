@@ -369,6 +369,7 @@ bool r3dGetFileCrc32(const char* fname, DWORD* out_crc32, DWORD* out_size)
   }
 
   const DWORD size = static_cast<DWORD>(fileSizeLong);
+
   BYTE* data = new BYTE[static_cast<size_t>(size) + 1];
 
   const size_t rsize = fread(data, 1, static_cast<size_t>(size), f);

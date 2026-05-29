@@ -336,7 +336,7 @@ void r3dFileSystem::RemoveVolumeFiles()
 bool r3dFileSystem::OpenVolumesEx(bool forRead, bool fail_if_error)
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
-  for(size_t i=0; i<MAX_VOLUMES; i++) 
+  for(int i = 0; i < MAX_VOLUMES; i++) 
   {
     r3d_assert(volumeHandles[i] == INVALID_HANDLE_VALUE);
     if(volumeSizes[i] == 0)
@@ -781,12 +781,10 @@ bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
   DetectVolumeSizes();
 
   // clean up unused volumes
-  for(size_t i=0; i<MAX_VOLUMES; i++) {
-    if(volumeSizes[i] == 0) {
-      char fname[MAX_PATH];
-      GetVolumeName(fname, i + 1);
-      _unlink(fname);
-    }
+  for(int i = 0; i < MAX_VOLUMES; i++) {
+    char fname[MAX_PATH];
+    GetVolumeName(fname, i);
+    _unlink(fname);
   }
 
   return true;

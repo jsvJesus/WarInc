@@ -3111,9 +3111,9 @@ namespace
 		}
 	}
 
-	LONG CountDone = ptr - vertStart ;
+	LONG CountDone = static_cast<LONG>(ptr - vertStart);
 
-	InterlockedExchangeAdd( &params->FillCount, CountDone );
+	InterlockedExchangeAdd(&params->FillCount, CountDone);
 }
 
 void r3dParticleSystem::FillBuffersNew( const r3dCamera& cam, int bOnlyShadowCasters )

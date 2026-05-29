@@ -106,8 +106,8 @@ r3dString operator + ( const r3dString& s0, const r3dString& s1 )
 	const char* cs0 = s0.c_str();
 	const char* cs1 = s1.c_str();
 
-	int s0len = strlen( cs0 );
-	int s1len = strlen( cs1 );
+	int s0len = static_cast<int>(strlen(cs0));
+	int s1len = static_cast<int>(strlen(cs1));
 
 	char* newString = new char[ s0len + s1len + 1 ];
 

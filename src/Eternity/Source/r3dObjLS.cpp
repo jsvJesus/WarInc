@@ -635,7 +635,7 @@ bool r3dMesh::SaveBin(const char* fname)
 	{
 		fwrite(&MatChunks[i].StartIndex, sizeof(int), 1, f);
 		fwrite(&MatChunks[i].EndIndex, sizeof(int), 1, f);
-		int len = strlen(MatChunksNames[i]);//strlen(MatChunks[i].Mat->Name);
+		int len = static_cast<int>(strlen(MatChunksNames[i]));//strlen(MatChunks[i].Mat->Name);
 		fwrite(&len, sizeof(int), 1, f);
 		//fwrite(MatChunks[i].Mat->Name, len, 1, f);
 		fwrite(MatChunksNames[i], len, 1, f);

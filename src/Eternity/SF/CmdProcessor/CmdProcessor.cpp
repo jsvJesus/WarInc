@@ -443,7 +443,7 @@ void CommandProcessor::InsertLine( const char * szLine, CTextBuf * pBuffer )
 		pBuffer = &m_FrameCommands;
 	}
 
-	DWORD dwLine = strlen( szLine ) + 1;
+	DWORD dwLine = static_cast<DWORD>(strlen(szLine) + 1);
 
 	if ( dwLine == 1 )
 		return;		// no text
@@ -479,7 +479,7 @@ void CommandProcessor::AppendLine( const char * szLine, CTextBuf * pBuffer )
 		pBuffer = &m_FrameCommands;
 	}
 
-	DWORD dwLine = strlen( szLine );
+	DWORD dwLine = static_cast<DWORD>(strlen(szLine));
 
 	if ( dwLine == 0 )
 		return;		// no text

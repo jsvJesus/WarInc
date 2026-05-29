@@ -106,7 +106,7 @@ void r3dIniFileReader::Preprocess()
 
 const char* r3dIniFileReader::GetNextLine(const char* line)
 {
-  int i = line - buf_;
+  int i = static_cast<int>(line - buf_);
 
   // find first end of string
   for(; i<len_; i++) {

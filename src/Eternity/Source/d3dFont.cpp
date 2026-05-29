@@ -926,7 +926,7 @@ void CD3DFont::PrintF(float X, float Y, float W, float H,  float StartTime, floa
   StringCbVPrintfA(buf, sizeof(buf), fmt, ap);
   va_end(ap);
 
-  int Len = strlen(buf);
+  int Len = static_cast<int>(strlen(buf));
 
   int Val = int((CurrentTime - StartTime) * PrintSpeed);
   if (Val > Len) Val = Len;
