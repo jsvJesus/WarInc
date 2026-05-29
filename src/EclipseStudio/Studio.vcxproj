@@ -116,7 +116,7 @@
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Release_Static;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -159,9 +159,9 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>PhysX3DEBUG_x86.lib;PhysX3CommonDEBUG_x86.lib;PhysX3CookingDEBUG_x86.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x86.lib;PxPvdSDKDEBUG_x86.lib;PsFastXmlDEBUG_x86.lib;PxTaskDEBUG_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX3DEBUG_x86.lib;PhysX3CommonDEBUG_x86.lib;PhysX3CookingDEBUG_x86.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x86.lib;PxPvdSDKDEBUG_x86.lib;PsFastXmlDEBUG_x86.lib;PxTaskDEBUG_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio_d.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Debug_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Debug_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -213,7 +213,7 @@
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\WarInc.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Release_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -403,6 +403,7 @@
     <ClCompile Include="Sources\RENDERING\GrannyTestSkeleton.cpp" />
     <ClCompile Include="Sources\RENDERING\Probes\ProbeMaster.cpp" />
     <ClCompile Include="Sources\SteamHelper.cpp" />
+    <ClCompile Include="Sources\ThirdParty\JpegTurboAlias.cpp" />
     <ClCompile Include="Sources\UIFilters\NightVisionController.cpp" />
     <ClCompile Include="Sources\UI\FrontEndNew.cpp" />
     <ClCompile Include="Sources\UI\FrontEndShared.cpp" />
