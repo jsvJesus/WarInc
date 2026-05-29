@@ -13,7 +13,16 @@
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-  </ItemGroup>
+  <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration><ProjectConfiguration Include="Final|x64">
+      <Configuration>Final</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration><ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration></ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{D14FACF2-B61D-445F-A307-FDC587F901F4}</ProjectGuid>
@@ -27,8 +36,18 @@
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -38,17 +57,27 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -86,6 +115,25 @@
     <Lib>
       <OutputFile>lib\GameEngineD.lib</OutputFile>
     </Lib>
+  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_LIB;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>lib\GameEngineD.lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -99,6 +147,32 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>lib\GameEngine.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_LIB;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -140,310 +214,438 @@
       <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
       <OutputFile>lib\GameEngineF.lib</OutputFile>
     </Lib>
+  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
+    <ClCompile>
+      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\External\Scaleform\Include;..\External\Scaleform\Src;.\..\EclipseStudio\Sources;.\;.\include;..\eternity\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_LIB;FINAL_BUILD;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>Cdecl</CallingConvention>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>lib\GameEngineF.lib</OutputFile>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\External\RecastAndDetour\DebugDraw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourAlloc.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourCommon.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourCrowd.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourDebugDraw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourLocalBoundary.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourNavMesh.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshBuilder.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourNavMeshQuery.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourNode.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourObstacleAvoidance.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourPathCorridor.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourPathQueue.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourProximityGrid.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourTileCache.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\DetourTileCacheBuilder.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\Recast.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastAlloc.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastArea.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastContour.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastDebugDraw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastDump.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</TreatWarningAsError><TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</TreatWarningAsError>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">false</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">false</TreatWarningAsError><TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Final|x64'">false</TreatWarningAsError>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatWarningAsError><TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</TreatWarningAsError>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastFilter.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastLayers.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastMesh.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastMeshDetail.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastRasterization.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\RecastAndDetour\RecastRegion.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderBinary.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
 
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
 
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
     </ClCompile>
 
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderDescs.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
 
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
 
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
       </PrecompiledHeader>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="ai\NavigationDebugVisualizer.cpp" />
@@ -463,15 +665,16 @@
     <ClCompile Include="gameobjects\obj_Apex.cpp" />
     <ClCompile Include="gameobjects\obj_Dummy.cpp">
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </BrowseInformation><BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </BrowseInformation>
     </ClCompile>
     <ClCompile Include="gameobjects\obj_Mesh.cpp" />
     <ClCompile Include="gameobjects\obj_Sprite.cpp" />
     <ClCompile Include="gameobjects\obj_Vehicle.cpp" />
     <ClCompile Include="gameobjects\PhysObj.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="gameobjects\PhysXRepXHelpers.cpp" />
     <ClCompile Include="gameobjects\PhysXWorld.cpp" />
@@ -479,9 +682,9 @@
     <ClCompile Include="gameobjects\VehicleDescriptor.cpp" />
     <ClCompile Include="gameobjects\VehicleManager.cpp" />
     <ClCompile Include="r3dPCH.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">Create</PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader><PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TrueNature2\Terrain2.cpp" />
     <ClCompile Include="TrueNature\CloudPlane\Cloud.cpp" />
