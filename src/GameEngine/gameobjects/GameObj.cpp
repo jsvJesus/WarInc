@@ -341,7 +341,9 @@ BOOL GameObject::Load(const char* fname)
 		sprintf_s(hash_string, sizeof(hash_string), "%s_%d_%d%d%d_%d:%d:%d_%d", fname, counter, date->tm_year, date->tm_mon, date->tm_mday, date->tm_hour, date->tm_min, date->tm_sec, rnd);
 		hashID = r3dHash::MakeHash(hash_string);
 		if(hashID == 0x7FFFFFFF)
-			__asm nop;
+		{
+			// x64: old "__asm nop" was a no-op. Keep behavior unchanged.
+		}
 	}
 
 	if( !( ObjFlags & OBJFLAG_AsyncLoading ) )

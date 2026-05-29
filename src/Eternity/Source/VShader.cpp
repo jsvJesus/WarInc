@@ -107,37 +107,58 @@ int r3dCompileShader(
   r3dTL::TArray< r3dString > * pFilesIncluded
   )
 {
-  //r3dOutToLog("r3dCompileShader: %s\n", fname);
+	DWORD flags = 0;
 
-  DWORD flags = 0;
-/*  
-#ifdef _DEBUG
-  flags |= D3DXSHADER_DEBUG|D3DXSHADER_SKIPOPTIMIZATION;
-#endif
-*/
+	r3dFile* f = r3d_open(fname, "rb");
+	if(!f) {
+		r3dError("missing shader file %s\n", fname);
+		return 0;
+	}
 
-  r3dFile* f = r3d_open(fname, "rb");
-  if(!f) {
-    r3dError("missing shader file %s\n", fname);
-    return 0;
-  }
-  char* buf = new char[f->size + 1];
-  int size = fread(buf, 1, f->size, f);
-  buf[size] = 0;
-  fclose(f);
-  
-  ID3DXBuffer* pError = NULL;
-  HRESULT hr;
-  r3dDXInclude include(fname);
+	if(f->size < 0) {
+		fclose(f);
+		r3dError("invalid shader file size %s\n", fname);
+		return 0;
+	}
 
-  //hr = D3DXCompileShaderFromFile(fname, definesCpy, NULL, pFunctionName, pProfile, flags, ppShader, &pError, NULL);
-  hr = D3DXCompileShader(buf, size, definesCpy, &include, pFunctionName, pProfile, flags, ppShader, &pError, NULL);
-  delete[] buf;
+	const size_t fileSize = static_cast<size_t>(f->size);
 
-  if( pFilesIncluded )
-  {
-	  pFilesIncluded->Swap( include.AccumIncludes );
-  }
+	if(fileSize > MAXDWORD) {
+		fclose(f);
+		r3dError("shader file is too big %s\n", fname);
+		return 0;
+	}
+
+	char* buf = new char[fileSize + 1];
+
+	const size_t bytesRead = fread(buf, 1, fileSize, f);
+	fclose(f);
+
+	buf[bytesRead] = 0;
+
+	ID3DXBuffer* pError = NULL;
+	HRESULT hr;
+	r3dDXInclude include(fname);
+
+	hr = D3DXCompileShader(
+	  buf,
+	  static_cast<UINT>(bytesRead),
+	  definesCpy,
+	  &include,
+	  pFunctionName,
+	  pProfile,
+	  flags,
+	  ppShader,
+	  &pError,
+	  NULL
+	);
+
+	delete[] buf;
+
+	if(pFilesIncluded)
+	{
+		pFilesIncluded->Swap(include.AccumIncludes);
+	}
 
 	if(FAILED(hr))
 	{
@@ -152,13 +173,17 @@ int r3dCompileShader(
 		  errorText
 		);
 
+		if(pError)
+			pError->Release();
+
 		return 0;
 	}
-  
-  return 1;
+
+	if(pError)
+		pError->Release();
+
+	return 1;
 }
-
-
 
 r3dVertexShader::r3dVertexShader()
 {

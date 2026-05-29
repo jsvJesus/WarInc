@@ -3013,7 +3013,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 
 		// otherwise shouldn't have ruined it
 
-		int resources_count = resources_.Count();
+		const int resources_count = static_cast<int>(resources_.Count());
 
 		if( DeviceWasAvailable )
 		{
@@ -3033,7 +3033,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 			SAFE_RELEASE( MainRT ) ;
 			SAFE_RELEASE( MainDSS ) ;
 
-			for( size_t i = 0; i < resources_.Count() ; ++ i )
+			for(int i = 0, e = static_cast<int>(resources_.Count()); i < e; ++i)
 			{
 				r3dIResource* res = resources_[i];
 				if(res) 
@@ -3078,7 +3078,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 
 		PendingQuery = 0 ;
 
-		for( size_t i = 0; i < resources_.Count(); ++ i ) 
+		for(int i = 0, e = static_cast<int>(resources_.Count()); i < e; ++i) 
 		{
 			if(resources_[i]) 
 			{

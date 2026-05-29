@@ -524,10 +524,10 @@ void CUberData::LoadWeaponTable()
 		if(n != expectedTokens) {
 			r3dOutToLog("Bad number of arguments: %d - %s\n", n, t[0]);
 		}
-		else
-		{
-			__asm nop;
-		}
+		//else
+		//{
+			//__asm nop;
+		//}
 		
 		//r3dOutToLog("Loading %s\n", t[0]);
 #endif

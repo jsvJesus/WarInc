@@ -148,7 +148,7 @@ char* __internal_gnrt_lkey(const char* name, int exp_year, int exp_month, int ex
 	for(int i=0; i<16; ++i)
 		sname[i] = 'a'+i;
 	sname[15] = 0;
-	strncpy(sname, name, R3D_MIN((int)strlen(name), 15));
+	strncpy(sname, name, R3D_MIN(static_cast<int>(strlen(name)), 15));
 	sprintf(raw_key, "%s %8x:%8x", sname, dword1, dword2);
 	encode(raw_key, result);
 	
@@ -164,20 +164,27 @@ bool __internal_check_license_key()
 		// 0..16 - name to whom licensed
 		// 17..24 - secret data
 		// 25..32 - exp.date
-		int len = strlen(gLicenseKey);
+		const int len = static_cast<int>(strlen(gLicenseKey));
+
 		r3d_assert(len == 33);
+
 		if(len == 33)
 		{
 			time_t exptime;
-			unsigned int dword1=0, dword2=0;
+			unsigned int dword1 = 0;
+			unsigned int dword2 = 0;
 			char temp[32];
+
 			sscanf(gLicenseKey, "%s %x:%x", temp, &dword1, &dword2);
-			exptime = (__int64)dword2;
+
+			exptime = static_cast<time_t>(dword2);
+
 			time_t curtime;
 			time(&curtime);
 
 			struct tm curdate = *localtime(&curtime);
 			struct tm expdate = *localtime(&exptime);
+
 			if(curdate.tm_year < expdate.tm_year ||
 				curdate.tm_mon < expdate.tm_mon ||
 				curdate.tm_mday < expdate.tm_mday)
@@ -186,7 +193,8 @@ bool __internal_check_license_key()
 				return false;
 		}
 	}
-	return false;	
+
+	return false;
 }
 
 int frame_timer = 1;

@@ -387,10 +387,10 @@ void PointLightsRenderer::RasterizeLightToTileCache
 				tileCache[numLights].lightIDs[i][j] = static_cast<uint16_t>(lightID);
 				zMin = R3D_MIN(zMin, minZ);
 			}
-			else
-			{
-				_asm nop;
-			}
+			//else
+			//{
+				//_asm nop;
+			//}
 		}
 	}
 }
