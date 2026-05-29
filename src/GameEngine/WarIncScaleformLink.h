@@ -35,8 +35,8 @@
 
 #else
 
-#pragma comment(lib, "libgfx_Release.lib")
-#pragma comment(lib, "libgfx_as2_Release.lib")
+#pragma comment(lib, "libgfx.lib")
+#pragma comment(lib, "libgfx_as2.lib")
 
 #if WARINC_SCALEFORM_USE_SPLIT_D3D9_LIBS
 #pragma comment(lib, "libgfxplatform_d3d9_Release.lib")

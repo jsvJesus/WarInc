@@ -1097,9 +1097,19 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 		int refCountRT = pRT->AddRef(); refCountRT = pRT->Release();
 		int refCountSS = pSS->AddRef(); refCountSS = pSS->Release();
 
-		static Scaleform::Render::RenderTarget* gfxRT = new Scaleform::Render::RenderTarget(NULL, Scaleform::Render::RBuffer_User, Scaleform::Render::ImageSize((uint32_t)r3dRenderer->ScreenW, (uint32_t)r3dRenderer->ScreenH));
-		static Scaleform::Render::DepthStencilBuffer* gfxDSB = new Scaleform::Render::DepthStencilBuffer(NULL, Scaleform::Render::ImageSize((uint32_t)r3dRenderer->ScreenW, (uint32_t)r3dRenderer->ScreenH));
-		Scaleform::Render::D3D9::HALData::UpdateData(gfxRT, pRT, gfxDSB, pSS);
+		Scaleform::Render::RenderTarget* gfxRT = gAPIScaleformGfx->RendererHAL->CreateRenderTarget(pRT, pSS);
+
+		if(!gfxRT)
+		{
+			SAFE_RELEASE(pRT);
+			SAFE_RELEASE(pSS);
+
+			if(gAPIScaleformGfx->pStateBlock)
+				gAPIScaleformGfx->pStateBlock->Apply();
+
+			gAPIScaleformGfx->pCurMovie = NULL;
+			return;
+		}
 
 		Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL->GetDefaultRenderTarget();
 
@@ -1125,10 +1135,8 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 		if (numPasses > 1)
 			r3dRenderer->SetEye(R3D_STEREO_EYE_MONO);
 
-		Scaleform::Render::D3D9::HALData::UpdateData(gfxRT, NULL, gfxDSB, NULL);
-
-		//SAFE_DELETE(gfxRT);
-		//SAFE_DELETE(gfxDSB);
+		gfxRT->Release();
+		gfxRT = NULL;
 
 		int refCountRT1 = pRT->AddRef(); refCountRT1 = pRT->Release();
 		int refCountSS1 = pSS->AddRef(); refCountSS1 = pSS->Release();
