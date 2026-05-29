@@ -41,8 +41,8 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Allow developers to replace the math.h
 //#define SF_MATH_H  <math.h>
 
-#define GFX_MAX_MICE_SUPPORTED          4
-#define GFX_MAX_KEYBOARD_SUPPORTED      4
+#define GFX_MAX_MICE_SUPPORTED          6
+#define GFX_MAX_KEYBOARD_SUPPORTED      6
 
 // Default mouse support enable state for GFx. Enabling mouse is also
 // dynamically controlled by GFxMovieView::EnableMouseSupport().
@@ -57,7 +57,10 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Enables multitouch support.
 //#define GFX_MULTITOUCH_SUPPORT_ENABLE
 
-#if defined(SF_OS_ANDROID) || defined(SF_OS_IPHONE) || defined(SF_OS_3DS)
+// Use Scaleform internal gesture recognizer
+//#define GFX_GESTURE_RECOGNIZE
+
+#if defined(SF_OS_ANDROID) || defined(SF_OS_IPHONE) || defined(SF_OS_3DS) || defined(SF_OS_WINMETRO)
 #define GFX_MULTITOUCH_SUPPORT_ENABLE
 #endif
 
@@ -71,12 +74,14 @@ otherwise accompanies this software in either electronic or hard copy form.
 //---------------------------------------------------------------------------
 
 // Enable/disable addons for MSVC builds
-#if defined(SF_OS_WIN32) || defined(SF_OS_XBOX360)
+#if defined(SF_OS_WIN32) || defined(SF_OS_XBOX360) || defined(SF_OS_PS3)
     #include "GFxConfigAddons.h"
 
 #if defined(SF_OS_WIN32) && defined(GFX_USE_VIDEO_WIN32)
     #define GFX_USE_VIDEO
 #elif defined(SF_OS_XBOX360) && defined(GFX_USE_VIDEO_XBOX360)
+    #define GFX_USE_VIDEO
+#elif defined(SF_OS_PS3) && defined(GFX_USE_VIDEO_PS3) && !defined(GFX_USE_VIDEO)
     #define GFX_USE_VIDEO
 #endif
 #endif
@@ -137,10 +142,19 @@ otherwise accompanies this software in either electronic or hard copy form.
     #define SF_ENABLE_SIMD
 #endif
 
-
 // Enable the use of TCP/IP sockets
 // This is needed for AMP
 #define SF_ENABLE_SOCKETS
+#ifdef SF_BUILD_SHIPPING
+	#undef SF_ENABLE_SOCKETS
+#endif
+
+// Enable use of PCRE - Perl Compatible Regular Expressions
+#define SF_ENABLE_PCRE
+
+
+// Enable AS3 Application Domain 
+#define SF_ENABLE_APP_DOMAIN
 
 // ***** Memory/Allocation Configuration
 //---------------------------------------------------------------------------
@@ -221,6 +235,9 @@ otherwise accompanies this software in either electronic or hard copy form.
     #define SF_RENDERER_PROFILE
 #endif
 
+// Enable filters. Undefine this to disable rendering of all filters.
+#define SF_RENDER_ENABLE_FILTERS
+
 // ***** GFx Logging options
 //---------------------------------------------------------------------------
 
@@ -252,7 +269,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 // FMOD sound support is enabled for MSVC builds (PC/Xbox360) by default
 // It will be automatically enabled for other platforms if FMOD is detected by build system
 #if defined(SF_OS_WIN32) || defined(SF_OS_XBOX360) || defined(SF_PS3_MSVC_BUILD) || \
-	defined(SF_NGP_MSVC_BUILD)|| defined(SF_WIIU_MSVC_BUILD)|| defined(SF_3DS_MSVC_BUILD)
+	defined(SF_PSVITA_MSVC_BUILD) || defined(SF_WIIU_MSVC_BUILD) || defined(SF_3DS_MSVC_BUILD)
     #define GFX_SOUND_FMOD
 #endif
 
@@ -290,6 +307,19 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Enable core XML support
 #define GFX_ENABLE_XML
 
+#if defined(SF_OS_WINMETRO)
+// Use standard C++11 thread library
+#ifdef SF_ENABLE_THREADS
+#define SF_USE_STD11_THREADS
+#endif
+// Disable TCP/IP sockets (AMP)
+#undef SF_ENABLE_SOCKETS
+// Disable video support
+#undef GFX_ENABLE_VIDEO
+// Disable core IME support
+#define SF_NO_IME_SUPPORT
+#endif
+
 // Disable core IME support
 //#define SF_NO_IME_SUPPORT
 
@@ -324,16 +354,16 @@ otherwise accompanies this software in either electronic or hard copy form.
 #endif
 
 // Enable game pad analog input support.
-#if ( defined(SF_OS_NGP) || defined(SF_OS_PS3) || defined(SF_OS_XBOX360) || defined(SF_OS_3DS) || defined(SF_OS_WIIU) )
+#if ( defined(SF_OS_PSVITA) || defined(SF_OS_PS3) || defined(SF_OS_XBOX360) || defined(SF_OS_3DS) || defined(SF_OS_WIIU) )
 #define GFX_ENABLE_ANALOG_GAMEPAD
 #endif
 
 // Enable font compactor (compaction during the run-time). When disabled, 
 // fonts compacted by the gfxexport (with option -fc) remain working.
-//#define GFX_ENABLE_FONT_COMPACTOR //@FONT
+#define GFX_ENABLE_FONT_COMPACTOR
 
 // Enable use of compacted fonts (fonts, compacted by gfxexport (option -fc))
-// #define GFX_ENABLE_COMPACTED_FONTS //@FONT
+#define GFX_ENABLE_COMPACTED_FONTS
 
 // Enable TextField ActionScript extension functions. When disabled,
 // standard GFxPlayer's HUD will not work.
@@ -370,8 +400,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 #if !defined(SF_BUILD_SHIPPING) && defined(SF_ENABLE_THREADS)
 
-#define SF_AMP_SERVER
-#define SF_ENABLE_SOCKETS
+#ifdef SF_ENABLE_SOCKETS
+	#define SF_AMP_SERVER
+#endif
 
 // Enable debug memory tracking when AMP is enabled
 //#define SF_MEMORY_ENABLE_DEBUG_INFO

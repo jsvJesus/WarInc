@@ -121,6 +121,8 @@ public:
     void                CollectTimingStats(ProfileFrame* frameProfile);
     void                CollectMarkers(MovieProfile* movieProfile);
     void                ClearMarkers();
+    void                CollectGcStats(ProfileFrame* frameProfile);
+    void                ClearGcStats();
     void                CollectMemoryStats(ProfileFrame* frameProfile);
     void                GetStats(StatBag* bag, bool reset);
 
@@ -144,6 +146,10 @@ public:
 
     // Frame markers
     void        AddMarker(const char* markerType);
+
+    // GC stats
+    virtual void AddGcRoots(UInt32 numRoots);
+    virtual void AddGcFreedRoots(UInt32 numFreedRoots);
 
     void        UpdateStats(UInt64 functionId, UInt32 functionTime, UInt32 functionCalls, ProfileFrame* frameProfile);
 
@@ -206,6 +212,10 @@ private:
 
     // Markers
     StringHashLH<UInt32>    Markers;
+
+    // GC stats
+    UInt32                  RootsNumber;
+    UInt32                  FreedRootsNumber;
 
     Scaleform::Event        DebugEvent;
 

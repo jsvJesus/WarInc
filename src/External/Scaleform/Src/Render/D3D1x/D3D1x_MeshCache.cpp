@@ -13,14 +13,14 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
-#include "D3D1x_MeshCache.h"
+#include "Render/D3D1x/D3D1x_MeshCache.h"
+#include "Render/D3D1x/D3D1x_ShaderDescs.h"
+#include "Render/D3D1x/D3D1x_Shader.h"
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_Alg.h"
 #include "Kernel/SF_HeapNew.h"
 
 //#define SF_RENDER_LOG_CACHESIZE
-
-#include <stdio.h>
 
 namespace Scaleform { namespace Render { namespace D3D1x {
 
@@ -57,12 +57,15 @@ MeshCache::~MeshCache()
 
 // Initializes MeshCache for operation, including allocation of the reserve
 // buffer. Typically called from SetVideoMode.
-bool MeshCache::Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext)
+bool MeshCache::Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext, ShaderManager* psm)
 {
-    SF_ASSERT(!pDevice || !pDeviceContext);
+    SF_ASSERT(!pDevice || !pDeviceContext || !psm);
 
     pDevice = pdevice;
     pDeviceContext = pcontext;
+    pShaderManager = psm;
+
+    adjustMeshCacheParams(&Params);
 
     // If SetDevice fails, it means that creating queries failed.
     if ( !RSync.SetDevice(pdevice, pcontext))
@@ -99,7 +102,6 @@ void MeshCache::Reset()
         destroyBuffers();
     // Unconditional to simplify Initialize fail logic:
     pMaskEraseBatchVertexBuffer.Clear();
-    pSquareVertexBuffer.Clear();
     pDevice.Clear();
     pDeviceContext.Clear();
     StagingBuffer.Reset();
@@ -170,17 +172,17 @@ bool MeshCache::SetParams(const MeshCacheParams& argParams)
 
 void MeshCache::adjustMeshCacheParams(MeshCacheParams* p)
 {
-    // TBD: Detect/record HW instancing capability.
-    
-    if (p->MaxBatchInstances > SF_RENDER_D3D1x_INSTANCE_MATRICES)
-        p->MaxBatchInstances = SF_RENDER_D3D1x_INSTANCE_MATRICES;
-    if (p->VBLockEvictSizeLimit < 1024 * 256)
-        p->VBLockEvictSizeLimit = 1024 * 256;
+    p->MaxBatchInstances    = Alg::Clamp<unsigned>(p->MaxBatchInstances, 1, SF_RENDER_MAX_BATCHES);
+    p->VBLockEvictSizeLimit = Alg::Clamp<UPInt>(p->VBLockEvictSizeLimit, 0, p->VBLockEvictSizeLimit = 1024 * 256);
 
     UPInt maxStagingItemSize = p->MaxVerticesSizeInBatch +
                                sizeof(UInt16) * p->MaxIndicesInBatch;
     if (maxStagingItemSize * 2 > p->StagingBufferSize)
         p->StagingBufferSize = maxStagingItemSize * 2;
+
+    // If we have a shader manager, we can query whether we have instancing. If not, disable it.
+    if (!pShaderManager->HasInstancingSupport())
+        p->InstancingThreshold = 0;
 }
 
 
@@ -322,15 +324,14 @@ bool MeshCache::allocCacheBuffers(UPInt size, MeshBuffer::AllocType type, unsign
 
 bool MeshCache::createStaticVertexBuffers(ID3D1x(Device)* pdevice)
 {
-    return createMaskEraseBatchVertexBuffer(pdevice) &&
-           createUVSquareVertexBuffer(pdevice);
+    return createMaskEraseBatchVertexBuffer(pdevice);
 }
 
 bool MeshCache::createMaskEraseBatchVertexBuffer(ID3D1x(Device)* pdevice)
 {
-    static const unsigned     bufferSize = sizeof(VertexXY16iAlpha) * 6 * MaxEraseBatchCount;
+    static const unsigned     bufferSize = sizeof(VertexXY16fAlpha) * 6 * SF_RENDER_MAX_BATCHES;
 
-    VertexXY16iAlpha pbuffer[6 * MaxEraseBatchCount];
+    VertexXY16fAlpha pbuffer[6 * SF_RENDER_MAX_BATCHES];
     HRESULT      createResult;
     D3D1x(BUFFER_DESC) vbdesc;
 
@@ -341,78 +342,13 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(ID3D1x(Device)* pdevice)
     vbdesc.MiscFlags            = 0;
     D3D11(vbdesc.StructureByteStride  = 0;)
 
-    // For now we create a buffer with a list of const values so that it can be
-    // used to carry matrix index. TBD: Perhaps there is a shader value we can use instead?
-    for(unsigned i = 0; i< MaxEraseBatchCount; i++)
-    {
-        // This assumes Alpha in first byte. Effect may depend on byte order and
-        // ShaderManager vertex format mapping (offset assigned for VET_Instance8
-        // for ShaderManager::registerVertexFormat).
-        pbuffer[i * 6 + 0].x  = 0;
-        pbuffer[i * 6 + 0].y  = 1;
-        pbuffer[i * 6 + 0].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 1].x  = 0;
-        pbuffer[i * 6 + 1].y  = 0;
-        pbuffer[i * 6 + 1].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 2].x  = 1;
-        pbuffer[i * 6 + 2].y  = 0;
-        pbuffer[i * 6 + 2].Alpha[0] = (UByte)i;
-
-        pbuffer[i * 6 + 3].x  = 0;
-        pbuffer[i * 6 + 3].y  = 1;
-        pbuffer[i * 6 + 3].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 4].x  = 1;
-        pbuffer[i * 6 + 4].y  = 0;
-        pbuffer[i * 6 + 4].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 5].x  = 1;
-        pbuffer[i * 6 + 5].y  = 1;
-        pbuffer[i * 6 + 5].Alpha[0] = (UByte)i;
-    }
+    fillMaskEraseVertexBuffer<VertexXY16fAlpha>(pbuffer, SF_RENDER_MAX_BATCHES);
 
     D3D1x(SUBRESOURCE_DATA) initData;
     initData.pSysMem            = pbuffer;
     initData.SysMemPitch        = 0;
     initData.SysMemSlicePitch   = 0;
     createResult = pdevice->CreateBuffer(&vbdesc, &initData, &pMaskEraseBatchVertexBuffer.GetRawRef() );
-
-    return SUCCEEDED(createResult);
-}
-
-bool MeshCache::createUVSquareVertexBuffer(ID3D1x(Device)* pdevice)
-{
-    HRESULT      createResult;
-    static const unsigned     bufferSize = sizeof(VertexXY16f) * 6;
-    VertexXY16f pbuffer[6];
-    D3D1x(BUFFER_DESC) vbdesc;
-
-    vbdesc.ByteWidth            = bufferSize;
-    vbdesc.Usage                = D3D1x(USAGE_IMMUTABLE);
-    vbdesc.BindFlags            = D3D1x(BIND_VERTEX_BUFFER);
-    vbdesc.CPUAccessFlags       = 0;
-    vbdesc.MiscFlags            = 0;
-    D3D11(vbdesc.StructureByteStride  = 0;)
-
-    // For now we create a buffer with a list of const values so that it can be
-    // used to carry matrix index. TBD: Perhaps there is a shader value we can use instead?
-    pbuffer[0].x  = 0;
-    pbuffer[0].y  = 1;
-    pbuffer[1].x  = 0;
-    pbuffer[1].y  = 0;
-    pbuffer[2].x  = 1;
-    pbuffer[2].y  = 0;
-
-    pbuffer[3].x  = 0;
-    pbuffer[3].y  = 1;
-    pbuffer[4].x  = 1;
-    pbuffer[4].y  = 0;
-    pbuffer[5].x  = 1;
-    pbuffer[5].y  = 1;
-
-    D3D1x(SUBRESOURCE_DATA) initData;
-    initData.pSysMem            = pbuffer;
-    initData.SysMemPitch        = 0;
-    initData.SysMemSlicePitch   = 0;
-    createResult = pdevice->CreateBuffer(&vbdesc, &initData, &pSquareVertexBuffer.GetRawRef() );
 
     return SUCCEEDED(createResult);
 }
@@ -664,10 +600,6 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* pbatch,
    
     unsigned    i;
     unsigned    indexStart = 0;
-
-    //printf("Writing to: mesh=%p vsz=%02d vc=%d AOffset=%d pdest=%p SOffset=%d\n",
-    //       batchData, destVertexSize, totalVertexCount, ((MeshCacheItem*)batchData)->VBAllocOffset,
-    //       pvertexDataStart, mc[0]->StagingBufferOffset); 
 
     for(i = 0; i< mc.GetMeshCount(); i++)
     {

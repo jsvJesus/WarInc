@@ -70,7 +70,6 @@ public:
     MemoryHeap*         pHeap;
 
     bool                MultiBitStencil;
-    UInt32		        FillFlags;
     int                 EnabledVertexArrays;
     unsigned            ActiveTextures;         // Bit-flag for enabled textures.
     
@@ -106,7 +105,6 @@ public:
     virtual bool        BeginFrame();
 
     virtual bool        BeginScene();
-    virtual void        EndScene();
 
     // Bracket the displaying of a frame from a movie.
     // Fill the background color, and set up default transforms, etc.
@@ -115,17 +113,9 @@ public:
 
     virtual void        GetHWViewMatrix(Matrix* pmatrix, const Viewport& vp);
 
-    void                CalcHWViewMatrix(unsigned VPFlags, Matrix* pmatrix, const Rect<int>& viewRect,
-                                         int dx, int dy);
-
     // Updates HW Viewport and ViewportMatrix based on the current
     // values of VP, ViewRect and ViewportValid.
     void                updateViewport();
-
-
-    // Creates / Destroys mesh and DP data 
-
-    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data);    
 
     virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
                                                PrimitiveBatch* pstart, PrimitiveBatch *pend);
@@ -164,7 +154,7 @@ public:
     virtual Render::RenderTarget* CreateTempRenderTarget(const ImageSize&, bool) { return 0; };
     virtual bool    SetRenderTarget(Render::RenderTarget*, bool setState = 1) { SF_UNUSED(setState); return false; };
     virtual void    PushRenderTarget(const RectF&, Render::RenderTarget* ) { };
-    virtual void    PopRenderTarget() { };
+    virtual void    PopRenderTarget(unsigned flags = 0) { };
     virtual bool    createDefaultRenderBuffer() { return false; };
     virtual void    destroyRenderBuffers() { };
 
@@ -172,11 +162,7 @@ public:
 
 
     // *** BlendMode
-
-    virtual void    PushBlendMode(BlendMode mode);
-    virtual void    PopBlendMode();
-
-    virtual void    applyBlendMode(BlendMode mode, bool sourceAc = false, bool forceAc = false);
+    virtual void    applyBlendModeImpl(BlendMode mode, bool sourceAc = false, bool forceAc = false);
 
     virtual Render::TextureManager* GetTextureManager() const
     {
@@ -193,6 +179,9 @@ public:
                                     const VertexFormat** batch, const VertexFormat** instanced,
                                     unsigned flags);
 
+    // Check whether the given extension exists in the current profile.
+    bool                CheckExtension(const char *name);
+    
     virtual RQCacheInterface& GetRQCacheInterface()
     {
         return QueueProcessor.GetQueueCachesRef();
@@ -207,9 +196,9 @@ public:
     };
 
     void SetPrimitiveFill(PrimitiveFill* pfill, UInt32 fillFlags, PrimitiveBatch::BatchType btype, const VertexFormat* pformat, 
-        unsigned batchCount, const MatrixState& mstate, const Primitive::MeshEntry* pmeshes );
+        unsigned batchCount, const MatrixState* mstate, const Primitive::MeshEntry* pmeshes );
     void SetFill(PrimitiveFillType fillType, unsigned fillFlags, const VertexFormat* vf );
-    void SetMatrix(MatrixType type, const Matrix2F &m1, const HMatrix &m2, const MatrixState &Matrices, unsigned index = 0, unsigned batch = 0);
+    void SetMatrix(MatrixType type, const Matrix2F &m1, const HMatrix &m2, const MatrixState* Matrices, unsigned index = 0, unsigned batch = 0);
     void SetMatrix(MatrixType type, const Matrix2F &m, unsigned index = 0, unsigned batch = 0);
     void SetCxform(unsigned stage, const Cxform & cx, unsigned index = 0, unsigned batch = 0);
     int SetComplexCombiners(bool vertexColor, bool solidColor, int textureCount, PrimitiveFill* pfill, const Cxform &cx);
@@ -223,6 +212,13 @@ public:
     unsigned DummyTextureID;
     
     unsigned AddAlphaTextureID[256];
+
+protected:
+    // Cached GL_EXTENSIONS string.
+    String              Extensions;
+
+    void                drawPrimitive(unsigned indexCount, unsigned meshCount);
+    void                drawIndexedPrimitive( unsigned indexCount, unsigned meshCount, UByte* indexPtr);
 };
 
 

@@ -23,18 +23,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Render/D3D9/D3D9_Sync.h"
 #include <d3d9.h>
 
-#ifndef FINAL_BUILD
-#define R3D_SCALEFORM_PROFILE_GRAPHICS
-#endif 
-
-#ifdef R3D_SCALEFORM_PROFILE_GRAPHICS
-void r3dAddUIBufferMemoryStats(int size);
-#endif
-
-// If SF_RENDER_D3D9_INSTANCE_MATRICES is decreased, make sure to update MeshCacheConfig defaults.
-static const int SF_RENDER_D3D9_INSTANCE_MATRICES = 30;
-static const int SF_RENDER_D3D9_ROWS_PER_INSTANCE = 10; // Number of registers per instance.
-static const int SF_RENDER_D3D9_INSTANCE_DATAROWS = SF_RENDER_D3D9_INSTANCE_MATRICES * SF_RENDER_D3D9_ROWS_PER_INSTANCE;
 
 #define SF_RENDER_D3D9_INDEX_FMT         D3DFMT_INDEX16
 
@@ -305,13 +293,6 @@ public:
         : MeshBuffer(size, type, arena, flags)
     { }
 
-#ifdef R3D_SCALEFORM_PROFILE_GRAPHICS
-	virtual ~MeshBufferImpl()
-	{
-		r3dAddUIBufferMemoryStats(-static_cast<int>(GetSize()));
-	}
-#endif
-
     inline BType* GetHWBuffer() const { return pBuffer.GetPtr(); }
 
     bool   DoLock()
@@ -375,13 +356,7 @@ public:
     virtual bool allocBuffer(IDirect3DDeviceX* pdevice)
     {
         unsigned usage = D3DUSAGE_WRITEONLY | ((Flags & Buffer_Dynamic) ? D3DUSAGE_DYNAMIC : 0);
-        bool rv = pdevice->CreateVertexBuffer((UINT)Size, usage, 0, D3DPOOL_DEFAULT, &pBuffer.GetRawRef(), 0) == D3D_OK;
-#ifdef R3D_SCALEFORM_PROFILE_GRAPHICS
-		if (rv)
-			r3dAddUIBufferMemoryStats(Size);
-#endif
-
-		return rv;
+        return pdevice->CreateVertexBuffer((UINT)Size, usage, 0, D3DPOOL_DEFAULT, &pBuffer.GetRawRef(), 0) == D3D_OK;
     }
     virtual BufferType GetBufferType() const { return Buffer_Vertex; }
 };
@@ -396,13 +371,8 @@ public:
     virtual bool allocBuffer(IDirect3DDeviceX* pdevice)
     {
         unsigned usage = D3DUSAGE_WRITEONLY | ((Flags & Buffer_Dynamic) ? D3DUSAGE_DYNAMIC : 0);
-        bool rv = pdevice->CreateIndexBuffer((UINT)Size, usage, SF_RENDER_D3D9_INDEX_FMT,
+        return pdevice->CreateIndexBuffer((UINT)Size, usage, SF_RENDER_D3D9_INDEX_FMT,
             D3DPOOL_DEFAULT, &pBuffer.GetRawRef(), 0) == D3D_OK;
-#ifdef R3D_SCALEFORM_PROFILE_GRAPHICS
-		if (rv)
-			r3dAddUIBufferMemoryStats(Size);
-#endif
-		return rv;
     }
     virtual BufferType GetBufferType() const { return Buffer_Index; }
 };
@@ -421,9 +391,7 @@ class MeshCache : public Render::MeshCache
     friend class HAL;    
     
     enum {
-        MinSupportedGranularity = 16*1024,
-        MaxEraseBatchCount = (10 > SF_RENDER_D3D9_INSTANCE_MATRICES) ?
-                              10 : SF_RENDER_D3D9_INSTANCE_MATRICES
+        MinSupportedGranularity = 16*1024
     };
 
     Ptr<IDirect3DDeviceX>       pDevice;    
@@ -453,7 +421,6 @@ class MeshCache : public Render::MeshCache
     // allocated to have constant values.
     Ptr<IDirect3DVertexBufferX> pInstancingVertexBuffer;
     Ptr<IDirect3DVertexBufferX> pMaskEraseBatchVertexBuffer;
-    Ptr<IDirect3DVertexBufferX> pUVSquareVertexBuffer;
     
     inline MeshCache* getThis() { return this; }
 
@@ -465,7 +432,6 @@ class MeshCache : public Render::MeshCache
     bool            createStaticVertexBuffers(IDirect3DDeviceX* pdevice);
     bool            createInstancingVertexBuffer(IDirect3DDeviceX* pdevice);
     bool            createMaskEraseBatchVertexBuffer(IDirect3DDeviceX* pdevice);
-    bool            createUVSquareVertexBuffer(IDirect3DDeviceX* pdevice);
 
     // Allocates Vertex/Index buffer of specified size and adds it to free list.
     bool            allocCacheBuffers(UPInt size, MeshBuffer::AllocType type, unsigned arena = 0);

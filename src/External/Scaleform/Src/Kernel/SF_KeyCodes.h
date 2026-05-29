@@ -137,6 +137,13 @@ public:
         NumLock         = 144, // Toggle
         ScrollLock      = 145, // Toggle
 
+        LeftShift       = 160,
+        RightShift,
+        LeftControl,
+        RightControl,
+        LeftAlt,
+        RightAlt,
+
         Semicolon       = 186,
         Equal           = 187,
         Comma           = 188, // Platform specific?

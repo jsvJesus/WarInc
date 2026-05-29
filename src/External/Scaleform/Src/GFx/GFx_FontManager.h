@@ -28,6 +28,7 @@ namespace Scaleform { namespace GFx {
 
 class FontManager;
 class MovieDefImpl;
+class MovieImpl;
 
 class FontHandle : public Render::Text::FontHandle
 {
@@ -172,6 +173,10 @@ protected:
     // Nodes automatically remove themselves when all their references die.
     FontSet                 CreatedFonts;
 
+    // A list of MovieDataDef pointers to movies
+    // that serve as a source for fonts
+    Array<Ptr<MovieDataDef> >  FontMovies;
+
     // MovieDefImpl which this font manager is associated with. We look up
     // fonts here by default before considering pFontProvider. Note that this
     // behavior changes if device flags are passed.
@@ -189,6 +194,9 @@ protected:
     // FontMap Entry temporary; here to avoid extra constructor/destructor calls.
     FontMap::MapEntry       FontMapEntry;
 
+    // a pointer back to movieImpl to search within registered fonts.
+    MovieImpl*              pMovie;
+
 #ifndef SF_NO_IME_SUPPORT
     Ptr<FontHandle>      pIMECandidateFont;
 #endif //#ifdef SF_NO_IME_SUPPORT
@@ -201,10 +209,8 @@ protected:
 private:
     void commonInit();
 public:
-    FontManager(MovieDefImpl *pdefImpl,
-                   FontManagerStates* pState);
-    FontManager(ResourceWeakLib *pweakLib,
-                   FontManagerStates* pState);
+    FontManager(MovieImpl* movie, MovieDefImpl *pdefImpl, FontManagerStates* pState);
+    FontManager(ResourceWeakLib *pweakLib, FontManagerStates* pState);
     ~FontManager();
 
 
@@ -215,7 +221,7 @@ public:
                                              bool allowListOfFonts = true, FontSearchPathInfo* searchInfo = NULL); 
 
 	// Helper function to remove handle from CreatedFonts when it dies.
-	void                    RemoveFontHandle(FontHandle *phandle);
+	void                        RemoveFontHandle(FontHandle *phandle);
 
     // Returns any font with the font name 'pfontName' or the first one
     // in the hash.
@@ -231,11 +237,11 @@ public:
 
     void                    SetIMECandidateFont(FontHandle* pfont);
 
+    MovieDefImpl*           GetDefImpl() const { return pDefImpl; }
 #if defined(SF_BUILD_DEBUG) || defined(SF_BUILD_DEBUGOPT)
     // Required for AS3::ObjectCollector only. Don't use for anything else!
     const FontSet&          GetCreatedFonts() const { return CreatedFonts; }
 #endif
-
 };
 
 

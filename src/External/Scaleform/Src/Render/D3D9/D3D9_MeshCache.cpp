@@ -13,7 +13,8 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
-#include "D3D9_MeshCache.h"
+#include "Render/D3D9/D3D9_MeshCache.h"
+#include "Render/D3D9/D3D9_ShaderDescs.h"
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_Alg.h"
 #include "Kernel/SF_HeapNew.h"
@@ -102,7 +103,6 @@ void MeshCache::Reset()
     // Unconditional to simplify Initialize fail logic:
     pInstancingVertexBuffer.Clear();
     pMaskEraseBatchVertexBuffer.Clear();
-    pUVSquareVertexBuffer.Clear();
     pDevice.Clear();
     StagingBuffer.Reset();
 }
@@ -184,13 +184,15 @@ void MeshCache::adjustMeshCacheParams(MeshCacheParams* p, IDirect3DDevice9* pdev
         }
 
         // Determine the maximum number of batches/instances we can have, depending on the number of shader
-        // constants we have. It should not exceed SF_RENDER_D3D9_INSTANCE_MATRICES, otherwise we may create
+        // constants we have. It should not exceed SF_RENDER_MAX_BATCHES, otherwise we may create
         // batches which are too large.
-        if (p->MaxBatchInstances > SF_RENDER_D3D9_INSTANCE_MATRICES)
-            p->MaxBatchInstances = SF_RENDER_D3D9_INSTANCE_MATRICES;
+        if (p->MaxBatchInstances > SF_RENDER_MAX_BATCHES)
+            p->MaxBatchInstances = SF_RENDER_MAX_BATCHES;
+
+        // TEMP
         // -1, because we use one VS register for a solid color constant.
-        unsigned maxInstances = (caps.MaxVertexShaderConst-1) / SF_RENDER_D3D9_ROWS_PER_INSTANCE;
-        p->MaxBatchInstances = Alg::Min(p->MaxBatchInstances, maxInstances);
+        //unsigned maxInstances = (caps.MaxVertexShaderConst-1) / SF_RENDER_D3D9_ROWS_PER_INSTANCE;
+        //p->MaxBatchInstances = Alg::Min(p->MaxBatchInstances, maxInstances);
     }
 
     if (p->VBLockEvictSizeLimit < 1024 * 256)
@@ -342,16 +344,14 @@ bool MeshCache::allocCacheBuffers(UPInt size, MeshBuffer::AllocType type, unsign
 bool MeshCache::createStaticVertexBuffers(IDirect3DDeviceX* pdevice)
 {
     return createInstancingVertexBuffer(pdevice) && 
-           createMaskEraseBatchVertexBuffer(pdevice) &&
-           createUVSquareVertexBuffer(pdevice);
+           createMaskEraseBatchVertexBuffer(pdevice);
 }
 
 bool MeshCache::createInstancingVertexBuffer(IDirect3DDeviceX* pdevice)
 {
     HRESULT              createResult;
     DWORD                lockFlags = 0;
-    unsigned             bufferSize = sizeof(Render_InstanceData) *
-                                      SF_RENDER_D3D9_INSTANCE_MATRICES;
+    unsigned             bufferSize = sizeof(Render_InstanceData) * SF_RENDER_MAX_BATCHES;
     Render_InstanceData* pbuffer = 0;
 
     createResult = pdevice->CreateVertexBuffer(bufferSize, D3DUSAGE_WRITEONLY,
@@ -366,9 +366,8 @@ bool MeshCache::createInstancingVertexBuffer(IDirect3DDeviceX* pdevice)
         pInstancingVertexBuffer = 0;
         return false;        
     }
-    // For now we create a buffer with a list of const values so that it can be
-    // used to carry matrix index. TBD: Perhaps there is a shader value we can use instead?
-    for(unsigned i = 0; i< SF_RENDER_D3D9_INSTANCE_MATRICES; i++)
+
+    for(unsigned i = 0; i< SF_RENDER_MAX_BATCHES; i++)
         pbuffer[i].Instance = i; // low byte
 
     pInstancingVertexBuffer->Unlock();
@@ -379,7 +378,7 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDeviceX* pdevice)
 {
     HRESULT      createResult;
     DWORD        lockFlags = 0;
-    unsigned     bufferSize = sizeof(VertexXY16iAlpha) * 6 * MaxEraseBatchCount;
+    unsigned     bufferSize = sizeof(VertexXY16iAlpha) * 6 * SF_RENDER_MAX_BATCHES;
     VertexXY16iAlpha* pbuffer = 0;
 
     createResult = pdevice->CreateVertexBuffer(bufferSize, D3DUSAGE_WRITEONLY,
@@ -394,86 +393,10 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDeviceX* pdevice)
         pMaskEraseBatchVertexBuffer = 0;
         return false;        
     }
-    // For now we create a buffer with a list of const values so that it can be
-    // used to carry matrix index. TBD: Perhaps there is a shader value we can use instead?
-    for(unsigned i = 0; i< MaxEraseBatchCount; i++)
-    {
-        // This assumes Alpha in first byte. Effect may depend on byte order and
-        // ShaderManager vertex format mapping (offset assigned for VET_Instance8
-        // for ShaderManager::registerVertexFormat).
-        pbuffer[i * 6 + 0].x  = 0;
-        pbuffer[i * 6 + 0].y  = 1;
-        pbuffer[i * 6 + 0].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 1].x  = 0;
-        pbuffer[i * 6 + 1].y  = 0;
-        pbuffer[i * 6 + 1].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 2].x  = 1;
-        pbuffer[i * 6 + 2].y  = 0;
-        pbuffer[i * 6 + 2].Alpha[0] = (UByte)i;
 
-        pbuffer[i * 6 + 3].x  = 0;
-        pbuffer[i * 6 + 3].y  = 1;
-        pbuffer[i * 6 + 3].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 4].x  = 1;
-        pbuffer[i * 6 + 4].y  = 0;
-        pbuffer[i * 6 + 4].Alpha[0] = (UByte)i;
-        pbuffer[i * 6 + 5].x  = 1;
-        pbuffer[i * 6 + 5].y  = 1;
-        pbuffer[i * 6 + 5].Alpha[0] = (UByte)i;
-    }
+    fillMaskEraseVertexBuffer<VertexXY16iAlpha>(pbuffer, SF_RENDER_MAX_BATCHES);
 
     pMaskEraseBatchVertexBuffer->Unlock();
-    return true;
-}
-
-bool MeshCache::createUVSquareVertexBuffer(IDirect3DDeviceX* pdevice)
-{
-    HRESULT      createResult;
-    DWORD        lockFlags = 0;
-    unsigned     bufferSize = sizeof(VertexXY16iUV) * 6;
-    VertexXY16iUV* pbuffer = 0;
-
-    createResult = pdevice->CreateVertexBuffer(bufferSize, D3DUSAGE_WRITEONLY,
-                                               0, D3DPOOL_DEFAULT,
-                                               &pUVSquareVertexBuffer.GetRawRef(), 0);
-    if (createResult != D3D_OK)
-        return false;
-
-    if (FAILED(pUVSquareVertexBuffer->Lock(0, bufferSize, (void**)&pbuffer, lockFlags)))
-    {
-        SF_DEBUG_WARNING(1, "D3D9::MeshCache - VertexBuffer lock failed");
-        pUVSquareVertexBuffer = 0;
-        return false;        
-    }
-    // For now we create a buffer with a list of const values so that it can be
-    // used to carry matrix index. TBD: Perhaps there is a shader value we can use instead?
-    pbuffer[0].x  = 0;
-    pbuffer[0].y  = 1;
-    pbuffer[0].UV[0] = 0;
-    pbuffer[0].UV[1] = 1.0f;
-    pbuffer[1].x  = 0;
-    pbuffer[1].y  = 0;
-    pbuffer[1].UV[0] = 0;
-    pbuffer[1].UV[1] = 0;
-    pbuffer[2].x  = 1;
-    pbuffer[2].y  = 0;
-    pbuffer[2].UV[0] = 1.0f;
-    pbuffer[2].UV[1] = 0;
-
-    pbuffer[3].x  = 0;
-    pbuffer[3].y  = 1;
-    pbuffer[3].UV[0] = 0;
-    pbuffer[3].UV[1] = 1.0f;
-    pbuffer[4].x  = 1;
-    pbuffer[4].y  = 0;
-    pbuffer[4].UV[0] = 1.0f;
-    pbuffer[4].UV[1] = 0;
-    pbuffer[5].x  = 1;
-    pbuffer[5].y  = 1;
-    pbuffer[5].UV[0] = 1.0f;
-    pbuffer[5].UV[1] = 1.0f;
-
-    pUVSquareVertexBuffer->Unlock();
     return true;
 }
 

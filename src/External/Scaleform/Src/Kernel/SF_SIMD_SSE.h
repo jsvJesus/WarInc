@@ -58,9 +58,14 @@ public:
             return ((CPUInfo[3] & (1 << 26)) != 0);        
     #endif
 #elif defined(SF_CC_GNU)
+    #if defined(__SSE2__) && __SSE2__
+        // The compiler is only compiling for processors that have SSE2 support.
+        return true;
+    #else
         int CPUInfo[4] = {-1};
         asm("cpuid": "=a" (CPUInfo[0]), "=b" (CPUInfo[1]), "=c" (CPUInfo[2]), "=d" (CPUInfo[3]) : "a" (1));
         return ((CPUInfo[3] & (1 << 26)) != 0);
+    #endif
 #else
         return false;
 #endif
@@ -103,30 +108,12 @@ public:
     static Vector4f Constant( )
     {
 #if defined(_MSC_VER)
-        // When initializing unions which contain arrays (which __m128i is),
-        // MSVC needs explicit byte casts here.
-        static Vector4i v =
-        {
-            static_cast<char>(static_cast<unsigned char>((i0 & 0x000000FFu) >> 0)),
-            static_cast<char>(static_cast<unsigned char>((i0 & 0x0000FF00u) >> 8)),
-            static_cast<char>(static_cast<unsigned char>((i0 & 0x00FF0000u) >> 16)),
-            static_cast<char>(static_cast<unsigned char>((i0 & 0xFF000000u) >> 24)),
-
-            static_cast<char>(static_cast<unsigned char>((i1 & 0x000000FFu) >> 0)),
-            static_cast<char>(static_cast<unsigned char>((i1 & 0x0000FF00u) >> 8)),
-            static_cast<char>(static_cast<unsigned char>((i1 & 0x00FF0000u) >> 16)),
-            static_cast<char>(static_cast<unsigned char>((i1 & 0xFF000000u) >> 24)),
-
-            static_cast<char>(static_cast<unsigned char>((i2 & 0x000000FFu) >> 0)),
-            static_cast<char>(static_cast<unsigned char>((i2 & 0x0000FF00u) >> 8)),
-            static_cast<char>(static_cast<unsigned char>((i2 & 0x00FF0000u) >> 16)),
-            static_cast<char>(static_cast<unsigned char>((i2 & 0xFF000000u) >> 24)),
-
-            static_cast<char>(static_cast<unsigned char>((i3 & 0x000000FFu) >> 0)),
-            static_cast<char>(static_cast<unsigned char>((i3 & 0x0000FF00u) >> 8)),
-            static_cast<char>(static_cast<unsigned char>((i3 & 0x00FF0000u) >> 16)),
-            static_cast<char>(static_cast<unsigned char>((i3 & 0xFF000000u) >> 24))
-        };
+        // When initializing unions which contain arrays (which __m128i is), the the initializers are cast to the first member in the union.
+        static Vector4i v = { 
+            ((i0&0x000000FF) >> 0 ), ((i0&0x0000FF00) >> 8), ((i0&0x00FF0000) >> 16), ((i0&0xFF000000) >> 24), 
+            ((i1&0x000000FF) >> 0 ), ((i1&0x0000FF00) >> 8), ((i1&0x00FF0000) >> 16), ((i1&0xFF000000) >> 24), 
+            ((i2&0x000000FF) >> 0 ), ((i2&0x0000FF00) >> 8), ((i2&0x00FF0000) >> 16), ((i2&0xFF000000) >> 24), 
+            ((i3&0x000000FF) >> 0 ), ((i3&0x0000FF00) >> 8), ((i3&0x00FF0000) >> 16), ((i3&0xFF000000) >> 24) };
 #else
         static const __m128i v = _mm_set_epi32(i3, i2, i1, i0);
 #endif

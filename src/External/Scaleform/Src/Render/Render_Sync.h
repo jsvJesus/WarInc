@@ -31,7 +31,7 @@ class FenceFrame;
 class RenderSync;
 
 // Represents the type of fence. For most platforms, these are equivalent, because fragment and vertex 
-// processing happen in parallel; fences are not 'passed' until both have completed. However, on NGP 
+// processing happen in parallel; fences are not 'passed' until both have completed. However, on PSVITA 
 // for example, there are separate vertex and fragment passes, so they are not equivalent on those systems.
 enum FenceType
 {

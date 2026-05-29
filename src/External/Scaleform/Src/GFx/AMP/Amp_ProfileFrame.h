@@ -292,6 +292,8 @@ public:
     UInt64  TimeStamp;
 
     UInt32  FramesPerSecond;
+    UInt32  ProfilingLevel;
+    bool    DetailedMemReport;
 
     // CPU graph
     UInt32  AdvanceTime;
@@ -299,6 +301,12 @@ public:
     UInt32      TimelineTime;
     UInt32      InputTime;
     UInt32          MouseTime;
+    UInt32      GcCollectTime;
+    UInt32          GcMarkInCycleTime;
+    UInt32          GcScanInUseTime;
+    UInt32          GcFreeGarbageTime;
+    UInt32          GcFinalizeTime;
+    UInt32          GcDelayedCleanupTime;
     UInt32  GetVariableTime;
     UInt32  SetVariableTime;
     UInt32  InvokeTime;
@@ -342,6 +350,10 @@ public:
     UInt32  VideoMemory;
     UInt32  SoundMemory;
     UInt32  OtherMemory;
+
+    // Garbage collector
+    UInt32  GcRootsNumber;
+    UInt32  GcFreedRootsNumber;
 
     ArrayLH< Ptr<MovieProfile> >    MovieStats;
     Ptr<MovieFunctionStats>         DisplayStats;

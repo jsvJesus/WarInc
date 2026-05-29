@@ -982,6 +982,9 @@ SoundSampleFMODImpl* SoundRendererFMODImpl::CreateSampleFromFile(const char* fna
     }
 
     FMOD_MODE flags = FMOD_SOFTWARE | FMOD_LOOP_OFF | FMOD_2D;
+#if defined(SF_OS_WINMETRO)
+    flags |= FMOD_NONBLOCKING;
+#endif
     FMOD_RESULT result;
     if (streaming)
         result = pDevice->createStream(fname, flags, NULL, &(psample->pSound));

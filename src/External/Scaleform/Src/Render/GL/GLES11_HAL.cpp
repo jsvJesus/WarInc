@@ -20,6 +20,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Kernel/SF_Random.h"
 
 #include "Render/GL/GLES11_HAL.h"
+#include "Render/Render_TextureCacheGeneric.h"
 
 namespace Scaleform { namespace Render { namespace GL {
 
@@ -29,7 +30,6 @@ namespace Scaleform { namespace Render { namespace GL {
 HAL::HAL(ThreadCommandQueue* commandQueue) :   
     Render::HAL(commandQueue),
     MultiBitStencil(1),
-    FillFlags(0),
     EnabledVertexArrays(0),
     ActiveTextures(0),
     MaxTexUnits(0),
@@ -51,6 +51,9 @@ bool HAL::InitHAL(const GL::HALInitParams& params)
     // Clear the error stack.
     glGetError();
 
+    if (!initHAL(params))
+        return false;
+
     int stencilBits, depthBits;
     glGetIntegerv(GL_STENCIL_BITS, &stencilBits);
     glGetIntegerv(GL_DEPTH_BITS, &depthBits);
@@ -65,13 +68,17 @@ bool HAL::InitHAL(const GL::HALInitParams& params)
         SF_DEBUG_WARNING(true, "GLES 1.1 hardware is reporting that it supports stencil, please double-check.");
     }
     
-    Render::HAL::initHAL(params);
-
     pTextureManager = params.GetTextureManager();
     if (!pTextureManager)
-        pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(params.RenderThreadId, pRTCommandQueue);
+    {
+        Ptr<TextureCacheGeneric> texCache = *SF_HEAP_AUTO_NEW(this) TextureCacheGeneric();
+        pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(params.RenderThreadId, pRTCommandQueue, texCache);
+    }
 
     pTextureManager->Initialize(this);
+
+    // Allocate our matrix state
+    Matrices = *SF_HEAP_AUTO_NEW(this) MatrixState(this);
 
 #ifdef SF_GL_RUNTIME_LINK
     Extensions::Init();
@@ -109,7 +116,8 @@ bool HAL::ShutdownHAL()
     if (!(HALState & HS_ModeSet))
         return true;
 
-    Render::HAL::shutdownHAL();
+    if (!shutdownHAL())
+        return false;
 
     // Destroy the dummy texture.
     glDeleteTextures(1, &DummyTextureID);
@@ -198,18 +206,6 @@ bool HAL::BeginScene()
     return true;
 }
 
-void HAL::EndScene()
-{
-    if (!checkState(HS_InFrame|HS_InScene, "BeginScene"))
-        return;    
-
-    // Flush all rendering on EndScene.
-    Flush();
-
-    HALState &= ~HS_InScene;
-}
-
-
 void HAL::beginDisplay(BeginDisplayData* data)
 {
     if (!checkState(HS_InFrame, "BeginScene"))
@@ -240,10 +236,10 @@ void HAL::updateViewport()
             dy = ViewRect.y1 - VP.Top;
 
         // Modify HW matrix and viewport to clip.
-        CalcHWViewMatrix(VP.Flags, &Matrices.View2D, ViewRect, dx, dy);
-        Matrices.SetUserMatrix(Matrices.User);
-        Matrices.ViewRect    = ViewRect;
-        Matrices.UVPOChanged = 1;
+        CalcHWViewMatrix(VP.Flags, &Matrices->View2D, ViewRect, dx, dy);
+        Matrices->SetUserMatrix(Matrices->User);
+        Matrices->ViewRect    = ViewRect;
+        Matrices->UVPOChanged = 1;
 
         vp.Left     = ViewRect.x1;
         vp.Top      = ViewRect.y1;
@@ -274,28 +270,6 @@ void HAL::GetHWViewMatrix(Matrix* pmatrix, const Viewport& vp)
     int        dx =0, dy =0;
     vp.GetClippedRect(&viewRect, &dx, &dy);
     CalcHWViewMatrix(vp.Flags, pmatrix, viewRect, dx, dy);
-}
-
-void HAL::CalcHWViewMatrix(unsigned VPFlags, Matrix* pmatrix, const Rect<int>& viewRect, int dx, int dy)
-{
-    float       vpWidth = (float)viewRect.Width();
-    float       vpHeight= (float)viewRect.Height();
-
-    pmatrix->SetIdentity();
-    if (VPFlags & Viewport::View_IsRenderTexture)
-    {
-        pmatrix->Sx() = 2.0f  / vpWidth;
-        pmatrix->Sy() = 2.0f /  vpHeight;
-        pmatrix->Tx() = -1.0f - pmatrix->Sx() * ((float)dx); 
-        pmatrix->Ty() = -1.0f - pmatrix->Sy() * ((float)dy);
-    }
-    else
-    {
-        pmatrix->Sx() = 2.0f  / vpWidth;
-        pmatrix->Sy() = -2.0f / vpHeight;
-        pmatrix->Tx() = -1.0f - pmatrix->Sx() * ((float)dx); 
-        pmatrix->Ty() = 1.0f  - pmatrix->Sy() * ((float)dy);
-    }
 }
 
 void   HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
@@ -512,11 +486,6 @@ bool HAL::SetVertexArray( PrimitiveFillType fillType, const VertexFormat* pForma
     return true;
 }
 
-PrimitiveFill*  HAL::CreatePrimitiveFill(const PrimitiveFillData &data)
-{
-    return SF_HEAP_NEW(pHeap) PrimitiveFill(data);
-}
-
 // Draws a range of pre-cached and preprocessed primitives
 void        HAL::DrawProcessedPrimitive(Primitive* pprimitive,
                                         PrimitiveBatch* pstart, PrimitiveBatch *pend)
@@ -569,24 +538,11 @@ void        HAL::DrawProcessedPrimitive(Primitive* pprimitive,
                                pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset))
             {
                 SF_ASSERT((pbatch->Type != PrimitiveBatch::DP_Failed) &&
-                          (pbatch->Type != PrimitiveBatch::DP_Virtual));
-
-                // Draw the object with cached mesh.
-                if (pbatch->Type != PrimitiveBatch::DP_Instanced)
-                {
-                    AccumulatedStats.Meshes += pmesh->MeshCount;
-                    AccumulatedStats.Triangles += pmesh->IndexCount / 3;
-                }
-                else
-                {
-                    SF_DEBUG_WARNING(1, "instanced draw");
-                    AccumulatedStats.Meshes += batchMeshCount;
-                    AccumulatedStats.Triangles += (pmesh->IndexCount / 3) * batchMeshCount;
-                }
+                          (pbatch->Type != PrimitiveBatch::DP_Virtual) &&
+                          (pbatch->Type != PrimitiveBatch::DP_Instanced));
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pmesh->pIndexBuffer->GetBuffer());
-                glDrawElements(GL_TRIANGLES, pmesh->IndexCount, GL_UNSIGNED_SHORT, pmesh->pIndexBuffer->GetBufferBase() + pmesh->IBAllocOffset);
-                AccumulatedStats.Primitives++;
+                drawIndexedPrimitive(pmesh->IndexCount, pmesh->MeshCount, pmesh->pIndexBuffer->GetBufferBase() + pmesh->IBAllocOffset);
             }
 
             pmesh->MoveToCacheListFront(MCL_ThisFrame);
@@ -728,14 +684,8 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
             }
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pmesh->pIndexBuffer->GetBuffer());
-            glDrawElements(GL_TRIANGLES, fr.IndexCount, GL_UNSIGNED_SHORT,
-                pmesh->pIndexBuffer->GetBufferBase() + pmesh->IBAllocOffset + sizeof(IndexType) * fr.IndexOffset);
+            drawIndexedPrimitive(fr.IndexCount, 1, pmesh->pIndexBuffer->GetBufferBase() + pmesh->IBAllocOffset + sizeof(IndexType) * fr.IndexOffset);
         }
-
-        AccumulatedStats.Triangles += (fr.IndexCount / 3) * instanceCount;
-        AccumulatedStats.Meshes += instanceCount;
-        AccumulatedStats.Primitives += instanceCount;
-
     } // for (fill record)
   
     pmesh->MoveToCacheListFront(MCL_ThisFrame);
@@ -754,8 +704,8 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
         
         PointF tl((float)(VP.Left + r.x1), (float)(VP.Top + r.y1));
         PointF br((float)(VP.Left + r.x2), (float)(VP.Top + r.y2));
-        tl = Matrices.Orient2D * tl;
-        br = Matrices.Orient2D * br;
+        tl = Matrices->Orient2D * tl;
+        br = Matrices->Orient2D * br;
         Rect<int> scissor((int)Alg::Min(tl.x, br.x), (int)Alg::Min(tl.y,br.y), (int)Alg::Max(tl.x,br.x), (int)Alg::Max(tl.y,br.y));
         
         glScissor(scissor.x1, scissor.y1, scissor.Width(), scissor.Height());
@@ -777,12 +727,12 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
         Matrix2F m((float)r.Width(), 0.0f, (float)r.x1,
                    0.0f, (float)r.Height(), (float)r.y1);
 
-        Matrix2F mvp(m, Matrices.UserView);
+        Matrix2F mvp(m, Matrices->UserView);
         
         SetColor(0, color);
         SetMatrix(MT_MVP, mvp);
         SetVertexArray(PrimFill_SolidColor, &VertexXY16iInstance::Format, Cache.MaskEraseBatchVertexBuffer, 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        drawPrimitive(6,1);
     }
 }
 
@@ -851,7 +801,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
         Rect<int> boundClip;
 
         // Apply new viewport clipping.
-        if (!Matrices.OrientationSet)
+        if (!Matrices->OrientationSet)
         {
             const Matrix2F& m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
 
@@ -865,7 +815,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
         else
         {
             Matrix2F m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
-            m.Append(Matrices.Orient2D);
+            m.Append(Matrices->Orient2D);
 
             RectF rect = m.EncloseTransform(RectF(0,0,1,1));
             boundClip = Rect<int>(VP.Left + (int)rect.x1, VP.Top + (int)rect.y1,
@@ -1073,13 +1023,8 @@ void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
     for (UPInt i = 0; i < count; i+= (UPInt)drawRangeCount)
     {
         SetMatrix(MT_MVP, Matrix2F::Identity, matrices[i], Matrices, 0, i);
-        glDrawArrays(GL_TRIANGLES, 0, drawRangeCount * 6);
+        drawPrimitive(drawRangeCount * 6, drawRangeCount);
     }
-
-    AccumulatedStats.Meshes += count;
-    AccumulatedStats.Triangles += count * 2;
-    AccumulatedStats.Primitives += count;
-
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -1089,135 +1034,29 @@ void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
 // *** BlendMode Stack support
 //--------------------------------------------------------------------
 
-void HAL::PushBlendMode(BlendMode mode)
-{
-    if (!checkState(HS_InDisplay, "PushBlendMode"))
-        return;
-
-    BlendModeStack.PushBack(mode);
-    applyBlendMode(mode);
-}
-
-void HAL::PopBlendMode()
-{
-    if (!checkState(HS_InDisplay, "PopBlendMode"))
-        return;
-    
-    UPInt stackSize = BlendModeStack.GetSize();
-    SF_ASSERT(stackSize != 0);
-    BlendModeStack.PopBack();
-    applyBlendMode((stackSize>1) ? BlendModeStack[stackSize-2] : Blend_Normal);
-}
-
-
-// Structure describing color combines applied for a given blend mode.
-struct BlendModeDesc
-{
-    GLenum op, src, dest;
-};
-
-struct BlendModeDescAlpha
-{
-    GLenum op, srcc, srca, destc, desta;
-};
-
-void HAL::applyBlendMode(BlendMode mode, bool, bool)
+void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
 {    
-    static BlendModeDesc modes[15] =
+    static const UInt32 BlendFactors[BlendFactor_Count] = 
     {
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // None
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Normal
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Layer
-
-        { GL_FUNC_ADD,              GL_DST_COLOR,           GL_ZERO                 }, // Multiply
-        // (For multiply, should src be pre-multiplied by its inverse alpha?)
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Screen *??
-
-        { GL_MAX,                   GL_SRC_ALPHA,           GL_ONE                  }, // Lighten
-        { GL_MIN,                   GL_SRC_ALPHA,           GL_ONE                  }, // Darken
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Difference *??
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE                  }, // Add
-        { GL_FUNC_REVERSE_SUBTRACT, GL_SRC_ALPHA,           GL_ONE                  }, // Subtract
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Invert *??
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Alpha *??
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Erase *??
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // Overlay *??
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,           GL_ONE_MINUS_SRC_ALPHA  }, // HardLight *??
+        GL_ZERO,                // BlendFactor_ZERO
+        GL_ONE,                 // BlendFactor_ONE
+        GL_SRC_ALPHA,           // BlendFactor_SRCALPHA
+        GL_ONE_MINUS_SRC_ALPHA, // BlendFactor_INVSRCALPHA
+        GL_DST_COLOR,           // BlendFactor_DESTCOLOR
+        GL_ONE_MINUS_DST_COLOR, // BlendFactor_INVDESTCOLOR
     };
 
-    // Blending into alpha textures with premultiplied colors
-    static BlendModeDescAlpha acmodes[15] =
-    {
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // None
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Normal
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Layer
+    GLenum sourceColor = BlendFactors[BlendModeTable[mode].SourceColor];
+    if ( sourceAc && sourceColor == GL_SRC_ALPHA )
+        sourceColor = GL_ONE;
 
-        { GL_FUNC_ADD,              GL_DST_COLOR,  GL_DST_ALPHA,  GL_ZERO,                GL_ZERO                 }, // Multiply
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Screen *??
-
-        { GL_MAX,                   GL_SRC_ALPHA,  GL_SRC_ALPHA,  GL_ONE,                 GL_ONE                  }, // Lighten *??
-        { GL_MIN,                   GL_SRC_ALPHA,  GL_SRC_ALPHA,  GL_ONE,                 GL_ONE                  }, // Darken *??
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Difference
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ZERO,       GL_ONE,                 GL_ONE                  }, // Add
-        { GL_FUNC_REVERSE_SUBTRACT, GL_SRC_ALPHA,  GL_ZERO,       GL_ONE,                 GL_ONE                  }, // Subtract
-
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Invert *??
-
-        { GL_FUNC_ADD,              GL_ZERO,       GL_ZERO,       GL_ONE,                 GL_ONE                  }, // Alpha *??
-        { GL_FUNC_ADD,              GL_ZERO,       GL_ZERO,       GL_ONE,                 GL_ONE                  }, // Erase *??
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // Overlay *??
-        { GL_FUNC_ADD,              GL_SRC_ALPHA,  GL_ONE,        GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA  }, // HardLight *??
-    };
-
-    // For debug build
-    SF_ASSERT(((unsigned) mode) < 15);
-    // For release
-    if (((unsigned) mode) >= 15)
-        mode = Blend_None;
-
-    mode = Profiler.GetBlendMode(mode);
-
-	// Multiply requires different fill mode, save it in the HAL's fill flags.
-	if ( mode == Blend_Multiply || mode == Blend_Darken )
-		FillFlags |= FF_Multiply;
-	else
-		FillFlags &= ~FF_Multiply;
-
-    bool sourceAc = false;
-
-    bool forceAc = false;
-    if (sourceAc || forceAc)
-    {
-        BlendModeDescAlpha ms = acmodes[mode];
-        if (sourceAc && ms.srcc == GL_SRC_ALPHA)
-            ms.srcc = GL_ONE;
-        //glBlendFuncSeparateOES(ms.srcc, ms.destc, ms.srca, ms.desta);
-        //glBlendEquationOES(ms.op);
-    }
-    else
-    {
-        BlendModeDesc ms = modes[mode];
-        if (sourceAc && ms.src == GL_SRC_ALPHA)
-            ms.src = GL_ONE;
-        glBlendFunc(ms.src, ms.dest);
-        //glBlendEquationOES(ms.op);
-    }
+    glBlendFunc(sourceColor, BlendFactors[BlendModeTable[mode].DestColor]);
 }
-
-
 
 //--------------------------------------------------------------------
 
 void HAL::SetPrimitiveFill(PrimitiveFill* pfill, UInt32 fillFlags, PrimitiveBatch::BatchType batchType, const VertexFormat* pformat, 
-                      unsigned meshCount, const MatrixState& mstate, const Primitive::MeshEntry* pmeshes )
+                      unsigned meshCount, const MatrixState* mstate, const Primitive::MeshEntry* pmeshes )
 {
     PrimitiveFillType fillType = pfill->GetType();
 
@@ -1922,7 +1761,7 @@ void HAL::SetFill(PrimitiveFillType filleType, unsigned fillFlags, const VertexF
 
 }
 
-void HAL::SetMatrix(MatrixType type, const Matrix2F &m1, const HMatrix &m2, const MatrixState &Matrices, unsigned index, unsigned batch )
+void HAL::SetMatrix(MatrixType type, const Matrix2F &m1, const HMatrix &m2, const MatrixState* Matrices, unsigned index, unsigned batch )
 {
     switch(type)
     {
@@ -1930,22 +1769,22 @@ void HAL::SetMatrix(MatrixType type, const Matrix2F &m1, const HMatrix &m2, cons
         {
             if (m2.Has3D())
             {
-                Matrices.GetUVP();
-                Matrix4F m(Matrices.View3D * Matrix3F(m2.GetMatrix3D(), m1));
+                Matrices->GetUVP();
+                Matrix4F m(Matrices->View3D * Matrix3F(m2.GetMatrix3D(), m1));
                 m.Transpose();
                 const float *rows = m.Data();
                 glMatrixMode(GL_MODELVIEW);
                 glLoadMatrixf(rows);
 
                 glMatrixMode(GL_PROJECTION);
-                Matrix4F proj(Matrices.ViewRectCompensated3D * Matrices.Orient3D * Matrices.Proj3D);
+                Matrix4F proj(Matrices->ViewRectCompensated3D * Matrices->Orient3D * Matrices->Proj3D);
                 proj.Transpose();
                 const float *projRows = proj.Data();
                 glLoadMatrixf(projRows);
             }
             else
             {
-                Matrix2F m2D(m1, m2.GetMatrix2D(), Matrices.UserView);
+                Matrix2F m2D(m1, m2.GetMatrix2D(), Matrices->UserView);
                 Matrix4F m;
                 m.Set(&m2D.M[0][0], 8);
                 m.Transpose();
@@ -1982,7 +1821,7 @@ void HAL::SetMatrix(MatrixType type, const Matrix2F &m, unsigned index, unsigned
         case MT_MVP:
         {
             Matrix4F  md;
-            Matrix2F  m0(m, Matrices.UserView);
+            Matrix2F  m0(m, Matrices->UserView);
             md.Set(&m0.M[0][0], 8);
             md.Transpose();
             glMatrixMode(GL_MODELVIEW);
@@ -2164,6 +2003,46 @@ void HAL::DisableExtraStages(unsigned stage)
             ActiveTextures &= ~(1<<i);
         }
     }
+}
+    
+bool HAL::CheckExtension(const char *name)
+{
+    if (Extensions.IsEmpty())
+    {
+        Extensions = (const char *) glGetString(GL_EXTENSIONS);
+        // Add space, just so we know it is initialized.
+        Extensions += " ";
+    }
+    
+    if (name == 0)
+        return false;
+    const char *p = strstr(Extensions.ToCStr(), name);
+    return (p && (p[strlen(name)] == 0 || p[strlen(name)] == ' '));
+}
+
+
+void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
+{
+    glDrawArrays(GL_TRIANGLES, 0, indexCount);
+
+    SF_UNUSED(meshCount);
+#if !defined(SF_BUILD_SHIPPING)
+    AccumulatedStats.Meshes += meshCount;
+    AccumulatedStats.Triangles += indexCount / 3;
+    AccumulatedStats.Primitives++;
+#endif
+}
+
+void HAL::drawIndexedPrimitive( unsigned indexCount, unsigned meshCount, UByte* indexPtr)
+{
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, indexPtr);
+
+    SF_UNUSED(meshCount);
+#if !defined(SF_BUILD_SHIPPING)
+    AccumulatedStats.Meshes += meshCount;
+    AccumulatedStats.Triangles += indexCount / 3;
+    AccumulatedStats.Primitives++;
+#endif
 }
 
 }}} // Scaleform::Render::GL

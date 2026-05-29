@@ -32,7 +32,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 // a special case for Windows: windows.h renames DrawText to 
 // either DrawTextA or DrawTextW depending on UNICODE macro.
 // Avoiding the effect on our DrawText class.
-#ifdef _WINDOWS
+#if defined(_WINDOWS) || defined(_WINDOWS_) || defined(_DURANGO)
 #ifdef DrawText
 #undef DrawText
 #endif // DrawText
@@ -57,18 +57,10 @@ namespace Text { using namespace Render::Text; }
 
        Ptr<DrawText> ptxt3 = *pdm->CreateHtmlText("<p><FONT size='20'>AB <b>singleline</b><i> CD</i>O", RectF(20, 300, 400, 700));
 
-   To render the text use the method Display. Note, it is necessary to call DrawTextManager::BeginDisplay
-   before the first call to Display and to call DrawTextManager::EndDisplay after the last call to Display:
-
-       Render::Viewport vp(GetWidth(), GetHeight(), 0, 0, GetWidth(), GetHeight(), 0);
-       pdm->BeginDisplay(vp);
-
-       ptxt->Display();
-       ptxt2->Display();
-       ptxt3->Display();
-
-       pdm->EndDisplay();
+    Call pdm->Capture() after making the DrawText instance changes. 
+    See our reference documentation and the DrawText sample for more details on the DrawText API.
    */
+
 class DrawText : public RefCountBaseNTS<DrawText, StatMV_Text_Mem>
 {
     friend class DrawTextManager;
@@ -266,8 +258,6 @@ protected:
 
 /* This class manages the DrawText objects. DrawTextManager should be used 
    for creation of DrawText objects. It also may be used to measure text extents. 
-   To render text, BeginDisplay should be called before the first call to DrawText::Display
-   and the EndDisplay method should be called after the last call to DrawText::Display. 
    One DrawTextManager instance may be used to manage (create, measure, render) multiple
    DrawText instances.
    

@@ -96,13 +96,15 @@ protected:
 
         Msg_Compressed,
         Msg_InitState,
+        Msg_ObjectsReportRequest,
+        Msg_ObjectsReport,
 
         Num_Messages
     };
 
     enum VersionType
     {
-        Version_Latest = 27
+        Version_Latest = 33
     };
 
     UInt32                      Version;
@@ -293,6 +295,30 @@ protected:
     virtual MessageType     GetMessageType() const { return Msg_SourceFile; } 
 };
 
+// Message containing Objects report
+// Sent by server to client upon request
+class MessageObjectsReport : public Message
+{
+public:
+    static String           GetStaticTypeName()        { return "ObjectsReport"; }
+    MessageObjectsReport(const char* objectsReport = NULL);
+
+    // Message overrides
+    virtual String          GetMessageName() const        { return GetStaticTypeName(); }
+    virtual void            Read(File& str);
+    virtual void            Write(File& str) const;
+
+    // Accessors
+    const char*             GetObjectsReport() const;
+
+protected:
+
+    StringLH                ObjectsReport;
+
+    // enum used only for compatibility with older versions
+    virtual MessageType     GetMessageType() const { return Msg_ObjectsReport; } 
+};
+
 
 
 // Sent by client to server
@@ -347,6 +373,43 @@ protected:
     virtual MessageType     GetMessageType() const { return Msg_SourceRequest; } 
 };
 
+// Requests an objects report
+// Sent by client to server
+class MessageObjectsReportRequest : public Message
+{
+public:
+    static String           GetStaticTypeName()        { return "ObjectsReportRequest"; }
+    MessageObjectsReportRequest();
+    MessageObjectsReportRequest(UInt32 movieHandle, bool shortFilenames, bool noCircularReferences, bool suppressOverallStats, bool addressesForAnonymObjsOnly, bool suppressMovieDefsStats, bool noEllipsis);
+
+    // Message overrides
+    virtual String          GetMessageName() const        { return GetStaticTypeName(); }
+    virtual void            Read(File& str);
+    virtual void            Write(File& str) const;
+
+    // Accessors
+    UInt32                  GetMovieHandle() const;
+    bool                    IsShortFilenames() const;
+    bool                    IsNoCircularReferences() const;
+    bool                    IsSuppressOverallStats() const;
+    bool                    IsAddressesForAnonymObjsOnly() const;
+    bool                    IsSuppressMovieDefsStats() const;
+    bool                    IsNoEllipsis() const;
+
+protected:
+
+    UInt32                  MovieHandle;
+    bool                    ShortFilenames; 
+    bool                    NoCircularReferences; 
+    bool                    SuppressOverallStats; 
+    bool                    AddressesForAnonymObjsOnly; 
+    bool                    SuppressMovieDefsStats; 
+    bool                    NoEllipsis; 
+
+    // enum used only for compatibility with older versions
+    virtual MessageType     GetMessageType() const { return Msg_ObjectsReportRequest; } 
+};
+
 
 // Message that controls the GFx application in some way
 // Normally sent by client to server
@@ -391,8 +454,6 @@ public:
     void                    SetCurveToleranceUp(bool up);
     bool                    IsCurveToleranceDown() const;
     void                    SetCurveToleranceDown(bool down);
-    bool                    IsForceInstructionProfile() const;
-    void                    SetForceInstructionProfile(bool instProf);
     bool                    IsDebugPause() const;
     void                    SetDebugPause(bool debug);
     bool                    IsDebugStep() const;
@@ -426,7 +487,6 @@ protected:
         OF_NextFont                     = 0x00000200,
         OF_CurveToleranceUp             = 0x00000400,
         OF_CurveToleranceDown           = 0x00000800,
-        OF_ForceInstructionProfile      = 0x00001000,
         OF_DebugPause                   = 0x00002000,
         OF_DebugStep                    = 0x00004000,
         OF_DebugStepIn                  = 0x00008000,

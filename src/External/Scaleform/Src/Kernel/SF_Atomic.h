@@ -24,6 +24,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Include System thread functionality.
 #if defined(SF_OS_WIN32)
 #include <windows.h>
+
 #elif defined(SF_OS_XBOX360)
 #include <xtl.h>
 
@@ -34,7 +35,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #elif defined(SF_OS_WII)
 #include <revolution/os.h>
 
-#elif defined(SF_OS_NGP)
+#elif defined(SF_OS_PSVITA)
 #include <kernel.h>
 #include <string.h>
 
@@ -945,7 +946,7 @@ public:
     inline void Unlock() { }
 
    // Windows.
-#elif defined(SF_OS_WIN32) && (defined(SF_CPU_X86) || defined(SF_CPU_X86_64))
+#elif defined(SF_OS_WIN32)
 
     // Optimized Win32 CriticalSection similar to code provided by
     // "Fast critical sections with timeout" by Vladislav Gelfer on code project.
@@ -1021,7 +1022,7 @@ public:
     inline void DoLock()    { OSLockMutex(&mutex); }
     inline void Unlock()    { OSUnlockMutex(&mutex); }
 
-#elif defined(SF_OS_NGP)
+#elif defined(SF_OS_PSVITA)
     UByte                 mutex[sizeof(SceKernelLwMutexWork) + 4] __attribute__((aligned(4)));
     SceKernelLwMutexWork* pmutex;
 

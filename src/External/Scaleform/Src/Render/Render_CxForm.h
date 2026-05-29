@@ -63,6 +63,7 @@ public:
     void    SetIdentity();
     bool    IsIdentity() const;
     bool    operator == (const Cxform& x) const;
+    bool    operator != (const Cxform& x) const;
 
     bool    RequiresBlend() const
     {

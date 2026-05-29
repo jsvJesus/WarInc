@@ -1,12 +1,51 @@
 <Project>
+  <PropertyGroup>
+    <WarIncExternalDir>$(MSBuildThisFileDirectory)..\External\</WarIncExternalDir>
+
+    <WarIncPlatformDir Condition="'$(Platform)'=='Win32'">Win32</WarIncPlatformDir>
+    <WarIncPlatformDir Condition="'$(Platform)'=='x64'">x64</WarIncPlatformDir>
+
+    <WarIncScaleformRoot>$(WarIncExternalDir)Scaleform\</WarIncScaleformRoot>
+
+    <WarIncScaleformConfigDir Condition="'$(Configuration)'=='Debug'">DebugOpt</WarIncScaleformConfigDir>
+    <WarIncScaleformConfigDir Condition="'$(Configuration)'=='Debug_NoCrashRpt'">DebugOpt</WarIncScaleformConfigDir>
+    <WarIncScaleformConfigDir Condition="'$(Configuration)'=='Debug_Server'">DebugOpt</WarIncScaleformConfigDir>
+    <WarIncScaleformConfigDir Condition="'$(Configuration)'=='Final'">Shipping</WarIncScaleformConfigDir>
+    <WarIncScaleformConfigDir Condition="'$(WarIncScaleformConfigDir)'==''">Release</WarIncScaleformConfigDir>
+
+    <WarIncScaleformLibDir>$(WarIncScaleformRoot)Lib\$(WarIncPlatformDir)\$(WarIncScaleformConfigDir)\</WarIncScaleformLibDir>
+
+    <WarIncDXLibDir Condition="'$(Platform)'=='Win32'">$(WarIncExternalDir)dxsdk\Lib\x86\</WarIncDXLibDir>
+    <WarIncDXLibDir Condition="'$(Platform)'=='x64'">$(WarIncExternalDir)dxsdk\Lib\x64\</WarIncDXLibDir>
+
+    <WarIncLibJpegDir Condition="'$(Platform)'=='Win32' And '$(Configuration)'=='Debug'">$(WarIncExternalDir)libjpeg-turbo\lib\Win32\v120\Debug_Static\</WarIncLibJpegDir>
+    <WarIncLibJpegDir Condition="'$(Platform)'=='Win32' And '$(Configuration)'!='Debug'">$(WarIncExternalDir)libjpeg-turbo\lib\Win32\v120\Release_Static\</WarIncLibJpegDir>
+    <WarIncLibJpegDir Condition="'$(Platform)'=='x64' And '$(Configuration)'=='Debug'">$(WarIncExternalDir)libjpeg-turbo\lib\x64\v120\Debug_Static\</WarIncLibJpegDir>
+    <WarIncLibJpegDir Condition="'$(Platform)'=='x64' And '$(Configuration)'!='Debug'">$(WarIncExternalDir)libjpeg-turbo\lib\x64\v120\Release_Static\</WarIncLibJpegDir>
+  </PropertyGroup>
+
   <ItemDefinitionGroup>
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
+
+      <AdditionalIncludeDirectories>
+        $(WarIncScaleformRoot)Include;
+        $(WarIncScaleformRoot)Src;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
 
       <PreprocessorDefinitions>
         _CRT_SECURE_NO_WARNINGS;
         _SCL_SECURE_NO_WARNINGS;
         _WINSOCK_DEPRECATED_NO_WARNINGS;
+        WARINC_SCALEFORM_42=1;
+        %(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+
+      <PreprocessorDefinitions Condition="'$(Platform)'=='x64'">
+        WARINC_X64=1;
+        WIN64;
+        _WIN64;
         %(PreprocessorDefinitions)
       </PreprocessorDefinitions>
 
@@ -15,8 +54,24 @@
         4996;
         4244;
         4477;
+        4311;
+        4312;
+        4302;
+        4267;
         %(DisableSpecificWarnings)
       </DisableSpecificWarnings>
     </ClCompile>
+
+    <Link>
+      <AdditionalLibraryDirectories>
+        $(WarIncScaleformLibDir);
+        $(WarIncScaleformRoot)Lib\$(WarIncPlatformDir);
+        $(WarIncScaleformRoot)Lib;
+        $(WarIncDXLibDir);
+        $(WarIncExternalDir)dxsdk\lib;
+        $(WarIncLibJpegDir);
+        %(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
 </Project>

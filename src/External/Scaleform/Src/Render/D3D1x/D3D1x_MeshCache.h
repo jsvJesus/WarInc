@@ -24,11 +24,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_HeapNew.h"
 
-// If SF_RENDER_D3D1x(INSTANCE_MATRICES) is changed, make sure to update MeshCacheConfig defaults.
-static const int SF_RENDER_D3D1x_INSTANCE_MATRICES = 24;
-static const int SF_RENDER_D3D1x_ROWS_PER_INSTANCE = 10; // Number of registers per instance.
-static const int SF_RENDER_D3D1x_INSTANCE_DATAROWS = SF_RENDER_D3D1x_INSTANCE_MATRICES * SF_RENDER_D3D1x_ROWS_PER_INSTANCE;
-
 namespace Scaleform { namespace Render { namespace D3D1x {
 
 class MeshBuffer;
@@ -37,6 +32,7 @@ class VertexBuffer;
 class IndexBuffer;
 class MeshCache;
 class HAL;
+class ShaderManager;
 
 
 // D3D1x version of MeshCacheItem. In D3D1x index and vertex buffers
@@ -374,12 +370,11 @@ class MeshCache : public Render::MeshCache
     
     enum {
         MinSupportedGranularity = 16*1024,
-        MaxEraseBatchCount = (10 > SF_RENDER_D3D1x_INSTANCE_MATRICES) ?
-                              10 : SF_RENDER_D3D1x_INSTANCE_MATRICES
     };
 
-    Ptr<ID3D1x(Device)>           pDevice;
-    Ptr<ID3D1x(DeviceContext)>    pDeviceContext;
+    Ptr<ID3D1x(Device)>         pDevice;
+    Ptr<ID3D1x(DeviceContext)>  pDeviceContext;
+    ShaderManager*              pShaderManager;
     MeshCacheListSet            CacheList;
     
     // Handles synchronization between CPU writing of GPU resources
@@ -402,7 +397,6 @@ class MeshCache : public Render::MeshCache
     List<Render::MeshBuffer>    PendingDestructionBuffers;
 
     Ptr<ID3D1x(Buffer)> pMaskEraseBatchVertexBuffer;
-    Ptr<ID3D1x(Buffer)> pSquareVertexBuffer;
     
     inline MeshCache* getThis() { return this; }
 
@@ -413,7 +407,6 @@ class MeshCache : public Render::MeshCache
    
     bool            createStaticVertexBuffers(ID3D1x(Device)* pdevice);
     bool            createMaskEraseBatchVertexBuffer(ID3D1x(Device)* pdevice);
-    bool            createUVSquareVertexBuffer(ID3D1x(Device)* pdevice);
 
     // Allocates Vertex/Index buffer of specified size and adds it to free list.
     bool            allocCacheBuffers(UPInt size, MeshBuffer::AllocType type, unsigned arena = 0);
@@ -442,7 +435,7 @@ public:
 
     // Initializes MeshCache for operation, including allocation of the reserve
     // buffer. Typically called from SetVideoMode.
-    bool            Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext);
+    bool            Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext, ShaderManager* psm);
     // Resets MeshCache, releasing all buffers.
     void            Reset();    
 

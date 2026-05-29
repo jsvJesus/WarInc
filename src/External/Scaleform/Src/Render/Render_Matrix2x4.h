@@ -130,6 +130,8 @@ class Matrix2x4 : public Matrix2x4Data<T>
 
     // Set the matrix to the identity matrix
     SF_EXPORT void     SetIdentity();
+    // Set the matrix to all zero components
+    SF_EXPORT void     SetZero();
 
     // Copy matrix to float rows[2][4]
     inline void        GetAsFloat2x4(float (*rows)[4]) const;
@@ -163,8 +165,10 @@ class Matrix2x4 : public Matrix2x4Data<T>
     // Scaling, Shearing, Rotation, Translation operations
     inline Matrix2x4&  AppendScaling (T scale);
     inline Matrix2x4&  AppendScaling (T sx, T sy);
+    inline Matrix2x4&  AppendScaling (Size<T> scale);
     inline Matrix2x4&  PrependScaling(T scale);
     inline Matrix2x4&  PrependScaling(T sx, T sy);
+    inline Matrix2x4&  PrependScaling (Size<T> scale);
 
     inline Matrix2x4&  AppendShearing (T sh, T sv);
     inline Matrix2x4&  PrependShearing(T sh, T sv);
@@ -262,10 +266,12 @@ class Matrix2x4 : public Matrix2x4Data<T>
     // *** Static matrix initializers
 
     // Creates a translation matrix
+    inline static Matrix2x4        Translation(const Point<T>& p);
     inline static Matrix2x4        Translation(T dx, T dy);    
     // Creates a scaling matrix
     inline static Matrix2x4        Scaling(T scale);
     inline static Matrix2x4        Scaling(T sx, T sy);
+    inline static Matrix2x4        Scaling(Size<T> scale);
     // Creates a shearing matrix
     inline static Matrix2x4        Shearing(T sh, T sv);   
     // Creates a rotation matrix 
@@ -288,18 +294,7 @@ class Matrix2x4 : public Matrix2x4Data<T>
     // Matrix equality
     inline friend bool                operator == (const Matrix2x4 &m1, const Matrix2x4 &m2)
 	{
-#if 0
-        return  (m1.M[0][0] == m2.M[0][0]) && 
-			    (m1.M[0][1] == m2.M[0][1]) && 
-			    (m1.M[0][2] == m2.M[0][2]) && 
-                (m1.M[0][3] == m2.M[0][3]) && 
-			    (m1.M[1][0] == m2.M[1][0]) && 
-			    (m1.M[1][1] == m2.M[1][1]) && 
-			    (m1.M[1][2] == m2.M[1][2]) &&
-                (m1.M[1][3] == m2.M[1][3]);
-#else
         return memcmp(m1.M, m2.M, sizeof(Matrix2x4<T>)) == 0;
-#endif
 	}
     inline friend bool                operator != (const Matrix2x4 &m1, const Matrix2x4 &m2)
 	{
@@ -391,7 +386,7 @@ inline Matrix2x4<T>::Matrix2x4()
 }
 
 template<typename T>
-inline Matrix2x4<T>::Matrix2x4(const Matrix2x4 &m)
+inline Matrix2x4<T>::Matrix2x4(const Matrix2x4<T> &m)
 {
     SetMatrix(m);
 }
@@ -415,7 +410,7 @@ inline Matrix2x4<T>::Matrix2x4(T v0, T v1, T v2, T v3, T v4, T v5)
 }
 
 template<typename T>
-inline void    Matrix2x4<T>::SetMatrix(const Matrix2x4 &m)
+inline void    Matrix2x4<T>::SetMatrix(const Matrix2x4<T> &m)
 {
     M[0][0] = m.M[0][0];
     M[0][1] = m.M[0][1];
@@ -563,6 +558,13 @@ inline Rect<T>  Matrix2x4<T>::EncloseTransform(const Rect<T>& r) const
 }
 
 template<typename T>
+inline Matrix2x4<T>   Matrix2x4<T>::Translation(const Point<T>& p)
+{
+    return Matrix2x4<T>(1.0, 0.0, 0.0, p.x,
+                        0.0, 1.0, 0.0, p.y);
+}
+
+template<typename T>
 inline Matrix2x4<T>       Matrix2x4<T>::Translation(T dx, T dy)
 {
     return Matrix2x4<T>(1.0, 0.0, 0.0, dx,
@@ -581,6 +583,12 @@ inline Matrix2x4<T>       Matrix2x4<T>::Scaling(T sx, T sy)
 {
     return Matrix2x4<T>(sx,  0.0, 0.0, 0.0,
                         0.0, sy,  0.0, 0.0);
+}
+
+template<typename T>
+inline Matrix2x4<T>       Matrix2x4<T>::Scaling(Size<T> scale)
+{
+    return Scaling(scale.Width, scale.Height);
 }
 
 template<typename T>
@@ -612,6 +620,13 @@ inline Matrix2x4<T>&      Matrix2x4<T>::PrependScaling(T scale)
 }
 
 template<typename T>
+inline Matrix2x4<T>&      Matrix2x4<T>::PrependScaling (Size<T> scale)
+{
+    return PrependScaling (scale.Width, scale.Height);
+}
+
+
+template<typename T>
 inline Matrix2x4<T>&      Matrix2x4<T>::AppendScaling (T sx, T sy)
 {
     M[0][0] *= sx;
@@ -629,6 +644,12 @@ template<typename T>
 inline Matrix2x4<T>&      Matrix2x4<T>::AppendScaling (T scale)
 {
     return AppendScaling (scale, scale);
+}
+
+template<typename T>
+inline Matrix2x4<T>&      Matrix2x4<T>::AppendScaling (Size<T> scale)
+{
+    return AppendScaling (scale.Width, scale.Height);
 }
 
 template<typename T>
@@ -704,6 +725,20 @@ void    Matrix2x4<T>::SetIdentity()
     M[0][3] = 0.0f;
     M[1][0] = 0.0f;
     M[1][1] = 1.0f;
+    M[1][2] = 0.0f;
+    M[1][3] = 0.0f;
+}
+
+// Set the Matrix2x4 to identity.
+template<typename T>
+void Matrix2x4<T>::SetZero()
+{
+    M[0][0] = 0.0f;
+    M[0][1] = 0.0f;
+    M[0][2] = 0.0f;
+    M[0][3] = 0.0f;
+    M[1][0] = 0.0f;
+    M[1][1] = 0.0f;
     M[1][2] = 0.0f;
     M[1][3] = 0.0f;
 }
@@ -1044,9 +1079,10 @@ void    Matrix2x4<T>::EncloseTransform_NonOpt(Rect<T> *pr, const Rect<T>& r) con
 
 //-------------------
 // The code of this functions was taken from the Anti-Grain Geometry
-// Project and modified for the use by Scaleform. 
+// Project and modified for the use by Scaleform/Autodesk. 
 // Permission to use without restrictions is hereby granted to 
-// Scaleform Corp. by the author of Anti-Grain Geometry Project.
+// Scaleform/Autodesk by the author of Anti-Grain Geometry Project.
+// See http://antigrain.com for details.
 //------------------------------------------------------------------------
 template<typename T>
 Matrix2x4<T>& Matrix2x4<T>::SetParlToParl(const T* src, const T* dst)

@@ -77,6 +77,13 @@ enum AmpNativeFunctionId
     Amp_Native_Function_Id_ProcessInput,
     Amp_Native_Function_Id_ProcessMouse,
 
+    Amp_Native_Function_Id_GcCollect,
+    Amp_Native_Function_Id_GcMarkInCycle,
+    Amp_Native_Function_Id_GcScanInUse,
+    Amp_Native_Function_Id_GcFreeGarbage,
+    Amp_Native_Function_Id_GcFinalize,
+    Amp_Native_Function_Id_GcDelayedCleanup,
+
     Amp_Native_Function_Id_Display,
     Amp_Native_Function_Id_NextCapture,
     Amp_Native_Function_Id_Draw,
@@ -128,6 +135,11 @@ enum AmpNativeFunctionId
     Amp_Native_Function_Id_ObjectInterface_AttachMovie,
     Amp_Native_Function_Id_ObjectInterface_ToString,
     Amp_Native_Function_Id_ObjectInterface_GetWorldMatrix,
+    Amp_Native_Function_Id_ObjectInterface_InvokeClosure,
+    Amp_Native_Function_Id_ObjectInterface_IsByteArray,
+    Amp_Native_Function_Id_ObjectInterface_GetByteArraySize,
+    Amp_Native_Function_Id_ObjectInterface_ReadFromByteArray,
+    Amp_Native_Function_Id_ObjectInterface_WriteToByteArray,
     Amp_Native_Function_Id_End_ObjectInterface,
 
     Amp_Num_Native_Function_Ids
@@ -157,6 +169,9 @@ public:
     // AdvanceFrame needs to be called once per frame
     // It is called from GRenderer::EndFrame
     virtual void AdvanceFrame() = 0;
+
+    // Called from movie advance thread
+    virtual void MovieAdvance(GFx::MovieImpl* movie) = 0;
 
     static AmpServer& SF_STDCALL    GetInstance();
     static void SF_STDCALL          Init();
@@ -207,6 +222,8 @@ public:
     // AMP keeps track of active Movie Views
     virtual void        AddMovie(GFx::MovieImpl* movie) = 0;
     virtual void        RemoveMovie(GFx::MovieImpl* movie) = 0;
+    // note: the returned movie is AddRef-ed!
+    virtual bool        FindMovieByHeap(MemoryHeap* heap, GFx::MovieImpl** movie) = 0;
 
     // AMP keeps track of images
     virtual void        AddImage(GFx::ImageResource* image) = 0;
@@ -261,6 +278,8 @@ public:
 
     virtual void    NativePushCallstack(const char* functionName, AmpNativeFunctionId functionId, UInt64 funcTime) = 0;
     virtual void    NativePopCallstack(UInt64 time) = 0;
+    virtual void    AddGcRoots(UInt32 numRoots) = 0;
+    virtual void    AddGcFreedRoots(UInt32 numFreedRoots) = 0;
 };
 
 

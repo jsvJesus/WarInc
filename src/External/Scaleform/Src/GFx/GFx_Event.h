@@ -94,6 +94,9 @@ public:
         DoHideMouse,
         DoSetMouseCursor,
 
+        EnableClipping,
+        DisableClipping,
+
         Char,
         IME
     };
@@ -109,7 +112,9 @@ public:
 	unsigned EventClassSize;
 #endif
 
-    Event(EventType eventType = Unknown)
+    // must be explicit ctor but for compatibility reasons commenting 
+    // 'explicit' out.
+    /*explicit*/ Event(EventType eventType = Unknown)
     {
         Type = eventType;
         SF_DEBUG_EXPR(EventClassSize = sizeof(Event));
@@ -269,6 +274,12 @@ public:
 	}
 };
 
+class ClippingEvent : public Event
+{
+public:
+    ClippingEvent() : Event(Event::EnableClipping) {}
+    ClippingEvent(EventType eventType) : Event(eventType) {}
+};
 
 class MouseCursorEvent : public Event
 {
@@ -420,8 +431,8 @@ public:
     bool    IsKeyDown(int code) const;
     bool    IsKeyToggled(int code) const;
     void    SetKeyToggled(int code, bool toggle);
-    void    SetKeyDown(int code, UByte ascii, KeyModifiers mods = 0);
-    void    SetKeyUp(int code, UByte ascii, KeyModifiers mods = 0);
+    void    SetKeyDown(int code, UByte ascii, KeyModifiers mods = 0, bool putInQueue = true);
+    void    SetKeyUp(int code, UByte ascii, KeyModifiers mods = 0, bool putInQueue = true);
     void    SetChar(UInt32 wcharCode);
 
     bool    IsQueueEmpty() const { return KeyQueue.IsEmpty(); }
@@ -442,6 +453,19 @@ public:
     void    ResetState();
 
     KeyModifiers GetKeyModifiers() const;
+};
+#else
+class KeyboardState : public RefCountBase<KeyboardState, Stat_Default_Mem>
+{
+public:
+    class IListener
+    {
+    public:
+        virtual ~IListener() {}
+        virtual void OnKeyDown(InteractiveObject *, const EventId&, int) {}
+        virtual void OnKeyUp(InteractiveObject *, const EventId&, int) {}
+        virtual void Update(const EventId&) {}
+    };
 };
 #endif //GFX_ENABLE_KEYBOARD
 
@@ -550,15 +574,19 @@ public:
     // State of special keys
     KeyModifiers KeysStates[GFX_MAX_KEYBOARD_SUPPORTED];
 
-    SetFocusEvent(KeyModifiers specialKeysState) : 
-      Event(SetFocus, specialKeysState) {}
+    SetFocusEvent() : Event(SetFocus) {}
 
-      SetFocusEvent(unsigned numKeyboards, KeyModifiers* specialKeysStates) 
-          : Event(SetFocus) 
-      {
-          for (unsigned i = 0, n = Alg::Min(unsigned(GFX_MAX_KEYBOARD_SUPPORTED), numKeyboards); i < n; ++i)
-              KeysStates[i] = specialKeysStates[i];
-      }
+    SetFocusEvent(KeyModifiers specialKeysState) : 
+      Event(SetFocus, specialKeysState) { KeysStates[0] = specialKeysState; }
+
+    SetFocusEvent(unsigned numKeyboards, KeyModifiers* specialKeysStates) 
+      : Event(SetFocus) 
+    {
+        if (numKeyboards > 0)
+            Modifiers = specialKeysStates[0];
+        for (unsigned i = 0, n = Alg::Min(unsigned(GFX_MAX_KEYBOARD_SUPPORTED), numKeyboards); i < n; ++i)
+            KeysStates[i] = specialKeysStates[i];
+    }
 };
 
 }} // Scaleform::GFx

@@ -163,7 +163,7 @@ public:
 	~IMEManagerBase();
 
 
-	virtual UInt32 Init(Log* plog, FileOpener* fileOpener = NULL, const char* xmlFileName = NULL, bool bcheckIMEExists = true)
+	virtual UInt32 Init(Log* plog, FileOpenerBase* fileOpener = NULL, const char* xmlFileName = NULL, bool bcheckIMEExists = true)
 	{ 
 		SF_UNUSED3(fileOpener, xmlFileName, bcheckIMEExists); 
 		bCheckIMEExists = bcheckIMEExists;

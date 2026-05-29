@@ -37,6 +37,7 @@ class StatusChangedCallback;
 class ViewStats;
 class SocketImplFactory;
 class AmpStream;
+class ObjectsLog;
 
 // AMP server states
 enum ServerStateType
@@ -108,6 +109,9 @@ public:
     // It is called from GRenderer::EndFrame
     virtual void    AdvanceFrame();
 
+    // Called from movie advance thread
+    virtual void    MovieAdvance(MovieImpl* movie);
+
     // Custom callback that handles application-specific messages
     virtual void    SetAppControlCallback(AppControlInterface* callback);
 
@@ -124,12 +128,15 @@ public:
     bool            HandleInitState(const MessageInitState* message);
     bool            HandleSwdRequest(const MessageSwdRequest* message);
     bool            HandleSourceRequest(const MessageSourceRequest* message);
+    bool            HandleObjectsReportRequest(const MessageObjectsReportRequest* message);
     bool            HandleImageRequest(const MessageImageRequest* message);
     bool            HandleFontRequest(const MessageFontRequest* message);
 
     // AMP keeps track of active Movie Views
     virtual void    AddMovie(MovieImpl* movie);
     virtual void    RemoveMovie(MovieImpl* movie);
+    // note: the returned movie is AddRef-ed!
+    virtual bool    FindMovieByHeap(MemoryHeap* heap, MovieImpl** movie);
 
     // AMP keeps track of images
     virtual void    AddImage(GFx::ImageResource* image);
@@ -246,6 +253,11 @@ private:
     AtomicInt<UInt32>               FontFailures;
     AtomicInt<UInt32>               MemReportLocked;
     AtomicInt<UInt32>               ProfileLevelLocked;
+
+    // For objects report
+    Lock                            ObjectsReportLock;
+    UInt32                          ObjectsReportRequested;
+    UInt32                          ObjectsReportFlags;
 
     // Task group domain and ID for GPA integration
     SF_GPA_ITT_DOMAIN*              GpaDomain;

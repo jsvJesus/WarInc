@@ -19,30 +19,7 @@
 #include "LangMngr.h"
 
 // libs
-#pragma comment(lib, "libpng.lib")
-#pragma comment(lib, "libjpeg.lib")
-
-#ifdef _DEBUG
-#pragma comment(lib, "libgfx_DebugOpt.lib")
-#pragma comment(lib, "libgfx_as2_DebugOpt.lib")
-//#pragma comment(lib, "libgfxplatform_d3d9_DebugOpt.lib")
-//#pragma comment(lib, "libgfxrender_d3d9_DebugOpt.lib")
-//#pragma comment(lib, "libgfxsound_fmod_DebugOpt.lib")
-#elif defined(FINAL_BUILD)
-#pragma comment(lib, "libgfx_Shipping.lib")
-#pragma comment(lib, "libgfx_as2_Shipping.lib")
-//#pragma comment(lib, "libgfxplatform_d3d9_Shipping.lib")
-//#pragma comment(lib, "libgfxrender_d3d9_Shipping.lib")
-//#pragma comment(lib, "libgfxsound_fmod_Shipping.lib")
-#else // RELEASE
-#pragma comment(lib, "libgfx_Release.lib")
-#pragma comment(lib, "libgfx_as2_Release.lib")
-//#pragma comment(lib, "libgfxplatform_d3d9_Release.lib")
-//#pragma comment(lib, "libgfxrender_d3d9_Release.lib")
-//#pragma comment(lib, "libgfxsound_fmod_Release.lib")
-#endif
-
-//////////////////////////////////////////////////////////////////////////
+#include "WarIncScaleformLink.h"
 
 void r3dAddUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {

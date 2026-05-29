@@ -33,7 +33,9 @@ public:
         // resetting the device or shutting down, so otherwise they would leak.
         if ( pdevice == 0 )
         {
+            SF_DEBUG_ASSERT(pNextEndFrameFence == 0, "Cannot shutdown in the middle of a frame.");
             ReleaseOutstandingFrames();
+            pDevice = 0;
             return true;
         }
         else

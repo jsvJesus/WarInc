@@ -54,7 +54,14 @@ otherwise accompanies this software in either electronic or hard copy form.
     #define SF_GL_RUNTIME_LINK(x) wglGetProcAddress(x)
 #elif defined(SF_OS_MAC)
     #include <OpenGL/OpenGL.h>
-    #include <OpenGL/gl.h>
+    #define GL_GLEXT_PROTOTYPES
+    #if defined(MAC_OS_X_VERSION_10_7) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_7)
+        #include <OpenGL/gl3.h>
+        #include <OpenGL/gl3ext.h>
+    #else
+        #include <OpenGL/gl.h>
+        #include <OpenGL/glext.h>
+    #endif
 #else
 
     // Use GLX to link gl extensions at runtime; comment out if not using GLX
@@ -80,7 +87,7 @@ otherwise accompanies this software in either electronic or hard copy form.
     #if defined(SF_USE_GLES)
         #include "Render/GL/GLES11_Extensions.h"
     #elif defined(SF_USE_GLES2)
-        #include "Render/GL/GLES20_Extensions.h"
+        #include "Render/GL/GLES_Extensions.h"
     #else
         #include "Render/GL/GL_Extensions.h"
     #endif
@@ -89,26 +96,62 @@ otherwise accompanies this software in either electronic or hard copy form.
   #define GLEXT
 #endif
 
-#if defined(GL_ES_VERSION_2_0)
+#if defined(GL_ES_VERSION_2_0) || defined(GL_VERSION_3_0)
 
-    // Unsupported features
-    #define GL_MIN GL_FUNC_ADD
-    #define GL_MAX GL_FUNC_ADD
+    // ES 2.0 specific
+    #if defined(GL_ES_VERSION_2_0)
+        // Unsupported features
+        #define GL_MIN                                  GL_FUNC_ADD
+        #define GL_MAX                                  GL_FUNC_ADD
 
-    // Convert extension enums to standard ones
-    #define GL_FRAMEBUFFER_EXT                          GL_FRAMEBUFFER
-    #define GL_FRAMEBUFFER_BINDING_EXT                  GL_FRAMEBUFFER_BINDING
-    #define GL_FRAMEBUFFER_COMPLETE_EXT                 GL_FRAMEBUFFER_COMPLETE
-    #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT   GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE
-    #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT   GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME
-    #define GL_FRAMEBUFFER_COMPLETE_EXT                 GL_FRAMEBUFFER_COMPLETE
-    #define GL_RENDERBUFFER_EXT                         GL_RENDERBUFFER
-    #define GL_RENDERBUFFER_BINDING_EXT                 GL_RENDERBUFFER_BINDING
-    #define GL_RENDERBUFFER_WIDTH_EXT                   GL_RENDERBUFFER_WIDTH
-    #define GL_RENDERBUFFER_HEIGHT_EXT                  GL_RENDERBUFFER_HEIGHT
-    #define GL_COLOR_ATTACHMENT0_EXT                    GL_COLOR_ATTACHMENT0
-    #define GL_DEPTH_ATTACHMENT_EXT                     GL_DEPTH_ATTACHMENT
-    #define GL_STENCIL_ATTACHMENT_EXT                   GL_STENCIL_ATTACHMENT
+        // Built-in in GL2.x, extensions in ES2.0
+        #define GL_WRITE_ONLY                           GL_WRITE_ONLY_OES
+        #define glMapBuffer                             glMapBufferOES
+        #define glUnmapBuffer                           glUnmapBufferOES
+
+
+	    #define glProgramBinary                 glProgramBinaryOES
+	    #define GL_PROGRAM_BINARY_LENGTH        GL_PROGRAM_BINARY_LENGTH_OES
+	    #define glGetProgramBinary              glGetProgramBinaryOES
+    #endif
+
+    // GL 3.0+ specific
+    #if !defined(GL_TEXTURE_COMPONENTS)
+        #define GL_TEXTURE_COMPONENTS                   GL_TEXTURE_INTERNAL_FORMAT
+    #endif
+
+    #if !defined(GL_EXT_framebuffer_object)
+        // Convert extension enums to standard ones
+        #define GL_FRAMEBUFFER_EXT                          GL_FRAMEBUFFER
+        #define GL_FRAMEBUFFER_BINDING_EXT                  GL_FRAMEBUFFER_BINDING
+        #define GL_FRAMEBUFFER_COMPLETE_EXT                 GL_FRAMEBUFFER_COMPLETE
+        #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT   GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE
+        #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT   GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME
+        #define GL_FRAMEBUFFER_COMPLETE_EXT                 GL_FRAMEBUFFER_COMPLETE
+        #define GL_RENDERBUFFER_EXT                         GL_RENDERBUFFER
+        #define GL_RENDERBUFFER_BINDING_EXT                 GL_RENDERBUFFER_BINDING
+        #define GL_RENDERBUFFER_WIDTH_EXT                   GL_RENDERBUFFER_WIDTH
+        #define GL_RENDERBUFFER_HEIGHT_EXT                  GL_RENDERBUFFER_HEIGHT
+        #define GL_COLOR_ATTACHMENT0_EXT                    GL_COLOR_ATTACHMENT0
+        #define GL_DEPTH_ATTACHMENT_EXT                     GL_DEPTH_ATTACHMENT
+        #define GL_STENCIL_ATTACHMENT_EXT                   GL_STENCIL_ATTACHMENT
+
+        #define glGenRenderbuffersEXT                       glGenRenderbuffers
+        #define glBindRenderbufferEXT                       glBindRenderbuffer
+        #define glRenderbufferStorageEXT                    glRenderbufferStorage
+        #define glGenFramebuffersEXT                        glGenFramebuffers
+        #define glBindFramebufferEXT                        glBindFramebuffer
+        #define glFramebufferTexture2DEXT                   glFramebufferTexture2D
+        #define glIsFramebufferEXT                          glIsFramebuffer
+        #define glGetFramebufferAttachmentParameterivEXT    glGetFramebufferAttachmentParameteriv
+        #define glDeleteRenderbuffersEXT                    glDeleteRenderbuffers
+        #define glIsRenderbufferEXT                         glIsRenderbuffer
+        #define glGetRenderbufferParameterivEXT             glGetRenderbufferParameteriv
+        #define glFramebufferRenderbufferEXT                glFramebufferRenderbuffer
+        #define glDeleteFramebuffersEXT                     glDeleteFramebuffers
+        #define glCheckFramebufferStatusEXT                 glCheckFramebufferStatus
+        #define glGenerateMipmapEXT                         glGenerateMipmap
+    #endif // GL_EXT_framebuffer_object
 
     #if !defined(GL_BGRA) && defined(GL_BGRA_EXT)
         #define GL_BGRA GL_BGRA_EXT
@@ -116,26 +159,6 @@ otherwise accompanies this software in either electronic or hard copy form.
     #if !defined(GL_BGRA_EXT) && defined(GL_BGRA)
         #define GL_BGRA_EXT GL_BGRA
     #endif
-
-    #define GL_WRITE_ONLY GL_WRITE_ONLY_OES
-    #define glMapBuffer glMapBufferOES
-    #define glUnmapBuffer glUnmapBufferOES
-    #define glGenerateMipmapEXT glGenerateMipmap
-
-    #define glGenRenderbuffersEXT                       glGenRenderbuffers
-    #define glBindRenderbufferEXT                       glBindRenderbuffer
-    #define glRenderbufferStorageEXT                    glRenderbufferStorage
-    #define glGenFramebuffersEXT                        glGenFramebuffers
-    #define glBindFramebufferEXT                        glBindFramebuffer
-    #define glFramebufferTexture2DEXT                   glFramebufferTexture2D
-    #define glIsFramebufferEXT                          glIsFramebuffer
-    #define glGetFramebufferAttachmentParameterivEXT    glGetFramebufferAttachmentParameteriv
-    #define glDeleteRenderbuffersEXT                    glDeleteRenderbuffers
-    #define glIsRenderbufferEXT                         glIsRenderbuffer
-    #define glGetRenderbufferParameterivEXT             glGetRenderbufferParameteriv
-    #define glFramebufferRenderbufferEXT                glFramebufferRenderbuffer
-    #define glDeleteFramebuffersEXT                     glDeleteFramebuffers
-    #define glCheckFramebufferStatusEXT                 glCheckFramebufferStatus
 
     typedef char GLchar;
 
@@ -168,6 +191,21 @@ otherwise accompanies this software in either electronic or hard copy form.
     #define glUnmapBuffer glUnmapBufferOES
     #define glGenerateMipmapEXT glGenerateMipmapOES
 
-#endif // SF_USE_GLES
+#else // SF_USE_GLES
+
+    // Statically linking, with possible extensions.
+    #if !defined SF_GL_RUNTIME_LINK
+        #if defined(GL_APPLE_vertex_array_object) && GL_APPLE_vertex_array_object
+            #define glBindVertexArray                           glBindVertexArrayAPPLE
+            #define glGenVertexArrays                           glGenVertexArraysAPPLE
+            #define glDeleteVertexArrays                        glDeleteVertexArraysAPPLE
+        #endif
+
+        #if defined(GL_ARB_instanced_arrays) && GL_ARB_instanced_arrays
+            #define glDrawElementsInstanced                     glDrawElementsInstancedARB
+        #endif
+    #endif
+
+#endif
 
 #endif
