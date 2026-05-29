@@ -26,6 +26,16 @@
 #include <malloc.h>
 #include <assert.h>
 
+#ifdef WARINC_USE_LIBCURL
+#include "CkByteData.h"
+#include "CkString.h"
+#include "CkHttp.h"
+#include "CkHttpRequest.h"
+#include "CkHttpResponse.h"
+#include "CkHttpProgress.h"
+#include "CkGzip.h"
+#endif
+
 // RJH Network2: added the following preprocessor defines for the network, 
 // since the game project is compiled for precompiled headers and this pch
 // is everywhere, ensures that the winsock header part of windows.h
