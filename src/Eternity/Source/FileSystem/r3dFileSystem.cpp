@@ -690,71 +690,80 @@ float r3dFileSystem::GetArchiveWastedPerc()
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
 
-  std::sort(fl_.files_.begin(), fl_.files_.end(), FileEntrySortByVolume);
+  if(fl_.files_.size() <= 1)
+    return 0.0f;
 
-  // get total size of archive
   __int64 totalSize = 0;
-  for(size_t i=0; i<fl_.files_.size(); i++)
-    totalSize += fl_.files_[i]->csize;
 
-  // calc gap size
+  for(size_t i = 0; i < fl_.files_.size(); i++)
+  {
+    totalSize += fl_.files_[i]->csize;
+  }
+
+  if(totalSize <= 0)
+    return 0.0f;
+
   __int64 totalGap = 0;
-  for(size_t i=0; i<fl_.files_.size()-1; i++) 
+
+  for(size_t i = 0; i + 1 < fl_.files_.size(); i++) 
   {
     r3dFS_FileEntry& f1 = *fl_.files_[i];
-    r3dFS_FileEntry& f2 = *fl_.files_[i+1];
-    //r3dOutToLog("%d: %d:%08d %s\n", i, f1.volume, f1.offset, f1.name);
+    r3dFS_FileEntry& f2 = *fl_.files_[i + 1];
 
     if(f1.volume != f2.volume)
       continue;
-      
-    int gap = f2.offset - (f1.offset + f1.csize + sizeof(r3dFS_FileHeader));
+
+    const DWORD f1End = f1.offset + f1.csize + static_cast<DWORD>(sizeof(r3dFS_FileHeader));
+    const int gap = static_cast<int>(f2.offset - f1End);
+
     if(gap != 0) {
-      //r3dOutToLog("%d bytes gap\n", gap);
       totalGap += gap;
     }
   }
-  
-  float wasted = (float)totalGap / (float)totalSize;
-  return wasted;
+
+  return static_cast<float>(totalGap) / static_cast<float>(totalSize);
 }
 
 bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
+
   r3dOutToLog("r3dFS: rebuilding archive\n"); CLOG_INDENT;
 
   std::sort(fl_.files_.begin(), fl_.files_.end(), FileEntrySortByVolume);
 
-  // get total size of files
   outCur   = 0;
   outTotal = 0;
-  for(size_t i=0; i<fl_.files_.size(); i++)
+
+  for(size_t i = 0; i < fl_.files_.size(); i++)
+  {
     outTotal += fl_.files_[i]->csize;
-    
-  // open for WRITE
+  }
+
   if(!OpenVolumesForWrite(false)) {
     return false;
   }
-  
+
   int   curVolume = 0;
   DWORD curOffset = 0;
-  for(size_t i=0; i<fl_.files_.size(); i++) 
+
+  for(size_t i = 0; i < fl_.files_.size(); i++) 
   {
     r3dFS_FileEntry& fe = *fl_.files_[i];
-    
-    // check if we need to switch to new volume
-    if(curOffset + fe.csize + sizeof(r3dFS_FileHeader) >= VOLUME_SIZE)
+
+    const DWORD headerSize = static_cast<DWORD>(sizeof(r3dFS_FileHeader));
+    const DWORD chunkSize = fe.csize + headerSize;
+
+    if(static_cast<__int64>(curOffset) + static_cast<__int64>(chunkSize) >= VOLUME_SIZE)
     {
       curOffset = 0;
       curVolume++;
     }
-    
+
     if(fe.volume != curVolume || fe.offset != curOffset)
     {
       if(!RelocateFile(fe, curVolume, curOffset))
       {
-        // ok, shit happens
         CloseVolumes();
         RemoveVolumeFiles();
         r3dOutToLog("archive is corrupted\n");
@@ -762,24 +771,21 @@ bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
       }
     }
 
-    // advance offset
-    curOffset += fe.csize + sizeof(r3dFS_FileHeader);
-    
-    // check if we're requested to exit
+    curOffset += chunkSize;
+
     extern bool g_bExit;
     if(g_bExit)
       break;
-    
-    outCur    += fe.csize;
+
+    outCur += fe.csize;
   }
-  
+
   CloseVolumes();
   WriteFileList();
-  
+
   ResetVolumes();
   DetectVolumeSizes();
 
-  // clean up unused volumes
   for(int i = 0; i < MAX_VOLUMES; i++) {
     char fname[MAX_PATH];
     GetVolumeName(fname, i);
@@ -791,9 +797,8 @@ bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
 
 bool r3dFileSystem::RelocateFile(r3dFS_FileEntry& fe, int newVolume, DWORD newOffset)
 {
-  // note: that'll work with zero sized files, because we're relocating whole chunk with header
-  int chunksize = fe.csize + sizeof(r3dFS_FileHeader);
-  BYTE* chunkdata = new BYTE[chunksize + 1];
+  const DWORD chunksize = fe.csize + static_cast<DWORD>(sizeof(r3dFS_FileHeader));
+  BYTE* chunkdata = new BYTE[static_cast<size_t>(chunksize) + 1];
 
   HANDLE h = volumeHandles[fe.volume];
   r3d_assert(h != INVALID_HANDLE_VALUE);

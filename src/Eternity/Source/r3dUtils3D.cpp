@@ -524,15 +524,18 @@ void r3dUtilInit()
 		//	Create screen space vertex buffers
 		if (g_ScreenSpaceQuadsVB == 0)
 		{
-			size_t fsQuadDataSize = sizeof(FS_QUAD);
-			size_t hsQuadDataSize = sizeof(HS_QUAD);
-			UINT vertexSize = D3DXGetDeclVertexSize(elems, 0);
-			UINT vertexCount = (fsQuadDataSize + hsQuadDataSize) / vertexSize;
+			const size_t fsQuadDataSize = sizeof(FS_QUAD);
+			const size_t hsQuadDataSize = sizeof(HS_QUAD);
+			const UINT vertexSize = D3DXGetDeclVertexSize(elems, 0);
+
+			const size_t totalQuadDataSize = fsQuadDataSize + hsQuadDataSize;
+			const UINT vertexCount = static_cast<UINT>( totalQuadDataSize / vertexSize );
+
 			g_ScreenSpaceQuadsVB = new r3dVertexBuffer(vertexCount, vertexSize);
-			char * data = reinterpret_cast<char*>(g_ScreenSpaceQuadsVB->Lock());
-			//	FS_QUAD
+
+			char* data = reinterpret_cast<char*>(g_ScreenSpaceQuadsVB->Lock());
+
 			memcpy_s(data, g_ScreenSpaceQuadsVB->GetDataLength(), FS_QUAD, fsQuadDataSize);
-			//	HS_QUAD
 			memcpy_s(data + fsQuadDataSize, g_ScreenSpaceQuadsVB->GetDataLength() - fsQuadDataSize, HS_QUAD, hsQuadDataSize);
 
 			g_ScreenSpaceQuadsVB->Unlock();

@@ -414,11 +414,11 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       }
       break;
 
-	case WM_KEYDOWN:
-	{
-		EngineConsole::ProcessKey( wParam );
-		break;
-	}
+  case WM_KEYDOWN:
+      {
+          EngineConsole::ProcessKey( static_cast<uint8_t>( wParam & 0xFF ) );
+          break;
+      }
 
 	case WM_LBUTTONDBLCLK:
 		if( OnDblClick )
@@ -426,19 +426,20 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
     // store char to input stream
-    case WM_CHAR:
-    {
-		EngineConsole::ProcessChar( wParam );
+  case WM_CHAR:
+      {
+          const int ch = static_cast<int>( wParam & 0xFFFF );
 
-        int	ch;
+          EngineConsole::ProcessChar( static_cast<char>( ch & 0xFF ) );
 
-      ch              = (TCHAR)wParam;
-      input_StackTail = input_StackHead;
-      *(input_StackHead++) = ch;
-      if(input_StackHead >= input_ScanStack + INPUT_KBD_STACK)
-	input_StackHead = input_ScanStack;
-      break;
-    }
+          input_StackTail = input_StackHead;
+          *(input_StackHead++) = ch;
+
+          if(input_StackHead >= input_ScanStack + INPUT_KBD_STACK)
+              input_StackHead = input_ScanStack;
+
+          break;
+      }
 
     case WM_PAINT:
     {

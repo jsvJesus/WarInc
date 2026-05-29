@@ -247,7 +247,9 @@ int r3dFSCompress::CompressFile(
   fclose(f);
 
   if(rsize != static_cast<size_t>(size)) {
+    delete[] data;
     r3dError("failed to read %s %u vs %u\n", fname, size, static_cast<unsigned int>(rsize));
+    return 0;
   }
 
   *out_size  = size;
@@ -265,8 +267,8 @@ int r3dFSCompress::CompressFile(
   switch(*method)
   {
   default:
-    r3dError("invalid compression method %d for %s\n", *method, fname);
     delete[] data;
+    r3dError("invalid compression method %d for %s\n", *method, fname);
     return 0;
 
   case COMPRESS_STORE:

@@ -320,7 +320,10 @@ void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName)
 {
 #if R3D_SET_DEBUG_D3D_NAMES
 
-	DWORD sz = strlen(FName);
+	if( !res || !FName )
+		return;
+
+	DWORD sz = static_cast<DWORD>( strlen( FName ) );
 	res->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
 
 	void* p = 0;
@@ -329,41 +332,39 @@ void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName)
 	if(p)
 	{
 		LPDIRECT3DTEXTURE9 t = (LPDIRECT3DTEXTURE9)p;
-		int mipsCount = t->GetLevelCount();
+		UINT mipsCount = t->GetLevelCount();
 
-		for (int i = 0; i < mipsCount; ++i)
+		for (UINT i = 0; i < mipsCount; ++i)
 		{
-			LPDIRECT3DSURFACE9 surf; 
+			LPDIRECT3DSURFACE9 surf = NULL;
 			t->GetSurfaceLevel(i, &surf);
-			surf->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
-			surf->Release();
-		}
 
-		t->Release();
-		return;
-	}
-
-	p = 0;
-	res->QueryInterface(IID_IDirect3DCubeTexture9, &p);
-	if(p)
-	{
-		LPDIRECT3DCUBETEXTURE9 t = (LPDIRECT3DCUBETEXTURE9)p;
-		int mipsCount = t->GetLevelCount();
-
-		for (int i = 0; i < mipsCount; ++i)
-		{
-			for (int j = D3DCUBEMAP_FACE_POSITIVE_X; j <= D3DCUBEMAP_FACE_NEGATIVE_Z; ++j)
+			if( surf )
 			{
-				LPDIRECT3DSURFACE9 surf; 
-				t->GetCubeMapSurface((D3DCUBEMAP_FACES)j, i, &surf);
 				surf->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
 				surf->Release();
 			}
 		}
 
 		t->Release();
+	}
 
-		return;
+	p = 0;
+	res->QueryInterface(IID_IDirect3DVertexBuffer9, &p);
+	if(p)
+	{
+		LPDIRECT3DVERTEXBUFFER9 vb = (LPDIRECT3DVERTEXBUFFER9)p;
+		vb->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
+		vb->Release();
+	}
+
+	p = 0;
+	res->QueryInterface(IID_IDirect3DIndexBuffer9, &p);
+	if(p)
+	{
+		LPDIRECT3DINDEXBUFFER9 ib = (LPDIRECT3DINDEXBUFFER9)p;
+		ib->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
+		ib->Release();
 	}
 
 #endif

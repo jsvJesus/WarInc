@@ -56,28 +56,38 @@ r3dDXInclude::r3dDXInclude(const char* fname)
 
 HRESULT r3dDXInclude::Open(D3DXINCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes)
 {
-  *ppData = NULL;
-  *pBytes = 0;
+	*ppData = NULL;
+	*pBytes = 0;
 
-  //r3dOutToLog("r3dDXInclude::Open: %d %s\n", IncludeType, pFileName);
-  char fname[MAX_PATH];
-  sprintf(fname, "%s\\%s", basePath, pFileName);
-  r3dFile* f = r3d_open(fname, "rb");
-  if(!f) {
-    r3dError("can't open shader include file %s (%s)\n", pFileName, fname);
-    return E_FAIL;
-  }
+	char fname[MAX_PATH];
+	sprintf(fname, "%s\\%s", basePath, pFileName);
 
-  char* buf = new char[f->size + 1];
-  int size = fread(buf, 1, f->size, f);
-  buf[size] = 0;
-  fclose(f);
+	r3dFile* f = r3d_open(fname, "rb");
+	if(!f) {
+		r3dError("can't open shader include file %s (%s)\n", pFileName, fname);
+		return E_FAIL;
+	}
 
-  AccumIncludes.PushBack( pFileName );
-  
-  *ppData = (void*)buf;
-  *pBytes = size;
-  return S_OK;
+	if( f->size < 0 ) {
+		fclose(f);
+		return E_FAIL;
+	}
+
+	const size_t fileSize = static_cast<size_t>( f->size );
+
+	char* buf = new char[fileSize + 1];
+
+	const size_t bytesRead = fread(buf, 1, fileSize, f);
+	fclose(f);
+
+	buf[bytesRead] = 0;
+
+	AccumIncludes.PushBack( pFileName );
+
+	*ppData = (void*)buf;
+	*pBytes = static_cast<UINT>( bytesRead );
+
+	return S_OK;
 }
 
 HRESULT r3dDXInclude::Close(LPCVOID pData)

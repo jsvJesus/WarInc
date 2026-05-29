@@ -634,26 +634,28 @@ template <typename T>
 void
 r3dMesh::RemapComponent( T* comp, const std::vector<int>& compMap )
 {
-	size_t reqTempSize = sizeof( T ) * compMap.size() ;
+	const size_t count = compMap.size();
+	const size_t reqTempSize = sizeof(T) * count;
 
 	if( reqTempSize > tempGenericMemSize )
 	{
-		free( tempGenericMem ) ;
-		tempGenericMem		= malloc( reqTempSize ) ;
-		tempGenericMemSize	= reqTempSize ;
+		free( tempGenericMem );
+		tempGenericMem		= malloc( reqTempSize );
+		tempGenericMemSize	= reqTempSize;
 	}
 
-	T* tmp = (T*) tempGenericMem ;
+	T* tmp = (T*)tempGenericMem;
 
-	memcpy( tmp, comp, reqTempSize ) ;
+	memcpy( tmp, comp, reqTempSize );
 
-	for( int i = 0, e = compMap.size() ; i < e ; i ++ )
+	for( size_t i = 0; i < count; i++ )
 	{
-		int idx = compMap[ i ] ;
+		const int idx = compMap[ i ];
 
-		r3d_assert( idx < e ) ;
+		r3d_assert( idx >= 0 );
+		r3d_assert( static_cast<size_t>( idx ) < count );
 
-		comp[ i ] = tmp[ idx ] ;
+		comp[ i ] = tmp[ idx ];
 	}
 }
 

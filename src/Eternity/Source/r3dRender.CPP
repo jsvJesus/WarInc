@@ -2837,45 +2837,46 @@ void r3dRenderLayer::RegisterScreenBuffer( r3dScreenBuffer* sb )
 
 void r3dRenderLayer::UnregisterScreenBuffer( r3dScreenBuffer* sb )
 {
-	for( int i = 0, e = ScreenBuffers_.Count() ; i < e ; i ++ )
+	for( int i = 0, e = static_cast<int>( ScreenBuffers_.Count() ); i < e; i++ )
 	{
 		if( ScreenBuffers_[ i ] == sb )
 		{
-			ScreenBuffers_.Erase( i, 1 ) ;
-			return ;
+			ScreenBuffers_.Erase( i, 1 );
+			return;
 		}
 	}
 
-	r3d_assert( false ) ;
+	r3d_assert( false );
 }
 
 void r3dRenderLayer::RegisterResource(r3dIResource* res)
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	size_t firstFree = -1;
-	for(size_t i = 0; i<resources_.Count(); ++i)
+	int firstFree = -1;
+
+	for( int i = 0, e = static_cast<int>( resources_.Count() ); i < e; ++i )
 	{
-		if(resources_[i] == res)
+		if( resources_[ i ] == res )
 		{
 			r3dError("r3d: resource %p already registered\n", res);
 			return;
 		}
 
-		if(resources_[i] == NULL && firstFree == -1)
+		if( resources_[ i ] == NULL && firstFree == -1 )
 		{
 			firstFree = i;
 		}
 	}
 
-	if(firstFree == -1)
+	if( firstFree == -1 )
 	{
-		firstFree = resources_.Count();
+		firstFree = static_cast<int>( resources_.Count() );
 		resources_.PushBack( res );
 	}
 	else
 	{
-		resources_[ firstFree ] = res ;
+		resources_[ firstFree ] = res;
 	}
 
 	r3d_assert( resources_[ firstFree ] == res );
@@ -2885,12 +2886,12 @@ void r3dRenderLayer::DeregisterResource(r3dIResource* res)
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	for( uint32_t i = 0, e = resources_.Count() ; i < e ; i ++ )
+	for( int i = 0, e = static_cast<int>( resources_.Count() ); i < e; i++ )
 	{
 		if( res == resources_[ i ] )
 		{
-			resources_[ i ] = NULL ;
-			return ;
+			resources_[ i ] = NULL;
+			return;
 		}
 	}
 
