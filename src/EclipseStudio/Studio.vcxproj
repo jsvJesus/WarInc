@@ -181,7 +181,7 @@
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Release_Static;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -226,7 +226,7 @@
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3DEBUG_x86.lib;PhysX3CommonDEBUG_x86.lib;PhysX3CookingDEBUG_x86.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x86.lib;PxPvdSDKDEBUG_x86.lib;PsFastXmlDEBUG_x86.lib;PxTaskDEBUG_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio_d.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Debug_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -278,7 +278,7 @@
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\WarInc.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/Scaleform/3rdParty/fmod/pc/Win32/lib;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/libjpeg-turbo/lib/Win32/v120/Release_Static;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/Scaleform/3rdParty/fmod/pc/Win32/lib;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -406,7 +406,7 @@
         ..\External\Scaleform\Lib\x64;
         ..\External\Scaleform\Lib;
         ..\External\Chilkat\Libs\x64;
-        ..\External\libjpeg-turbo\lib\x64\v120\Release_Static;
+        ..\External\Scaleform\3rdParty\jpeg-8d\Lib\Win32\Msvc10\Release
         ..\External\VMProtect;
         %(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
