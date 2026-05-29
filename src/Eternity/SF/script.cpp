@@ -91,27 +91,30 @@ Script_c::~Script_c()
 //---------------------------------------------------------------------------------------------
 bool Script_c::OpenFile( const char * szFileName, bool as_binary )
 {
-	unsigned int dwFileLen;
-
-	r3dscpy( m_szFileName, szFileName);
+	r3dscpy( m_szFileName, szFileName );
 	
-	r3dFile * hFile = r3d_open( szFileName, as_binary?"rb":"rt" );
+	r3dFile * hFile = r3d_open( szFileName, as_binary ? "rb" : "rt" );
 	if ( ! hFile )
 		return false;
 
+	if ( hFile->size < 0x7fffffff )
+	{
+		const size_t fileSize = static_cast<size_t>( hFile->size );
 
-	m_pStoredFile = new char[ hFile->size + 1 ];
+		m_pStoredFile = new char[ fileSize + 1 ];
 
-	dwFileLen = fread( m_pStoredFile, 1, hFile->size, hFile );
-	m_pStoredFile[ hFile->size ] = '\0';
+		const size_t bytesRead = fread( m_pStoredFile, 1, fileSize, hFile );
+		m_pStoredFile[ bytesRead ] = '\0';
 		
-	OpenMemoryLocation( m_pStoredFile, hFile->size );
+		OpenMemoryLocation( m_pStoredFile, static_cast<int>( bytesRead ) );
+
+		fclose( hFile );
+		return true;
+	}
 
 	fclose( hFile );
-
-	return true;
+	return false;
 }
-
 
 //---------------------------------------------------------------------------------------------
 // Name: 
@@ -255,7 +258,7 @@ bool Script_c::RewindAfterToken( const char * szToken, bool from_start, bool who
 		if ( substr )
 		{
 			bFoundIt = true;
-			m_iBytesRead = substr - m_pStartPos;
+			m_iBytesRead = static_cast<int>( substr - m_pStartPos );
 			assert( m_iBytesRead < m_iBytesTotal );
 			GetToken( tempToken );
 		}
