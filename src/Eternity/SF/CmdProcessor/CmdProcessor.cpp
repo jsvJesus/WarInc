@@ -383,7 +383,7 @@ void CommandProcessor::ExecuteLine( const char * szLine, DWORD dwFlags )
 
 					strcpy_s( buff, start ) ;
 
-					int i = strlen( buff ) ;
+					int i = static_cast<int>(strlen(buff));
 					for( ; i >= 0 ; i -- ) 
 					{
 						if( buff[ i ] == ' ' || buff[ i ] == '\t' || buff[ i ] == '\n' || buff[ i ] == '\r' )

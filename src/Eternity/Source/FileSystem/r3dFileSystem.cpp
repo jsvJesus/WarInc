@@ -253,20 +253,31 @@ bool r3dFS_FileList::WriteFileList(FILE* f)
   hdr1.version = 0x00000001;
   
   //
-  long  size = files_.size() * sizeof(r3dFS_FileEntry);
-  BYTE* data = new BYTE[size + 1];
-  for(size_t i=0; i<files_.size(); i++) {
+  const size_t rawSize = files_.size() * sizeof(r3dFS_FileEntry);
+
+  if(rawSize > MAXDWORD)
+    r3dError("file list is too big\n");
+
+  if(files_.size() > MAXDWORD)
+    r3dError("too many files in file list\n");
+
+  const DWORD size = static_cast<DWORD>(rawSize);
+
+  BYTE* data = new BYTE[rawSize + 1];
+
+  for(size_t i = 0; i < files_.size(); i++) {
     memcpy(data + i * sizeof(r3dFS_FileEntry), files_[i], sizeof(r3dFS_FileEntry));
   }
-  
+
   r3dFSCompress compress;
   BYTE* cdata;
   DWORD csize;
+
   if(!compress.CompressInflate(data, size, &cdata, &csize))
     r3dError("failed to compres file list\n");
-  
+
   r3dFS_ListHeader_v1 hdr2;
-  hdr2.numFiles     = files_.size();
+  hdr2.numFiles     = static_cast<DWORD>(files_.size());
   hdr2.buildVersion = buildVersion_;
   hdr2.csize        = csize;
   hdr2.crc32        = r3dCRC32(data, size);

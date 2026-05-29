@@ -638,7 +638,7 @@ void EternityWebBrowser::ClearURLHandler(const char *urlPrefix)
 	UrlHandler *h = FindURLHandler(urlPrefix);
 	if (h)
 	{
-		uint32_t idx = h - &urlHandlers.GetFirst();
+		uint32_t idx = static_cast<uint32_t>(h - &urlHandlers.GetFirst());
 		urlHandlers.Erase(idx);
 	}
 }

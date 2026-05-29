@@ -278,7 +278,7 @@ int r3dFSCompress::CompressFile(
     r3dError("Compress failed\n");
   }
 
-  if(*out_csize > (DWORD)size) {
+  if(*out_csize > size) {
     // compressed size was larger that normal, switch to store
     *method = COMPRESS_STORE;
     delete[] *out_data;
@@ -359,24 +359,27 @@ bool r3dGetFileCrc32(const char* fname, DWORD* out_crc32, DWORD* out_size)
   }
   
   fseek(f, 0, SEEK_END);
-  long size = ftell(f);
+  const long fileSizeLong = ftell(f);
   fseek(f, 0, SEEK_SET);
-  
-  BYTE* data = new BYTE[size + 1];
-  if(fread(data, 1, size, f) != size) {
-	fclose(f);
-	delete [] data;
-    r3dError("failed to read %s %d\n", fname, size);
+
+  if(fileSizeLong < 0 || static_cast<unsigned long>(fileSizeLong) > MAXDWORD) {
+    fclose(f);
+    r3dError("r3dFSCompress::CompressFile() invalid file size %s\n", fname);
     return 0;
   }
 
-  DWORD crc32 = r3dCRC32(data, size);
-  
-  delete[] data;
+  const DWORD size = static_cast<DWORD>(fileSizeLong);
+  BYTE* data = new BYTE[static_cast<size_t>(size) + 1];
+
+  const size_t rsize = fread(data, 1, static_cast<size_t>(size), f);
   fclose(f);
-  
-  if(out_size) *out_size = size;
-  *out_crc32 = crc32;
+
+  if(rsize != static_cast<size_t>(size)) {
+    r3dError("failed to read %s %u vs %u\n", fname, size, static_cast<unsigned int>(rsize));
+  }
+
+  *out_size  = size;
+  *out_crc32 = r3dCRC32(data, size);
   
   return true;
 }

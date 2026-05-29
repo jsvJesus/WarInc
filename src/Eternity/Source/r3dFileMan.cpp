@@ -288,23 +288,33 @@ char* fgets(char* s, int n, r3dFile *f)
 
 size_t fread(void *ptr, size_t size, size_t n, r3dFile *f)
 {
-  if(f->stream) {
-    size_t val = fread(ptr, size, n, f->stream);
-    return val;
-  }
+    if(f->stream) {
+        size_t val = fread(ptr, size, n, f->stream);
+        return val;
+    }
 
-  size_t len = n * size;
+    if(size == 0 || n == 0)
+        return 0;
 
-  // NOTE:
-  //  add \r removal in text-mode reading..
-  //  i'm not sure it's needed, but it's needed for full compatibility
-  if(f->pos + len >= (size_t) f->size)
-    len = f->size - f->pos;
-  if(len == 0)
-    return 0;
-  memcpy(ptr, f->data + f->pos, len);
-  f->pos += len;
-  return len / size;
+    size_t len = n * size;
+
+    const size_t pos = static_cast<size_t>(f->pos);
+    const size_t fileSize = static_cast<size_t>(f->size);
+
+    if(pos >= fileSize)
+        return 0;
+
+    if(pos + len >= fileSize)
+        len = fileSize - pos;
+
+    if(len == 0)
+        return 0;
+
+    memcpy(ptr, f->data + f->pos, len);
+
+    f->pos += static_cast<int>(len);
+
+    return len / size;
 }
 
 int r3dFileManager_OpenArchive(const char* fname)

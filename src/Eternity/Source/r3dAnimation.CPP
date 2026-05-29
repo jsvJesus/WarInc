@@ -523,7 +523,7 @@ int r3dAnimPool::Add(const char* name, const char* fname, float fInitialAngle)
 	  return -1;
   }
 
-  ad->iAnimId = Anims.size();
+  ad->iAnimId = static_cast<int>(Anims.size());
   Anims.push_back(ad);
   
   return ad->iAnimId;
