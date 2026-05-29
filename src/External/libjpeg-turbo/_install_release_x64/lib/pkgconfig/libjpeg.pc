@@ -1,0 +1,10 @@
+prefix=Z:/Z/SDK_For_WarInc/libjpeg-turbo/_install_release_x64
+exec_prefix=Z:/Z/SDK_For_WarInc/libjpeg-turbo/_install_release_x64
+libdir=Z:/Z/SDK_For_WarInc/libjpeg-turbo/_install_release_x64/lib
+includedir=Z:/Z/SDK_For_WarInc/libjpeg-turbo/_install_release_x64/include
+
+Name: libjpeg
+Description: A SIMD-accelerated JPEG codec that provides the libjpeg API
+Version: 3.1.91
+Libs: -L${libdir} -ljpeg
+Cflags: -I${includedir}
