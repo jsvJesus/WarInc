@@ -1181,7 +1181,7 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, pRT, gfxDSB, pSS);
 
-		Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL->GetDefaultRenderTarget();
+		//Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL->GetDefaultRenderTarget();
 
 		uint32_t numPasses = (r3dRenderer->GetPresentEye() == R3D_STEREO_EYE_MONO ? 1 : 2);
 
@@ -1200,7 +1200,10 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 			gAPIScaleformGfx->Renderer->EndFrame();
 
-			if(defRT)
+			// DO NOT restore Scaleform default render target here.
+			// In WarInc after Scaleform 4.2 migration default RT can point to stale D3D surface.
+			// We render directly into current r3d render target through gfxRT.
+			/*if(defRT)
 				gAPIScaleformGfx->RendererHAL->SetRenderTarget(defRT, 1);
 			else
 			{
@@ -1208,7 +1211,7 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 				if(pSS)
 					r3dRenderer->SetDSS(pSS);
-			}
+			}*/
 		}
 
 		if(numPasses > 1)
