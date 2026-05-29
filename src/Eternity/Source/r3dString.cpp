@@ -33,7 +33,7 @@ r3dString::~r3dString()
 void r3dString::Assign(const char* str)
 {
 	// length PLUS terminating zero 
-	int	slen = strlen(str) + 1;
+	int slen = static_cast<int>(strlen(str) + 1);
 
   if(maxlen < slen) {
     delete[] data;

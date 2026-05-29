@@ -22,7 +22,7 @@ public:
 		if(limit == 0)
 			return 0;
 
-		URandomState* s = State ;
+		URandomState* s = State;
 
 		size_t index1 = s->index1;
 		size_t index2 = s->index2;
@@ -30,7 +30,7 @@ public:
 		index1 = (index1 + 1) % 55;
 		index2 = (index2 + 1) % 55;
 
-		size_t val1 = s->table[index1] - s->table[index2];
+		unsigned long val1 = s->table[index1] - s->table[index2];
 
 		s->index1 = index1;
 		s->index2 = index2;

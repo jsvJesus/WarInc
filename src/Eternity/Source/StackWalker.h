@@ -189,11 +189,15 @@ protected:
 
 #else
 
+#ifndef RtlCaptureContext
+extern "C" NTSYSAPI VOID NTAPI RtlCaptureContext(PCONTEXT ContextRecord);
+#endif
+
 // The following is defined for x86 (XP and higher), x64 and IA64:
 #define GET_CURRENT_CONTEXT(c, contextFlags) \
-  do { \
-    memset(&c, 0, sizeof(CONTEXT)); \
-    c.ContextFlags = contextFlags; \
-    RtlCaptureContext(&c); \
+do { \
+memset(&c, 0, sizeof(CONTEXT)); \
+c.ContextFlags = contextFlags; \
+RtlCaptureContext(&c); \
 } while(0);
 #endif

@@ -2957,11 +2957,11 @@ namespace
 
 /*static*/ void r3dParticleSystem::DoFillBuffers( void* Data, size_t Start, size_t Count )
 {
-	r3dRenderer->Stats.AddNumParticlesRendered ( Count ) ;
+	r3dRenderer->Stats.AddNumParticlesRendered( static_cast<int>( Count ) );
 
 	ParticleFillParams* params = ( ParticleFillParams* )Data;
 
-	r3dSingleParticle* Array	= params->Array ;
+	r3dSingleParticle* Array		= params->Array ;
 	PARTICLE_INDEX* LockArea	= params->LockArea ;
 	const r3dParticleData* PD	= params->PD ;
 	r3dParticleSystem* This		= params->This ;
@@ -2969,7 +2969,7 @@ namespace
 	PARTICLE_INDEX* ptr = LockArea + Start ;
 	PARTICLE_INDEX* vertStart = ptr ;
 
-	for( uint32_t i = Start, e = Start + Count ; i < e; i ++ )
+	for( size_t i = Start, e = Start + Count ; i < e; i ++ )
 	{
 		const r3dSingleParticle& pt = Array[ gPartIdxArr [ i ] ];
 		const r3dParticleEmitter& PE = *PD->PType[ pt.Type ];

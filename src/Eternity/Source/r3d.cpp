@@ -3,6 +3,8 @@
 
 #include "r3dBackgroundTaskDispatcher.h"
 
+#include <intrin.h>
+
 // no occlusion if server build
 #ifdef WO_SERVER 
 int g_UseHZB = 0;
@@ -1021,10 +1023,9 @@ const char* r3dError(const char* fmt, ...)
 
 	ShowWindow(win::hWnd, FALSE); // hide window, otherwise in fullscreen it's impossible to debug
 	if(IsDebuggerPresent()) 
-		__asm int 3;
+		__debugbreak();
 	else 
 	{
-		// please do not remove this!!! Otherwise it will just silently crash
 		MessageBox(0, buf, "Error!", MB_OK);
 	}
 

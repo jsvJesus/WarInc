@@ -607,7 +607,7 @@ bool r3dMesh::SaveBin(const char* fname)
 		flags |= 2;
 	fwrite(&flags, sizeof(DWORD), 1, f);
 
-	int len = strlen(Name);
+	int len = static_cast<int>(strlen(Name));
 	fwrite(&len, sizeof(len), 1, f);
 	fwrite(Name, len, 1, f);
 
