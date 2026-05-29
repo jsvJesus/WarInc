@@ -312,7 +312,9 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 	extern float g_DoubleDepthSSAO_BlurSens;
 
 	const bool W = Write ;
+	r3dOutToLog( "SerializeLevelSettingsXML: enter\n" );
 
+	r3dOutToLog( "SerializeLevelSettingsXML: misc begin\n" );
 	if( pugi::xml_node miscNode = SerializeXMLNode<W>( root, "misc" ) )
 	{
 		if(g_level_settings_ver->GetInt() <= 2)
@@ -332,6 +334,7 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLCmdVarF<W>( "detail_radius"			, miscNode, r_level_detail_radius		);
 		SerializeXMLCmdVarF<W>( "grass_radius"			, miscNode, r_grass_view_dist			);
 	}
+	r3dOutToLog( "SerializeLevelSettingsXML: misc ok\n" );
 
 	if( pugi::xml_node uavNode = SerializeXMLNode<W>( root, "uav" ) )
 	{
@@ -378,6 +381,7 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLShadowSlice<W>( shadowNode, 2 );
 	}
 
+	r3dOutToLog( "SerializeLevelSettingsXML: postfx begin\n" );
 	if( pugi::xml_node pfxNode = SerializeXMLNode<W>( root, "postfx" ) )
 	{
 		HUDFilterSettings &nwHfs = gHUDFilterSettings[HUDFilter_NightVision];
@@ -532,6 +536,7 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLVal<W>( "fxaa_edge_threshold"			, pfxNode, &gPFX_FXAA.edgeThreshold					);
 		SerializeXMLVal<W>( "fxaa_edge_threshold_min"		, pfxNode, &gPFX_FXAA.edgeThresholdMin				);
 	}
+	r3dOutToLog( "SerializeLevelSettingsXML: postfx ok\n" );
 
 	if( pugi::xml_node ssaoNode = SerializeXMLNode<W>( root, "double_depth" ) )
 	{
@@ -539,6 +544,7 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLVal<W>( "ao_double_depth_ssao_blur"			, ssaoNode, &g_DoubleDepthSSAO_Blur			);
 		SerializeXMLVal<W>( "ao_double_depth_ssao_blur_sens"	, ssaoNode, &g_DoubleDepthSSAO_BlurSens		);
 	}
+	r3dOutToLog( "SerializeLevelSettingsXML: ok\n" );
 }
 
 void SaveXMLSettings( const char* targetDir );
@@ -719,110 +725,192 @@ void UpdateColorCorrectionTextures()
 
 int LoadLevelSettingsXML( pugi::xml_node root )
 {
-	SerializableSettingSet ssSet ;	
+	r3dOutToLog( "LoadLevelSettingsXML: enter\n" );
 
-	SerializeLevelSettingsXML< false >( root, &ssSet ) ;
+	if( root.empty() )
+	{
+		r3dOutToLog( "LoadLevelSettingsXML FAILED: empty root\n" );
+		return 0;
+	}
 
-	// only SSM_HQ supports detail path
-	g_SSAOSettings[ SSM_DEFAULT ].DetailPathEnable = 0 ;
+	SerializableSettingSet ssSet;
+	memset( &ssSet, 0, sizeof( ssSet ) );
 
+	ssSet.ExplosionMaxStrength = 1.0f;
+	ssSet.ExplosionDuration = 1.0f;
+	ssSet.ExplosionMaxDistance = 100.0f;
+	ssSet.ExplosionBrightThreshold = 1.0f;
+
+	r3dOutToLog( "LoadLevelSettingsXML: SerializeLevelSettingsXML begin\n" );
+	SerializeLevelSettingsXML< false >( root, &ssSet );
+	r3dOutToLog( "LoadLevelSettingsXML: SerializeLevelSettingsXML ok\n" );
+
+	g_SSAOSettings[ SSM_DEFAULT ].DetailPathEnable = 0;
+
+	r3dOutToLog( "LoadLevelSettingsXML: RestoreCCLUT3DTexture begin\n" );
 	RestoreCCLUT3DTexture();
+	r3dOutToLog( "LoadLevelSettingsXML: RestoreCCLUT3DTexture ok\n" );
 
+	r3dOutToLog( "LoadLevelSettingsXML: UpdateColorCorrectionTextures begin\n" );
 	UpdateColorCorrectionTextures();
+	r3dOutToLog( "LoadLevelSettingsXML: UpdateColorCorrectionTextures ok\n" );
 
 	if( g_ColorCorrectionSettings.scheme == ColorCorrectionSettings::CCS_USE_RGB_HSV_CURVES )
 		g_ColorCorrectionSettings.uiScheme = 0;
 	else
 		g_ColorCorrectionSettings.uiScheme = g_ColorCorrectionSettings.scheme;
 
+	r3dOutToLog( "LoadLevelSettingsXML: RadialBlurSettings.Restrict begin\n" );
 	ssSet.RadialBlurSettings.Restrict();
+	r3dOutToLog( "LoadLevelSettingsXML: RadialBlurSettings.Restrict ok\n" );
 
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ExtractGlow.SetSettings begin\n" );
 	gPFX_ExtractGlow.SetSettings( ssSet.GlowSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ExtractGlow.SetSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_CameraMotionBlur.SetSettings begin\n" );
 	gPFX_CameraMotionBlur.SetSettings( ssSet.CamMotionBlurSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_CameraMotionBlur.SetSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_RadialBlur.SetDefaultSettings begin\n" );
 	gPFX_RadialBlur.SetDefaultSettings( ssSet.RadialBlurSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_RadialBlur.SetDefaultSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ObjectMotionBlur.SetSettings begin\n" );
 	gPFX_ObjectMotionBlur.SetSettings( ssSet.ObjMotionBlurSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ObjectMotionBlur.SetSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_GodRays.SetSettings begin\n" );
 	gPFX_GodRays.SetSettings( ssSet.GodRaysSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_GodRays.SetSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SeedSunThroughStencil.SetSettings begin\n" );
 	gPFX_SeedSunThroughStencil.SetSettings( ssSet.SunThroughStencilSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SeedSunThroughStencil.SetSettings ok\n" );
+
+	if( SG_SlicesNum < 0 )
+		SG_SlicesNum = 0;
+
+	if( SG_SlicesNum > MAX_SUNGLARES )
+		SG_SlicesNum = MAX_SUNGLARES;
 
 	ssSet.SunGlareSettings.NumSunglares = SG_SlicesNum;
-	gPFX_SunGlare.SetSettings( ssSet.SunGlareSettings );
-	UpdateLowShadowSplitDistances();
 
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SunGlare.SetSettings begin, SG_SlicesNum=%d\n", SG_SlicesNum );
+	gPFX_SunGlare.SetSettings( ssSet.SunGlareSettings );
+	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SunGlare.SetSettings ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: UpdateLowShadowSplitDistances begin\n" );
+	UpdateLowShadowSplitDistances();
+	r3dOutToLog( "LoadLevelSettingsXML: UpdateLowShadowSplitDistances ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: SSAO restrict begin\n" );
 	g_SSAOConstraints[ SSM_DEFAULT ].Restrict( g_SSAOSettings[ SSM_DEFAULT ] );
 	g_SSAOConstraints[ SSM_HQ ].Restrict( g_SSAOSettings[ SSM_HQ ] );
+	r3dOutToLog( "LoadLevelSettingsXML: SSAO restrict ok\n" );
 
-	gExplosionVisualController.SetDefaultMaxStrength( ssSet.ExplosionMaxStrength ) ;
-	gExplosionVisualController.SetDefaultDuration( ssSet.ExplosionDuration ) ;
-	gExplosionVisualController.SetMaxVisibleDistance( ssSet.ExplosionMaxDistance ) ;
-	gExplosionVisualController.SetDefaultBrightThreshold( ssSet.ExplosionBrightThreshold ) ;
+	r3dOutToLog( "LoadLevelSettingsXML: ExplosionVisualController begin\n" );
+	gExplosionVisualController.SetDefaultMaxStrength( ssSet.ExplosionMaxStrength );
+	gExplosionVisualController.SetDefaultDuration( ssSet.ExplosionDuration );
+	gExplosionVisualController.SetMaxVisibleDistance( ssSet.ExplosionMaxDistance );
+	gExplosionVisualController.SetDefaultBrightThreshold( ssSet.ExplosionBrightThreshold );
+	r3dOutToLog( "LoadLevelSettingsXML: ExplosionVisualController ok\n" );
 
+	r3dOutToLog( "LoadLevelSettingsXML: SyncLightingAndSSAO begin\n" );
 	void SyncLightingAndSSAO();
 	SyncLightingAndSSAO();
+	r3dOutToLog( "LoadLevelSettingsXML: SyncLightingAndSSAO ok\n" );
+
+	r3dOutToLog( "LoadLevelSettingsXML: ok\n" );
 
 	return 1;
-};
+}
 
 int LoadXMLSettings()
 {
-	char FName[ 512 ] ;
-
+	char FName[ 512 ];
 	FName[ sizeof FName - 1 ] = 0;
 
-	_snprintf( FName, sizeof FName - 1, LEVEL_SETTINGS_FILE, r3dGameLevel::GetHomeDir() ) ;
+	_snprintf( FName, sizeof FName - 1, LEVEL_SETTINGS_FILE, r3dGameLevel::GetHomeDir() );
 
-	bool XMLExists = false;
+	r3dOutToLog( "LoadXMLSettings: begin '%s'\n", FName );
 
 	Bytes xmlFileBuffer;
-
 	pugi::xml_document xmlLevelFile;
-	pugi::xml_node xmlRoot ;
+	pugi::xml_node xmlRoot;
 
 	r3dFile* f = r3d_open( FName, "rb" );
-	if ( f )
+
+	if( !f )
 	{
-		r3dOutToLog( "Loading '%s'\n", FName ) ;
-		XMLExists = true ;
+		r3dOutToLog( "LoadXMLSettings FAILED: cannot open '%s'\n", FName );
+		return 0;
+	}
 
-		if( !ParseXMLInMemory( f, &xmlFileBuffer, &xmlLevelFile ) )
-		{
-			fclose( f );
-			return 0 ;
-		}
+	r3dOutToLog( "LoadXMLSettings: opened '%s', size=%u\n", FName, (unsigned int)f->size );
 
-		xmlRoot = xmlLevelFile.root().child( "root" ) ;
-
+	if( !ParseXMLInMemory( f, &xmlFileBuffer, &xmlLevelFile ) )
+	{
+		r3dOutToLog( "LoadXMLSettings FAILED: ParseXMLInMemory failed for '%s'\n", FName );
 		fclose( f );
+		return 0;
 	}
-	else
+
+	fclose( f );
+
+	xmlRoot = xmlLevelFile.root().child( "root" );
+
+	if( xmlRoot.empty() )
 	{
-		r3dOutToLog( "Couldn't open '%s'\n", FName ) ;
+		r3dOutToLog( "LoadXMLSettings FAILED: xml root node <root> not found in '%s'\n", FName );
+		return 0;
 	}
 
+	int xmlVersion = xmlRoot.attribute( "version" ).as_int();
 
-	int levelXmlLoadSuccess = 0 ;
+	r3dOutToLog( "LoadXMLSettings: root version=%d\n", xmlVersion );
 
-	if( XMLExists && xmlRoot.attribute("version").as_int() >= 2 )
+	if( xmlVersion < 2 )
 	{
-		g_level_settings_ver->SetInt( xmlRoot.attribute("version").as_int() ) ;
-
-		levelXmlLoadSuccess = LoadLevelSettingsXML( xmlRoot );
-
-		if( !levelXmlLoadSuccess )
-			r3dOutToLog( "LoadLevelSettingsXML failed.\n" ) ;
-
-		r3dGameLevel::Environment.LoadFromXML( xmlRoot );
+		r3dOutToLog( "LoadXMLSettings FAILED: unsupported LevelSettings.xml version=%d, need >= 2\n", xmlVersion );
+		return 0;
 	}
+
+	g_level_settings_ver->SetInt( xmlVersion );
+
+	r3dOutToLog( "LoadXMLSettings: LoadLevelSettingsXML begin\n" );
+
+	int levelXmlLoadSuccess = LoadLevelSettingsXML( xmlRoot );
+
+	if( !levelXmlLoadSuccess )
+	{
+		r3dOutToLog( "LoadXMLSettings FAILED: LoadLevelSettingsXML failed\n" );
+		return 0;
+	}
+
+	r3dOutToLog( "LoadXMLSettings: Environment.LoadFromXML begin\n" );
+
+	r3dGameLevel::Environment.LoadFromXML( xmlRoot );
+
+	r3dOutToLog( "LoadXMLSettings: LoadCommonSettings begin\n" );
 
 	int LoadCommonSettings();
 	int commXmlLoadSuccess = LoadCommonSettings();
 
 	if( !commXmlLoadSuccess )
-		r3dOutToLog( "LoadCommonSettings failed.\n" ) ;
+	{
+		r3dOutToLog( "LoadXMLSettings FAILED: LoadCommonSettings failed\n" );
+		return 0;
+	}
+
+	r3dOutToLog( "LoadXMLSettings: UpdateHUDFilterSettings begin\n" );
 
 	void UpdateHUDFilterSettings( int*, int* );
 	UpdateHUDFilterSettings( 0, 0 );
 
-	return levelXmlLoadSuccess && commXmlLoadSuccess ;
+	r3dOutToLog( "LoadXMLSettings: ok\n" );
+
+	return 1;
 }
 
 int LoadLevel()
@@ -860,11 +948,16 @@ int LoadLevel()
 
 	extern bool gNewLevelCreated ;
 
-	if ( !LoadXMLSettings() && !gNewLevelCreated )
+	if( !LoadXMLSettings() && !gNewLevelCreated )
 	{
-		r3dError("Failed to load XML settings!");
-		//r3dGameLevel::Environment.Load(r3dGameLevel::GetHomeDir());
-		//LoadPostprocessSettingsINI();
+		r3dOutToLog( "LoadLevel WARNING: Failed to load XML settings, continuing without fatal crash.\n" );
+
+		// временно не валим редактор, пока переводим SDK/x64
+		// r3dError("Failed to load XML settings!");
+
+		// если нужны старые ini-настройки, можно потом вернуть:
+		// r3dGameLevel::Environment.Load(r3dGameLevel::GetHomeDir());
+		// LoadPostprocessSettingsINI();
 	}
 
 	SetLoadingProgress( LoadProgress += 0.015f );

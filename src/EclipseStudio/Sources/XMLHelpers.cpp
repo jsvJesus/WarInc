@@ -500,18 +500,49 @@ int SetXMLCmdVarI( const char* Name, pugi::xml_node& node, CmdVar * var )
 
 //------------------------------------------------------------------------
 
-int ParseXMLInMemory( r3dFile* f,  Bytes * xmlFileBuffer, pugi::xml_document* doc )
+int ParseXMLInMemory( r3dFile* f, Bytes* xmlFileBuffer, pugi::xml_document* doc )
 {
+	if( !f )
+	{
+		r3dOutToLog( "ParseXMLInMemory FAILED: null file\n" );
+		return 0;
+	}
+
+	if( !xmlFileBuffer || !doc )
+	{
+		r3dOutToLog( "ParseXMLInMemory FAILED: null output pointer for '%s'\n", f->GetFileName() );
+		return 0;
+	}
+
+	if( f->size <= 0 )
+	{
+		r3dOutToLog( "ParseXMLInMemory FAILED: empty file '%s'\n", f->GetFileName() );
+		return 0;
+	}
+
 	xmlFileBuffer->Resize( f->size + 1 );
 
-	fread( &(*xmlFileBuffer)[ 0 ], f->size, 1, f );
+	size_t readed = fread( &(*xmlFileBuffer)[0], 1, f->size, f );
 	(*xmlFileBuffer)[ f->size ] = 0;
+
+	if( readed != (size_t)f->size )
+	{
+		r3dOutToLog( "ParseXMLInMemory FAILED: fread failed for '%s', readed=%u expected=%u\n",
+			f->GetFileName(),
+			(unsigned int)readed,
+			(unsigned int)f->size );
+		return 0;
+	}
 
 	pugi::xml_parse_result parseResult = doc->load_buffer_inplace( &(*xmlFileBuffer)[0], f->size );
 
 	if( !parseResult )
 	{
-		r3dError( "LoadLevel: Failed to parse %s, error: %s", f->GetFileName(), parseResult.description() );
+		r3dOutToLog( "ParseXMLInMemory FAILED: '%s', offset=%u, error='%s'\n",
+			f->GetFileName(),
+			(unsigned int)parseResult.offset,
+			parseResult.description() );
+
 		return 0;
 	}
 

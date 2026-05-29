@@ -19,7 +19,7 @@
 #pragma comment(lib, "libgfx_as2_DebugOpt.lib")
 
 #if WARINC_SCALEFORM_USE_SPLIT_D3D9_LIBS
-#pragma comment(lib, "libgfxplatform_d3d9_DebugOpt.lib")
+#pragma comment(lib, "libgfxplatform_DebugOpt.lib")
 #pragma comment(lib, "libgfxrender_d3d9_DebugOpt.lib")
 #endif
 
@@ -29,7 +29,7 @@
 #pragma comment(lib, "libgfx_as2_Shipping.lib")
 
 #if WARINC_SCALEFORM_USE_SPLIT_D3D9_LIBS
-#pragma comment(lib, "libgfxplatform_d3d9_Shipping.lib")
+#pragma comment(lib, "libgfxplatform_Shipping.lib")
 #pragma comment(lib, "libgfxrender_d3d9_Shipping.lib")
 #endif
 
@@ -39,7 +39,7 @@
 #pragma comment(lib, "libgfx_as2.lib")
 
 #if WARINC_SCALEFORM_USE_SPLIT_D3D9_LIBS
-#pragma comment(lib, "libgfxplatform_d3d9_Release.lib")
+#pragma comment(lib, "libgfxplatform_Release.lib")
 #pragma comment(lib, "libgfxrender_d3d9_Release.lib")
 #endif
 
