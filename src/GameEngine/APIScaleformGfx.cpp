@@ -7,6 +7,7 @@
 
 #include "GFx_Kernel.h"
 #include "GFx_Renderer_D3D9.h"
+#include "Render/D3D9/D3D9_HAL.h"
 #include "GFx_FontProvider_Win32.h"
 
 // See r3dRender.h
@@ -1040,11 +1041,21 @@ int g_ScaleFormUpdateAndDrawCount ;
 void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
+
 	if(!pMovie)
 		return;
 
+	if(!gAPIScaleformGfx)
+		return;
+
+	if(!gAPIScaleformGfx->RendererHAL)
+		return;
+
+	if(!gAPIScaleformGfx->Renderer)
+		return;
+
 #ifndef FINAL_BUILD
-	float updateStart = r3dGetTime() ;
+	float updateStart = r3dGetTime();
 #endif
 
 	gAPIScaleformGfx->pCurMovie = this;
@@ -1053,34 +1064,47 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 	Mouse->GetXY(mx, my);
 	mb = Mouse->GetRawMouseData();
 
-	// translate to local coords
-	if( ConvertMouseCoords )
+	if(ConvertMouseCoords)
 	{
-		float VX, VY, VW, VH ;
-		r3dRenderer->GetBackBufferViewport( &VX, &VY, &VW, &VH );
+		float VX, VY, VW, VH;
+		r3dRenderer->GetBackBufferViewport(&VX, &VY, &VW, &VH);
 
-		mx = int( (mx - VX) / VW * viewW + 0.5f );
-		my = int( (my - VY) / VH * viewH + 0.5f );
+		if(VW > 0.0f && VH > 0.0f)
+		{
+			mx = int((mx - VX) / VW * viewW + 0.5f);
+			my = int((my - VY) / VH * viewH + 0.5f);
+		}
 	}
 
 	pMovie->NotifyMouseState(float(mx - viewX), float(my - viewY), mb);
 
-	// Advance time
-	// pt: we need to call Advance exactly at movie's frame rate, otherwise flash onInterval isn't working properly, or sometimes not working at all.
 	float curTime = r3dGetTime();
+
 	if(timeForNextUpdate < curTime)
 	{
-		float delta = curTime-timePrevUpdate;
-		if(delta > (1.0f/pMovie->GetFrameRate()))
-			delta = 1.0f/pMovie->GetFrameRate();
+		float frameRate = pMovie->GetFrameRate();
+
+		if(frameRate <= 0.0f)
+			frameRate = 30.0f;
+
+		float delta = curTime - timePrevUpdate;
+		float maxDelta = 1.0f / frameRate;
+
+		if(delta > maxDelta)
+			delta = maxDelta;
+
 		timePrevUpdate = curTime;
+
 		float timeTillNextTicks = pMovie->Advance(delta, 2, !skipDraw);
 		timeForNextUpdate = curTime + timeTillNextTicks;
-		if (timeForNextUpdate < curTime) // wrap-around check.
+
+		if(timeForNextUpdate < curTime)
 			timeForNextUpdate = curTime;
 	}
 	else
+	{
 		pMovie->Advance(0.0f, 0, !skipDraw);
+	}
 
 	if(!skipDraw)
 	{
@@ -1091,15 +1115,25 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 		LPDIRECT3DSURFACE9 pRT = NULL;
 		LPDIRECT3DSURFACE9 pSS = NULL;
+
 		r3dRenderer->GetRT(0, &pRT);
 		r3dRenderer->GetDSS(&pSS);
 
-		int refCountRT = pRT->AddRef(); refCountRT = pRT->Release();
-		int refCountSS = pSS->AddRef(); refCountSS = pSS->Release();
+		if(!pRT)
+		{
+			if(gAPIScaleformGfx->pStateBlock)
+				gAPIScaleformGfx->pStateBlock->Apply();
 
-		Scaleform::Render::RenderTarget* gfxRT = gAPIScaleformGfx->RendererHAL->CreateRenderTarget(pRT, pSS);
+			SAFE_RELEASE(pSS);
 
-		if(!gfxRT)
+			gAPIScaleformGfx->pCurMovie = NULL;
+			return;
+		}
+
+		D3DSURFACE_DESC rtDesc;
+		ZeroMemory(&rtDesc, sizeof(rtDesc));
+
+		if(FAILED(pRT->GetDesc(&rtDesc)) || rtDesc.Width == 0 || rtDesc.Height == 0)
 		{
 			SAFE_RELEASE(pRT);
 			SAFE_RELEASE(pSS);
@@ -1111,35 +1145,76 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 			return;
 		}
 
+		static Scaleform::Render::RenderTarget* gfxRT = NULL;
+		static Scaleform::Render::DepthStencilBuffer* gfxDSB = NULL;
+		static UINT gfxRTWidth = 0;
+		static UINT gfxRTHeight = 0;
+
+		if(!gfxRT || !gfxDSB || gfxRTWidth != rtDesc.Width || gfxRTHeight != rtDesc.Height)
+		{
+			gfxRTWidth = rtDesc.Width;
+			gfxRTHeight = rtDesc.Height;
+
+			gfxRT = new Scaleform::Render::RenderTarget(
+				NULL,
+				Scaleform::Render::RBuffer_User,
+				Scaleform::Render::ImageSize(gfxRTWidth, gfxRTHeight)
+			);
+
+			gfxDSB = new Scaleform::Render::DepthStencilBuffer(
+				NULL,
+				Scaleform::Render::ImageSize(gfxRTWidth, gfxRTHeight)
+			);
+		}
+
+		if(!gfxRT || !gfxDSB)
+		{
+			SAFE_RELEASE(pRT);
+			SAFE_RELEASE(pSS);
+
+			if(gAPIScaleformGfx->pStateBlock)
+				gAPIScaleformGfx->pStateBlock->Apply();
+
+			gAPIScaleformGfx->pCurMovie = NULL;
+			return;
+		}
+
+		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, pRT, gfxDSB, pSS);
+
 		Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL->GetDefaultRenderTarget();
 
 		uint32_t numPasses = (r3dRenderer->GetPresentEye() == R3D_STEREO_EYE_MONO ? 1 : 2);
-		for (UINT i = 0; i < numPasses; ++i)
+
+		for(UINT i = 0; i < numPasses; ++i)
 		{
-			gAPIScaleformGfx->RendererHAL->SetRenderTarget(gfxRT, 1);
-			if (numPasses > 1)
+			if(!gAPIScaleformGfx->RendererHAL->SetRenderTarget(gfxRT, 1))
+				continue;
+
+			if(numPasses > 1)
 				r3dRenderer->SetEye(i == 0 ? R3D_STEREO_EYE_LEFT : R3D_STEREO_EYE_RIGHT);
 
-			{
-				gAPIScaleformGfx->Renderer->BeginFrame();
-				if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
-				{
-					gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
-				}
-				gAPIScaleformGfx->Renderer->EndFrame();
-			}
+			gAPIScaleformGfx->Renderer->BeginFrame();
 
-			gAPIScaleformGfx->RendererHAL->SetRenderTarget(defRT, 1);
+			if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
+				gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
+
+			gAPIScaleformGfx->Renderer->EndFrame();
+
+			if(defRT)
+				gAPIScaleformGfx->RendererHAL->SetRenderTarget(defRT, 1);
+			else
+			{
+				r3dRenderer->SetRT(0, pRT);
+
+				if(pSS)
+					r3dRenderer->SetDSS(pSS);
+			}
 		}
 
-		if (numPasses > 1)
+		if(numPasses > 1)
 			r3dRenderer->SetEye(R3D_STEREO_EYE_MONO);
 
-		gfxRT->Release();
-		gfxRT = NULL;
-
-		int refCountRT1 = pRT->AddRef(); refCountRT1 = pRT->Release();
-		int refCountSS1 = pSS->AddRef(); refCountSS1 = pSS->Release();
+		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, NULL, gfxDSB, NULL);
 
 		SAFE_RELEASE(pRT);
 		SAFE_RELEASE(pSS);
@@ -1150,14 +1225,9 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 	gAPIScaleformGfx->pCurMovie = NULL;
 
-	pMovie->ForceCollectGarbage();
-
-	SF_AMP_CODE(Scaleform::AmpServer::GetInstance().AdvanceFrame());
-
 #ifndef FINAL_BUILD
-	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart ;
-
-	g_ScaleFormUpdateAndDrawCount ++ ;
+	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart;
+	g_ScaleFormUpdateAndDrawCount++;
 #endif
 
 	return;
