@@ -1,5 +1,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
+#include "CkString.h"
 
 #include "GameCommon.h"
 #include "m_Login.h"

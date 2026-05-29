@@ -5,6 +5,7 @@
 #include "CkHttp.h"
 #include "CkHttpResponse.h"
 #include "CkByteData.h"
+#include "CkString.h"
 
 #include "UserProfile.h"
 #include "UserFriends.h"

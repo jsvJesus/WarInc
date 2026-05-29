@@ -1,266 +1,184 @@
-// CkString.h: interface for the CkString class.
-//
-//////////////////////////////////////////////////////////////////////
+#pragma once
 
+#include <string>
+#include <vector>
 
-#ifndef _CKSTRING_H
-#define _CKSTRING_H
-
-
-
-#include "CkObject.h"
-
-#if !defined(WIN32) && !defined(WINCE)
-#include "SystemTime.h"
-#endif
-
-class CkStringArray;
-
-#ifndef __sun__
-#pragma pack (push, 8)
-#endif
- 
-
-// CLASS: CkString
-class CkString : public CkObject
+class CkString
 {
-    public:
-	CkString();
-	~CkString();
+private:
+	std::string value_;
 
-	CkString(const CkString &);
-	CkString &operator=(const CkString &);
+	static const char* Base64Table()
+	{
+		return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	}
 
-	CkString &operator=(const char *);
-	CkString &operator=(int);
-	CkString &operator=(bool);
-	CkString &operator=(char);
+	static int Base64Value(unsigned char c)
+	{
+		if(c >= 'A' && c <= 'Z')
+			return c - 'A';
 
-       // 
-       // operator to cast to a const char *
-       // 
-       operator const char *();
-       operator const wchar_t *();
+		if(c >= 'a' && c <= 'z')
+			return c - 'a' + 26;
 
-        void appendHexData(const char *data, int dataLen);
+		if(c >= '0' && c <= '9')
+			return c - '0' + 52;
 
-	// BEGIN PUBLIC INTERFACE
-	bool get_Utf8(void) const;
-	void put_Utf8(bool b);
+		if(c == '+')
+			return 62;
 
-	// Load the contents of a text file into the CkString object.
-	// The string is cleared before loading.
-	// Charset can be "unicode", "ansi", "utf-8", or any other charset
-	// such as "iso-8859-1", "windows-1253", "Shift_JIS", etc.
-        bool loadFile(const char *fileName, const char *charset);
+		if(c == '/')
+			return 63;
 
-	// Returns the ANSI character starting at an index.
-	// The first character is at index 0.
-	// IMPORTANT: This is not a byte index, but a character position index.
-	char charAt(int idx) const;
-	wchar_t charAtU(int idx) const;   // Returns Unicode character at position idx.
+		return -1;
+	}
 
-	// If this string is "43" for example, this returns 43.
-        int intValue(void) const;
-        double doubleValue(void) const;
+public:
+	CkString()
+	{
+	}
 
-	// New methods as of 17-Aug-2006
-	CkString *clone(void) const;
-	void setStr(CkString &s);
-	bool endsWith(const char *s) const;
-	bool endsWithStr(CkString &s) const;
-	//bool beginsWith(const char *s);
-	bool beginsWithStr(CkString &s) const;
-	int indexOf(const char *s) const;
-	int indexOfStr(CkString &s) const;
-        int replaceAll(CkString &str, CkString &replacement);
-        bool replaceFirst(CkString &str, CkString &replacement);
-	CkString *substring(int startCharIdx, int numChars) const;
-	bool matchesStr(CkString &str) const;
-	bool matches(const char *s) const;
-	bool matchesNoCase(const char *s) const;
-	CkString *getChar(int idx) const;
-        int removeAll(CkString &str);
-        bool removeFirst(CkString &str);
-	void chopAtStr(CkString &str);
-	void urlDecode(const char *charset);
-	void urlEncode(const char *charset);
-	void base64Decode(const char *charset);
-	void base64Encode(const char *charset);
-	void qpDecode(const char *charset);
-	void qpEncode(const char *charset);
-	void hexDecode(const char *charset);
-	void hexEncode(const char *charset);
-	void entityDecode(void);
-	void entityEncode(void);
-	void appendUtf8(const char *s);	    
-	void appendAnsi(const char *s);	   
-	
-	// Appends the current local date/time.
-	void appendCurrentDateRfc822(void);
+	CkString(const char* s)
+	{
+		value_ = s ? s : "";
+	}
 
-	// SYSTEMTIME is defined in <windows.h>
-	// For more information, Google "SYSTEMTIME"
-	// sysTime should represent a local date/time
-	void appendDateRfc822(SYSTEMTIME &sysTime);
+	CkString& operator=(const char* s)
+	{
+		value_ = s ? s : "";
+		return *this;
+	}
 
-	void appendDateRfc822Gmt(SYSTEMTIME &sysTime);
+	CkString& operator=(const CkString& rhs)
+	{
+		if(this != &rhs)
+			value_ = rhs.value_;
 
-	// Self explanatory, right?
-	void clear(void);
-	void prepend(const char *s);	    
-	void appendInt(int n);
-	void append(const char *s);	    
-        void appendChar(char c);
-	void appendN(const char *s, int numBytes);	
-        void appendStr(const CkString &str);
-	void appendEnc(const char *s, const char *charEncoding);	// such as "utf-8", "windows-1252", "shift_JIS", etc.
-	void appendRandom(int numBytes, const char *encoding);	// such as "base64", "hex", "qp", "url", etc.
+		return *this;
+	}
 
+	void append(const char* s)
+	{
+		if(s)
+			value_ += s;
+	}
 
+	void clear()
+	{
+		value_.clear();
+	}
 
-	// Convert the binary data to a hex string representation and append.
-        void appendHexData(const unsigned char *data, int dataLen);
+	const char* getUtf8() const
+	{
+		return value_.c_str();
+	}
 
-	// Same as clearing the string and appending.
-        void setString(const char *s);
-        void setStringAnsi(const char *s);
-        void setStringUtf8(const char *s);
+	const char* c_str() const
+	{
+		return value_.c_str();
+	}
 
-	// To/From Unicode...
-	void setStringU(const wchar_t *unicode);
-	void appendU(const wchar_t *unicode);
-	void appendNU(const wchar_t *unicode, int numChars);
-	const wchar_t *getUnicode(void) const;
+	int getLength() const
+	{
+		return (int)value_.length();
+	}
 
-	// To ANSI...
-	const char *getAnsi(void) const;
+	const char* getAnsi() const
+	{
+		return value_.c_str();
+	}
 
-	// To utf-8...
-	const char *getUtf8(void) const;
+	const char* ansi() const
+	{
+		return value_.c_str();
+	}
 
-	// Get any multi-byte encoding.
-	const char *getEnc(const char *encoding) const;
+	void base64Encode(const char*)
+	{
+		const unsigned char* data = (const unsigned char*)value_.data();
+		size_t len = value_.size();
 
-	// Same as strcmp
-	int compareStr(const CkString &str) const;	// Compare against another CkString
+		std::string out;
+		out.reserve(((len + 2) / 3) * 4);
 
-	const char *getString(void) const;
+		const char* table = Base64Table();
 
-	int getSizeUtf8(void) const;  // Returns size in bytes of utf-8 string.
-	int getSizeAnsi(void) const; // Returns size in bytes of ANSI string.
-	int getSizeUnicode(void) const; // Returns size in bytes of Unicode string.
-	int getNumChars(void) const;	// Returns number of characters in the string.
+		for(size_t i = 0; i < len; i += 3)
+		{
+			unsigned int octet_a = i < len ? data[i] : 0;
+			unsigned int octet_b = (i + 1) < len ? data[i + 1] : 0;
+			unsigned int octet_c = (i + 2) < len ? data[i + 2] : 0;
 
-        // Trim whitespace from both ends of the string.
-        void trim(void);    // Does not include newline
-        void trim2(void);   // Includes newline
-	void trimInsideSpaces(void);
+			unsigned int triple = (octet_a << 16) | (octet_b << 8) | octet_c;
 
-        // Case sensitive replacement functions.
-	// Return the number of occurances replaced.
-        int replaceAllOccurances(const char *pattern, const char *replacement);
-        bool replaceFirstOccurance(const char *pattern, const char *replacement);
+			out.push_back(table[(triple >> 18) & 0x3F]);
+			out.push_back(table[(triple >> 12) & 0x3F]);
+			out.push_back((i + 1) < len ? table[(triple >> 6) & 0x3F] : '=');
+			out.push_back((i + 2) < len ? table[triple & 0x3F] : '=');
+		}
 
-        // CRLF
-        void toCRLF(void);                  // Make all end of lines a CRLF ("\r\n")
-        void toLF(void);                    // Make all end of lines a "\n"
+		value_ = out;
+	}
 
-        // Eliminate all occurances of a particular ANSI character.
-        void eliminateChar(char ansiChar, int startIndex);
+	bool base64Decode(const char*)
+	{
+		std::string clean;
+		clean.reserve(value_.size());
 
-        // Return the last (ANSI) character in the string.
-        char lastChar(void);
+		for(size_t i = 0; i < value_.size(); ++i)
+		{
+			unsigned char c = (unsigned char)value_[i];
 
-	// Return the number of occurances of ch in the string.
-	int countCharOccurances(char ch);
+			if(c == '\r' || c == '\n' || c == '\t' || c == ' ')
+				continue;
 
-        // Remove the last N chars from the string.
-        void shorten(int n);    
+			clean.push_back((char)c);
+		}
 
-        // Convert to lower or upper case
-        void toLowerCase(void);
-        void toUpperCase(void);
+		if(clean.empty())
+		{
+			value_.clear();
+			return true;
+		}
 
-        // Convert XML special characters to their representations
-        // Example: '<' is converted to &lt;
-        void encodeXMLSpecial(void);    // Convert '<' to &lt; (etc.)
-        void decodeXMLSpecial(void);    // Convert &lt; to '<' (etc.)
+		if((clean.size() % 4) != 0)
+			return false;
 
-	// Pattern can contain * and ? wildcards.
-        bool containsSubstring(const char *pattern) const;	
-        bool containsSubstringNoCase(const char *pattern) const;	
+		std::string out;
+		out.reserve((clean.size() / 4) * 3);
 
-	// For many Win32 SDK functions, such as CreateFile, error information
-	// must be retrieved by using the Win32 functions GetLastError and FormatMessage.
-	// This method calls these Win32 functions to format the error and append it
-	// to the string.
-#ifdef WIN32
-        void appendLastWindowsError(void);
-#endif
-	// Returns true if the strings are equal, or false.  (Not the same as 
-	// "compare", which returns 0 if equal, and 1 or -1 if the strings are lexicographically
-	// less than or greater than)
-        bool equals(const char *s) const;   
-        bool equalsStr(CkString &s) const;
-        bool equalsIgnoreCase(const char *s) const;
-        bool equalsIgnoreCaseStr(CkString &s) const;
-        
-        // Remove a chunk from the string.
-        void removeChunk(int charStartPos, int numChars);
+		for(size_t i = 0; i < clean.size(); i += 4)
+		{
+			int v0 = Base64Value((unsigned char)clean[i + 0]);
+			int v1 = Base64Value((unsigned char)clean[i + 1]);
 
-        // Remove all occurances of a particular character.
-        void removeCharOccurances(char c);
+			if(v0 < 0 || v1 < 0)
+				return false;
 
-	// Replace all occurance of c1 with c2.
-	void replaceChar(char c1, char c2);
+			int v2 = clean[i + 2] == '=' ? -2 : Base64Value((unsigned char)clean[i + 2]);
+			int v3 = clean[i + 3] == '=' ? -2 : Base64Value((unsigned char)clean[i + 3]);
 
-	// Replace the first occurance of c1 with a null terminator
-	void chopAtFirstChar(char c1);
+			if(v2 == -1 || v3 == -1)
+				return false;
 
-	void obfuscate(void);
-	void unobfuscate(void);
+			unsigned int triple = ((unsigned int)v0 << 18) | ((unsigned int)v1 << 12);
 
-	// Save the string to a file.
-	// charset can be "ansi", "utf-8", "unicode", or anything else such as "iso-8859-1"
-	bool saveToFile(const char *filename, const char *charset);
+			if(v2 >= 0)
+				triple |= ((unsigned int)v2 << 6);
 
-	CkStringArray *split(char splitChar, bool exceptDoubleQuoted, bool exceptEscaped, bool keepEmpty) const;
-	CkStringArray *split2(const char *splitCharSet, bool exceptDoubleQuoted, bool exceptEscaped, bool keepEmpty) const;
-	CkStringArray *tokenize(char *punctuation) const;
+			if(v3 >= 0)
+				triple |= (unsigned int)v3;
 
-	// Equivalent to split2(" \t\r\n",true,true,false)
-	CkStringArray *splitAtWS(void) const;
+			out.push_back((char)((triple >> 16) & 0xFF));
 
-	// Return true if this string begins with substr (case sensitive)
-	bool beginsWith(const char *sSubstr) const;
+			if(v2 >= 0)
+				out.push_back((char)((triple >> 8) & 0xFF));
 
+			if(v3 >= 0)
+				out.push_back((char)(triple & 0xFF));
+		}
 
-	CkString *getDelimited(const char *beginSearchAfter, 
-				   const char *startDelim, const char *endDelim);
-
-	void minimizeMemory(void);
-
-	// STRING_INSERT_POINT
-
-	// END PUBLIC INTERFACE
-
-	bool isInternalPtr(const char *str);
-
-    private:
-	// Internal implementation.
-	void *m_x;
-	bool m_utf8;	// If true, all input "const char *" arguments are utf-8, otherwise they are ANSI strings.
-	void *m_sb;	// Used for getEnc()
-
-    public:
-	// For internal use
-	void *getImplX(void) const { return m_x; }
-
+		value_ = out;
+		return true;
+	}
 };
-#ifndef __sun__
-#pragma pack (pop)
-#endif
-
-
-#endif
