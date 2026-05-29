@@ -1,6 +1,6 @@
 /*
     fmod_event.hpp - Data-driven event classes
-    Copyright (c), Firelight Technologies Pty, Ltd. 2004-2009.
+    Copyright (c), Firelight Technologies Pty, Ltd. 2004-2016.
 
     This header is the base header for all other FMOD EventSystem headers. If you are programming in C use FMOD_EVENT.H
 */
@@ -24,6 +24,8 @@ namespace FMOD
     class Event;
     class EventParameter;
     class EventReverb;
+    class EventQueue;
+    class EventQueueEntry;
     class MusicSystem;
     class MusicPrompt;
 
@@ -40,64 +42,69 @@ namespace FMOD
         public :
 
         // Initialization / system functions.
-        virtual FMOD_RESULT F_API init                      (int maxchannels, FMOD_INITFLAGS flags, void *extradriverdata, FMOD_EVENT_INITFLAGS eventflags = FMOD_EVENT_INIT_NORMAL) = 0;
-        virtual FMOD_RESULT F_API release                   () = 0;
-        virtual FMOD_RESULT F_API update                    () = 0;
-        virtual FMOD_RESULT F_API setMediaPath              (const char *path) = 0;
-        virtual FMOD_RESULT F_API setPluginPath             (const char *path) = 0;
-        virtual FMOD_RESULT F_API getVersion                (unsigned int *version) = 0;
-        virtual FMOD_RESULT F_API getInfo                   (FMOD_EVENT_SYSTEMINFO *info) = 0;
-        virtual FMOD_RESULT F_API getSystemObject           (System **system) = 0;
-        virtual FMOD_RESULT F_API getMusicSystem            (MusicSystem **musicsystem) = 0;
-                                                            
+        FMOD_RESULT F_API init                      (int maxchannels, FMOD_INITFLAGS flags, void *extradriverdata, FMOD_EVENT_INITFLAGS eventflags = FMOD_EVENT_INIT_NORMAL);
+        FMOD_RESULT F_API release                   ();
+        FMOD_RESULT F_API update                    ();
+        FMOD_RESULT F_API setMediaPath              (const char *path);
+        FMOD_RESULT F_API setPluginPath             (const char *path);
+        FMOD_RESULT F_API getVersion                (unsigned int *version);
+        FMOD_RESULT F_API getInfo                   (FMOD_EVENT_SYSTEMINFO *info);
+        FMOD_RESULT F_API getSystemObject           (System **system);
+        FMOD_RESULT F_API getMusicSystem            (MusicSystem **musicsystem);
+        FMOD_RESULT F_API setLanguage               (const char *language);
+        FMOD_RESULT F_API getLanguage               (char *language);
+        FMOD_RESULT F_API registerDSP               (FMOD_DSP_DESCRIPTION *description, unsigned int *handle);
+
         // FEV load/unload.                                 
-        virtual FMOD_RESULT F_API load                      (const char *name_or_data, FMOD_EVENT_LOADINFO *loadinfo, EventProject **project) = 0;
-        virtual FMOD_RESULT F_API unload                    () = 0;
+        FMOD_RESULT F_API load                      (const char *name_or_data, FMOD_EVENT_LOADINFO *loadinfo, EventProject **project);
+        FMOD_RESULT F_API unload                    ();
                                                             
         // Event,EventGroup,EventCategory Retrieval.        
-        virtual FMOD_RESULT F_API getProject                (const char *name, EventProject **project) = 0;
-        virtual FMOD_RESULT F_API getProjectByIndex         (int index,        EventProject **project) = 0;
-        virtual FMOD_RESULT F_API getNumProjects            (int *numprojects) = 0;
-        virtual FMOD_RESULT F_API getCategory               (const char *name, EventCategory **category) = 0;
-        virtual FMOD_RESULT F_API getCategoryByIndex        (int index,        EventCategory **category) = 0;
-        virtual FMOD_RESULT F_API getMusicCategory          (EventCategory **category) = 0;
-        virtual FMOD_RESULT F_API getNumCategories          (int *numcategories) = 0;
-        virtual FMOD_RESULT F_API getGroup                  (const char *name, bool cacheevents, EventGroup **group) = 0;
-        virtual FMOD_RESULT F_API getEvent                  (const char *name, FMOD_EVENT_MODE mode, Event **event) = 0;
-        virtual FMOD_RESULT F_API getEventBySystemID        (unsigned int systemid, FMOD_EVENT_MODE mode, Event **event) = 0;
-        virtual FMOD_RESULT F_API getEventByGUID            (const FMOD_GUID *guid, FMOD_EVENT_MODE mode, Event **event) = 0;
-        virtual FMOD_RESULT F_API getEventByGUIDString      (const char *guid, FMOD_EVENT_MODE mode, Event **event) = 0;
-        virtual FMOD_RESULT F_API getNumEvents              (int *numevents) = 0;
+        FMOD_RESULT F_API getProject                (const char *name, EventProject **project);
+        FMOD_RESULT F_API getProjectByIndex         (int index,        EventProject **project);
+        FMOD_RESULT F_API getNumProjects            (int *numprojects);
+        FMOD_RESULT F_API getCategory               (const char *name, EventCategory **category);
+        FMOD_RESULT F_API getCategoryByIndex        (int index,        EventCategory **category);
+        FMOD_RESULT F_API getMusicCategory          (EventCategory **category);
+        FMOD_RESULT F_API getNumCategories          (int *numcategories);
+        FMOD_RESULT F_API getGroup                  (const char *name, bool cacheevents, EventGroup **group);
+        FMOD_RESULT F_API getEvent                  (const char *name, FMOD_EVENT_MODE mode, Event **event);
+        FMOD_RESULT F_API getEventBySystemID        (unsigned int systemid, FMOD_EVENT_MODE mode, Event **event);
+        FMOD_RESULT F_API getEventByGUID            (const FMOD_GUID *guid, FMOD_EVENT_MODE mode, Event **event);
+        FMOD_RESULT F_API getEventByGUIDString      (const char *guid, FMOD_EVENT_MODE mode, Event **event);
+        FMOD_RESULT F_API getNumEvents              (int *numevents);
 
         // Reverb interfaces.
-        virtual FMOD_RESULT F_API setReverbProperties       (const FMOD_REVERB_PROPERTIES *prop) = 0;
-        virtual FMOD_RESULT F_API getReverbProperties       (FMOD_REVERB_PROPERTIES *prop) = 0;
+        FMOD_RESULT F_API setReverbProperties       (const FMOD_REVERB_PROPERTIES *props);
+        FMOD_RESULT F_API getReverbProperties       (FMOD_REVERB_PROPERTIES *props);
 
-        virtual FMOD_RESULT F_API getReverbPreset           (const char *name, FMOD_REVERB_PROPERTIES *prop, int *index = 0) = 0;
-        virtual FMOD_RESULT F_API getReverbPresetByIndex    (const int index,  FMOD_REVERB_PROPERTIES *prop, char **name = 0) = 0;
-        virtual FMOD_RESULT F_API getNumReverbPresets       (int *numpresets) = 0;
+        FMOD_RESULT F_API getReverbPreset           (const char *name, FMOD_REVERB_PROPERTIES *props, int *index = 0);
+        FMOD_RESULT F_API getReverbPresetByIndex    (const int index,  FMOD_REVERB_PROPERTIES *props, char **name = 0);
+        FMOD_RESULT F_API getNumReverbPresets       (int *numpresets);
 
-        virtual FMOD_RESULT F_API createReverb              (EventReverb **reverb) = 0;
-        virtual FMOD_RESULT F_API setReverbAmbientProperties(FMOD_REVERB_PROPERTIES *prop) = 0;
-        virtual FMOD_RESULT F_API getReverbAmbientProperties(FMOD_REVERB_PROPERTIES *prop) = 0;
+        FMOD_RESULT F_API createReverb              (EventReverb **reverb);
+        FMOD_RESULT F_API setReverbAmbientProperties(FMOD_REVERB_PROPERTIES *props);
+        FMOD_RESULT F_API getReverbAmbientProperties(FMOD_REVERB_PROPERTIES *props);
+
+        // Event queue interfaces.
+        FMOD_RESULT F_API createEventQueue          (EventQueue **queue);
+        FMOD_RESULT F_API createEventQueueEntry     (Event *event, EventQueueEntry **entry);
 
         // 3D Listener interface.
-        virtual FMOD_RESULT F_API set3DNumListeners         (int numlisteners) = 0;
-        virtual FMOD_RESULT F_API get3DNumListeners         (int *numlisteners) = 0;
-        virtual FMOD_RESULT F_API set3DListenerAttributes   (int listener, const FMOD_VECTOR *pos, const FMOD_VECTOR *vel, const FMOD_VECTOR *forward, const FMOD_VECTOR *up) = 0;
-        virtual FMOD_RESULT F_API get3DListenerAttributes   (int listener, FMOD_VECTOR *pos, FMOD_VECTOR *vel, FMOD_VECTOR *forward, FMOD_VECTOR *up) = 0;
+        FMOD_RESULT F_API set3DNumListeners         (int numlisteners);
+        FMOD_RESULT F_API get3DNumListeners         (int *numlisteners);
+        FMOD_RESULT F_API set3DListenerAttributes   (int listener, const FMOD_VECTOR *pos, const FMOD_VECTOR *vel, const FMOD_VECTOR *forward, const FMOD_VECTOR *up);
+        FMOD_RESULT F_API get3DListenerAttributes   (int listener, FMOD_VECTOR *pos, FMOD_VECTOR *vel, FMOD_VECTOR *forward, FMOD_VECTOR *up);
 
         // Get/set user data
-        virtual FMOD_RESULT F_API setUserData               (void *userdata) = 0;
-        virtual FMOD_RESULT F_API getUserData               (void **userdata) = 0;
+        FMOD_RESULT F_API setUserData               (void *userdata);
+        FMOD_RESULT F_API getUserData               (void **userdata);
 
         // Pre-loading FSB files (from disk or from memory, use FMOD_OPENMEMORY_POINT to point to pre-loaded memory).
-        virtual FMOD_RESULT F_API preloadFSB                (const char *filename, int streaminstance, Sound *sound) = 0;
-        virtual FMOD_RESULT F_API unloadFSB                 (const char *filename, int streaminstance) = 0;
+        FMOD_RESULT F_API preloadFSB                (const char *filename, int streaminstance, Sound *sound, bool unloadprevious = false);
+        FMOD_RESULT F_API unloadFSB                 (const char *filename, int streaminstance);
 
-        virtual FMOD_RESULT F_API getMemoryInfo             (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
-
-        virtual ~EventSystem(){};
+        FMOD_RESULT F_API getMemoryInfo             (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details);
     };
 
     /*
@@ -108,7 +115,7 @@ namespace FMOD
         public :
 
         virtual FMOD_RESULT F_API release            () = 0;
-        virtual FMOD_RESULT F_API getInfo            (int *index, char **name) = 0;
+        virtual FMOD_RESULT F_API getInfo            (FMOD_EVENT_PROJECTINFO *info) = 0;
         virtual FMOD_RESULT F_API getGroup           (const char *name, bool cacheevents, EventGroup **group) = 0;
         virtual FMOD_RESULT F_API getGroupByIndex    (int index,        bool cacheevents, EventGroup **group) = 0;
         virtual FMOD_RESULT F_API getNumGroups       (int *numgroups) = 0;
@@ -116,12 +123,12 @@ namespace FMOD
         virtual FMOD_RESULT F_API getEventByProjectID(unsigned int projectid, FMOD_EVENT_MODE mode, Event **event) = 0;
         virtual FMOD_RESULT F_API getNumEvents       (int *numevents) = 0;
         virtual FMOD_RESULT F_API loadSampleData     (int *eventid_array, int sizeof_eventid_array, char **groupname_array, int sizeof_groupname_array, FMOD_EVENT_MODE eventmode) = 0;
+        virtual FMOD_RESULT F_API stopAllEvents      (bool immediate = false) = 0;
+        virtual FMOD_RESULT F_API cancelAllLoads     () = 0;
         virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
         virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
 
-        virtual FMOD_RESULT F_API stopAllEvents      (bool immediate = false) = 0;
-
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~EventProject(){};
     };
 
@@ -150,7 +157,7 @@ namespace FMOD
         virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
         virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
 
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~EventGroup(){};
     };
 
@@ -167,6 +174,7 @@ namespace FMOD
         virtual FMOD_RESULT F_API getNumCategories   (int *numcategories) = 0;
         virtual FMOD_RESULT F_API getEventByIndex    (int index, FMOD_EVENT_MODE mode, Event **event) = 0;
         virtual FMOD_RESULT F_API getNumEvents       (int *numevents) = 0;
+        virtual FMOD_RESULT F_API getParentCategory  (EventCategory **category) = 0;
 
         virtual FMOD_RESULT F_API stopAllEvents      () = 0;
         virtual FMOD_RESULT F_API setVolume          (float volume) = 0;
@@ -181,7 +189,7 @@ namespace FMOD
         virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
         virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
 
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~EventCategory(){};
     };
 
@@ -226,12 +234,12 @@ namespace FMOD
         FMOD_RESULT F_API get3DAttributes            (FMOD_VECTOR *position, FMOD_VECTOR *velocity, FMOD_VECTOR *orientation = 0);
         FMOD_RESULT F_API set3DOcclusion             (float directocclusion, float reverbocclusion);
         FMOD_RESULT F_API get3DOcclusion             (float *directocclusion, float *reverbocclusion);
-        FMOD_RESULT F_API setReverbProperties        (const FMOD_REVERB_CHANNELPROPERTIES *prop);
-        FMOD_RESULT F_API getReverbProperties        (FMOD_REVERB_CHANNELPROPERTIES *prop);
+        FMOD_RESULT F_API setReverbProperties        (const FMOD_REVERB_CHANNELPROPERTIES *props);
+        FMOD_RESULT F_API getReverbProperties        (FMOD_REVERB_CHANNELPROPERTIES *props);
         FMOD_RESULT F_API setUserData                (void *userdata);
         FMOD_RESULT F_API getUserData                (void **userdata);
 
-        FMOD_RESULT F_API getMemoryInfo              (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array);
+        FMOD_RESULT F_API getMemoryInfo              (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details);
     };
 
     /*
@@ -252,8 +260,9 @@ namespace FMOD
         FMOD_RESULT F_API setUserData                (void *userdata);
         FMOD_RESULT F_API getUserData                (void **userdata);
         FMOD_RESULT F_API keyOff                     ();
+        FMOD_RESULT F_API disableAutomation          (bool disable);
 
-        FMOD_RESULT F_API getMemoryInfo              (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array);
+        FMOD_RESULT F_API getMemoryInfo              (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details);
     };
 
     /*
@@ -273,8 +282,62 @@ namespace FMOD
         virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
         virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
 
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~EventReverb(){};
+    };
+
+    /*
+       'EventQueue' API
+    */
+    class EventQueue
+    {
+        public :
+
+        virtual FMOD_RESULT F_API release            () = 0;
+        virtual FMOD_RESULT F_API add                (EventQueueEntry *entry, bool allow_duplicates = true) = 0;
+        virtual FMOD_RESULT F_API remove             (EventQueueEntry *entry) = 0;
+        virtual FMOD_RESULT F_API removeHead         () = 0;
+        virtual FMOD_RESULT F_API clear              (bool stopallevents = true) = 0;
+        virtual FMOD_RESULT F_API findFirstEntry     (EventQueueEntry **entry) = 0;
+        virtual FMOD_RESULT F_API findNextEntry      (EventQueueEntry **entry) = 0;
+        virtual FMOD_RESULT F_API setPaused          (bool paused) = 0;
+        virtual FMOD_RESULT F_API getPaused          (bool *paused) = 0;
+        virtual FMOD_RESULT F_API includeDuckingCategory (EventCategory *category, float ducked_volume, float unducked_volume, unsigned int duck_time, unsigned int unduck_time) = 0;
+        virtual FMOD_RESULT F_API excludeDuckingCategory (EventCategory *category) = 0;
+        virtual FMOD_RESULT F_API setCallback        (FMOD_EVENTQUEUE_CALLBACK callback, void *callbackuserdata) = 0;
+        virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
+        virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
+        virtual FMOD_RESULT F_API dump               () = 0;
+
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
+        virtual ~EventQueue(){};
+    };
+
+    /*
+       'EventQueueEntry' API
+    */
+    class EventQueueEntry
+    {
+        public :
+
+        virtual FMOD_RESULT F_API release            () = 0;
+        virtual FMOD_RESULT F_API getInfoOnlyEvent   (Event **infoonlyevent) = 0;
+        virtual FMOD_RESULT F_API getRealEvent       (Event **realevent) = 0;
+        virtual FMOD_RESULT F_API setPriority        (unsigned char priority) = 0;
+        virtual FMOD_RESULT F_API getPriority        (unsigned char *priority) = 0;
+        virtual FMOD_RESULT F_API setExpiryTime      (unsigned int expirytime) = 0;
+        virtual FMOD_RESULT F_API getExpiryTime      (unsigned int *expirytime) = 0;
+        virtual FMOD_RESULT F_API setDelayTime       (unsigned int delay) = 0;
+        virtual FMOD_RESULT F_API getDelayTime       (unsigned int *delay) = 0;
+        virtual FMOD_RESULT F_API setInterrupt       (bool interrupt) = 0;
+        virtual FMOD_RESULT F_API getInterrupt       (bool *interrupt) = 0;
+        virtual FMOD_RESULT F_API setCrossfadeTime   (int crossfade) = 0;
+        virtual FMOD_RESULT F_API getCrossfadeTime   (int *crossfade) = 0;
+        virtual FMOD_RESULT F_API setUserData        (void *userdata) = 0;
+        virtual FMOD_RESULT F_API getUserData        (void **userdata) = 0;
+
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
+        virtual ~EventQueueEntry(){};
     };
 
     /*
@@ -287,6 +350,8 @@ namespace FMOD
         virtual FMOD_RESULT F_API reset              () = 0;
         virtual FMOD_RESULT F_API setVolume          (float volume) = 0;
         virtual FMOD_RESULT F_API getVolume          (float *volume) = 0;
+        virtual FMOD_RESULT F_API setReverbProperties(const FMOD_REVERB_CHANNELPROPERTIES *props) = 0;
+        virtual FMOD_RESULT F_API getReverbProperties(FMOD_REVERB_CHANNELPROPERTIES *props) = 0;
         virtual FMOD_RESULT F_API setPaused          (bool paused) = 0;
         virtual FMOD_RESULT F_API getPaused          (bool *paused) = 0;
         virtual FMOD_RESULT F_API setMute            (bool mute) = 0;
@@ -307,7 +372,7 @@ namespace FMOD
 
         virtual FMOD_RESULT F_API setCallback        (FMOD_MUSIC_CALLBACK callback, void *userdata) = 0;
 
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~MusicSystem(){};
     };
 
@@ -323,7 +388,7 @@ namespace FMOD
         virtual FMOD_RESULT F_API end                () = 0;
         virtual FMOD_RESULT F_API isActive           (bool *active) = 0;
 
-        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, unsigned int *memoryused_array) = 0;
+        virtual FMOD_RESULT F_API getMemoryInfo      (unsigned int memorybits, unsigned int event_memorybits, unsigned int *memoryused, FMOD_MEMORY_USAGE_DETAILS *memoryused_details) = 0;
         virtual ~MusicPrompt(){};
     };
 }
