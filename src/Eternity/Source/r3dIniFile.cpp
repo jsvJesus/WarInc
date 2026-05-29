@@ -69,9 +69,14 @@ bool r3dIniFileReader::ValidateFileName(const char* lpFileName)
     return false;
   }
   
-  len_ = fread(buf_, 1, MAX_INI_SIZE-2, f);
-  if(len_ >= MAX_INI_SIZE-2) r3dError("ini file %s is too big\n", lpFileName);
+  const size_t bytesRead = fread(buf_, 1, MAX_INI_SIZE - 2, f);
+
+  if(bytesRead >= MAX_INI_SIZE - 2)
+    r3dError("ini file %s is too big\n", lpFileName);
+
+  len_ = static_cast<int>(bytesRead);
   buf_[len_] = 0;
+
   fclose(f);
 
   goodIniFile_ = true;

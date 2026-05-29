@@ -4,6 +4,16 @@
 #include "JobChief.h"
 #include "r3dDebug.h"
 
+static int JobSizeToInt(size_t value)
+{
+	return value > static_cast<size_t>(INT_MAX) ? INT_MAX : static_cast<int>(value);
+}
+
+static DWORD JobSizeToDWORD(size_t value)
+{
+	return value > static_cast<size_t>(MAXDWORD) ? MAXDWORD : static_cast<DWORD>(value);
+}
+
 JobChief* g_pJobChief = 0;
 //------------------------------------------------------------------------
 
@@ -149,21 +159,19 @@ void
 JobChief::Exec( ExecFunc func, void* data, size_t itemCount )
 {
 	R3DPROFILE_FUNCTION("JobChief::Exec");
-	uint32_t coreCount = mThreadHandles.Count() + 1 ;
-	uint32_t perCore = itemCount / coreCount ;
 
 	gJobDesc.Func		= func;
 	gJobDesc.Data		= data;
-	gJobDesc.Left		= itemCount ;
+	gJobDesc.Left		= JobSizeToInt(itemCount);
 
 	if( r_multithreading->GetInt() )
 	{
-		gJobDesc.ChunkSize	= R3D_MAX( (int)itemCount / 32, 1 );
+		gJobDesc.ChunkSize = R3D_MAX( JobSizeToInt(itemCount / 32), 1 );
 		FireThreads();
 	}
 	else
 	{
-		gJobDesc.ChunkSize = itemCount ;
+		gJobDesc.ChunkSize = JobSizeToInt(itemCount);
 	}
 
 	DoJob();
@@ -173,7 +181,7 @@ JobChief::Exec( ExecFunc func, void* data, size_t itemCount )
 	{
 		if (d_job_chief_idle_events->GetBool())
 		{
-			WaitForMultipleObjects(gIdleHandles.Count(), &gIdleHandles[0], TRUE, INFINITE);
+			WaitForMultipleObjects(JobSizeToDWORD(gIdleHandles.Count()), &gIdleHandles[0], TRUE, INFINITE);
 		}
 		else
 		{
@@ -183,7 +191,7 @@ JobChief::Exec( ExecFunc func, void* data, size_t itemCount )
 			{
 				notAllDone = false ;
 
-				for( uint32_t i = 0, e = gThreadDataVec.Count(); i < e; i ++ )
+				for( uint32_t i = 0, e = static_cast<uint32_t>(gThreadDataVec.Count()); i < e; i ++ )
 				{
 					if( !gThreadDataVec[ i ].Idle )
 					{
@@ -238,7 +246,7 @@ JobChief::FireThreads()
 uint32_t
 JobChief::GetThreadCount() const
 {
-	return mThreadHandles.Count() + 1;
+	return static_cast<uint32_t>(mThreadHandles.Count() + 1);
 }
 
 //------------------------------------------------------------------------

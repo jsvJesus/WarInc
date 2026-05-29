@@ -659,7 +659,7 @@ void CD3DFont::DrawText(float sx, float sy, float sw, float sh, const r3dColor24
     fnt_pD3DXFont->DrawTextA(
       NULL, //fnt_sprite,
       strText,
-      strlen(strText), 
+      -1,
       &r,
       flags,
       Color.GetPacked());

@@ -184,7 +184,9 @@ bool ProcessDeviceQueue( float chunkTimeStart, float maxDuration )
 	R3DPROFILE_FUNCTION("ProcessDeviceQueue");
 	r3dCSHolder block( gDeviceQueueCS ) ;
 
-	size_t i = 0, e = gDeviceQueueItems.Count()  ;
+	int i = 0;
+	int e = static_cast<int>(gDeviceQueueItems.Count());
+
 	for( ; i < e ; i ++ )
 	{
 		if( r3dGetTime() - chunkTimeStart > maxDuration )
