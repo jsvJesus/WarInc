@@ -501,44 +501,51 @@ static int do_mkdir( const char *path )
 
 int r3d_create_path( const char *path )
 {
-	char drive[ 16 ], dir[ MAX_PATH * 3 ], file[ MAX_PATH * 3 ], ext[ MAX_PATH * 3 ] ;
+    char drive[ 16 ], dir[ MAX_PATH * 3 ], file[ MAX_PATH * 3 ], ext[ MAX_PATH * 3 ];
 
-	drive[ 0 ] = 0 ;
+    drive[ 0 ] = 0;
 
-	_splitpath( path, drive, dir, file, ext ) ;
+    _splitpath( path, drive, dir, file, ext );
 
-	char           *pp;
-	char           *sp;
-	int             status;
-	// we may get trick folder with date (extensionesque) - treat it as a folder
+    char* pp;
+    char* sp;
+    int status;
 
-	strcat ( dir, file ) ;
-	strcat ( dir, ext ) ;
-	char           *copypath = strdup( dir );
+    strcat( dir, file );
+    strcat( dir, ext );
 
-	for( int i = 0, e = strlen( copypath ) ; i < e ; i ++ )
-	{
-		if( copypath[ i ] == '\\' )
-			copypath[ i ] = '/' ;
-	}
+    char* copypath = strdup( dir );
+    if( !copypath )
+        return -1;
 
-	status = 0;
-	pp = copypath;
-	while (status == 0 && (sp = strchr(pp, '/')) != 0)
-	{
-		if (sp != pp)
-		{
-			/* Neither root nor double slash in path */
-			*sp = '\0';
-			status = do_mkdir( drive[0] ? ( r3dString( drive ) + copypath ).c_str() : copypath );
-			*sp = '/';
-		}
-		pp = sp + 1;
-	}
-	if (status == 0)
-		status = do_mkdir( drive[0] ? ( r3dString( drive ) + dir ).c_str() : path );
-	free(copypath);
-	return (status);
+    const int pathLen = static_cast<int>( strlen( copypath ) );
+
+    for( int i = 0; i < pathLen; i++ )
+    {
+        if( copypath[ i ] == '\\' )
+            copypath[ i ] = '/';
+    }
+
+    status = 0;
+    pp = copypath;
+
+    while( status == 0 && ( sp = strchr( pp, '/' ) ) != 0 )
+    {
+        if( sp != pp )
+        {
+            *sp = '\0';
+            status = do_mkdir( drive[0] ? ( r3dString( drive ) + copypath ).c_str() : copypath );
+            *sp = '/';
+        }
+
+        pp = sp + 1;
+    }
+
+    if( status == 0 )
+        status = do_mkdir( drive[0] ? ( r3dString( drive ) + dir ).c_str() : path );
+
+    free( copypath );
+    return status;
 }
 
 //------------------------------------------------------------------------

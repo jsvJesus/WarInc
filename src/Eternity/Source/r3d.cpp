@@ -2156,37 +2156,47 @@ r3dDevStrength r3dGetDeviceStrength()
 
 wchar_t* utf8ToWide(const char* str)
 {
+	static wchar_t emptyW[] = L"";
+
 	if(str == NULL || *str == 0)
-		return L"";
+		return emptyW;
 
 	static wchar_t wbuf[2048];
-	int wchars = ::MultiByteToWideChar(
-		CP_UTF8,		// convert from UTF-8
-		MB_ERR_INVALID_CHARS,	// error on invalid chars
-		str,			// source UTF-8 string
-		strlen(str) + 1,	// total length of source UTF-8 string, encluding EOF
+
+	::MultiByteToWideChar(
+		CP_UTF8,
+		MB_ERR_INVALID_CHARS,
+		str,
+		-1,
 		wbuf,
-		2048			// size of destination buffer, in WCHAR's
+		2048
 		);
+
+	wbuf[2047] = 0;
 	return wbuf;
 }
 
 char* wideToUtf8(const wchar_t* str)
 {
+	static char emptyA[] = "";
+
 	if(str == NULL || *str == 0)
-		return "";
+		return emptyA;
 
 	static char buf[2048];
-	int chars = ::WideCharToMultiByte(
-		CP_UTF8,		// convert to UTF-8
-		0,			// WC_ERR_INVALID_CHARS for Vista+ error on invalid chars
-		str,			// source string
-		wcslen(str) + 1,	// total length of source string, encluding EOF
+
+	::WideCharToMultiByte(
+		CP_UTF8,
+		0,
+		str,
+		-1,
 		buf,
-		2048,			// size of destination buffer, in bytes
+		2048,
 		NULL,
 		NULL
 		);
+
+	buf[2047] = 0;
 	return buf;
 }
 

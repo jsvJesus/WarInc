@@ -664,7 +664,7 @@ bool r3dMesh::SaveBinPS3(const char* fname)
 
 	fwrite_be(R3DMESH_BINARY_VERSION, f);
 
-	int len = strlen(Name);
+	int len = static_cast<int>(strlen(Name));
 	fwrite_be(len, f);
 	fwrite_be(Name, len, f);
 
@@ -682,19 +682,21 @@ bool r3dMesh::SaveBinPS3(const char* fname)
 	fwrite_be(VertexUVs, NumVertices, f);
 	fwrite_be(VertexNormals, NumVertices, f);
 	fwrite_be(VertexTangents, NumVertices, f);
-	fwrite_be(VertexTangentWs, sizeof(VertexTangentWs[ 0 ]) * NumVertices, f);
+	fwrite_be(VertexTangentWs, sizeof(VertexTangentWs[0]) * NumVertices, f);
 
 	fwrite_be(NumIndices, f);
 	fwrite_be(Indices, NumIndices, f);
 
 	fwrite_be(NumMatChunks, f);
-	for(int i=0; i<NumMatChunks; ++i)
+
+	for(int i = 0; i < NumMatChunks; ++i)
 	{
 		fwrite_be(MatChunks[i].StartIndex, f);
 		fwrite_be(MatChunks[i].EndIndex, f);
-		int len = strlen(MatChunksNames[i]);
-		fwrite_be(len, f);
-		fwrite_be(MatChunksNames[i], len, f);
+
+		int chunkNameLen = static_cast<int>(strlen(MatChunksNames[i]));
+		fwrite_be(chunkNameLen, f);
+		fwrite_be(MatChunksNames[i], chunkNameLen, f);
 	}
 
 	fclose(f);

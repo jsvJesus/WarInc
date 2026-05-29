@@ -216,77 +216,86 @@ r3dFSCompress::r3dFSCompress()
 }
 
 int r3dFSCompress::CompressFile(
-	  const char* fname, 
-	  int* method, 
-	  BYTE** out_data, 
-	  DWORD* out_size, 
-	  DWORD* out_csize,
-	  DWORD* out_crc32)
+    const char* fname, 
+    int* method, 
+    BYTE** out_data, 
+    DWORD* out_size, 
+    DWORD* out_csize,
+    DWORD* out_crc32)
 {
-  // read that file first
   FILE* f = fopen(fname, "rb");
   if(f == NULL) {
     r3dError("r3dFSCompress::CompressFile() can't open %s\n", fname);
     return 0;
   }
+
   fseek(f, 0, SEEK_END);
-  const long size = ftell(f);
+  const long fileSizeLong = ftell(f);
   fseek(f, 0, SEEK_SET);
-  
-  BYTE* data = new BYTE[size + 1];
-  const long rsize = fread(data, 1, size, f);
-  fclose(f);
-  if(rsize != size) {
-    r3dError("failed to read %s %d vs %d\n", fname, size, rsize);
+
+  if(fileSizeLong < 0 || static_cast<unsigned long>(fileSizeLong) > MAXDWORD) {
+    fclose(f);
+    r3dError("r3dFSCompress::CompressFile() invalid file size %s\n", fname);
+    return 0;
   }
-  
-  *out_size  = (DWORD)size;
+
+  const DWORD size = static_cast<DWORD>(fileSizeLong);
+
+  BYTE* data = new BYTE[static_cast<size_t>(size) + 1];
+
+  const size_t rsize = fread(data, 1, static_cast<size_t>(size), f);
+  fclose(f);
+
+  if(rsize != static_cast<size_t>(size)) {
+    r3dError("failed to read %s %u vs %u\n", fname, size, static_cast<unsigned int>(rsize));
+  }
+
+  *out_size  = size;
   *out_crc32 = r3dCRC32(data, size);
-  
-  // zero length file compression
+
   if(size == 0) {
     *method    = COMPRESS_STORE;
-    *out_data  = data; // there is 1 byte array now
+    *out_data  = data;
     *out_csize = 0;
     return 1;
   }
 
-  float t1 = r3dGetTime();
-  int res;
+  int res = 0;
+
   switch(*method)
   {
-    default:
-      r3dError("invalid compression method %d for %s\n", method, fname);
-      return 0;
-      
-    case COMPRESS_STORE:
-      res = CompressStore(data, size, out_data, out_csize);
-      break;
+  default:
+    r3dError("invalid compression method %d for %s\n", *method, fname);
+    delete[] data;
+    return 0;
 
-    case COMPRESS_INFLATE:
-      res = CompressInflate(data, size, out_data, out_csize);
-      break;
-      
+  case COMPRESS_STORE:
+    res = CompressStore(data, size, out_data, out_csize);
+    break;
+
+  case COMPRESS_INFLATE:
+    res = CompressInflate(data, size, out_data, out_csize);
+    break;
+
 #ifdef USING_LZO
-    case COMPRESS_LZO:
-      res = CompressLzo(data, size, out_data, out_csize);
-      break;
+  case COMPRESS_LZO:
+    res = CompressLzo(data, size, out_data, out_csize);
+    break;
 #endif
   }
-  
+
   if(!res) {
+    delete[] data;
     r3dError("Compress failed\n");
+    return 0;
   }
 
   if(*out_csize > size) {
-    // compressed size was larger that normal, switch to store
     *method = COMPRESS_STORE;
     delete[] *out_data;
     res = CompressStore(data, size, out_data, out_csize);
   }
 
-  //r3dOutToLog(", %.3fsec", r3dGetTime() - t1);
-  
   delete[] data;
   return res;
 }

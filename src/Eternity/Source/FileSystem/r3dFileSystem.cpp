@@ -325,8 +325,7 @@ void r3dFileSystem::RemoveVolumeFiles()
   r3dCSHolder csHolder(g_FileSysCritSection);
   CloseVolumes();
 
-  // clean up
-  for(size_t i=0; i<MAX_VOLUMES; i++) {
+  for(int i = 0; i < MAX_VOLUMES; i++) {
     char fname[MAX_PATH];
     GetVolumeName(fname, i);
     _unlink(fname);

@@ -124,69 +124,66 @@ const char* r3dIniFileReader::GetNextLine(const char* line)
 
 
 bool r3dIniFileReader::GetPrivateProfileString(const char* lpAppName, const char* lpKeyName, 
-			  const char* lpDefault, char* lpReturnedString, int nSize, 
-	                  const char* lpFileName)
+        const char* lpDefault, char* lpReturnedString, int nSize, 
+                    const char* lpFileName)
 {
   Init();
 
   r3dscpy(lpReturnedString, lpDefault);
-  
+
   if(!ValidateFileName(lpFileName))
     return false;
-    
-  // those 2 can't be null in this implementation - we must have section & key
+
   assert(lpAppName);
   assert(lpKeyName);
-  
-  int len = strlen(lpAppName);
 
-  // search for section
+  int len = static_cast<int>(strlen(lpAppName));
+
   const char* section = NULL;
+
   for(const char* line = buf_; line; line = GetNextLine(line)) 
   {
     if(line[0] == ';') 
       continue;
 
     if(line[0] == '[') {
-      if(_strnicmp(line+1, lpAppName, len) == NULL) {
-        if(line[len+1] == ']') {
+      if(_strnicmp(line + 1, lpAppName, len) == 0) {
+        if(line[len + 1] == ']') {
           section = line;
           break;
         }
       }
     }
   }
-  
+
   if(!section) {
     return false;
   }
 
-  // search for actual key
-  len = strlen(lpKeyName);
+  len = static_cast<int>(strlen(lpKeyName));
+
   for(const char* line = GetNextLine(section); line; line = GetNextLine(line)) 
   {
     if(line[0] == ';') 
       continue;
 
     if(line[0] == '[') {
-      // found new section, abort
       return false;
     }
 
-    if(_strnicmp(line, lpKeyName, len) != NULL) 
+    if(_strnicmp(line, lpKeyName, len) != 0) 
       continue;
-      
-    // skip whitelines
+
     const char* p = line + len;
+
     for(; *p == ' ' || *p == '\t'; ++p) ;
-    
+
     if(*p != '=') {
       r3dArtBug("ini: malformed string '%s' in file %s\n", line, curIni_);
       return false;
     }
 
-    // skip whitespaces after '='
-    for(p = p+1; *p == ' ' || *p == '\t'; ++p) ;
+    for(p = p + 1; *p == ' ' || *p == '\t'; ++p) ;
 
     r3dscpy(lpReturnedString, p);
     return true;

@@ -956,29 +956,27 @@ void CD3DFont::ScaledPrintF(float X, float Y, float XScale, float YScale, float 
 
 void CD3DFont::DrawTextW(float x, float y, float w, float h, const r3dColor24& Color, const wchar_t* strText, DWORD dwFlags)
 {
-  // this is needed, because we might have some data sitting in our renderer
   r3dRenderer->Flush();
-  
-  RECT  r;
+
+  RECT r;
   r.left   = (long)x;
   r.top    = (long)y;
   r.right  = r.left + (long)w;
   r.bottom = r.top  + (long)h;
-    
+
   DWORD flags = DT_NOCLIP;
   if(dwFlags & D3DFONT_CENTERED) {
-    // clip in specified rectangle
     flags = DT_CENTER | DT_VCENTER | DT_WORDBREAK;
   }
-  
+
   fnt_pD3DXFont->DrawTextW(
-    NULL, //fnt_sprite,
+    NULL,
     strText,
-    wcslen(strText), 
+    -1,
     &r,
     flags,
     Color.GetPacked());
-    
+
   return;
 }
 
@@ -1006,11 +1004,11 @@ void CD3DFont::GetTextExtentW(const wchar_t* strText, SIZE* pSize) const
   fnt_pD3DXFont->DrawTextW(
     NULL,
     strText,
-    wcslen(strText), 
+    -1,
     &r,
     DT_CALCRECT,
     0xFFFFFFFF);
-    
+
   pSize->cx = r.right  - r.left;
   pSize->cy = r.bottom - r.top;
 
