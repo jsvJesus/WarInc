@@ -1,6 +1,9 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using WarInc.Api.Common;
+using WarInc.Api.Config;
+using WarInc.Api.Security;
 
 namespace WarInc.Api.GameServer;
 
@@ -12,11 +15,17 @@ public static class GameServerInventoryEndpoints
         MapLegacy(app, "/api_SrvGiveItemInMinutes.aspx", LegacyGiveItemInMinutesAsync);
         MapLegacy(app, "/api_SrvRemoveItem.aspx", LegacyRemoveItemAsync);
 
-        app.MapGet("/v1/gameserver/give-item", JsonGiveItemAsync);
-        app.MapPost("/v1/gameserver/give-item", JsonGiveItemAsync);
+        app.MapGet("/internal/gameserver/give-item", JsonGiveItemAsync).RequireRateLimiting("gameserver");
+        app.MapPost("/internal/gameserver/give-item", JsonGiveItemAsync).RequireRateLimiting("gameserver");
 
-        app.MapGet("/v1/gameserver/remove-item", JsonRemoveItemAsync);
-        app.MapPost("/v1/gameserver/remove-item", JsonRemoveItemAsync);
+        app.MapGet("/internal/gameserver/remove-item", JsonRemoveItemAsync).RequireRateLimiting("gameserver");
+        app.MapPost("/internal/gameserver/remove-item", JsonRemoveItemAsync).RequireRateLimiting("gameserver");
+
+        app.MapGet("/v1/gameserver/give-item", JsonGiveItemAsync).RequireRateLimiting("gameserver");
+        app.MapPost("/v1/gameserver/give-item", JsonGiveItemAsync).RequireRateLimiting("gameserver");
+
+        app.MapGet("/v1/gameserver/remove-item", JsonRemoveItemAsync).RequireRateLimiting("gameserver");
+        app.MapPost("/v1/gameserver/remove-item", JsonRemoveItemAsync).RequireRateLimiting("gameserver");
     }
 
     private static void MapLegacy(
@@ -24,276 +33,173 @@ public static class GameServerInventoryEndpoints
         string path,
         Delegate handler)
     {
-        app.MapGet(path, handler);
-        app.MapPost(path, handler);
+        app.MapGet(path, handler).RequireRateLimiting("gameserver");
+        app.MapPost(path, handler).RequireRateLimiting("gameserver");
 
-        app.MapGet("/api" + path, handler);
-        app.MapPost("/api" + path, handler);
+        app.MapGet("/api" + path, handler).RequireRateLimiting("gameserver");
+        app.MapPost("/api" + path, handler).RequireRateLimiting("gameserver");
     }
 
     private static async Task<IResult> LegacyGiveItemAsync(
         HttpContext http,
-        GameServerInventoryService inventory)
+        GameServerInventoryService inventory,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = ReadULongAny(
-            data,
-            "CustomerID",
-            "CustomerId",
-            "customerId",
-            "customerid",
-            "s_id",
-            "UserID",
-            "userid");
+        if (!await CheckGameServerAsync(http, data, options, audit, "legacy_give_item"))
+            return Text("WO_3 bad key");
 
-        var itemId = ReadIntAny(
-            data,
-            0,
-            "ItemID",
-            "ItemId",
-            "itemId",
-            "itemid");
+        var customerId = ReadULongAny(data, "CustomerID", "CustomerId", "customerId", "customerid", "s_id", "UserID", "userid");
+        var itemId = ReadIntAny(data, 0, "ItemID", "ItemId", "itemId", "itemid");
+        var quantity = ReadIntAny(data, 1, "Quantity", "quantity", "Qty", "qty", "Amount", "amount");
+        var expDays = ReadIntAny(data, 2000, "ExpDays", "expDays", "Days", "days", "Duration", "duration", "LeasedDays", "leasedDays");
 
-        var quantity = ReadIntAny(
-            data,
-            1,
-            "Quantity",
-            "quantity",
-            "Qty",
-            "qty",
-            "Amount",
-            "amount");
+        var result = await inventory.GiveItemAsync(customerId, itemId, quantity, expDays);
 
-        var expDays = ReadIntAny(
-            data,
-            2000,
-            "ExpDays",
-            "expDays",
-            "Days",
-            "days",
-            "Duration",
-            "duration",
-            "LeasedDays",
-            "leasedDays");
-
-        var result = await inventory.GiveItemAsync(
-            customerId,
-            itemId,
-            quantity,
-            expDays);
+        if (!result.Ok)
+            await audit.LogAsync(http, "legacy_give_item_failed", result.Message, customerId, ReadServerId(data), data);
 
         return LegacyText(result);
     }
 
     private static async Task<IResult> LegacyGiveItemInMinutesAsync(
         HttpContext http,
-        GameServerInventoryService inventory)
+        GameServerInventoryService inventory,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = ReadULongAny(
-            data,
-            "CustomerID",
-            "CustomerId",
-            "customerId",
-            "customerid",
-            "s_id",
-            "UserID",
-            "userid");
+        if (!await CheckGameServerAsync(http, data, options, audit, "legacy_give_item_minutes"))
+            return Text("WO_3 bad key");
 
-        var itemId = ReadIntAny(
-            data,
-            0,
-            "ItemID",
-            "ItemId",
-            "itemId",
-            "itemid");
+        var customerId = ReadULongAny(data, "CustomerID", "CustomerId", "customerId", "customerid", "s_id", "UserID", "userid");
+        var itemId = ReadIntAny(data, 0, "ItemID", "ItemId", "itemId", "itemid");
+        var quantity = ReadIntAny(data, 1, "Quantity", "quantity", "Qty", "qty", "Amount", "amount");
+        var expMinutes = ReadIntAny(data, 2000 * 24 * 60, "ExpMinutes", "expMinutes", "Minutes", "minutes", "Mins", "mins", "Duration", "duration", "LeasedMinutes", "leasedMinutes");
 
-        var quantity = ReadIntAny(
-            data,
-            1,
-            "Quantity",
-            "quantity",
-            "Qty",
-            "qty",
-            "Amount",
-            "amount");
+        var result = await inventory.GiveItemInMinutesAsync(customerId, itemId, quantity, expMinutes);
 
-        var expMinutes = ReadIntAny(
-            data,
-            2000 * 24 * 60,
-            "ExpMinutes",
-            "expMinutes",
-            "Minutes",
-            "minutes",
-            "Mins",
-            "mins",
-            "Duration",
-            "duration",
-            "LeasedMinutes",
-            "leasedMinutes");
-
-        var result = await inventory.GiveItemInMinutesAsync(
-            customerId,
-            itemId,
-            quantity,
-            expMinutes);
+        if (!result.Ok)
+            await audit.LogAsync(http, "legacy_give_item_minutes_failed", result.Message, customerId, ReadServerId(data), data);
 
         return LegacyText(result);
     }
 
     private static async Task<IResult> LegacyRemoveItemAsync(
         HttpContext http,
-        GameServerInventoryService inventory)
+        GameServerInventoryService inventory,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = ReadULongAny(
-            data,
-            "CustomerID",
-            "CustomerId",
-            "customerId",
-            "customerid",
-            "s_id",
-            "UserID",
-            "userid");
+        if (!await CheckGameServerAsync(http, data, options, audit, "legacy_remove_item"))
+            return Text("WO_3 bad key");
 
-        var itemId = ReadIntAny(
-            data,
-            0,
-            "ItemID",
-            "ItemId",
-            "itemId",
-            "itemid");
+        var customerId = ReadULongAny(data, "CustomerID", "CustomerId", "customerId", "customerid", "s_id", "UserID", "userid");
+        var itemId = ReadIntAny(data, 0, "ItemID", "ItemId", "itemId", "itemid");
+        var quantity = ReadIntAny(data, 1, "Quantity", "quantity", "Qty", "qty", "Amount", "amount");
+        var removeAll = ReadBoolAny(data, false, "RemoveAll", "removeAll", "DeleteAll", "deleteAll", "All", "all");
 
-        var quantity = ReadIntAny(
-            data,
-            1,
-            "Quantity",
-            "quantity",
-            "Qty",
-            "qty",
-            "Amount",
-            "amount");
+        var result = await inventory.RemoveItemAsync(customerId, itemId, quantity, removeAll);
 
-        var removeAll = ReadBoolAny(
-            data,
-            false,
-            "RemoveAll",
-            "removeAll",
-            "DeleteAll",
-            "deleteAll",
-            "All",
-            "all");
-
-        var result = await inventory.RemoveItemAsync(
-            customerId,
-            itemId,
-            quantity,
-            removeAll);
+        if (!result.Ok)
+            await audit.LogAsync(http, "legacy_remove_item_failed", result.Message, customerId, ReadServerId(data), data);
 
         return LegacyText(result);
     }
 
     private static async Task<IResult> JsonGiveItemAsync(
         HttpContext http,
-        GameServerInventoryService inventory)
+        GameServerInventoryService inventory,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = ReadULongAny(
-            data,
-            "customerId",
-            "CustomerId",
-            "CustomerID",
-            "s_id");
+        if (!await CheckGameServerAsync(http, data, options, audit, "json_give_item"))
+        {
+            return Results.Json(new GameServerInventoryActionResponse(
+                false,
+                403,
+                "FORBIDDEN",
+                0,
+                0,
+                0,
+                0));
+        }
 
-        var itemId = ReadIntAny(
-            data,
-            0,
-            "itemId",
-            "ItemId",
-            "ItemID");
-
-        var quantity = ReadIntAny(
-            data,
-            1,
-            "quantity",
-            "Quantity",
-            "qty",
-            "Qty",
-            "amount",
-            "Amount");
-
-        var expDays = ReadIntAny(
-            data,
-            2000,
-            "expDays",
-            "ExpDays",
-            "days",
-            "Days");
-
-        var expMinutes = ReadIntAny(
-            data,
-            0,
-            "expMinutes",
-            "ExpMinutes",
-            "minutes",
-            "Minutes");
+        var customerId = ReadULongAny(data, "customerId", "CustomerId", "CustomerID", "s_id");
+        var itemId = ReadIntAny(data, 0, "itemId", "ItemId", "ItemID");
+        var quantity = ReadIntAny(data, 1, "quantity", "Quantity", "qty", "Qty", "amount", "Amount");
+        var expDays = ReadIntAny(data, 2000, "expDays", "ExpDays", "days", "Days");
+        var expMinutes = ReadIntAny(data, 0, "expMinutes", "ExpMinutes", "minutes", "Minutes");
 
         var result = expMinutes > 0
             ? await inventory.GiveItemInMinutesAsync(customerId, itemId, quantity, expMinutes)
             : await inventory.GiveItemAsync(customerId, itemId, quantity, expDays);
+
+        if (!result.Ok)
+            await audit.LogAsync(http, "json_give_item_failed", result.Message, customerId, ReadServerId(data), data);
 
         return Results.Json(result);
     }
 
     private static async Task<IResult> JsonRemoveItemAsync(
         HttpContext http,
-        GameServerInventoryService inventory)
+        GameServerInventoryService inventory,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = ReadULongAny(
-            data,
-            "customerId",
-            "CustomerId",
-            "CustomerID",
-            "s_id");
+        if (!await CheckGameServerAsync(http, data, options, audit, "json_remove_item"))
+        {
+            return Results.Json(new GameServerInventoryActionResponse(
+                false,
+                403,
+                "FORBIDDEN",
+                0,
+                0,
+                0,
+                0));
+        }
 
-        var itemId = ReadIntAny(
-            data,
-            0,
-            "itemId",
-            "ItemId",
-            "ItemID");
+        var customerId = ReadULongAny(data, "customerId", "CustomerId", "CustomerID", "s_id");
+        var itemId = ReadIntAny(data, 0, "itemId", "ItemId", "ItemID");
+        var quantity = ReadIntAny(data, 1, "quantity", "Quantity", "qty", "Qty", "amount", "Amount");
+        var removeAll = ReadBoolAny(data, false, "removeAll", "RemoveAll", "deleteAll", "DeleteAll");
 
-        var quantity = ReadIntAny(
-            data,
-            1,
-            "quantity",
-            "Quantity",
-            "qty",
-            "Qty",
-            "amount",
-            "Amount");
+        var result = await inventory.RemoveItemAsync(customerId, itemId, quantity, removeAll);
 
-        var removeAll = ReadBoolAny(
-            data,
-            false,
-            "removeAll",
-            "RemoveAll",
-            "deleteAll",
-            "DeleteAll");
-
-        var result = await inventory.RemoveItemAsync(
-            customerId,
-            itemId,
-            quantity,
-            removeAll);
+        if (!result.Ok)
+            await audit.LogAsync(http, "json_remove_item_failed", result.Message, customerId, ReadServerId(data), data);
 
         return Results.Json(result);
+    }
+
+    private static async Task<bool> CheckGameServerAsync(
+        HttpContext http,
+        Dictionary<string, string> data,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit,
+        string action)
+    {
+        if (RequestSecurity.IsGameServerAllowed(http, options.Value, data, out var reason))
+            return true;
+
+        await audit.LogAsync(
+            http,
+            action + "_denied",
+            reason,
+            ReadULongAny(data, "CustomerID", "CustomerId", "customerId", "s_id"),
+            ReadServerId(data),
+            data);
+
+        return false;
     }
 
     private static IResult LegacyText(GameServerInventoryActionResponse result)
@@ -333,26 +239,15 @@ public static class GameServerInventoryEndpoints
                 {
                     foreach (var item in body)
                     {
-                        if (item.Value.ValueKind == JsonValueKind.String)
+                        data[item.Key] = item.Value.ValueKind switch
                         {
-                            data[item.Key] = item.Value.GetString() ?? "";
-                        }
-                        else if (item.Value.ValueKind == JsonValueKind.Number)
-                        {
-                            data[item.Key] = item.Value.GetRawText();
-                        }
-                        else if (item.Value.ValueKind == JsonValueKind.True)
-                        {
-                            data[item.Key] = "1";
-                        }
-                        else if (item.Value.ValueKind == JsonValueKind.False)
-                        {
-                            data[item.Key] = "0";
-                        }
-                        else
-                        {
-                            data[item.Key] = item.Value.GetRawText();
-                        }
+                            JsonValueKind.String => item.Value.GetString() ?? "",
+                            JsonValueKind.Number => item.Value.GetRawText(),
+                            JsonValueKind.True => "1",
+                            JsonValueKind.False => "0",
+                            JsonValueKind.Null => "",
+                            _ => item.Value.GetRawText()
+                        };
                     }
                 }
             }
@@ -420,6 +315,17 @@ public static class GameServerInventoryEndpoints
         }
 
         return defaultValue;
+    }
+
+    private static string ReadServerId(Dictionary<string, string> data)
+    {
+        return RequestSecurity.ReadAny(
+            data,
+            "serverid",
+            "ServerID",
+            "ServerId",
+            "serverId",
+            "sid");
     }
 
     private static IResult Text(string value)

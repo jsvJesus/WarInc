@@ -2,6 +2,9 @@ using System.Text;
 using System.Text.Json;
 using WarInc.Api.Auth;
 using WarInc.Api.Common;
+using WarInc.Api.Config;
+using WarInc.Api.Security;
+using Microsoft.Extensions.Options;
 
 namespace WarInc.Api.MysteryBox;
 
@@ -9,26 +12,28 @@ public static class MysteryBoxEndpoints
 {
     public static void MapMysteryBoxEndpoints(this WebApplication app)
     {
-        app.MapGet("/api_MysteryBox.aspx", LegacyMysteryBoxAsync);
-        app.MapGet("/api/api_MysteryBox.aspx", LegacyMysteryBoxAsync);
+        app.MapGet("/api_MysteryBox.aspx", LegacyMysteryBoxAsync).RequireRateLimiting("roll");
+        app.MapGet("/api/api_MysteryBox.aspx", LegacyMysteryBoxAsync).RequireRateLimiting("roll");
 
-        app.MapPost("/api_MysteryBox.aspx", LegacyMysteryBoxAsync);
-        app.MapPost("/api/api_MysteryBox.aspx", LegacyMysteryBoxAsync);
+        app.MapPost("/api_MysteryBox.aspx", LegacyMysteryBoxAsync).RequireRateLimiting("roll");
+        app.MapPost("/api/api_MysteryBox.aspx", LegacyMysteryBoxAsync).RequireRateLimiting("roll");
 
         app.MapGet("/v1/mystery-box/info", JsonInfoAsync);
         app.MapPost("/v1/mystery-box/info", JsonInfoAsync);
 
-        app.MapGet("/v1/mystery-box/roll", JsonRollAsync);
-        app.MapPost("/v1/mystery-box/roll", JsonRollAsync);
+        app.MapGet("/v1/mystery-box/roll", JsonRollAsync).RequireRateLimiting("roll");
+        app.MapPost("/v1/mystery-box/roll", JsonRollAsync).RequireRateLimiting("roll");
 
-        app.MapGet("/v1/mystery-box/sell", JsonSellAsync);
-        app.MapPost("/v1/mystery-box/sell", JsonSellAsync);
+        app.MapGet("/v1/mystery-box/sell", JsonSellAsync).RequireRateLimiting("roll");
+        app.MapPost("/v1/mystery-box/sell", JsonSellAsync).RequireRateLimiting("roll");
     }
 
     private static async Task<IResult> LegacyMysteryBoxAsync(
         HttpContext http,
         AuthService auth,
-        MysteryBoxService mysteryBox)
+        MysteryBoxService mysteryBox,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
         var func = ReadAny(data, "func").Trim();
@@ -46,15 +51,40 @@ public static class MysteryBoxEndpoints
             "SessionID",
             "SessionId",
             "sessionId"));
+        
+        var token = ReadAny(
+            data,
+            "s_token",
+            "token",
+            "Token",
+            "SessionKey");
 
         if (!string.Equals(func, "fEEaTest001", StringComparison.OrdinalIgnoreCase))
         {
-            var session = await auth.CheckLegacySessionAsync(
+            var session = await auth.CheckLegacySessionWithTokenModeAsync(
                 customerId,
-                sessionId);
+                sessionId,
+                token,
+                options.Value.RequireLegacySessionToken);
 
             if (!session.Ok)
+            {
+                await audit.LogAsync(
+                    http,
+                    "legacy_mystery_box_denied",
+                    session.Message,
+                    customerId,
+                    "",
+                    new
+                    {
+                        customerId,
+                        sessionId,
+                        hasToken = !string.IsNullOrWhiteSpace(token),
+                        func
+                    });
+
                 return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+            }
         }
 
         var lootId = ReadIntAny(

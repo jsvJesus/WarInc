@@ -12,6 +12,9 @@ using WarInc.Api.Retention;
 using WarInc.Api.MysteryBox;
 using WarInc.Api.GameRewards;
 using WarInc.Api.ClientTelemetry;
+using WarInc.Api.Security;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +30,56 @@ if (string.IsNullOrWhiteSpace(warIncOptions.Database))
 
 // Database
 builder.Services.AddSingleton(new WarIncDb(warIncOptions.Database));
+builder.Services.AddScoped<SecurityAuditService>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("login", http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            RequestSecurity.RateLimitKey(http, warIncOptions),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, warIncOptions.LoginRateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("buy", http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            RequestSecurity.RateLimitKey(http, warIncOptions),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, warIncOptions.BuyRateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("roll", http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            RequestSecurity.RateLimitKey(http, warIncOptions),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, warIncOptions.RollRateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("gameserver", http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            RequestSecurity.RateLimitKey(http, warIncOptions),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, warIncOptions.GameServerRateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 // Client
 builder.Services.AddScoped<AuthService>();
@@ -71,6 +124,14 @@ app.MapGet("/health", () =>
         time = DateTimeOffset.UtcNow
     });
 });
+
+app.UseRateLimiter();
+
+using (var scope = app.Services.CreateScope())
+{
+    var audit = scope.ServiceProvider.GetRequiredService<SecurityAuditService>();
+    await audit.EnsureSchemaAsync();
+}
 
 app.MapGet("/", () =>
 {

@@ -247,6 +247,20 @@ public sealed class AuthService
 
         return rows > 0;
     }
+    
+    public async Task<CheckSessionResponse> CheckLegacySessionWithTokenModeAsync(
+        ulong customerId,
+        ulong sessionId,
+        string? tokenRaw,
+        bool requireToken)
+    {
+        var token = tokenRaw ?? "";
+
+        if (requireToken || !string.IsNullOrWhiteSpace(token))
+            return await CheckSessionAsync(customerId, sessionId, token);
+
+        return await CheckLegacySessionAsync(customerId, sessionId);
+    }
 
     public async Task<bool> LogoutAsync(
         ulong customerId,

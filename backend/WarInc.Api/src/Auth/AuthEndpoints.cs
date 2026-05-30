@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using WarInc.Api.Common;
 using WarInc.Api.Config;
+using WarInc.Api.Security;
 
 namespace WarInc.Api.Auth;
 
@@ -12,15 +13,30 @@ public static class AuthEndpoints
         app.MapPost("/v1/auth/login", async (
             HttpContext http,
             LoginRequest request,
-            AuthService auth) =>
+            AuthService auth,
+            SecurityAuditService audit) =>
         {
             var result = await auth.LoginAsync(
                 http,
                 request.Username,
                 request.Password);
 
+            if (!result.Ok)
+            {
+                await audit.LogAsync(
+                    http,
+                    "login_failed",
+                    result.Message,
+                    result.CustomerId,
+                    "",
+                    new
+                    {
+                        request.Username
+                    });
+            }
+
             return Results.Json(result);
-        });
+        }).RequireRateLimiting("login");
 
         app.MapPost("/v1/auth/check", async (
             CheckSessionRequest request,
@@ -75,8 +91,8 @@ public static class AuthEndpoints
                 result.Ok ? result.AccountStatus : 0));
         });
 
-        app.MapPost("/api_Login.aspx", LegacyLoginAsync);
-        app.MapPost("/api/api_Login.aspx", LegacyLoginAsync);
+        app.MapPost("/api_Login.aspx", LegacyLoginAsync).RequireRateLimiting("login");
+        app.MapPost("/api/api_Login.aspx", LegacyLoginAsync).RequireRateLimiting("login");
 
         app.MapPost("/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
         app.MapPost("/api/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
@@ -84,14 +100,14 @@ public static class AuthEndpoints
         app.MapPost("/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
         app.MapPost("/api/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
 
-        app.MapPost("/api_GNALogin.aspx", LegacyGnaLoginAsync);
-        app.MapPost("/api/api_GNALogin.aspx", LegacyGnaLoginAsync);
+        app.MapPost("/api_GNALogin.aspx", LegacyGnaLoginAsync).RequireRateLimiting("login");
+        app.MapPost("/api/api_GNALogin.aspx", LegacyGnaLoginAsync).RequireRateLimiting("login");
 
         app.MapPost("/api_GNAGetBalance.aspx", LegacyGnaGetBalanceAsync);
         app.MapPost("/api/api_GNAGetBalance.aspx", LegacyGnaGetBalanceAsync);
 
-        app.MapPost("/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
-        app.MapPost("/api/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
+        app.MapPost("/api_Gamersfirst.aspx", LegacyGamersFirstAsync).RequireRateLimiting("login");
+        app.MapPost("/api/api_Gamersfirst.aspx", LegacyGamersFirstAsync).RequireRateLimiting("login");
 
         app.MapPost("/dev/create-account", async (
             HttpContext http,

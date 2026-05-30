@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using WarInc.Api.Common;
 using WarInc.Api.Config;
+using WarInc.Api.Security;
 
 namespace WarInc.Api.GameServer;
 
@@ -26,11 +27,11 @@ public static class GameServerLegacyEndpoints
         string path,
         Delegate handler)
     {
-        app.MapGet(path, handler);
-        app.MapPost(path, handler);
+        app.MapGet(path, handler).RequireRateLimiting("gameserver");
+        app.MapPost(path, handler).RequireRateLimiting("gameserver");
 
-        app.MapGet("/api" + path, handler);
-        app.MapPost("/api" + path, handler);
+        app.MapGet("/api" + path, handler).RequireRateLimiting("gameserver");
+        app.MapPost("/api" + path, handler).RequireRateLimiting("gameserver");
     }
 
     private static async Task<IResult> LegacySetCreateGameKeyAsync(
@@ -40,8 +41,8 @@ public static class GameServerLegacyEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        if (!CheckServerKey(data, options))
-            return Text("WO_3 bad key");
+        if (!CheckServerKey(http, data, options, out var securityReason))
+            return Text("WO_3 " + securityReason);
 
         var createGameKey = ReadIntAny(data, 0, "CreateGameKey", "createGameKey", "gameKey", "key");
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid", "s_id");
@@ -142,9 +143,18 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyAddUserRoundResultAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
+        
+        if (!CheckServerKey(http, data, options, out var securityReason))
+        {
+            await audit.LogAsync(http, "legacy_srv_round_result_denied", securityReason, 0, ReadAny(data, "serverid", "ServerID", "ServerId", "sid"), data);
+            return Text("WO_3 " + securityReason);
+        }
+        
         var remoteIp = GetRemoteIp(http);
 
         var ok = await service.WriteRoundResultAsync(data, remoteIp);
@@ -175,9 +185,18 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyAddWeaponStatsAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
+        
+        if (!CheckServerKey(http, data, options, out var securityReason))
+        {
+            await audit.LogAsync(http, "legacy_srv_weapon_stats_denied", securityReason, 0, ReadAny(data, "serverid", "ServerID", "ServerId", "sid"), data);
+            return Text("WO_3 " + securityReason);
+        }
+        
         var ok = await service.WriteWeaponStatsAsync(data);
 
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
@@ -200,8 +219,8 @@ public static class GameServerLegacyEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        if (!CheckServerKey(data, options))
-            return Text("WO_3 bad key");
+        if (!CheckServerKey(http, data, options, out var securityReason))
+            return Text("WO_3 " + securityReason);
 
         var ok = await service.UpdateAchievementsAsync(data);
 
@@ -220,9 +239,18 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyAddLogInfoAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
+        
+        if (!CheckServerKey(http, data, options, out var securityReason))
+        {
+            await audit.LogAsync(http, "legacy_srv_log_info_denied", securityReason, 0, ReadAny(data, "serverid", "ServerID", "ServerId", "sid"), data);
+            return Text("WO_3 " + securityReason);
+        }
+        
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
@@ -239,12 +267,29 @@ public static class GameServerLegacyEndpoints
     private static async Task<IResult> LegacyUploadLogFileAsync(
         HttpContext http,
         GameServerService service,
-        IOptions<WarIncOptions> options)
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
 
-        if (!CheckServerKey(data, options))
-            return Text("WO_3 bad key");
+        if (!CheckServerKey(http, data, options, out var securityReason))
+            return Text("WO_3 " + securityReason);
+        
+        if (http.Request.ContentLength.GetValueOrDefault() > options.Value.MaxLegacyUploadBytes)
+        {
+            await audit.LogAsync(
+                http,
+                "legacy_srv_upload_too_large",
+                "UPLOAD_TOO_LARGE",
+                0,
+                ReadAny(data, "serverid", "ServerID", "ServerId", "sid"),
+                new
+                {
+                    http.Request.ContentLength
+                });
+
+            return Text("WO_3 upload too large");
+        }
 
         await SaveUploadedLegacyFilesAsync(http, data);
 
@@ -263,9 +308,17 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyAddCheatAttemptsAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options,
+        SecurityAuditService audit)
     {
         var data = await ReadRequestDataAsync(http);
+        
+        if (!CheckServerKey(http, data, options, out var securityReason))
+        {
+            await audit.LogAsync(http, "legacy_srv_cheat_attempt_denied", securityReason, 0, ReadAny(data, "serverid", "ServerID", "ServerId", "sid"), data);
+            return Text("WO_3 " + securityReason);
+        }
 
         var ok = await service.WriteCheatAttemptAsync(data);
 
@@ -433,17 +486,12 @@ public static class GameServerLegacyEndpoints
     }
 
     private static bool CheckServerKey(
+        HttpContext http,
         Dictionary<string, string> data,
-        IOptions<WarIncOptions> options)
+        IOptions<WarIncOptions> options,
+        out string reason)
     {
-        var expected = options.Value.InternalApiKey;
-
-        if (string.IsNullOrWhiteSpace(expected))
-            return true;
-
-        var actual = ReadAny(data, "skey1", "SKey1", "serverKey", "ServerKey", "key", "Key");
-
-        return actual == expected;
+        return RequestSecurity.IsGameServerAllowed(http, options.Value, data, out reason);
     }
 
     private static string ReadAny(Dictionary<string, string> data, params string[] keys)
