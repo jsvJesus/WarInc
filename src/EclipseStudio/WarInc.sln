@@ -10,6 +10,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameEngine", "..\GameEngine
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RakNet", "..\External\RakNet\RakNet.vcxproj", "{143F9B67-C223-4F2D-B8F9-B644CA710CA6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{297D3F71-68B3-4359-B50C-77DA56B4FEF3}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\backend\WarInc.Api\sql\001_auth.sql = ..\..\backend\WarInc.Api\sql\001_auth.sql
+		..\..\backend\WarInc.Api\appsettings.json = ..\..\backend\WarInc.Api\appsettings.json
+		..\..\backend\WarInc.Api\Program.cs = ..\..\backend\WarInc.Api\Program.cs
+		..\..\backend\WarInc.Api\run.txt = ..\..\backend\WarInc.Api\run.txt
+		..\..\backend\WarInc.Api\WarInc.Api.csproj = ..\..\backend\WarInc.Api\WarInc.Api.csproj
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
