@@ -4,27 +4,32 @@
 
 #include "GameCode/UserProfile.h"
 #include "WOBackendAPI.h"
+#include "WarIncBackendConfig.h"
 
 const char* gDomainBaseUrl = "/";
 int gDomainPort = 8080;
 bool gDomainUseSSL = false;
 
-static const char* gWarIncBackendHost = "26.163.92.76";
+static bool gBackendConfigLoaded = false;
+
+static void EnsureWarIncBackendConfig()
+{
+	if(gBackendConfigLoaded)
+		return;
+
+	gWarIncBackendConfig.LoadFromFile("Data/Config/backend.ini");
+
+	gDomainBaseUrl = gWarIncBackendConfig.GetBaseUrl();
+	gDomainPort = gWarIncBackendConfig.GetPort();
+	gDomainUseSSL = gWarIncBackendConfig.IsSSL();
+
+	gBackendConfigLoaded = true;
+}
 
 static const char* GetWarIncBackendHost()
 {
-	const char* host = g_api_ip->GetString();
-
-	if(host == NULL || host[0] == 0)
-		return gWarIncBackendHost;
-
-	if(stricmp(host, "127.0.0.1") == 0)
-		return gWarIncBackendHost;
-
-	if(stricmp(host, "localhost") == 0)
-		return gWarIncBackendHost;
-
-	return host;
+	EnsureWarIncBackendConfig();
+	return gWarIncBackendConfig.GetHost();
 }
 
 CWOBackendReq::CWOBackendReq(const char* url)
@@ -41,6 +46,7 @@ CWOBackendReq::CWOBackendReq(const CUserProfile* prof, const char* url)
 void CWOBackendReq::Init(const char* url)
 {
 	resp_ = NULL;
+	EnsureWarIncBackendConfig();
 
 	savedUrl_ = url;
 	resultCode_ = 0;

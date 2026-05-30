@@ -507,6 +507,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Sources\Backend\HttpDownload.cpp" />
+    <ClCompile Include="Sources\Backend\WarIncAuthClient.cpp" />
+    <ClCompile Include="Sources\Backend\WarIncBackendConfig.cpp" />
+    <ClCompile Include="Sources\Backend\WarIncHttpClient.cpp" />
+    <ClCompile Include="Sources\Backend\WarIncJson.cpp" />
     <ClCompile Include="Sources\Backend\WOBackendAPI.cpp" />
     <ClCompile Include="Sources\DamageLib.cpp" />
     <ClCompile Include="Sources\DrvVer.cpp" />
@@ -717,6 +721,10 @@
   <ItemGroup>
     <ClInclude Include="..\..\bin\Data\Shaders\DX9_P1\SYSTEM\LibSM\shadow_config.h" />
     <ClInclude Include="Sources\Backend\HttpDownload.h" />
+    <ClInclude Include="Sources\Backend\WarIncAuthClient.h" />
+    <ClInclude Include="Sources\Backend\WarIncBackendConfig.h" />
+    <ClInclude Include="Sources\Backend\WarIncHttpClient.h" />
+    <ClInclude Include="Sources\Backend\WarIncJson.h" />
     <ClInclude Include="Sources\Backend\WOBackendAPI.h" />
     <ClInclude Include="Sources\DamageLib.h" />
     <ClInclude Include="Sources\DEBUG.HPP" />

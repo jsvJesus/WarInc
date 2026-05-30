@@ -343,6 +343,7 @@ class CUserProfile
 	DWORD		CustomerID;
 	DWORD		SessionID;
 	int		AccountStatus;
+	char		AuthToken[512];
 	char		ScreenName[64];
 	wchar_t		ScreenNameW[64];
 

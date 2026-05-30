@@ -203,18 +203,38 @@ public:
 	std::vector<std::pair<std::string, std::string> > headers_;
 	std::vector<FilePart> files_;
 	std::string lastError_;
+	std::string rawBody_;
+	bool hasRawBody_;
 
 	CkHttpRequest()
 	{
 		post_ = false;
 		upload_ = false;
 		utf8_ = false;
+		hasRawBody_ = false;
 	}
 
 	void UsePost()
 	{
 		post_ = true;
 		upload_ = false;
+	}
+
+	void UseGet()
+	{
+		post_ = false;
+		upload_ = false;
+		hasRawBody_ = false;
+		rawBody_.clear();
+	}
+
+	bool LoadBodyFromString(const char* body, const char*)
+	{
+		rawBody_ = body ? body : "";
+		hasRawBody_ = true;
+		post_ = true;
+		upload_ = false;
+		return true;
 	}
 
 	void UseUpload()
@@ -344,6 +364,7 @@ private:
 	CkHttpProgress* progress_;
 	std::string lastError_;
 	std::string domainScratch_;
+	std::string userAgent_;
 
 	static void EnsureCurl()
 	{
@@ -447,6 +468,7 @@ public:
 		readTimeout_ = 60;
 		followRedirects_ = true;
 		progress_ = NULL;
+		userAgent_ = "WarIncClient/1.0";
 	}
 
 	bool UnlockComponent(const char*)
@@ -486,6 +508,11 @@ public:
 	void put_FollowRedirects(bool v)
 	{
 		followRedirects_ = v;
+	}
+
+	void put_UserAgent(const char* ua)
+	{
+		userAgent_ = ua ? ua : "";
 	}
 
 	const char* lastErrorText() const
@@ -552,6 +579,9 @@ public:
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, followRedirects_ ? 1L : 0L);
 		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
+		if(!userAgent_.empty())
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent_.c_str());
+
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
@@ -599,10 +629,19 @@ public:
 		}
 		else if(req.post_)
 		{
-			postFields = BuildPostFields(curl, req);
-			curl_easy_setopt(curl, CURLOPT_POST, 1L);
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)postFields.size());
+			if(req.hasRawBody_)
+			{
+				curl_easy_setopt(curl, CURLOPT_POST, 1L);
+				curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.rawBody_.c_str());
+				curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)req.rawBody_.size());
+			}
+			else
+			{
+				postFields = BuildPostFields(curl, req);
+				curl_easy_setopt(curl, CURLOPT_POST, 1L);
+				curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
+				curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)postFields.size());
+			}
 		}
 
 		if(progress_)

@@ -6,6 +6,7 @@
 #include "m_Login.h"
 #include "GameCode\UserProfile.h"
 #include "Backend\WOBackendAPI.h"
+#include "Backend\WarIncAuthClient.h"
 #include "r3dDebug.h"
 
 static int LoginMenuExitFlag = 0;
@@ -22,7 +23,41 @@ unsigned int WINAPI CLoginMenu::LoginProcessThread(void* in_data)
 	
 	r3d_assert(This->loginAnswerCode == ANS_Unactive);
 	This->loginAnswerCode = ANS_Processing;
+
 	gUserProfile.CustomerID = 0;
+	gUserProfile.SessionID = 0;
+	gUserProfile.AccountStatus = 0;
+	gUserProfile.AuthToken[0] = 0;
+
+	{
+		CWarIncAuthClient authClient;
+		CWarIncAuthLoginResult loginResult;
+
+		if(authClient.Login(This->username, This->password, loginResult))
+		{
+			gUserProfile.CustomerID = loginResult.CustomerID;
+			gUserProfile.SessionID = loginResult.SessionID;
+			gUserProfile.AccountStatus = loginResult.AccountStatus;
+			r3dscpy(gUserProfile.AuthToken, loginResult.Token);
+
+			r3dOutToLog("Login JSON OK: customerId=%d sessionId=%d accountStatus=%d token=%s\n",
+				gUserProfile.CustomerID,
+				gUserProfile.SessionID,
+				gUserProfile.AccountStatus,
+				gUserProfile.AuthToken[0] ? "yes" : "no");
+
+			if(gUserProfile.CustomerID == 0)
+				This->loginAnswerCode = ANS_BadPassword;
+			else if(gUserProfile.AccountStatus >= 200)
+				This->loginAnswerCode = ANS_Frozen;
+			else
+				This->loginAnswerCode = ANS_Logged;
+
+			return 0;
+		}
+
+		r3dOutToLog("Login JSON failed, trying legacy api_Login.aspx fallback\n");
+	}
 
 	CWOBackendReq req("api_Login.aspx");
 	req.AddParam("username", This->username);
@@ -30,7 +65,7 @@ unsigned int WINAPI CLoginMenu::LoginProcessThread(void* in_data)
 
 	if(!req.Issue())
 	{
-		r3dOutToLog("Login FAILED, code: %d\n", req.resultCode_);
+		r3dOutToLog("Login legacy FAILED, code: %d\n", req.resultCode_);
 		This->loginAnswerCode = req.resultCode_ == 8 ? ANS_Timeout : ANS_Error;
 		return 0;
 	}
@@ -39,13 +74,15 @@ unsigned int WINAPI CLoginMenu::LoginProcessThread(void* in_data)
 		&gUserProfile.CustomerID, 
 		&gUserProfile.SessionID,
 		&gUserProfile.AccountStatus);
+
 	if(n != 3)
 	{
-		r3dOutToLog("Login: bad answer\n");
+		r3dOutToLog("Login legacy: bad answer\n");
 		This->loginAnswerCode = ANS_Error;
 		return 0;
 	}
-	//r3dOutToLog("CustomerID: %d\n",gUserProfile.CustomerID);
+
+	gUserProfile.AuthToken[0] = 0;
 
 	if(gUserProfile.CustomerID == 0)
 		This->loginAnswerCode = ANS_BadPassword;
@@ -64,8 +101,22 @@ unsigned int WINAPI CLoginMenu::LoginAuthThread(void* in_data)
 	
 	r3d_assert(This->loginAnswerCode == ANS_Unactive);
 	This->loginAnswerCode = ANS_Processing;
+
 	r3d_assert(gUserProfile.CustomerID);
 	r3d_assert(gUserProfile.SessionID);
+
+	if(gUserProfile.AuthToken[0])
+	{
+		CWarIncAuthClient authClient;
+
+		if(authClient.Check(gUserProfile.CustomerID, gUserProfile.SessionID, gUserProfile.AuthToken))
+		{
+			This->loginAnswerCode = ANS_Logged;
+			return true;
+		}
+
+		r3dOutToLog("LoginAuth JSON failed, trying legacy api_CheckLoginSession.aspx fallback\n");
+	}
 
 	CWOBackendReq req(&gUserProfile, "api_CheckLoginSession.aspx");
 	if(req.Issue() == true)
@@ -77,8 +128,9 @@ unsigned int WINAPI CLoginMenu::LoginAuthThread(void* in_data)
 	gUserProfile.CustomerID    = 0;
 	gUserProfile.SessionID     = 0;
 	gUserProfile.AccountStatus = 0;
+	gUserProfile.AuthToken[0]  = 0;
 
-	r3dOutToLog("LoginAuth: %d\n", req.resultCode_);
+	r3dOutToLog("LoginAuth legacy failed: %d\n", req.resultCode_);
 	This->loginAnswerCode = ANS_BadPassword;
 	return 0;
 }
@@ -320,6 +372,7 @@ bool CLoginMenu::DecodeAuthParams()
 	gUserProfile.CustomerID    = CustomerID;
 	gUserProfile.SessionID     = SessionID;
 	gUserProfile.AccountStatus = AccountStatus;
+	gUserProfile.AuthToken[0] = 0;
 	return true;
 }
 
