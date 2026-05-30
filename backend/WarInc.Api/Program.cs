@@ -249,65 +249,249 @@ app.MapGet("/v1/shop/items", async () =>
 {
     await using var db = new MySqlConnection(dbConnectionString);
 
-    var items = await db.QueryAsync<ShopItemRow>(
+    var gear = await db.QueryAsync<ShopItemRow>(
         """
         SELECT
-            i.item_id AS ItemId,
-            i.item_type AS ItemType,
-            i.category AS Category,
-            i.is_enabled AS IsEnabled,
+            ItemID AS ItemId,
+            1 AS ItemType,
+            Category AS Category,
+            1 AS IsEnabled,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            LevelRequired AS LevelRequired,
+            Weight AS Weight,
+            DamagePerc AS DamagePerc,
+            DamageMax AS DamageMax,
+            0 AS Damage,
+            0 AS DamageDecay,
+            0 AS NumClips,
+            0 AS ClipSize,
+            60 AS RateOfFire,
+            0 AS Spread,
+            0 AS Recoil,
+            0 AS AddGP,
+            0 AS AddSP,
+            0 AS Item1Id,
+            0 AS Item1Exp,
+            0 AS Item2Id,
+            0 AS Item2Exp,
+            0 AS Item3Id,
+            0 AS Item3Exp,
+            0 AS Item4Id,
+            0 AS Item4Exp,
+            0 AS Item5Id,
+            0 AS Item5Exp,
+            0 AS Item6Id,
+            0 AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_gear
+        ORDER BY ItemID;
+        """);
 
-            i.name AS Name,
-            i.fname AS FName,
-            i.description AS Description,
+    var weapons = await db.QueryAsync<ShopItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            2 AS ItemType,
+            Category AS Category,
+            1 AS IsEnabled,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            LevelRequired AS LevelRequired,
+            0 AS Weight,
+            0 AS DamagePerc,
+            0 AS DamageMax,
+            Damage AS Damage,
+            DamageDecay AS DamageDecay,
+            NumClips AS NumClips,
+            Clipsize AS ClipSize,
+            RateOfFire AS RateOfFire,
+            Spread AS Spread,
+            Recoil AS Recoil,
+            0 AS AddGP,
+            0 AS AddSP,
+            0 AS Item1Id,
+            0 AS Item1Exp,
+            0 AS Item2Id,
+            0 AS Item2Exp,
+            0 AS Item3Id,
+            0 AS Item3Exp,
+            0 AS Item4Id,
+            0 AS Item4Exp,
+            0 AS Item5Id,
+            0 AS Item5Exp,
+            0 AS Item6Id,
+            0 AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_weapons
+        ORDER BY ItemID;
+        """);
 
-            i.level_required AS LevelRequired,
+    var generics = await db.QueryAsync<ShopItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            3 AS ItemType,
+            Category AS Category,
+            1 AS IsEnabled,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            LevelRequired AS LevelRequired,
+            0 AS Weight,
+            0 AS DamagePerc,
+            0 AS DamageMax,
+            0 AS Damage,
+            0 AS DamageDecay,
+            0 AS NumClips,
+            0 AS ClipSize,
+            60 AS RateOfFire,
+            0 AS Spread,
+            0 AS Recoil,
+            0 AS AddGP,
+            0 AS AddSP,
+            0 AS Item1Id,
+            0 AS Item1Exp,
+            0 AS Item2Id,
+            0 AS Item2Exp,
+            0 AS Item3Id,
+            0 AS Item3Exp,
+            0 AS Item4Id,
+            0 AS Item4Exp,
+            0 AS Item5Id,
+            0 AS Item5Exp,
+            0 AS Item6Id,
+            0 AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_generic
+        ORDER BY ItemID;
+        """);
 
-            i.weight AS Weight,
-            i.damage_perc AS DamagePerc,
-            i.damage_max AS DamageMax,
+    var attachments = await db.QueryAsync<ShopItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            5 AS ItemType,
+            Category AS Category,
+            1 AS IsEnabled,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            LevelRequired AS LevelRequired,
+            0 AS Weight,
+            0 AS DamagePerc,
+            0 AS DamageMax,
+            Damage AS Damage,
+            0 AS DamageDecay,
+            0 AS NumClips,
+            Clipsize AS ClipSize,
+            Firerate AS RateOfFire,
+            Spread AS Spread,
+            Recoil AS Recoil,
+            0 AS AddGP,
+            0 AS AddSP,
+            0 AS Item1Id,
+            0 AS Item1Exp,
+            0 AS Item2Id,
+            0 AS Item2Exp,
+            0 AS Item3Id,
+            0 AS Item3Exp,
+            0 AS Item4Id,
+            0 AS Item4Exp,
+            0 AS Item5Id,
+            0 AS Item5Exp,
+            0 AS Item6Id,
+            0 AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_attachments
+        ORDER BY ItemID;
+        """);
 
-            i.damage AS Damage,
-            i.damage_decay AS DamageDecay,
-            i.num_clips AS NumClips,
-            i.clip_size AS ClipSize,
-            i.rate_of_fire AS RateOfFire,
-            i.spread AS Spread,
-            i.recoil AS Recoil,
-
-            i.add_gp AS AddGP,
-            i.add_sp AS AddSP,
-
-            i.item1_id AS Item1Id,
-            i.item1_exp AS Item1Exp,
-            i.item2_id AS Item2Id,
-            i.item2_exp AS Item2Exp,
-            i.item3_id AS Item3Id,
-            i.item3_exp AS Item3Exp,
-            i.item4_id AS Item4Id,
-            i.item4_exp AS Item4Exp,
-            i.item5_id AS Item5Id,
-            i.item5_exp AS Item5Exp,
-            i.item6_id AS Item6Id,
-            i.item6_exp AS Item6Exp,
-
-            p.price1 AS Price1,
-            p.price7 AS Price7,
-            p.price30 AS Price30,
-            p.price_perm AS PricePerm,
-            p.gprice1 AS GPrice1,
-            p.gprice7 AS GPrice7,
-            p.gprice30 AS GPrice30,
-            p.gprice_perm AS GPricePerm
-        FROM game_items i
-        LEFT JOIN shop_prices p ON p.item_id = i.item_id
-        ORDER BY i.category, i.item_id;
+    var packages = await db.QueryAsync<ShopItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            4 AS ItemType,
+            Category AS Category,
+            IsEnabled AS IsEnabled,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            LevelRequired AS LevelRequired,
+            0 AS Weight,
+            0 AS DamagePerc,
+            0 AS DamageMax,
+            0 AS Damage,
+            0 AS DamageDecay,
+            0 AS NumClips,
+            0 AS ClipSize,
+            60 AS RateOfFire,
+            0 AS Spread,
+            0 AS Recoil,
+            AddGP AS AddGP,
+            AddSP AS AddSP,
+            Item1_ID AS Item1Id,
+            Item1_Exp AS Item1Exp,
+            Item2_ID AS Item2Id,
+            Item2_Exp AS Item2Exp,
+            Item3_ID AS Item3Id,
+            Item3_Exp AS Item3Exp,
+            Item4_ID AS Item4Id,
+            Item4_Exp AS Item4Exp,
+            Item5_ID AS Item5Id,
+            Item5_Exp AS Item5Exp,
+            Item6_ID AS Item6Id,
+            Item6_Exp AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_packages
+        ORDER BY ItemID;
         """);
 
     return Results.Json(new
     {
         ok = true,
-        items
+        gear,
+        weapons,
+        generics,
+        attachments,
+        packages
     });
 });
 
@@ -324,131 +508,95 @@ async Task<IResult> LegacyGetShop5Async()
     var skills = (await db.QueryAsync<SkillPriceRow>(
         """
         SELECT
-            skill_id AS SkillId,
-            lv1 AS Lv1,
-            lv2 AS Lv2,
-            lv3 AS Lv3,
-            lv4 AS Lv4,
-            lv5 AS Lv5
-        FROM shop_skill_prices
-        WHERE is_enabled = 1
-        ORDER BY skill_id;
+            SkillID AS SkillId,
+            IFNULL(Lv1, 0) AS Lv1,
+            IFNULL(Lv2, 0) AS Lv2,
+            IFNULL(Lv3, 0) AS Lv3,
+            IFNULL(Lv4, 0) AS Lv4,
+            IFNULL(Lv5, 0) AS Lv5
+        FROM dataskill2price
+        ORDER BY SkillID;
         """)).ToList();
 
-    var items = (await db.QueryAsync<ShopItemRow>(
+    var commonItems = (await db.QueryAsync<LegacyShopPriceRow>(
         """
         SELECT
-            i.item_id AS ItemId,
-            i.item_type AS ItemType,
-            i.category AS Category,
-            i.is_enabled AS IsEnabled,
+            ItemID AS ItemId,
+            Category AS Category,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_gear
 
-            i.name AS Name,
-            i.fname AS FName,
-            i.description AS Description,
+        UNION ALL
 
-            i.level_required AS LevelRequired,
+        SELECT
+            ItemID AS ItemId,
+            Category AS Category,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_weapons
 
-            i.weight AS Weight,
-            i.damage_perc AS DamagePerc,
-            i.damage_max AS DamageMax,
+        UNION ALL
 
-            i.damage AS Damage,
-            i.damage_decay AS DamageDecay,
-            i.num_clips AS NumClips,
-            i.clip_size AS ClipSize,
-            i.rate_of_fire AS RateOfFire,
-            i.spread AS Spread,
-            i.recoil AS Recoil,
+        SELECT
+            ItemID AS ItemId,
+            Category AS Category,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_generic
 
-            i.add_gp AS AddGP,
-            i.add_sp AS AddSP,
+        UNION ALL
 
-            i.item1_id AS Item1Id,
-            i.item1_exp AS Item1Exp,
-            i.item2_id AS Item2Id,
-            i.item2_exp AS Item2Exp,
-            i.item3_id AS Item3Id,
-            i.item3_exp AS Item3Exp,
-            i.item4_id AS Item4Id,
-            i.item4_exp AS Item4Exp,
-            i.item5_id AS Item5Id,
-            i.item5_exp AS Item5Exp,
-            i.item6_id AS Item6Id,
-            i.item6_exp AS Item6Exp,
+        SELECT
+            ItemID AS ItemId,
+            Category AS Category,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_attachments
 
-            p.price1 AS Price1,
-            p.price7 AS Price7,
-            p.price30 AS Price30,
-            p.price_perm AS PricePerm,
-            p.gprice1 AS GPrice1,
-            p.gprice7 AS GPrice7,
-            p.gprice30 AS GPrice30,
-            p.gprice_perm AS GPricePerm
-        FROM game_items i
-        INNER JOIN shop_prices p ON p.item_id = i.item_id
-        WHERE i.is_enabled = 1
-          AND p.is_enabled = 1
-          AND i.item_type <> 4
-        ORDER BY i.category, i.item_id;
+        ORDER BY ItemId;
         """)).ToList();
 
-    var packages = (await db.QueryAsync<ShopItemRow>(
+    var packages = (await db.QueryAsync<LegacyShopPriceRow>(
         """
         SELECT
-            i.item_id AS ItemId,
-            i.item_type AS ItemType,
-            i.category AS Category,
-            i.is_enabled AS IsEnabled,
-
-            i.name AS Name,
-            i.fname AS FName,
-            i.description AS Description,
-
-            i.level_required AS LevelRequired,
-
-            i.weight AS Weight,
-            i.damage_perc AS DamagePerc,
-            i.damage_max AS DamageMax,
-
-            i.damage AS Damage,
-            i.damage_decay AS DamageDecay,
-            i.num_clips AS NumClips,
-            i.clip_size AS ClipSize,
-            i.rate_of_fire AS RateOfFire,
-            i.spread AS Spread,
-            i.recoil AS Recoil,
-
-            i.add_gp AS AddGP,
-            i.add_sp AS AddSP,
-
-            i.item1_id AS Item1Id,
-            i.item1_exp AS Item1Exp,
-            i.item2_id AS Item2Id,
-            i.item2_exp AS Item2Exp,
-            i.item3_id AS Item3Id,
-            i.item3_exp AS Item3Exp,
-            i.item4_id AS Item4Id,
-            i.item4_exp AS Item4Exp,
-            i.item5_id AS Item5Id,
-            i.item5_exp AS Item5Exp,
-            i.item6_id AS Item6Id,
-            i.item6_exp AS Item6Exp,
-
-            p.price1 AS Price1,
-            p.price7 AS Price7,
-            p.price30 AS Price30,
-            p.price_perm AS PricePerm,
-            p.gprice1 AS GPrice1,
-            p.gprice7 AS GPrice7,
-            p.gprice30 AS GPrice30,
-            p.gprice_perm AS GPricePerm
-        FROM game_items i
-        INNER JOIN shop_prices p ON p.item_id = i.item_id
-        WHERE i.is_enabled = 1
-          AND p.is_enabled = 1
-          AND i.item_type = 4
-        ORDER BY i.category, i.item_id;
+            ItemID AS ItemId,
+            Category AS Category,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_packages
+        WHERE IsEnabled <> 0
+        ORDER BY ItemID;
         """)).ToList();
 
     var shopData = new MemoryStream();
@@ -459,18 +607,18 @@ async Task<IResult> LegacyGetShop5Async()
     foreach (var skill in skills)
     {
         WriteUInt16LE(shopData, skill.SkillId);
-        shopData.WriteByte(skill.Lv1);
-        shopData.WriteByte(skill.Lv2);
-        shopData.WriteByte(skill.Lv3);
-        shopData.WriteByte(skill.Lv4);
-        shopData.WriteByte(skill.Lv5);
+        shopData.WriteByte((byte)ClampByte(skill.Lv1));
+        shopData.WriteByte((byte)ClampByte(skill.Lv2));
+        shopData.WriteByte((byte)ClampByte(skill.Lv3));
+        shopData.WriteByte((byte)ClampByte(skill.Lv4));
+        shopData.WriteByte((byte)ClampByte(skill.Lv5));
     }
 
     WriteUInt16LE(shopData, 0xFFFF);
 
     shopData.Write(header, 0, header.Length);
 
-    foreach (var item in items)
+    foreach (var item in commonItems)
         WriteLegacyShopItem(shopData, item);
 
     foreach (var item in packages)
@@ -493,60 +641,102 @@ async Task<IResult> LegacyGetItemsInfoAsync()
 {
     await using var db = new MySqlConnection(dbConnectionString);
 
-    var rows = (await db.QueryAsync<ShopItemRow>(
+    var gears = (await db.QueryAsync<GearItemRow>(
         """
         SELECT
-            i.item_id AS ItemId,
-            i.item_type AS ItemType,
-            i.category AS Category,
-            i.is_enabled AS IsEnabled,
+            ItemID AS ItemId,
+            LevelRequired AS LevelRequired,
+            Weight AS Weight,
+            DamagePerc AS DamagePerc,
+            DamageMax AS DamageMax,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_gear
+        ORDER BY ItemID;
+        """)).ToList();
 
-            i.name AS Name,
-            i.fname AS FName,
-            i.description AS Description,
+    var weapons = (await db.QueryAsync<WeaponItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            LevelRequired AS LevelRequired,
+            Damage AS Damage,
+            DamageDecay AS DamageDecay,
+            NumClips AS NumClips,
+            Clipsize AS ClipSize,
+            RateOfFire AS RateOfFire,
+            Spread AS Spread,
+            Recoil AS Recoil,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_weapons
+        ORDER BY ItemID;
+        """)).ToList();
 
-            i.level_required AS LevelRequired,
+    var generics = (await db.QueryAsync<GenericItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            Category AS Category,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_generic
+        ORDER BY ItemID;
+        """)).ToList();
 
-            i.weight AS Weight,
-            i.damage_perc AS DamagePerc,
-            i.damage_max AS DamageMax,
-
-            i.damage AS Damage,
-            i.damage_decay AS DamageDecay,
-            i.num_clips AS NumClips,
-            i.clip_size AS ClipSize,
-            i.rate_of_fire AS RateOfFire,
-            i.spread AS Spread,
-            i.recoil AS Recoil,
-
-            i.add_gp AS AddGP,
-            i.add_sp AS AddSP,
-
-            i.item1_id AS Item1Id,
-            i.item1_exp AS Item1Exp,
-            i.item2_id AS Item2Id,
-            i.item2_exp AS Item2Exp,
-            i.item3_id AS Item3Id,
-            i.item3_exp AS Item3Exp,
-            i.item4_id AS Item4Id,
-            i.item4_exp AS Item4Exp,
-            i.item5_id AS Item5Id,
-            i.item5_exp AS Item5Exp,
-            i.item6_id AS Item6Id,
-            i.item6_exp AS Item6Exp,
-
-            p.price1 AS Price1,
-            p.price7 AS Price7,
-            p.price30 AS Price30,
-            p.price_perm AS PricePerm,
-            p.gprice1 AS GPrice1,
-            p.gprice7 AS GPrice7,
-            p.gprice30 AS GPrice30,
-            p.gprice_perm AS GPricePerm
-        FROM game_items i
-        LEFT JOIN shop_prices p ON p.item_id = i.item_id
-        WHERE i.is_enabled = 1
-        ORDER BY i.category, i.item_id;
+    var packages = (await db.QueryAsync<PackageItemRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            Name AS Name,
+            FNAME AS FName,
+            Description AS Description,
+            AddGP AS AddGP,
+            AddSP AS AddSP,
+            Item1_ID AS Item1Id,
+            Item1_Exp AS Item1Exp,
+            Item2_ID AS Item2Id,
+            Item2_Exp AS Item2Exp,
+            Item3_ID AS Item3Id,
+            Item3_Exp AS Item3Exp,
+            Item4_ID AS Item4Id,
+            Item4_Exp AS Item4Exp,
+            Item5_ID AS Item5Id,
+            Item5_Exp AS Item5Exp,
+            Item6_ID AS Item6Id,
+            Item6_Exp AS Item6Exp,
+            Price1 AS Price1,
+            Price7 AS Price7,
+            Price30 AS Price30,
+            PriceP AS PricePerm,
+            GPrice1 AS GPrice1,
+            GPrice7 AS GPrice7,
+            GPrice30 AS GPrice30,
+            GPriceP AS GPricePerm
+        FROM items_packages
+        WHERE IsEnabled <> 0
+        ORDER BY ItemID;
         """)).ToList();
 
     var xml = new StringBuilder();
@@ -555,11 +745,8 @@ async Task<IResult> LegacyGetItemsInfoAsync()
     xml.Append("<items>");
 
     xml.Append("<gears>");
-    foreach (var item in rows)
+    foreach (var item in gears)
     {
-        if (item.ItemType != 1)
-            continue;
-
         if (!HasAnyPrice(item))
             continue;
 
@@ -574,11 +761,8 @@ async Task<IResult> LegacyGetItemsInfoAsync()
     xml.Append("</gears>");
 
     xml.Append("<weapons>");
-    foreach (var item in rows)
+    foreach (var item in weapons)
     {
-        if (item.ItemType != 2)
-            continue;
-
         if (!HasAnyPrice(item))
             continue;
 
@@ -597,15 +781,12 @@ async Task<IResult> LegacyGetItemsInfoAsync()
     xml.Append("</weapons>");
 
     xml.Append("<generics>");
-    foreach (var item in rows)
+    foreach (var item in generics)
     {
-        if (item.ItemType != 3)
-            continue;
-
         if (!HasAnyPrice(item))
             continue;
 
-        if (item.Category != 3 && item.Category != 7)
+        if (item.Category != 7 && item.Category != 3)
             continue;
 
         xml.Append("<b ");
@@ -618,11 +799,8 @@ async Task<IResult> LegacyGetItemsInfoAsync()
     xml.Append("</generics>");
 
     xml.Append("<packages>");
-    foreach (var item in rows)
+    foreach (var item in packages)
     {
-        if (item.ItemType != 4)
-            continue;
-
         if (!HasAnyPrice(item))
             continue;
 
@@ -940,14 +1118,14 @@ static ulong ParseULong(string value)
     return 0;
 }
 
-static void WriteLegacyShopItem(MemoryStream stream, ShopItemRow item)
+static void WriteLegacyShopItem(MemoryStream stream, ILegacyShopPrice item)
 {
     var priceBits = GetPriceBits(item);
 
     if (priceBits == 0)
         return;
 
-    WriteInt32LE(stream, (int)item.ItemId);
+    WriteInt32LE(stream, item.ItemId);
     stream.WriteByte((byte)priceBits);
     stream.WriteByte((byte)item.Category);
 
@@ -976,7 +1154,7 @@ static void WriteLegacyShopItem(MemoryStream stream, ShopItemRow item)
         WriteInt32LE(stream, item.GPricePerm);
 }
 
-static int GetPriceBits(ShopItemRow item)
+static int GetPriceBits(IHasPrices item)
 {
     var bits = 0;
 
@@ -1007,9 +1185,20 @@ static int GetPriceBits(ShopItemRow item)
     return bits;
 }
 
-static bool HasAnyPrice(ShopItemRow item)
+static bool HasAnyPrice(IHasPrices item)
 {
     return GetPriceBits(item) != 0;
+}
+
+static int ClampByte(int value)
+{
+    if (value < 0)
+        return 0;
+
+    if (value > 255)
+        return 255;
+
+    return value;
 }
 
 static void WriteInt32LE(MemoryStream stream, int value)
@@ -1029,6 +1218,7 @@ static void WriteUInt16LE(MemoryStream stream, int value)
 static void AppendXmlAttr(StringBuilder xml, string name, object? value)
 {
     var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
+
     xml.Append(name);
     xml.Append("=\"");
     xml.Append(WebUtility.HtmlEncode(text));
@@ -1079,22 +1269,164 @@ class AccountRow
     public bool IsDeveloper { get; set; }
 }
 
+class SessionRow
+{
+    public ulong SessionId { get; set; }
+    public ulong CustomerId { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? RevokedAt { get; set; }
+    public int AccountStatus { get; set; }
+}
+
+interface IHasPrices
+{
+    int Price1 { get; }
+    int Price7 { get; }
+    int Price30 { get; }
+    int PricePerm { get; }
+
+    int GPrice1 { get; }
+    int GPrice7 { get; }
+    int GPrice30 { get; }
+    int GPricePerm { get; }
+}
+
 class SkillPriceRow
 {
     public int SkillId { get; set; }
-    public byte Lv1 { get; set; }
-    public byte Lv2 { get; set; }
-    public byte Lv3 { get; set; }
-    public byte Lv4 { get; set; }
-    public byte Lv5 { get; set; }
+    public int Lv1 { get; set; }
+    public int Lv2 { get; set; }
+    public int Lv3 { get; set; }
+    public int Lv4 { get; set; }
+    public int Lv5 { get; set; }
 }
 
-class ShopItemRow
+interface ILegacyShopPrice : IHasPrices
 {
-    public uint ItemId { get; set; }
+    int ItemId { get; }
+    int Category { get; }
+}
+
+class LegacyShopPriceRow : ILegacyShopPrice
+{
+    public int ItemId { get; set; }
+    public int Category { get; set; }
+
+    public int Price1 { get; set; }
+    public int Price7 { get; set; }
+    public int Price30 { get; set; }
+    public int PricePerm { get; set; }
+
+    public int GPrice1 { get; set; }
+    public int GPrice7 { get; set; }
+    public int GPrice30 { get; set; }
+    public int GPricePerm { get; set; }
+}
+
+class GearItemRow : IHasPrices
+{
+    public int ItemId { get; set; }
+    public int LevelRequired { get; set; }
+    public decimal Weight { get; set; }
+    public decimal DamagePerc { get; set; }
+    public decimal DamageMax { get; set; }
+
+    public int Price1 { get; set; }
+    public int Price7 { get; set; }
+    public int Price30 { get; set; }
+    public int PricePerm { get; set; }
+
+    public int GPrice1 { get; set; }
+    public int GPrice7 { get; set; }
+    public int GPrice30 { get; set; }
+    public int GPricePerm { get; set; }
+}
+
+class WeaponItemRow : IHasPrices
+{
+    public int ItemId { get; set; }
+    public int LevelRequired { get; set; }
+
+    public decimal Damage { get; set; }
+    public decimal DamageDecay { get; set; }
+    public int NumClips { get; set; }
+    public int ClipSize { get; set; }
+    public decimal RateOfFire { get; set; }
+    public decimal Spread { get; set; }
+    public decimal Recoil { get; set; }
+
+    public int Price1 { get; set; }
+    public int Price7 { get; set; }
+    public int Price30 { get; set; }
+    public int PricePerm { get; set; }
+
+    public int GPrice1 { get; set; }
+    public int GPrice7 { get; set; }
+    public int GPrice30 { get; set; }
+    public int GPricePerm { get; set; }
+}
+
+class GenericItemRow : IHasPrices
+{
+    public int ItemId { get; set; }
+    public int Category { get; set; }
+
+    public string Name { get; set; } = "";
+    public string FName { get; set; } = "";
+    public string Description { get; set; } = "";
+
+    public int Price1 { get; set; }
+    public int Price7 { get; set; }
+    public int Price30 { get; set; }
+    public int PricePerm { get; set; }
+
+    public int GPrice1 { get; set; }
+    public int GPrice7 { get; set; }
+    public int GPrice30 { get; set; }
+    public int GPricePerm { get; set; }
+}
+
+class PackageItemRow : IHasPrices
+{
+    public int ItemId { get; set; }
+
+    public string Name { get; set; } = "";
+    public string FName { get; set; } = "";
+    public string Description { get; set; } = "";
+
+    public int AddGP { get; set; }
+    public int AddSP { get; set; }
+
+    public int Item1Id { get; set; }
+    public int Item1Exp { get; set; }
+    public int Item2Id { get; set; }
+    public int Item2Exp { get; set; }
+    public int Item3Id { get; set; }
+    public int Item3Exp { get; set; }
+    public int Item4Id { get; set; }
+    public int Item4Exp { get; set; }
+    public int Item5Id { get; set; }
+    public int Item5Exp { get; set; }
+    public int Item6Id { get; set; }
+    public int Item6Exp { get; set; }
+
+    public int Price1 { get; set; }
+    public int Price7 { get; set; }
+    public int Price30 { get; set; }
+    public int PricePerm { get; set; }
+
+    public int GPrice1 { get; set; }
+    public int GPrice7 { get; set; }
+    public int GPrice30 { get; set; }
+    public int GPricePerm { get; set; }
+}
+
+class ShopItemRow : IHasPrices
+{
+    public int ItemId { get; set; }
     public int ItemType { get; set; }
     public int Category { get; set; }
-    public bool IsEnabled { get; set; }
+    public int IsEnabled { get; set; }
 
     public string Name { get; set; } = "";
     public string FName { get; set; } = "";
@@ -1117,17 +1449,17 @@ class ShopItemRow
     public int AddGP { get; set; }
     public int AddSP { get; set; }
 
-    public uint Item1Id { get; set; }
+    public int Item1Id { get; set; }
     public int Item1Exp { get; set; }
-    public uint Item2Id { get; set; }
+    public int Item2Id { get; set; }
     public int Item2Exp { get; set; }
-    public uint Item3Id { get; set; }
+    public int Item3Id { get; set; }
     public int Item3Exp { get; set; }
-    public uint Item4Id { get; set; }
+    public int Item4Id { get; set; }
     public int Item4Exp { get; set; }
-    public uint Item5Id { get; set; }
+    public int Item5Id { get; set; }
     public int Item5Exp { get; set; }
-    public uint Item6Id { get; set; }
+    public int Item6Id { get; set; }
     public int Item6Exp { get; set; }
 
     public int Price1 { get; set; }
@@ -1139,13 +1471,4 @@ class ShopItemRow
     public int GPrice7 { get; set; }
     public int GPrice30 { get; set; }
     public int GPricePerm { get; set; }
-}
-
-class SessionRow
-{
-    public ulong SessionId { get; set; }
-    public ulong CustomerId { get; set; }
-    public DateTime ExpiresAt { get; set; }
-    public DateTime? RevokedAt { get; set; }
-    public int AccountStatus { get; set; }
 }
