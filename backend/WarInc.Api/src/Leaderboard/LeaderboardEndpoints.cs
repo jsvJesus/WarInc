@@ -24,23 +24,43 @@ public static class LeaderboardEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        var position = ReadInt(data, "pos", 0);
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "CustomerID",
+            "CustomerId",
+            "customerId",
+            "s_id"));
 
-        if (position == 0)
-            position = ReadInt(data, "start", 0);
+        var position = ReadIntAny(
+            data,
+            0,
+            "pos",
+            "start",
+            "offset",
+            "StartPos");
 
-        if (position == 0)
-            position = ReadInt(data, "offset", 0);
+        var tableId = ReadIntAny(
+            data,
+            3,
+            "t",
+            "table",
+            "tableId",
+            "TableID",
+            "TableId");
 
-        var size = ReadInt(data, "size", 0);
+        var size = ReadIntAny(
+            data,
+            100,
+            "size",
+            "limit",
+            "count");
 
-        if (size == 0)
-            size = ReadInt(data, "limit", 0);
+        var result = await leaderboard.GetLeaderboardAsync(
+            customerId,
+            position,
+            size,
+            tableId);
 
-        if (size == 0)
-            size = ReadInt(data, "count", 0);
-
-        var result = await leaderboard.GetLeaderboardAsync(position, size);
         var xml = leaderboard.BuildLegacyLeaderboardXml(result);
 
         return Results.Text(xml, "text/xml", Encoding.UTF8);
@@ -52,26 +72,43 @@ public static class LeaderboardEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        var position = ReadInt(data, "position", 0);
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "customerId",
+            "CustomerId",
+            "CustomerID",
+            "s_id"));
 
-        if (position == 0)
-            position = ReadInt(data, "pos", 0);
+        var position = ReadIntAny(
+            data,
+            0,
+            "position",
+            "pos",
+            "start",
+            "offset",
+            "StartPos");
 
-        if (position == 0)
-            position = ReadInt(data, "start", 0);
+        var tableId = ReadIntAny(
+            data,
+            3,
+            "tableId",
+            "TableId",
+            "TableID",
+            "table",
+            "t");
 
-        if (position == 0)
-            position = ReadInt(data, "offset", 0);
+        var size = ReadIntAny(
+            data,
+            100,
+            "size",
+            "limit",
+            "count");
 
-        var size = ReadInt(data, "size", 50);
-
-        if (size == 50)
-            size = ReadInt(data, "limit", 50);
-
-        if (size == 50)
-            size = ReadInt(data, "count", 50);
-
-        var result = await leaderboard.GetLeaderboardAsync(position, size);
+        var result = await leaderboard.GetLeaderboardAsync(
+            customerId,
+            position,
+            size,
+            tableId);
 
         return Results.Json(result);
     }
@@ -132,19 +169,34 @@ public static class LeaderboardEndpoints
         return data;
     }
 
-    private static int ReadInt(
+    private static string ReadAny(
         Dictionary<string, string> data,
-        string key,
-        int defaultValue)
+        params string[] keys)
     {
-        if (!data.TryGetValue(key, out var value))
-            return defaultValue;
+        foreach (var key in keys)
+        {
+            if (data.TryGetValue(key, out var value))
+                return value;
+        }
 
-        var parsed = LegacyUtil.ParseInt(value);
+        return "";
+    }
 
-        if (parsed < 0)
-            return defaultValue;
+    private static int ReadIntAny(
+        Dictionary<string, string> data,
+        int defaultValue,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!data.TryGetValue(key, out var value))
+                continue;
 
-        return parsed;
+            var parsed = LegacyUtil.ParseInt(value);
+
+            return parsed;
+        }
+
+        return defaultValue;
     }
 }

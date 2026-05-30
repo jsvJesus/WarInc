@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text;
 using Dapper;
 using MySqlConnector;
@@ -9,6 +8,8 @@ namespace WarInc.Api.Leaderboard;
 
 public sealed class LeaderboardService
 {
+    private const int LegacyRowsToFetch = 100;
+
     private readonly WarIncDb _db;
 
     public LeaderboardService(WarIncDb db)
@@ -16,130 +17,122 @@ public sealed class LeaderboardService
         _db = db;
     }
 
-    public async Task<LeaderboardResponse> GetLeaderboardAsync(int position, int size)
+    public async Task<LeaderboardResponse> GetLeaderboardAsync(
+        int position,
+        int size)
     {
-        position = Math.Max(0, position);
-        size = Math.Clamp(size, 0, 100);
+        return await GetLeaderboardAsync(
+            0,
+            position,
+            size,
+            3);
+    }
+
+    public async Task<LeaderboardResponse> GetLeaderboardAsync(
+        ulong customerId,
+        int position,
+        int size,
+        int tableId)
+    {
+        var tableName = ResolveTableName(tableId);
 
         if (size <= 0)
-        {
-            return new LeaderboardResponse(
-                true,
-                0,
-                "OK",
-                position,
-                0,
-                Array.Empty<LeaderboardEntryDto>());
-        }
+            size = LegacyRowsToFetch;
+
+        size = Math.Clamp(size, 1, 100);
 
         await using var db = _db.CreateConnection();
 
-        var hasLoginId = await TableExistsAsync(db, "loginid");
-        var hasStats = await TableExistsAsync(db, "stats");
-
-        if (!hasLoginId || !hasStats)
+        if (!await TableExistsAsync(db, tableName))
         {
             return new LeaderboardResponse(
                 true,
                 0,
                 "OK",
-                position,
+                Math.Max(0, position),
                 0,
+                tableId,
+                tableName,
                 Array.Empty<LeaderboardEntryDto>());
         }
 
-        try
-        {
-            var rows = (await db.QueryAsync<LeaderboardRow>(
-                """
-                SELECT
-                    l.CustomerID AS CustomerId,
-                    COALESCE(NULLIF(l.Gamertag, ''), NULLIF(l.AccountName, ''), CONCAT('Player', l.CustomerID)) AS Gamertag,
-                    COALESCE(s.Kills, 0) AS Kills,
-                    COALESCE(s.Deaths, 0) AS Deaths,
-                    COALESCE(s.Wins, 0) AS Wins,
-                    COALESCE(s.Losses, 0) AS Losses,
-                    COALESCE(s.TimePlayed, 0) AS TimePlayed,
-                    (
-                        COALESCE(s.Kills, 0) * 10 +
-                        COALESCE(s.Wins, 0) * 50 +
-                        COALESCE(s.AssistKills, 0) * 3 -
-                        COALESCE(s.Deaths, 0) * 2 +
-                        FLOOR(COALESCE(s.TimePlayed, 0) / 60)
-                    ) AS Score
-                FROM loginid l
-                LEFT JOIN stats s ON s.CustomerID = l.CustomerID
-                WHERE COALESCE(l.AccountStatus, 0) < 200
-                ORDER BY
-                    Score DESC,
-                    COALESCE(s.Kills, 0) DESC,
-                    COALESCE(s.Deaths, 0) ASC,
-                    l.CustomerID ASC
-                LIMIT @Size OFFSET @Position;
-                """,
-                new
-                {
-                    Position = position,
-                    Size = size
-                })).ToArray();
+        var totalRows = 0;
+        var startPos = position;
 
-            var entries = rows
-                .Select((row, index) => new LeaderboardEntryDto(
-                    position + index + 1,
-                    row.CustomerId,
-                    row.Gamertag,
-                    row.Score,
-                    row.Kills,
-                    row.Deaths,
-                    row.Wins,
-                    row.Losses,
-                    row.TimePlayed))
-                .ToArray();
-
-            return new LeaderboardResponse(
-                true,
-                0,
-                "OK",
-                position,
-                entries.Length,
-                entries);
-        }
-        catch
+        if (startPos < 0)
         {
-            return new LeaderboardResponse(
-                true,
-                0,
-                "OK",
-                position,
-                0,
-                Array.Empty<LeaderboardEntryDto>());
+            totalRows = await GetTotalRowsAsync(db, tableName);
+            startPos = await GetPlayerCenteredStartPosAsync(
+                db,
+                tableName,
+                customerId);
+
+            if (startPos < 0)
+                startPos = 0;
         }
+
+        if (startPos < 0)
+            startPos = 0;
+
+        var rows = await QueryLeaderboardRowsAsync(
+            db,
+            tableName,
+            startPos,
+            size);
+
+        var entries = rows
+            .Select(row => new LeaderboardEntryDto(
+                row.Pos,
+                (ulong)Math.Max(0, row.CustomerID),
+                row.Gamertag ?? "",
+                row.HonorPoints,
+                row.Rank,
+                row.HonorPoints,
+                row.Kills,
+                row.Deaths,
+                row.Wins,
+                row.Losses,
+                row.ShotsFired,
+                row.ShotsHit,
+                row.TimePlayed,
+                row.HavePremium))
+            .ToArray();
+
+        return new LeaderboardResponse(
+            true,
+            0,
+            "OK",
+            startPos,
+            totalRows,
+            tableId,
+            tableName,
+            entries);
     }
 
     public string BuildLegacyLeaderboardXml(LeaderboardResponse leaderboard)
     {
-        if (leaderboard.Entries.Count == 0)
-            return $"<leaderboard pos=\"{leaderboard.Position}\" size=\"0\"></leaderboard>";
-
         var xml = new StringBuilder();
+
+        xml.Append("<?xml version=\"1.0\"?>\n");
 
         xml.Append("<leaderboard ");
         LegacyUtil.AppendXmlAttr(xml, "pos", leaderboard.Position);
-        LegacyUtil.AppendXmlAttr(xml, "size", leaderboard.Entries.Count);
+        LegacyUtil.AppendXmlAttr(xml, "size", leaderboard.Size);
         xml.Append(">");
 
         foreach (var entry in leaderboard.Entries)
         {
-            xml.Append("<r ");
-            LegacyUtil.AppendXmlAttr(xml, "pos", entry.Position);
-            LegacyUtil.AppendXmlAttr(xml, "CustomerID", entry.CustomerId);
-            LegacyUtil.AppendXmlAttr(xml, "gt", entry.Gamertag);
-            LegacyUtil.AppendXmlAttr(xml, "score", entry.Score);
-            LegacyUtil.AppendXmlAttr(xml, "kills", entry.Kills);
-            LegacyUtil.AppendXmlAttr(xml, "deaths", entry.Deaths);
-            LegacyUtil.AppendXmlAttr(xml, "wins", entry.Wins);
-            LegacyUtil.AppendXmlAttr(xml, "losses", entry.Losses);
-            LegacyUtil.AppendXmlAttr(xml, "time", entry.TimePlayed);
+            xml.Append("<f ");
+            LegacyUtil.AppendXmlAttr(xml, "GT", entry.Gamertag);
+            LegacyUtil.AppendXmlAttr(xml, "XP", entry.HonorPoints);
+            LegacyUtil.AppendXmlAttr(xml, "k", entry.Kills);
+            LegacyUtil.AppendXmlAttr(xml, "d", entry.Deaths);
+            LegacyUtil.AppendXmlAttr(xml, "w", entry.Wins);
+            LegacyUtil.AppendXmlAttr(xml, "l", entry.Losses);
+            LegacyUtil.AppendXmlAttr(xml, "f", entry.ShotsFired);
+            LegacyUtil.AppendXmlAttr(xml, "h", entry.ShotsHit);
+            LegacyUtil.AppendXmlAttr(xml, "t", entry.TimePlayed);
+            LegacyUtil.AppendXmlAttr(xml, "p", entry.HavePremium);
             xml.Append("/>");
         }
 
@@ -148,7 +141,96 @@ public sealed class LeaderboardService
         return xml.ToString();
     }
 
-    private static async Task<bool> TableExistsAsync(MySqlConnection db, string table)
+    private static async Task<LeaderboardDbRow[]> QueryLeaderboardRowsAsync(
+        MySqlConnection db,
+        string tableName,
+        int startPos,
+        int size)
+    {
+        var sql =
+            $"""
+            SELECT
+                Pos,
+                CustomerID,
+                gamertag AS Gamertag,
+                Rank,
+                HonorPoints,
+                Wins,
+                Losses,
+                Kills,
+                Deaths,
+                ShotsFired,
+                ShotsHit,
+                TimePlayed,
+                HavePremium
+            FROM {tableName}
+            WHERE Pos > @StartPos
+              AND Pos <= @EndPos
+            ORDER BY HonorPoints DESC, Pos ASC;
+            """;
+
+        var rows = await db.QueryAsync<LeaderboardDbRow>(
+            sql,
+            new
+            {
+                StartPos = startPos,
+                EndPos = startPos + size
+            });
+
+        return rows.ToArray();
+    }
+
+    private static async Task<int> GetPlayerCenteredStartPosAsync(
+        MySqlConnection db,
+        string tableName,
+        ulong customerId)
+    {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return 0;
+
+        var sql =
+            $"""
+            SELECT Pos
+            FROM {tableName}
+            WHERE CustomerID = @CustomerId
+            LIMIT 1;
+            """;
+
+        var playerPos = await db.ExecuteScalarAsync<int?>(
+            sql,
+            new { CustomerId = (int)customerId });
+
+        if (!playerPos.HasValue || playerPos.Value <= 0)
+            return 0;
+
+        var startPos = playerPos.Value - (LegacyRowsToFetch / 2);
+
+        return Math.Max(0, startPos);
+    }
+
+    private static async Task<int> GetTotalRowsAsync(
+        MySqlConnection db,
+        string tableName)
+    {
+        var sql = $"SELECT COUNT(*) FROM {tableName};";
+
+        return await db.ExecuteScalarAsync<int>(sql);
+    }
+
+    private static string ResolveTableName(int tableId)
+    {
+        return tableId switch
+        {
+            0 => "leaderboard1",
+            1 => "leaderboard7",
+            2 => "leaderboard30",
+            _ => "leaderboard"
+        };
+    }
+
+    private static async Task<bool> TableExistsAsync(
+        MySqlConnection db,
+        string table)
     {
         var count = await db.ExecuteScalarAsync<int>(
             """
@@ -162,15 +244,20 @@ public sealed class LeaderboardService
         return count > 0;
     }
 
-    private sealed class LeaderboardRow
+    private sealed class LeaderboardDbRow
     {
-        public ulong CustomerId { get; set; }
+        public int Pos { get; set; }
+        public int CustomerID { get; set; }
         public string Gamertag { get; set; } = "";
-        public long Score { get; set; }
-        public int Kills { get; set; }
-        public int Deaths { get; set; }
+        public int Rank { get; set; }
+        public int HonorPoints { get; set; }
         public int Wins { get; set; }
         public int Losses { get; set; }
+        public int Kills { get; set; }
+        public int Deaths { get; set; }
+        public int ShotsFired { get; set; }
+        public int ShotsHit { get; set; }
         public int TimePlayed { get; set; }
+        public int HavePremium { get; set; }
     }
 }
