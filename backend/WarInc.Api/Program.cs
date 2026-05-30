@@ -11,6 +11,7 @@ using WarInc.Api.Leaderboard;
 using WarInc.Api.Retention;
 using WarInc.Api.MysteryBox;
 using WarInc.Api.GameRewards;
+using WarInc.Api.ClientTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,7 @@ builder.Services.AddScoped<RetentionService>();
 builder.Services.AddScoped<MysteryBoxService>();
 builder.Services.AddScoped<DatabaseCheckService>();
 builder.Services.AddScoped<GameRewardsService>();
+builder.Services.AddScoped<ClientTelemetryService>();
 
 builder.Services.AddSingleton<GameServerService>();
 
@@ -78,24 +80,17 @@ app.MapGet("/", () =>
             "/v1/auth/login",
             "/v1/auth/check",
             "/v1/auth/logout",
-            "/internal/session/validate",
-
             "/v1/shop/items",
             "/v1/shop/buy",
             "/v1/profile/get",
-
             "/v1/loadout/modify",
             "/v1/loadout/unlock",
             "/v1/loadout/reset",
-
             "/v1/skill/learn",
             "/v1/skill/reset",
-
             "/v1/weapon/attach",
-
             "/v1/profile/change-gamertag",
             "/v1/profile/welcome-package",
-
             "/v1/friends/list",
             "/v1/clan/get",
             "/v1/leaderboard/get",
@@ -105,7 +100,12 @@ app.MapGet("/", () =>
             "/v1/mystery-box/roll",
             "/v1/mystery-box/sell",
             "/v1/game-rewards/get",
+            "/v1/session/poll",
+            "/v1/client/status",
+            "/v1/hardware/report",
+            "/v1/achievements/update",
 
+            "/internal/session/validate",
             "/internal/gameserver/register",
             "/internal/gameserver/heartbeat",
             "/internal/gameserver/unregister",
@@ -126,12 +126,15 @@ app.MapGet("/", () =>
             "/api_GetItemsInfo.aspx",
             "/api_GetProfile4.aspx",
             "/api_BuyItem3.aspx",
-            
             "/api_LeaderboardGet.aspx",
             "/api_RetBonus.aspx",
             "/api_MysteryBox.aspx",
             "/api_GetDataGameRewards.aspx",
-            
+            "/api_LoginSessionPoller.aspx",
+            "/api_SetRSUpdateStatus.aspx",
+            "/api_ReportHWInfo.aspx",
+            "/api_ReportHWInfo_Customer.aspx",
+            "/api_ClientUpdateAchievements.aspx",
             "/api_SrvSetCreateGameKey2.aspx",
             "/api_GetCreateGameKey3.aspx",
             "/api_SrvAddUserRoundResult4.aspx",
@@ -140,7 +143,6 @@ app.MapGet("/", () =>
             "/api_SrvAddLogInfo.aspx",
             "/api_SrvUploadLogFile.aspx",
             "/api_SrvAddCheatAttempts.aspx",
-
             "/api_LoadoutModify.aspx",
             "/api_LoadoutUnlock.aspx",
             "/api_LoadoutReset.aspx",
@@ -164,6 +166,7 @@ app.MapLeaderboardEndpoints();
 app.MapRetentionEndpoints();
 app.MapMysteryBoxEndpoints();
 app.MapGameRewardsEndpoints();
+app.MapClientTelemetryEndpoints();
 app.MapGameServerEndpoints();
 app.MapDatabaseCheckEndpoints();
 app.MapGameServerLegacyEndpoints();
