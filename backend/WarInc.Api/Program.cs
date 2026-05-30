@@ -10,7 +10,7 @@ var sessionHours = int.TryParse(builder.Configuration["WarInc:SessionHours"], ou
 var internalApiKey = builder.Configuration["WarInc:InternalApiKey"] ?? "";
 
 if (string.IsNullOrWhiteSpace(dbConnectionString))
-    throw new Exception("WarInc:Database is empty");
+    throw new Exception("WarInc:Database is empty"); // ebana rot
 
 builder.Services.AddCors(options =>
 {
