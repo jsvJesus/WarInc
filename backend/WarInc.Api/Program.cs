@@ -34,6 +34,7 @@ builder.Services.AddScoped<SocialService>();
 builder.Services.AddScoped<LeaderboardService>();
 builder.Services.AddScoped<RetentionService>();
 builder.Services.AddScoped<MysteryBoxService>();
+builder.Services.AddScoped<DatabaseCheckService>();
 
 builder.Services.AddSingleton<GameServerService>();
 
@@ -109,6 +110,8 @@ app.MapGet("/", () =>
             "/internal/gameserver/player/leave",
             "/internal/gameserver/report",
             "/internal/gameserver/list",
+            "/internal/database/check",
+            "/internal/database/schema",
 
             "/legacy/smoke",
             "/legacy/smoke/endpoints",
@@ -157,6 +160,7 @@ app.MapLeaderboardEndpoints();
 app.MapRetentionEndpoints();
 app.MapMysteryBoxEndpoints();
 app.MapGameServerEndpoints();
+app.MapDatabaseCheckEndpoints();
 app.MapGameServerLegacyEndpoints();
 app.MapLegacySmokeEndpoints();
 
