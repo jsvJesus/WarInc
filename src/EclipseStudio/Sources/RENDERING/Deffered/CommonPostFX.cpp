@@ -188,11 +188,11 @@ static void ApplyModernFeatureSwitches()
 	if(!r_modern_force_postfx->GetBool())
 		return;
 
-	LevelBloom = 1;
+	LevelBloom = r_modern_bloom_power->GetFloat() > 0.001f ? 1 : 0;
 	LevelSunRays = r_modern_sun_rays->GetInt() ? 1 : 0;
 
-	r_bloom->SetInt(1);
-	r_glow->SetInt(1);
+	r_bloom->SetInt(LevelBloom);
+	r_glow->SetInt(r_modern_glow_amplify->GetFloat() > 0.001f ? 1 : 0);
 	r_sun_rays->SetInt(r_modern_sun_rays->GetInt() ? 1 : 0);
 
 	r_ssao->SetInt(1);
@@ -333,14 +333,30 @@ static void ApplyModernColorCorrection()
 		return;
 
 	if(!r_modern_color_lut->GetBool())
+	{
+		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
 		return;
-
-	g_ColorCorrectionSettings.scheme = ColorCorrectionSettings::CCS_CUSTOM_3DLUT;
+	}
 
 	const char* lutName = r_modern_lut_name->GetString();
 
 	if(!lutName || !lutName[0])
-		lutName = "default.dds";
+	{
+		r3dOutToLog("ModernGraphics: LUT disabled, empty r_modern_lut_name\n");
+		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
+		r_modern_color_lut->SetInt(0);
+		return;
+	}
+
+	if(!r3dFileExists(lutName))
+	{
+		r3dOutToLog("ModernGraphics: LUT '%s' not found, color LUT disabled\n", lutName);
+		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
+		r_modern_color_lut->SetInt(0);
+		return;
+	}
+
+	g_ColorCorrectionSettings.scheme = ColorCorrectionSettings::CCS_CUSTOM_3DLUT;
 
 	static char lastLUTName[256] = "";
 
