@@ -15,7 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{297D
 		..\..\backend\WarInc.Api\sql\001_auth.sql = ..\..\backend\WarInc.Api\sql\001_auth.sql
 		..\..\backend\WarInc.Api\appsettings.json = ..\..\backend\WarInc.Api\appsettings.json
 		..\..\backend\WarInc.Api\Program.cs = ..\..\backend\WarInc.Api\Program.cs
-		..\..\backend\WarInc.Api\run.txt = ..\..\backend\WarInc.Api\run.txt
 		..\..\backend\WarInc.Api\WarInc.Api.csproj = ..\..\backend\WarInc.Api\WarInc.Api.csproj
 	EndProjectSection
 EndProject
