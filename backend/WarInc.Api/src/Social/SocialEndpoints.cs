@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using WarInc.Api.Auth;
 using WarInc.Api.Common;
 
@@ -8,35 +9,29 @@ public static class SocialEndpoints
 {
     public static void MapSocialEndpoints(this WebApplication app)
     {
-        app.MapPost("/api_Friends.aspx", LegacyFriendsAsync);
-        app.MapPost("/api/api_Friends.aspx", LegacyFriendsAsync);
-        app.MapGet("/api_Friends.aspx", LegacyFriendsAsync);
-        app.MapGet("/api/api_Friends.aspx", LegacyFriendsAsync);
+        MapLegacy(app, "/api_Friends.aspx", LegacyFriendsAsync);
+        MapLegacy(app, "/api_FriendsList.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyFriendsAsync(http, auth, social, "list"));
+        MapLegacy(app, "/api_FriendsPending.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyFriendsAsync(http, auth, social, "pending"));
+        MapLegacy(app, "/api_FriendsAccept.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyFriendsAsync(http, auth, social, "accept"));
+        MapLegacy(app, "/api_FriendsDecline.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyFriendsAsync(http, auth, social, "decline"));
 
-        app.MapPost("/api_ClanMgr.aspx", LegacyClanMgrAsync);
-        app.MapPost("/api/api_ClanMgr.aspx", LegacyClanMgrAsync);
-        app.MapGet("/api_ClanMgr.aspx", LegacyClanMgrAsync);
-        app.MapGet("/api/api_ClanMgr.aspx", LegacyClanMgrAsync);
-
-        app.MapPost("/api_ClanGetInfo.aspx", LegacyClanGetInfoAsync);
-        app.MapPost("/api/api_ClanGetInfo.aspx", LegacyClanGetInfoAsync);
-        app.MapGet("/api_ClanGetInfo.aspx", LegacyClanGetInfoAsync);
-        app.MapGet("/api/api_ClanGetInfo.aspx", LegacyClanGetInfoAsync);
-
-        app.MapPost("/api_ClanInvites.aspx", LegacyClanInvitesAsync);
-        app.MapPost("/api/api_ClanInvites.aspx", LegacyClanInvitesAsync);
-        app.MapGet("/api_ClanInvites.aspx", LegacyClanInvitesAsync);
-        app.MapGet("/api/api_ClanInvites.aspx", LegacyClanInvitesAsync);
-
-        app.MapPost("/api_ClanApply.aspx", LegacyClanApplyAsync);
-        app.MapPost("/api/api_ClanApply.aspx", LegacyClanApplyAsync);
-        app.MapGet("/api_ClanApply.aspx", LegacyClanApplyAsync);
-        app.MapGet("/api/api_ClanApply.aspx", LegacyClanApplyAsync);
-
-        app.MapPost("/api_ClanCreate.aspx", LegacyClanCreateAsync);
-        app.MapPost("/api/api_ClanCreate.aspx", LegacyClanCreateAsync);
-        app.MapGet("/api_ClanCreate.aspx", LegacyClanCreateAsync);
-        app.MapGet("/api/api_ClanCreate.aspx", LegacyClanCreateAsync);
+        MapLegacy(app, "/api_ClanMgr.aspx", LegacyClanMgrAsync);
+        MapLegacy(app, "/api_ClanGetInfo.aspx", LegacyClanGetInfoAsync);
+        MapLegacy(app, "/api_ClanCreate.aspx", LegacyClanCreateAsync);
+        MapLegacy(app, "/api_ClanMembers.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "members"));
+        MapLegacy(app, "/api_ClanInvites.aspx", LegacyClanInvitesAsync);
+        MapLegacy(app, "/api_ClanInvite.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanInvitesAsync(http, auth, social, "invite"));
+        MapLegacy(app, "/api_ClanAcceptInvite.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanInvitesAsync(http, auth, social, "accept"));
+        MapLegacy(app, "/api_ClanDeclineInvite.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanInvitesAsync(http, auth, social, "decline"));
+        MapLegacy(app, "/api_ClanApply.aspx", LegacyClanApplyAsync);
+        MapLegacy(app, "/api_ClanAcceptApplication.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanApplyAsync(http, auth, social, "accept"));
+        MapLegacy(app, "/api_ClanDeclineApplication.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanApplyAsync(http, auth, social, "decline"));
+        MapLegacy(app, "/api_ClanLeave.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "leave"));
+        MapLegacy(app, "/api_ClanKick.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "kick"));
+        MapLegacy(app, "/api_ClanPromote.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "promote"));
+        MapLegacy(app, "/api_ClanDemote.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "demote"));
+        MapLegacy(app, "/api_ClanAnnouncement.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "announcement"));
+        MapLegacy(app, "/api_ClanSetAnnouncement.aspx", (HttpContext http, AuthService auth, SocialService social) => LegacyClanMgrAsync(http, auth, social, "announcement"));
 
         app.MapPost("/v1/friends/list", async (
             FriendsListRequest request,
@@ -44,6 +39,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new FriendsListResponse(false, session.Code, session.Message, Array.Empty<SocialFriendDto>()));
 
@@ -57,6 +53,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new FriendsPendingResponse(false, session.Code, session.Message, Array.Empty<SocialFriendPendingDto>(), Array.Empty<SocialFriendPendingDto>()));
 
@@ -70,6 +67,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message });
 
@@ -84,6 +82,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message });
 
@@ -98,6 +97,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message });
 
@@ -112,6 +112,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message });
 
@@ -123,7 +124,8 @@ public static class SocialEndpoints
                 code = 0,
                 message = "OK",
                 count = result.Friends.Count,
-                online = result.Friends.Count(x => x.Online != 0)
+                online = result.Friends.Count(x => x.Online != 0),
+                friends = result.Friends
             });
         });
 
@@ -133,6 +135,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -146,6 +149,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -159,6 +163,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message, members = Array.Empty<object>() });
 
@@ -173,6 +178,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message, invites = Array.Empty<object>() });
 
@@ -187,6 +193,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new { ok = false, code = session.Code, message = session.Message, applications = Array.Empty<object>() });
 
@@ -201,6 +208,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -214,6 +222,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -227,6 +236,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -240,6 +250,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -258,6 +269,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -271,6 +283,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -284,6 +297,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -297,6 +311,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -310,6 +325,7 @@ public static class SocialEndpoints
             SocialService social) =>
         {
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
+
             if (!session.Ok)
                 return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
 
@@ -321,7 +337,8 @@ public static class SocialEndpoints
     private static async Task<IResult> LegacyFriendsAsync(
         HttpContext http,
         AuthService auth,
-        SocialService social)
+        SocialService social,
+        string? forcedFunc = null)
     {
         var data = await ReadLegacyDataAsync(http);
 
@@ -333,39 +350,41 @@ public static class SocialEndpoints
         if (!session.Ok)
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
-        var func = Read(data, "func").Trim();
+        var func = GetFunc(data, forcedFunc);
 
-        if (string.Equals(func, "addReq", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "addReq", "add", "request", "send", "sendRequest"))
         {
-            var friendId = LegacyUtil.ParseULong(Read(data, "FriendID"));
-            var friendName = Read(data, "Gamertag");
+            var friendId = LegacyUtil.ParseULong(ReadAny(data, "FriendID", "CustomerID", "TargetID"));
+            var friendName = ReadAny(data, "Gamertag", "FriendName", "TargetName", "name");
 
             await social.AddFriendRequestAsync(customerId, friendId, friendName);
 
             return Results.Text("WO_0", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "addAns", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "addAns", "answer", "accept", "decline", "reject"))
         {
-            var friendId = LegacyUtil.ParseULong(Read(data, "FriendID"));
-            var accept = Read(data, "Answer") != "0";
+            var friendId = LegacyUtil.ParseULong(ReadAny(data, "FriendID", "CustomerID", "TargetID"));
+
+            var accept = IsFunc(func, "decline", "reject")
+                ? false
+                : ReadLegacyBool(data, true, "Answer", "Accept", "Result");
 
             await social.AnswerFriendRequestAsync(customerId, friendId, accept);
 
             return Results.Text("WO_0", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "remove", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "remove", "delete", "del", "unfriend"))
         {
-            var friendId = LegacyUtil.ParseULong(Read(data, "FriendID"));
+            var friendId = LegacyUtil.ParseULong(ReadAny(data, "FriendID", "CustomerID", "TargetID"));
 
             await social.RemoveFriendAsync(customerId, friendId);
 
             return Results.Text("WO_0", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "pending", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "requests", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "pending", "requests", "getPending", "getRequests", "listPending", "pendingRequests"))
         {
             var pending = await social.GetFriendPendingRequestsAsync(customerId);
             var pendingXml = social.BuildLegacyFriendsPendingXml(pending);
@@ -375,7 +394,7 @@ public static class SocialEndpoints
 
         var friends = await social.GetFriendsAsync(customerId);
 
-        if (string.Equals(func, "stats", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "stats", "status", "online", "onlineStatus"))
         {
             var statsXml = social.BuildLegacyFriendsStatsXml(friends.Friends);
 
@@ -390,7 +409,8 @@ public static class SocialEndpoints
     private static async Task<IResult> LegacyClanMgrAsync(
         HttpContext http,
         AuthService auth,
-        SocialService social)
+        SocialService social,
+        string? forcedFunc = null)
     {
         var data = await ReadLegacyDataAsync(http);
 
@@ -402,56 +422,117 @@ public static class SocialEndpoints
         if (!session.Ok)
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
-        var func = Read(data, "func").Trim();
+        var func = GetFunc(data, forcedFunc);
 
-        if (string.Equals(func, "members", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "create"))
+        {
+            var name = ReadAny(data, "name", "ClanName", "clanName");
+            var tag = ReadAny(data, "tag", "ClanTag", "clanTag");
+
+            var result = await social.CreateClanAsync(customerId, name, tag);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "members", "memberList", "getMembers", "listMembers"))
         {
             var members = await social.GetClanMembersAsync(customerId);
             return Results.Text(social.BuildLegacyClanMembersXml(members), "text/xml", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "invite", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "invite", "sendInvite"))
         {
-            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "FriendID", "TargetID"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "FriendID", "TargetID", "MemberID"));
             var targetName = ReadAny(data, "Gamertag", "TargetName", "name");
 
             var result = await social.InviteToClanAsync(customerId, targetId, targetName);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "leave", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "acceptInvite", "inviteAccept"))
+        {
+            var clanOrInviteId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid", "ClanInviteID", "InviteID", "id"));
+            var result = await social.AcceptClanInviteAsync(customerId, clanOrInviteId, true);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "declineInvite", "rejectInvite"))
+        {
+            var clanOrInviteId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid", "ClanInviteID", "InviteID", "id"));
+            var result = await social.AcceptClanInviteAsync(customerId, clanOrInviteId, false);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "apply", "sendApplication"))
+        {
+            var clanId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid"));
+            var text = ReadAny(data, "Text", "text", "ApplicationText", "msg");
+
+            var result = await social.ApplyToClanAsync(customerId, clanId, text);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "acceptApplication", "applicationAccept"))
+        {
+            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId", "id"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
+
+            var result = await social.AnswerClanApplicationAsync(customerId, appId, targetId, true);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "declineApplication", "rejectApplication"))
+        {
+            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId", "id"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
+
+            var result = await social.AnswerClanApplicationAsync(customerId, appId, targetId, false);
+            return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "leave", "quit"))
         {
             var result = await social.LeaveClanAsync(customerId);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "kick", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "kick", "removeMember"))
         {
             var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
             var result = await social.KickClanMemberAsync(customerId, targetId);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "promote", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "promote"))
         {
             var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
             var result = await social.PromoteClanMemberAsync(customerId, targetId);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "demote", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "demote"))
         {
             var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
             var result = await social.DemoteClanMemberAsync(customerId, targetId);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "announcement", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "setAnnouncement", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "announcement", "setAnnouncement", "setAnnounce", "message"))
         {
             var announcement = ReadAny(data, "Announcement", "announcement", "Text", "text", "msg");
             var result = await social.SetClanAnnouncementAsync(customerId, announcement);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "invites", "inviteList", "getInvites"))
+        {
+            var invites = await social.GetClanInvitesAsync(customerId);
+            return Results.Text(social.BuildLegacyClanInvitesXml(invites), "text/xml", Encoding.UTF8);
+        }
+
+        if (IsFunc(func, "applications", "applicationList", "getApplications"))
+        {
+            var applications = await social.GetClanApplicationsAsync(customerId);
+            return Results.Text(social.BuildLegacyClanApplicationsXml(applications), "text/xml", Encoding.UTF8);
         }
 
         var clan = await social.GetClanAsync(customerId);
@@ -496,28 +577,19 @@ public static class SocialEndpoints
         if (!session.Ok)
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
-        var name = Read(data, "name");
-
-        if (string.IsNullOrWhiteSpace(name))
-            name = Read(data, "ClanName");
-
-        var tag = Read(data, "tag");
-
-        if (string.IsNullOrWhiteSpace(tag))
-            tag = Read(data, "ClanTag");
+        var name = ReadAny(data, "name", "ClanName", "clanName");
+        var tag = ReadAny(data, "tag", "ClanTag", "clanTag");
 
         var result = await social.CreateClanAsync(customerId, name, tag);
 
-        if (!result.Ok)
-            return Results.Text("WO_5", "text/plain", Encoding.UTF8);
-
-        return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+        return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
     }
 
     private static async Task<IResult> LegacyClanInvitesAsync(
         HttpContext http,
         AuthService auth,
-        SocialService social)
+        SocialService social,
+        string? forcedFunc = null)
     {
         var data = await ReadLegacyDataAsync(http);
 
@@ -529,30 +601,28 @@ public static class SocialEndpoints
         if (!session.Ok)
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
-        var func = Read(data, "func").Trim();
+        var func = GetFunc(data, forcedFunc);
 
-        if (string.Equals(func, "invite", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "invite", "send", "sendInvite"))
         {
-            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "FriendID", "TargetID"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "FriendID", "TargetID", "MemberID"));
             var targetName = ReadAny(data, "Gamertag", "TargetName", "name");
 
             var result = await social.InviteToClanAsync(customerId, targetId, targetName);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "accept", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "acceptInvite", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "accept", "acceptInvite", "inviteAccept"))
         {
-            var clanId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid"));
-            var result = await social.AcceptClanInviteAsync(customerId, clanId, true);
+            var clanOrInviteId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid", "ClanInviteID", "InviteID", "id"));
+            var result = await social.AcceptClanInviteAsync(customerId, clanOrInviteId, true);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "decline", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "reject", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "decline", "reject", "declineInvite", "rejectInvite"))
         {
-            var clanId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid"));
-            var result = await social.AcceptClanInviteAsync(customerId, clanId, false);
+            var clanOrInviteId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid", "ClanInviteID", "InviteID", "id"));
+            var result = await social.AcceptClanInviteAsync(customerId, clanOrInviteId, false);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
@@ -565,7 +635,8 @@ public static class SocialEndpoints
     private static async Task<IResult> LegacyClanApplyAsync(
         HttpContext http,
         AuthService auth,
-        SocialService social)
+        SocialService social,
+        string? forcedFunc = null)
     {
         var data = await ReadLegacyDataAsync(http);
 
@@ -577,10 +648,9 @@ public static class SocialEndpoints
         if (!session.Ok)
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
-        var func = Read(data, "func").Trim();
+        var func = GetFunc(data, forcedFunc);
 
-        if (string.Equals(func, "apply", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "send", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "apply", "send", "sendApplication"))
         {
             var clanId = LegacyUtil.ParseULong(ReadAny(data, "ClanID", "clanId", "cid"));
             var text = ReadAny(data, "Text", "text", "ApplicationText", "msg");
@@ -589,20 +659,20 @@ public static class SocialEndpoints
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "accept", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "acceptApplication", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "accept", "acceptApplication", "applicationAccept"))
         {
-            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId"));
-            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID"));
+            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId", "id"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
+
             var result = await social.AnswerClanApplicationAsync(customerId, appId, targetId, true);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
 
-        if (string.Equals(func, "decline", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(func, "reject", StringComparison.OrdinalIgnoreCase))
+        if (IsFunc(func, "decline", "reject", "declineApplication", "rejectApplication"))
         {
-            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId"));
-            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID"));
+            var appId = LegacyUtil.ParseULong(ReadAny(data, "ApplicationID", "ClanApplicationID", "appId", "id"));
+            var targetId = LegacyUtil.ParseULong(ReadAny(data, "CustomerID", "TargetID", "MemberID"));
+
             var result = await social.AnswerClanApplicationAsync(customerId, appId, targetId, false);
             return Results.Text(result.Ok ? "WO_0" : "WO_5", "text/plain", Encoding.UTF8);
         }
@@ -611,6 +681,18 @@ public static class SocialEndpoints
         var xml = social.BuildLegacyClanApplicationsXml(applications);
 
         return Results.Text(xml, "text/xml", Encoding.UTF8);
+    }
+
+    private static void MapLegacy(WebApplication app, string path, Delegate handler)
+    {
+        app.MapGet(path, handler);
+        app.MapPost(path, handler);
+
+        if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+            app.MapGet("/api" + path, handler);
+            app.MapPost("/api" + path, handler);
+        }
     }
 
     private static async Task<Dictionary<string, string>> ReadLegacyDataAsync(HttpContext http)
@@ -626,9 +708,95 @@ public static class SocialEndpoints
 
             foreach (var item in form)
                 data[item.Key] = item.Value.ToString();
+
+            return data;
+        }
+
+        if (http.Request.ContentLength.GetValueOrDefault() <= 0)
+            return data;
+
+        var contentType = http.Request.ContentType ?? "";
+
+        if (!contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            return data;
+
+        try
+        {
+            using var reader = new StreamReader(http.Request.Body, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+
+            if (string.IsNullOrWhiteSpace(body))
+                return data;
+
+            using var doc = JsonDocument.Parse(body);
+
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return data;
+
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                data[prop.Name] = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString() ?? "",
+                    JsonValueKind.Number => prop.Value.GetRawText(),
+                    JsonValueKind.True => "1",
+                    JsonValueKind.False => "0",
+                    _ => prop.Value.GetRawText()
+                };
+            }
+        }
+        catch
+        {
+            return data;
         }
 
         return data;
+    }
+
+    private static string GetFunc(Dictionary<string, string> data, string? forcedFunc)
+    {
+        if (!string.IsNullOrWhiteSpace(forcedFunc))
+            return forcedFunc.Trim();
+
+        return ReadAny(data, "func", "action", "cmd", "op").Trim();
+    }
+
+    private static bool ReadLegacyBool(Dictionary<string, string> data, bool defaultValue, params string[] keys)
+    {
+        var value = ReadAny(data, keys);
+
+        if (string.IsNullOrWhiteSpace(value))
+            return defaultValue;
+
+        value = value.Trim();
+
+        if (string.Equals(value, "0", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.Equals(value, "no", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.Equals(value, "decline", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.Equals(value, "reject", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
+    }
+
+    private static bool IsFunc(string func, params string[] values)
+    {
+        foreach (var value in values)
+        {
+            if (string.Equals(func, value, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string Read(Dictionary<string, string> data, string key)
@@ -640,7 +808,7 @@ public static class SocialEndpoints
     {
         foreach (var key in keys)
         {
-            if (data.TryGetValue(key, out var value))
+            if (data.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
                 return value;
         }
 

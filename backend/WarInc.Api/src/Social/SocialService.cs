@@ -38,7 +38,6 @@ public sealed class SocialService
                     WHEN f.CustomerID = @CustomerId THEN f.FriendID
                     ELSE f.CustomerID
                 END AS CustomerId,
-
                 COALESCE(
                     NULLIF(l.Gamertag, ''),
                     NULLIF(l.AccountName, ''),
@@ -47,14 +46,8 @@ public sealed class SocialService
                         ELSE f.CustomerID
                     END)
                 ) AS Gamertag,
-
                 COALESCE(f.FriendStatus, 0) AS Status,
-
-                CASE
-                    WHEN s.CustomerID IS NULL THEN 0
-                    ELSE 1
-                END AS Online,
-
+                CASE WHEN s.CustomerID IS NULL THEN 0 ELSE 1 END AS Online,
                 COALESCE(lb.Rank, 0) AS Level,
                 COALESCE(l.HonorPoints, 0) AS XP
             FROM friendsmap f
@@ -70,22 +63,12 @@ public sealed class SocialService
                 ON lb.CustomerID = l.CustomerID
             WHERE (f.CustomerID = @CustomerId OR f.FriendID = @CustomerId)
               AND COALESCE(f.FriendStatus, 0) = 1
-            GROUP BY
-                CustomerId,
-                Gamertag,
-                Status,
-                Online,
-                Level,
-                XP
+            GROUP BY CustomerId, Gamertag, Status, Online, Level, XP
             ORDER BY Gamertag;
             """,
             new { CustomerId = (int)customerId });
 
-        return new FriendsListResponse(
-            true,
-            0,
-            "OK",
-            rows.ToArray());
+        return new FriendsListResponse(true, 0, "OK", rows.ToArray());
     }
 
     public async Task<FriendsPendingResponse> GetFriendPendingRequestsAsync(ulong customerId)
@@ -128,18 +111,10 @@ public sealed class SocialService
             """,
             new { CustomerId = (int)customerId });
 
-        return new FriendsPendingResponse(
-            true,
-            0,
-            "OK",
-            incoming.ToArray(),
-            outgoing.ToArray());
+        return new FriendsPendingResponse(true, 0, "OK", incoming.ToArray(), outgoing.ToArray());
     }
 
-    public async Task<bool> AddFriendRequestAsync(
-        ulong customerId,
-        ulong friendCustomerId,
-        string? friendName)
+    public async Task<bool> AddFriendRequestAsync(ulong customerId, ulong friendCustomerId, string? friendName)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return true;
@@ -219,10 +194,7 @@ public sealed class SocialService
         return true;
     }
 
-    public async Task<bool> AnswerFriendRequestAsync(
-        ulong customerId,
-        ulong friendCustomerId,
-        bool accept)
+    public async Task<bool> AnswerFriendRequestAsync(ulong customerId, ulong friendCustomerId, bool accept)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return true;
@@ -267,24 +239,13 @@ public sealed class SocialService
                 FriendId = (int)friendCustomerId
             });
 
-        await InsertFriendRowIfMissingAsync(
-            db,
-            (int)friendCustomerId,
-            (int)customerId,
-            1);
-
-        await InsertFriendRowIfMissingAsync(
-            db,
-            (int)customerId,
-            (int)friendCustomerId,
-            1);
+        await InsertFriendRowIfMissingAsync(db, (int)friendCustomerId, (int)customerId, 1);
+        await InsertFriendRowIfMissingAsync(db, (int)customerId, (int)friendCustomerId, 1);
 
         return true;
     }
 
-    public async Task<bool> RemoveFriendAsync(
-        ulong customerId,
-        ulong friendCustomerId)
+    public async Task<bool> RemoveFriendAsync(ulong customerId, ulong friendCustomerId)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return true;
@@ -348,10 +309,7 @@ public sealed class SocialService
         return new ClanResponse(true, 0, "OK", clan);
     }
 
-    public async Task<ClanResponse> CreateClanAsync(
-        ulong customerId,
-        string nameRaw,
-        string tagRaw)
+    public async Task<ClanResponse> CreateClanAsync(ulong customerId, string nameRaw, string tagRaw)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -368,41 +326,14 @@ public sealed class SocialService
         await using var db = _db.CreateConnection();
 
         if (!await TableExistsAsync(db, "clandata"))
-        {
-            return new ClanResponse(
-                true,
-                0,
-                "OK",
-                new SocialClanDto(
-                    0,
-                    name,
-                    tag,
-                    customerId,
-                    0,
-                    0,
-                    1,
-                    ""));
-        }
+            return new ClanResponse(true, 0, "OK", new SocialClanDto(0, name, tag, customerId, 0, 0, 1, ""));
 
         await db.OpenAsync();
         await using var tx = await db.BeginTransactionAsync();
 
         try
         {
-            var account = await db.QueryFirstOrDefaultAsync<AccountClanRow>(
-                """
-                SELECT
-                    CustomerID AS CustomerId,
-                    ClanID AS ClanId,
-                    ClanRank AS ClanRank,
-                    COALESCE(NULLIF(Gamertag, ''), NULLIF(AccountName, ''), CONCAT('Player', CustomerID)) AS Gamertag
-                FROM loginid
-                WHERE CustomerID = @CustomerId
-                LIMIT 1
-                FOR UPDATE;
-                """,
-                new { CustomerId = (int)customerId },
-                tx);
+            var account = await GetAccountClanRowAsync(db, customerId, tx);
 
             if (account == null)
             {
@@ -423,11 +354,7 @@ public sealed class SocialService
                 WHERE ClanName = @Name
                    OR ClanTag = @Tag;
                 """,
-                new
-                {
-                    Name = name,
-                    Tag = tag
-                },
+                new { Name = name, Tag = tag },
                 tx);
 
             if (exists > 0)
@@ -507,19 +434,7 @@ public sealed class SocialService
 
             await tx.CommitAsync();
 
-            return new ClanResponse(
-                true,
-                0,
-                "OK",
-                new SocialClanDto(
-                    (ulong)clanId,
-                    name,
-                    tag,
-                    customerId,
-                    0,
-                    0,
-                    1,
-                    ""));
+            return new ClanResponse(true, 0, "OK", new SocialClanDto((ulong)clanId, name, tag, customerId, 0, 0, 1, ""));
         }
         catch (Exception e)
         {
@@ -558,14 +473,7 @@ public sealed class SocialService
                 ON s.CustomerID = l.CustomerID
                AND s.TimeUpdated >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
             WHERE l.ClanID = @ClanId
-            GROUP BY
-                l.CustomerID,
-                Gamertag,
-                Rank,
-                Online,
-                XP,
-                ContributedXP,
-                ContributedGP
+            GROUP BY l.CustomerID, Gamertag, Rank, Online, XP, ContributedXP, ContributedGP
             ORDER BY Rank DESC, Gamertag ASC;
             """,
             new { ClanId = clanId });
@@ -681,10 +589,7 @@ public sealed class SocialService
         return rows.ToArray();
     }
 
-    public async Task<ClanResponse> InviteToClanAsync(
-        ulong customerId,
-        ulong targetCustomerId,
-        string? targetName)
+    public async Task<ClanResponse> InviteToClanAsync(ulong customerId, ulong targetCustomerId, string? targetName)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -749,16 +654,7 @@ public sealed class SocialService
                 DELETE FROM claninvites
                 WHERE ClanID = @ClanId
                   AND CustomerID = @TargetId;
-                """,
-                new
-                {
-                    ClanId = actor.ClanId,
-                    TargetId = (int)targetId
-                },
-                tx);
 
-            await db.ExecuteAsync(
-                """
                 INSERT INTO claninvites
                 (
                     ClanID,
@@ -795,16 +691,10 @@ public sealed class SocialService
         }
     }
 
-    public async Task<ClanResponse> AcceptClanInviteAsync(
-        ulong customerId,
-        ulong clanId,
-        bool accept)
+    public async Task<ClanResponse> AcceptClanInviteAsync(ulong customerId, ulong clanOrInviteId, bool accept)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
-
-        if (clanId == 0 || clanId > int.MaxValue)
-            return new ClanResponse(false, 400, "BAD_CLAN_ID", null);
 
         await using var db = _db.CreateConnection();
 
@@ -832,17 +722,21 @@ public sealed class SocialService
                     InviterID AS InviterId,
                     CustomerID AS CustomerId
                 FROM claninvites
-                WHERE ClanID = @ClanId
-                  AND CustomerID = @CustomerId
+                WHERE CustomerID = @CustomerId
                   AND ExpireTime > UTC_TIMESTAMP()
+                  AND (
+                        @Id = 0
+                     OR ClanID = @Id
+                     OR ClanInviteID = @Id
+                  )
                 ORDER BY ClanInviteID DESC
                 LIMIT 1
                 FOR UPDATE;
                 """,
                 new
                 {
-                    ClanId = (int)clanId,
-                    CustomerId = (int)customerId
+                    CustomerId = (int)customerId,
+                    Id = (int)Math.Min(clanOrInviteId, (ulong)int.MaxValue)
                 },
                 tx);
 
@@ -872,7 +766,7 @@ public sealed class SocialService
                 return new ClanResponse(false, 409, "ALREADY_IN_CLAN", null);
             }
 
-            if (!await ClanHasFreeSlotAsync(db, tx, (int)clanId))
+            if (!await ClanHasFreeSlotAsync(db, tx, invite.ClanId))
             {
                 await tx.RollbackAsync();
                 return new ClanResponse(false, 409, "CLAN_FULL", null);
@@ -887,17 +781,7 @@ public sealed class SocialService
                     ClanContributedXP = 0,
                     ClanContributedGP = 0
                 WHERE CustomerID = @CustomerId;
-                """,
-                new
-                {
-                    ClanId = (int)clanId,
-                    Rank = ClanRankMember,
-                    CustomerId = (int)customerId
-                },
-                tx);
 
-            await db.ExecuteAsync(
-                """
                 DELETE FROM claninvites
                 WHERE CustomerID = @CustomerId;
 
@@ -906,11 +790,16 @@ public sealed class SocialService
                 WHERE CustomerID = @CustomerId
                   AND COALESCE(IsProcessed, 0) = 0;
                 """,
-                new { CustomerId = (int)customerId },
+                new
+                {
+                    ClanId = invite.ClanId,
+                    Rank = ClanRankMember,
+                    CustomerId = (int)customerId
+                },
                 tx);
 
-            await UpdateClanMemberCountAsync(db, tx, (int)clanId);
-            await LogClanEventAsync(db, tx, (int)clanId, 11, ClanRankMember, (int)customerId, invite.InviterId, 0, 0, account.Gamertag, "", "invite accepted");
+            await UpdateClanMemberCountAsync(db, tx, invite.ClanId);
+            await LogClanEventAsync(db, tx, invite.ClanId, 11, ClanRankMember, (int)customerId, invite.InviterId, 0, 0, account.Gamertag, "", "invite accepted");
 
             await tx.CommitAsync();
 
@@ -923,10 +812,7 @@ public sealed class SocialService
         }
     }
 
-    public async Task<ClanResponse> ApplyToClanAsync(
-        ulong customerId,
-        ulong clanId,
-        string? textRaw)
+    public async Task<ClanResponse> ApplyToClanAsync(ulong customerId, ulong clanId, string? textRaw)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -981,16 +867,7 @@ public sealed class SocialService
                 WHERE ClanID = @ClanId
                   AND CustomerID = @CustomerId
                   AND COALESCE(IsProcessed, 0) = 0;
-                """,
-                new
-                {
-                    ClanId = (int)clanId,
-                    CustomerId = (int)customerId
-                },
-                tx);
 
-            await db.ExecuteAsync(
-                """
                 INSERT INTO clanapplications
                 (
                     ClanID,
@@ -1029,11 +906,7 @@ public sealed class SocialService
         }
     }
 
-    public async Task<ClanResponse> AnswerClanApplicationAsync(
-        ulong customerId,
-        ulong applicationId,
-        ulong targetCustomerId,
-        bool accept)
+    public async Task<ClanResponse> AnswerClanApplicationAsync(ulong customerId, ulong applicationId, ulong targetCustomerId, bool accept)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -1083,8 +956,8 @@ public sealed class SocialService
                 new
                 {
                     ClanId = actor.ClanId,
-                    ApplicationId = (int)applicationId,
-                    TargetCustomerId = (int)targetCustomerId
+                    ApplicationId = (int)Math.Min(applicationId, (ulong)int.MaxValue),
+                    TargetCustomerId = (int)Math.Min(targetCustomerId, (ulong)int.MaxValue)
                 },
                 tx);
 
@@ -1139,17 +1012,7 @@ public sealed class SocialService
                     ClanContributedXP = 0,
                     ClanContributedGP = 0
                 WHERE CustomerID = @TargetId;
-                """,
-                new
-                {
-                    ClanId = actor.ClanId,
-                    Rank = ClanRankMember,
-                    TargetId = app.CustomerId
-                },
-                tx);
 
-            await db.ExecuteAsync(
-                """
                 DELETE FROM claninvites
                 WHERE CustomerID = @TargetId;
 
@@ -1158,7 +1021,12 @@ public sealed class SocialService
                 WHERE CustomerID = @TargetId
                   AND COALESCE(IsProcessed, 0) = 0;
                 """,
-                new { TargetId = app.CustomerId },
+                new
+                {
+                    ClanId = actor.ClanId,
+                    Rank = ClanRankMember,
+                    TargetId = app.CustomerId
+                },
                 tx);
 
             await UpdateClanMemberCountAsync(db, tx, actor.ClanId);
@@ -1300,9 +1168,7 @@ public sealed class SocialService
         }
     }
 
-    public async Task<ClanResponse> KickClanMemberAsync(
-        ulong customerId,
-        ulong targetCustomerId)
+    public async Task<ClanResponse> KickClanMemberAsync(ulong customerId, ulong targetCustomerId)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -1365,23 +1231,17 @@ public sealed class SocialService
         }
     }
 
-    public async Task<ClanResponse> PromoteClanMemberAsync(
-        ulong customerId,
-        ulong targetCustomerId)
+    public async Task<ClanResponse> PromoteClanMemberAsync(ulong customerId, ulong targetCustomerId)
     {
         return await ChangeClanRankAsync(customerId, targetCustomerId, true);
     }
 
-    public async Task<ClanResponse> DemoteClanMemberAsync(
-        ulong customerId,
-        ulong targetCustomerId)
+    public async Task<ClanResponse> DemoteClanMemberAsync(ulong customerId, ulong targetCustomerId)
     {
         return await ChangeClanRankAsync(customerId, targetCustomerId, false);
     }
 
-    public async Task<ClanResponse> SetClanAnnouncementAsync(
-        ulong customerId,
-        string announcementRaw)
+    public async Task<ClanResponse> SetClanAnnouncementAsync(ulong customerId, string announcementRaw)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -1607,10 +1467,7 @@ public sealed class SocialService
         return xml.ToString();
     }
 
-    private async Task<ClanResponse> ChangeClanRankAsync(
-        ulong customerId,
-        ulong targetCustomerId,
-        bool promote)
+    private async Task<ClanResponse> ChangeClanRankAsync(ulong customerId, ulong targetCustomerId, bool promote)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
@@ -1703,11 +1560,7 @@ public sealed class SocialService
         }
     }
 
-    private static async Task InsertFriendRowIfMissingAsync(
-        MySqlConnection db,
-        int customerId,
-        int friendId,
-        int status)
+    private static async Task InsertFriendRowIfMissingAsync(MySqlConnection db, int customerId, int friendId, int status)
     {
         var exists = await db.ExecuteScalarAsync<int>(
             """
@@ -1768,10 +1621,7 @@ public sealed class SocialService
             });
     }
 
-    private static async Task<ulong> ResolveCustomerIdByNameAsync(
-        MySqlConnection db,
-        string nameRaw,
-        MySqlTransaction? tx = null)
+    private static async Task<ulong> ResolveCustomerIdByNameAsync(MySqlConnection db, string nameRaw, MySqlTransaction? tx = null)
     {
         var name = WebUtility.HtmlDecode(nameRaw ?? "").Trim();
 
@@ -1790,14 +1640,10 @@ public sealed class SocialService
             new { Name = name },
             tx);
 
-        return customerId.HasValue && customerId.Value > 0
-            ? (ulong)customerId.Value
-            : 0;
+        return customerId.HasValue && customerId.Value > 0 ? (ulong)customerId.Value : 0;
     }
 
-    private static async Task<int> GetCustomerClanIdAsync(
-        MySqlConnection db,
-        ulong customerId)
+    private static async Task<int> GetCustomerClanIdAsync(MySqlConnection db, ulong customerId)
     {
         return await db.ExecuteScalarAsync<int>(
             """
@@ -1809,10 +1655,7 @@ public sealed class SocialService
             new { CustomerId = (int)customerId });
     }
 
-    private static async Task<AccountClanRow?> GetAccountClanRowAsync(
-        MySqlConnection db,
-        ulong customerId,
-        MySqlTransaction? tx = null)
+    private static async Task<AccountClanRow?> GetAccountClanRowAsync(MySqlConnection db, ulong customerId, MySqlTransaction? tx = null)
     {
         if (customerId == 0 || customerId > int.MaxValue)
             return null;
@@ -1832,10 +1675,7 @@ public sealed class SocialService
             tx);
     }
 
-    private static async Task<bool> ClanHasFreeSlotAsync(
-        MySqlConnection db,
-        MySqlTransaction tx,
-        int clanId)
+    private static async Task<bool> ClanHasFreeSlotAsync(MySqlConnection db, MySqlTransaction tx, int clanId)
     {
         var row = await db.QueryFirstOrDefaultAsync<ClanSlotRow>(
             """
@@ -1854,16 +1694,10 @@ public sealed class SocialService
             new { ClanId = clanId },
             tx);
 
-        if (row == null)
-            return false;
-
-        return row.CurrentMembers < row.MaxMembers;
+        return row != null && row.CurrentMembers < row.MaxMembers;
     }
 
-    private static async Task UpdateClanMemberCountAsync(
-        MySqlConnection db,
-        MySqlTransaction tx,
-        int clanId)
+    private static async Task UpdateClanMemberCountAsync(MySqlConnection db, MySqlTransaction tx, int clanId)
     {
         await db.ExecuteAsync(
             """
@@ -1944,9 +1778,7 @@ public sealed class SocialService
             tx);
     }
 
-    private static async Task<bool> TableExistsAsync(
-        MySqlConnection db,
-        string table)
+    private static async Task<bool> TableExistsAsync(MySqlConnection db, string table)
     {
         var count = await db.ExecuteScalarAsync<int>(
             """
