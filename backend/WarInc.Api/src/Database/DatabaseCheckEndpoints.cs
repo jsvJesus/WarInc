@@ -15,5 +15,17 @@ public static class DatabaseCheckEndpoints
             var result = await service.GetSchemaAsync();
             return Results.Json(result);
         });
+
+        app.MapGet("/internal/database/smoke", async (DatabaseCheckService service) =>
+        {
+            var result = await service.SmokeAsync();
+            return Results.Json(result);
+        });
+
+        app.MapGet("/internal/database/smoke-test", async (DatabaseCheckService service) =>
+        {
+            var result = await service.SmokeAsync();
+            return Results.Json(result);
+        });
     }
 }

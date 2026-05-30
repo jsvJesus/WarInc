@@ -196,6 +196,8 @@ app.MapGet("/", () =>
             "/internal/gameserver/list",
             "/internal/database/check",
             "/internal/database/schema",
+            "/internal/database/smoke",
+            "/internal/database/smoke-test",
 
             "/legacy/smoke",
             "/legacy/smoke/endpoints",

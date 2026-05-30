@@ -197,7 +197,7 @@ public sealed class LegacyExternalAuthService
                     VALUES
                     (
                         @CustomerId,
-                        '0000000000000000000000000000000',
+                        '0000000000',
                         '',
                         ''
                     );
