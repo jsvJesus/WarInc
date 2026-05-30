@@ -1,7 +1,10 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
-using System.Text.Json; // ebana v rot
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace WarInc.Api.Legacy;
 
@@ -22,7 +25,7 @@ public static class LegacySmokeEndpoints
         @"^api_[A-Za-z0-9_]+\.aspx$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static readonly string[] KnownLegacyApiEndpoints =
+    private static readonly string[] KnownLegacyApiEndpoints =
     [
         "api_BuyItem3.aspx",
         "api_ChangeGamerTag.aspx",
@@ -89,7 +92,7 @@ public static class LegacySmokeEndpoints
         app.MapMethods("/api/{legacyEndpoint}", LegacyHttpMethods, LegacyFallbackAsync);
     }
 
-    private static IResult SmokeInfo(HttpContext http)
+    private static IResult SmokeInfo()
     {
         return Results.Json(new
         {
@@ -103,7 +106,7 @@ public static class LegacySmokeEndpoints
         });
     }
 
-    private static IResult SmokeEndpoints(HttpContext http)
+    private static IResult SmokeEndpoints()
     {
         return Results.Json(new
         {
@@ -164,16 +167,12 @@ public static class LegacySmokeEndpoints
         if (lastSlash >= 0)
             rawPath = rawPath[(lastSlash + 1)..];
 
-        rawPath = WebUtility.UrlDecode(rawPath);
-        return rawPath.Trim();
+        return WebUtility.UrlDecode(rawPath).Trim();
     }
 
     private static bool IsLegacyApiName(string endpoint)
     {
-        if (string.IsNullOrWhiteSpace(endpoint))
-            return false;
-
-        return LegacyApiRegex.IsMatch(endpoint);
+        return !string.IsNullOrWhiteSpace(endpoint) && LegacyApiRegex.IsMatch(endpoint);
     }
 
     private static bool WantsJson(HttpContext http)
@@ -212,7 +211,7 @@ public static class LegacySmokeEndpoints
             "api_login.aspx" => "WO_00 0 0",
             "api_steamlogin.aspx" => "WO_00 0 0",
             "api_gnalogin.aspx" => "WO_00 0 0",
-            "api_gamersfirst.aspx" => BuildGamersFirstSmoke(func),
+            "api_gamersfirst.aspx" => func == "login" ? "WO_00 0 0 0 0" : "WO_0",
             "api_steamcreateacc.aspx" => "WO_0",
 
             "api_checkloginsession.aspx" => "WO_0",
@@ -234,24 +233,24 @@ public static class LegacySmokeEndpoints
             "api_skilllearn.aspx" => "WO_00 0 0",
             "api_skillreset.aspx" => "WO_0",
 
-            "api_weaponattach.aspx" => BuildWeaponAttachSmoke(func),
+            "api_weaponattach.aspx" => func == "buy" ? "WO_00" : "WO_0",
             "api_weaponattachset.aspx" => "WO_0",
 
             "api_welcomepackage4.aspx" => "WO_0",
 
-            "api_friends.aspx" => BuildFriendsSmoke(func),
-            "api_clanmgr.aspx" => BuildClanMgrSmoke(func),
+            "api_friends.aspx" => func == "stats" ? "WO_0<friends></friends>" : "WO_0",
+            "api_clanmgr.aspx" => "WO_0",
             "api_clanapply.aspx" => "WO_0",
             "api_clancreate.aspx" => "WO_0",
             "api_clangetinfo.aspx" => "WO_0<clan id=\"0\" name=\"\" tag=\"\" tagcolor=\"0\"></clan>",
             "api_claninvites.aspx" => "WO_0<invites></invites>",
 
             "api_leaderboardget.aspx" => "WO_0<leaderboard pos=\"0\" size=\"0\"></leaderboard>",
-            "api_mysterybox.aspx" => BuildMysteryBoxSmoke(func),
-            "api_retbonus.aspx" => BuildRetentionBonusSmoke(func),
+            "api_mysterybox.aspx" => func == "info" ? "WO_0<box></box>" : "WO_00 0 0 0",
+            "api_retbonus.aspx" => func == "info" ? "WO_0<retbonus d=\"0\" m=\"0\"><days></days></retbonus>" : "WO_00",
 
             "api_gnagetbalance.aspx" => "WO_00",
-            "api_steambuygp.aspx" => BuildSteamBuyGpSmoke(func),
+            "api_steambuygp.aspx" => func == "shop" ? "WO_0<SteamGPShop></SteamGPShop>" : "WO_00",
 
             "api_getcreategamekey3.aspx" => "WO_00",
             "api_setrsupdatestatus.aspx" => "WO_0",
@@ -276,80 +275,6 @@ public static class LegacySmokeEndpoints
 
             _ => "WO_0"
         };
-    }
-
-    private static string BuildGamersFirstSmoke(string func)
-    {
-        if (func == "login")
-            return "WO_00 0 0 0 0";
-
-        return "WO_0";
-    }
-
-    private static string BuildWeaponAttachSmoke(string func)
-    {
-        if (func == "buy")
-            return "WO_00";
-
-        return "WO_0";
-    }
-
-    private static string BuildFriendsSmoke(string func)
-    {
-        if (func == "addreq")
-            return "WO_00";
-
-        if (func == "stats")
-            return "WO_0<friends></friends>";
-
-        return "WO_0";
-    }
-
-    private static string BuildClanMgrSmoke(string func)
-    {
-        if (func == "list")
-            return "WO_0<clans></clans>";
-
-        if (func == "members")
-            return "WO_0<members></members>";
-
-        return "WO_0";
-    }
-
-    private static string BuildMysteryBoxSmoke(string func)
-    {
-        if (func == "info")
-            return "WO_0<box></box>";
-
-        if (func == "roll")
-            return "WO_00 0 0 0";
-
-        if (func == "sell")
-            return "WO_0";
-
-        return "WO_0";
-    }
-
-    private static string BuildRetentionBonusSmoke(string func)
-    {
-        if (func == "info")
-            return "WO_0<retbonus d=\"0\" m=\"0\"><days></days></retbonus>";
-
-        if (func == "give")
-            return "WO_00";
-
-        return "WO_0";
-    }
-
-    private static string BuildSteamBuyGpSmoke(string func)
-    {
-        if (func == "shop")
-            return "WO_0<SteamGPShop></SteamGPShop>";
-
-        if (func == "fin")
-            return "WO_00";
-
-        return "WO_0";
     }
 
     private static string BuildLoadoutModifySmoke(IReadOnlyDictionary<string, string> values)
@@ -379,64 +304,22 @@ public static class LegacySmokeEndpoints
 
         var now = DateTime.UtcNow;
 
-        var xml = new StringBuilder();
-
-        xml.Append("WO_0");
-        xml.Append("<account ");
-        xml.Append("CustomerID=\"").Append(Xml(customerId)).Append("\" ");
-        xml.Append("AccountStatus=\"100\" ");
-        xml.Append("gamertag=\"SmokeTester\" ");
-        xml.Append("gamepoints=\"0\" ");
-        xml.Append("GameDollars=\"0\" ");
-        xml.Append("HonorPoints=\"0\" ");
-        xml.Append("SkillPoints=\"0\" ");
-        xml.Append("Kills=\"0\" ");
-        xml.Append("Deaths=\"0\" ");
-        xml.Append("ShotsFired=\"0\" ");
-        xml.Append("ShotsHits=\"0\" ");
-        xml.Append("Headshots=\"0\" ");
-        xml.Append("AssistKills=\"0\" ");
-        xml.Append("Wins=\"0\" ");
-        xml.Append("Losses=\"0\" ");
-        xml.Append("CaptureNeutralPoints=\"0\" ");
-        xml.Append("CaptureEnemyPoints=\"0\" ");
-        xml.Append("TimePlayed=\"0\" ");
-        xml.Append("IsDev=\"1\" ");
-        xml.Append("F1S=\"0\" ");
-        xml.Append("F2S=\"0\" ");
-        xml.Append("F3S=\"0\" ");
-        xml.Append("F4S=\"0\" ");
-        xml.Append("F5S=\"0\" ");
-        xml.Append("ClanID=\"0\" ");
-        xml.Append("ClanRank=\"0\" ");
-        xml.Append("ClanTag=\"\" ");
-        xml.Append("ClanTagColor=\"0\" ");
-        xml.Append("IsFPSEnabled=\"1\" ");
-        xml.Append("time=\"")
-            .Append(now.Year)
-            .Append(' ')
-            .Append(now.Month)
-            .Append(' ')
-            .Append(now.Day)
-            .Append(' ')
-            .Append(now.Hour)
-            .Append(' ')
-            .Append(now.Minute)
-            .Append("\">");
-
-        xml.Append("<loadouts>");
-        xml.Append("<l id=\"1\" cl=\"0\" xp=\"0\" tm=\"0\" sp1=\"0\" sp2=\"0\" sp3=\"0\" sv=\"\" lo=\"0 0 0 0 0 0 0 0 0 0 0 0 0\" />");
-        xml.Append("</loadouts>");
-
-        xml.Append("<achievements></achievements>");
-        xml.Append("<fpsattach></fpsattach>");
-        xml.Append("<inventory></inventory>");
-        xml.Append("<nis></nis>");
-        xml.Append("<sday></sday>");
-        xml.Append("<sweek></sweek>");
-        xml.Append("</account>");
-
-        return xml.ToString();
+        return "WO_0" +
+               $"<account CustomerID=\"{Xml(customerId)}\" AccountStatus=\"100\" gamertag=\"SmokeTester\" " +
+               "gamepoints=\"0\" GameDollars=\"0\" HonorPoints=\"0\" SkillPoints=\"0\" " +
+               "Kills=\"0\" Deaths=\"0\" ShotsFired=\"0\" ShotsHits=\"0\" Headshots=\"0\" AssistKills=\"0\" " +
+               "Wins=\"0\" Losses=\"0\" CaptureNeutralPoints=\"0\" CaptureEnemyPoints=\"0\" TimePlayed=\"0\" " +
+               "IsDev=\"1\" F1S=\"0\" F2S=\"0\" F3S=\"0\" F4S=\"0\" F5S=\"0\" " +
+               "ClanID=\"0\" ClanRank=\"0\" ClanTag=\"\" ClanTagColor=\"0\" IsFPSEnabled=\"1\" " +
+               $"time=\"{now.Year.ToString(CultureInfo.InvariantCulture)} {now.Month.ToString(CultureInfo.InvariantCulture)} {now.Day.ToString(CultureInfo.InvariantCulture)} {now.Hour.ToString(CultureInfo.InvariantCulture)} {now.Minute.ToString(CultureInfo.InvariantCulture)}\">" +
+               "<loadouts><l id=\"1\" cl=\"0\" xp=\"0\" tm=\"0\" sp1=\"0\" sp2=\"0\" sp3=\"0\" sv=\"\" lo=\"0 0 0 0 0 0 0 0 0 0 0 0 0\" /></loadouts>" +
+               "<achievements></achievements>" +
+               "<fpsattach></fpsattach>" +
+               "<inventory></inventory>" +
+               "<nis></nis>" +
+               "<sday></sday>" +
+               "<sweek></sweek>" +
+               "</account>";
     }
 
     private static string Get(IReadOnlyDictionary<string, string> values, string key)
