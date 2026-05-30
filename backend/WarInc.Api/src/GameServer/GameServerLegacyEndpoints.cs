@@ -2,7 +2,6 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using WarInc.Api.ClientTelemetry;
 using WarInc.Api.Common;
 using WarInc.Api.Config;
 
@@ -44,11 +43,11 @@ public static class GameServerLegacyEndpoints
         if (!CheckServerKey(data, options))
             return Text("WO_3 bad key");
 
-        var createGameKey = ReadAny(data, "CreateGameKey", "createGameKey", "gameKey", "key");
+        var createGameKey = ReadIntAny(data, 0, "CreateGameKey", "createGameKey", "gameKey", "key");
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid", "s_id");
 
-        if (string.IsNullOrWhiteSpace(serverId))
-            serverId = createGameKey;
+        if (string.IsNullOrWhiteSpace(serverId) && createGameKey > 0)
+            serverId = createGameKey.ToString();
 
         if (string.IsNullOrWhiteSpace(serverId))
             serverId = "legacy-" + Guid.NewGuid().ToString("N");
@@ -77,7 +76,7 @@ public static class GameServerLegacyEndpoints
         var maxPlayers = ReadIntAny(data, 0, "maxplayers", "MaxPlayers", "maxplr", "MaxPlayersLimit");
         var currentPlayers = ReadIntAny(data, 0, "players", "curplayers", "CurrentPlayers", "numplayers");
 
-        service.Register(new GameServerRegisterRequest(
+        await service.RegisterAsync(new GameServerRegisterRequest(
             serverId,
             name,
             "",
@@ -86,7 +85,8 @@ public static class GameServerLegacyEndpoints
             publicAddress,
             port,
             maxPlayers,
-            currentPlayers));
+            currentPlayers,
+            createGameKey));
 
         return Text("WO_0");
     }
@@ -126,7 +126,7 @@ public static class GameServerLegacyEndpoints
         var maxPlayers = ReadIntAny(data, 0, "maxplayers", "MaxPlayers", "maxplr", "MaxPlayersLimit");
         var currentPlayers = ReadIntAny(data, 0, "players", "curplayers", "CurrentPlayers", "numplayers");
 
-        service.Register(new GameServerRegisterRequest(
+        await service.RegisterAsync(new GameServerRegisterRequest(
             serverId,
             name,
             "",
@@ -145,6 +145,9 @@ public static class GameServerLegacyEndpoints
         GameServerService service)
     {
         var data = await ReadRequestDataAsync(http);
+        var remoteIp = GetRemoteIp(http);
+
+        var ok = await service.WriteRoundResultAsync(data, remoteIp);
 
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
@@ -155,18 +158,19 @@ public static class GameServerLegacyEndpoints
 
             if (customerId != 0)
             {
-                service.PlayerLeave(new GameServerPlayerRequest(
+                await service.PlayerLeaveAsync(new GameServerPlayerRequest(
                     serverId,
                     customerId,
                     gamertag));
             }
 
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("round_result", data)));
+                BuildReport("round_result", data),
+                "round_result"));
         }
 
-        return Text("WO_0");
+        return Text(ok ? "WO_0" : "WO_5");
     }
 
     private static async Task<IResult> LegacyAddWeaponStatsAsync(
@@ -174,22 +178,24 @@ public static class GameServerLegacyEndpoints
         GameServerService service)
     {
         var data = await ReadRequestDataAsync(http);
+        var ok = await service.WriteWeaponStatsAsync(data);
+
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
         {
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("weapon_stats", data)));
+                BuildReport("weapon_stats", data),
+                "weapon_stats"));
         }
 
-        return Text("WO_0");
+        return Text(ok ? "WO_0" : "WO_5");
     }
 
     private static async Task<IResult> LegacyUpdateAchievementsAsync(
         HttpContext http,
         GameServerService service,
-        ClientTelemetryService telemetry,
         IOptions<WarIncOptions> options)
     {
         var data = await ReadRequestDataAsync(http);
@@ -197,15 +203,16 @@ public static class GameServerLegacyEndpoints
         if (!CheckServerKey(data, options))
             return Text("WO_3 bad key");
 
-        var ok = await telemetry.UpdateAchievementsAsync(data);
+        var ok = await service.UpdateAchievementsAsync(data);
 
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
         {
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("achievements", data)));
+                BuildReport("achievements", data),
+                "achievements"));
         }
 
         return Text(ok ? "WO_0" : "WO_5");
@@ -220,9 +227,10 @@ public static class GameServerLegacyEndpoints
 
         if (!string.IsNullOrWhiteSpace(serverId))
         {
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("log_info", data)));
+                BuildReport("log_info", data),
+                "log_info"));
         }
 
         return Text("WO_0");
@@ -244,9 +252,10 @@ public static class GameServerLegacyEndpoints
 
         if (!string.IsNullOrWhiteSpace(serverId))
         {
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("upload_log_file", data)));
+                BuildReport("upload_log_file", data),
+                "upload_log_file"));
         }
 
         return Text("WO_0");
@@ -257,16 +266,20 @@ public static class GameServerLegacyEndpoints
         GameServerService service)
     {
         var data = await ReadRequestDataAsync(http);
+
+        var ok = await service.WriteCheatAttemptAsync(data);
+
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
         {
-            service.Report(new GameServerReportRequest(
+            await service.ReportAsync(new GameServerReportRequest(
                 serverId,
-                BuildReport("cheat_attempt", data)));
+                BuildReport("cheat_attempt", data),
+                "cheat_attempt"));
         }
 
-        return Text("WO_0");
+        return Text(ok ? "WO_0" : "WO_5");
     }
 
     private static async Task<Dictionary<string, string>> ReadRequestDataAsync(HttpContext http)
@@ -306,6 +319,8 @@ public static class GameServerLegacyEndpoints
                             data[item.Key] = "1";
                         else if (item.Value.ValueKind == JsonValueKind.False)
                             data[item.Key] = "0";
+                        else
+                            data[item.Key] = item.Value.GetRawText();
                     }
                 }
             }
