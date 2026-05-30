@@ -663,6 +663,7 @@
     <ClCompile Include="Sources\ObjectsCode\Gameplay\ReverbZoneBox.cpp" />
     <ClCompile Include="Sources\SteamHelper.cpp" />
     <ClCompile Include="Sources\Editors\TerrainMods.cpp" />
+    <ClCompile Include="Sources\ThirdParty\JpegTurboAlias.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Sources\ObjectsCode\World\Building.h">

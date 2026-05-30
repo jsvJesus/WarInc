@@ -9,13 +9,15 @@
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-  <ProjectConfiguration Include="Debug|x64">
+    <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
-    </ProjectConfiguration><ProjectConfiguration Include="Release|x64">
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
-    </ProjectConfiguration></ItemGroup>
+    </ProjectConfiguration>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{143F9B67-C223-4F2D-B8F9-B644CA710CA6}</ProjectGuid>
@@ -26,10 +28,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
@@ -39,7 +42,8 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
-  </PropertyGroup><PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
@@ -49,12 +53,14 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup><ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -85,12 +91,12 @@
     <Lib>
       <OutputFile>Lib\$(Configuration)\$(ProjectName).lib</OutputFile>
     </Lib>
-  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\speex-1.1.12\include\speex;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\speex-1.1.12\include;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\bzip2-1.0.3;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\AutopatcherPostgreRepository;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions;$(SolutionDir)Source\Engine\RakNet3.0\CrashReporter;$(SolutionDir)Source\Engine\RakNet3.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -116,7 +122,8 @@
     <Lib>
       <OutputFile>Lib\$(Configuration)\$(ProjectName).lib</OutputFile>
     </Lib>
-  </ItemDefinitionGroup><ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\speex-1.1.12\include\speex;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\speex-1.1.12\include;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\bzip2-1.0.3;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions\AutopatcherPostgreRepository;$(SolutionDir)Source\Engine\RakNet3.0\DependentExtensions;$(SolutionDir)Source\Engine\RakNet3.0\CrashReporter;$(SolutionDir)Source\Engine\RakNet3.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

@@ -216,50 +216,14 @@
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp">
       <Filter>Scaleform</Filter>
     </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HALSetup.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp">
       <Filter>Scaleform</Filter>
     </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp">
       <Filter>Scaleform</Filter>
     </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderManager.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
     <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp">
       <Filter>Scaleform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PxFoundation\internal\src\PsAllocator.cpp">
-      <Filter>PhysX</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctBoxController.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCapsuleController.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterController.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerCallbacks.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctCharacterControllerManager.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctController.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptBox.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptCapsule.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\PhysX\PhysXCharacterKinematic\src\CctSweptVolume.cpp">
-      <Filter>PhysX\nxCharacter</Filter>
     </ClCompile>
     <ClCompile Include="TrueNature2\Terrain2.cpp">
       <Filter>TrueNature2</Filter>
@@ -276,6 +240,8 @@
     <ClCompile Include="CamouflageDataManager.cpp" />
     <ClCompile Include="DebugHelpers.cpp" />
     <ClCompile Include="r3dPCH.cpp" />
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderBinary.cpp" />
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderDescs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fmod\SoundSys.h">
@@ -506,5 +472,6 @@
     <ClInclude Include="CamouflageDataManager.h" />
     <ClInclude Include="DebugHelpers.h" />
     <ClInclude Include="gameobjects\WarIncPhysX34Compat.h" />
+    <ClInclude Include="WarIncScaleformLink.h" />
   </ItemGroup>
 </Project>

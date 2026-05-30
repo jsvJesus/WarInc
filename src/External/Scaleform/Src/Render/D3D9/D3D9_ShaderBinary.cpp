@@ -3,7 +3,7 @@
     PublicHeader:   Render
     Filename    :   D3D9_ShaderBinary.cpp
     Content     :   D3D9 Shader descriptors
-    Created     :   29.05.2026
+    Created     :   30.05.2026
     Authors     :   Automatically generated.
 
     Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.

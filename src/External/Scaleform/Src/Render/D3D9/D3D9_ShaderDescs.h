@@ -3,7 +3,7 @@
     PublicHeader:   Render
     Filename    :   D3D9_ShaderDescs.h
     Content     :   D3D9 Shader descriptors
-    Created     :   29.05.2026
+    Created     :   30.05.2026
     Authors     :   Automatically generated.
 
     Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
@@ -32,7 +32,7 @@
 
 namespace Scaleform { namespace Render { namespace D3D9 {
 
-const static SInt64 SF_GFXSHADERMAKER_TIMESTAMP = -8584215250162351520LL;
+const static SInt64 SF_GFXSHADERMAKER_TIMESTAMP = -8584215049855764805LL;
 struct Uniform
 {
     enum Flags

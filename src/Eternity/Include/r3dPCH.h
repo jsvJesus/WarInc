@@ -26,16 +26,6 @@
 #include <malloc.h>
 #include <assert.h>
 
-#ifdef WARINC_USE_LIBCURL
-#include "CkByteData.h"
-#include "CkString.h"
-#include "CkHttp.h"
-#include "CkHttpRequest.h"
-#include "CkHttpResponse.h"
-#include "CkHttpProgress.h"
-#include "CkGzip.h"
-#endif
-
 // RJH Network2: added the following preprocessor defines for the network, 
 // since the game project is compiled for precompiled headers and this pch
 // is everywhere, ensures that the winsock header part of windows.h
@@ -152,8 +142,12 @@ using namespace physx;
 
 #define ENABLE_RAGDOLL 1
 
-#ifndef WO_SERVER 
-	#define ENABLE_WEB_BROWSER 1
+#ifndef ENABLE_WEB_BROWSER
+#if defined(WARINC_X64) || defined(_WIN64) || defined(WO_SERVER)
+#define ENABLE_WEB_BROWSER 0
+#else
+#define ENABLE_WEB_BROWSER 1
+#endif
 #endif
 
 // memory debug, disable define to turn off memory tracking
