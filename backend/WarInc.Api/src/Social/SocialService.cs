@@ -17,11 +17,12 @@ public sealed class SocialService
 
     public async Task<FriendsListResponse> GetFriendsAsync(ulong customerId)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return new FriendsListResponse(true, 0, "OK", Array.Empty<SocialFriendDto>());
+
         await using var db = _db.CreateConnection();
 
-        var exists = await TableExistsAsync(db, "friends");
-
-        if (!exists)
+        if (!await TableExistsAsync(db, "friendsmap"))
             return new FriendsListResponse(true, 0, "OK", Array.Empty<SocialFriendDto>());
 
         var rows = await db.QueryAsync<SocialFriendDto>(
@@ -31,29 +32,52 @@ public sealed class SocialService
                     WHEN f.CustomerID = @CustomerId THEN f.FriendID
                     ELSE f.CustomerID
                 END AS CustomerId,
-                COALESCE(p.Gamertag, a.AccountName, '') AS Gamertag,
-                1 AS Status,
-                0 AS Online,
-                COALESCE(p.HardcoreLevel, 0) AS Level,
-                COALESCE(p.HardcoreXP, 0) AS XP
-            FROM friends f
-            LEFT JOIN profile_chars p
-                ON p.CustomerID = CASE
+
+                COALESCE(
+                    NULLIF(l.Gamertag, ''),
+                    NULLIF(l.AccountName, ''),
+                    CONCAT('Player', CASE
+                        WHEN f.CustomerID = @CustomerId THEN f.FriendID
+                        ELSE f.CustomerID
+                    END)
+                ) AS Gamertag,
+
+                COALESCE(f.FriendStatus, 0) AS Status,
+
+                CASE
+                    WHEN s.CustomerID IS NULL THEN 0
+                    ELSE 1
+                END AS Online,
+
+                COALESCE(lb.Rank, 0) AS Level,
+                COALESCE(l.HonorPoints, 0) AS XP
+            FROM friendsmap f
+            LEFT JOIN loginid l
+                ON l.CustomerID = CASE
                     WHEN f.CustomerID = @CustomerId THEN f.FriendID
                     ELSE f.CustomerID
                 END
-            LEFT JOIN loginid a
-                ON a.CustomerID = CASE
-                    WHEN f.CustomerID = @CustomerId THEN f.FriendID
-                    ELSE f.CustomerID
-                END
+            LEFT JOIN loginsessions s
+                ON s.CustomerID = l.CustomerID
+            LEFT JOIN leaderboard lb
+                ON lb.CustomerID = l.CustomerID
             WHERE f.CustomerID = @CustomerId
                OR f.FriendID = @CustomerId
+            GROUP BY
+                CustomerId,
+                Gamertag,
+                Status,
+                Level,
+                XP
             ORDER BY Gamertag;
             """,
-            new { CustomerId = customerId });
+            new { CustomerId = (int)customerId });
 
-        return new FriendsListResponse(true, 0, "OK", rows.ToArray());
+        return new FriendsListResponse(
+            true,
+            0,
+            "OK",
+            rows.ToArray());
     }
 
     public async Task<bool> AddFriendRequestAsync(
@@ -61,35 +85,60 @@ public sealed class SocialService
         ulong friendCustomerId,
         string? friendName)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return true;
+
         await using var db = _db.CreateConnection();
 
-        var hasFriendRequests = await TableExistsAsync(db, "friend_requests");
-
-        if (hasFriendRequests && friendCustomerId != 0)
-        {
-            await db.ExecuteAsync(
-                """
-                INSERT IGNORE INTO friend_requests
-                (
-                    CustomerID,
-                    FriendID,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @CustomerId,
-                    @FriendId,
-                    UTC_TIMESTAMP()
-                );
-                """,
-                new
-                {
-                    CustomerId = customerId,
-                    FriendId = friendCustomerId
-                });
-
+        if (!await TableExistsAsync(db, "friendsmap"))
             return true;
-        }
+
+        var friendId = friendCustomerId;
+
+        if (friendId == 0 && !string.IsNullOrWhiteSpace(friendName))
+            friendId = await ResolveCustomerIdByNameAsync(db, friendName);
+
+        if (friendId == 0 || friendId > int.MaxValue || friendId == customerId)
+            return true;
+
+        var exists = await db.ExecuteScalarAsync<int>(
+            """
+            SELECT COUNT(*)
+            FROM friendsmap
+            WHERE (CustomerID = @CustomerId AND FriendID = @FriendId)
+               OR (CustomerID = @FriendId AND FriendID = @CustomerId);
+            """,
+            new
+            {
+                CustomerId = (int)customerId,
+                FriendId = (int)friendId
+            });
+
+        if (exists > 0)
+            return true;
+
+        await db.ExecuteAsync(
+            """
+            INSERT INTO friendsmap
+            (
+                CustomerID,
+                FriendID,
+                FriendStatus,
+                DateAdded
+            )
+            VALUES
+            (
+                @CustomerId,
+                @FriendId,
+                0,
+                UTC_TIMESTAMP()
+            );
+            """,
+            new
+            {
+                CustomerId = (int)customerId,
+                FriendId = (int)friendId
+            });
 
         return true;
     }
@@ -99,72 +148,89 @@ public sealed class SocialService
         ulong friendCustomerId,
         bool accept)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return true;
+
+        if (friendCustomerId == 0 || friendCustomerId > int.MaxValue || friendCustomerId == customerId)
+            return true;
+
         await using var db = _db.CreateConnection();
 
-        var hasFriends = await TableExistsAsync(db, "friends");
-        var hasFriendRequests = await TableExistsAsync(db, "friend_requests");
+        if (!await TableExistsAsync(db, "friendsmap"))
+            return true;
 
-        if (accept && hasFriends && friendCustomerId != 0)
+        if (!accept)
         {
             await db.ExecuteAsync(
                 """
-                INSERT IGNORE INTO friends
-                (
-                    CustomerID,
-                    FriendID,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @CustomerId,
-                    @FriendId,
-                    UTC_TIMESTAMP()
-                );
+                DELETE FROM friendsmap
+                WHERE (CustomerID = @FriendId AND FriendID = @CustomerId)
+                   OR (CustomerID = @CustomerId AND FriendID = @FriendId);
                 """,
                 new
                 {
-                    CustomerId = customerId,
-                    FriendId = friendCustomerId
+                    CustomerId = (int)customerId,
+                    FriendId = (int)friendCustomerId
                 });
+
+            return true;
         }
 
-        if (hasFriendRequests && friendCustomerId != 0)
-        {
-            await db.ExecuteAsync(
-                """
-                DELETE FROM friend_requests
-                WHERE CustomerID = @FriendId
-                  AND FriendID = @CustomerId;
-                """,
-                new
-                {
-                    CustomerId = customerId,
-                    FriendId = friendCustomerId
-                });
-        }
+        await db.ExecuteAsync(
+            """
+            UPDATE friendsmap
+            SET
+                FriendStatus = 1,
+                DateAdded = COALESCE(DateAdded, UTC_TIMESTAMP())
+            WHERE CustomerID = @FriendId
+              AND FriendID = @CustomerId;
+            """,
+            new
+            {
+                CustomerId = (int)customerId,
+                FriendId = (int)friendCustomerId
+            });
+
+        await InsertFriendRowIfMissingAsync(
+            db,
+            (int)friendCustomerId,
+            (int)customerId,
+            1);
+
+        await InsertFriendRowIfMissingAsync(
+            db,
+            (int)customerId,
+            (int)friendCustomerId,
+            1);
 
         return true;
     }
 
-    public async Task<bool> RemoveFriendAsync(ulong customerId, ulong friendCustomerId)
+    public async Task<bool> RemoveFriendAsync(
+        ulong customerId,
+        ulong friendCustomerId)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return true;
+
+        if (friendCustomerId == 0 || friendCustomerId > int.MaxValue)
+            return true;
+
         await using var db = _db.CreateConnection();
 
-        var hasFriends = await TableExistsAsync(db, "friends");
-
-        if (!hasFriends || friendCustomerId == 0)
+        if (!await TableExistsAsync(db, "friendsmap"))
             return true;
 
         await db.ExecuteAsync(
             """
-            DELETE FROM friends
+            DELETE FROM friendsmap
             WHERE (CustomerID = @CustomerId AND FriendID = @FriendId)
                OR (CustomerID = @FriendId AND FriendID = @CustomerId);
             """,
             new
             {
-                CustomerId = customerId,
-                FriendId = friendCustomerId
+                CustomerId = (int)customerId,
+                FriendId = (int)friendCustomerId
             });
 
         return true;
@@ -172,34 +238,38 @@ public sealed class SocialService
 
     public async Task<ClanResponse> GetClanAsync(ulong customerId)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return new ClanResponse(true, 0, "OK", null);
+
         await using var db = _db.CreateConnection();
 
-        var hasClans = await TableExistsAsync(db, "clans");
-        var hasClanMembers = await TableExistsAsync(db, "clan_members");
-
-        if (!hasClans || !hasClanMembers)
+        if (!await TableExistsAsync(db, "clandata"))
             return new ClanResponse(true, 0, "OK", null);
 
         var clan = await db.QueryFirstOrDefaultAsync<SocialClanDto>(
             """
             SELECT
                 c.ClanID AS ClanId,
-                c.Name AS Name,
-                c.Tag AS Tag,
-                c.OwnerCustomerID AS OwnerCustomerId,
-                COALESCE(c.Level, 0) AS Level,
-                COALESCE(c.XP, 0) AS XP,
-                (
-                    SELECT COUNT(*)
-                    FROM clan_members cm2
-                    WHERE cm2.ClanID = c.ClanID
-                ) AS MemberCount
-            FROM clan_members cm
-            INNER JOIN clans c ON c.ClanID = cm.ClanID
-            WHERE cm.CustomerID = @CustomerId
+                c.ClanName AS Name,
+                c.ClanTag AS Tag,
+                c.OwnerID AS OwnerCustomerId,
+                COALESCE(c.ClanLevel, 0) AS Level,
+                COALESCE(c.ClanXP, 0) AS XP,
+                CASE
+                    WHEN COALESCE(c.NumClanMembers, 0) > 0 THEN c.NumClanMembers
+                    ELSE (
+                        SELECT COUNT(*)
+                        FROM loginid l2
+                        WHERE l2.ClanID = c.ClanID
+                    )
+                END AS MemberCount
+            FROM loginid l
+            INNER JOIN clandata c ON c.ClanID = l.ClanID
+            WHERE l.CustomerID = @CustomerId
+              AND l.ClanID > 0
             LIMIT 1;
             """,
-            new { CustomerId = customerId });
+            new { CustomerId = (int)customerId });
 
         return new ClanResponse(true, 0, "OK", clan);
     }
@@ -209,21 +279,21 @@ public sealed class SocialService
         string nameRaw,
         string tagRaw)
     {
+        if (customerId == 0 || customerId > int.MaxValue)
+            return new ClanResponse(false, 400, "BAD_CUSTOMER_ID", null);
+
         var name = NormalizeClanName(nameRaw);
         var tag = NormalizeClanTag(tagRaw);
 
-        if (name.Length < 3 || name.Length > 32)
+        if (name.Length < 3 || name.Length > 64)
             return new ClanResponse(false, 400, "BAD_CLAN_NAME", null);
 
-        if (tag.Length < 2 || tag.Length > 5)
+        if (tag.Length < 2 || tag.Length > 4)
             return new ClanResponse(false, 400, "BAD_CLAN_TAG", null);
 
         await using var db = _db.CreateConnection();
 
-        var hasClans = await TableExistsAsync(db, "clans");
-        var hasClanMembers = await TableExistsAsync(db, "clan_members");
-
-        if (!hasClans || !hasClanMembers)
+        if (!await TableExistsAsync(db, "clandata"))
         {
             return new ClanResponse(
                 true,
@@ -239,22 +309,30 @@ public sealed class SocialService
                     1));
         }
 
-        var alreadyInClan = await db.ExecuteScalarAsync<int>(
+        var account = await db.QueryFirstOrDefaultAsync<AccountClanRow>(
             """
-            SELECT COUNT(*)
-            FROM clan_members
-            WHERE CustomerID = @CustomerId;
+            SELECT
+                CustomerID AS CustomerId,
+                ClanID AS ClanId,
+                ClanRank AS ClanRank
+            FROM loginid
+            WHERE CustomerID = @CustomerId
+            LIMIT 1;
             """,
-            new { CustomerId = customerId });
+            new { CustomerId = (int)customerId });
 
-        if (alreadyInClan > 0)
+        if (account == null)
+            return new ClanResponse(false, 404, "ACCOUNT_NOT_FOUND", null);
+
+        if (account.ClanId > 0)
             return new ClanResponse(false, 409, "ALREADY_IN_CLAN", null);
 
-        var nameUsed = await db.ExecuteScalarAsync<int>(
+        var exists = await db.ExecuteScalarAsync<int>(
             """
             SELECT COUNT(*)
-            FROM clans
-            WHERE Name = @Name OR Tag = @Tag;
+            FROM clandata
+            WHERE ClanName = @Name
+               OR ClanTag = @Tag;
             """,
             new
             {
@@ -262,27 +340,45 @@ public sealed class SocialService
                 Tag = tag
             });
 
-        if (nameUsed > 0)
+        if (exists > 0)
             return new ClanResponse(false, 409, "CLAN_EXISTS", null);
 
         await db.ExecuteAsync(
             """
-            INSERT INTO clans
+            INSERT INTO clandata
             (
-                Name,
-                Tag,
-                OwnerCustomerID,
-                Level,
-                XP,
-                CreatedAt
+                ClanName,
+                ClanNameColor,
+                ClanTag,
+                ClanTagColor,
+                ClanEmblemID,
+                ClanEmblemColor,
+                ClanXP,
+                ClanLevel,
+                ClanGP,
+                OwnerID,
+                MaxClanMembers,
+                NumClanMembers,
+                ClanLore,
+                Announcement,
+                ClanCreateDate
             )
             VALUES
             (
                 @Name,
+                0,
                 @Tag,
-                @OwnerCustomerId,
                 0,
                 0,
+                0,
+                0,
+                0,
+                0,
+                @OwnerId,
+                50,
+                1,
+                '',
+                '',
                 UTC_TIMESTAMP()
             );
             """,
@@ -290,33 +386,26 @@ public sealed class SocialService
             {
                 Name = name,
                 Tag = tag,
-                OwnerCustomerId = customerId
+                OwnerId = (int)customerId
             });
 
-        var clanId = await db.ExecuteScalarAsync<ulong>(
+        var clanId = await db.ExecuteScalarAsync<int>(
             "SELECT LAST_INSERT_ID();");
 
         await db.ExecuteAsync(
             """
-            INSERT INTO clan_members
-            (
-                ClanID,
-                CustomerID,
-                Rank,
-                JoinedAt
-            )
-            VALUES
-            (
-                @ClanId,
-                @CustomerId,
-                99,
-                UTC_TIMESTAMP()
-            );
+            UPDATE loginid
+            SET
+                ClanID = @ClanId,
+                ClanRank = 99,
+                ClanContributedXP = 0,
+                ClanContributedGP = 0
+            WHERE CustomerID = @CustomerId;
             """,
             new
             {
                 ClanId = clanId,
-                CustomerId = customerId
+                CustomerId = (int)customerId
             });
 
         return new ClanResponse(
@@ -324,7 +413,7 @@ public sealed class SocialService
             0,
             "OK",
             new SocialClanDto(
-                clanId,
+                (ulong)clanId,
                 name,
                 tag,
                 customerId,
@@ -391,6 +480,7 @@ public sealed class SocialService
         LegacyUtil.AppendXmlAttr(xml, "id", clan.ClanId);
         LegacyUtil.AppendXmlAttr(xml, "name", clan.Name);
         LegacyUtil.AppendXmlAttr(xml, "tag", clan.Tag);
+        LegacyUtil.AppendXmlAttr(xml, "tagcolor", 0);
         LegacyUtil.AppendXmlAttr(xml, "owner", clan.OwnerCustomerId);
         LegacyUtil.AppendXmlAttr(xml, "level", clan.Level);
         LegacyUtil.AppendXmlAttr(xml, "xp", clan.XP);
@@ -398,6 +488,96 @@ public sealed class SocialService
         xml.Append("></clan>");
 
         return xml.ToString();
+    }
+
+    private static async Task InsertFriendRowIfMissingAsync(
+        MySqlConnector.MySqlConnection db,
+        int customerId,
+        int friendId,
+        int status)
+    {
+        var exists = await db.ExecuteScalarAsync<int>(
+            """
+            SELECT COUNT(*)
+            FROM friendsmap
+            WHERE CustomerID = @CustomerId
+              AND FriendID = @FriendId;
+            """,
+            new
+            {
+                CustomerId = customerId,
+                FriendId = friendId
+            });
+
+        if (exists > 0)
+        {
+            await db.ExecuteAsync(
+                """
+                UPDATE friendsmap
+                SET
+                    FriendStatus = @Status,
+                    DateAdded = COALESCE(DateAdded, UTC_TIMESTAMP())
+                WHERE CustomerID = @CustomerId
+                  AND FriendID = @FriendId;
+                """,
+                new
+                {
+                    CustomerId = customerId,
+                    FriendId = friendId,
+                    Status = status
+                });
+
+            return;
+        }
+
+        await db.ExecuteAsync(
+            """
+            INSERT INTO friendsmap
+            (
+                CustomerID,
+                FriendID,
+                FriendStatus,
+                DateAdded
+            )
+            VALUES
+            (
+                @CustomerId,
+                @FriendId,
+                @Status,
+                UTC_TIMESTAMP()
+            );
+            """,
+            new
+            {
+                CustomerId = customerId,
+                FriendId = friendId,
+                Status = status
+            });
+    }
+
+    private static async Task<ulong> ResolveCustomerIdByNameAsync(
+        MySqlConnector.MySqlConnection db,
+        string nameRaw)
+    {
+        var name = WebUtility.HtmlDecode(nameRaw ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+            return 0;
+
+        var customerId = await db.ExecuteScalarAsync<int?>(
+            """
+            SELECT CustomerID
+            FROM loginid
+            WHERE Gamertag = @Name
+               OR AccountName = @Name
+            ORDER BY CustomerID ASC
+            LIMIT 1;
+            """,
+            new { Name = name });
+
+        return customerId.HasValue && customerId.Value > 0
+            ? (ulong)customerId.Value
+            : 0;
     }
 
     private static async Task<bool> TableExistsAsync(
@@ -424,5 +604,12 @@ public sealed class SocialService
     private static string NormalizeClanTag(string value)
     {
         return WebUtility.HtmlDecode(value ?? "").Trim().ToUpperInvariant();
+    }
+
+    private sealed class AccountClanRow
+    {
+        public int CustomerId { get; set; }
+        public int ClanId { get; set; }
+        public int ClanRank { get; set; }
     }
 }
