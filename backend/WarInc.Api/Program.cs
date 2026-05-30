@@ -124,6 +124,15 @@ app.MapGet("/", () =>
             "/api_LeaderboardGet.aspx",
             "/api_RetBonus.aspx",
             "/api_MysteryBox.aspx",
+            
+            "/api_SrvSetCreateGameKey2.aspx",
+            "/api_GetCreateGameKey3.aspx",
+            "/api_SrvAddUserRoundResult4.aspx",
+            "/api_SrvAddWeaponStats.aspx",
+            "/api_SrvUpdateAchievements.aspx",
+            "/api_SrvAddLogInfo.aspx",
+            "/api_SrvUploadLogFile.aspx",
+            "/api_SrvAddCheatAttempts.aspx",
 
             "/api_LoadoutModify.aspx",
             "/api_LoadoutUnlock.aspx",
@@ -145,9 +154,10 @@ app.MapPurchaseEndpoints();
 app.MapProfileAdditionalEndpoints();
 app.MapSocialEndpoints();
 app.MapLeaderboardEndpoints();
-app.MapGameServerEndpoints();
 app.MapRetentionEndpoints();
 app.MapMysteryBoxEndpoints();
+app.MapGameServerEndpoints();
+app.MapGameServerLegacyEndpoints();
 app.MapLegacySmokeEndpoints();
 
 app.Run();
