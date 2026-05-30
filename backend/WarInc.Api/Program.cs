@@ -25,8 +25,10 @@ var warIncOptions = builder.Configuration
 if (string.IsNullOrWhiteSpace(warIncOptions.Database))
     throw new Exception("WarInc:Database is empty");
 
+// Database
 builder.Services.AddSingleton(new WarIncDb(warIncOptions.Database));
 
+// Client
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<ProfileService>();
@@ -40,8 +42,11 @@ builder.Services.AddScoped<DatabaseCheckService>();
 builder.Services.AddScoped<GameRewardsService>();
 builder.Services.AddScoped<ClientTelemetryService>();
 
+// Server
 builder.Services.AddSingleton<GameServerService>();
+builder.Services.AddScoped<GameServerInventoryService>();
 
+// Agent
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("WarIncCors", policy =>
@@ -104,6 +109,8 @@ app.MapGet("/", () =>
             "/v1/client/status",
             "/v1/hardware/report",
             "/v1/achievements/update",
+            "/v1/gameserver/give-item",
+            "/v1/gameserver/remove-item",
 
             "/internal/session/validate",
             "/internal/gameserver/register",
@@ -143,6 +150,9 @@ app.MapGet("/", () =>
             "/api_SrvAddLogInfo.aspx",
             "/api_SrvUploadLogFile.aspx",
             "/api_SrvAddCheatAttempts.aspx",
+            "/api_SrvGiveItem.aspx",
+            "/api_SrvGiveItemInMinutes.aspx",
+            "/api_SrvRemoveItem.aspx",
             "/api_LoadoutModify.aspx",
             "/api_LoadoutUnlock.aspx",
             "/api_LoadoutReset.aspx",
@@ -168,6 +178,7 @@ app.MapMysteryBoxEndpoints();
 app.MapGameRewardsEndpoints();
 app.MapClientTelemetryEndpoints();
 app.MapGameServerEndpoints();
+app.MapGameServerInventoryEndpoints();
 app.MapDatabaseCheckEndpoints();
 app.MapGameServerLegacyEndpoints();
 app.MapLegacySmokeEndpoints();
