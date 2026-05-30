@@ -133,45 +133,41 @@ app.MapPost("/api_Login.aspx", async (HttpContext http) =>
         Encoding.UTF8);
 });
 
-app.MapPost("/api_CheckLoginSession.aspx", async (HttpContext http) =>
+app.MapPost("/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
+app.MapPost("/api/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
+
+app.MapPost("/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
+app.MapPost("/api/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
+
+async Task<IResult> LegacyCheckLoginSessionAsync(HttpContext http)
 {
     var form = await http.Request.ReadFormAsync();
 
     var customerId = ParseULong(form["s_id"].ToString());
     var sessionId = ParseULong(form["s_key"].ToString());
-    var token = form["token"].ToString();
 
-    if (string.IsNullOrWhiteSpace(token))
-        token = form["s_token"].ToString();
-
-    var result = await CheckSessionAsync(
+    var result = await CheckLegacySessionAsync(
         dbConnectionString,
         customerId,
-        sessionId,
-        token);
+        sessionId);
 
     if (!result.Ok)
         return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
     return Results.Text("WO_0", "text/plain", Encoding.UTF8);
-});
+}
 
-app.MapPost("/api_UpdateLoginSession.aspx", async (HttpContext http) =>
+async Task<IResult> LegacyUpdateLoginSessionAsync(HttpContext http)
 {
     var form = await http.Request.ReadFormAsync();
 
     var customerId = ParseULong(form["s_id"].ToString());
     var sessionId = ParseULong(form["s_key"].ToString());
-    var token = form["token"].ToString();
 
-    if (string.IsNullOrWhiteSpace(token))
-        token = form["s_token"].ToString();
-
-    var result = await CheckSessionAsync(
+    var result = await CheckLegacySessionAsync(
         dbConnectionString,
         customerId,
-        sessionId,
-        token);
+        sessionId);
 
     if (!result.Ok)
         return Results.Text("WO_1", "text/plain", Encoding.UTF8);
@@ -194,7 +190,7 @@ app.MapPost("/api_UpdateLoginSession.aspx", async (HttpContext http) =>
         });
 
     return Results.Text("WO_0", "text/plain", Encoding.UTF8);
-});
+}
 
 app.MapPost("/dev/create-account", async (CreateAccountRequest request) =>
 {
@@ -415,6 +411,51 @@ static async Task<CheckSessionResponse> CheckSessionAsync(
             CustomerId = customerId,
             SessionId = sessionId,
             TokenHash = tokenHash
+        });
+
+    if (session == null)
+        return new CheckSessionResponse(false, 401, "SESSION_NOT_FOUND", 0);
+
+    if (session.RevokedAt != null)
+        return new CheckSessionResponse(false, 401, "SESSION_REVOKED", 0);
+
+    if (session.ExpiresAt <= DateTime.UtcNow)
+        return new CheckSessionResponse(false, 401, "SESSION_EXPIRED", 0);
+
+    if (session.AccountStatus >= 200)
+        return new CheckSessionResponse(false, 403, "ACCOUNT_BLOCKED", session.AccountStatus);
+
+    return new CheckSessionResponse(true, 0, "OK", session.AccountStatus);
+}
+
+static async Task<CheckSessionResponse> CheckLegacySessionAsync(
+    string dbConnectionString,
+    ulong customerId,
+    ulong sessionId)
+{
+    if (customerId == 0 || sessionId == 0)
+        return new CheckSessionResponse(false, 400, "BAD_SESSION", 0);
+
+    await using var db = new MySqlConnection(dbConnectionString);
+
+    var session = await db.QueryFirstOrDefaultAsync<SessionRow>(
+        """
+        SELECT
+            s.session_id AS SessionId,
+            s.customer_id AS CustomerId,
+            s.expires_at AS ExpiresAt,
+            s.revoked_at AS RevokedAt,
+            a.account_status AS AccountStatus
+        FROM login_sessions s
+        INNER JOIN accounts a ON a.customer_id = s.customer_id
+        WHERE s.customer_id = @CustomerId
+          AND s.session_id = @SessionId
+        LIMIT 1;
+        """,
+        new
+        {
+            CustomerId = customerId,
+            SessionId = sessionId
         });
 
     if (session == null)

@@ -10,19 +10,8 @@
 
 #ifndef WO_SERVER
 
-#if defined(_WIN64)
 #define R3D_USE_NVAPI 0
-#else
-#define R3D_USE_NVAPI 1
-#endif
-
-#if R3D_USE_NVAPI
-#include "NVApi/nvapi.h"
-#define R3D_NVAPI "NVApi: "
-#pragma comment(lib, "../External/NVApi/x86/nvapi.lib")
-#else
 #define R3D_NVAPI "NVApi disabled: "
-#endif
 
 #endif
 

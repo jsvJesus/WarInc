@@ -12,7 +12,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RakNet", "..\External\RakNe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{297D3F71-68B3-4359-B50C-77DA56B4FEF3}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\sql\001_auth.sql = ..\..\backend\WarInc.Api\sql\001_auth.sql
 		..\..\backend\WarInc.Api\appsettings.json = ..\..\backend\WarInc.Api\appsettings.json
 		..\..\backend\WarInc.Api\Program.cs = ..\..\backend\WarInc.Api\Program.cs
 		..\..\backend\WarInc.Api\WarInc.Api.csproj = ..\..\backend\WarInc.Api\WarInc.Api.csproj
