@@ -88,8 +88,8 @@ public static class LegacySmokeEndpoints
         app.MapGet("/legacy/smoke", SmokeInfo);
         app.MapGet("/legacy/smoke/endpoints", SmokeEndpoints);
 
-        app.MapMethods("/{legacyEndpoint}", LegacyHttpMethods, LegacyFallbackAsync);
-        app.MapMethods("/api/{legacyEndpoint}", LegacyHttpMethods, LegacyFallbackAsync);
+        app.MapMethods("/{legacyEndpoint}", LegacyHttpMethods, (Delegate)LegacyFallbackAsync);
+        app.MapMethods("/api/{legacyEndpoint}", LegacyHttpMethods, (Delegate)LegacyFallbackAsync);
     }
 
     private static IResult SmokeInfo()

@@ -98,11 +98,11 @@ public static class AuthEndpoints
                 Encoding.UTF8);
         });
 
-        app.MapPost("/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
-        app.MapPost("/api/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
+        app.MapPost("/api_CheckLoginSession.aspx", (Delegate)LegacyCheckLoginSessionAsync);
+        app.MapPost("/api/api_CheckLoginSession.aspx", (Delegate)LegacyCheckLoginSessionAsync);
 
-        app.MapPost("/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
-        app.MapPost("/api/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
+        app.MapPost("/api_UpdateLoginSession.aspx", (Delegate)LegacyUpdateLoginSessionAsync);
+        app.MapPost("/api/api_UpdateLoginSession.aspx", (Delegate)LegacyUpdateLoginSessionAsync);
         
         app.MapPost("/api_SteamLogin.aspx", LegacySteamLoginAsync);
         app.MapPost("/api/api_SteamLogin.aspx", LegacySteamLoginAsync);
