@@ -103,6 +103,15 @@ public static class AuthEndpoints
 
         app.MapPost("/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
         app.MapPost("/api/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
+        
+        app.MapPost("/api_SteamLogin.aspx", LegacySteamLoginAsync);
+        app.MapPost("/api/api_SteamLogin.aspx", LegacySteamLoginAsync);
+
+        app.MapPost("/api_SteamCreateAcc.aspx", LegacySteamCreateAccountAsync);
+        app.MapPost("/api/api_SteamCreateAcc.aspx", LegacySteamCreateAccountAsync);
+
+        app.MapPost("/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
+        app.MapPost("/api/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
 
         app.MapPost("/dev/create-account", async (
             HttpContext http,
@@ -157,5 +166,75 @@ public static class AuthEndpoints
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
         return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+    }
+    
+    private static Task<IResult> LegacySteamLoginAsync(HttpContext http)
+    {
+        return Task.FromResult<IResult>(
+            Results.Text("WO_00 0 0", "text/plain", Encoding.UTF8));
+    }
+
+    private static async Task<IResult> LegacySteamCreateAccountAsync(
+        HttpContext http,
+        AuthService auth)
+    {
+        var form = await http.Request.ReadFormAsync();
+
+        var username = form["username"].ToString();
+        var password = form["password"].ToString();
+        var email = form["email"].ToString();
+
+        var result = await auth.CreateAccountAsync(
+            http,
+            new CreateAccountRequest(
+                username,
+                password,
+                email,
+                false));
+
+        if (!result.Ok)
+            return Results.Text(
+                $"WO_{LegacyUtil.NormalizeLegacyErrorCode(result.Code)} {result.Message}",
+                "text/plain",
+                Encoding.UTF8);
+
+        return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+    }
+
+    private static async Task<IResult> LegacyGamersFirstAsync(
+        HttpContext http,
+        AuthService auth)
+    {
+        var form = await http.Request.ReadFormAsync();
+
+        var func = form["func"].ToString();
+
+        if (func == "login")
+            return Results.Text("WO_00 0 0 0 0", "text/plain", Encoding.UTF8);
+
+        if (func == "create")
+        {
+            var username = form["username"].ToString();
+            var password = form["password"].ToString();
+            var email = form["email"].ToString();
+
+            var result = await auth.CreateAccountAsync(
+                http,
+                new CreateAccountRequest(
+                    username,
+                    password,
+                    email,
+                    false));
+
+            if (!result.Ok)
+                return Results.Text(
+                    $"WO_{LegacyUtil.NormalizeLegacyErrorCode(result.Code)} {result.Message}",
+                    "text/plain",
+                    Encoding.UTF8);
+
+            return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+        }
+
+        return Results.Text("WO_6 bad func", "text/plain", Encoding.UTF8);
     }
 }
