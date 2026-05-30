@@ -30,6 +30,7 @@ builder.Services.AddSingleton(new WarIncDb(warIncOptions.Database));
 
 // Client
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<LegacyExternalAuthService>();
 builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<PurchaseService>();

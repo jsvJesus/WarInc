@@ -1,6 +1,10 @@
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
+using WarInc.Api.ClientTelemetry;
 using WarInc.Api.Common;
+using WarInc.Api.Config;
 
 namespace WarInc.Api.GameServer;
 
@@ -32,11 +36,19 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacySetCreateGameKeyAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options)
     {
         var data = await ReadRequestDataAsync(http);
 
+        if (!CheckServerKey(data, options))
+            return Text("WO_3 bad key");
+
+        var createGameKey = ReadAny(data, "CreateGameKey", "createGameKey", "gameKey", "key");
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid", "s_id");
+
+        if (string.IsNullOrWhiteSpace(serverId))
+            serverId = createGameKey;
 
         if (string.IsNullOrWhiteSpace(serverId))
             serverId = "legacy-" + Guid.NewGuid().ToString("N");
@@ -176,9 +188,17 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyUpdateAchievementsAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        ClientTelemetryService telemetry,
+        IOptions<WarIncOptions> options)
     {
         var data = await ReadRequestDataAsync(http);
+
+        if (!CheckServerKey(data, options))
+            return Text("WO_3 bad key");
+
+        var ok = await telemetry.UpdateAchievementsAsync(data);
+
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
@@ -188,7 +208,7 @@ public static class GameServerLegacyEndpoints
                 BuildReport("achievements", data)));
         }
 
-        return Text("WO_0");
+        return Text(ok ? "WO_0" : "WO_5");
     }
 
     private static async Task<IResult> LegacyAddLogInfoAsync(
@@ -210,9 +230,16 @@ public static class GameServerLegacyEndpoints
 
     private static async Task<IResult> LegacyUploadLogFileAsync(
         HttpContext http,
-        GameServerService service)
+        GameServerService service,
+        IOptions<WarIncOptions> options)
     {
         var data = await ReadRequestDataAsync(http);
+
+        if (!CheckServerKey(data, options))
+            return Text("WO_3 bad key");
+
+        await SaveUploadedLegacyFilesAsync(http, data);
+
         var serverId = ReadAny(data, "serverid", "ServerID", "ServerId", "sid");
 
         if (!string.IsNullOrWhiteSpace(serverId))
@@ -272,21 +299,13 @@ public static class GameServerLegacyEndpoints
                     foreach (var item in body)
                     {
                         if (item.Value.ValueKind == JsonValueKind.String)
-                        {
                             data[item.Key] = item.Value.GetString() ?? "";
-                        }
                         else if (item.Value.ValueKind == JsonValueKind.Number)
-                        {
                             data[item.Key] = item.Value.GetRawText();
-                        }
                         else if (item.Value.ValueKind == JsonValueKind.True)
-                        {
                             data[item.Key] = "1";
-                        }
                         else if (item.Value.ValueKind == JsonValueKind.False)
-                        {
                             data[item.Key] = "0";
-                        }
                     }
                 }
             }
@@ -296,6 +315,120 @@ public static class GameServerLegacyEndpoints
         }
 
         return data;
+    }
+
+    private static async Task SaveUploadedLegacyFilesAsync(
+        HttpContext http,
+        Dictionary<string, string> data)
+    {
+        if (!http.Request.HasFormContentType)
+            return;
+
+        try
+        {
+            var form = await http.Request.ReadFormAsync();
+
+            if (form.Files.Count == 0)
+                return;
+
+            var sessionId = ReadAny(data, "sessionId", "SessionID", "sid", "s_id");
+
+            if (string.IsNullOrWhiteSpace(sessionId))
+                sessionId = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+
+            sessionId = SafeFileName(sessionId);
+
+            var root = Path.Combine(AppContext.BaseDirectory, "legacy-uploads");
+            var day = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+            var logsDir = Path.Combine(root, "logs", day);
+            Directory.CreateDirectory(logsDir);
+
+            var logFile = form.Files.FirstOrDefault(x => string.Equals(x.Name, "logFile", StringComparison.OrdinalIgnoreCase));
+            if (logFile != null && logFile.Length > 0)
+            {
+                var logSize = ReadIntAny(data, 0, "logSize", "LogSize");
+                var bytes = await ReadMaybeGZipAsync(logFile, logSize);
+                await File.WriteAllBytesAsync(Path.Combine(logsDir, $"GS_{sessionId}.txt"), bytes);
+            }
+
+            var dmpFile = form.Files.FirstOrDefault(x => string.Equals(x.Name, "dmpFile", StringComparison.OrdinalIgnoreCase));
+            if (dmpFile != null && dmpFile.Length > 0)
+            {
+                var crashDir = Path.Combine(root, "crash");
+                Directory.CreateDirectory(crashDir);
+
+                var dmpSize = ReadIntAny(data, 0, "dmpSize", "DmpSize");
+                var bytes = await ReadMaybeGZipAsync(dmpFile, dmpSize);
+
+                await File.WriteAllBytesAsync(Path.Combine(crashDir, $"GS_{sessionId}.dmp"), bytes);
+            }
+
+            var picturesDir = Path.Combine(root, "pictures");
+            Directory.CreateDirectory(picturesDir);
+
+            for (var i = 0; i < 99; i++)
+            {
+                var fileName = "jpgFile" + i;
+                var jpg = form.Files.FirstOrDefault(x => string.Equals(x.Name, fileName, StringComparison.OrdinalIgnoreCase));
+
+                if (jpg == null || jpg.Length <= 0)
+                    continue;
+
+                var jpgPath = Path.Combine(picturesDir, $"GS_{sessionId}_{i:00}.jpg");
+
+                await using var input = jpg.OpenReadStream();
+                await using var output = File.Create(jpgPath);
+                await input.CopyToAsync(output);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static async Task<byte[]> ReadMaybeGZipAsync(
+        IFormFile file,
+        int expectedSize)
+    {
+        if (expectedSize > 0 || file.FileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await using var input = file.OpenReadStream();
+                await using var output = new MemoryStream();
+
+                using (var gzip = new GZipStream(input, CompressionMode.Decompress))
+                {
+                    await gzip.CopyToAsync(output);
+                }
+
+                return output.ToArray();
+            }
+            catch
+            {
+            }
+        }
+
+        await using var rawInput = file.OpenReadStream();
+        await using var rawOutput = new MemoryStream();
+        await rawInput.CopyToAsync(rawOutput);
+
+        return rawOutput.ToArray();
+    }
+
+    private static bool CheckServerKey(
+        Dictionary<string, string> data,
+        IOptions<WarIncOptions> options)
+    {
+        var expected = options.Value.InternalApiKey;
+
+        if (string.IsNullOrWhiteSpace(expected))
+            return true;
+
+        var actual = ReadAny(data, "skey1", "SKey1", "serverKey", "ServerKey", "key", "Key");
+
+        return actual == expected;
     }
 
     private static string ReadAny(Dictionary<string, string> data, params string[] keys)
@@ -362,6 +495,24 @@ public static class GameServerLegacyEndpoints
             return forwarded.Split(',')[0].Trim();
 
         return http.Connection.RemoteIpAddress?.ToString() ?? "";
+    }
+
+    private static string SafeFileName(string value)
+    {
+        value = value.Trim();
+
+        var sb = new StringBuilder(value.Length);
+
+        foreach (var ch in value)
+        {
+            if (char.IsLetterOrDigit(ch) || ch == '_' || ch == '-')
+                sb.Append(ch);
+        }
+
+        if (sb.Length == 0)
+            return DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+
+        return sb.ToString();
     }
 
     private static IResult Text(string value)

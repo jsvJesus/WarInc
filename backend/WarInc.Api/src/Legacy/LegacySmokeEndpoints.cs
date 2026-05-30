@@ -70,9 +70,6 @@ public static class LegacySmokeEndpoints
         "api_SrvSetCreateGameKey2.aspx",
         "api_SrvUpdateAchievements.aspx",
         "api_SrvUploadLogFile.aspx",
-        "api_SteamBuyGP.aspx",
-        "api_SteamCreateAcc.aspx",
-        "api_SteamLogin.aspx",
         "api_UpdateLoginSession.aspx",
         "api_WeaponAttach.aspx",
         "api_WeaponAttachSet.aspx",
@@ -209,10 +206,8 @@ public static class LegacySmokeEndpoints
         return endpoint.ToLowerInvariant() switch
         {
             "api_login.aspx" => "WO_00 0 0",
-            "api_steamlogin.aspx" => "WO_00 0 0",
             "api_gnalogin.aspx" => "WO_00 0 0",
             "api_gamersfirst.aspx" => func == "login" ? "WO_00 0 0 0 0" : "WO_0",
-            "api_steamcreateacc.aspx" => "WO_0",
 
             "api_checkloginsession.aspx" => "WO_0",
             "api_updateloginsession.aspx" => "WO_0",
@@ -250,7 +245,6 @@ public static class LegacySmokeEndpoints
             "api_retbonus.aspx" => func == "info" ? "WO_0<retbonus d=\"0\" m=\"0\"><days></days></retbonus>" : "WO_00",
 
             "api_gnagetbalance.aspx" => "WO_00",
-            "api_steambuygp.aspx" => func == "shop" ? "WO_0<SteamGPShop></SteamGPShop>" : "WO_00",
 
             "api_getcreategamekey3.aspx" => "WO_00",
             "api_setrsupdatestatus.aspx" => "WO_0",

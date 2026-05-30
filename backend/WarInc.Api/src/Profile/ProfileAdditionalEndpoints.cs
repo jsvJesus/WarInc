@@ -15,6 +15,9 @@ public static class ProfileAdditionalEndpoints
     {
         app.MapPost("/api_LoadoutModify.aspx", LegacyLoadoutModifyAsync);
         app.MapPost("/api/api_LoadoutModify.aspx", LegacyLoadoutModifyAsync);
+        
+        app.MapPost("/api_ModifySlot.aspx", LegacyLoadoutModifyAsync);
+        app.MapPost("/api/api_ModifySlot.aspx", LegacyLoadoutModifyAsync);
 
         app.MapPost("/api_LoadoutUnlock.aspx", LegacyLoadoutUnlockAsync);
         app.MapPost("/api/api_LoadoutUnlock.aspx", LegacyLoadoutUnlockAsync);
@@ -214,6 +217,9 @@ public static class ProfileAdditionalEndpoints
             return Results.Text("WO_1", "text/plain", Encoding.UTF8);
 
         var loadoutId = LegacyUtil.ParseInt(form["LoadoutID"].ToString());
+
+        if (loadoutId <= 0)
+            loadoutId = LegacyUtil.ParseInt(form["SlotID"].ToString());
 
         var items = new[]
         {

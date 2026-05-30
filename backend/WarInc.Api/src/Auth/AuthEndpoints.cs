@@ -75,40 +75,20 @@ public static class AuthEndpoints
                 result.Ok ? result.AccountStatus : 0));
         });
 
-        app.MapPost("/api_Login.aspx", async (
-            HttpContext http,
-            AuthService auth) =>
-        {
-            var form = await http.Request.ReadFormAsync();
+        app.MapPost("/api_Login.aspx", LegacyLoginAsync);
+        app.MapPost("/api/api_Login.aspx", LegacyLoginAsync);
 
-            var username = form["username"].ToString();
-            var password = form["password"].ToString();
+        app.MapPost("/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
+        app.MapPost("/api/api_CheckLoginSession.aspx", LegacyCheckLoginSessionAsync);
 
-            var result = await auth.LoginAsync(
-                http,
-                username,
-                password);
+        app.MapPost("/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
+        app.MapPost("/api/api_UpdateLoginSession.aspx", LegacyUpdateLoginSessionAsync);
 
-            if (!result.Ok)
-                return Results.Text("WO_00 0 0", "text/plain", Encoding.UTF8);
+        app.MapPost("/api_GNALogin.aspx", LegacyGnaLoginAsync);
+        app.MapPost("/api/api_GNALogin.aspx", LegacyGnaLoginAsync);
 
-            return Results.Text(
-                $"WO_0{result.CustomerId} {result.SessionId} {result.AccountStatus}",
-                "text/plain",
-                Encoding.UTF8);
-        });
-
-        app.MapPost("/api_CheckLoginSession.aspx", (Delegate)LegacyCheckLoginSessionAsync);
-        app.MapPost("/api/api_CheckLoginSession.aspx", (Delegate)LegacyCheckLoginSessionAsync);
-
-        app.MapPost("/api_UpdateLoginSession.aspx", (Delegate)LegacyUpdateLoginSessionAsync);
-        app.MapPost("/api/api_UpdateLoginSession.aspx", (Delegate)LegacyUpdateLoginSessionAsync);
-        
-        app.MapPost("/api_SteamLogin.aspx", LegacySteamLoginAsync);
-        app.MapPost("/api/api_SteamLogin.aspx", LegacySteamLoginAsync);
-
-        app.MapPost("/api_SteamCreateAcc.aspx", LegacySteamCreateAccountAsync);
-        app.MapPost("/api/api_SteamCreateAcc.aspx", LegacySteamCreateAccountAsync);
+        app.MapPost("/api_GNAGetBalance.aspx", LegacyGnaGetBalanceAsync);
+        app.MapPost("/api/api_GNAGetBalance.aspx", LegacyGnaGetBalanceAsync);
 
         app.MapPost("/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
         app.MapPost("/api/api_Gamersfirst.aspx", LegacyGamersFirstAsync);
@@ -123,100 +103,152 @@ public static class AuthEndpoints
         });
     }
 
+    private static async Task<IResult> LegacyLoginAsync(
+        HttpContext http,
+        AuthService auth)
+    {
+        var data = await ReadRequestValuesAsync(http);
+
+        var username = ReadAny(data, "username", "Username", "login", "AccountName");
+        var password = ReadAny(data, "password", "Password", "pass");
+
+        var result = await auth.LoginAsync(
+            http,
+            username,
+            password);
+
+        if (!result.Ok)
+            return Text("WO_00 0 0");
+
+        return Text($"WO_0{result.CustomerId} {result.SessionId} {result.AccountStatus}");
+    }
+
     private static async Task<IResult> LegacyCheckLoginSessionAsync(
         HttpContext http,
         AuthService auth)
     {
-        var form = await http.Request.ReadFormAsync();
+        var data = await ReadRequestValuesAsync(http);
 
-        var customerId = LegacyUtil.ParseULong(form["s_id"].ToString());
-        var sessionId = LegacyUtil.ParseULong(form["s_key"].ToString());
+        var customerId = LegacyUtil.ParseULong(ReadAny(data, "s_id", "CustomerID", "CustomerId", "customerId"));
+        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "s_key", "SessionID", "SessionId", "sessionId"));
 
         var result = await auth.CheckLegacySessionAsync(
             customerId,
             sessionId);
 
         if (!result.Ok)
-            return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+            return Text("WO_1");
 
-        return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+        return Text("WO_0");
     }
 
     private static async Task<IResult> LegacyUpdateLoginSessionAsync(
         HttpContext http,
         AuthService auth)
     {
-        var form = await http.Request.ReadFormAsync();
+        var data = await ReadRequestValuesAsync(http);
 
-        var customerId = LegacyUtil.ParseULong(form["s_id"].ToString());
-        var sessionId = LegacyUtil.ParseULong(form["s_key"].ToString());
+        var customerId = LegacyUtil.ParseULong(ReadAny(data, "s_id", "CustomerID", "CustomerId", "customerId"));
+        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "s_key", "SessionID", "SessionId", "sessionId"));
 
         var result = await auth.CheckLegacySessionAsync(
             customerId,
             sessionId);
 
         if (!result.Ok)
-            return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+            return Text("WO_1");
 
         var touched = await auth.TouchLegacySessionAsync(
             customerId,
             sessionId);
 
         if (!touched)
-            return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+            return Text("WO_1");
 
-        return Results.Text("WO_0", "text/plain", Encoding.UTF8);
-    }
-    
-    private static Task<IResult> LegacySteamLoginAsync(HttpContext http)
-    {
-        return Task.FromResult<IResult>(
-            Results.Text("WO_00 0 0", "text/plain", Encoding.UTF8));
+        return Text("WO_0");
     }
 
-    private static async Task<IResult> LegacySteamCreateAccountAsync(
+    private static async Task<IResult> LegacyGnaLoginAsync(
         HttpContext http,
-        AuthService auth)
+        LegacyExternalAuthService legacyAuth)
     {
-        var form = await http.Request.ReadFormAsync();
+        var data = await ReadRequestValuesAsync(http);
 
-        var username = form["username"].ToString();
-        var password = form["password"].ToString();
-        var email = form["email"].ToString();
+        var userId = ReadAny(data, "userId", "UserID", "userid", "gnaUserId", "GNAUserId", "id");
+        var nickname = ReadAny(data, "nickname", "nick", "username", "Username", "GNANick", "name");
 
-        var result = await auth.CreateAccountAsync(
+        var result = await legacyAuth.LoginOrCreateExternalAsync(
             http,
-            new CreateAccountRequest(
-                username,
-                password,
-                email,
-                false));
+            "gna",
+            userId,
+            nickname);
 
         if (!result.Ok)
-            return Results.Text(
-                $"WO_{LegacyUtil.NormalizeLegacyErrorCode(result.Code)} {result.Message}",
-                "text/plain",
-                Encoding.UTF8);
+            return Text("WO_00 0 0");
 
-        return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+        return Text($"WO_0{result.CustomerId} {result.SessionId} {result.AccountStatus}");
+    }
+
+    private static async Task<IResult> LegacyGnaGetBalanceAsync(
+        HttpContext http,
+        AuthService auth,
+        LegacyExternalAuthService legacyAuth)
+    {
+        var data = await ReadRequestValuesAsync(http);
+
+        var customerId = LegacyUtil.ParseULong(ReadAny(data, "s_id", "CustomerID", "CustomerId", "customerId"));
+        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "s_key", "SessionID", "SessionId", "sessionId"));
+
+        var session = await auth.CheckLegacySessionAsync(
+            customerId,
+            sessionId);
+
+        if (!session.Ok)
+            return Text("WO_1");
+
+        var balance = await legacyAuth.GetGamePointsBalanceAsync(customerId);
+
+        return Text($"WO_0{balance}");
     }
 
     private static async Task<IResult> LegacyGamersFirstAsync(
         HttpContext http,
-        AuthService auth)
+        AuthService auth,
+        LegacyExternalAuthService legacyAuth)
     {
-        var form = await http.Request.ReadFormAsync();
+        var data = await ReadRequestValuesAsync(http);
 
-        var func = form["func"].ToString();
+        var func = ReadAny(data, "func", "Func").Trim().ToLowerInvariant();
 
         if (func == "login")
-            return Results.Text("WO_00 0 0 0 0", "text/plain", Encoding.UTF8);
+        {
+            var g1Id = ReadAny(data, "g1Id", "G1ID", "AccountId", "accountId", "token", "Token");
+
+            if (string.IsNullOrWhiteSpace(g1Id))
+                g1Id = ReadAny(data, "username", "Username", "email", "Email");
+
+            var nickname = ReadAny(data, "username", "Username", "nickname", "Nickname", "name");
+
+            var result = await legacyAuth.LoginOrCreateExternalAsync(
+                http,
+                "g1",
+                g1Id,
+                nickname);
+
+            if (!result.Ok)
+                return Text("WO_00 0 0 0 0");
+
+            var outG1Id = string.IsNullOrWhiteSpace(g1Id) ? result.CustomerId.ToString() : g1Id;
+            var outNickname = string.IsNullOrWhiteSpace(nickname) ? $"g1{result.CustomerId}" : nickname.Trim();
+
+            return Text($"WO_0{result.CustomerId} {result.SessionId} {result.AccountStatus} {outG1Id} 0 :{outNickname}");
+        }
 
         if (func == "create")
         {
-            var username = form["username"].ToString();
-            var password = form["password"].ToString();
-            var email = form["email"].ToString();
+            var username = ReadAny(data, "username", "Username");
+            var password = ReadAny(data, "password", "Password");
+            var email = ReadAny(data, "email", "Email");
 
             var result = await auth.CreateAccountAsync(
                 http,
@@ -227,14 +259,47 @@ public static class AuthEndpoints
                     false));
 
             if (!result.Ok)
-                return Results.Text(
-                    $"WO_{LegacyUtil.NormalizeLegacyErrorCode(result.Code)} {result.Message}",
-                    "text/plain",
-                    Encoding.UTF8);
+                return Text($"WO_{LegacyUtil.NormalizeLegacyErrorCode(result.Code)} {result.Message}");
 
-            return Results.Text("WO_0", "text/plain", Encoding.UTF8);
+            return Text("WO_0");
         }
 
-        return Results.Text("WO_6 bad func", "text/plain", Encoding.UTF8);
+        return Text("WO_6 bad func");
+    }
+
+    private static async Task<Dictionary<string, string>> ReadRequestValuesAsync(HttpContext http)
+    {
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in http.Request.Query)
+            data[item.Key] = item.Value.ToString();
+
+        if (http.Request.HasFormContentType)
+        {
+            var form = await http.Request.ReadFormAsync();
+
+            foreach (var item in form)
+                data[item.Key] = item.Value.ToString();
+        }
+
+        return data;
+    }
+
+    private static string ReadAny(
+        Dictionary<string, string> data,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (data.TryGetValue(key, out var value))
+                return value;
+        }
+
+        return "";
+    }
+
+    private static IResult Text(string value)
+    {
+        return Results.Text(value, "text/plain", Encoding.UTF8);
     }
 }

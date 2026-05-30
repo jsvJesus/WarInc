@@ -229,67 +229,109 @@ public sealed class ClientTelemetryService
     }
 
     private static List<AchievementUpdate> ReadAchievementUpdates(Dictionary<string, string> data)
+{
+    var result = new List<AchievementUpdate>();
+
+    var singleAchId = ReadIntAny(
+        data,
+        0,
+        "AchID",
+        "AchId",
+        "achId",
+        "AchievementID",
+        "achievementId",
+        "id");
+
+    var singleValue = ReadIntAny(
+        data,
+        0,
+        "AchVal",
+        "AchValue",
+        "AchVAL",
+        "Value",
+        "value",
+        "Val",
+        "val",
+        "v");
+
+    var singleUnlocked = ReadIntAny(
+        data,
+        0,
+        "AchUnl",
+        "AchUnlocked",
+        "AchUNL",
+        "Unlocked",
+        "unlocked",
+        "u");
+
+    if (singleAchId > 0)
     {
-        var result = new List<AchievementUpdate>();
-
-        var singleAchId = ReadIntAny(data, 0, "AchID", "AchId", "achId", "AchievementID", "achievementId", "id");
-        var singleValue = ReadIntAny(data, 0, "Value", "value", "Val", "val", "v");
-        var singleUnlocked = ReadIntAny(data, 0, "Unlocked", "unlocked", "u");
-
-        if (singleAchId > 0)
-        {
-            result.Add(new AchievementUpdate(
-                singleAchId,
-                singleValue,
-                singleUnlocked));
-        }
-
-        for (var i = 0; i < 256; i++)
-        {
-            var achId = ReadIntAny(
-                data,
-                0,
-                "AchID" + i,
-                "AchId" + i,
-                "achId" + i,
-                "AchievementID" + i,
-                "AID" + i,
-                "aid" + i,
-                "A" + i,
-                "a" + i);
-
-            if (achId <= 0)
-                continue;
-
-            var value = ReadIntAny(
-                data,
-                0,
-                "Value" + i,
-                "value" + i,
-                "Val" + i,
-                "val" + i,
-                "V" + i,
-                "v" + i);
-
-            var unlocked = ReadIntAny(
-                data,
-                0,
-                "Unlocked" + i,
-                "unlocked" + i,
-                "U" + i,
-                "u" + i);
-
-            result.Add(new AchievementUpdate(
-                achId,
-                value,
-                unlocked));
-        }
-
-        return result
-            .GroupBy(x => x.AchId)
-            .Select(x => x.Last())
-            .ToList();
+        result.Add(new AchievementUpdate(
+            singleAchId,
+            singleValue,
+            singleUnlocked));
     }
+
+    var numAch = ReadIntAny(data, 256, "NumAch", "numAch", "NumAchievements", "numAchievements");
+
+    if (numAch <= 0)
+        numAch = 256;
+
+    if (numAch > 256)
+        numAch = 256;
+
+    for (var i = 0; i < numAch; i++)
+    {
+        var achId = ReadIntAny(
+            data,
+            0,
+            "AchID" + i,
+            "AchId" + i,
+            "achId" + i,
+            "AchievementID" + i,
+            "AID" + i,
+            "aid" + i,
+            "A" + i,
+            "a" + i);
+
+        if (achId <= 0)
+            continue;
+
+        var value = ReadIntAny(
+            data,
+            0,
+            "AchVal" + i,
+            "AchValue" + i,
+            "AchVAL" + i,
+            "Value" + i,
+            "value" + i,
+            "Val" + i,
+            "val" + i,
+            "V" + i,
+            "v" + i);
+
+        var unlocked = ReadIntAny(
+            data,
+            0,
+            "AchUnl" + i,
+            "AchUnlocked" + i,
+            "AchUNL" + i,
+            "Unlocked" + i,
+            "unlocked" + i,
+            "U" + i,
+            "u" + i);
+
+        result.Add(new AchievementUpdate(
+            achId,
+            value,
+            unlocked));
+    }
+
+    return result
+        .GroupBy(x => x.AchId)
+        .Select(x => x.Last())
+        .ToList();
+}
 
     private static async Task<bool> TableExistsAsync(
         MySqlConnection db,
