@@ -166,6 +166,10 @@ void AddScopeEffectStack();
 void AddDirectionalStreaksStack(PostFXChief::RTType bloomImageID);
 void AddNightVisionStack();
 void AddFXAAStack();
+void ApplyModernGraphicsTuning();
+void ApplyModernBloomSettings();
+void ApplyModernFogAndAmbientTuning();
+void AddModernFinalColorStack();
 
 void AddSeparateEyesStereoReprojectionStack(PostFXChief::RTType srcImage, PostFXChief::RTType dstLeft, PostFXChief::RTType dstRight);
 
@@ -263,27 +267,27 @@ struct ColorCorrectionSettings
 	int					uiScheme;
 	int					uiTexDim;
 
-	void	ResetCurvesRGB()
+	void ResetCurvesRGB()
 	{
-		for( int i = 0, e = 3; i < e; i ++ )
+		for( int i = 0, e = 3; i < e; i++ )
 		{
-			g_ColorCorrectionSettings.RGBCurves[ i ].Reset();
-			g_ColorCorrectionSettings.RGBCurves[ i ].Values[ 0 ].val[0] = 0.0f;
-			g_ColorCorrectionSettings.RGBCurves[ i ].Values[ 1 ].val[0] = 1.0f;
+			RGBCurves[ i ].Reset();
+			RGBCurves[ i ].Values[ 0 ].val[ 0 ] = 0.0f;
+			RGBCurves[ i ].Values[ 1 ].val[ 0 ] = 1.0f;
 		}
 	}
 
-	void	ResetCurvesHSV()
+	void ResetCurvesHSV()
 	{
-		for( int i = 0, e = 3; i < e; i ++ )
+		for( int i = 0, e = 3; i < e; i++ )
 		{
-			g_ColorCorrectionSettings.HSVCurves[ i ].Reset();
-			g_ColorCorrectionSettings.HSVCurves[ i ].Values[ 0 ].val[0] = 0.0f;
-			g_ColorCorrectionSettings.HSVCurves[ i ].Values[ 1 ].val[0] = 1.0f;
+			HSVCurves[ i ].Reset();
+			HSVCurves[ i ].Values[ 0 ].val[ 0 ] = 0.0f;
+			HSVCurves[ i ].Values[ 1 ].val[ 0 ] = 1.0f;
 		}
 
-		g_ColorCorrectionSettings.HSVCurves[ 0 ].Values[ 0 ].val[0] = 0.0f;
-		g_ColorCorrectionSettings.HSVCurves[ 0 ].Values[ 1 ].val[0] = 0.0f;
+		HSVCurves[ 0 ].Values[ 0 ].val[ 0 ] = 0.0f;
+		HSVCurves[ 0 ].Values[ 1 ].val[ 0 ] = 0.0f;
 	}
 
 	ColorCorrectionSettings();

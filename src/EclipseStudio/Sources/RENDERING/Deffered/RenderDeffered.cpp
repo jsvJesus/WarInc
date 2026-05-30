@@ -6545,6 +6545,8 @@ void r3dDefferedRenderer::Render()
 		r3dRenderer->AmbientColor = r3dGameLevel::Environment.SkyColor.GetColorValue(curTime) ;
 	}
 
+	ApplyModernFogAndAmbientTuning();
+
 	SunL = &Sun->SunLight;
 
 	SunVector = SunL->Direction;
@@ -7237,6 +7239,13 @@ void r3dDefferedRenderer::PostProcess()
 	
 	UpdateHUDFilterSettings( &renderColorCorrection, &fgEnabled );
 
+	ApplyModernGraphicsTuning();
+
+	if(r_modern_graphics->GetBool() && r_modern_color_lut->GetBool())
+	{
+		renderColorCorrection = 1;
+	}
+
 	if( r_do_depth_screenshot->GetInt() )
 	{
 		r_do_depth_screenshot->SetInt( 0 );
@@ -7442,12 +7451,7 @@ void r3dDefferedRenderer::PostProcess()
 			g_pPostFXChief->AddGrabScreen( InternalScreenshotBuffer, PostFXChief::RTT_PINGPONG_LAST ) ;
 		}
 
-#if 0
-		gPFX_GammaCorrect.SetPower( r_gamma_pow->GetFloat() );
-
-		g_pPostFXChief->AddFX( gPFX_GammaCorrect );
-		g_pPostFXChief->AddSwapBuffers();
-#endif
+		AddModernFinalColorStack();
 
 		if( r_3d_stereo_post_fx->GetInt() || r3dRenderer->IsStereoActive() )
 		{

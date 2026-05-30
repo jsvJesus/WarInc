@@ -329,6 +329,59 @@ REG_VAR( r_sun_rays,				0,				0 );
 REG_VAR( r_gamma_pow,				1.f,			0 );
 REG_VAR( r_allow_gpu_timestamps,	1,				0 );
 
+//------------------------------------------------------------------------
+// Modern Graphics Tuning
+//------------------------------------------------------------------------
+
+REG_VAR( r_modern_graphics,					1,			VF_SAVE );
+REG_VAR( r_modern_force_postfx,				1,			VF_SAVE );
+
+REG_VAR( r_modern_film_a,					0.18f,		VF_SAVE );
+REG_VAR( r_modern_film_b,					0.48f,		VF_SAVE );
+REG_VAR( r_modern_film_c,					0.10f,		VF_SAVE );
+REG_VAR( r_modern_film_d,					0.20f,		VF_SAVE );
+REG_VAR( r_modern_film_e,					0.018f,		VF_SAVE );
+REG_VAR( r_modern_film_f,					0.30f,		VF_SAVE );
+REG_VAR( r_modern_exposure_bias,			0.08f,		VF_SAVE );
+REG_VAR( r_modern_white_level,				9.50f,		VF_SAVE );
+
+REG_VAR( r_modern_bloom_power,				1.35f,		VF_SAVE );
+REG_VAR( r_modern_bloom_threshold,			0.72f,		VF_SAVE );
+REG_VAR( r_modern_glow_amplify,				0.85f,		VF_SAVE );
+REG_VAR( r_modern_glow_threshold,			0.45f,		VF_SAVE );
+REG_VAR( r_modern_bloom_blur_passes,		2,			VF_SAVE );
+REG_VAR( r_modern_bloom_blur_taps,			3,			VF_SAVE );
+
+REG_VAR( r_modern_ssao_radius,				1.12f,		VF_SAVE );
+REG_VAR( r_modern_ssao_depth_range,			0.62f,		VF_SAVE );
+REG_VAR( r_modern_ssao_brightness,			0.82f,		VF_SAVE );
+REG_VAR( r_modern_ssao_contrast,			1.42f,		VF_SAVE );
+REG_VAR( r_modern_ssao_detail_strength,		0.92f,		VF_SAVE );
+REG_VAR( r_modern_ssao_blur_strength,		0.88f,		VF_SAVE );
+
+REG_VAR( r_modern_gamma,					1.08f,		VF_SAVE );
+REG_VAR( r_modern_contrast,					1.08f,		VF_SAVE );
+REG_VAR( r_modern_brightness,				0.015f,		VF_SAVE );
+
+REG_VAR( r_modern_color_lut,				1,			VF_SAVE );
+REG_VAR( r_modern_lut_name,					"default.dds", VF_SAVE );
+
+REG_VAR( r_modern_sun_glare,				1,			VF_SAVE );
+REG_VAR( r_modern_sun_glare_count,			3,			VF_SAVE );
+REG_VAR( r_modern_sun_glare_opacity,		0.18f,		VF_SAVE );
+REG_VAR( r_modern_sun_glare_scale,			2.40f,		VF_SAVE );
+REG_VAR( r_modern_sun_glare_threshold,		0.12f,		VF_SAVE );
+REG_VAR( r_modern_sun_rays,					1,			VF_SAVE );
+
+REG_VAR( r_modern_fog,						1,			VF_SAVE );
+REG_VAR( r_modern_fog_mul,					1.12f,		VF_SAVE );
+REG_VAR( r_modern_fog_tint_r,				0.92f,		VF_SAVE );
+REG_VAR( r_modern_fog_tint_g,				0.96f,		VF_SAVE );
+REG_VAR( r_modern_fog_tint_b,				1.06f,		VF_SAVE );
+REG_VAR( r_modern_ambient_mul,				0.92f,		VF_SAVE );
+
+//------------------------------------------------------------------------
+
 REG_VAR( r_3d_stereo_post_fx,		0,				0 );
 REG_VAR( r_3d_stereo_separation,	0.08f,			0 );
 REG_VAR( r_3d_stereo_convergance,	0.33f,			0 );
