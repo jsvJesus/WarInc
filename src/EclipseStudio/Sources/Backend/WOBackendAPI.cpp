@@ -24,9 +24,6 @@ static const char* GetWarIncBackendHost()
 	if(stricmp(host, "localhost") == 0)
 		return gWarIncBackendHost;
 
-	if(stricmp(host, "192.95.7.127") == 0)
-		return gWarIncBackendHost;
-
 	return host;
 }
 

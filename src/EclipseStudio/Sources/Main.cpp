@@ -1546,10 +1546,10 @@ void game::MainLoop()
 #ifndef FINAL_BUILD
 	case	Menu_AppSelect::bUpdateDB:
 		g_bEditMode = false;
-		UpdateDB("192.95.7.127", "Data/Weapons/itemsDB.xml");
+		UpdateDB("26.163.92.76", "Data/Weapons/itemsDB.xml");
 		MessageBox(0, "Successfully updated English DB!", "Result", MB_OK);
 
-		UpdateDB("192.95.7.127", "Data/Weapons/itemsDB_RU.xml");
+		UpdateDB("26.163.92.76", "Data/Weapons/itemsDB_RU.xml");
 		MessageBox(0, "Successfully updated Russian DB!", "Result", MB_OK);
 		break;
 #endif
@@ -1559,21 +1559,21 @@ void game::MainLoop()
 		if(strstr(__r3dCmdLine, "-ffgrtvzdf") == NULL)
 		{
 			if(RUS_CLIENT) {
-				g_serverip->SetString("192.95.7.127");
+				g_serverip->SetString("26.163.92.76");
 			} else if(MASSIVE_CLIENT) {
-				g_serverip->SetString("192.95.7.127");
+				g_serverip->SetString("26.163.92.76");
 			} else {
-				g_serverip->SetString("192.95.7.127");
+				g_serverip->SetString("26.163.92.76");
 			}
 		}
 
 		// override API settings
 		if(RUS_CLIENT) {
-			g_api_ip->SetString("192.95.7.127");
+			g_api_ip->SetString("26.163.92.76");
 		} else if(MASSIVE_CLIENT) {
-			g_api_ip->SetString("192.95.7.127");
+			g_api_ip->SetString("26.163.92.76");
 		} else {
-			g_api_ip->SetString("192.95.7.127");
+			g_api_ip->SetString("26.163.92.76");
 		}
 	case	Menu_AppSelect::bStartGameSVN:
 		g_bEditMode = false;

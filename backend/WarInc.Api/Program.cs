@@ -358,6 +358,8 @@ app.MapPost("/dev/create-account", async (HttpContext http, CreateAccountRequest
         );
         """,
         new { CustomerId = customerId });
+    
+    await EnsureStarterProfileAsync(db, customerId);
 
     await db.ExecuteAsync(
         """
@@ -640,6 +642,67 @@ app.MapPost("/api/api_GetShop5.aspx", LegacyGetShop5Async);
 
 app.MapPost("/api_GetItemsInfo.aspx", LegacyGetItemsInfoAsync);
 app.MapPost("/api/api_GetItemsInfo.aspx", LegacyGetItemsInfoAsync);
+
+app.MapPost("/api_GetProfile4.aspx", LegacyGetProfile4Async);
+app.MapPost("/api/api_GetProfile4.aspx", LegacyGetProfile4Async);
+
+app.MapPost("/v1/profile/get", async (ProfileRequest request) =>
+{
+    var session = await CheckSessionAsync(
+        dbConnectionString,
+        sessionHours,
+        request.CustomerId,
+        request.SessionId,
+        request.Token);
+
+    if (!session.Ok)
+        return Results.Json(new ApiResponse(false, session.Code, session.Message));
+
+    var profile = await GetProfileDataAsync(
+        dbConnectionString,
+        request.CustomerId,
+        request.JoiningGame);
+
+    if (!profile.Ok)
+        return Results.Json(new ApiResponse(false, profile.Code, profile.Message));
+
+    return Results.Json(profile);
+});
+
+async Task<IResult> LegacyGetProfile4Async(HttpContext http)
+{
+    var form = await http.Request.ReadFormAsync();
+
+    var customerId = ParseULong(form["s_id"].ToString());
+    var sessionId = ParseULong(form["s_key"].ToString());
+
+    var joiningGame = false;
+    var jg = form["jg"].ToString();
+
+    if (!string.IsNullOrWhiteSpace(jg))
+        joiningGame = jg != "0";
+
+    var session = await CheckLegacySessionAsync(
+        dbConnectionString,
+        sessionHours,
+        customerId,
+        sessionId);
+
+    if (!session.Ok)
+        return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+
+    var profile = await GetProfileDataAsync(
+        dbConnectionString,
+        customerId,
+        joiningGame);
+
+    if (!profile.Ok || profile.Account == null)
+        return Results.Text("WO_6", "text/plain", Encoding.UTF8);
+
+    var xml = BuildLegacyProfileXml(profile);
+
+    return Results.Text(xml, "text/xml", Encoding.UTF8);
+}
 
 async Task<IResult> LegacyGetShop5Async()
 {
@@ -1248,6 +1311,470 @@ static async Task<CheckSessionResponse> CheckLegacySessionAsync(
     return new CheckSessionResponse(true, 0, "OK", session.AccountStatus);
 }
 
+static async Task<ProfileBundle> GetProfileDataAsync(
+    string dbConnectionString,
+    ulong customerId,
+    bool joiningGame)
+{
+    if (customerId == 0 || customerId > int.MaxValue)
+        return ProfileBundle.Fail(400, "BAD_CUSTOMER_ID");
+
+    await using var db = new MySqlConnection(dbConnectionString);
+
+    if (joiningGame)
+    {
+        await db.ExecuteAsync(
+            """
+            UPDATE loginid
+            SET lastjoineddate = UTC_TIMESTAMP()
+            WHERE CustomerID = @CustomerId;
+            """,
+            new { CustomerId = customerId });
+    }
+
+    var account = await db.QueryFirstOrDefaultAsync<ProfileAccountRow>(
+        """
+        SELECT
+            l.CustomerID AS CustomerId,
+            l.AccountStatus AS AccountStatus,
+            l.GamePoints AS GamePoints,
+            l.GameDollars AS GameDollars,
+            l.HonorPoints AS HonorPoints,
+            l.SkillPoints AS SkillPoints,
+            l.Gamertag AS Gamertag,
+
+            l.Faction1Score AS Faction1Score,
+            l.Faction2Score AS Faction2Score,
+            l.Faction3Score AS Faction3Score,
+            l.Faction4Score AS Faction4Score,
+            l.Faction5Score AS Faction5Score,
+
+            l.ClanID AS ClanId,
+            l.ClanRank AS ClanRank,
+            l.IsFPSEnabled AS IsFPSEnabled,
+            l.IsDeveloper AS IsDeveloper,
+
+            IFNULL(s.Kills, 0) AS Kills,
+            IFNULL(s.Deaths, 0) AS Deaths,
+            IFNULL(s.ShotsFired, 0) AS ShotsFired,
+            IFNULL(s.ShotsHits, 0) AS ShotsHits,
+            IFNULL(s.Headshots, 0) AS Headshots,
+            IFNULL(s.AssistKills, 0) AS AssistKills,
+            IFNULL(s.Wins, 0) AS Wins,
+            IFNULL(s.Losses, 0) AS Losses,
+            IFNULL(s.CaptureNeutralPoints, 0) AS CaptureNeutralPoints,
+            IFNULL(s.CaptureEnemyPoints, 0) AS CaptureEnemyPoints,
+            IFNULL(s.TimePlayed, 0) AS TimePlayed,
+
+            IFNULL(pd.Skills, '') AS Skills,
+            IFNULL(pd.Abilities, '') AS Abilities,
+
+            IFNULL(cd.ClanTag, '') AS ClanTag,
+            IFNULL(cd.ClanTagColor, 0) AS ClanTagColor
+        FROM loginid l
+        LEFT JOIN stats s ON s.CustomerID = l.CustomerID
+        LEFT JOIN profiledata pd ON pd.CustomerID = l.CustomerID
+        LEFT JOIN clandata cd ON cd.ClanID = l.ClanID
+        WHERE l.CustomerID = @CustomerId
+        LIMIT 1;
+        """,
+        new { CustomerId = customerId });
+
+    if (account == null)
+        return ProfileBundle.Fail(404, "ACCOUNT_NOT_FOUND");
+
+    var loadouts = (await db.QueryAsync<ProfileLoadoutRow>(
+        """
+        SELECT
+            LoadoutID AS LoadoutId,
+            Class AS Class,
+            HonorPoints AS HonorPoints,
+            TimePlayed AS TimePlayed,
+            Loadout AS Loadout,
+            Skills AS Skills,
+            SpendSP1 AS SpendSP1,
+            SpendSP2 AS SpendSP2,
+            SpendSP3 AS SpendSP3
+        FROM profile_chars
+        WHERE CustomerID = @CustomerId
+        ORDER BY LoadoutID ASC;
+        """,
+        new { CustomerId = customerId })).ToList();
+
+    var achievements = (await db.QueryAsync<ProfileAchievementRow>(
+        """
+        SELECT
+            AchID AS AchId,
+            Value AS Value,
+            Unlocked AS Unlocked
+        FROM achievements
+        WHERE CustomerID = @CustomerId
+        ORDER BY AchID ASC;
+        """,
+        new { CustomerId = customerId })).ToList();
+
+    var fpsAttachments = (await db.QueryAsync<ProfileFpsAttachmentRow>(
+        """
+        SELECT
+            WeaponID AS WeaponId,
+            AttachmentID AS AttachmentId,
+            GREATEST(TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), LeasedUntil), 0) AS MinutesLeft,
+            IsEquipped AS IsEquipped
+        FROM inventory_fps
+        WHERE CustomerID = @CustomerId
+          AND LeasedUntil > UTC_TIMESTAMP()
+        ORDER BY WeaponID ASC, Slot ASC;
+        """,
+        new { CustomerId = customerId })).ToList();
+
+    var inventory = (await db.QueryAsync<ProfileInventoryRow>(
+        """
+        SELECT
+            ItemID AS ItemId,
+            GREATEST(TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), LeasedUntil), 0) AS MinutesLeft,
+            Quantity AS Quantity
+        FROM inventory
+        WHERE CustomerID = @CustomerId
+          AND LeasedUntil > UTC_TIMESTAMP()
+        ORDER BY ItemID ASC;
+        """,
+        new { CustomerId = customerId })).ToList();
+
+    var newItems = (await db.QueryAsync<int>(
+        """
+        SELECT ItemID
+        FROM items_weapons
+        WHERE IsNew > 0
+          AND (Price1 + Price7 + Price30 + PriceP + GPrice1 + GPrice7 + GPrice30 + GPriceP) > 0
+
+        UNION
+
+        SELECT ItemID
+        FROM items_gear
+        WHERE IsNew > 0
+          AND (Price1 + Price7 + Price30 + PriceP + GPrice1 + GPrice7 + GPrice30 + GPriceP) > 0
+
+        UNION
+
+        SELECT ItemID
+        FROM items_generic
+        WHERE IsNew > 0
+          AND (Price1 + Price7 + Price30 + PriceP + GPrice1 + GPrice7 + GPrice30 + GPriceP) > 0
+
+        UNION
+
+        SELECT ItemID
+        FROM items_packages
+        WHERE IsNew > 0
+          AND (Price1 + Price7 + Price30 + PriceP + GPrice1 + GPrice7 + GPrice30 + GPriceP) > 0
+
+        ORDER BY ItemID ASC;
+        """)).ToList();
+
+    var now = DateTime.UtcNow;
+    var dayStart = now.Date;
+    var dayEnd = dayStart.AddDays(1);
+
+    var weekStart = now.Date.AddDays(-(int)now.DayOfWeek);
+    var weekEnd = weekStart.AddDays(7);
+
+    var dailyStats = await GetProfileStatsWindowAsync(db, customerId, dayStart, dayEnd);
+    var weeklyStats = await GetProfileStatsWindowAsync(db, customerId, weekStart, weekEnd);
+
+    return new ProfileBundle
+    {
+        Ok = true,
+        Code = 0,
+        Message = "OK",
+        Account = account,
+        Loadouts = loadouts,
+        Achievements = achievements,
+        FpsAttachments = fpsAttachments,
+        Inventory = inventory,
+        NewItems = newItems,
+        DailyStats = dailyStats,
+        WeeklyStats = weeklyStats
+    };
+}
+
+static async Task<ProfileStatsWindowRow> GetProfileStatsWindowAsync(
+    MySqlConnection db,
+    ulong customerId,
+    DateTime start,
+    DateTime end)
+{
+    return await db.QueryFirstAsync<ProfileStatsWindowRow>(
+        """
+        SELECT
+            COUNT(*) AS DailyGames,
+            IFNULL(SUM(Kills), 0) AS Kills,
+            IFNULL(SUM(Headshots), 0) AS Headshots,
+            IFNULL(SUM(CaptureEnemyPoints), 0) AS CaptureFlags,
+
+            IFNULL(SUM(CASE WHEN MapType = 0 THEN 1 ELSE 0 END), 0) AS MatchesCQ,
+            IFNULL(SUM(CASE WHEN MapType = 1 THEN 1 ELSE 0 END), 0) AS MatchesDM,
+            IFNULL(SUM(CASE WHEN MapType = 3 THEN 1 ELSE 0 END), 0) AS MatchesSB
+        FROM dbg_userroundresults
+        WHERE CustomerID = @CustomerId
+          AND GameReportTime >= @Start
+          AND GameReportTime < @End;
+        """,
+        new
+        {
+            CustomerId = customerId,
+            Start = start,
+            End = end
+        });
+}
+
+static string BuildLegacyProfileXml(ProfileBundle profile)
+{
+    var account = profile.Account ?? throw new Exception("Profile account is null");
+
+    var now = DateTime.Now;
+    var curTime = $"{now.Year} {now.Month} {now.Day} {now.Hour} {now.Minute}";
+
+    var xml = new StringBuilder();
+
+    xml.Append("<?xml version=\"1.0\"?>\n");
+    xml.Append("<account ");
+
+    AppendXmlAttr(xml, "CustomerID", account.CustomerId);
+    AppendXmlAttr(xml, "AccountStatus", account.AccountStatus);
+    AppendXmlAttr(xml, "gamertag", account.Gamertag.TrimEnd());
+    AppendXmlAttr(xml, "gamepoints", account.GamePoints);
+    AppendXmlAttr(xml, "GameDollars", account.GameDollars);
+    AppendXmlAttr(xml, "HonorPoints", account.HonorPoints);
+    AppendXmlAttr(xml, "SkillPoints", account.SkillPoints);
+
+    AppendXmlAttr(xml, "ClanID", account.ClanId);
+    AppendXmlAttr(xml, "ClanRank", account.ClanRank);
+    AppendXmlAttr(xml, "ClanTag", account.ClanTag);
+    AppendXmlAttr(xml, "ClanTagColor", account.ClanTagColor);
+
+    AppendXmlAttr(xml, "Kills", account.Kills);
+    AppendXmlAttr(xml, "Deaths", account.Deaths);
+    AppendXmlAttr(xml, "ShotsFired", account.ShotsFired);
+    AppendXmlAttr(xml, "ShotsHits", account.ShotsHits);
+    AppendXmlAttr(xml, "Headshots", account.Headshots);
+    AppendXmlAttr(xml, "AssistKills", account.AssistKills);
+    AppendXmlAttr(xml, "Wins", account.Wins);
+    AppendXmlAttr(xml, "Losses", account.Losses);
+    AppendXmlAttr(xml, "CaptureNeutralPoints", account.CaptureNeutralPoints);
+    AppendXmlAttr(xml, "CaptureEnemyPoints", account.CaptureEnemyPoints);
+    AppendXmlAttr(xml, "TimePlayed", account.TimePlayed);
+
+    AppendXmlAttr(xml, "Abilities", account.Abilities);
+    AppendXmlAttr(xml, "F1S", account.Faction1Score);
+    AppendXmlAttr(xml, "F2S", account.Faction2Score);
+    AppendXmlAttr(xml, "F3S", account.Faction3Score);
+    AppendXmlAttr(xml, "F4S", account.Faction4Score);
+    AppendXmlAttr(xml, "F5S", account.Faction5Score);
+    AppendXmlAttr(xml, "time", curTime);
+    AppendXmlAttr(xml, "IsFPSEnabled", account.IsFPSEnabled);
+
+    if (account.IsDeveloper != 0)
+        AppendXmlAttr(xml, "IsDev", account.IsDeveloper);
+
+    xml.Append(">\n");
+
+    xml.Append("<loadouts>\n");
+    foreach (var loadout in profile.Loadouts)
+    {
+        xml.Append("<l ");
+        AppendXmlAttr(xml, "id", loadout.LoadoutId);
+        AppendXmlAttr(xml, "cl", loadout.Class);
+        AppendXmlAttr(xml, "xp", loadout.HonorPoints);
+        AppendXmlAttr(xml, "tm", loadout.TimePlayed);
+        AppendXmlAttr(xml, "lo", loadout.Loadout);
+        AppendXmlAttr(xml, "sp1", loadout.SpendSP1);
+        AppendXmlAttr(xml, "sp2", loadout.SpendSP2);
+        AppendXmlAttr(xml, "sp3", loadout.SpendSP3);
+        AppendXmlAttr(xml, "sv", TrimLegacySkills(loadout.Skills));
+        xml.Append("/>\n");
+    }
+    xml.Append("</loadouts>\n");
+
+    xml.Append("<achievements>\n");
+    foreach (var achievement in profile.Achievements)
+    {
+        xml.Append("<a ");
+        AppendXmlAttr(xml, "id", achievement.AchId);
+        AppendXmlAttr(xml, "v", achievement.Value);
+        AppendXmlAttr(xml, "u", achievement.Unlocked);
+        xml.Append("/>\n");
+    }
+    xml.Append("</achievements>\n");
+
+    xml.Append("<fpsattach>\n");
+    foreach (var item in profile.FpsAttachments)
+    {
+        xml.Append("<i ");
+        AppendXmlAttr(xml, "wi", item.WeaponId);
+        AppendXmlAttr(xml, "ai", item.AttachmentId);
+        AppendXmlAttr(xml, "ml", item.MinutesLeft);
+
+        if (item.IsEquipped > 0)
+            AppendXmlAttr(xml, "eq", 1);
+
+        xml.Append("/>\n");
+    }
+    xml.Append("</fpsattach>\n");
+
+    xml.Append("<inventory>\n");
+    foreach (var item in profile.Inventory)
+    {
+        xml.Append("<i ");
+        AppendXmlAttr(xml, "id", item.ItemId);
+        AppendXmlAttr(xml, "ml", item.MinutesLeft);
+
+        if (item.Quantity > 1)
+            AppendXmlAttr(xml, "qt", item.Quantity);
+
+        xml.Append("/>\n");
+    }
+    xml.Append("</inventory>\n");
+
+    xml.Append("<nis>\n");
+    foreach (var itemId in profile.NewItems)
+    {
+        xml.Append("<i ");
+        AppendXmlAttr(xml, "id", itemId);
+        xml.Append("/>\n");
+    }
+    xml.Append("</nis>\n");
+
+    AppendLegacyStatsXml(xml, "sday", profile.DailyStats);
+    AppendLegacyStatsXml(xml, "sweek", profile.WeeklyStats);
+
+    xml.Append("</account>");
+
+    return xml.ToString();
+}
+
+static void AppendLegacyStatsXml(StringBuilder xml, string nodeName, ProfileStatsWindowRow stats)
+{
+    xml.Append("<");
+    xml.Append(nodeName);
+    xml.Append(" ");
+
+    AppendXmlAttr(xml, "dg", stats.DailyGames);
+    AppendXmlAttr(xml, "ki", stats.Kills);
+    AppendXmlAttr(xml, "hs", stats.Headshots);
+    AppendXmlAttr(xml, "cf", stats.CaptureFlags);
+    AppendXmlAttr(xml, "mcq", stats.MatchesCQ);
+    AppendXmlAttr(xml, "mdm", stats.MatchesDM);
+    AppendXmlAttr(xml, "msb", stats.MatchesSB);
+
+    xml.Append("/>\n");
+}
+
+static string TrimLegacySkills(string? value)
+{
+    return (value ?? "").TrimEnd(' ', '0');
+}
+
+static async Task EnsureStarterProfileAsync(MySqlConnection db, ulong customerId)
+{
+    var loadoutCount = await db.ExecuteScalarAsync<int>(
+        """
+        SELECT COUNT(*)
+        FROM profile_chars
+        WHERE CustomerID = @CustomerId;
+        """,
+        new { CustomerId = customerId });
+
+    if (loadoutCount > 0)
+        return;
+
+    const string loadout = "20061 0 20019 20026 0 0 0 0 0 0 101002 101158 101004";
+
+    await db.ExecuteAsync(
+        """
+        INSERT INTO profile_chars
+        (
+            CustomerID,
+            Class,
+            HonorPoints,
+            TimePlayed,
+            Loadout,
+            Skills,
+            SpendSP1,
+            SpendSP2,
+            SpendSP3
+        )
+        VALUES
+        (
+            @CustomerId,
+            0,
+            0,
+            0,
+            @Loadout,
+            '0000000000000000000000000000000',
+            0,
+            0,
+            0
+        );
+        """,
+        new
+        {
+            CustomerId = customerId,
+            Loadout = loadout
+        });
+
+    var starterItems = new[]
+    {
+        20061,
+        20019,
+        20026,
+        101002,
+        101158,
+        101004
+    };
+
+    foreach (var itemId in starterItems)
+    {
+        await db.ExecuteAsync(
+            """
+            INSERT INTO inventory
+            (
+                CustomerID,
+                ItemID,
+                LeasedUntil,
+                Quantity,
+                UpSlot1,
+                UpSlot2,
+                UpSlot3,
+                UpSlot4,
+                UpSlot5
+            )
+            SELECT
+                @CustomerId,
+                @ItemId,
+                DATE_ADD(UTC_TIMESTAMP(), INTERVAL 2000 DAY),
+                1,
+                0,
+                0,
+                0,
+                0,
+                0
+            WHERE NOT EXISTS
+            (
+                SELECT 1
+                FROM inventory
+                WHERE CustomerID = @CustomerId
+                  AND ItemID = @ItemId
+                LIMIT 1
+            );
+            """,
+            new
+            {
+                CustomerId = customerId,
+                ItemId = itemId
+            });
+    }
+}
+
 static int CreateSessionId()
 {
     return RandomNumberGenerator.GetInt32(1, int.MaxValue);
@@ -1471,6 +1998,8 @@ record LoginRequest(string Username, string Password);
 
 record CheckSessionRequest(ulong CustomerId, ulong SessionId, string Token);
 
+record ProfileRequest(ulong CustomerId, ulong SessionId, string Token, bool JoiningGame);
+
 record CreateAccountRequest(string Username, string Password, string? Email, bool IsDeveloper);
 
 record ApiResponse(bool Ok, int Code, string Message);
@@ -1519,6 +2048,122 @@ class SessionRow
     public string SessionKey { get; set; } = "";
     public DateTime TimeUpdated { get; set; }
     public int AccountStatus { get; set; }
+}
+
+class ProfileBundle
+{
+    public bool Ok { get; set; }
+    public int Code { get; set; }
+    public string Message { get; set; } = "";
+
+    public ProfileAccountRow? Account { get; set; }
+
+    public List<ProfileLoadoutRow> Loadouts { get; set; } = new();
+    public List<ProfileAchievementRow> Achievements { get; set; } = new();
+    public List<ProfileFpsAttachmentRow> FpsAttachments { get; set; } = new();
+    public List<ProfileInventoryRow> Inventory { get; set; } = new();
+    public List<int> NewItems { get; set; } = new();
+
+    public ProfileStatsWindowRow DailyStats { get; set; } = new();
+    public ProfileStatsWindowRow WeeklyStats { get; set; } = new();
+
+    public static ProfileBundle Fail(int code, string message)
+    {
+        return new ProfileBundle
+        {
+            Ok = false,
+            Code = code,
+            Message = message
+        };
+    }
+}
+
+class ProfileAccountRow
+{
+    public ulong CustomerId { get; set; }
+    public int AccountStatus { get; set; }
+
+    public int GamePoints { get; set; }
+    public int GameDollars { get; set; }
+    public int HonorPoints { get; set; }
+    public int SkillPoints { get; set; }
+
+    public string Gamertag { get; set; } = "";
+
+    public int Faction1Score { get; set; }
+    public int Faction2Score { get; set; }
+    public int Faction3Score { get; set; }
+    public int Faction4Score { get; set; }
+    public int Faction5Score { get; set; }
+
+    public int ClanId { get; set; }
+    public int ClanRank { get; set; }
+    public string ClanTag { get; set; } = "";
+    public int ClanTagColor { get; set; }
+
+    public int IsFPSEnabled { get; set; }
+    public int IsDeveloper { get; set; }
+
+    public int Kills { get; set; }
+    public int Deaths { get; set; }
+    public int ShotsFired { get; set; }
+    public int ShotsHits { get; set; }
+    public int Headshots { get; set; }
+    public int AssistKills { get; set; }
+    public int Wins { get; set; }
+    public int Losses { get; set; }
+    public int CaptureNeutralPoints { get; set; }
+    public int CaptureEnemyPoints { get; set; }
+    public int TimePlayed { get; set; }
+
+    public string Skills { get; set; } = "";
+    public string Abilities { get; set; } = "";
+}
+
+class ProfileLoadoutRow
+{
+    public int LoadoutId { get; set; }
+    public int Class { get; set; }
+    public int HonorPoints { get; set; }
+    public int TimePlayed { get; set; }
+    public string Loadout { get; set; } = "";
+    public string Skills { get; set; } = "";
+    public int SpendSP1 { get; set; }
+    public int SpendSP2 { get; set; }
+    public int SpendSP3 { get; set; }
+}
+
+class ProfileAchievementRow
+{
+    public int AchId { get; set; }
+    public int Value { get; set; }
+    public int Unlocked { get; set; }
+}
+
+class ProfileFpsAttachmentRow
+{
+    public int WeaponId { get; set; }
+    public int AttachmentId { get; set; }
+    public int MinutesLeft { get; set; }
+    public int IsEquipped { get; set; }
+}
+
+class ProfileInventoryRow
+{
+    public int ItemId { get; set; }
+    public int MinutesLeft { get; set; }
+    public int Quantity { get; set; }
+}
+
+class ProfileStatsWindowRow
+{
+    public int DailyGames { get; set; }
+    public int Kills { get; set; }
+    public int Headshots { get; set; }
+    public int CaptureFlags { get; set; }
+    public int MatchesCQ { get; set; }
+    public int MatchesDM { get; set; }
+    public int MatchesSB { get; set; }
 }
 
 interface IHasPrices

@@ -384,7 +384,7 @@ void PhysXWorld::Init()
 	Pvd = PxCreatePvd(*Foundation);
 	if (Pvd)
 	{
-		PvdTransport = PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+		PvdTransport = PxDefaultPvdSocketTransportCreate("26.163.92.76", 5425, 10);
 		if (PvdTransport)
 			Pvd->connect(*PvdTransport, PxPvdInstrumentationFlag::eALL);
 	}
