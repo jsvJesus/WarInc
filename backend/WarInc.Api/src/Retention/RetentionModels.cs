@@ -17,7 +17,8 @@ public sealed record RetentionInfoResponse(
     int Code,
     string Message,
     int CurrentDay,
-    int MaxDay,
+    int MinutesToNextDay,
+    int CanClaim,
     IReadOnlyList<RetentionDayDto> Days);
 
 public sealed record RetentionClaimResponse(
@@ -25,4 +26,6 @@ public sealed record RetentionClaimResponse(
     int Code,
     string Message,
     int ClaimedDay,
+    int Bonus,
+    int Balance,
     IReadOnlyList<RetentionDayDto> Rewards);

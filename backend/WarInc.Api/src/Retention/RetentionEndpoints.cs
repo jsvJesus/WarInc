@@ -29,25 +29,42 @@ public static class RetentionEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = LegacyUtil.ParseULong(Read(data, "s_id"));
-        var sessionId = LegacyUtil.ParseULong(Read(data, "s_key"));
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "s_id",
+            "CustomerID",
+            "CustomerId",
+            "customerId"));
 
-        if (customerId != 0 || sessionId != 0)
-        {
-            var session = await auth.CheckLegacySessionAsync(customerId, sessionId);
+        var sessionId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "s_key",
+            "SessionID",
+            "SessionId",
+            "sessionId"));
 
-            if (!session.Ok)
-                return Results.Text("WO_1", "text/plain", Encoding.UTF8);
-        }
+        var session = await auth.CheckLegacySessionAsync(
+            customerId,
+            sessionId);
 
-        var func = Read(data, "func").Trim();
+        if (!session.Ok)
+            return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+
+        var func = ReadAny(data, "func").Trim();
 
         if (string.Equals(func, "give", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(func, "claim", StringComparison.OrdinalIgnoreCase))
         {
-            await retention.ClaimAsync(customerId);
+            var result = await retention.ClaimAsync(customerId);
+            var text = retention.BuildLegacyClaimText(result);
 
-            return Results.Text("WO_00", "text/plain", Encoding.UTF8);
+            return Results.Text(text, "text/plain", Encoding.UTF8);
+        }
+
+        if (!string.Equals(func, "info", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(func))
+        {
+            return Results.Text("WO_5", "text/plain", Encoding.UTF8);
         }
 
         var info = await retention.GetInfoAsync(customerId);
@@ -74,6 +91,7 @@ public static class RetentionEndpoints
                 false,
                 session.Code,
                 session.Message,
+                0,
                 0,
                 0,
                 Array.Empty<RetentionDayDto>()));
@@ -103,6 +121,8 @@ public static class RetentionEndpoints
                 session.Code,
                 session.Message,
                 0,
+                0,
+                0,
                 Array.Empty<RetentionDayDto>()));
         }
 
@@ -115,9 +135,25 @@ public static class RetentionEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = LegacyUtil.ParseULong(ReadAny(data, "customerId", "CustomerId", "s_id"));
-        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "sessionId", "SessionId", "s_key"));
-        var token = ReadAny(data, "token", "Token", "s_token");
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "customerId",
+            "CustomerId",
+            "CustomerID",
+            "s_id"));
+
+        var sessionId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "sessionId",
+            "SessionId",
+            "SessionID",
+            "s_key"));
+
+        var token = ReadAny(
+            data,
+            "token",
+            "Token",
+            "s_token");
 
         return new RetentionRequest(
             customerId,
@@ -181,12 +217,9 @@ public static class RetentionEndpoints
         return data;
     }
 
-    private static string Read(Dictionary<string, string> data, string key)
-    {
-        return data.TryGetValue(key, out var value) ? value : "";
-    }
-
-    private static string ReadAny(Dictionary<string, string> data, params string[] keys)
+    private static string ReadAny(
+        Dictionary<string, string> data,
+        params string[] keys)
     {
         foreach (var key in keys)
         {
