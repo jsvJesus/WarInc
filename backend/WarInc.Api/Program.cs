@@ -6,6 +6,7 @@ using WarInc.Api.Legacy;
 using WarInc.Api.Profile;
 using WarInc.Api.Purchase;
 using WarInc.Api.Shop;
+using WarInc.Api.Social;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,7 @@ builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<PurchaseService>();
 builder.Services.AddScoped<ProfileWriteService>();
+builder.Services.AddScoped<SocialService>();
 
 builder.Services.AddSingleton<GameServerService>();
 
@@ -125,6 +127,7 @@ app.MapShopEndpoints();
 app.MapProfileEndpoints();
 app.MapPurchaseEndpoints();
 app.MapProfileAdditionalEndpoints();
+app.MapSocialEndpoints();
 app.MapGameServerEndpoints();
 app.MapLegacySmokeEndpoints();
 
