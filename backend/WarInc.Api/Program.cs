@@ -8,6 +8,7 @@ using WarInc.Api.Purchase;
 using WarInc.Api.Shop;
 using WarInc.Api.Social;
 using WarInc.Api.Leaderboard;
+using WarInc.Api.Retention;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,7 @@ builder.Services.AddScoped<PurchaseService>();
 builder.Services.AddScoped<ProfileWriteService>();
 builder.Services.AddScoped<SocialService>();
 builder.Services.AddScoped<LeaderboardService>();
+builder.Services.AddScoped<RetentionService>();
 
 builder.Services.AddSingleton<GameServerService>();
 
@@ -92,6 +94,8 @@ app.MapGet("/", () =>
             "/v1/friends/list",
             "/v1/clan/get",
             "/v1/leaderboard/get",
+            "/v1/retention/info",
+            "/v1/retention/claim",
 
             "/internal/gameserver/register",
             "/internal/gameserver/heartbeat",
@@ -113,6 +117,7 @@ app.MapGet("/", () =>
             "/api_BuyItem3.aspx",
             
             "/api_LeaderboardGet.aspx",
+            "/api_RetBonus.aspx",
 
             "/api_LoadoutModify.aspx",
             "/api_LoadoutUnlock.aspx",
@@ -136,5 +141,6 @@ app.MapSocialEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapGameServerEndpoints();
 app.MapLegacySmokeEndpoints();
+app.MapRetentionEndpoints();
 
 app.Run();
