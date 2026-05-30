@@ -4,6 +4,8 @@ using MySqlConnector;
 using WarInc.Api.Common;
 using WarInc.Api.Config;
 using WarInc.Api.Database;
+using System.Text;
+using System.Text.Json;
 
 namespace WarInc.Api.GameServer;
 
@@ -107,6 +109,12 @@ public static class GameServerEndpoints
                 servers
             });
         });
+        
+        app.MapGet("/v1/gameserver/result", JsonGameServerResultAsync);
+        app.MapPost("/v1/gameserver/result", JsonGameServerResultAsync);
+
+        app.MapGet("/v1/gameserver/weapon-stats", JsonGameServerWeaponStatsAsync);
+        app.MapPost("/v1/gameserver/weapon-stats", JsonGameServerWeaponStatsAsync);
 
         app.MapPost("/internal/gameserver/list", async (
             HttpContext http,
@@ -126,6 +134,275 @@ public static class GameServerEndpoints
                 servers
             });
         });
+    }
+    
+        private static async Task<IResult> JsonGameServerResultAsync(
+        HttpContext http,
+        GameServerService service)
+    {
+        var data = await ReadRequestDataAsync(http);
+        var remoteIp = GetRemoteIp(http);
+
+        var customerId = ReadULongAny(
+            data,
+            "CustomerID",
+            "CustomerId",
+            "customerId",
+            "customerid",
+            "s_id",
+            "UserID",
+            "userid");
+
+        if (customerId == 0)
+        {
+            return Results.Json(new
+            {
+                ok = false,
+                code = 400,
+                message = "BAD_CUSTOMER_ID"
+            });
+        }
+
+        var serverId = ReadAny(
+            data,
+            "serverid",
+            "ServerID",
+            "ServerId",
+            "serverId",
+            "sid");
+
+        var gamertag = ReadAny(
+            data,
+            "Gamertag",
+            "gamertag",
+            "gt",
+            "name");
+
+        var ok = await service.WriteRoundResultAsync(data, remoteIp);
+
+        if (!string.IsNullOrWhiteSpace(serverId))
+        {
+            await service.PlayerLeaveAsync(new GameServerPlayerRequest(
+                serverId,
+                customerId,
+                gamertag));
+
+            await service.ReportAsync(new GameServerReportRequest(
+                serverId,
+                BuildReport("round_result", data),
+                "round_result"));
+        }
+
+        return Results.Json(new
+        {
+            ok,
+            code = ok ? 0 : 500,
+            message = ok ? "OK" : "WRITE_FAILED",
+            action = "gameserver_result",
+            customerId,
+            serverId,
+            written = ok
+        });
+    }
+
+    private static async Task<IResult> JsonGameServerWeaponStatsAsync(
+        HttpContext http,
+        GameServerService service)
+    {
+        var data = await ReadRequestDataAsync(http);
+
+        var itemId = ReadIntAny(
+            data,
+            0,
+            "ItemID",
+            "ItemId",
+            "itemId",
+            "WeaponID",
+            "WeaponId",
+            "weaponId");
+
+        if (itemId <= 0)
+        {
+            return Results.Json(new
+            {
+                ok = false,
+                code = 400,
+                message = "BAD_ITEM_ID"
+            });
+        }
+
+        var customerId = ReadULongAny(
+            data,
+            "CustomerID",
+            "CustomerId",
+            "customerId",
+            "customerid",
+            "s_id",
+            "UserID",
+            "userid");
+
+        var serverId = ReadAny(
+            data,
+            "serverid",
+            "ServerID",
+            "ServerId",
+            "serverId",
+            "sid");
+
+        var ok = await service.WriteWeaponStatsAsync(data);
+
+        if (!string.IsNullOrWhiteSpace(serverId))
+        {
+            await service.ReportAsync(new GameServerReportRequest(
+                serverId,
+                BuildReport("weapon_stats", data),
+                "weapon_stats"));
+        }
+
+        return Results.Json(new
+        {
+            ok,
+            code = ok ? 0 : 500,
+            message = ok ? "OK" : "WRITE_FAILED",
+            action = "gameserver_weapon_stats",
+            itemId,
+            customerId,
+            serverId,
+            written = ok
+        });
+    }
+
+    private static async Task<Dictionary<string, string>> ReadRequestDataAsync(HttpContext http)
+    {
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in http.Request.Query)
+            data[item.Key] = item.Value.ToString();
+
+        if (http.Request.HasFormContentType)
+        {
+            var form = await http.Request.ReadFormAsync();
+
+            foreach (var item in form)
+                data[item.Key] = item.Value.ToString();
+
+            return data;
+        }
+
+        if (http.Request.ContentLength.GetValueOrDefault() <= 0)
+            return data;
+
+        var contentType = http.Request.ContentType ?? "";
+
+        if (!contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            return data;
+
+        try
+        {
+            using var doc = await JsonDocument.ParseAsync(http.Request.Body);
+
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return data;
+
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                data[prop.Name] = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString() ?? "",
+                    JsonValueKind.Number => prop.Value.GetRawText(),
+                    JsonValueKind.True => "1",
+                    JsonValueKind.False => "0",
+                    JsonValueKind.Null => "",
+                    _ => prop.Value.GetRawText()
+                };
+            }
+        }
+        catch
+        {
+            return data;
+        }
+
+        return data;
+    }
+
+    private static string ReadAny(
+        Dictionary<string, string> data,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (data.TryGetValue(key, out var value))
+                return value;
+        }
+
+        return "";
+    }
+
+    private static int ReadIntAny(
+        Dictionary<string, string> data,
+        int defaultValue,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!data.TryGetValue(key, out var value))
+                continue;
+
+            return LegacyUtil.ParseInt(value);
+        }
+
+        return defaultValue;
+    }
+
+    private static ulong ReadULongAny(
+        Dictionary<string, string> data,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!data.TryGetValue(key, out var value))
+                continue;
+
+            return LegacyUtil.ParseULong(value);
+        }
+
+        return 0;
+    }
+
+    private static string BuildReport(
+        string type,
+        Dictionary<string, string> data)
+    {
+        var sb = new StringBuilder();
+
+        sb.Append(type);
+        sb.Append(": ");
+
+        var first = true;
+
+        foreach (var item in data.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!first)
+                sb.Append("; ");
+
+            first = false;
+
+            sb.Append(item.Key);
+            sb.Append('=');
+            sb.Append(item.Value);
+        }
+
+        return sb.ToString();
+    }
+
+    private static string GetRemoteIp(HttpContext http)
+    {
+        var forwarded = http.Request.Headers["X-Forwarded-For"].ToString();
+
+        if (!string.IsNullOrWhiteSpace(forwarded))
+            return forwarded.Split(',')[0].Trim();
+
+        return http.Connection.RemoteIpAddress?.ToString() ?? "";
     }
 
     private static bool IsInternalRequest(

@@ -112,6 +112,18 @@ app.MapGet("/", () =>
             "/v1/achievements/update",
             "/v1/gameserver/give-item",
             "/v1/gameserver/remove-item",
+            
+            "/v1/clan/invite",
+            "/v1/clan/accept-invite",
+            "/v1/clan/apply",
+            "/v1/clan/accept-application",
+            "/v1/clan/leave",
+            "/v1/clan/kick",
+            "/v1/clan/promote",
+            "/v1/clan/demote",
+            "/v1/clan/announcement",
+            "/v1/gameserver/result",
+            "/v1/gameserver/weapon-stats",
 
             "/internal/session/validate",
             "/internal/gameserver/register",

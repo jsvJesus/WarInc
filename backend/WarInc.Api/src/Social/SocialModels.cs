@@ -36,7 +36,8 @@ public sealed record ClanInviteAnswerRequest(
     ulong CustomerId,
     ulong SessionId,
     string Token,
-    ulong ClanId,
+    ulong ClanId = 0,
+    ulong InviteId = 0,
     bool Accept = true);
 
 public sealed record ClanApplicationRequest(

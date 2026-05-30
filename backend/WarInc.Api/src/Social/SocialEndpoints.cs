@@ -210,10 +210,22 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_invite" });
 
             var result = await social.InviteToClanAsync(request.CustomerId, request.TargetCustomerId, request.TargetName);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_invite",
+                result,
+                includeMembers: true,
+                includeInvites: true,
+                extra: new
+                {
+                    targetCustomerId = request.TargetCustomerId,
+                    targetName = request.TargetName
+                });
         });
 
         app.MapPost("/v1/clan/accept-invite", async (
@@ -224,10 +236,24 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_accept_invite" });
 
-            var result = await social.AcceptClanInviteAsync(request.CustomerId, request.ClanId, request.Accept);
-            return Results.Json(result);
+            var inviteOrClanId = request.InviteId > 0 ? request.InviteId : request.ClanId;
+            var result = await social.AcceptClanInviteAsync(request.CustomerId, inviteOrClanId, request.Accept);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                request.Accept ? "clan_accept_invite" : "clan_decline_invite",
+                result,
+                includeMembers: request.Accept,
+                includeInvites: true,
+                extra: new
+                {
+                    clanId = request.ClanId,
+                    inviteId = request.InviteId,
+                    accepted = request.Accept
+                });
         });
 
         app.MapPost("/v1/clan/apply", async (
@@ -238,10 +264,32 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_apply" });
 
             var result = await social.ApplyToClanAsync(request.CustomerId, request.ClanId, request.Text);
-            return Results.Json(result);
+
+            if (!result.Ok)
+            {
+                return Results.Json(new
+                {
+                    ok = false,
+                    code = result.Code,
+                    message = result.Message,
+                    action = "clan_apply",
+                    clanId = request.ClanId,
+                    applicationSent = false
+                });
+            }
+
+            return Results.Json(new
+            {
+                ok = true,
+                code = 0,
+                message = "OK",
+                action = "clan_apply",
+                clanId = request.ClanId,
+                applicationSent = true
+            });
         });
 
         app.MapPost("/v1/clan/accept-application", async (
@@ -252,7 +300,7 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_accept_application" });
 
             var result = await social.AnswerClanApplicationAsync(
                 request.CustomerId,
@@ -260,7 +308,19 @@ public static class SocialEndpoints
                 request.TargetCustomerId,
                 request.Accept);
 
-            return Results.Json(result);
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                request.Accept ? "clan_accept_application" : "clan_decline_application",
+                result,
+                includeMembers: true,
+                includeApplications: true,
+                extra: new
+                {
+                    applicationId = request.ApplicationId,
+                    targetCustomerId = request.TargetCustomerId,
+                    accepted = request.Accept
+                });
         });
 
         app.MapPost("/v1/clan/leave", async (
@@ -271,10 +331,15 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_leave" });
 
             var result = await social.LeaveClanAsync(request.CustomerId);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_leave",
+                result);
         });
 
         app.MapPost("/v1/clan/kick", async (
@@ -285,10 +350,20 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_kick" });
 
             var result = await social.KickClanMemberAsync(request.CustomerId, request.TargetCustomerId);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_kick",
+                result,
+                includeMembers: true,
+                extra: new
+                {
+                    targetCustomerId = request.TargetCustomerId
+                });
         });
 
         app.MapPost("/v1/clan/promote", async (
@@ -299,10 +374,20 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_promote" });
 
             var result = await social.PromoteClanMemberAsync(request.CustomerId, request.TargetCustomerId);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_promote",
+                result,
+                includeMembers: true,
+                extra: new
+                {
+                    targetCustomerId = request.TargetCustomerId
+                });
         });
 
         app.MapPost("/v1/clan/demote", async (
@@ -313,10 +398,20 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_demote" });
 
             var result = await social.DemoteClanMemberAsync(request.CustomerId, request.TargetCustomerId);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_demote",
+                result,
+                includeMembers: true,
+                extra: new
+                {
+                    targetCustomerId = request.TargetCustomerId
+                });
         });
 
         app.MapPost("/v1/clan/announcement", async (
@@ -327,10 +422,75 @@ public static class SocialEndpoints
             var session = await auth.CheckSessionAsync(request.CustomerId, request.SessionId, request.Token);
 
             if (!session.Ok)
-                return Results.Json(new ClanResponse(false, session.Code, session.Message, null));
+                return Results.Json(new { ok = false, code = session.Code, message = session.Message, action = "clan_announcement" });
 
             var result = await social.SetClanAnnouncementAsync(request.CustomerId, request.Announcement);
-            return Results.Json(result);
+
+            return await ClanActionJsonAsync(
+                social,
+                request.CustomerId,
+                "clan_announcement",
+                result,
+                includeMembers: true,
+                extra: new
+                {
+                    announcement = request.Announcement
+                });
+        });
+    }
+    
+    private static async Task<IResult> ClanActionJsonAsync(
+        SocialService social,
+        ulong customerId,
+        string action,
+        ClanResponse result,
+        bool includeMembers = false,
+        bool includeInvites = false,
+        bool includeApplications = false,
+        object? extra = null)
+    {
+        if (!result.Ok)
+        {
+            return Results.Json(new
+            {
+                ok = false,
+                code = result.Code,
+                message = result.Message,
+                action,
+                clan = result.Clan,
+                members = Array.Empty<SocialClanMemberDto>(),
+                invites = Array.Empty<SocialClanInviteDto>(),
+                applications = Array.Empty<SocialClanApplicationDto>(),
+                extra
+            });
+        }
+
+        var currentClanResult = await social.GetClanAsync(customerId);
+        var clan = currentClanResult.Clan ?? result.Clan;
+
+        var members = includeMembers && clan != null
+            ? await social.GetClanMembersAsync(customerId)
+            : Array.Empty<SocialClanMemberDto>();
+
+        var invites = includeInvites
+            ? await social.GetClanInvitesAsync(customerId)
+            : Array.Empty<SocialClanInviteDto>();
+
+        var applications = includeApplications
+            ? await social.GetClanApplicationsAsync(customerId)
+            : Array.Empty<SocialClanApplicationDto>();
+
+        return Results.Json(new
+        {
+            ok = true,
+            code = 0,
+            message = "OK",
+            action,
+            clan,
+            members,
+            invites,
+            applications,
+            extra
         });
     }
 
