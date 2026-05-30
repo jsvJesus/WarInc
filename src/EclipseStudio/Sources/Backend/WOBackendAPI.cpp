@@ -9,7 +9,7 @@ const char* gDomainBaseUrl = "/";
 int gDomainPort = 8080;
 bool gDomainUseSSL = false;
 
-static const char* gWarIncBackendHost = "127.0.0.1"; // local ip
+static const char* gWarIncBackendHost = "26.163.92.76";
 
 static const char* GetWarIncBackendHost()
 {
@@ -18,7 +18,13 @@ static const char* GetWarIncBackendHost()
 	if(host == NULL || host[0] == 0)
 		return gWarIncBackendHost;
 
-	if(stricmp(host, "192.95.7.127") == 0) // my ip
+	if(stricmp(host, "127.0.0.1") == 0)
+		return gWarIncBackendHost;
+
+	if(stricmp(host, "localhost") == 0)
+		return gWarIncBackendHost;
+
+	if(stricmp(host, "192.95.7.127") == 0)
 		return gWarIncBackendHost;
 
 	return host;

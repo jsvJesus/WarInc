@@ -38,6 +38,29 @@ app.MapGet("/health", () =>
     });
 });
 
+app.MapGet("/", () =>
+{
+    return Results.Json(new
+    {
+        ok = true,
+        service = "WarInc.Api",
+        message = "WarInc backend is running",
+        endpoints = new[]
+        {
+            "/health",
+            "/v1/auth/login",
+            "/v1/auth/check",
+            "/v1/auth/logout",
+            "/v1/shop/items",
+            "/api_Login.aspx",
+            "/api_CheckLoginSession.aspx",
+            "/api_UpdateLoginSession.aspx",
+            "/api_GetShop5.aspx",
+            "/api_GetItemsInfo.aspx"
+        }
+    });
+});
+
 app.MapPost("/v1/auth/login", async (HttpContext http, LoginRequest request) =>
 {
     var result = await LoginAsync(
@@ -54,6 +77,7 @@ app.MapPost("/v1/auth/check", async (CheckSessionRequest request) =>
 {
     var result = await CheckSessionAsync(
         dbConnectionString,
+        sessionHours,
         request.CustomerId,
         request.SessionId,
         request.Token);
@@ -68,22 +92,18 @@ app.MapPost("/v1/auth/logout", async (CheckSessionRequest request) =>
 
     await using var db = new MySqlConnection(dbConnectionString);
 
-    var tokenHash = Sha256Hex(request.Token);
-
     var rows = await db.ExecuteAsync(
         """
-        UPDATE login_sessions
-        SET revoked_at = UTC_TIMESTAMP()
-        WHERE customer_id = @CustomerId
-          AND session_id = @SessionId
-          AND token_hash = @TokenHash
-          AND revoked_at IS NULL;
+        DELETE FROM loginsessions
+        WHERE CustomerID = @CustomerId
+          AND SessionID = @SessionId
+          AND SessionKey = @SessionKey;
         """,
         new
         {
             request.CustomerId,
             request.SessionId,
-            TokenHash = tokenHash
+            SessionKey = request.Token
         });
 
     if (rows <= 0)
@@ -101,6 +121,7 @@ app.MapPost("/internal/session/validate", async (HttpContext http, CheckSessionR
 
     var result = await CheckSessionAsync(
         dbConnectionString,
+        sessionHours,
         request.CustomerId,
         request.SessionId,
         request.Token);
@@ -150,6 +171,7 @@ async Task<IResult> LegacyCheckLoginSessionAsync(HttpContext http)
 
     var result = await CheckLegacySessionAsync(
         dbConnectionString,
+        sessionHours,
         customerId,
         sessionId);
 
@@ -168,6 +190,7 @@ async Task<IResult> LegacyUpdateLoginSessionAsync(HttpContext http)
 
     var result = await CheckLegacySessionAsync(
         dbConnectionString,
+        sessionHours,
         customerId,
         sessionId);
 
@@ -176,73 +199,190 @@ async Task<IResult> LegacyUpdateLoginSessionAsync(HttpContext http)
 
     await using var db = new MySqlConnection(dbConnectionString);
 
-    await db.ExecuteAsync(
+    var rows = await db.ExecuteAsync(
         """
-        UPDATE login_sessions
-        SET expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL @SessionHours HOUR)
-        WHERE customer_id = @CustomerId
-          AND session_id = @SessionId
-          AND revoked_at IS NULL;
+        UPDATE loginsessions
+        SET TimeUpdated = UTC_TIMESTAMP()
+        WHERE CustomerID = @CustomerId
+          AND SessionID = @SessionId;
         """,
         new
         {
-            SessionHours = sessionHours,
             CustomerId = customerId,
             SessionId = sessionId
         });
 
+    if (rows <= 0)
+        return Results.Text("WO_1", "text/plain", Encoding.UTF8);
+
     return Results.Text("WO_0", "text/plain", Encoding.UTF8);
 }
 
-app.MapPost("/dev/create-account", async (CreateAccountRequest request) =>
+app.MapPost("/dev/create-account", async (HttpContext http, CreateAccountRequest request) =>
 {
     var username = (request.Username ?? "").Trim();
     var password = request.Password ?? "";
-    var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+    var ip = NormalizeLegacyIp(GetClientIp(http));
 
-    if (username.Length < 3 || username.Length > 64)
+    if (username.Length < 3 || username.Length > 32)
         return Results.Json(new ApiResponse(false, 400, "BAD_USERNAME"));
 
-    if (password.Length < 6 || password.Length > 128)
-        return Results.Json(new ApiResponse(false, 400, "BAD_PASSWORD"));
-
-    var hash = BCrypt.Net.BCrypt.HashPassword(password);
+    if (password.Length < 3 || password.Length > 16)
+        return Results.Json(new ApiResponse(false, 400, "BAD_PASSWORD_SCHEMA_MAX_16"));
 
     await using var db = new MySqlConnection(dbConnectionString);
 
-    try
-    {
-        var customerId = await db.ExecuteScalarAsync<ulong>(
-            """
-            INSERT INTO accounts
-                (username, email, password_hash, account_status, is_developer)
-            VALUES
-                (@Username, @Email, @PasswordHash, 100, @IsDeveloper);
+    var exists = await db.ExecuteScalarAsync<int>(
+        """
+        SELECT COUNT(*)
+        FROM loginid
+        WHERE AccountName = @Username;
+        """,
+        new { Username = username });
 
-            SELECT LAST_INSERT_ID();
-            """,
-            new
-            {
-                Username = username,
-                Email = email,
-                PasswordHash = hash,
-                IsDeveloper = request.IsDeveloper ? 1 : 0
-            });
+    if (exists > 0)
+        return Results.Json(new CreateAccountResponse(false, 409, "ACCOUNT_ALREADY_EXISTS", 0));
 
-        return Results.Json(new CreateAccountResponse(
-            true,
+    var md5Password = Md5Hex(password);
+
+    var customerId = await db.ExecuteScalarAsync<ulong>(
+        """
+        INSERT INTO loginid
+        (
+            AccountName,
+            Password,
+            AccountStatus,
+            GamePoints,
+            HonorPoints,
+            SkillPoints,
+            Gamertag,
+            dateregistered,
+            lastlogindate,
+            lastloginIP,
+            lastgamedate,
+            ReferralID,
+            lastjoineddate,
+            MD5Password,
+            ClanID,
+            GameDollars,
+            Faction1Score,
+            Faction2Score,
+            Faction3Score,
+            Faction4Score,
+            Faction5Score,
+            ClanRank,
+            lastRetBonusDate,
+            IsFPSEnabled,
+            reg_sid,
+            ClanContributedXP,
+            ClanContributedGP,
+            IsDeveloper
+        )
+        VALUES
+        (
+            @Username,
+            @Password,
+            100,
             0,
-            "OK",
-            customerId));
-    }
-    catch (MySqlException e) when (e.Number == 1062)
-    {
-        return Results.Json(new CreateAccountResponse(
-            false,
-            409,
-            "ACCOUNT_ALREADY_EXISTS",
-            0));
-    }
+            0,
+            0,
+            @Gamertag,
+            UTC_TIMESTAMP(),
+            UTC_TIMESTAMP(),
+            @Ip,
+            UTC_TIMESTAMP(),
+            0,
+            UTC_TIMESTAMP(),
+            @MD5Password,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            NULL,
+            1,
+            NULL,
+            0,
+            0,
+            @IsDeveloper
+        );
+
+        SELECT LAST_INSERT_ID();
+        """,
+        new
+        {
+            Username = username,
+            Password = password,
+            Gamertag = username,
+            MD5Password = md5Password,
+            Ip = ip,
+            IsDeveloper = request.IsDeveloper ? 1 : 0
+        });
+
+    await db.ExecuteAsync(
+        """
+        INSERT INTO stats
+        (
+            CustomerID,
+            Kills,
+            Deaths,
+            ShotsFired,
+            ShotsHits,
+            Headshots,
+            AssistKills,
+            Wins,
+            Losses,
+            CaptureNeutralPoints,
+            CaptureEnemyPoints,
+            TimePlayed,
+            CheatAttempts
+        )
+        VALUES
+        (
+            @CustomerId,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        );
+        """,
+        new { CustomerId = customerId });
+
+    await db.ExecuteAsync(
+        """
+        INSERT INTO profiledata
+        (
+            CustomerID,
+            Skills,
+            Achievements,
+            Abilities
+        )
+        VALUES
+        (
+            @CustomerId,
+            '0000000000',
+            '',
+            ''
+        );
+        """,
+        new { CustomerId = customerId });
+
+    return Results.Json(new CreateAccountResponse(
+        true,
+        0,
+        "OK",
+        customerId));
 });
 
 app.MapGet("/v1/shop/items", async () =>
@@ -844,7 +984,7 @@ static async Task<LoginResponse> LoginAsync(
     var username = (usernameRaw ?? "").Trim();
     var password = passwordRaw ?? "";
 
-    if (username.Length < 3 || username.Length > 64)
+    if (username.Length < 3 || username.Length > 32)
     {
         return new LoginResponse(
             false,
@@ -856,7 +996,7 @@ static async Task<LoginResponse> LoginAsync(
             "");
     }
 
-    if (password.Length < 3 || password.Length > 128)
+    if (password.Length < 1 || password.Length > 128)
     {
         return new LoginResponse(
             false,
@@ -873,13 +1013,14 @@ static async Task<LoginResponse> LoginAsync(
     var account = await db.QueryFirstOrDefaultAsync<AccountRow>(
         """
         SELECT
-            customer_id AS CustomerId,
-            username AS Username,
-            password_hash AS PasswordHash,
-            account_status AS AccountStatus,
-            is_developer AS IsDeveloper
-        FROM accounts
-        WHERE username = @Username
+            CustomerID AS CustomerId,
+            AccountName AS AccountName,
+            Password AS Password,
+            MD5Password AS MD5Password,
+            AccountStatus AS AccountStatus,
+            IsDeveloper AS IsDeveloper
+        FROM loginid
+        WHERE AccountName = @Username
         LIMIT 1;
         """,
         new { Username = username });
@@ -896,7 +1037,7 @@ static async Task<LoginResponse> LoginAsync(
             "");
     }
 
-    if (!BCrypt.Net.BCrypt.Verify(password, account.PasswordHash))
+    if (!PasswordMatches(password, account.Password, account.MD5Password))
     {
         return new LoginResponse(
             false,
@@ -921,56 +1062,104 @@ static async Task<LoginResponse> LoginAsync(
     }
 
     var sessionId = CreateSessionId();
-    var token = CreateToken();
-    var tokenHash = Sha256Hex(token);
-    var ip = GetClientIp(http);
-    var userAgent = http.Request.Headers.UserAgent.ToString();
-    var expiresAt = DateTime.UtcNow.AddHours(sessionHours);
+    var sessionKey = CreateToken();
+    var ip = NormalizeLegacyIp(GetClientIp(http));
 
     await db.ExecuteAsync(
         """
-        INSERT INTO login_sessions
-            (session_id, customer_id, token_hash, ip_address, user_agent, expires_at)
+        DELETE FROM loginsessions
+        WHERE CustomerID = @CustomerId;
+        """,
+        new { account.CustomerId });
+
+    await db.ExecuteAsync(
+        """
+        INSERT INTO loginsessions
+        (
+            CustomerID,
+            SessionKey,
+            SessionID,
+            LoginIP,
+            TimeLogged,
+            TimeUpdated,
+            GameSessionID
+        )
         VALUES
-            (@SessionId, @CustomerId, @TokenHash, @IpAddress, @UserAgent, @ExpiresAt);
+        (
+            @CustomerId,
+            @SessionKey,
+            @SessionId,
+            @Ip,
+            UTC_TIMESTAMP(),
+            UTC_TIMESTAMP(),
+            0
+        );
         """,
         new
         {
+            account.CustomerId,
+            SessionKey = sessionKey,
             SessionId = sessionId,
-            CustomerId = account.CustomerId,
-            TokenHash = tokenHash,
-            IpAddress = ip,
-            UserAgent = userAgent,
-            ExpiresAt = expiresAt
+            Ip = ip
         });
 
     await db.ExecuteAsync(
         """
-        UPDATE accounts
-        SET last_login_at = UTC_TIMESTAMP()
-        WHERE customer_id = @CustomerId;
+        UPDATE loginid
+        SET
+            lastlogindate = UTC_TIMESTAMP(),
+            lastloginIP = @Ip
+        WHERE CustomerID = @CustomerId;
         """,
-        new { account.CustomerId });
+        new
+        {
+            account.CustomerId,
+            Ip = ip
+        });
+
+    await db.ExecuteAsync(
+        """
+        INSERT INTO logins
+        (
+            CustomerID,
+            LoginTime,
+            IP,
+            LoginSource
+        )
+        VALUES
+        (
+            @CustomerId,
+            UTC_TIMESTAMP(),
+            @Ip,
+            0
+        );
+        """,
+        new
+        {
+            account.CustomerId,
+            Ip = ip
+        });
 
     return new LoginResponse(
         true,
         0,
         "OK",
         account.CustomerId,
-        sessionId,
+        (ulong)sessionId,
         account.AccountStatus,
-        token);
+        sessionKey);
 }
 
 static async Task<CheckSessionResponse> CheckSessionAsync(
     string dbConnectionString,
+    int sessionHours,
     ulong customerId,
     ulong sessionId,
     string? tokenRaw)
 {
     var token = tokenRaw ?? "";
 
-    if (customerId == 0 || sessionId == 0)
+    if (customerId == 0 || sessionId == 0 || sessionId > int.MaxValue)
         return new CheckSessionResponse(false, 400, "BAD_SESSION", 0);
 
     if (string.IsNullOrWhiteSpace(token))
@@ -978,37 +1167,34 @@ static async Task<CheckSessionResponse> CheckSessionAsync(
 
     await using var db = new MySqlConnection(dbConnectionString);
 
-    var tokenHash = Sha256Hex(token);
-
     var session = await db.QueryFirstOrDefaultAsync<SessionRow>(
         """
         SELECT
-            s.session_id AS SessionId,
-            s.customer_id AS CustomerId,
-            s.expires_at AS ExpiresAt,
-            s.revoked_at AS RevokedAt,
-            a.account_status AS AccountStatus
-        FROM login_sessions s
-        INNER JOIN accounts a ON a.customer_id = s.customer_id
-        WHERE s.customer_id = @CustomerId
-          AND s.session_id = @SessionId
-          AND s.token_hash = @TokenHash
+            s.SessionID AS SessionId,
+            s.CustomerID AS CustomerId,
+            s.SessionKey AS SessionKey,
+            s.TimeUpdated AS TimeUpdated,
+            a.AccountStatus AS AccountStatus
+        FROM loginsessions s
+        INNER JOIN loginid a ON a.CustomerID = s.CustomerID
+        WHERE s.CustomerID = @CustomerId
+          AND s.SessionID = @SessionId
+          AND s.SessionKey = @SessionKey
         LIMIT 1;
         """,
         new
         {
             CustomerId = customerId,
-            SessionId = sessionId,
-            TokenHash = tokenHash
+            SessionId = (int)sessionId,
+            SessionKey = token
         });
 
     if (session == null)
         return new CheckSessionResponse(false, 401, "SESSION_NOT_FOUND", 0);
 
-    if (session.RevokedAt != null)
-        return new CheckSessionResponse(false, 401, "SESSION_REVOKED", 0);
+    var minTime = DateTime.UtcNow.AddHours(-sessionHours);
 
-    if (session.ExpiresAt <= DateTime.UtcNow)
+    if (session.TimeUpdated < minTime)
         return new CheckSessionResponse(false, 401, "SESSION_EXPIRED", 0);
 
     if (session.AccountStatus >= 200)
@@ -1019,10 +1205,11 @@ static async Task<CheckSessionResponse> CheckSessionAsync(
 
 static async Task<CheckSessionResponse> CheckLegacySessionAsync(
     string dbConnectionString,
+    int sessionHours,
     ulong customerId,
     ulong sessionId)
 {
-    if (customerId == 0 || sessionId == 0)
+    if (customerId == 0 || sessionId == 0 || sessionId > int.MaxValue)
         return new CheckSessionResponse(false, 400, "BAD_SESSION", 0);
 
     await using var db = new MySqlConnection(dbConnectionString);
@@ -1030,30 +1217,29 @@ static async Task<CheckSessionResponse> CheckLegacySessionAsync(
     var session = await db.QueryFirstOrDefaultAsync<SessionRow>(
         """
         SELECT
-            s.session_id AS SessionId,
-            s.customer_id AS CustomerId,
-            s.expires_at AS ExpiresAt,
-            s.revoked_at AS RevokedAt,
-            a.account_status AS AccountStatus
-        FROM login_sessions s
-        INNER JOIN accounts a ON a.customer_id = s.customer_id
-        WHERE s.customer_id = @CustomerId
-          AND s.session_id = @SessionId
+            s.SessionID AS SessionId,
+            s.CustomerID AS CustomerId,
+            s.SessionKey AS SessionKey,
+            s.TimeUpdated AS TimeUpdated,
+            a.AccountStatus AS AccountStatus
+        FROM loginsessions s
+        INNER JOIN loginid a ON a.CustomerID = s.CustomerID
+        WHERE s.CustomerID = @CustomerId
+          AND s.SessionID = @SessionId
         LIMIT 1;
         """,
         new
         {
             CustomerId = customerId,
-            SessionId = sessionId
+            SessionId = (int)sessionId
         });
 
     if (session == null)
         return new CheckSessionResponse(false, 401, "SESSION_NOT_FOUND", 0);
 
-    if (session.RevokedAt != null)
-        return new CheckSessionResponse(false, 401, "SESSION_REVOKED", 0);
+    var minTime = DateTime.UtcNow.AddHours(-sessionHours);
 
-    if (session.ExpiresAt <= DateTime.UtcNow)
+    if (session.TimeUpdated < minTime)
         return new CheckSessionResponse(false, 401, "SESSION_EXPIRED", 0);
 
     if (session.AccountStatus >= 200)
@@ -1062,17 +1248,9 @@ static async Task<CheckSessionResponse> CheckLegacySessionAsync(
     return new CheckSessionResponse(true, 0, "OK", session.AccountStatus);
 }
 
-static ulong CreateSessionId()
+static int CreateSessionId()
 {
-    Span<byte> bytes = stackalloc byte[8];
-    RandomNumberGenerator.Fill(bytes);
-
-    var value = BitConverter.ToUInt64(bytes);
-
-    if (value == 0)
-        value = 1;
-
-    return value;
+    return RandomNumberGenerator.GetInt32(1, int.MaxValue);
 }
 
 static string CreateToken()
@@ -1080,6 +1258,70 @@ static string CreateToken()
     Span<byte> bytes = stackalloc byte[32];
     RandomNumberGenerator.Fill(bytes);
     return Convert.ToBase64String(bytes);
+}
+
+static bool PasswordMatches(string password, string storedPassword, string storedMd5Password)
+{
+    if (!string.IsNullOrWhiteSpace(storedPassword))
+    {
+        if (string.Equals(password, storedPassword, StringComparison.Ordinal))
+            return true;
+
+        if (storedPassword.StartsWith("$2", StringComparison.Ordinal))
+        {
+            try
+            {
+                if (BCrypt.Net.BCrypt.Verify(password, storedPassword))
+                    return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    if (!string.IsNullOrWhiteSpace(storedMd5Password))
+    {
+        var md5 = Md5Hex(password);
+
+        if (string.Equals(md5, storedMd5Password, StringComparison.OrdinalIgnoreCase))
+            return true;
+    }
+
+    return false;
+}
+
+static string Md5Hex(string value)
+{
+    var bytes = MD5.HashData(Encoding.UTF8.GetBytes(value));
+    var sb = new StringBuilder(bytes.Length * 2);
+
+    foreach (var b in bytes)
+        sb.Append(b.ToString("x2"));
+
+    return sb.ToString();
+}
+
+static string NormalizeLegacyIp(string ip)
+{
+    ip = (ip ?? "").Trim();
+
+    if (string.IsNullOrWhiteSpace(ip))
+        return "0.0.0.0";
+
+    if (ip == "::1")
+        return "127.0.0.1";
+
+    const string ipv6MappedPrefix = "::ffff:";
+
+    if (ip.StartsWith(ipv6MappedPrefix, StringComparison.OrdinalIgnoreCase))
+        ip = ip[ipv6MappedPrefix.Length..];
+
+    if (ip.Length > 16)
+        ip = ip[..16];
+
+    return ip;
 }
 
 static string Sha256Hex(string value)
@@ -1263,18 +1505,19 @@ record InternalSessionValidateResponse(
 class AccountRow
 {
     public ulong CustomerId { get; set; }
-    public string Username { get; set; } = "";
-    public string PasswordHash { get; set; } = "";
+    public string AccountName { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string MD5Password { get; set; } = "";
     public int AccountStatus { get; set; }
     public bool IsDeveloper { get; set; }
 }
 
 class SessionRow
 {
-    public ulong SessionId { get; set; }
+    public int SessionId { get; set; }
     public ulong CustomerId { get; set; }
-    public DateTime ExpiresAt { get; set; }
-    public DateTime? RevokedAt { get; set; }
+    public string SessionKey { get; set; } = "";
+    public DateTime TimeUpdated { get; set; }
     public int AccountStatus { get; set; }
 }
 
