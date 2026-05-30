@@ -31,26 +31,78 @@ public static class MysteryBoxEndpoints
         MysteryBoxService mysteryBox)
     {
         var data = await ReadRequestDataAsync(http);
+        var func = ReadAny(data, "func").Trim();
 
-        var customerId = LegacyUtil.ParseULong(ReadAny(data, "s_id", "CustomerID", "CustomerId", "customerId"));
-        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "s_key", "SessionID", "SessionId", "sessionId"));
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "s_id",
+            "CustomerID",
+            "CustomerId",
+            "customerId"));
 
-        if (customerId != 0 || sessionId != 0)
+        var sessionId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "s_key",
+            "SessionID",
+            "SessionId",
+            "sessionId"));
+
+        if (!string.Equals(func, "fEEaTest001", StringComparison.OrdinalIgnoreCase))
         {
-            var session = await auth.CheckLegacySessionAsync(customerId, sessionId);
+            var session = await auth.CheckLegacySessionAsync(
+                customerId,
+                sessionId);
 
             if (!session.Ok)
                 return Results.Text("WO_1", "text/plain", Encoding.UTF8);
         }
 
-        var func = ReadAny(data, "func").Trim();
-        var boxId = ReadIntAny(data, 0, "boxid", "box_id", "BoxID", "BoxId", "id");
-        var itemId = ReadIntAny(data, 0, "itemid", "item_id", "ItemID", "ItemId");
+        var lootId = ReadIntAny(
+            data,
+            0,
+            "LootID",
+            "LootId",
+            "lootId",
+            "boxId",
+            "BoxId",
+            "BoxID",
+            "id");
+
+        var itemId = ReadIntAny(
+            data,
+            0,
+            "ItemID",
+            "ItemId",
+            "itemId",
+            "itemid");
+
+        var buyIdx = ReadIntAny(
+            data,
+            0,
+            "BuyIdx",
+            "buyIdx",
+            "buyidx");
+
+        if (string.Equals(func, "info", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(func, "fEEaTest001", StringComparison.OrdinalIgnoreCase))
+        {
+            var infoLootId = lootId > 0 ? lootId : itemId;
+            var info = await mysteryBox.GetInfoAsync(customerId, infoLootId);
+            var xml = mysteryBox.BuildLegacyInfoXml(info);
+
+            return Results.Text(xml, "text/xml", Encoding.UTF8);
+        }
 
         if (string.Equals(func, "roll", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(func, "open", StringComparison.OrdinalIgnoreCase))
         {
-            var roll = await mysteryBox.RollAsync(customerId, boxId);
+            var rollBoxId = itemId > 0 ? itemId : lootId;
+
+            var roll = await mysteryBox.RollAsync(
+                customerId,
+                rollBoxId,
+                buyIdx);
+
             var text = mysteryBox.BuildLegacyRollText(roll);
 
             return Results.Text(text, "text/plain", Encoding.UTF8);
@@ -58,16 +110,19 @@ public static class MysteryBoxEndpoints
 
         if (string.Equals(func, "sell", StringComparison.OrdinalIgnoreCase))
         {
-            var sell = await mysteryBox.SellAsync(customerId, boxId, itemId);
+            var sellItemId = itemId > 0 ? itemId : lootId;
+
+            var sell = await mysteryBox.SellAsync(
+                customerId,
+                sellItemId,
+                sellItemId);
+
             var text = mysteryBox.BuildLegacySellText(sell);
 
             return Results.Text(text, "text/plain", Encoding.UTF8);
         }
 
-        var info = await mysteryBox.GetInfoAsync(customerId, boxId);
-        var xml = mysteryBox.BuildLegacyInfoXml(info);
-
-        return Results.Text(xml, "text/xml", Encoding.UTF8);
+        return Results.Text("WO_5", "text/plain", Encoding.UTF8);
     }
 
     private static async Task<IResult> JsonInfoAsync(
@@ -88,6 +143,8 @@ public static class MysteryBoxEndpoints
                 false,
                 session.Code,
                 session.Message,
+                request.BoxId,
+                0,
                 Array.Empty<MysteryBoxItemDto>()));
         }
 
@@ -119,12 +176,15 @@ public static class MysteryBoxEndpoints
                 request.BoxId,
                 0,
                 0,
+                0,
+                0,
                 0));
         }
 
         var result = await mysteryBox.RollAsync(
             request.CustomerId,
-            request.BoxId);
+            request.BoxId,
+            request.BuyIdx);
 
         return Results.Json(result);
     }
@@ -147,9 +207,7 @@ public static class MysteryBoxEndpoints
                 false,
                 session.Code,
                 session.Message,
-                request.BoxId,
                 request.ItemId,
-                0,
                 0));
         }
 
@@ -165,19 +223,60 @@ public static class MysteryBoxEndpoints
     {
         var data = await ReadRequestDataAsync(http);
 
-        var customerId = LegacyUtil.ParseULong(ReadAny(data, "customerId", "CustomerId", "CustomerID", "s_id"));
-        var sessionId = LegacyUtil.ParseULong(ReadAny(data, "sessionId", "SessionId", "SessionID", "s_key"));
-        var token = ReadAny(data, "token", "Token", "s_token");
+        var customerId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "customerId",
+            "CustomerId",
+            "CustomerID",
+            "s_id"));
 
-        var boxId = ReadIntAny(data, 0, "boxId", "BoxId", "BoxID", "boxid", "box_id", "id");
-        var itemId = ReadIntAny(data, 0, "itemId", "ItemId", "ItemID", "itemid", "item_id");
+        var sessionId = LegacyUtil.ParseULong(ReadAny(
+            data,
+            "sessionId",
+            "SessionId",
+            "SessionID",
+            "s_key"));
+
+        var token = ReadAny(
+            data,
+            "token",
+            "Token",
+            "s_token");
+
+        var boxId = ReadIntAny(
+            data,
+            0,
+            "boxId",
+            "BoxId",
+            "BoxID",
+            "boxid",
+            "LootID",
+            "LootId",
+            "lootId",
+            "id");
+
+        var itemId = ReadIntAny(
+            data,
+            0,
+            "itemId",
+            "ItemId",
+            "ItemID",
+            "itemid");
+
+        var buyIdx = ReadIntAny(
+            data,
+            0,
+            "buyIdx",
+            "BuyIdx",
+            "buyidx");
 
         return new MysteryBoxRequest(
             customerId,
             sessionId,
             token,
             boxId,
-            itemId);
+            itemId,
+            buyIdx);
     }
 
     private static async Task<Dictionary<string, string>> ReadRequestDataAsync(HttpContext http)
@@ -236,7 +335,9 @@ public static class MysteryBoxEndpoints
         return data;
     }
 
-    private static string ReadAny(Dictionary<string, string> data, params string[] keys)
+    private static string ReadAny(
+        Dictionary<string, string> data,
+        params string[] keys)
     {
         foreach (var key in keys)
         {
@@ -257,10 +358,7 @@ public static class MysteryBoxEndpoints
             if (!data.TryGetValue(key, out var value))
                 continue;
 
-            var parsed = LegacyUtil.ParseInt(value);
-
-            if (parsed >= 0)
-                return parsed;
+            return LegacyUtil.ParseInt(value);
         }
 
         return defaultValue;
