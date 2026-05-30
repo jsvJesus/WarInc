@@ -1,17 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <InvariantGlobalization>false</InvariantGlobalization>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="2.4.0" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="MySqlConnector" Version="2.4.0" />
+        <PackageReference Include="Dapper" Version="2.1.66" />
+        <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Auth\" />
+      <Folder Include="Common\" />
+      <Folder Include="Config\" />
+      <Folder Include="Database\" />
+      <Folder Include="Purchase\" />
+      <Folder Include="Shop\" />
+    </ItemGroup>
 
 </Project>

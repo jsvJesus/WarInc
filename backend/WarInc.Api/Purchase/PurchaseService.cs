@@ -235,6 +235,22 @@ public sealed class PurchaseService
                 isGameDollars = true;
                 return true;
 
+            case 9:
+                buyDays = 1;
+                return true;
+
+            case 10:
+                buyDays = 7;
+                return true;
+
+            case 11:
+                buyDays = 30;
+                return true;
+
+            case 12:
+                buyDays = 2000;
+                return true;
+
             default:
                 return false;
         }

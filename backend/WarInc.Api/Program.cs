@@ -1,6 +1,7 @@
 using WarInc.Api.Auth;
 using WarInc.Api.Config;
 using WarInc.Api.Database;
+using WarInc.Api.GameServer;
 using WarInc.Api.Profile;
 using WarInc.Api.Purchase;
 using WarInc.Api.Shop;
@@ -23,6 +24,9 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ShopService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<PurchaseService>();
+builder.Services.AddScoped<ProfileWriteService>();
+
+builder.Services.AddSingleton<GameServerService>();
 
 builder.Services.AddCors(options =>
 {
@@ -68,13 +72,46 @@ app.MapGet("/", () =>
             "/v1/shop/buy",
             "/v1/profile/get",
 
+            "/v1/loadout/modify",
+            "/v1/loadout/unlock",
+            "/v1/loadout/reset",
+
+            "/v1/skill/learn",
+            "/v1/skill/reset",
+
+            "/v1/weapon/attach",
+
+            "/v1/profile/change-gamertag",
+            "/v1/profile/welcome-package",
+
+            "/v1/friends/list",
+            "/v1/clan/get",
+
+            "/internal/gameserver/register",
+            "/internal/gameserver/heartbeat",
+            "/internal/gameserver/unregister",
+            "/internal/gameserver/player/join",
+            "/internal/gameserver/player/leave",
+            "/internal/gameserver/report",
+            "/internal/gameserver/list",
+
             "/api_Login.aspx",
             "/api_CheckLoginSession.aspx",
             "/api_UpdateLoginSession.aspx",
             "/api_GetShop5.aspx",
             "/api_GetItemsInfo.aspx",
             "/api_GetProfile4.aspx",
-            "/api_BuyItem3.aspx"
+            "/api_BuyItem3.aspx",
+
+            "/api_LoadoutModify.aspx",
+            "/api_LoadoutUnlock.aspx",
+            "/api_LoadoutReset.aspx",
+            "/api_SkillLearn.aspx",
+            "/api_SkillReset.aspx",
+            "/api_WeaponAttach.aspx",
+            "/api_WeaponAttachSet.aspx",
+            "/api_ChangeGamerTag2.aspx",
+            "/api_WelcomePackage4.aspx"
         }
     });
 });
@@ -83,5 +120,7 @@ app.MapAuthEndpoints();
 app.MapShopEndpoints();
 app.MapProfileEndpoints();
 app.MapPurchaseEndpoints();
+app.MapProfileAdditionalEndpoints();
+app.MapGameServerEndpoints();
 
 app.Run();

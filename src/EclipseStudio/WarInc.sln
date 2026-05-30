@@ -10,58 +10,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GameEngine", "..\GameEngine
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RakNet", "..\External\RakNet\RakNet.vcxproj", "{143F9B67-C223-4F2D-B8F9-B644CA710CA6}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{297D3F71-68B3-4359-B50C-77DA56B4FEF3}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WarInc.Api", "WarInc.Api", "{E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\appsettings.json = ..\..\backend\WarInc.Api\appsettings.json
-		..\..\backend\WarInc.Api\Program.cs = ..\..\backend\WarInc.Api\Program.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{95085356-DD42-4D80-8392-6D8400DD4109}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Config\WarIncOptions.cs = ..\..\backend\WarInc.Api\Config\WarIncOptions.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Database", "Database", "{0025AB5C-5705-4D10-9CEE-4368A18FE5DA}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Database\WarIncDb.cs = ..\..\backend\WarInc.Api\Database\WarIncDb.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Auth", "Auth", "{79A6AB1E-A7DF-4F22-A54F-87880095E06F}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Auth\AuthEndpoints.cs = ..\..\backend\WarInc.Api\Auth\AuthEndpoints.cs
-		..\..\backend\WarInc.Api\Auth\AuthModels.cs = ..\..\backend\WarInc.Api\Auth\AuthModels.cs
-		..\..\backend\WarInc.Api\Auth\AuthService.cs = ..\..\backend\WarInc.Api\Auth\AuthService.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{0624DF1D-ABEB-49F7-B823-C49343BDE629}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Common\CommonModels.cs = ..\..\backend\WarInc.Api\Common\CommonModels.cs
-		..\..\backend\WarInc.Api\Common\LegacyUtil.cs = ..\..\backend\WarInc.Api\Common\LegacyUtil.cs
-		..\..\backend\WarInc.Api\Common\SecurityUtil.cs = ..\..\backend\WarInc.Api\Common\SecurityUtil.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shop", "Shop", "{BC0A2038-CB4C-4BD1-8F13-61B3FA95DAB2}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Shop\ShopEndpoints.cs = ..\..\backend\WarInc.Api\Shop\ShopEndpoints.cs
-		..\..\backend\WarInc.Api\Shop\ShopModels.cs = ..\..\backend\WarInc.Api\Shop\ShopModels.cs
-		..\..\backend\WarInc.Api\Shop\ShopService.cs = ..\..\backend\WarInc.Api\Shop\ShopService.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Profile", "Profile", "{73AF7940-81F4-4F4D-B740-A0CCFB1483AB}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Profile\ProfileEndpoints.cs = ..\..\backend\WarInc.Api\Profile\ProfileEndpoints.cs
-		..\..\backend\WarInc.Api\Profile\ProfileModels.cs = ..\..\backend\WarInc.Api\Profile\ProfileModels.cs
-		..\..\backend\WarInc.Api\Profile\ProfileService.cs = ..\..\backend\WarInc.Api\Profile\ProfileService.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Purchase", "Purchase", "{27887F3B-CBB1-4E31-972F-2C137967279A}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\backend\WarInc.Api\Purchase\PurchaseEndpoints.cs = ..\..\backend\WarInc.Api\Purchase\PurchaseEndpoints.cs
-		..\..\backend\WarInc.Api\Purchase\PurchaseModels.cs = ..\..\backend\WarInc.Api\Purchase\PurchaseModels.cs
-		..\..\backend\WarInc.Api\Purchase\PurchaseService.cs = ..\..\backend\WarInc.Api\Purchase\PurchaseService.cs
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WarInc.Api", "..\..\backend\WarInc.Api\WarInc.Api.csproj", "{CB267E95-E317-440F-A961-2414B574707D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -121,6 +70,18 @@ Global
 		{143F9B67-C223-4F2D-B8F9-B644CA710CA6}.Final|x64.Build.0 = Release|x64
 		{143F9B67-C223-4F2D-B8F9-B644CA710CA6}.Release|x64.ActiveCfg = Release|x64
 		{143F9B67-C223-4F2D-B8F9-B644CA710CA6}.Release|x64.Build.0 = Release|x64
+		{CB267E95-E317-440F-A961-2414B574707D}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Debug|Win32.Build.0 = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Final|Win32.ActiveCfg = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Final|Win32.Build.0 = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Release|Win32.ActiveCfg = Release|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Release|Win32.Build.0 = Release|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Debug|x64.Build.0 = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Final|x64.ActiveCfg = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Final|x64.Build.0 = Debug|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Release|x64.ActiveCfg = Release|Any CPU
+		{CB267E95-E317-440F-A961-2414B574707D}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -129,13 +90,5 @@ Global
 		SolutionGuid = {21A383FE-6F72-4D1A-94AF-10386D3656EC}
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{E2B3CD32-7354-4DCC-88EA-6C33E497B3DE} = {297D3F71-68B3-4359-B50C-77DA56B4FEF3}
-		{95085356-DD42-4D80-8392-6D8400DD4109} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{0025AB5C-5705-4D10-9CEE-4368A18FE5DA} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{79A6AB1E-A7DF-4F22-A54F-87880095E06F} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{0624DF1D-ABEB-49F7-B823-C49343BDE629} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{BC0A2038-CB4C-4BD1-8F13-61B3FA95DAB2} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{73AF7940-81F4-4F4D-B740-A0CCFB1483AB} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
-		{27887F3B-CBB1-4E31-972F-2C137967279A} = {E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}
 	EndGlobalSection
 EndGlobal

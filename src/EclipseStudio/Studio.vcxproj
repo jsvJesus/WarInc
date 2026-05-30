@@ -939,6 +939,73 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\backend\WarInc.Api\appsettings.json" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\appsettings.json" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\BCrypt.Net-Next.dll" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\Dapper.dll" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\MySqlConnector.dll" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.deps.json" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.dll" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.exe" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.pdb" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.runtimeconfig.json" />
+    <Content Include="..\..\backend\WarInc.Api\bin\Debug\net9.0\WarInc.Api.staticwebassets.endpoints.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\apphost.exe" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\refint\WarInc.Api.dll" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\ref\WarInc.Api.dll" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\rjsmrazor.dswa.cache.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\rpswa.dswa.cache.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\staticwebassets.build.endpoints.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\staticwebassets.build.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\staticwebassets.build.json.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.AssemblyInfoInputs.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.assets.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.csproj.AssemblyReference.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.csproj.CoreCompileInputs.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.csproj.FileListAbsolute.txt" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.csproj.Up2Date" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.dll" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.GeneratedMSBuildEditorConfig.editorconfig" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.genruntimeconfig.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.MvcApplicationPartsAssemblyInfo.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.pdb" />
+    <Content Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.sourcelink.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\project.assets.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\project.nuget.cache" />
+    <Content Include="..\..\backend\WarInc.Api\obj\WarInc.Api.csproj.nuget.dgspec.json" />
+    <Content Include="..\..\backend\WarInc.Api\obj\WarInc.Api.csproj.nuget.g.props" />
+    <Content Include="..\..\backend\WarInc.Api\obj\WarInc.Api.csproj.nuget.g.targets" />
+    <Content Include="..\..\backend\WarInc.Api\sql\warnet.sql" />
+    <Content Include="..\..\backend\WarInc.Api\WarInc.Api.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\backend\WarInc.Api\Auth\AuthEndpoints.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Auth\AuthModels.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Auth\AuthService.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Common\CommonModels.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Common\LegacyUtil.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Common\SecurityUtil.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Config\WarIncOptions.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Database\WarIncDb.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\.NETCoreApp,Version=v9.0.AssemblyAttributes.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.AssemblyInfo.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\WarInc.Api.GlobalUsings.g.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Profile\ProfileEndpoints.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Profile\ProfileModels.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Profile\ProfileService.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Program.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Purchase\PurchaseEndpoints.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Purchase\PurchaseModels.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Purchase\PurchaseService.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Shop\ShopEndpoints.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Shop\ShopModels.cs" />
+    <Compile Include="..\..\backend\WarInc.Api\Shop\ShopService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\staticwebassets\" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
