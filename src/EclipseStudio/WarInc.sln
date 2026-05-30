@@ -12,9 +12,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RakNet", "..\External\RakNe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{297D3F71-68B3-4359-B50C-77DA56B4FEF3}"
 	ProjectSection(SolutionItems) = preProject
+		..\..\backend\WarInc.Api\WarInc.Api.csproj = ..\..\backend\WarInc.Api\WarInc.Api.csproj
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WarInc.Api", "WarInc.Api", "{E2B3CD32-7354-4DCC-88EA-6C33E497B3DE}"
+	ProjectSection(SolutionItems) = preProject
 		..\..\backend\WarInc.Api\appsettings.json = ..\..\backend\WarInc.Api\appsettings.json
 		..\..\backend\WarInc.Api\Program.cs = ..\..\backend\WarInc.Api\Program.cs
-		..\..\backend\WarInc.Api\WarInc.Api.csproj = ..\..\backend\WarInc.Api\WarInc.Api.csproj
 	EndProjectSection
 EndProject
 Global
@@ -81,5 +85,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {21A383FE-6F72-4D1A-94AF-10386D3656EC}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E2B3CD32-7354-4DCC-88EA-6C33E497B3DE} = {297D3F71-68B3-4359-B50C-77DA56B4FEF3}
 	EndGlobalSection
 EndGlobal
