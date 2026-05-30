@@ -98,34 +98,107 @@ HRESULT r3dDXInclude::Close(LPCVOID pData)
 
 char LastCompilationError[ 16384 ];
 
+int g_IgnoreShaderCacheTimestamps = 1;
+
+int r3dRuntimeShaderCompileAllowed()
+{
+	const char* cmdLine = GetCommandLineA();
+
+	if(!cmdLine)
+		return 0;
+
+	if(strstr(cmdLine, "-compileshaders"))
+		return 1;
+
+	if(strstr(cmdLine, "-rebuildshaders"))
+		return 1;
+
+	if(strstr(cmdLine, "-shaderdev"))
+		return 1;
+
+	return 0;
+}
+
+static void r3dWriteShaderCompileErrorLog(const char* text)
+{
+	if(!text)
+		return;
+
+	FILE* f = fopen("ShaderCompileErrors.txt", "ab");
+	if(f)
+	{
+		fprintf(f, "%s\r\n", text);
+		fclose(f);
+	}
+
+	OutputDebugStringA(text);
+	OutputDebugStringA("\n");
+}
+
 int r3dCompileShader(
-  const char* fname, 
-  const D3DXMACRO* definesCpy, 
-  const char* pFunctionName, 
-  const char* pProfile,
-  LPD3DXBUFFER* ppShader,
-  r3dTL::TArray< r3dString > * pFilesIncluded
-  )
+	const char* fname,
+	const D3DXMACRO* definesCpy,
+	const char* pFunctionName,
+	const char* pProfile,
+	LPD3DXBUFFER* ppShader,
+	r3dTL::TArray< r3dString >* pFilesIncluded
+)
 {
 	DWORD flags = 0;
 
+#ifdef D3DXSHADER_ENABLE_BACKWARDS_COMPATIBILITY
+	flags |= D3DXSHADER_ENABLE_BACKWARDS_COMPATIBILITY;
+#endif
+
 	r3dFile* f = r3d_open(fname, "rb");
-	if(!f) {
-		r3dError("missing shader file %s\n", fname);
+	if(!f)
+	{
+		_snprintf_s(
+			LastCompilationError,
+			sizeof(LastCompilationError),
+			_TRUNCATE,
+			"missing shader file %s\n",
+			fname
+		);
+
+		r3dOutToLog("%s", LastCompilationError);
+		r3dWriteShaderCompileErrorLog(LastCompilationError);
 		return 0;
 	}
 
-	if(f->size < 0) {
+	if(f->size < 0)
+	{
 		fclose(f);
-		r3dError("invalid shader file size %s\n", fname);
+
+		_snprintf_s(
+			LastCompilationError,
+			sizeof(LastCompilationError),
+			_TRUNCATE,
+			"invalid shader file size %s\n",
+			fname
+		);
+
+		r3dOutToLog("%s", LastCompilationError);
+		r3dWriteShaderCompileErrorLog(LastCompilationError);
 		return 0;
 	}
 
 	const size_t fileSize = static_cast<size_t>(f->size);
 
-	if(fileSize > MAXDWORD) {
+	if(fileSize > MAXDWORD)
+	{
 		fclose(f);
-		r3dError("shader file is too big %s\n", fname);
+
+		_snprintf_s(
+			LastCompilationError,
+			sizeof(LastCompilationError),
+			_TRUNCATE,
+			"shader file is too big %s\n",
+			fname
+		);
+
+		r3dOutToLog("%s", LastCompilationError);
+		r3dWriteShaderCompileErrorLog(LastCompilationError);
 		return 0;
 	}
 
@@ -136,21 +209,35 @@ int r3dCompileShader(
 
 	buf[bytesRead] = 0;
 
+	const char* sourceCode = buf;
+	UINT sourceSize = static_cast<UINT>(bytesRead);
+
+	if(sourceSize >= 3)
+	{
+		const unsigned char* bytes = reinterpret_cast<const unsigned char*>(sourceCode);
+		if(bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+		{
+			sourceCode += 3;
+			sourceSize -= 3;
+		}
+	}
+
 	ID3DXBuffer* pError = NULL;
 	HRESULT hr;
+
 	r3dDXInclude include(fname);
 
 	hr = D3DXCompileShader(
-	  buf,
-	  static_cast<UINT>(bytesRead),
-	  definesCpy,
-	  &include,
-	  pFunctionName,
-	  pProfile,
-	  flags,
-	  ppShader,
-	  &pError,
-	  NULL
+		sourceCode,
+		sourceSize,
+		definesCpy,
+		&include,
+		pFunctionName,
+		pProfile,
+		flags,
+		ppShader,
+		&pError,
+		NULL
 	);
 
 	delete[] buf;
@@ -162,16 +249,22 @@ int r3dCompileShader(
 
 	if(FAILED(hr))
 	{
-		const char* errorText = pError ? static_cast<const char*>(pError->GetBufferPointer()) : "unknown error";
+		const char* errorText = pError ? static_cast<const char*>(pError->GetBufferPointer()) : "unknown shader compiler error";
 
 		_snprintf_s(
-		  LastCompilationError,
-		  sizeof(LastCompilationError),
-		  _TRUNCATE,
-		  "Shader compilation Error %s\n%s\n",
-		  fname,
-		  errorText
+			LastCompilationError,
+			sizeof(LastCompilationError),
+			_TRUNCATE,
+			"Shader compilation Error\r\nFile: %s\r\nEntry: %s\r\nProfile: %s\r\nHRESULT: 0x%08X\r\n%s\r\n",
+			fname,
+			pFunctionName ? pFunctionName : "NULL",
+			pProfile ? pProfile : "NULL",
+			(unsigned int)hr,
+			errorText
 		);
+
+		r3dOutToLog("%s", LastCompilationError);
+		r3dWriteShaderCompileErrorLog(LastCompilationError);
 
 		if(pError)
 			pError->Release();
@@ -221,73 +314,79 @@ void r3dVertexShader :: Unload()
 
 int r3dVertexShader :: LoadBinaryCache(const char* FName, const char* Path, const char* defines)
 {
+	g_IgnoreShaderCacheTimestamps = r3dRuntimeShaderCompileAllowed() ? 0 : 1;
 	char FName2[512];
 	r3dMakeCompiledShaderName(FName2, FName, defines);
-	if(r3d_access(FName2, 0) != 0) return 0;
 
-	bool sourceAvailable = r3d_access( Path, 0 ) == 0;
+	if(r3d_access(FName2, 0) != 0)
+		return 0;
 
-	// is source code available?
-	if( sourceAvailable )
+	bool sourceAvailable = r3d_access(Path, 0) == 0;
+
+	if(sourceAvailable && !g_IgnoreShaderCacheTimestamps)
 	{
-		// source code is newer, have to recompile
-		if( r3d_fstamp( Path ) > r3d_fstamp( FName2 ) )
+		if(r3d_fstamp(Path) > r3d_fstamp(FName2))
 			return 0;
 	}
 
-	r3dFile* f = r3d_open(FName2,"rb");
-	if (!f) return 0;
+	r3dFile* f = r3d_open(FName2, "rb");
+	if(!f)
+		return 0;
 
-	if( !sourceAvailable && !f )
+	if(!sourceAvailable && !f)
 	{
-		r3dError( "r3dVertexShader :: LoadBinaryCache: both source and cached version a missing(%s)!\n", Path );
+		r3dError("r3dVertexShader :: LoadBinaryCache: both source and cached version are missing(%s)!\n", Path);
 	}
 
-	char CheckSig[ sizeof BIN_VER_SIG ];
-	fread( CheckSig, sizeof CheckSig, 1, f );
+	char CheckSig[sizeof BIN_VER_SIG];
+	fread(CheckSig, sizeof CheckSig, 1, f);
 
-	if( memcmp( CheckSig, BIN_VER_SIG, sizeof BIN_VER_SIG ) )
+	if(memcmp(CheckSig, BIN_VER_SIG, sizeof BIN_VER_SIG))
 	{
-		if( sourceAvailable )
+		if(sourceAvailable)
 		{
-			r3dError( "r3dVertexShader::LoadBinaryCache: source code is missing and cached version is unknown(%s)!\n", Path );
+			r3dError("r3dVertexShader::LoadBinaryCache: source code is missing and cached version is unknown(%s)!\n", Path);
 		}
 		else
 		{
-			r3dOutToLog( "r3dVertexShader::LoadBinaryCache: unsupported binary version!\n" );
+			r3dOutToLog("r3dVertexShader::LoadBinaryCache: unsupported binary version!\n");
 		}
 
-		fclose( f );
-
+		fclose(f);
 		return 0;
 	}
 
 	r3dTL::TArray< r3dString > Includes;
 
-	ReadIncludesFromFile( f, Includes );
+	ReadIncludesFromFile(f, Includes);
 
-	if( sourceAvailable )
+	if(sourceAvailable && !g_IgnoreShaderCacheTimestamps)
 	{
-		for( uint32_t i = 0, e = Includes.Count(); i < e; i ++ )
+		for(uint32_t i = 0, e = Includes.Count(); i < e; i++)
 		{
-			char IncludeName[ 512 ];
-			char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 512 ];
+			char IncludeName[512];
+			char drive[16], dir[512], name[512], ext[512];
 
-			_splitpath( FName, drive, dir, name, ext );
+			_splitpath(FName, drive, dir, name, ext);
 
-			sprintf( IncludeName, "%s\\%s\\%s", __r3dBaseShaderPath, dir, Includes[ i ].c_str() );
+			sprintf(IncludeName, "%s\\%s\\%s", __r3dBaseShaderPath, dir, Includes[i].c_str());
 
-			if( r3d_fstamp( IncludeName ) > r3d_fstamp( FName2 ) )
+			if(r3d_fstamp(IncludeName) > r3d_fstamp(FName2))
 			{
-				fclose( f );
+				fclose(f);
 				return 0;
 			}
 		}
 	}
 
-	size_t codeSize = f->size - ftell( f );
+	if(g_IgnoreShaderCacheTimestamps)
+	{
+		r3dOutToLog("ShaderCache fallback: using stale vertex shader cache %s\n", FName2);
+	}
 
-	char* shaderCode = new char[ codeSize+ 1];
+	size_t codeSize = f->size - ftell(f);
+
+	char* shaderCode = new char[codeSize + 1];
 	fread(shaderCode, codeSize, 1, f);
 	fclose(f);
 
@@ -295,26 +394,24 @@ int r3dVertexShader :: LoadBinaryCache(const char* FName, const char* Path, cons
 
 	R3D_ENSURE_MAIN_THREAD();
 
-	// Create the vertex shader
 	HRESULT hr;
-	hr = r3dRenderer->pd3ddev->CreateVertexShader( (DWORD*)shaderCode, &m_pShader);
+	hr = r3dRenderer->pd3ddev->CreateVertexShader((DWORD*)shaderCode, &m_pShader);
 
-	r3dRenderer->CheckOutOfMemory( hr ) ;
+	r3dRenderer->CheckOutOfMemory(hr);
 
 	delete[] shaderCode;
 
-	if( FAILED(hr) )
+	if(FAILED(hr))
 	{
 		r3dOutToLog("Failed to create Vertex shader '%s' : ", FName);
-		if(hr == D3DERR_INVALIDCALL)       r3dOutToLog ("Error: Invalid Call\n");
-		if(hr == E_OUTOFMEMORY)            r3dOutToLog ("Error: Out of memory\n");
-		if(hr == D3DERR_OUTOFVIDEOMEMORY)  r3dOutToLog ("Error: Out of Video Memory\n"); 
+
+		if(hr == D3DERR_INVALIDCALL)      r3dOutToLog("Error: Invalid Call\n");
+		if(hr == E_OUTOFMEMORY)           r3dOutToLog("Error: Out of memory\n");
+		if(hr == D3DERR_OUTOFVIDEOMEMORY) r3dOutToLog("Error: Out of Video Memory\n");
 
 		m_pShader = NULL;
 		return 0;
 	}
-
-	// r3dOutToLog("VERTEX SHADER INIT %d  -->%s\n", m_pShader, __VSFileName);
 
 	return 1;
 }
@@ -355,31 +452,32 @@ int r3dVertexShader :: Load(const char* FName, int Type )
 	return Load ( FName, Type, defines );
 }
 
-int r3dVertexShader :: Load(const char* FName, int Type, const r3dTL::TArray <D3DXMACRO> & defines )
+int r3dVertexShader :: Load(const char* FName, int Type, const r3dTL::TArray <D3DXMACRO>& defines)
 {
 	sprintf(FileName, "%s\\%s", __r3dBaseShaderPath, FName);
 
 	char defines_string[256];
 	memset(defines_string, 0, 256);
-	for(unsigned int i=0; i<defines.Count(); ++i)
+
+	for(unsigned int i = 0; i < defines.Count(); ++i)
 	{
 		sprintf(&defines_string[strlen(defines_string)], "%s=%s,", defines[i].Name, defines[i].Definition);
 	}
 
-	if ( !LoadBinaryCache( FName, FileName, defines_string ) )
+	if(!LoadBinaryCache(FName, FileName, defines_string))
 	{
-		ID3DXBuffer*	pCode;
+		ID3DXBuffer* pCode = NULL;
 		HRESULT hr;
 
-		r3dTL::TArray <D3DXMACRO> definesCpy( defines );
+		r3dTL::TArray <D3DXMACRO> definesCpy(defines);
 
 		definesCpy.PushBack(D3DXMACRO());
-		definesCpy[definesCpy.Count() - 1].Name			= "VERTEX_SHADER";
-		definesCpy[definesCpy.Count() - 1].Definition	= "1";
+		definesCpy[definesCpy.Count() - 1].Name = "VERTEX_SHADER";
+		definesCpy[definesCpy.Count() - 1].Definition = "1";
 
 		definesCpy.PushBack(D3DXMACRO());
-		definesCpy[definesCpy.Count() - 1].Name			= "PIXEL_SHADER";
-		definesCpy[definesCpy.Count() - 1].Definition	= "0";
+		definesCpy[definesCpy.Count() - 1].Name = "PIXEL_SHADER";
+		definesCpy[definesCpy.Count() - 1].Definition = "0";
 
 		definesCpy.PushBack(D3DXMACRO());
 		definesCpy[definesCpy.Count() - 1].Name = 0;
@@ -387,59 +485,66 @@ int r3dVertexShader :: Load(const char* FName, int Type, const r3dTL::TArray <D3
 
 		r3dTL::TArray< r3dString > Includes;
 
-		if( !r3dCompileShader( FileName, &definesCpy[0], "main", r3dRenderer->VertexShaderProfileName, &pCode, &Includes ) )
-			return 0;
-
-		Unload();
-
-		R3D_ENSURE_MAIN_THREAD();
-
-		// Create the vertex shader
-		hr = r3dRenderer->pd3ddev->CreateVertexShader( (DWORD*)pCode->GetBufferPointer(), &m_pShader);
-
-		r3dRenderer->CheckOutOfMemory( hr ) ;
-
-		if( FAILED(hr) )
+		if(!r3dCompileShader(FileName, &definesCpy[0], "main", r3dRenderer->VertexShaderProfileName, &pCode, &Includes))
 		{
-			r3dOutToLog("Failed to create Vertex shader '%s' : \n", FileName);
-			if(hr == D3DERR_INVALIDCALL)       r3dOutToLog ("Error: Invalid Call\n");
-			if(hr == E_OUTOFMEMORY)            r3dOutToLog ("Error: Out of memory\n");
-			if(hr == D3DERR_OUTOFVIDEOMEMORY)  r3dOutToLog ("Error: Out of Video Memory\n"); 
-			// mystic DDERR_CURRENTLYNOTAVAIL
-			if(hr == 0x88760028)  r3dOutToLog ("DDERR_CURRENTLYNOTAVAIL\n");
+			r3dOutToLog("Vertex shader compile failed. Trying stale cache fallback: %s\n", FileName);
 
-			r3dOutToLog("error=%d\n", hr);
+			g_IgnoreShaderCacheTimestamps = 1;
+			const int fallbackLoaded = LoadBinaryCache(FName, FileName, defines_string);
+			g_IgnoreShaderCacheTimestamps = 0;
 
-			m_pShader = NULL;
-			pCode->Release();
-			return 0;
+			if(!fallbackLoaded)
+				return 0;
 		}
+		else
+		{
+			Unload();
+
+			R3D_ENSURE_MAIN_THREAD();
+
+			hr = r3dRenderer->pd3ddev->CreateVertexShader((DWORD*)pCode->GetBufferPointer(), &m_pShader);
+
+			r3dRenderer->CheckOutOfMemory(hr);
+
+			if(FAILED(hr))
+			{
+				r3dOutToLog("Failed to create Vertex shader '%s' : \n", FileName);
+
+				if(hr == D3DERR_INVALIDCALL)      r3dOutToLog("Error: Invalid Call\n");
+				if(hr == E_OUTOFMEMORY)           r3dOutToLog("Error: Out of memory\n");
+				if(hr == D3DERR_OUTOFVIDEOMEMORY) r3dOutToLog("Error: Out of Video Memory\n");
+				if(hr == 0x88760028)              r3dOutToLog("DDERR_CURRENTLYNOTAVAIL\n");
+
+				r3dOutToLog("error=%d\n", hr);
+
+				m_pShader = NULL;
+				pCode->Release();
+				return 0;
+			}
 
 #ifdef _DEBUG
-		_r3d_mShaderMap.insert(std::pair<DWORD, std::string>((DWORD)m_pShader, FileName));
-		//r3dOutToLog("Shader[%x] created : %d, %s\n", m_pShader, _iNumShaders, __VSFileName);
+			_r3d_mShaderMap.insert(std::pair<DWORD, std::string>((DWORD)m_pShader, FileName));
 #endif
 
-		SaveBinaryCache( FName, pCode, defines_string, Includes );
+			SaveBinaryCache(FName, pCode, defines_string, Includes);
 
-		pCode->Release();
+			pCode->Release();
+		}
 	}
 
-	// save macros for reloading possibility ( TODO : make optional & disabled in final build )
-	Macros.Resize( defines.Count() );
+	Macros.Resize(defines.Count());
 
-	for( uint32_t i = 0, e = defines.Count(); i < e ; i ++ )
+	for(uint32_t i = 0, e = defines.Count(); i < e; i++)
 	{
-		ShaderMacro& macro = Macros[ i ];
-		const D3DXMACRO& dxmacro = defines[ i ];
+		ShaderMacro& macro = Macros[i];
+		const D3DXMACRO& dxmacro = defines[i];
 
-		macro.Name			= dxmacro.Name;
-		macro.Definition	= dxmacro.Definition;
+		macro.Name = dxmacro.Name;
+		macro.Definition = dxmacro.Definition;
 	}
 
 	return 1;
 }
-
 
 void r3dVertexShader :: SetActive(int Act)
 {

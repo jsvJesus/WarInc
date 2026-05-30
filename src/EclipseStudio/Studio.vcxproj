@@ -175,7 +175,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
+      <Addit-ionalOptions>/MACHINE:I386 %(AdditionalOptions)</Addit-ionalOptions>
       <AdditionalDependencies>PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
       <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
