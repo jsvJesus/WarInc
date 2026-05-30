@@ -85,7 +85,8 @@ public static class LegacySmokeEndpoints
         app.MapGet("/legacy/smoke", SmokeInfo);
         app.MapGet("/legacy/smoke/endpoints", SmokeEndpoints);
 
-        app.MapMethods("/{**legacyPath}", LegacyHttpMethods, LegacyFallbackAsync);
+        app.MapMethods("/{legacyEndpoint}", LegacyHttpMethods, LegacyFallbackAsync);
+        app.MapMethods("/api/{legacyEndpoint}", LegacyHttpMethods, LegacyFallbackAsync);
     }
 
     private static IResult SmokeInfo(HttpContext http)
@@ -152,6 +153,11 @@ public static class LegacySmokeEndpoints
 
     private static string GetLegacyEndpointName(HttpContext http)
     {
+        var routeValue = http.Request.RouteValues["legacyEndpoint"]?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(routeValue))
+            return WebUtility.UrlDecode(routeValue).Trim();
+
         var rawPath = http.Request.Path.Value ?? "";
         var lastSlash = rawPath.LastIndexOf('/');
 

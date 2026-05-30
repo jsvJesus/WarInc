@@ -1,6 +1,6 @@
 param(
     [string]$Root = ".",
-    [string]$BaseUrl = "http://localhost:5000",
+    [string]$BaseUrl = "http://26.163.92.76:5000",
     [switch]$VerboseBody
 )
 
@@ -85,7 +85,7 @@ foreach ($file in $files) {
     }
 }
 
-$endpoints = $endpointSet.ToArray() | Sort-Object
+$endpoints = @($endpointSet) | Sort-Object
 
 Write-Host ""
 Write-Host "WARINC LEGACY API SMOKE TEST"

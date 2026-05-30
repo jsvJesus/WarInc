@@ -15,12 +15,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Auth\" />
-      <Folder Include="Common\" />
-      <Folder Include="Config\" />
-      <Folder Include="Database\" />
-      <Folder Include="Purchase\" />
-      <Folder Include="Shop\" />
+        <Folder Include="Auth\" />
+        <Folder Include="Common\" />
+        <Folder Include="Config\" />
+        <Folder Include="Database\" />
+        <Folder Include="GameServer\" />
+        <Folder Include="Legacy\" />
+        <Folder Include="Profile\" />
+        <Folder Include="Purchase\" />
+        <Folder Include="Shop\" />
     </ItemGroup>
 
 </Project>
