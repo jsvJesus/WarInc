@@ -206,7 +206,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -228,8 +228,8 @@
     <Link>
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3_x64.lib;PhysX3Common_x64.lib;PhysX3Cooking_x64.lib;PhysX3CharacterKinematic_x64.lib;PhysX3Extensions.lib;PxFoundation_x64.lib;PxPvdSDK_x64.lib;PsFastXml_x64.lib;PxTask_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;libcurl.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(SolutionDir)\..\..\bin\Studio_x64.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;.\..\External\xsdk\x64Lib;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -317,7 +317,7 @@
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>PhysX3DEBUG_x64.lib;PhysX3CommonDEBUG_x64.lib;PhysX3CookingDEBUG_x64.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x64.lib;PxPvdSDKDEBUG_x64.lib;PsFastXmlDEBUG_x64.lib;PxTaskDEBUG_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio_d_x64.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;.\..\External\xsdk\x64Lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/curl/curl_build_x64_vs2013/lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/curl/curl_build_x64_vs2013/lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -475,12 +475,13 @@
       </AdditionalDependencies>
       <OutputFile>$(ProjectDir)..\..\bin\WarInc_x64.exe</OutputFile>
       <AdditionalLibraryDirectories>
+        C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;
         .\..\External\Scaleform\Lib\x64\Msvc10\Release;
         .\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;
         .\..\External\PhysX_3.4\Lib\vc12win64;
         .\..\External\PhysX_3.4\bin\vc12win64;
         .\..\External\PxShared\lib\vc12win64;
-        .\..\External\xsdk\x64Lib;
+        C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;
         ..\External\dbghelp\lib;
         ..\External\CrashRpt\Lib;
         ..\External\fmod;

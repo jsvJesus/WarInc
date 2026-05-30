@@ -9,9 +9,21 @@
 #include <wbemidl.h>
 
 #ifndef WO_SERVER
+
+#if defined(_WIN64)
+#define R3D_USE_NVAPI 0
+#else
+#define R3D_USE_NVAPI 1
+#endif
+
+#if R3D_USE_NVAPI
 #include "NVApi/nvapi.h"
 #define R3D_NVAPI "NVApi: "
 #pragma comment(lib, "../External/NVApi/x86/nvapi.lib")
+#else
+#define R3D_NVAPI "NVApi disabled: "
+#endif
+
 #endif
 
 #include "../SF/Console/Config.h"
@@ -635,7 +647,7 @@ r3dRenderLayer::SetD3DDev( IDirect3DDevice9* dev )
 
 int r3dRenderLayer::Close()
 {
-#ifndef WO_SERVER 
+#if !defined(WO_SERVER) && R3D_USE_NVAPI
 	if( NVApiStereoHandle )
 	{
 		if( NvAPI_Stereo_DestroyHandle( NVApiStereoHandle ) != NVAPI_OK )
@@ -862,7 +874,7 @@ void __EvaluateDisplayModes(IDirect3D9 *d3d, ModesArray &outModes)
 
 bool r3dRenderLayer::FindCompatibleNVidiaStereoDisplayMode(const char *displayName, D3DDISPLAYMODE &inOutMode, const ModesArray &allModes)
 {
-#ifdef WO_SERVER
+#if defined(WO_SERVER) || !R3D_USE_NVAPI
 	return false;
 #else
 	if (!NVApiActive || !NVApiStereoMode)
@@ -1454,7 +1466,7 @@ static int DoesGPUSupportVertexFetch( IDirect3D9* d3d )
 
 int r3dRenderLayer::InitStereo()
 {
-#ifndef WO_SERVER 
+#if !defined(WO_SERVER) && R3D_USE_NVAPI
 	NvAPI_Status status ;
 	status = NvAPI_Initialize() ;
 
@@ -1530,7 +1542,7 @@ int r3dRenderLayer::InitStereo()
 
 void r3dRenderLayer::SetEye( StereoEyeEnum eye )
 {
-#ifndef WO_SERVER 
+#if !defined(WO_SERVER) && R3D_USE_NVAPI
 	if( NVApiStereoMode )
 	{
 		NvAPI_Status status ;
@@ -1578,7 +1590,7 @@ void BrightnessContrastCallback( int oldI, float oldF )
 void StereoChangeCallback(int oldI, float oldF)
 {
 
-#ifndef WO_SERVER 
+#if !defined(WO_SERVER) && R3D_USE_NVAPI
 
 	if (!r3dRenderer->NVApiActive)
 		return;
@@ -1766,7 +1778,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 
 	SetD3DDev( dev );
 
-#ifndef WO_SERVER
+#if !defined(WO_SERVER) && R3D_USE_NVAPI
 	if( this->NVApiActive )
 	{
 		if( NvAPI_Stereo_CreateHandleFromIUnknown( dev, &NVApiStereoHandle ) != NVAPI_OK)
