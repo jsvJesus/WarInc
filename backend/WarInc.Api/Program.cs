@@ -10,6 +10,7 @@ using WarInc.Api.Social;
 using WarInc.Api.Leaderboard;
 using WarInc.Api.Retention;
 using WarInc.Api.MysteryBox;
+using WarInc.Api.GameRewards;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,7 @@ builder.Services.AddScoped<LeaderboardService>();
 builder.Services.AddScoped<RetentionService>();
 builder.Services.AddScoped<MysteryBoxService>();
 builder.Services.AddScoped<DatabaseCheckService>();
+builder.Services.AddScoped<GameRewardsService>();
 
 builder.Services.AddSingleton<GameServerService>();
 
@@ -102,6 +104,7 @@ app.MapGet("/", () =>
             "/v1/mystery-box/info",
             "/v1/mystery-box/roll",
             "/v1/mystery-box/sell",
+            "/v1/game-rewards/get",
 
             "/internal/gameserver/register",
             "/internal/gameserver/heartbeat",
@@ -127,6 +130,7 @@ app.MapGet("/", () =>
             "/api_LeaderboardGet.aspx",
             "/api_RetBonus.aspx",
             "/api_MysteryBox.aspx",
+            "/api_GetDataGameRewards.aspx",
             
             "/api_SrvSetCreateGameKey2.aspx",
             "/api_GetCreateGameKey3.aspx",
@@ -159,6 +163,7 @@ app.MapSocialEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapRetentionEndpoints();
 app.MapMysteryBoxEndpoints();
+app.MapGameRewardsEndpoints();
 app.MapGameServerEndpoints();
 app.MapDatabaseCheckEndpoints();
 app.MapGameServerLegacyEndpoints();
