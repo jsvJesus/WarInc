@@ -6,6 +6,9 @@
 #include "m_AppSelect.h"
 #include "APINoesisGUI.h"
 
+#include <windows.h>
+#include <windowsx.h>
+
 int AppSelectMode = 100;
 
 Menu_AppSelect::Menu_AppSelect()
@@ -33,6 +36,127 @@ void ClearFullScreen_Menu()
 	);
 	D3D_V(r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.f, 0));
 	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+}
+
+struct StudioMenuButton
+{
+	float x;
+	float y;
+	float w;
+	float h;
+	const char* text;
+	const char* command;
+	int result;
+};
+
+static bool gStudioPrevMouseDown = false;
+
+static bool StudioPointInRect(float px, float py, float x, float y, float w, float h)
+{
+	return px >= x && px <= x + w && py >= y && py <= y + h;
+}
+
+static void StudioGetMouse(float* outX, float* outY, bool* outDown)
+{
+	POINT pt;
+	GetCursorPos(&pt);
+
+	if(win::hWnd)
+		ScreenToClient(win::hWnd, &pt);
+
+	*outX = (float)pt.x;
+	*outY = (float)pt.y;
+	*outDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+}
+
+static void StudioDrawButton(const StudioMenuButton& button, float mouseX, float mouseY, bool mouseDown)
+{
+	bool hovered = StudioPointInRect(mouseX, mouseY, button.x, button.y, button.w, button.h);
+	bool pressed = hovered && mouseDown;
+
+	r3dColor borderColor = hovered ? r3dColor(255, 30, 20, 255) : r3dColor(80, 88, 98, 255);
+	r3dColor fillColor = pressed ? r3dColor(46, 54, 64, 230) : hovered ? r3dColor(32, 36, 43, 230) : r3dColor(5, 6, 7, 230);
+	r3dColor glossColor = r3dColor(255, 255, 255, 22);
+
+	r3dDrawBox2D(button.x, button.y, button.w, button.h, borderColor);
+	r3dDrawBox2D(button.x + 1, button.y + 1, button.w - 2, button.h - 2, fillColor);
+	r3dDrawBox2D(button.x + 2, button.y + 2, button.w - 4, 8, glossColor);
+
+	SIZE textSize;
+	textSize.cx = 0;
+	textSize.cy = 0;
+
+	Font_Label->GetTextExtent(button.text, &textSize);
+
+	Font_Label->PrintF(
+		button.x + button.w * 0.5f - (float)textSize.cx * 0.5f,
+		button.y + 8,
+		r3dColor(235, 240, 250, 255),
+		"%s",
+		button.text
+	);
+}
+
+static int StudioDrawAndProcessMenu()
+{
+	float sw = r3dRenderer->ScreenW;
+	float sh = r3dRenderer->ScreenH;
+
+	float mouseX = 0.0f;
+	float mouseY = 0.0f;
+	bool mouseDown = false;
+
+	StudioGetMouse(&mouseX, &mouseY, &mouseDown);
+
+	bool clicked = !mouseDown && gStudioPrevMouseDown;
+	gStudioPrevMouseDown = mouseDown;
+
+	const float btnW = 220.0f;
+	const float btnH = 30.0f;
+	const float gap = 16.0f;
+
+	float row1W = btnW * 3.0f + gap * 2.0f;
+	float row2W = btnW * 4.0f + gap * 3.0f;
+
+	float row1X = sw * 0.5f - row1W * 0.5f;
+	float row2X = sw * 0.5f - row2W * 0.5f;
+
+	float row1Y = sh * 0.5f - 55.0f;
+	float row2Y = sh * 0.5f + 28.0f;
+
+	StudioMenuButton buttons[] =
+	{
+		{ row1X + (btnW + gap) * 0.0f, row1Y, btnW, btnH, "Update DB",             "BtnUpdateDB",        Menu_AppSelect::bUpdateDB },
+		{ row1X + (btnW + gap) * 1.0f, row1Y, btnW, btnH, "Game (Public Server)",  "BtnGamePublic",      Menu_AppSelect::bStartGamePublic },
+		{ row1X + (btnW + gap) * 2.0f, row1Y, btnW, btnH, "Game (DEV Server)",     "BtnGameDev",         Menu_AppSelect::bStartGameSVN },
+
+		{ row2X + (btnW + gap) * 0.0f, row2Y, btnW, btnH, "Level Editor",          "BtnLevelEditor",     Menu_AppSelect::bStartLevelEditor },
+		{ row2X + (btnW + gap) * 1.0f, row2Y, btnW, btnH, "Particle Editor",       "BtnParticleEditor",  Menu_AppSelect::bStartParticleEditor },
+		{ row2X + (btnW + gap) * 2.0f, row2Y, btnW, btnH, "Physics Editor",        "BtnPhysicsEditor",   Menu_AppSelect::bStartPhysicsEditor },
+		{ row2X + (btnW + gap) * 3.0f, row2Y, btnW, btnH, "Character Editor",      "BtnCharacterEditor", Menu_AppSelect::bStartCharacterEditor }
+	};
+
+	Font_Label->PrintF(
+		sw * 0.5f - 78.0f,
+		sh * 0.5f - 125.0f,
+		r3dColor(190, 200, 215, 255),
+		"ECLIPSE STUDIO"
+	);
+
+	int result = -1;
+
+	for(int i = 0; i < _countof(buttons); ++i)
+	{
+		StudioDrawButton(buttons[i], mouseX, mouseY, mouseDown);
+
+		if(clicked && StudioPointInRect(mouseX, mouseY, buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h))
+		{
+			r3dOutToLog("Studio AppSelect command: %s\n", buttons[i].command);
+			result = buttons[i].result;
+		}
+	}
+
+	return result;
 }
 
 static int AppSelectCommandToResult(const char* command)
@@ -123,24 +247,31 @@ int Menu_AppSelect::DoModal()
 			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 			gNoesisGUI->Update(r3dGetTime());
 			gNoesisGUI->Render();
+		}
 
-			Font_Label->PrintF(
-				10,
-				10,
-				r3dColor(0, 255, 0),
-				"NOESIS APPSELECT: loaded=1 last_cmd=%s",
-				r3dNoesisGetLastEditorCommand()
-			);
-		}
-		else
+		int nativeResult = StudioDrawAndProcessMenu();
+		if(nativeResult != -1)
 		{
-			Font_Label->PrintF(
-				10,
-				10,
-				r3dColor(255, 0, 0),
-				"NOESIS APPSELECT: not loaded"
-			);
+			mDrawEnd();
+			r3dEndFrame();
+			return nativeResult;
 		}
+
+		Font_Label->PrintF(
+			8,
+			8,
+			r3dColor(0, 255, 0),
+			"NOESIS APPSELECT: loaded=%d last_cmd=%s",
+			gNoesisGUI && gNoesisGUI->IsLoaded() ? 1 : 0,
+			r3dNoesisGetLastEditorCommand()
+		);
+
+		Font_Label->PrintF(
+			8,
+			28,
+			r3dColor(255, 160, 0),
+			"Noesis RenderDevice not connected yet, drawing temporary native shell"
+		);
 
 		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
