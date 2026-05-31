@@ -11,6 +11,10 @@ extern r3dCamera gCam;
 
 WeatherPuddleManager gWeatherPuddleManager;
 
+static const char* const WPM_PuddleTypeName = "weather_puddle";
+static const char* const WPM_PuddleDiffuseTexture = "Data\\Water\\Puddles\\puddles_diffuse_alpha.dds";
+static const char* const WPM_PuddleNormalTexture = "Data\\Water\\Puddles\\water_normal.dds";
+
 static float WPM_ClampFloat( float v, float lo, float hi )
 {
 	return v < lo ? lo : ( v > hi ? hi : v );
@@ -64,20 +68,22 @@ void WeatherPuddleManager::RegisterType()
 	if( !g_pDecalChief )
 		return;
 
-	mTypeId = g_pDecalChief->GetTypeID( "weather_puddle" );
+	mTypeId = g_pDecalChief->GetTypeID( WPM_PuddleTypeName );
 
 	if( mTypeId == INVALID_DECAL_ID )
 	{
 		DecalType type;
-		type.Name = "weather_puddle";
-		type.DiffuseTexName = "Data\\Water\\Puddles\\puddles_perlin.dds";
-		type.NormalTexName = "Data\\Water\\Puddles\\water_normal.dds";
-		type.LifeTime = 0.0f;
+		type.Name = WPM_PuddleTypeName;
+		type.DiffuseTexName = WPM_PuddleDiffuseTexture;
+		type.NormalTexName = WPM_PuddleNormalTexture;
+
+		type.LifeTime = 1.0f;
 		type.ScaleX = 1.0f;
 		type.ScaleY = 1.0f;
 		type.UniformScale = 0;
 		type.ScaleVar = 0.0f;
 		type.RandomRotation = 0;
+
 		type.BackgroundBlendFactor = 0.15f + r_weather_puddles_reflection->GetFloat() * 0.75f;
 		type.ClipFarFactor = 0.075f;
 		type.ClipNearFactor = 1.0f;
@@ -86,7 +92,12 @@ void WeatherPuddleManager::RegisterType()
 		type.WriteGloss = 1;
 
 		g_pDecalChief->AddType( type );
-		mTypeId = g_pDecalChief->GetTypeID( "weather_puddle" );
+		mTypeId = g_pDecalChief->GetTypeID( WPM_PuddleTypeName );
+	}
+
+	if( mTypeId != INVALID_DECAL_ID )
+	{
+		g_pDecalChief->AutoLoadTextures( mTypeId );
 	}
 
 	UpdateTypeParams();
