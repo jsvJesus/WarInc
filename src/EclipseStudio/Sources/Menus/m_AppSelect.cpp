@@ -51,6 +51,69 @@ struct StudioMenuButton
 
 static bool gStudioPrevMouseDown = false;
 
+static CD3DFont* gStudioMenuFont = NULL;
+
+static CD3DFont* StudioGetFont()
+{
+	if(Font_Label)
+		return Font_Label;
+
+	if(gStudioMenuFont)
+		return gStudioMenuFont;
+
+	if(!r3dRenderer || !r3dRenderer->pd3ddev)
+		return NULL;
+
+	r3dIntegrityGuardian ig;
+
+	gStudioMenuFont = new CD3DFont(
+		ig,
+		"Verdana",
+		10,
+		D3DFONT_BOLD | D3DFONT_FILTERED | D3DFONT_SKIPGLYPH
+	);
+
+	if(FAILED(gStudioMenuFont->CreateSystemFont()))
+	{
+		SAFE_DELETE(gStudioMenuFont);
+		return NULL;
+	}
+
+	return gStudioMenuFont;
+}
+
+static void StudioPrintText(float x, float y, const r3dColor24& color, const char* text)
+{
+	CD3DFont* font = StudioGetFont();
+
+	if(!font)
+		return;
+
+	if(!text)
+		text = "";
+
+	font->PrintF(x, y, color, "%s", text);
+}
+
+static float StudioGetTextWidth(const char* text)
+{
+	CD3DFont* font = StudioGetFont();
+
+	if(!font)
+		return 0.0f;
+
+	if(!text)
+		text = "";
+
+	SIZE textSize;
+	textSize.cx = 0;
+	textSize.cy = 0;
+
+	font->GetTextExtent(text, &textSize);
+
+	return (float)textSize.cx;
+}
+
 static bool StudioPointInRect(float px, float py, float x, float y, float w, float h)
 {
 	return px >= x && px <= x + w && py >= y && py <= y + h;
@@ -82,18 +145,15 @@ static void StudioDrawButton(const StudioMenuButton& button, float mouseX, float
 	r3dDrawBox2D(button.x + 1, button.y + 1, button.w - 2, button.h - 2, fillColor);
 	r3dDrawBox2D(button.x + 2, button.y + 2, button.w - 4, 8, glossColor);
 
-	SIZE textSize;
-	textSize.cx = 0;
-	textSize.cy = 0;
+	const char* buttonText = button.text ? button.text : "";
 
-	Font_Label->GetTextExtent(button.text, &textSize);
+	float textW = StudioGetTextWidth(buttonText);
 
-	Font_Label->PrintF(
-		button.x + button.w * 0.5f - (float)textSize.cx * 0.5f,
+	StudioPrintText(
+		button.x + button.w * 0.5f - textW * 0.5f,
 		button.y + 8,
 		r3dColor(235, 240, 250, 255),
-		"%s",
-		button.text
+		buttonText
 	);
 }
 
@@ -136,7 +196,7 @@ static int StudioDrawAndProcessMenu()
 		{ row2X + (btnW + gap) * 3.0f, row2Y, btnW, btnH, "Character Editor",      "BtnCharacterEditor", Menu_AppSelect::bStartCharacterEditor }
 	};
 
-	Font_Label->PrintF(
+	StudioPrintText(
 		sw * 0.5f - 78.0f,
 		sh * 0.5f - 125.0f,
 		r3dColor(190, 200, 215, 255),
@@ -215,6 +275,8 @@ int Menu_AppSelect::DoModal()
 
 	r3dMouse::Show();
 
+	StudioGetFont();
+
 	if(gNoesisGUI)
 	{
 		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
@@ -257,16 +319,25 @@ int Menu_AppSelect::DoModal()
 			return nativeResult;
 		}
 
-		Font_Label->PrintF(
-			8,
-			8,
-			r3dColor(0, 255, 0),
-			"NOESIS APPSELECT: loaded=%d last_cmd=%s",
-			gNoesisGUI && gNoesisGUI->IsLoaded() ? 1 : 0,
-			r3dNoesisGetLastEditorCommand()
-		);
+		{
+			char debugText[512];
 
-		Font_Label->PrintF(
+			sprintf(
+				debugText,
+				"NOESIS APPSELECT: loaded=%d last_cmd=%s",
+				gNoesisGUI && gNoesisGUI->IsLoaded() ? 1 : 0,
+				r3dNoesisGetLastEditorCommand()
+			);
+
+			StudioPrintText(
+				8,
+				8,
+				r3dColor(0, 255, 0),
+				debugText
+			);
+		}
+
+		StudioPrintText(
 			8,
 			28,
 			r3dColor(255, 160, 0),
