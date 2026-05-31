@@ -22,6 +22,17 @@ extern r3dCamera gCam ;
 
 #define PT_EMPTY_STR "<empty>"
 
+static float r3dClamp01Weather( float Value )
+{
+	if( Value < 0.0f )
+		return 0.0f;
+
+	if( Value > 1.0f )
+		return 1.0f;
+
+	return Value;
+}
+
 int GetAtmoDownScale()
 {
 	return r_texture_quality->GetInt() == 1 ? 2 : 1 ;
@@ -49,6 +60,9 @@ void r3dAtmosphere :: Reset()
 		RainParticleSystem = 0 ;
 	}
 	RainParticleSystemName[ 0 ] = 0;
+
+	RainStrength = 0.0f;
+	Wetness = 0.0f;
 
 	StaticSkyTexName = "" ;
 	bStaticSkyEnable = false ;
@@ -191,7 +205,14 @@ int r3dAtmosphere :: SerializeXML( pugi::xml_node root )
 		SerializeXMLVal<W>( "static_texgetoffset_y"				, atmoNode, &StaticTexGetOffsetY		);
 
 		SerializeXMLVal<W>( "rain_particles"					, atmoNode, RainParticleSystemName		);
+		SerializeXMLVal<W>( "rain_strength"						, atmoNode, &RainStrength				);
+		SerializeXMLVal<W>( "wetness"							, atmoNode, &Wetness					);
 		SerializeXMLVal<W>( "sunlight"							, atmoNode, &SunLightOn					);
+
+		if( !W )
+		{
+			ClampWeatherState();
+		}
 
 		SerializeXMLCmdVarF<W>("sky_intensity"					, atmoNode, r_sky_intensity				);
 
@@ -241,6 +262,7 @@ int	r3dAtmosphere :: LoadFromXML( pugi::xml_node root )
 	}
 
 	SetRainParticle( RainParticleSystemName ) ;
+	ApplyRainStateToParticles();
 
 	return res ;
 }
@@ -412,9 +434,12 @@ void r3dAtmosphere::ReloadTextures()
 
 void r3dAtmosphere::Update()
 {
+	ClampWeatherState();
+
 	if( RainParticleSystem )
 	{
-		RainParticleSystem->SetPosition( gCam ) ;
+		RainParticleSystem->SetPosition( gCam );
+		ApplyRainStateToParticles();
 	}
 }
 
@@ -422,32 +447,67 @@ void r3dAtmosphere::SetRainParticle( const char* Name )
 {
 	if( RainParticleSystem )
 	{
-		GameWorld().DeleteObject( RainParticleSystem ) ;
-		RainParticleSystem = 0 ;
+		GameWorld().DeleteObject( RainParticleSystem );
+		RainParticleSystem = 0;
 	}
 
-	if( RainParticleSystemName != Name )
-	{
-		strcpy( RainParticleSystemName, Name ) ;
-	}
+	const char* SafeName = Name ? Name : PT_EMPTY_STR;
+
+	strncpy( RainParticleSystemName, SafeName, sizeof( RainParticleSystemName ) - 1 );
+	RainParticleSystemName[ sizeof( RainParticleSystemName ) - 1 ] = 0;
 
 	if( !stricmp( RainParticleSystemName, PT_EMPTY_STR ) || !strlen( RainParticleSystemName ) )
 	{
-		return ;
+		return;
 	}
 
-	RainParticleSystem = srv_CreateGameObject( "obj_ParticleSystem", Name, gCam ) ;
+	RainParticleSystem = srv_CreateGameObject( "obj_ParticleSystem", RainParticleSystemName, gCam );
 
-	// have to load/save separately
-	RainParticleSystem->bPersistent = false ;
+	RainParticleSystem->bPersistent = false;
 
-	obj_ParticleSystem* gem = static_cast<obj_ParticleSystem*>( RainParticleSystem ) ;
-	gem->bKeepAlive		= true ;
-	gem->bKillDelayed	= false ;
-	gem->bKill			= false ;
+	obj_ParticleSystem* gem = static_cast<obj_ParticleSystem*>( RainParticleSystem );
+	gem->bKeepAlive		= true;
+	gem->bKillDelayed	= false;
+	gem->bKill			= false;
+
+	ApplyRainStateToParticles();
 }
 
 void r3dAtmosphere::ClearRainParticle()
 {
-	SetRainParticle( PT_EMPTY_STR ) ;
+	SetRainParticle( PT_EMPTY_STR );
+}
+
+void r3dAtmosphere::SetRainStrength( float Value )
+{
+	RainStrength = r3dClamp01Weather( Value );
+	ApplyRainStateToParticles();
+}
+
+void r3dAtmosphere::SetWetness( float Value )
+{
+	Wetness = r3dClamp01Weather( Value );
+}
+
+void r3dAtmosphere::ClampWeatherState()
+{
+	RainStrength = r3dClamp01Weather( RainStrength );
+	Wetness = r3dClamp01Weather( Wetness );
+}
+
+void r3dAtmosphere::ApplyRainStateToParticles()
+{
+	if( !RainParticleSystem )
+		return;
+
+	obj_ParticleSystem* particleSystem = static_cast<obj_ParticleSystem*>( RainParticleSystem );
+
+	const int enabled = RainStrength > 0.001f ? 1 : 0;
+
+	particleSystem->bRender = enabled;
+
+	const float particleScale = 0.35f + RainStrength * 1.65f;
+
+	particleSystem->RenderScale = particleScale;
+	particleSystem->GlobalScale = particleScale;
 }

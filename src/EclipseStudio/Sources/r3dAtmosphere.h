@@ -89,6 +89,9 @@ class r3dAtmosphere
 	class GameObject*	RainParticleSystem ;
 	char				RainParticleSystemName[ 64 ] ;
 
+	float				RainStrength;
+	float				Wetness;
+
   public:
 	r3dAtmosphere()
 	: StaticSkyTex( 0 )
@@ -118,8 +121,17 @@ class r3dAtmosphere
   void  ReloadTextures();
   void	Update();
 
-  void	SetRainParticle( const char* Name ) ;
-  void	ClearRainParticle();
+	void	SetRainParticle( const char* Name ) ;
+	void	ClearRainParticle();
+
+	void	SetRainStrength( float Value );
+	void	SetWetness( float Value );
+
+	float	GetRainStrength() const { return RainStrength; }
+	float	GetWetness() const { return Wetness; }
+
+	void	ClampWeatherState();
+	void	ApplyRainStateToParticles();
 
   void	EnableStaticSky();
   void	DisableStaticSky();

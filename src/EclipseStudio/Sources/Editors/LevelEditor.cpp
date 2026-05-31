@@ -12102,11 +12102,23 @@ const int FILE_LIST_HEIGHT = 330 ;
 		}
 		break;
 
-		case PE_RAIN:
-			{
-				static bool InSelectParticleMode = false ;
+	case PE_RAIN:
+		{
+			static bool InSelectParticleMode = false ;
 
-				bool valueChanged = false ;
+			bool valueChanged = false ;
+
+			SliderY += imgui_Static( SliderX, SliderY, "Weather / Rain State" );
+
+			float rainStrength = r3dGameLevel::Environment.GetRainStrength();
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Rain Strength", &rainStrength, 0.0f, 1.0f, "%-02.2f", 1 );
+			r3dGameLevel::Environment.SetRainStrength( rainStrength );
+
+			float wetness = r3dGameLevel::Environment.GetWetness();
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Wetness", &wetness, 0.0f, 1.0f, "%-02.2f", 1 );
+			r3dGameLevel::Environment.SetWetness( wetness );
+
+			SliderY += 10.0f;
 
 				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
 				{
