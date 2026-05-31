@@ -4,6 +4,7 @@
 #include "WeatherPuddleManager.h"
 
 #include "TrueNature/ITerrain.h"
+#include "GameLevel.h"
 #include "../../../../Eternity/SF/Console/Config.h"
 
 extern r3dCamera gCam;
@@ -69,8 +70,8 @@ void WeatherPuddleManager::RegisterType()
 	{
 		DecalType type;
 		type.Name = "weather_puddle";
-		type.DiffuseTexName = "Data\\Water\\LakeColor.dds";
-		type.NormalTexName = "Data\\Water\\waves_00.dds";
+		type.DiffuseTexName = "Data\\Water\\Puddles\\puddles_perlin.dds";
+		type.NormalTexName = "Data\\Water\\Puddles\\water_normal.dds";
 		type.LifeTime = 0.0f;
 		type.ScaleX = 1.0f;
 		type.ScaleY = 1.0f;
@@ -298,14 +299,20 @@ void WeatherPuddleManager::Update()
 	while( mPuddleCount > maxCount )
 		RemoveAt( mPuddleCount - 1 );
 
-	const float rain = WPM_ClampFloat( r_weather_rain_intensity->GetFloat(), 0.0f, 1.0f );
-	const float wetness = WPM_ClampFloat( r_weather_wetness->GetFloat(), 0.0f, 1.0f );
+	const float rain = WPM_ClampFloat( r3dGameLevel::Environment.GetRainStrength(), 0.0f, 1.0f );
+	const float wetness = WPM_ClampFloat( r3dGameLevel::Environment.GetWetness(), 0.0f, 1.0f );
 
-	if( wetness < r_weather_puddles_min_wetness->GetFloat() || rain <= 0.01f )
+	r_weather_rain_intensity->SetFloat( rain );
+	r_weather_wetness->SetFloat( wetness );
+
+	if( wetness < r_weather_puddles_min_wetness->GetFloat() )
+		return;
+
+	if( rain <= 0.001f && wetness <= 0.001f )
 		return;
 
 	const float density = WPM_ClampFloat( r_weather_puddles_density->GetFloat(), 0.0f, 1.0f );
-	const float spawnRate = r_weather_puddles_spawn_rate->GetFloat() * density * rain * wetness;
+	const float spawnRate = r_weather_puddles_spawn_rate->GetFloat() * density * WPM_MaxFloat( rain, wetness );
 
 	mSpawnAccum += dt * spawnRate;
 

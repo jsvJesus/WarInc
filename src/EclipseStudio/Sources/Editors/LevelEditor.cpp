@@ -12103,82 +12103,156 @@ const int FILE_LIST_HEIGHT = 330 ;
 		break;
 
 	case PE_RAIN:
+	{
+		g_pDesktopManager->Begin( "ed_env" );
+
+		static bool InSelectParticleMode = false;
+
+		SliderY += imgui_Static( SliderX, SliderY, "Weather / Rain State", 360 );
+
+		float rainStrength = r3dGameLevel::Environment.GetRainStrength();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Rain Strength", &rainStrength, 0.0f, 1.0f, "%.2f" );
+		r3dGameLevel::Environment.SetRainStrength( rainStrength );
+
+		float wetness = r3dGameLevel::Environment.GetWetness();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Wetness", &wetness, 0.0f, 1.0f, "%.2f" );
+		r3dGameLevel::Environment.SetWetness( wetness );
+
+		r_weather_rain_intensity->SetFloat( r3dGameLevel::Environment.GetRainStrength() );
+		r_weather_wetness->SetFloat( r3dGameLevel::Environment.GetWetness() );
+
+		SliderY += 10;
+
+		int screenDropsEnabled = r_screen_rain_drops->GetInt();
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Screen Rain Drops Enabled", &screenDropsEnabled, 1 );
+		r_screen_rain_drops->SetInt( screenDropsEnabled ? 1 : 0 );
+
+		SliderY += 10;
+		SliderY += imgui_Static( SliderX, SliderY, "Puddle Settings", 360 );
+
+		int puddlesEnabled = r_weather_puddles->GetInt();
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Puddles Enabled", &puddlesEnabled, 1 );
+		r_weather_puddles->SetInt( puddlesEnabled ? 1 : 0 );
+
+		float puddleDensity = r_weather_puddles_density->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Density", &puddleDensity, 0.0f, 1.0f, "%.2f" );
+		r_weather_puddles_density->SetFloat( puddleDensity );
+
+		float puddleSpawnRate = r_weather_puddles_spawn_rate->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Spawn Rate", &puddleSpawnRate, 0.0f, 128.0f, "%.1f" );
+		r_weather_puddles_spawn_rate->SetFloat( puddleSpawnRate );
+
+		int puddleMaxCount = r_weather_puddles_max_count->GetInt();
+		SliderY += imgui_Value_SliderI( SliderX, SliderY, "Puddle Max Count", &puddleMaxCount, 0, 512, "%d" );
+		r_weather_puddles_max_count->SetInt( puddleMaxCount );
+
+		float puddleRadius = r_weather_puddles_radius->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Radius", &puddleRadius, 4.0f, 160.0f, "%.1f" );
+		r_weather_puddles_radius->SetFloat( puddleRadius );
+
+		float puddleMinWetness = r_weather_puddles_min_wetness->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Min Wetness", &puddleMinWetness, 0.0f, 1.0f, "%.2f" );
+		r_weather_puddles_min_wetness->SetFloat( puddleMinWetness );
+
+		float puddleMinNormalY = r_weather_puddles_min_normal_y->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Terrain Slope", &puddleMinNormalY, 0.0f, 1.0f, "%.2f" );
+		r_weather_puddles_min_normal_y->SetFloat( puddleMinNormalY );
+
+		float puddleReflection = r_weather_puddles_reflection->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Reflection", &puddleReflection, 0.0f, 1.0f, "%.2f" );
+		r_weather_puddles_reflection->SetFloat( puddleReflection );
+
+		SliderY += 10;
+		SliderY += imgui_Static( SliderX, SliderY, "Wet Weapon Settings", 360 );
+
+		int wetWeaponEnabled = r3dGameLevel::Environment.WetWeaponEnabled;
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Wet Weapon Enabled", &wetWeaponEnabled, 1 );
+		r3dGameLevel::Environment.WetWeaponEnabled = wetWeaponEnabled ? 1 : 0;
+		r_wet_weapon->SetInt( wetWeaponEnabled ? 1 : 0 );
+
+		float wetWeaponAmount = r3dGameLevel::Environment.WetWeaponAmount;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Wet Amount", &wetWeaponAmount, 0.0f, 2.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponAmount = wetWeaponAmount;
+		r_wet_weapon_amount->SetFloat( wetWeaponAmount );
+
+		float wetWeaponDark = r3dGameLevel::Environment.WetWeaponDark;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Dark Diffuse", &wetWeaponDark, 0.25f, 1.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponDark = wetWeaponDark;
+		r_wet_weapon_dark->SetFloat( wetWeaponDark );
+
+		float wetWeaponGloss = r3dGameLevel::Environment.WetWeaponGlossBoost;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Gloss Boost", &wetWeaponGloss, 0.0f, 1.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponGlossBoost = wetWeaponGloss;
+		r_wet_weapon_gloss_boost->SetFloat( wetWeaponGloss );
+
+		float wetWeaponSpec = r3dGameLevel::Environment.WetWeaponSpecMul;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Spec Power", &wetWeaponSpec, 1.0f, 4.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponSpecMul = wetWeaponSpec;
+		r_wet_weapon_spec_mul->SetFloat( wetWeaponSpec );
+
+		float wetWeaponStreaks = r3dGameLevel::Environment.WetWeaponStreaks;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Rain Streaks", &wetWeaponStreaks, 0.0f, 2.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponStreaks = wetWeaponStreaks;
+		r_wet_weapon_streaks->SetFloat( wetWeaponStreaks );
+
+		float wetWeaponStreakScale = r3dGameLevel::Environment.WetWeaponStreakScale;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Scale", &wetWeaponStreakScale, 4.0f, 128.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponStreakScale = wetWeaponStreakScale;
+		r_wet_weapon_streak_scale->SetFloat( wetWeaponStreakScale );
+
+		float wetWeaponStreakSpeed = r3dGameLevel::Environment.WetWeaponStreakSpeed;
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Speed", &wetWeaponStreakSpeed, 0.0f, 4.0f, "%.2f" );
+		r3dGameLevel::Environment.WetWeaponStreakSpeed = wetWeaponStreakSpeed;
+		r_wet_weapon_streak_speed->SetFloat( wetWeaponStreakSpeed );
+
+		r3dGameLevel::Environment.ClampWeatherState();
+
+		SliderY += 10;
+
+		if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
 		{
-			static bool InSelectParticleMode = false ;
+			InSelectParticleMode = !InSelectParticleMode;
+		}
+		SliderY += 24.f;
 
-			bool valueChanged = false ;
+		static char ParticlePath[ MAX_PATH ] = "";
 
-			SliderY += imgui_Static( SliderX, SliderY, "Weather / Rain State" );
+		if( r3dGameLevel::Environment.RainParticleSystemName[ 0 ] )
+			strcpy( ParticlePath, r3dGameLevel::Environment.RainParticleSystemName );
 
-			float rainStrength = r3dGameLevel::Environment.GetRainStrength();
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Rain Strength", &rainStrength, 0.0f, 1.0f, "%-02.2f", 1 );
-			r3dGameLevel::Environment.SetRainStrength( rainStrength );
+		if( InSelectParticleMode )
+		{
+			static float offset = 0.f;
 
-			float wetness = r3dGameLevel::Environment.GetWetness();
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Wetness", &wetness, 0.0f, 1.0f, "%-02.2f", 1 );
-			r3dGameLevel::Environment.SetWetness( wetness );
+			if( imgui_FileList( SliderX, SliderY, 360, 200, "Data\\Particles\\*.prt", ParticlePath, &offset, true ) )
+			{
+				char* dot = strrchr( ParticlePath, '.' );
 
-			SliderY += 10.0f;
-			SliderY += imgui_Static( SliderX, SliderY, "Wet Weapon Settings" );
+				if( dot )
+					*dot = 0;
 
-			SliderY += imgui_Checkbox( SliderX, SliderY, "Wet Weapon Enabled", &r3dGameLevel::Environment.WetWeaponEnabled, 1 );
-
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Wet Amount", &r3dGameLevel::Environment.WetWeaponAmount, 0.0f, 2.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Dark Diffuse", &r3dGameLevel::Environment.WetWeaponDark, 0.25f, 1.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Gloss Boost", &r3dGameLevel::Environment.WetWeaponGlossBoost, 0.0f, 1.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Spec Power", &r3dGameLevel::Environment.WetWeaponSpecMul, 1.0f, 4.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Rain Streaks", &r3dGameLevel::Environment.WetWeaponStreaks, 0.0f, 2.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Scale", &r3dGameLevel::Environment.WetWeaponStreakScale, 4.0f, 128.0f, "%-02.2f", 1 );
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Speed", &r3dGameLevel::Environment.WetWeaponStreakSpeed, 0.0f, 4.0f, "%-02.2f", 1 );
-
-			r3dGameLevel::Environment.ClampWeatherState();
-
-			SliderY += 10.0f;
-
-				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
-				{
-					InSelectParticleMode = true ;
-					valueChanged = true ;
-				}
-				SliderY += 22.f ;
-
-				static char ParticlePath[ MAX_PATH ] ;
-
-				strcpy( ParticlePath, r3dGameLevel::Environment.RainParticleSystemName ) ;
-
-				if( InSelectParticleMode )
-				{
-					static float offset = 0.f ;
-
-					if (imgui_FileList(5, 80, 300, 380, "Data/Particles/*.prt", ParticlePath, &offset, false, valueChanged ))
-					{
-						for( int i = strlen( ParticlePath ) ; i >= 0 ; i -- )
-						{
-							if( ParticlePath[ i ] == '.' )
-							{
-								ParticlePath[ i ] = 0 ;
-								break ;
-							}
-						}
-
-						r3dGameLevel::Environment.SetRainParticle( ParticlePath ) ;
-
-						InSelectParticleMode = 0 ;
-					}
-				}
-
-				char InfoLine[ 256 ] ;
-
-				sprintf( InfoLine, "Selected Particle: %s", ParticlePath ) ;
-
-				SliderY += imgui_Static( SliderX, SliderY, InfoLine ) ;
-
-				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Clear Rain Particle" ) )
-				{
-					r3dGameLevel::Environment.ClearRainParticle();
-				}
+				r3dGameLevel::Environment.SetRainParticle( ParticlePath );
+				InSelectParticleMode = false;
 			}
-			break ;
+
+			SliderY += 205.f;
+		}
+
+		char infoLine[ 256 ];
+		sprintf( infoLine, "Selected Particle: %s", r3dGameLevel::Environment.RainParticleSystemName );
+
+		SliderY += imgui_Static( SliderX, SliderY, infoLine, 360 );
+
+		if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Clear Rain Particle" ) )
+		{
+			r3dGameLevel::Environment.ClearRainParticle();
+			ParticlePath[ 0 ] = 0;
+		}
+		SliderY += 24.f;
+
+		g_pDesktopManager->End();
+	}
+	break;
 
 	} //switch edit mode
 }
