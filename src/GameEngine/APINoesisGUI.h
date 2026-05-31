@@ -47,6 +47,8 @@ private:
 	typedef void (__cdecl* FN_WarNoesis_Update)(double timeSeconds);
 	typedef void (__cdecl* FN_WarNoesis_Render)();
 	typedef int  (__cdecl* FN_WarNoesis_IsLoaded)();
+	typedef void (__cdecl* FN_WarNoesisCommandCallback)(const char* command, const char* value);
+	typedef void (__cdecl* FN_WarNoesis_SetCommandCallback)(FN_WarNoesisCommandCallback callback);
 
 	typedef int (__cdecl* FN_WarNoesis_MouseMove)(int x, int y);
 	typedef int (__cdecl* FN_WarNoesis_MouseButtonDown)(int x, int y, int button);
@@ -64,6 +66,7 @@ private:
 	FN_WarNoesis_Update FnUpdate;
 	FN_WarNoesis_Render FnRender;
 	FN_WarNoesis_IsLoaded FnIsLoaded;
+	FN_WarNoesis_SetCommandCallback FnSetCommandCallback;
 
 	FN_WarNoesis_MouseMove FnMouseMove;
 	FN_WarNoesis_MouseButtonDown FnMouseButtonDown;

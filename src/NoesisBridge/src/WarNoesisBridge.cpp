@@ -17,11 +17,15 @@
 #include <NsGui/IRenderer.h>
 #include <NsGui/InputEnums.h>
 #include <NsGui/FontProperties.h>
+#include <NsGui/Button.h>
+#include <NsGui/BaseButton.h>
+#include <NsGui/RoutedEvent.h>
 
 #include "NoesisLicense.h"
 
 static Noesis::Ptr<Noesis::FrameworkElement> gRoot;
 static Noesis::Ptr<Noesis::IView> gView;
+static WarNoesisCommandCallback gCommandCallback = NULL;
 
 static int gInitialized = 0;
 static int gLoaded = 0;
@@ -34,6 +38,73 @@ static void BridgeLog(const char* text)
 {
 	OutputDebugStringA(text);
 	OutputDebugStringA("\n");
+}
+
+static void EmitEditorCommand(const char* command, const char* value)
+{
+	if(!command || !command[0])
+		return;
+
+	char buffer[1024];
+	_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: command=%s value=%s", command, value ? value : "");
+	buffer[sizeof(buffer) - 1] = 0;
+	BridgeLog(buffer);
+
+	if(gCommandCallback)
+		gCommandCallback(command, value ? value : "");
+}
+
+static void OnEditorButtonClick(Noesis::BaseComponent* sender, const Noesis::RoutedEventArgs& args)
+{
+	Noesis::FrameworkElement* element = Noesis::DynamicCast<Noesis::FrameworkElement*>(sender);
+
+	if(!element)
+		return;
+
+	const char* name = element->GetName();
+
+	if(!name || !name[0])
+		return;
+
+	EmitEditorCommand(name, "");
+}
+
+static void BindEditorButton(const char* name)
+{
+	if(!gRoot || !name || !name[0])
+		return;
+
+	Noesis::Button* button = gRoot->FindName<Noesis::Button>(name);
+
+	if(!button)
+		return;
+
+	button->Click() += Noesis::RoutedEventHandler(&OnEditorButtonClick);
+}
+
+static void BindEditorControls()
+{
+	BindEditorButton("BtnSettings");
+	BindEditorButton("BtnTerrain");
+	BindEditorButton("BtnObjects");
+	BindEditorButton("BtnMaterials");
+	BindEditorButton("BtnEnvironment");
+	BindEditorButton("BtnCollections");
+	BindEditorButton("BtnDecorators");
+	BindEditorButton("BtnRoads");
+	BindEditorButton("BtnGameplay");
+	BindEditorButton("BtnPostFX");
+	BindEditorButton("BtnColorCorrection");
+
+	BindEditorButton("BtnSystemSettings");
+	BindEditorButton("BtnOptionsMenu");
+	BindEditorButton("BtnSaveMap");
+	BindEditorButton("BtnSaveGlobal");
+
+	BindEditorButton("BtnCamera");
+	BindEditorButton("BtnMap");
+	BindEditorButton("BtnShadows");
+	BindEditorButton("BtnMisc");
 }
 
 static void NoesisLogHandler(const char* file, uint32_t line, uint32_t level, const char* channel, const char* message)
@@ -299,6 +370,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 	gLoaded = 0;
 
 	BridgeLog("WarNoesisBridge: Shutdown OK");
+	gCommandCallback = NULL;
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
@@ -359,6 +431,8 @@ WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
 	gView->SetSize((uint32_t)gWidth, (uint32_t)gHeight);
 	gView->Activate();
 
+	BindEditorControls();
+
 	gLoaded = 1;
 
 	BridgeLog("WarNoesisBridge: XAML loaded OK");
@@ -415,6 +489,11 @@ WAR_NOESIS_API void __cdecl WarNoesis_Render()
 WAR_NOESIS_API int __cdecl WarNoesis_IsLoaded()
 {
 	return gLoaded;
+}
+
+WAR_NOESIS_API void __cdecl WarNoesis_SetCommandCallback(WarNoesisCommandCallback callback)
+{
+	gCommandCallback = callback;
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_MouseMove(int x, int y)

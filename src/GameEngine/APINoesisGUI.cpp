@@ -23,6 +23,62 @@ static bool r3dNoesisMsgProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return gNoesisGUI->ProcessWindowMessage(uMsg, wParam, lParam);
 }
 
+static void __cdecl r3dNoesisEditorCommandCallback(const char* command, const char* value)
+{
+	if(!command || !command[0])
+		return;
+
+	r3dOutToLog("NoesisEditorCommand: %s value=%s\n", command, value ? value : "");
+
+	if(strcmp(command, "BtnSaveMap") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: SAVE MAP requested\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnSaveGlobal") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: SAVE GLOBAL requested\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnTerrain") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Terrain\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnObjects") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Objects\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnMaterials") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Materials\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnEnvironment") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Environment\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnRoads") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Roads\n");
+		return;
+	}
+
+	if(strcmp(command, "BtnGameplay") == 0)
+	{
+		r3dOutToLog("NoesisEditorCommand: switch tab Gameplay\n");
+		return;
+	}
+}
+
 APINoesisGUI::APINoesisGUI()
 {
 	DllHandle = NULL;
@@ -35,6 +91,7 @@ APINoesisGUI::APINoesisGUI()
 	FnUpdate = NULL;
 	FnRender = NULL;
 	FnIsLoaded = NULL;
+	FnSetCommandCallback = NULL;
 
 	FnMouseMove = NULL;
 	FnMouseButtonDown = NULL;
@@ -77,6 +134,7 @@ bool APINoesisGUI::Init()
 	FnUpdate = (FN_WarNoesis_Update)GetProcAddress(dll, "WarNoesis_Update");
 	FnRender = (FN_WarNoesis_Render)GetProcAddress(dll, "WarNoesis_Render");
 	FnIsLoaded = (FN_WarNoesis_IsLoaded)GetProcAddress(dll, "WarNoesis_IsLoaded");
+	FnSetCommandCallback = (FN_WarNoesis_SetCommandCallback)GetProcAddress(dll, "WarNoesis_SetCommandCallback");
 
 	FnMouseMove = (FN_WarNoesis_MouseMove)GetProcAddress(dll, "WarNoesis_MouseMove");
 	FnMouseButtonDown = (FN_WarNoesis_MouseButtonDown)GetProcAddress(dll, "WarNoesis_MouseButtonDown");
@@ -110,6 +168,9 @@ bool APINoesisGUI::Init()
 		return false;
 	}
 
+	if(FnSetCommandCallback)
+		FnSetCommandCallback(r3dNoesisEditorCommandCallback);
+
 	RegisterMsgProc(r3dNoesisMsgProc);
 	MsgProcRegistered = true;
 
@@ -134,6 +195,9 @@ void APINoesisGUI::Shutdown()
 	if(FnShutdown)
 		FnShutdown();
 
+	if(FnSetCommandCallback)
+		FnSetCommandCallback(NULL);
+
 	FreeLibrary((HMODULE)DllHandle);
 
 	DllHandle = NULL;
@@ -146,6 +210,7 @@ void APINoesisGUI::Shutdown()
 	FnUpdate = NULL;
 	FnRender = NULL;
 	FnIsLoaded = NULL;
+	FnSetCommandCallback = NULL;
 
 	FnMouseMove = NULL;
 	FnMouseButtonDown = NULL;
