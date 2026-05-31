@@ -429,7 +429,7 @@ void game::PreInit()
 
 	g_HardwareInfo.Grab();
 
-	win::hWinIcon  = NULL;
+	win::hWinIcon = ::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARINC));
 	win::szWinName = GetBuildVersionString();
 
 #ifdef FINAL_BUILD

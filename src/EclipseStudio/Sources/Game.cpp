@@ -652,6 +652,8 @@ void SyncLightingAndSSAO()
 	}
 }
 
+static void ProcessNoesisEditorCommands();
+static void RenderNoesisEditorDebug();
 void GameStateGameLoop()
 {
 
@@ -888,6 +890,7 @@ void GameStateGameLoop()
 
 			R3DPROFILE_START("SysInfo Render");
 			DrawSysInfo();
+			RenderNoesisEditorDebug();
 			R3DPROFILE_END("SysInfo Render");
 		}
 		R3DPROFILE_END("HudGui Render");
@@ -1231,6 +1234,38 @@ static void ProcessNoesisEditorCommands()
 	}
 }
 
+static void UpdateNoesisEditorUI()
+{
+	if(!gNoesisGUI)
+		return;
+
+	if(!gNoesisGUI->IsLoaded())
+		return;
+
+	gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+	gNoesisGUI->Update(r3dGetTime());
+}
+
+static void RenderNoesisEditorDebug()
+{
+#ifndef FINAL_BUILD
+	if(!gNoesisGUI)
+		return;
+
+	const char* lastCommand = r3dNoesisGetLastEditorCommand();
+
+	Font_Label->PrintF(
+		10,
+		95,
+		r3dColor(0, 255, 0),
+		"NOESIS UI: init=%d loaded=%d last_cmd=%s",
+		gNoesisGUI->IsInitialized() ? 1 : 0,
+		gNoesisGUI->IsLoaded() ? 1 : 0,
+		lastCommand && lastCommand[0] ? lastCommand : "none"
+	);
+#endif
+}
+
 void PlayEditor()
 {
 #ifndef FINAL_BUILD
@@ -1259,8 +1294,6 @@ void PlayEditor()
 	{
 		UpdateAutoProfile();
 
-		ProcessNoesisEditorCommands();
-
 		r3dStartFrame();
 
 		ClearBackBufferFringes();
@@ -1269,9 +1302,13 @@ void PlayEditor()
 
 		InputUpdate();
 
+		UpdateNoesisEditorUI();
+
 		g_Manipulator3d.Update();
 
 		GameFrameStart();
+
+		ProcessNoesisEditorCommands();
 
 		extern bool g_bStartedAsParticleEditor;
 		if ( !( g_bStartedAsParticleEditor && CurHUDID == 3 ) )

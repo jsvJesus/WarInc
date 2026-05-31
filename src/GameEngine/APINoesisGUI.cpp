@@ -16,6 +16,7 @@ struct r3dNoesisEditorCommand
 static r3dNoesisEditorCommand gNoesisEditorCommands[64];
 static volatile LONG gNoesisEditorCommandWrite = 0;
 static volatile LONG gNoesisEditorCommandRead = 0;
+static char gNoesisLastEditorCommand[128] = "";
 
 static void r3dNoesisPushEditorCommand(const char* command, const char* value)
 {
@@ -49,6 +50,8 @@ static void __cdecl r3dNoesisEditorCommandCallback(const char* command, const ch
 {
 	if(!command || !command[0])
 		return;
+
+	r3dscpy(gNoesisLastEditorCommand, command);
 
 	r3dOutToLog("NoesisEditorCommand queued: %s value=%s\n", command, value ? value : "");
 
@@ -201,6 +204,7 @@ void APINoesisGUI::Shutdown()
 
 	gNoesisEditorCommandWrite = 0;
 	gNoesisEditorCommandRead = 0;
+	gNoesisLastEditorCommand[0] = 0;
 
 	r3dOutToLog("NoesisBridge: Shutdown OK\n");
 }
@@ -398,6 +402,11 @@ bool APINoesisGUI::PopEditorCommand(char* command, int commandSize, char* value,
 	InterlockedIncrement(&gNoesisEditorCommandRead);
 
 	return true;
+}
+
+const char* r3dNoesisGetLastEditorCommand()
+{
+	return gNoesisLastEditorCommand;
 }
 
 bool r3dNoesisPopEditorCommand(char* command, int commandSize, char* value, int valueSize)

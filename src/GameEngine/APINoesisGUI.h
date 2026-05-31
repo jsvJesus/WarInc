@@ -89,6 +89,7 @@ void r3dNoesisGUICreate();
 void r3dNoesisGUIDestroy();
 void r3dNoesisGUIReset();
 
+const char* r3dNoesisGetLastEditorCommand();
 bool r3dNoesisPopEditorCommand(char* command, int commandSize, char* value, int valueSize);
 
 #endif

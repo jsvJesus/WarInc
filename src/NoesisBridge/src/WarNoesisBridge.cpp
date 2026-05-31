@@ -66,6 +66,11 @@ static void OnEditorButtonClick(Noesis::BaseComponent* sender, const Noesis::Rou
 	if(!name || !name[0])
 		return;
 
+	char buffer[512];
+	_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: button click %s", name);
+	buffer[sizeof(buffer) - 1] = 0;
+	BridgeLog(buffer);
+
 	EmitEditorCommand(name, "");
 }
 
@@ -77,9 +82,20 @@ static void BindEditorButton(const char* name)
 	Noesis::Button* button = gRoot->FindName<Noesis::Button>(name);
 
 	if(!button)
+	{
+		char buffer[512];
+		_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: button missing %s", name);
+		buffer[sizeof(buffer) - 1] = 0;
+		BridgeLog(buffer);
 		return;
+	}
 
 	button->Click() += Noesis::RoutedEventHandler(&OnEditorButtonClick);
+
+	char buffer[512];
+	_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: button bound %s", name);
+	buffer[sizeof(buffer) - 1] = 0;
+	BridgeLog(buffer);
 }
 
 static void BindEditorControls()
