@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{d97f1d49-6219-4e00-917b-5f0c358743d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{234bd8ba-ed2a-4555-8768-60906adaeb06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{e36c96ee-4271-448f-801d-51d55be953bb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\BrushShaders\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Data\Exo-SemiBold.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Data\fill-blue.png">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Data\fill-gold.png">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BrushShaders\Src\Noise.noesisbrush">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

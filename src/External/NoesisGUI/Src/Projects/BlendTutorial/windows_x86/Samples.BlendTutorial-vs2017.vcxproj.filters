@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{95a9a592-f46c-42de-b04e-e2bde9534c5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{15c6c1fd-537c-4840-a83d-b902c5013054}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{8d60664c-dba7-4386-b970-6f8ee6cffa1b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\BlendTutorial\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\BlendTutorial\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BlendTutorial\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BlendTutorial\Data\ColorSelector.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BlendTutorial\Data\Resources.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BlendTutorial\Data\Fonts\WeblySleek_UI_Normal.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

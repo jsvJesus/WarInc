@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{74f765a9-54c8-4ccb-b2d8-e5591e3f5b9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{77bee7d1-528e-43b9-b635-cc4c62f01980}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{37945e9a-5e61-446d-b9a3-274e52c2c38a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\BackgroundBlur\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Resources.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Rajdhani-SemiBold.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Background.jpg">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

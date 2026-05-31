@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{6399b8bc-8d80-40c4-b0ce-e0d1d63ee0dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{4536dc45-8551-4700-9d26-65a40c456cba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{ff13e866-22c0-43bd-80cf-319a3b1d0134}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\Integration\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\Integration\Src\Settings.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\Integration\Src\HermeneusOne-Regular.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

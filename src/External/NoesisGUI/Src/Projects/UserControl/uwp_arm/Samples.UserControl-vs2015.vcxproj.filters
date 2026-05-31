@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{5bdcf74f-18bf-4a42-8dd9-db8ed8c08cd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{f1a3f9ab-6e1e-4f60-83ae-53aac856c111}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{2aee1f70-eeeb-4efe-9f8f-3a99d2f1765c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\UserControl\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\UserControl\Src\NumericUpDown.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\UserControl\Src\NumericUpDown.xaml.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <AppxManifest Include="Package.appxmanifest">
+      <Filter>Resources</Filter>
+    </AppxManifest>
+    <Image Include="SplashScreen.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square71x71Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square150x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square310x310Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="StoreLogo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Wide310x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <CustomBuild Include="..\..\..\Packages\Samples\UserControl\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\UserControl\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\UserControl\Data\NumericUpDown.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\UserControl\Data\Aero Matics Regular.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

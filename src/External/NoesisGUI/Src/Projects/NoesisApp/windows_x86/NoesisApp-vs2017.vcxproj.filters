@@ -1,0 +1,1381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="App">
+      <UniqueIdentifier>{c0e867a8-f1f5-4456-85ff-3d455ccda90d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render">
+      <UniqueIdentifier>{b10f7619-40c3-4be9-90ec-0884432e7499}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Display">
+      <UniqueIdentifier>{d6921c6c-59f2-4c84-9c08-565a221376c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Display\Include">
+      <UniqueIdentifier>{7cc142aa-c69c-4466-8955-fcc50e640c4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Display\Src">
+      <UniqueIdentifier>{788c54ed-afbe-4b7f-978a-063d52ef3372}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Win32Display">
+      <UniqueIdentifier>{1fa66386-4ab7-4cfc-9c0c-50021494f828}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Win32Display\Src">
+      <UniqueIdentifier>{76e39e37-bebe-4ec6-9c73-95566ecfb270}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Launcher">
+      <UniqueIdentifier>{2a6b4980-be6d-4757-b11d-ab27b9adb81b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Launcher\Include">
+      <UniqueIdentifier>{ffa20fc1-e2ea-4704-aa75-570a1b57b9bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Launcher\Src">
+      <UniqueIdentifier>{4963cfbd-4510-4b69-8e93-ab96caec71fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Providers">
+      <UniqueIdentifier>{2fba597f-3ce5-4c28-a0d9-757142622208}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Providers\Include">
+      <UniqueIdentifier>{92cfeb50-81aa-49eb-94a5-bdb0a1698eac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Providers\Src">
+      <UniqueIdentifier>{30655fcc-183a-455f-ad3b-ab49538a4bd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\DisplayLauncher">
+      <UniqueIdentifier>{6a99f0a0-4224-4dbc-b4c1-b5f72abab818}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\DisplayLauncher\Include">
+      <UniqueIdentifier>{c9cd41b3-fe08-4e26-948d-2d8af4880985}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\DisplayLauncher\Src">
+      <UniqueIdentifier>{d0b9929d-6eb3-4a8a-89cc-151ee1c78ec5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Theme">
+      <UniqueIdentifier>{1ce28318-af24-4d39-b0d9-0ff02ef433dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Theme\Include">
+      <UniqueIdentifier>{17dcdfd7-c873-41ef-aab6-b52c306c5c95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Theme\Src">
+      <UniqueIdentifier>{0c094ff0-f17b-4aa2-b524-09bbc60648a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Theme\Data">
+      <UniqueIdentifier>{416a1315-a036-4c0e-bf55-5b2f6cf9ec1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServer">
+      <UniqueIdentifier>{ac6d6cf4-4ee1-4bf6-8261-e3d90630b490}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServer\Include">
+      <UniqueIdentifier>{a353d8e0-b6a1-41b7-b4c9-eee43b7f8e8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServer\Src">
+      <UniqueIdentifier>{f162add1-2d81-4e21-86fe-60dd83fc56af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Shaders">
+      <UniqueIdentifier>{d27d8bbe-4a39-43cf-b492-401912ddfa6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Shaders\Include">
+      <UniqueIdentifier>{f2cf2db8-d953-4e99-8159-8c41464cd215}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Shaders\Src">
+      <UniqueIdentifier>{de0e2ff0-2dd7-4b15-b85a-f1206edfc4e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Shaders\Data">
+      <UniqueIdentifier>{713ead23-c180-4d55-917c-94cf7aa55349}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServerHelpers">
+      <UniqueIdentifier>{67bf36a3-ad56-4795-aee3-b9728682c8be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServerHelpers\Include">
+      <UniqueIdentifier>{048bea05-dd92-47fc-9cea-fd856365ae29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\LangServerHelpers\Src">
+      <UniqueIdentifier>{fd480110-5248-4741-b816-8fecc03cb2a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\ApplicationLauncher">
+      <UniqueIdentifier>{b7a31400-44b4-4998-9c98-556d1da59752}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\ApplicationLauncher\Include">
+      <UniqueIdentifier>{f620382c-eddd-4818-ac56-10acacc91d55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\ApplicationLauncher\Src">
+      <UniqueIdentifier>{5157a5a1-9f4e-4234-8c67-218f52423e5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\ApplicationLauncher\Data">
+      <UniqueIdentifier>{747c439e-6eac-41d8-b572-b4ee8866b224}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\MediaElement">
+      <UniqueIdentifier>{3be4fda3-d817-44d5-92e9-beffc07bc214}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\MediaElement\Include">
+      <UniqueIdentifier>{75f647f5-a419-4643-94c6-90855d8b1950}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\MediaElement\Src">
+      <UniqueIdentifier>{fa243b22-23de-4610-b998-1a6700a23e99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Interactivity">
+      <UniqueIdentifier>{9ec1d8db-092e-4313-8a0d-61e195cc7ed2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Interactivity\Include">
+      <UniqueIdentifier>{55944485-53f8-4a51-882e-c1fd922b3107}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Interactivity\Src">
+      <UniqueIdentifier>{6e688aa5-12d4-4ff7-8d3a-123a03a2b01c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\RiveBase">
+      <UniqueIdentifier>{6c9cc089-4796-4743-af24-5a07932a79b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\RiveBase\Include">
+      <UniqueIdentifier>{2949797a-d70b-4cb5-b50d-bb2e8412ae8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\RiveBase\Src">
+      <UniqueIdentifier>{b5476d79-6440-4936-8606-2b879a9dac44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Rive">
+      <UniqueIdentifier>{386ef2bd-02f4-456f-9c8a-ed4ba4757179}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Rive\Include">
+      <UniqueIdentifier>{ca40fd40-61c6-4ef4-b312-bcec45202bbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Rive\Src">
+      <UniqueIdentifier>{4e26322d-6894-4f61-be2d-54da59e49c7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\RenderContext">
+      <UniqueIdentifier>{9ac57bcf-4387-4529-ac62-9e7d012b0bee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\RenderContext\Include">
+      <UniqueIdentifier>{5d1065ac-1da4-4934-b527-e7bab2981bbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\RenderContext\Src">
+      <UniqueIdentifier>{002bdfbd-d15f-4945-bb57-4c7c516350bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\GLRenderDevice">
+      <UniqueIdentifier>{3edbf1d1-6557-4845-994a-20c2bab5acb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\GLRenderDevice\Include">
+      <UniqueIdentifier>{a092edb2-2530-4bf5-94d2-b0972914f938}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\GLRenderDevice\Src">
+      <UniqueIdentifier>{ace2ff2e-4e31-4a64-bdce-23d701bc9696}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\GLRenderContext">
+      <UniqueIdentifier>{1fa758fb-5601-4f7a-80e9-34a97de20d33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\GLRenderContext\Src">
+      <UniqueIdentifier>{33422e7d-4186-4dea-946b-e8befb85375f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D11RenderDevice">
+      <UniqueIdentifier>{ba7b747e-eb23-408f-ade3-31e219d4fb1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D11RenderDevice\Include">
+      <UniqueIdentifier>{e7c86f03-d4c5-4f21-926b-d04cef056bfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D11RenderDevice\Src">
+      <UniqueIdentifier>{dfa74826-28df-4350-a3f7-1896e465906f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D11RenderContext">
+      <UniqueIdentifier>{ceb57733-3953-44a8-ac0e-a139e2f67e27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D11RenderContext\Src">
+      <UniqueIdentifier>{939a079c-55e9-404b-9bcc-a2715ef71c0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D12RenderDevice">
+      <UniqueIdentifier>{10c81887-a473-4524-a324-0f4374f3d30a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D12RenderDevice\Include">
+      <UniqueIdentifier>{3a5de2b8-a316-439c-a291-f43d138fdde3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D12RenderDevice\Src">
+      <UniqueIdentifier>{41b76f95-59f0-434b-8af7-c796f55ca034}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D12RenderContext">
+      <UniqueIdentifier>{1bb0eb41-08a3-4288-afe8-0d9261c0dcc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\D3D12RenderContext\Src">
+      <UniqueIdentifier>{fae5bf98-8b0b-418a-bd4e-91262ad5bf03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\VKRenderDevice">
+      <UniqueIdentifier>{28273170-b93e-48c6-a830-a345439a1ef5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\VKRenderDevice\Include">
+      <UniqueIdentifier>{e6f35181-9dfd-4178-b0d0-7bfa08ebeb8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\VKRenderDevice\Src">
+      <UniqueIdentifier>{7094d665-7620-4c3a-88fd-574db5430d3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\VKRenderContext">
+      <UniqueIdentifier>{b4e58647-5cee-4fc8-8314-481fedce342d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\VKRenderContext\Src">
+      <UniqueIdentifier>{b6114e4a-2dba-4a18-8a9a-038d4df482da}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Packages\App\Display\Include\NsApp\Display.h">
+      <Filter>App\Display\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Display\Include\NsApp\DisplayApi.h">
+      <Filter>App\Display\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Display\Src\App.Display.cpp">
+      <Filter>App\Display\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Display\Src\Audio.h">
+      <Filter>App\Display\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Display\Src\Audio.mm.cpp">
+      <Filter>App\Display\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Display\Src\Display.cpp">
+      <Filter>App\Display\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Display\Src\dr_mp3.h">
+      <Filter>App\Display\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Display\Src\dr_wav.h">
+      <Filter>App\Display\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Display\Src\mini_al.h">
+      <Filter>App\Display\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Win32Display\Src\App.Win32Display.cpp">
+      <Filter>App\Win32Display\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Win32Display\Src\TSF.cpp">
+      <Filter>App\Win32Display\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Win32Display\Src\TSF.h">
+      <Filter>App\Win32Display\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Win32Display\Src\Win32Display.cpp">
+      <Filter>App\Win32Display\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Win32Display\Src\Win32Display.h">
+      <Filter>App\Win32Display\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Launcher\Include\NsApp\CommandLine.h">
+      <Filter>App\Launcher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Launcher\Include\NsApp\EntryPoint.h">
+      <Filter>App\Launcher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Launcher\Include\NsApp\Launcher.h">
+      <Filter>App\Launcher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Launcher\Include\NsApp\LauncherApi.h">
+      <Filter>App\Launcher\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Launcher\Src\App.Launcher.cpp">
+      <Filter>App\Launcher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Launcher\Src\CommandLine.cpp">
+      <Filter>App\Launcher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Launcher\Src\Launcher.cpp">
+      <Filter>App\Launcher\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\EmbeddedFontProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\EmbeddedTextureProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\EmbeddedXamlProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\FastLZ.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\FileSystemWatcher.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\FileTextureProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\Find.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\LocalFontProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\LocalTextureProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\LocalXamlProvider.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Include\NsApp\ProvidersApi.h">
+      <Filter>App\Providers\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\App.Providers.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\EmbeddedFontProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\EmbeddedTextureProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\EmbeddedXamlProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\FastLZ.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\FileSystemWatcher.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\FileTextureProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\Find.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\LocalFontProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\LocalTextureProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Providers\Src\LocalXamlProvider.cpp">
+      <Filter>App\Providers\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Src\ProviderFileWatcher.h">
+      <Filter>App\Providers\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Src\stb_image.h">
+      <Filter>App\Providers\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Providers\Src\stb_image_resize.h">
+      <Filter>App\Providers\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\DisplayLauncher\Include\NsApp\DisplayLauncher.h">
+      <Filter>App\DisplayLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\DisplayLauncher\Include\NsApp\DisplayLauncherApi.h">
+      <Filter>App\DisplayLauncher\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\DisplayLauncher\Src\App.DisplayLauncher.cpp">
+      <Filter>App\DisplayLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\DisplayLauncher\Src\DisplayLauncher.cpp">
+      <Filter>App\DisplayLauncher\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Theme\Include\NsApp\ThemeApi.h">
+      <Filter>App\Theme\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Theme\Include\NsApp\ThemeProviders.h">
+      <Filter>App\Theme\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Theme\Src\App.Theme.cpp">
+      <Filter>App\Theme\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Theme\Src\ThemeProviders.cpp">
+      <Filter>App\Theme\Src</Filter>
+    </ClCompile>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Styles.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Fonts.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Colors.Dark.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Colors.Light.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkRed.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightRed.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkGreen.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightGreen.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkBlue.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightBlue.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkOrange.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightOrange.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkEmerald.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightEmerald.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkPurple.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightPurple.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkCrimson.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightCrimson.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkLime.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightLime.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.DarkAqua.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.Brushes.LightAqua.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkRed.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightRed.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkGreen.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightGreen.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkBlue.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightBlue.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkOrange.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightOrange.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkEmerald.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightEmerald.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkPurple.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightPurple.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkCrimson.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightCrimson.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkLime.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightLime.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.DarkAqua.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\NoesisTheme.LightAqua.xaml">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\Fonts\PT Root UI_Regular.otf">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Theme\Data\Theme\Fonts\PT Root UI_Bold.otf">
+      <Filter>App\Theme\Data</Filter>
+    </CustomBuild>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Include\NsApp\LangServer.h">
+      <Filter>App\LangServer\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Include\NsApp\LangServerApi.h">
+      <Filter>App\LangServer\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\App.LangServer.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\CapabilityColor.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\CapabilityColor.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\CapabilityCompletion.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\CapabilityCompletion.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\CapabilityDiagnostics.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\CapabilityDiagnostics.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\Document.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\DocumentHelper.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\DocumentHelper.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\JsonBuilder.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\JsonBuilder.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\JsonObject.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\JsonObject.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\LangServer.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\LangServerReflectionHelper.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\LangServerReflectionHelper.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\LangServerSocket.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\LangServerSocket.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\LenientXamlParser.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\LenientXamlParser.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\LSPErrorCodes.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\MessageBuffer.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\MessageBuffer.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\MessageReader.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\MessageReader.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\MessageWriter.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\MessageWriter.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServer\Src\Workspace.cpp">
+      <Filter>App\LangServer\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServer\Src\Workspace.h">
+      <Filter>App\LangServer\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\BoxShadow.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\ConicGradientBrush.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\CrossFadeBrush.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\DirectionalBlurEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\MonochromeBrush.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\PinchEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\PixelateEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\PlasmaBrush.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\SaturationEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\ShadersApi.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\TintEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\VignetteEffect.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Include\NsApp\WavesBrush.h">
+      <Filter>App\Shaders\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\App.Effects.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\BoxShadow.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\ConicGradientBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\CrossFadeBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\DirectionalBlurEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\InnerShadowBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Src\InnerShadowBrush.h">
+      <Filter>App\Shaders\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\MonochromeBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\OuterShadowBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Shaders\Src\OuterShadowBrush.h">
+      <Filter>App\Shaders\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\PinchEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\PixelateEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\PlasmaBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\SaturationEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\TintEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\VignetteEffect.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Shaders\Src\WavesBrush.cpp">
+      <Filter>App\Shaders\Src</Filter>
+    </ClCompile>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Tint.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\DirectionalBlur.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Pinch.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Pixelate.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Saturation.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Vignette.noesiseffect">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Plasma.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\ConicGradient.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Monochrome.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\Waves.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\CrossFade.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\InnerShadow.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\Shaders\Src\OuterShadow.noesisbrush">
+      <Filter>App\Shaders\Data</Filter>
+    </CustomBuild>
+    <ClInclude Include="..\..\..\Packages\App\LangServerHelpers\Include\NsApp\LangServerHelpersApi.h">
+      <Filter>App\LangServerHelpers\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\LangServerHelpers\Include\NsApp\PreviewRenderer.h">
+      <Filter>App\LangServerHelpers\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\LangServerHelpers\Src\App.LangServerHelpers.cpp">
+      <Filter>App\LangServerHelpers\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\LangServerHelpers\Src\PreviewRenderer.cpp">
+      <Filter>App\LangServerHelpers\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\LangServerHelpers\Src\stb_image_write.h">
+      <Filter>App\LangServerHelpers\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\Application.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\ApplicationLauncher.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\ApplicationLauncherApi.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\DelegateCommand.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\LocExtension.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\MessageBox.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\NotifyPropertyChangedBase.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\RichText.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Include\NsApp\Window.h">
+      <Filter>App\ApplicationLauncher\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\App.ApplicationLauncher.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\Application.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\ApplicationLauncher.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\DelegateCommand.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\LocExtension.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\MessageBox.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\NotifyPropertyChangedBase.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\ApplicationLauncher\Src\renderdoc_app.h">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\RichText.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\ApplicationLauncher\Src\Window.cpp">
+      <Filter>App\ApplicationLauncher\Src</Filter>
+    </ClCompile>
+    <CustomBuild Include="..\..\..\Packages\App\ApplicationLauncher\Src\StatsOverlay.xaml">
+      <Filter>App\ApplicationLauncher\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\ApplicationLauncher\Src\MessageBox.xaml">
+      <Filter>App\ApplicationLauncher\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\ApplicationLauncher\Src\dripicons-v2.ttf">
+      <Filter>App\ApplicationLauncher\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\ApplicationLauncher\Src\ModeNine.ttf">
+      <Filter>App\ApplicationLauncher\Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\App\ApplicationLauncher\Src\generic.xaml">
+      <Filter>App\ApplicationLauncher\Data</Filter>
+    </CustomBuild>
+    <ClInclude Include="..\..\..\Packages\App\MediaElement\Include\NsApp\MediaElement.h">
+      <Filter>App\MediaElement\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\MediaElement\Include\NsApp\MediaElementApi.h">
+      <Filter>App\MediaElement\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\MediaElement\Include\NsApp\MediaPlayer.h">
+      <Filter>App\MediaElement\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\MediaElement\Src\App.MediaElement.cpp">
+      <Filter>App\MediaElement\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\MediaElement\Src\MediaElement.cpp">
+      <Filter>App\MediaElement\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\MediaElement\Src\MediaPlayer.cpp">
+      <Filter>App\MediaElement\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\AttachableCollection.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <None Include="..\..\..\Packages\App\Interactivity\Include\NsApp\AttachableCollection.inl">
+      <Filter>App\Interactivity\Include</Filter>
+    </None>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\AttachableObject.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\BackgroundEffectBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\Behavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\BehaviorCollection.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\ChangePropertyAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\CollectionFilterBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\CollectionSortBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\ComparisonCondition.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\ConditionalExpression.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\ConditionBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\ControlStoryboardAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\DataEventTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\DataTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\EventTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\EventTriggerBase.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\FilterPredicate.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\GamepadTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\GoToStateAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\IAttachedObject.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\Interaction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\InteractivityApi.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\InvokeCommandAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\KeyTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\LaunchUriOrFileAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\LineDecorationBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\LoadContentAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\MediaActions.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\MouseDragElementBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\MoveFocusAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\PlaySoundAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\PropertyChangedTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\RemoveElementAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\SelectAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\SelectAllAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\SetFocusAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\SortComparer.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StoryboardAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StoryboardCompletedTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StoryboardTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StringFilterPredicate.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StringSortComparer.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\StyleInteraction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TargetedTriggerAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TimerTrigger.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TranslateZoomRotateBehavior.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TriggerAction.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TriggerActionCollection.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TriggerBase.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Include\NsApp\TriggerCollection.h">
+      <Filter>App\Interactivity\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\App.Interactivity.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\AttachableObject.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\BackgroundEffectBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\Behavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\BehaviorCollection.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ChangePropertyAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\CollectionFilterBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\CollectionSortBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ComparisonCondition.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ComparisonLogic.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Src\ComparisonLogic.h">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ConditionalExpression.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ConditionBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\ControlStoryboardAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\DataBindingHelper.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Interactivity\Src\DataBindingHelper.h">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\DataEventTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\DataTrigger.Interactivity.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\EventTrigger.Interactivity.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\EventTriggerBase.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\FilterPredicate.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\GamepadTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\GoToStateAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\Interaction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\InvokeCommandAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\KeyTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\LaunchUriOrFileAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\LineDecorationBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\LoadContentAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\MediaActions.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\MouseDragElementBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\MoveFocusAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\PlaySoundAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\PropertyChangedTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\RemoveElementAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\SelectAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\SelectAllAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\SetFocusAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\SortComparer.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StoryboardAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StoryboardCompletedTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StoryboardTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StringFilterPredicate.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StringSortComparer.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\StyleInteraction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TargetedTriggerAction.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TimerTrigger.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TranslateZoomRotateBehavior.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TriggerAction.Interactivity.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TriggerActionCollection.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TriggerBase.Interactivity.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Interactivity\Src\TriggerCollection.cpp">
+      <Filter>App\Interactivity\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\RiveBase\Include\NsApp\RiveBaseApi.h">
+      <Filter>App\RiveBase\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\RiveBase\Include\NsApp\RiveControl.h">
+      <Filter>App\RiveBase\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\RiveBase\Include\NsApp\RiveInput.h">
+      <Filter>App\RiveBase\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\RiveBase\Include\NsApp\RiveRun.h">
+      <Filter>App\RiveBase\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\App.RiveBase.cpp">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\Rive.cpp">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\RiveBase\Src\Rive.h">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\RiveControl.cpp">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\RiveInput.cpp">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\RiveRun.cpp">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\RiveBase\Src\SheenBidi.c">
+      <Filter>App\RiveBase\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\App\Rive\Include\NsApp\RiveApi.h">
+      <Filter>App\Rive\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\App\Rive\Include\NsApp\RiveTriggerAction.h">
+      <Filter>App\Rive\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\App\Rive\Src\App.Rive.cpp">
+      <Filter>App\Rive\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\App\Rive\Src\RiveTriggerAction.cpp">
+      <Filter>App\Rive\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="pch.h">
+    </ClInclude>
+    <ClCompile Include="pch.cpp">
+    </ClCompile>
+    <ClCompile Include="register.cpp">
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\RenderContext\Include\NsRender\Image.h">
+      <Filter>Render\RenderContext\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\RenderContext\Include\NsRender\RenderContext.h">
+      <Filter>Render\RenderContext\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\RenderContext\Include\NsRender\RenderContextApi.h">
+      <Filter>Render\RenderContext\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\RenderContext\Src\Image.cpp">
+      <Filter>Render\RenderContext\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Render\RenderContext\Src\Render.RenderContext.cpp">
+      <Filter>Render\RenderContext\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Render\RenderContext\Src\RenderContext.cpp">
+      <Filter>Render\RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Include\NsRender\GLFactory.h">
+      <Filter>Render\GLRenderDevice\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Include\NsRender\GLRenderDeviceApi.h">
+      <Filter>Render\GLRenderDevice\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\glext.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\GLHeaders.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\GLImports.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\GLRenderDevice\Src\GLRenderDevice.cpp">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\GLRenderDevice.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\GLRenderDevice\Src\Render.GLRenderDevice.cpp">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.100es.frag.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.100es.vert.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.140.frag.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.140.stereo.vert.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.140.vert.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.300es.frag.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.300es.stereo.vert.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderDevice\Src\Shader.300es.vert.h">
+      <Filter>Render\GLRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderContext\Src\glext.h">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderContext\Src\GLHeaders.h">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderContext\Src\GLRenderContext.h">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\GLRenderContext\Src\GLRenderContext.mm.cpp">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Render\GLRenderContext\Src\Render.GLRenderContext.cpp">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\GLRenderContext\Src\wglext.h">
+      <Filter>Render\GLRenderContext\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderDevice\Include\NsRender\D3D11Factory.h">
+      <Filter>Render\D3D11RenderDevice\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderDevice\Include\NsRender\D3D11RenderDeviceApi.h">
+      <Filter>Render\D3D11RenderDevice\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D11RenderDevice\Src\D3D11RenderDevice.cpp">
+      <Filter>Render\D3D11RenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderDevice\Src\D3D11RenderDevice.h">
+      <Filter>Render\D3D11RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D11RenderDevice\Src\Render.D3D11RenderDevice.cpp">
+      <Filter>Render\D3D11RenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderDevice\Src\Shaders.h">
+      <Filter>Render\D3D11RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D11RenderContext\Src\D3D11MediaPlayer.cpp">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderContext\Src\D3D11MediaPlayer.h">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D11RenderContext\Src\D3D11RenderContext.cpp">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderContext\Src\D3D11RenderContext.h">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D11RenderContext\Src\Render.D3D11RenderContext.cpp">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderContext\Src\VideoPS.h">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D11RenderContext\Src\VideoVS.h">
+      <Filter>Render\D3D11RenderContext\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Include\NsRender\D3D12Factory.h">
+      <Filter>Render\D3D12RenderDevice\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Include\NsRender\D3D12RenderDeviceApi.h">
+      <Filter>Render\D3D12RenderDevice\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\D3D12RenderDevice.cpp">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\D3D12RenderDevice.h">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\Render.D3D12RenderDevice.cpp">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\Shaders.h">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\Shaders_x.h">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderDevice\Src\Shaders_xs.h">
+      <Filter>Render\D3D12RenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D12RenderContext\Src\D3D12MediaPlayer.cpp">
+      <Filter>Render\D3D12RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderContext\Src\D3D12MediaPlayer.h">
+      <Filter>Render\D3D12RenderContext\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D12RenderContext\Src\D3D12RenderContext.cpp">
+      <Filter>Render\D3D12RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\D3D12RenderContext\Src\D3D12RenderContext.h">
+      <Filter>Render\D3D12RenderContext\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\D3D12RenderContext\Src\Render.D3D12RenderContext.cpp">
+      <Filter>Render\D3D12RenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\VKRenderDevice\Include\NsRender\VKFactory.h">
+      <Filter>Render\VKRenderDevice\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Render\VKRenderDevice\Include\NsRender\VKRenderDeviceApi.h">
+      <Filter>Render\VKRenderDevice\Include</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\VKRenderDevice\Src\Render.VKRenderDevice.cpp">
+      <Filter>Render\VKRenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\VKRenderDevice\Src\Shaders.h">
+      <Filter>Render\VKRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\VKRenderDevice\Src\VKRenderDevice.cpp">
+      <Filter>Render\VKRenderDevice\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\VKRenderDevice\Src\VKRenderDevice.h">
+      <Filter>Render\VKRenderDevice\Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Render\VKRenderContext\Src\Render.VKRenderContext.cpp">
+      <Filter>Render\VKRenderContext\Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Render\VKRenderContext\Src\VKRenderContext.cpp">
+      <Filter>Render\VKRenderContext\Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Render\VKRenderContext\Src\VKRenderContext.h">
+      <Filter>Render\VKRenderContext\Src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -170,6 +170,11 @@ static int ModernColorByte(float v)
 	return ModernClampInt((int)(v + 0.5f), 0, 255);
 }
 
+static bool ModernSameColor(const r3dColor& a, const r3dColor& b)
+{
+	return a.R == b.R && a.G == b.G && a.B == b.B && a.A == b.A;
+}
+
 static r3dColor ModernMultiplyColor(const r3dColor& color, float rMul, float gMul, float bMul, float aMul)
 {
 	return r3dColor(
@@ -188,22 +193,32 @@ static void ApplyModernFeatureSwitches()
 	if(!r_modern_force_postfx->GetBool())
 		return;
 
-	LevelBloom = r_modern_bloom_power->GetFloat() > 0.001f ? 1 : 0;
-	LevelSunRays = r_modern_sun_rays->GetInt() ? 1 : 0;
+	const int ssaoEnabled = r_modern_ssao_radius->GetFloat() > 0.001f ? 1 : 0;
+	const int bloomEnabled = r_modern_bloom_power->GetFloat() > 0.001f ? 1 : 0;
 
-	r_bloom->SetInt(LevelBloom);
-	r_glow->SetInt(r_modern_glow_amplify->GetFloat() > 0.001f ? 1 : 0);
-	r_sun_rays->SetInt(r_modern_sun_rays->GetInt() ? 1 : 0);
+	LevelBloom = bloomEnabled;
+	LevelSunRays = 0;
+	LevelDOF = 0;
+	FilmGrainOn = 0;
 
-	r_ssao->SetInt(1);
-	r_ssao_method->SetInt(SSM_HQ);
-	r_optimized_ssao->SetInt(1);
-	r_half_scale_ssao->SetInt(0);
-
+	r_ssao->SetInt(ssaoEnabled);
+	r_bloom->SetInt(bloomEnabled);
+	r_glow->SetInt(0);
+	r_sun_rays->SetInt(0);
+	r_dof->SetInt(0);
+	r_film_grain->SetInt(0);
 	r_fxaa->SetInt(0);
+	r_mlaa->SetInt(0);
 
-	extern int __SSAOBlurEnable;
-	__SSAOBlurEnable = 1;
+	if(ssaoEnabled)
+	{
+		r_ssao_method->SetInt(SSM_HQ);
+		r_optimized_ssao->SetInt(1);
+		r_half_scale_ssao->SetInt(0);
+
+		extern int __SSAOBlurEnable;
+		__SSAOBlurEnable = 1;
+	}
 }
 
 static void ApplyModernFilmToneConstants()
@@ -211,49 +226,49 @@ static void ApplyModernFilmToneConstants()
 	if(!r_modern_graphics->GetBool())
 		return;
 
-	r_film_tone_a->SetFloat(r_modern_film_a->GetFloat());
-	r_film_tone_b->SetFloat(r_modern_film_b->GetFloat());
-	r_film_tone_c->SetFloat(r_modern_film_c->GetFloat());
-	r_film_tone_d->SetFloat(r_modern_film_d->GetFloat());
-	r_film_tone_e->SetFloat(r_modern_film_e->GetFloat());
-	r_film_tone_f->SetFloat(r_modern_film_f->GetFloat());
+	r_film_tone_a->SetFloat(ModernClampFloat(r_modern_film_a->GetFloat(), 0.01f, 1.00f));
+	r_film_tone_b->SetFloat(ModernClampFloat(r_modern_film_b->GetFloat(), 0.01f, 1.00f));
+	r_film_tone_c->SetFloat(ModernClampFloat(r_modern_film_c->GetFloat(), 0.00f, 1.00f));
+	r_film_tone_d->SetFloat(ModernClampFloat(r_modern_film_d->GetFloat(), 0.00f, 1.00f));
+	r_film_tone_e->SetFloat(ModernClampFloat(r_modern_film_e->GetFloat(), 0.00f, 1.00f));
+	r_film_tone_f->SetFloat(ModernClampFloat(r_modern_film_f->GetFloat(), 0.01f, 1.00f));
 
-	r_exposure_bias->SetFloat(r_modern_exposure_bias->GetFloat());
-	r_white_level->SetFloat(r_modern_white_level->GetFloat());
+	r_exposure_bias->SetFloat(ModernClampFloat(r_modern_exposure_bias->GetFloat(), -2.00f, 2.00f));
+	r_white_level->SetFloat(ModernClampFloat(r_modern_white_level->GetFloat(), 1.00f, 32.00f));
 
-	r_light_adapt_speed_pos->SetFloat(1.65f);
-	r_light_adapt_speed_neg->SetFloat(1.25f);
+	r_light_adapt_speed_pos->SetFloat(1.35f);
+	r_light_adapt_speed_neg->SetFloat(1.15f);
 }
 
 static void ApplyModernSSAOTuningTo(SSAOSettings& sts, int detail)
 {
-	const float radius = ModernClampFloat(r_modern_ssao_radius->GetFloat(), 0.1f, 1.5f);
-	const float depthRange = ModernClampFloat(r_modern_ssao_depth_range->GetFloat(), 0.05f, 2.2f);
-	const float brightness = ModernClampFloat(r_modern_ssao_brightness->GetFloat(), 0.0f, 2.0f);
-	const float contrast = ModernClampFloat(r_modern_ssao_contrast->GetFloat(), 0.0f, 2.0f);
-	const float detailStrength = ModernClampFloat(r_modern_ssao_detail_strength->GetFloat(), 0.0f, 2.0f);
-	const float blurStrength = ModernClampFloat(r_modern_ssao_blur_strength->GetFloat(), 0.0f, 1.0f);
+	const float radius = ModernClampFloat(r_modern_ssao_radius->GetFloat(), 0.05f, 1.50f);
+	const float depthRange = ModernClampFloat(r_modern_ssao_depth_range->GetFloat(), 0.05f, 2.00f);
+	const float brightness = ModernClampFloat(r_modern_ssao_brightness->GetFloat(), 0.05f, 2.00f);
+	const float contrast = ModernClampFloat(r_modern_ssao_contrast->GetFloat(), 0.10f, 2.50f);
+	const float detailStrength = ModernClampFloat(r_modern_ssao_detail_strength->GetFloat(), 0.00f, 1.50f);
+	const float blurStrength = ModernClampFloat(r_modern_ssao_blur_strength->GetFloat(), 0.00f, 1.00f);
 
 	sts.Radius = radius;
 	sts.DepthRange = depthRange;
 	sts.Brightness = brightness;
 	sts.Contrast = contrast;
 
-	sts.BlurDepthSensitivity = 24.0f;
+	sts.BlurDepthSensitivity = 18.0f;
 	sts.BlurStrength = blurStrength;
-	sts.RadiusExpandStart = 18.0f;
-	sts.RadiusExpandCoef = 0.018f;
+	sts.RadiusExpandStart = 22.0f;
+	sts.RadiusExpandCoef = 0.014f;
 
 	sts.TemporalTolerance = 3.0f;
 	sts.TemporalHistoryDepth = 8.0f;
 
 	sts.DetailPathEnable = detail ? 1 : 0;
-	sts.DetailRadius = 0.28f;
-	sts.DetailDepthRange = 2.6f;
 	sts.DetailStrength = detail ? detailStrength : 0.0f;
+	sts.DetailRadius = 0.22f;
+	sts.DetailDepthRange = 2.20f;
 	sts.DetailRadiusExpandStart = 0.0f;
 	sts.DetailRadiusExpandCoef = 0.0f;
-	sts.DetailFadeOut = 14.0f;
+	sts.DetailFadeOut = 18.0f;
 
 	sts.BlurTapCount = 4;
 	sts.BlurPassCount = 1;
@@ -262,6 +277,9 @@ static void ApplyModernSSAOTuningTo(SSAOSettings& sts, int detail)
 static void ApplyModernSSAOTuning()
 {
 	if(!r_modern_graphics->GetBool())
+		return;
+
+	if(r_modern_ssao_radius->GetFloat() <= 0.001f)
 		return;
 
 	ApplyModernSSAOTuningTo(g_SSAOSettings[SSM_REF], 0);
@@ -276,25 +294,25 @@ void ApplyModernBloomSettings()
 
 	PFX_ExtractBloom::Settings bloom = gPFX_ExtractBloom.GetDefaultSettings();
 
-	bloom.Power = ModernClampFloat(r_modern_bloom_power->GetFloat(), 0.0f, 5.0f);
-	bloom.Threshold = ModernClampFloat(r_modern_bloom_threshold->GetFloat(), 0.0f, 3.0f);
-	bloom.GlowAmplify = ModernClampFloat(r_modern_glow_amplify->GetFloat(), 0.0f, 5.0f);
-	bloom.GlowThreshold = ModernClampFloat(r_modern_glow_threshold->GetFloat(), 0.0f, 3.0f);
+	bloom.Power = ModernClampFloat(r_modern_bloom_power->GetFloat(), 0.00f, 0.35f);
+	bloom.Threshold = ModernClampFloat(r_modern_bloom_threshold->GetFloat(), 1.50f, 3.00f);
+	bloom.GlowAmplify = 0.0f;
+	bloom.GlowThreshold = 3.0f;
 
-	bloom.MultiplyColor = r3dColor(255, 244, 226);
-	bloom.GlowTint = r3dColor(255, 226, 190);
+	bloom.MultiplyColor = r3dColor(255, 245, 232);
+	bloom.GlowTint = r3dColor(255, 245, 232);
 
 	gPFX_ExtractBloom.SetDefaultSettings(bloom);
 
 	extern int _UsedBloomBlurPasses;
 	extern int _UsedBloomBlurTaps;
 
-	_UsedBloomBlurPasses = ModernClampInt(r_modern_bloom_blur_passes->GetInt(), 1, 6);
-	_UsedBloomBlurTaps = ModernClampInt(r_modern_bloom_blur_taps->GetInt(), 0, BT_COUNT - 1);
+	_UsedBloomBlurPasses = 1;
+	_UsedBloomBlurTaps = 0;
 
-	DirectionalStreaks_Strength = 0.72f;
-	DirectionalStreaks_Length = 0.42f;
-	DirectionalStreaksOnOffCoef = 0.70f;
+	DirectionalStreaks_Strength = 0.0f;
+	DirectionalStreaks_Length = 0.0f;
+	DirectionalStreaksOnOffCoef = 0.0f;
 }
 
 static void ApplyModernSunGlareSettings()
@@ -309,19 +327,19 @@ static void ApplyModernSunGlareSettings()
 
 	sunGlare.NumSunglares = ModernClampInt(r_modern_sun_glare_count->GetInt(), 1, MAX_SUNGLARES);
 
-	const float baseOpacity = ModernClampFloat(r_modern_sun_glare_opacity->GetFloat(), 0.0f, 2.0f);
-	const float baseScale = ModernClampFloat(r_modern_sun_glare_scale->GetFloat(), 0.1f, 10.0f);
-	const float baseThreshold = ModernClampFloat(r_modern_sun_glare_threshold->GetFloat(), 0.0f, 2.0f);
+	const float baseOpacity = ModernClampFloat(r_modern_sun_glare_opacity->GetFloat(), 0.00f, 0.50f);
+	const float baseScale = ModernClampFloat(r_modern_sun_glare_scale->GetFloat(), 0.10f, 4.00f);
+	const float baseThreshold = ModernClampFloat(r_modern_sun_glare_threshold->GetFloat(), 0.20f, 2.00f);
 
 	for(int i = 0; i < MAX_SUNGLARES; ++i)
 	{
-		const float indexMul = 1.0f + i * 0.45f;
+		const float indexMul = 1.0f + i * 0.30f;
 
-		sunGlare.Tint[i] = r3dColor(255, 232, 190, 255);
-		sunGlare.Opacity[i] = baseOpacity / (1.0f + i * 0.55f);
+		sunGlare.Tint[i] = r3dColor(255, 232, 198, 255);
+		sunGlare.Opacity[i] = baseOpacity / (1.0f + i * 0.75f);
 		sunGlare.TexScale[i] = baseScale * indexMul;
-		sunGlare.BlurScale[i] = 0.15f;
-		sunGlare.Threshold[i] = baseThreshold + i * 0.025f;
+		sunGlare.BlurScale[i] = 0.10f;
+		sunGlare.Threshold[i] = baseThreshold + i * 0.08f;
 	}
 
 	gPFX_SunGlare.SetSettings(sunGlare);
@@ -378,9 +396,9 @@ void AddModernFinalColorStack()
 	if(!r_modern_graphics->GetBool())
 		return;
 
-	const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.25f, 0.25f);
-	const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.25f, 2.50f);
-	const float gamma = ModernClampFloat(r_modern_gamma->GetFloat(), 0.35f, 3.00f);
+	const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.20f, 0.20f);
+	const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.50f, 1.75f);
+	const float gamma = ModernClampFloat(r_modern_gamma->GetFloat(), 0.65f, 1.50f);
 
 	if(fabsf(brightness) > 0.0001f || fabsf(contrast - 1.0f) > 0.0001f)
 	{
@@ -409,27 +427,55 @@ void ApplyModernFogAndAmbientTuning()
 	if(!r_modern_fog->GetBool())
 		return;
 
-	const float fogMul = ModernClampFloat(r_modern_fog_mul->GetFloat(), 0.0f, 4.0f);
-	const float fogR = ModernClampFloat(r_modern_fog_tint_r->GetFloat(), 0.0f, 4.0f);
-	const float fogG = ModernClampFloat(r_modern_fog_tint_g->GetFloat(), 0.0f, 4.0f);
-	const float fogB = ModernClampFloat(r_modern_fog_tint_b->GetFloat(), 0.0f, 4.0f);
-	const float ambientMul = ModernClampFloat(r_modern_ambient_mul->GetFloat(), 0.0f, 4.0f);
+	static int hasCachedFog = 0;
+	static r3dColor cachedFogInput;
+	static r3dColor cachedFogOutput;
 
-	r3dRenderer->Fog.Color = ModernMultiplyColor(
-		r3dRenderer->Fog.Color,
+	static int hasCachedAmbient = 0;
+	static r3dColor cachedAmbientInput;
+	static r3dColor cachedAmbientOutput;
+
+	const float fogMul = ModernClampFloat(r_modern_fog_mul->GetFloat(), 0.05f, 2.00f);
+	const float fogR = ModernClampFloat(r_modern_fog_tint_r->GetFloat(), 0.25f, 2.00f);
+	const float fogG = ModernClampFloat(r_modern_fog_tint_g->GetFloat(), 0.25f, 2.00f);
+	const float fogB = ModernClampFloat(r_modern_fog_tint_b->GetFloat(), 0.25f, 2.00f);
+	const float ambientMul = ModernClampFloat(r_modern_ambient_mul->GetFloat(), 0.10f, 2.00f);
+
+	r3dColor fogSource = r3dRenderer->Fog.Color;
+	r3dColor ambientSource = r3dRenderer->AmbientColor;
+
+	if(hasCachedFog && ModernSameColor(fogSource, cachedFogOutput))
+		fogSource = cachedFogInput;
+
+	if(hasCachedAmbient && ModernSameColor(ambientSource, cachedAmbientOutput))
+		ambientSource = cachedAmbientInput;
+
+	r3dColor fogResult = ModernMultiplyColor(
+		fogSource,
 		fogMul * fogR,
 		fogMul * fogG,
 		fogMul * fogB,
 		1.0f
 	);
 
-	r3dRenderer->AmbientColor = ModernMultiplyColor(
-		r3dRenderer->AmbientColor,
+	r3dColor ambientResult = ModernMultiplyColor(
+		ambientSource,
 		ambientMul,
 		ambientMul,
-		ambientMul * 1.04f,
+		ambientMul,
 		1.0f
 	);
+
+	r3dRenderer->Fog.Color = fogResult;
+	r3dRenderer->AmbientColor = ambientResult;
+
+	cachedFogInput = fogSource;
+	cachedFogOutput = fogResult;
+	hasCachedFog = 1;
+
+	cachedAmbientInput = ambientSource;
+	cachedAmbientOutput = ambientResult;
+	hasCachedAmbient = 1;
 }
 
 void ApplyModernGraphicsTuning()
@@ -841,14 +887,18 @@ void AddDepthOfFieldStack()
 
 void AddBloomStack()
 {
-	ApplyModernBloomSettings();
+	if(r_modern_graphics->GetBool())
+		ApplyModernBloomSettings();
+
+	if(r_modern_bloom_power->GetFloat() <= 0.001f && r_modern_glow_amplify->GetFloat() <= 0.001f)
+		return;
 
 	g_pPostFXChief->AddFX(gPFX_ExtractBloom, PostFXChief::RTT_ONEFOURTH0_64BIT, PostFXChief::RTT_PINGPONG_LAST);
 
 	extern int _UsedBloomBlurPasses;
 	extern int _UsedBloomBlurTaps;
 
-	_UsedBloomBlurPasses = ModernClampInt(_UsedBloomBlurPasses, 1, 6);
+	_UsedBloomBlurPasses = ModernClampInt(_UsedBloomBlurPasses, 1, 4);
 	_UsedBloomBlurTaps = ModernClampInt(_UsedBloomBlurTaps, 0, BT_COUNT - 1);
 
 	for(int i = 0; i < _UsedBloomBlurPasses; ++i)

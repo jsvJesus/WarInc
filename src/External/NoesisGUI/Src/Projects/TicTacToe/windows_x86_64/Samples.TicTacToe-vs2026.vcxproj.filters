@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{70e6e7a4-81f0-4a05-89b9-a4fa353962e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{b7f143b7-3951-429b-bce8-3823c885cc6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{a1f203be-e306-4212-8d43-9eab6b21dff4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\TicTacToe\Src\App.xaml.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\TicTacToe\Src\App.xaml.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\TicTacToe\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Samples\TicTacToe\Src\MainWindow.xaml.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\TicTacToe\Src\MainWindow.xaml.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\TicTacToe\Src\ViewModel.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\TicTacToe\Src\ViewModel.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Resources.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Fonts\Multicolore.otf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Sounds\NoughtEffect.mp3">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Sounds\CrossEffect.mp3">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Sounds\ClickEffect.mp3">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Sounds\WinEffect.mp3">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\TicTacToe\Data\Sounds\TieEffect.mp3">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

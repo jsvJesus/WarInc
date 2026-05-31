@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{96fd30b8-f214-4880-a693-5e79944d4a53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{482e78ed-46ca-44b6-acdd-3c44c696e590}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{b5971f27-2b5b-4a4f-87ee-552e0ce24b4b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\Scoreboard\Src\App.xaml.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\Scoreboard\Src\App.xaml.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\Scoreboard\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Packages\Samples\Scoreboard\Src\MainWindow.xaml.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\Scoreboard\Src\MainWindow.xaml.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\Scoreboard\Src\ViewModel.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\Scoreboard\Src\ViewModel.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\Scoreboard\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\Scoreboard\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\Scoreboard\Data\Fonts\Cheboyga.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\Scoreboard\Data\Fonts\PERRYGOT.TTF">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

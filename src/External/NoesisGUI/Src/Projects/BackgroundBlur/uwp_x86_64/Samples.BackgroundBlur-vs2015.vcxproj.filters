@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{932cd4f1-6837-4f11-8421-ae723e70b21e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{51e73aa2-3662-40d1-acd3-5547bc06017c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{12efc5b2-5727-4d18-bf0d-0a2647fcdceb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\BackgroundBlur\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <AppxManifest Include="Package.appxmanifest">
+      <Filter>Resources</Filter>
+    </AppxManifest>
+    <Image Include="SplashScreen.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square71x71Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square150x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square310x310Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="StoreLogo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Wide310x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Resources.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Rajdhani-SemiBold.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\BackgroundBlur\Data\Background.jpg">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

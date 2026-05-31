@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{45accfa2-b75e-4039-a0e2-11100bc97234}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{c3b2cf4f-10a2-4027-b5dc-a314f4eb50f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{deaf289c-2f3c-43fb-a79a-dbb2cae2d4e0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\BackAnimation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\CustomAnimation\Src\BackAnimation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\BounceAnimation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\CustomAnimation\Src\BounceAnimation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\CircleAnimation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\CustomAnimation\Src\CircleAnimation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\ElasticAnimation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\CustomAnimation\Src\ElasticAnimation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\ExponentialAnimation.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\CustomAnimation\Src\ExponentialAnimation.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\CustomAnimation\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <AppxManifest Include="Package.appxmanifest">
+      <Filter>Resources</Filter>
+    </AppxManifest>
+    <Image Include="SplashScreen.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-24_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-48_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square44x44Logo.targetsize-256_altform-unplated.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square71x71Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square150x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Square310x310Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="StoreLogo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Wide310x150Logo.scale-200.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <CustomBuild Include="..\..\..\Packages\Samples\CustomAnimation\Data\App.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\CustomAnimation\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\CustomAnimation\Data\Aero Matics Regular.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

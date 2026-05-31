@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{25dc34fb-59f4-4756-9379-efb1a6fb85b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{34dd4f79-be2a-4fc6-b4dd-21efcd4db468}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{e9e982fa-36e1-464b-bb27-bd38119a2921}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Packages\Samples\OculusVR\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPIShim.c">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI_D3D.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI_Keys.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI_Prototypes.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI_Util.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_CAPI_Util.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_ErrorCode.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_Math.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_StereoProjection.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_StereoProjection.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\OVR_Version.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Packages\Samples\OculusVR\Src\Win32_DirectXAppUtil.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ResourceCompile Include="resources.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+    <None Include="Noesis.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <CustomBuild Include="..\..\..\Packages\Samples\OculusVR\Data\MainWindow.xaml">
+      <Filter>Data</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\..\Packages\Samples\OculusVR\Data\Fonts\Inconsolata-Bold.ttf">
+      <Filter>Data</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

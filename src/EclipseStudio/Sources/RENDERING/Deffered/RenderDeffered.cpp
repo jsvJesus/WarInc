@@ -7294,12 +7294,15 @@ void r3dDefferedRenderer::PostProcess()
 			AddBloomStack();
 
 			extern int _SunGlare;
-			if(_SunGlare && r_glow->GetInt())
+			if(_SunGlare && r_glow->GetInt() && r_modern_sun_glare->GetInt())
 			{
 				g_pPostFXChief->AddFX( gPFX_SunGlare, PostFXChief::RTT_PINGPONG_LAST, PostFXChief::RTT_ONEFOURTH0_64BIT ) ;
 			}
 
-			AddDirectionalStreaksStack( PostFXChief::RTT_ONEFOURTH0_64BIT ) ;
+			if(r_modern_sun_rays->GetInt())
+			{
+				AddDirectionalStreaksStack( PostFXChief::RTT_ONEFOURTH0_64BIT ) ;
+			}
 		}
 
 		// depth of field

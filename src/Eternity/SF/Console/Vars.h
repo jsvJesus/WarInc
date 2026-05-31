@@ -342,43 +342,43 @@ REG_VAR( r_modern_film_c,					0.10f,		VF_SAVE );
 REG_VAR( r_modern_film_d,					0.20f,		VF_SAVE );
 REG_VAR( r_modern_film_e,					0.020f,		VF_SAVE );
 REG_VAR( r_modern_film_f,					0.30f,		VF_SAVE );
-REG_VAR( r_modern_exposure_bias,			-0.20f,		VF_SAVE );
-REG_VAR( r_modern_white_level,				11.20f,		VF_SAVE );
+REG_VAR( r_modern_exposure_bias,			-0.18f,		VF_SAVE );
+REG_VAR( r_modern_white_level,				12.00f,		VF_SAVE );
 
-REG_VAR( r_modern_bloom_power,				0.22f,		VF_SAVE );
-REG_VAR( r_modern_bloom_threshold,			1.60f,		VF_SAVE );
+REG_VAR( r_modern_bloom_power,				0.10f,		VF_SAVE );
+REG_VAR( r_modern_bloom_threshold,			1.95f,		VF_SAVE );
 REG_VAR( r_modern_glow_amplify,				0.00f,		VF_SAVE );
-REG_VAR( r_modern_glow_threshold,			2.00f,		VF_SAVE );
+REG_VAR( r_modern_glow_threshold,			2.50f,		VF_SAVE );
 REG_VAR( r_modern_bloom_blur_passes,		1,			VF_SAVE );
-REG_VAR( r_modern_bloom_blur_taps,			1,			VF_SAVE );
+REG_VAR( r_modern_bloom_blur_taps,			0,			VF_SAVE );
 
-REG_VAR( r_modern_ssao_radius,				0.65f,		VF_SAVE );
-REG_VAR( r_modern_ssao_depth_range,			0.45f,		VF_SAVE );
-REG_VAR( r_modern_ssao_brightness,			0.65f,		VF_SAVE );
-REG_VAR( r_modern_ssao_contrast,			1.15f,		VF_SAVE );
-REG_VAR( r_modern_ssao_detail_strength,		0.30f,		VF_SAVE );
-REG_VAR( r_modern_ssao_blur_strength,		0.70f,		VF_SAVE );
+REG_VAR( r_modern_ssao_radius,				0.55f,		VF_SAVE );
+REG_VAR( r_modern_ssao_depth_range,			0.35f,		VF_SAVE );
+REG_VAR( r_modern_ssao_brightness,			0.85f,		VF_SAVE );
+REG_VAR( r_modern_ssao_contrast,			1.35f,		VF_SAVE );
+REG_VAR( r_modern_ssao_detail_strength,		0.55f,		VF_SAVE );
+REG_VAR( r_modern_ssao_blur_strength,		0.25f,		VF_SAVE );
 
-REG_VAR( r_modern_gamma,					1.00f,		VF_SAVE );
-REG_VAR( r_modern_contrast,					0.98f,		VF_SAVE );
-REG_VAR( r_modern_brightness,				-0.035f,	VF_SAVE );
+REG_VAR( r_modern_gamma,					0.98f,		VF_SAVE );
+REG_VAR( r_modern_contrast,					1.08f,		VF_SAVE );
+REG_VAR( r_modern_brightness,				-0.025f,	VF_SAVE );
 
 REG_VAR( r_modern_color_lut,				0,			VF_SAVE );
 REG_VAR( r_modern_lut_name,					"",			VF_SAVE );
 
 REG_VAR( r_modern_sun_glare,				0,			VF_SAVE );
-REG_VAR( r_modern_sun_glare_count,			2,			VF_SAVE );
-REG_VAR( r_modern_sun_glare_opacity,		0.05f,		VF_SAVE );
-REG_VAR( r_modern_sun_glare_scale,			1.25f,		VF_SAVE );
-REG_VAR( r_modern_sun_glare_threshold,		0.60f,		VF_SAVE );
+REG_VAR( r_modern_sun_glare_count,			1,			VF_SAVE );
+REG_VAR( r_modern_sun_glare_opacity,		0.00f,		VF_SAVE );
+REG_VAR( r_modern_sun_glare_scale,			1.00f,		VF_SAVE );
+REG_VAR( r_modern_sun_glare_threshold,		1.50f,		VF_SAVE );
 REG_VAR( r_modern_sun_rays,					0,			VF_SAVE );
 
 REG_VAR( r_modern_fog,						0,			VF_SAVE );
-REG_VAR( r_modern_fog_mul,					0.55f,		VF_SAVE );
+REG_VAR( r_modern_fog_mul,					0.35f,		VF_SAVE );
 REG_VAR( r_modern_fog_tint_r,				1.00f,		VF_SAVE );
 REG_VAR( r_modern_fog_tint_g,				1.00f,		VF_SAVE );
 REG_VAR( r_modern_fog_tint_b,				1.00f,		VF_SAVE );
-REG_VAR( r_modern_ambient_mul,				0.85f,		VF_SAVE );
+REG_VAR( r_modern_ambient_mul,				0.92f,		VF_SAVE );
 
 //------------------------------------------------------------------------
 
