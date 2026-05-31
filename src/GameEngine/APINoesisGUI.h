@@ -5,28 +5,6 @@
 
 #include "r3d.h"
 
-#define WARINC_USE_NOESIS_GUI 1
-
-#if WARINC_USE_NOESIS_GUI
-
-#include <NsCore/Noesis.h>
-#include <NsCore/Ptr.h>
-#include <NsCore/Log.h>
-#include <NsCore/Init.h>
-
-#include <NsGui/IntegrationAPI.h>
-#include <NsGui/FrameworkElement.h>
-#include <NsGui/IView.h>
-#include <NsGui/IRenderer.h>
-#include <NsGui/InputEnums.h>
-#include <NsGui/Uri.h>
-
-#include <NsApp/LocalXamlProvider.h>
-#include <NsApp/LocalTextureProvider.h>
-#include <NsApp/LocalFontProvider.h>
-
-#endif
-
 class APINoesisGUI
 {
 public:
@@ -40,39 +18,35 @@ public:
     void UnloadXaml();
 
     void SetSize(int width, int height);
-
     void Update(float timeSeconds);
     void Render();
 
     bool IsInitialized() const;
     bool IsLoaded() const;
 
-    bool MouseMove(int x, int y);
-    bool MouseButtonDown(int x, int y, int button);
-    bool MouseButtonUp(int x, int y, int button);
-    bool MouseWheel(int x, int y, int wheelDelta);
-
-    bool KeyDown(int vk);
-    bool KeyUp(int vk);
-    bool Char(unsigned int ch);
-
 private:
+    void* DllHandle;
+
+    typedef int  (__cdecl* FN_WarNoesis_Init)(const char* rootPath);
+    typedef void (__cdecl* FN_WarNoesis_Shutdown)();
+    typedef int  (__cdecl* FN_WarNoesis_LoadXamlFile)(const char* filename);
+    typedef void (__cdecl* FN_WarNoesis_UnloadXaml)();
+    typedef void (__cdecl* FN_WarNoesis_SetSize)(int width, int height);
+    typedef void (__cdecl* FN_WarNoesis_Update)(double timeSeconds);
+    typedef void (__cdecl* FN_WarNoesis_Render)();
+    typedef int  (__cdecl* FN_WarNoesis_IsLoaded)();
+
+    FN_WarNoesis_Init FnInit;
+    FN_WarNoesis_Shutdown FnShutdown;
+    FN_WarNoesis_LoadXamlFile FnLoadXamlFile;
+    FN_WarNoesis_UnloadXaml FnUnloadXaml;
+    FN_WarNoesis_SetSize FnSetSize;
+    FN_WarNoesis_Update FnUpdate;
+    FN_WarNoesis_Render FnRender;
+    FN_WarNoesis_IsLoaded FnIsLoaded;
+
     bool Initialized;
     bool Loaded;
-    bool RendererInitialized;
-
-    int Width;
-    int Height;
-
-#if WARINC_USE_NOESIS_GUI
-    Noesis::Ptr<Noesis::FrameworkElement> Root;
-    Noesis::Ptr<Noesis::IView> View;
-
-    static void NoesisLogHandler(const char* file, uint32_t line, uint32_t level, const char* channel, const char* message);
-
-    static Noesis::MouseButton ConvertMouseButton(int button);
-    static Noesis::Key ConvertKey(int vk);
-#endif
 };
 
 extern APINoesisGUI* gNoesisGUI;

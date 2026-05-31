@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RakNet", "..\External\RakNe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WarInc.Api", "..\..\backend\WarInc.Api\WarInc.Api.csproj", "{CB267E95-E317-440F-A961-2414B574707D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NoesisBridge", "..\NoesisBridge\NoesisBridge.vcxproj", "{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -49,6 +51,12 @@ Global
 		{CB267E95-E317-440F-A961-2414B574707D}.Final|x64.Build.0 = Debug|Any CPU
 		{CB267E95-E317-440F-A961-2414B574707D}.Release|x64.ActiveCfg = Release|Any CPU
 		{CB267E95-E317-440F-A961-2414B574707D}.Release|x64.Build.0 = Release|Any CPU
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Debug|x64.ActiveCfg = Debug|x64
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Debug|x64.Build.0 = Debug|x64
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Final|x64.ActiveCfg = Debug|Win32
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Final|x64.Build.0 = Debug|Win32
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Release|x64.ActiveCfg = Release|x64
+		{EC74DCD0-5C81-4D63-87F5-E49B240C5C28}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
