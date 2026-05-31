@@ -275,12 +275,23 @@ int Menu_AppSelect::DoModal()
 
 	r3dMouse::Show();
 
-	StudioGetFont();
+	bool noesisReady = false;
 
 	if(gNoesisGUI)
 	{
+		gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
 		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-		gNoesisGUI->LoadXaml("Studio/AppSelect.xaml");
+		noesisReady = gNoesisGUI->LoadXaml("Studio/AppSelect.xaml");
+	}
+
+	if(!noesisReady)
+	{
+		StudioGetFont();
+		r3dOutToLog("AppSelect: Noesis is not ready, native fallback enabled\n");
+	}
+	else
+	{
+		r3dOutToLog("AppSelect: Noesis UI enabled\n");
 	}
 
 	while(1)
@@ -301,48 +312,34 @@ int Menu_AppSelect::DoModal()
 		ClearFullScreen_Menu();
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
-		r3dSetFiltering(R3D_POINT);
+		r3dSetFiltering(R3D_BILINEAR);
 		r3dRenderer->SetMipMapBias(-6.0f, -1);
 
-		if(gNoesisGUI && gNoesisGUI->IsLoaded())
+		if(noesisReady && gNoesisGUI && gNoesisGUI->IsLoaded())
 		{
+			gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
 			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 			gNoesisGUI->Update(r3dGetTime());
 			gNoesisGUI->Render();
 		}
-
-		int nativeResult = StudioDrawAndProcessMenu();
-		if(nativeResult != -1)
+		else
 		{
-			mDrawEnd();
-			r3dEndFrame();
-			return nativeResult;
-		}
+			int nativeResult = StudioDrawAndProcessMenu();
 
-		{
-			char debugText[512];
-
-			sprintf(
-				debugText,
-				"NOESIS APPSELECT: loaded=%d last_cmd=%s",
-				gNoesisGUI && gNoesisGUI->IsLoaded() ? 1 : 0,
-				r3dNoesisGetLastEditorCommand()
-			);
+			if(nativeResult != -1)
+			{
+				mDrawEnd();
+				r3dEndFrame();
+				return nativeResult;
+			}
 
 			StudioPrintText(
 				8,
 				8,
-				r3dColor(0, 255, 0),
-				debugText
+				r3dColor(255, 160, 0),
+				"Noesis AppSelect failed, drawing native fallback"
 			);
 		}
-
-		StudioPrintText(
-			8,
-			28,
-			r3dColor(255, 160, 0),
-			"Noesis RenderDevice not connected yet, drawing temporary native shell"
-		);
 
 		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
