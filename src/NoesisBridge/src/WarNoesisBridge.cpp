@@ -21,6 +21,9 @@
 #include <NsGui/BaseButton.h>
 #include <NsGui/RoutedEvent.h>
 
+#include <NsGui/Visual.h>
+#include <NsGui/VisualTreeHelper.h>
+
 #include "NoesisLicense.h"
 
 static Noesis::Ptr<Noesis::FrameworkElement> gRoot;
@@ -74,21 +77,15 @@ static void OnEditorButtonClick(Noesis::BaseComponent* sender, const Noesis::Rou
 	EmitEditorCommand(name, "");
 }
 
-static void BindEditorButton(const char* name)
+static void BindNoesisButton(Noesis::Button* button)
 {
-	if(!gRoot || !name || !name[0])
-		return;
-
-	Noesis::Button* button = gRoot->FindName<Noesis::Button>(name);
-
 	if(!button)
-	{
-		char buffer[512];
-		_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: button missing %s", name);
-		buffer[sizeof(buffer) - 1] = 0;
-		BridgeLog(buffer);
 		return;
-	}
+
+	const char* name = button->GetName();
+
+	if(!name || !name[0])
+		return;
 
 	button->Click() += Noesis::RoutedEventHandler(&OnEditorButtonClick);
 
@@ -98,29 +95,40 @@ static void BindEditorButton(const char* name)
 	BridgeLog(buffer);
 }
 
-static void BindEditorControls()
+static void BindNoesisButtonsRecursive(Noesis::Visual* visual)
 {
-	BindEditorButton("BtnSettings");
-	BindEditorButton("BtnTerrain");
-	BindEditorButton("BtnObjects");
-	BindEditorButton("BtnMaterials");
-	BindEditorButton("BtnEnvironment");
-	BindEditorButton("BtnCollections");
-	BindEditorButton("BtnDecorators");
-	BindEditorButton("BtnRoads");
-	BindEditorButton("BtnGameplay");
-	BindEditorButton("BtnPostFX");
-	BindEditorButton("BtnColorCorrection");
+	if(!visual)
+		return;
 
-	BindEditorButton("BtnSystemSettings");
-	BindEditorButton("BtnOptionsMenu");
-	BindEditorButton("BtnSaveMap");
-	BindEditorButton("BtnSaveGlobal");
+	Noesis::Button* button = Noesis::DynamicCast<Noesis::Button*>(visual);
+	if(button)
+		BindNoesisButton(button);
 
-	BindEditorButton("BtnCamera");
-	BindEditorButton("BtnMap");
-	BindEditorButton("BtnShadows");
-	BindEditorButton("BtnMisc");
+	uint32_t count = Noesis::VisualTreeHelper::GetChildrenCount(visual);
+
+	for(uint32_t i = 0; i < count; ++i)
+	{
+		Noesis::Visual* child = Noesis::VisualTreeHelper::GetChild(visual, i);
+		BindNoesisButtonsRecursive(child);
+	}
+}
+
+static void BindNoesisControls()
+{
+	if(!gRoot)
+		return;
+
+	gRoot->ApplyTemplate();
+
+	Noesis::Visual* rootVisual = Noesis::DynamicCast<Noesis::Visual*>(gRoot.GetPtr());
+
+	if(!rootVisual)
+	{
+		BridgeLog("WarNoesisBridge: root is not visual");
+		return;
+	}
+
+	BindNoesisButtonsRecursive(rootVisual);
 }
 
 static void NoesisLogHandler(const char* file, uint32_t line, uint32_t level, const char* channel, const char* message)
@@ -447,7 +455,7 @@ WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
 	gView->SetSize((uint32_t)gWidth, (uint32_t)gHeight);
 	gView->Activate();
 
-	BindEditorControls();
+	BindNoesisControls();
 
 	gLoaded = 1;
 

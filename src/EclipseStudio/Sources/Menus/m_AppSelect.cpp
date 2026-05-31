@@ -4,10 +4,9 @@
 #include "GameCommon.h"
 
 #include "m_AppSelect.h"
-#include "..\UI\UIMenu.h"
+#include "APINoesisGUI.h"
 
-int	AppSelectMode = 100;
-
+int AppSelectMode = 100;
 
 Menu_AppSelect::Menu_AppSelect()
 {
@@ -17,134 +16,138 @@ Menu_AppSelect::~Menu_AppSelect()
 {
 }
 
-
-
 void Menu_AppSelect::Draw()
 {
-
-	return;
 }
-
 
 extern bool g_bExit;
 
 void ClearFullScreen_Menu()
 {
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE );
-	r3dRenderer->SetViewport( 0.f, 0.f, (float)r3dRenderer->d3dpp.BackBufferWidth, (float)r3dRenderer->d3dpp.BackBufferHeight );
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.f, 0 ) );
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+	r3dRenderer->SetViewport(
+		0.f,
+		0.f,
+		(float)r3dRenderer->d3dpp.BackBufferWidth,
+		(float)r3dRenderer->d3dpp.BackBufferHeight
+	);
+	D3D_V(r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.f, 0));
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+}
+
+static int AppSelectCommandToResult(const char* command)
+{
+	if(!command || !command[0])
+		return -1;
+
+	if(strcmp(command, "BtnUpdateDB") == 0)
+		return Menu_AppSelect::bUpdateDB;
+
+	if(strcmp(command, "BtnGamePublic") == 0)
+		return Menu_AppSelect::bStartGamePublic;
+
+	if(strcmp(command, "BtnGameDev") == 0)
+		return Menu_AppSelect::bStartGameSVN;
+
+	if(strcmp(command, "BtnLevelEditor") == 0)
+		return Menu_AppSelect::bStartLevelEditor;
+
+	if(strcmp(command, "BtnParticleEditor") == 0)
+		return Menu_AppSelect::bStartParticleEditor;
+
+	if(strcmp(command, "BtnPhysicsEditor") == 0)
+		return Menu_AppSelect::bStartPhysicsEditor;
+
+	if(strcmp(command, "BtnCharacterEditor") == 0)
+		return Menu_AppSelect::bStartCharacterEditor;
+
+	return -1;
+}
+
+static int ProcessAppSelectNoesisCommands()
+{
+	char command[128];
+	char value[256];
+
+	while(r3dNoesisPopEditorCommand(command, sizeof(command), value, sizeof(value)))
+	{
+		r3dOutToLog("Noesis AppSelect command: %s value=%s\n", command, value);
+
+		int result = AppSelectCommandToResult(command);
+
+		if(result != -1)
+			return result;
+	}
+
+	return -1;
 }
 
 int Menu_AppSelect::DoModal()
 {
-	// TEST SWF BEGIN
-#if 0
-	class CTestMenu : public UIMenu
-	{
-	public:
-		CTestMenu(const char * movieName) : UIMenu(movieName) {}
-		virtual ~CTestMenu() {};
-
-		virtual bool Initialize() {return true;}
-		virtual int Update() 
-		{
-			r3dProcessWindowMessages();
-
-			r3dMouse::Show();
-			r3dStartFrame();
-
-			r3dRenderer->StartRender(1);
-			r3dRenderer->StartFrame();
-
-			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
-			ClearFullScreen_Menu();
-
-			gfxMovie.Update();
-			gfxMovie.Draw();
-
-			r3dRenderer->Flush();  
-			r3dRenderer->EndFrame();
-			r3dRenderer->EndRender( true );
-
-			r3dEndFrame();
-
-			return 0;
-		};
-	};
-
-	CTestMenu* menu = new CTestMenu("data/menu/HUD_OutOfBattleZone.swf");
-	menu->Load();
-	int res = 0;
-	if(menu->Initialize())
-	{
-		while(res == 0) {
-			res = menu->Update();
-		}
-	}
-	menu->Unload();
-	SAFE_DELETE(menu);
-	// TEST SWF END
-#endif
-
-
 	AppSelectMode = 100;
+	released_id = -1;
 
-	Desktop().SetViewSize( r3dRenderer->ScreenW, r3dRenderer->ScreenH );
+	Desktop().SetViewSize(r3dRenderer->ScreenW, r3dRenderer->ScreenH);
+
+	r3dMouse::Show();
+
+	if(gNoesisGUI)
+	{
+		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+		gNoesisGUI->LoadXaml("Studio/AppSelect.xaml");
+	}
 
 	while(1)
 	{
 		if(g_bExit)
 			return 0;
-		r3dStartFrame();
 
 		mUpdate();
 
-		imgui_Update();
+		int noesisResult = ProcessAppSelectNoesisCommands();
+		if(noesisResult != -1)
+			return noesisResult;
 
-		int ret = 1;
+		r3dStartFrame();
 
 		mDrawStart();
 
 		ClearFullScreen_Menu();
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
-		r3dSetFiltering( R3D_POINT );
-		r3dRenderer->SetMipMapBias(-6.0f,-1);
+		r3dSetFiltering(R3D_POINT);
+		r3dRenderer->SetMipMapBias(-6.0f, -1);
 
-		switch (AppSelectMode)
+		if(gNoesisGUI && gNoesisGUI->IsLoaded())
 		{
-		case 100:
-			{
-				const static char *BNames1[] = {"Update DB", "Game (Public Server)", "Game (DEV Server)" };
+			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+			gNoesisGUI->Update(r3dGetTime());
+			gNoesisGUI->Render();
 
-				for (int i=0;i<R3D_ARRAYSIZE(BNames1);i++)
-					if (imgui_Button(r3dRenderer->ScreenW/2-(210*R3D_ARRAYSIZE(BNames1))/2+210*i, r3dRenderer->ScreenH/2 - 30,200, 30,BNames1[i], 0)) 
-						released_id = bUpdateDB+i;
-
-				const static char* BNames[] = {"Level Editor", "Particle Editor", "Physics Editor", "Character Editor" };
-
-				for (int i=0;i<R3D_ARRAYSIZE(BNames);i++)
-					if (imgui_Button(r3dRenderer->ScreenW/2-(210*R3D_ARRAYSIZE(BNames))/2+210*i, r3dRenderer->ScreenH/2 + 30,200, 30,BNames[i], 0)) 
-						released_id = bStartLevelEditor+i;
-			}
-			break;
+			Font_Label->PrintF(
+				10,
+				10,
+				r3dColor(0, 255, 0),
+				"NOESIS APPSELECT: loaded=1 last_cmd=%s",
+				r3dNoesisGetLastEditorCommand()
+			);
+		}
+		else
+		{
+			Font_Label->PrintF(
+				10,
+				10,
+				r3dColor(255, 0, 0),
+				"NOESIS APPSELECT: not loaded"
+			);
 		}
 
 		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
 		mDrawEnd();
+
 		r3dEndFrame();
-
-		switch(released_id)
-		{
-			case -1:
-				break;
-			default:
-				return released_id;
-		};
-
 	}
 
 	return 0;
