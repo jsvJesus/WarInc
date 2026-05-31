@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--Level Settings File-->
+<root>
+	<tcamo>
+		<tex_scale val="0.655263" />
+		<distort_scale val="0.492105" />
+		<reflection_ammount val="0.352632" />
+		<anim_speed val="0.410526" />
+		<color0 r="153" g="255" b="255" a="255" />
+		<color1 r="255" g="255" b="255" a="43" />
+	</tcamo>
+</root>
