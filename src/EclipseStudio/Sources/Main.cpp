@@ -248,7 +248,15 @@ void InitRender(int bUseSet = 0)
 	if(gNoesisGUI)
 	{
 		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-		gNoesisGUI->LoadXaml("TestNoesis.xaml");
+
+		if(g_bEditMode)
+		{
+			gNoesisGUI->LoadXaml("Editor/LevelEditor.xaml");
+		}
+		else
+		{
+			gNoesisGUI->LoadXaml("TestNoesis.xaml");
+		}
 	}
 
 #if ENABLE_WEB_BROWSER
