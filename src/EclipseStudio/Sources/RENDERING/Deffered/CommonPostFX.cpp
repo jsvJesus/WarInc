@@ -5,6 +5,7 @@
 #include "PFX_Fill.h"
 #include "CommonPostFX.h"
 #include "HUDFilters.h"
+#include "GameLevel.h"
 
 void ReloadCCLUT3DTexture(const char* newName, HUDFilters filter);
 
@@ -107,6 +108,7 @@ PFX_MinExpand				gPFX_MinExpand;
 PFX_FXAA					gPFX_FXAA;
 PFX_FXAA_LumPass			gPFX_FXAA_LumPass;
 PFX_ReShadeLook				gPFX_ReShadeLook;
+PFX_ScreenRainDrops			gPFX_ScreenRainDrops;
 
 PFX_FilmTone				gPFX_FilmTone ;
 PFX_CopyOutput				gPFX_CopyOutput ;
@@ -421,34 +423,63 @@ void AddReShadeLookStack()
 	g_pPostFXChief->AddSwapBuffers();
 }
 
-void AddModernFinalColorStack()
+void AddScreenRainDropsStack()
 {
-	if(!r_modern_graphics->GetBool())
+	if(!r_screen_rain_drops->GetBool())
 		return;
 
-	AddReShadeLookStack();
+	const float rainStrength = r3dGameLevel::Environment.GetRainStrength();
 
-	const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.20f, 0.20f);
-	const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.50f, 1.75f);
-	const float gamma = ModernClampFloat(r_modern_gamma->GetFloat(), 0.65f, 1.50f);
+	if(rainStrength <= 0.001f)
+		return;
 
-	if(fabsf(brightness) > 0.0001f || fabsf(contrast - 1.0f) > 0.0001f)
+	PFX_ScreenRainDrops::Settings sts;
+
+	sts.Amount = ModernClampFloat(rainStrength * r_screen_rain_amount->GetFloat(), 0.0f, 1.0f);
+	sts.Distortion = ModernClampFloat(r_screen_rain_distort->GetFloat(), 0.0f, 0.15f);
+	sts.SlideSpeed = ModernClampFloat(r_screen_rain_slide_speed->GetFloat(), 0.0f, 3.0f);
+	sts.Scale = ModernClampFloat(r_screen_rain_scale->GetFloat(), 0.25f, 4.0f);
+	sts.Streaks = ModernClampFloat(r_screen_rain_streaks->GetFloat(), 0.0f, 2.0f);
+	sts.Wetness = ModernClampFloat(r3dGameLevel::Environment.GetWetness(), 0.0f, 1.0f);
+
+	if(sts.Amount <= 0.001f)
+		return;
+
+	gPFX_ScreenRainDrops.PushSettings(sts);
+	g_pPostFXChief->AddFX(gPFX_ScreenRainDrops);
+	g_pPostFXChief->AddSwapBuffers();
+}
+
+void AddModernFinalColorStack()
+{
+	if(r_modern_graphics->GetBool())
 	{
-		PFX_BrightnessContrast::Settings sts;
-		sts.brightness = brightness;
-		sts.constrast = contrast;
+		AddReShadeLookStack();
 
-		gPFX_BrightnessContrast.PushSettings(sts);
-		g_pPostFXChief->AddFX(gPFX_BrightnessContrast);
-		g_pPostFXChief->AddSwapBuffers();
+		const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.20f, 0.20f);
+		const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.50f, 1.75f);
+		const float gamma = ModernClampFloat(r_modern_gamma->GetFloat(), 0.65f, 1.50f);
+
+		if(fabsf(brightness) > 0.0001f || fabsf(contrast - 1.0f) > 0.0001f)
+		{
+			PFX_BrightnessContrast::Settings sts;
+			sts.brightness = brightness;
+			sts.constrast = contrast;
+
+			gPFX_BrightnessContrast.PushSettings(sts);
+			g_pPostFXChief->AddFX(gPFX_BrightnessContrast);
+			g_pPostFXChief->AddSwapBuffers();
+		}
+
+		if(fabsf(gamma - 1.0f) > 0.0001f)
+		{
+			gPFX_GammaCorrect.SetPower(gamma);
+			g_pPostFXChief->AddFX(gPFX_GammaCorrect);
+			g_pPostFXChief->AddSwapBuffers();
+		}
 	}
 
-	if(fabsf(gamma - 1.0f) > 0.0001f)
-	{
-		gPFX_GammaCorrect.SetPower(gamma);
-		g_pPostFXChief->AddFX(gPFX_GammaCorrect);
-		g_pPostFXChief->AddSwapBuffers();
-	}
+	AddScreenRainDropsStack();
 }
 
 void ApplyModernFogAndAmbientTuning()
@@ -1123,6 +1154,7 @@ void InitPostFX()
 	r3d_assert(g_pPostFXChief == 0);
 	g_pPostFXChief = new PostFXChief();
 	g_pPostFXChief->Init();
+	gPFX_ScreenRainDrops.Init();
 
 	InitSSAO();
 	InitColorCorrection();
@@ -1137,6 +1169,7 @@ void ClosePostFX()
 {
 	CloseCommonPostFX();
 	g_pPostFXChief->Close();
+	gPFX_ScreenRainDrops.Close();
 	SAFE_DELETE(g_pPostFXChief);
 }
 

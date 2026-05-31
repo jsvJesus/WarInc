@@ -483,6 +483,7 @@
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_RadialBlur.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_ReShadeLook.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_ScopeEffect.cpp" />
+    <ClCompile Include="Sources\RENDERING\Deffered\PFX_ScreenRainDrops.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_SeedSunThroughStencil.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_StarShapeBlur.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_StencilToMask.cpp" />
@@ -692,6 +693,7 @@
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_RadialBlur.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_ReShadeLook.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_ScopeEffect.h" />
+    <ClInclude Include="Sources\RENDERING\Deffered\PFX_ScreenRainDrops.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_SeedSunThroughStencil.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_StarShapeBlur.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_StencilToMask.h" />

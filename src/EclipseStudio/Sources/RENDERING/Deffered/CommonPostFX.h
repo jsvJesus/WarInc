@@ -39,6 +39,7 @@
 #include "PFX_NightVision.h"
 #include "PFX_FXAA.h"
 #include "PFX_ReShadeLook.h"
+#include "PFX_ScreenRainDrops.h"
 #include "PFX_FilmTone.h"
 #include "PFX_CopyOutput.h"
 #include "PFX_ConvertToLDR.h"
@@ -143,6 +144,7 @@ extern PFX_MixIn gPFX_MixIn ;
 extern PFX_FXAA gPFX_FXAA;
 extern PFX_FXAA_LumPass gPFX_FXAA_LumPass;
 extern PFX_ReShadeLook gPFX_ReShadeLook;
+extern PFX_ScreenRainDrops gPFX_ScreenRainDrops;
 
 extern PFX_ScopeEffect gPFX_ScopeEffect;
 
@@ -173,6 +175,7 @@ void ApplyModernBloomSettings();
 void ApplyModernFogAndAmbientTuning();
 void AddModernFinalColorStack();
 void AddReShadeLookStack();
+void AddScreenRainDropsStack();
 
 void AddSeparateEyesStereoReprojectionStack(PostFXChief::RTType srcImage, PostFXChief::RTType dstLeft, PostFXChief::RTType dstRight);
 

@@ -3053,6 +3053,7 @@ void r3dInitShaders()
 	r3dRenderer->AddPixelShaderFromFile("PS_COPY", "copy_ps.hls");
 
 	r3dRenderer->AddPixelShaderFromFile("PS_DISTORT_SCREEN", "DistortScreen_ps.hls");
+	r3dRenderer->AddPixelShaderFromFile("PS_SCREEN_RAIN_DROPS", "ScreenRainDrops_ps.hls");
 
 	r3dRenderer->AddPixelShaderFromFile("PS_SHOW_SHADOWBUFFER", "ShowShadowBuffer.hls");
 

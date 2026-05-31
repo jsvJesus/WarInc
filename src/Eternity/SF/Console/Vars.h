@@ -397,6 +397,17 @@ REG_VAR( r_modern_fog_tint_b,				1.00f,		VF_SAVE );
 REG_VAR( r_modern_ambient_mul,				0.92f,		VF_SAVE );
 
 //------------------------------------------------------------------------
+// Screen Rain Drops
+//------------------------------------------------------------------------
+
+REG_VAR( r_screen_rain_drops,				1,			VF_SAVE );
+REG_VAR( r_screen_rain_amount,				1.00f,		VF_SAVE );
+REG_VAR( r_screen_rain_distort,				0.028f,	VF_SAVE );
+REG_VAR( r_screen_rain_slide_speed,			0.45f,		VF_SAVE );
+REG_VAR( r_screen_rain_scale,				1.00f,		VF_SAVE );
+REG_VAR( r_screen_rain_streaks,				0.70f,		VF_SAVE );
+
+//------------------------------------------------------------------------
 
 REG_VAR( r_3d_stereo_post_fx,		0,				0 );
 REG_VAR( r_3d_stereo_separation,	0.08f,			0 );

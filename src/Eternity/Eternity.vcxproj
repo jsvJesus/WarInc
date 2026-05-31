@@ -1131,6 +1131,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\..\bin\Data\Shaders\DX9_P1\ReShaderLook_ps.hls" />
+    <Content Include="..\..\bin\Data\Shaders\DX9_P1\ScreenRainDrops_ps.hls" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets"></ImportGroup>
