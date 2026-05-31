@@ -20,6 +20,7 @@
 
 #include "ObjectsCode/world/EnvmapProbes.h"
 #include "ObjectsCode/world/DecalChief.h"
+#include "ObjectsCode/world/WeatherPuddleManager.h"
 #include "ObjectsCode/world/MaterialTypes.h"
 #include "ObjectsCode/world/WaterPlane.h"
 
@@ -199,6 +200,7 @@ void InitRender(int bUseSet = 0)
 	r3d_assert(g_pDecalChief == 0);
 	g_pDecalChief = new DecalChief();
 	g_pDecalChief->Init();
+	gWeatherPuddleManager.Init();
 	// should follow g_DecalChief
 	r3d_assert(g_pMaterialTypes == 0);
 	g_pMaterialTypes = new MaterialTypes();
@@ -289,6 +291,7 @@ void CloseRender()
 	r3dUtilClose();
 
 	SAFE_DELETE(g_pMaterialTypes);
+	gWeatherPuddleManager.Close();
 	g_pDecalChief->Close();
 	SAFE_DELETE(g_pDecalChief);
 	g_EnvmapProbes.Close();

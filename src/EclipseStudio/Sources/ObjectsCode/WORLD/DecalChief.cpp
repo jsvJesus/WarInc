@@ -77,6 +77,7 @@ DecalType::DecalType()
 , ClipNearFactor( 1.f )
 , MinQuality( 2 )
 , globalDecal( true )
+, WriteGloss( 0 )
 {
 	UVStart[ 0 ] = 0.f;
 	UVStart[ 1 ] = 0.f;
@@ -551,6 +552,36 @@ DecalChief::Move( int idx, const r3dPoint3D& pos, const r3dPoint3D& norm )
 
 //------------------------------------------------------------------------
 
+bool DecalChief::UpdateDecalParams( int idx, const DecalParams& params )
+{
+	if( idx == INVALID_DECAL_ID || idx < 0 || idx >= (int)mDecals.Count() )
+		return false;
+
+	if( params.TypeID == INVALID_DECAL_ID )
+		return false;
+
+	if( params.TypeID < 0 || params.TypeID >= (int)mTypes.Count() )
+		return false;
+
+	DecalParams& toUpdate = mDecals[ idx ];
+
+	if( toUpdate.TypeID == INVALID_DECAL_ID )
+		return false;
+
+	toUpdate = params;
+
+	Conform( toUpdate );
+
+	if( toUpdate.ScaleCoef <= 0.0f )
+		toUpdate.ScaleCoef = 1.0f;
+
+	UpdateDecal( idx, mTypes[ toUpdate.TypeID ] );
+
+	return true;
+}
+
+//------------------------------------------------------------------------
+
 namespace
 {
 	const char* LIB_FILE_PATH = "Data\\Decals\\";
@@ -669,6 +700,7 @@ DecalChief::LoadLibInternal(const r3dString &libPath, bool globalLib)
 		PUGI_GET_IF_SET( type.ClipFarFactor, xmlItem, "clip_far_factor", float );
 		PUGI_GET_IF_SET( type.ClipNearFactor, xmlItem, "clip_near_factor", float );
 		PUGI_GET_IF_SET( type.MinQuality, xmlItem, "min_quality", int );
+		PUGI_GET_IF_SET( type.WriteGloss, xmlItem, "write_gloss", int );
 
 		attrib = xmlItem.attribute( "diffuse_tex" );
 		if( !attrib.empty() )
@@ -762,6 +794,7 @@ DecalChief::SaveLibInternal(const r3dString &libPath, bool globalLib) const
 		xmlItem.append_attribute( "clip_far_factor" )	= type.ClipFarFactor;
 		xmlItem.append_attribute( "clip_near_factor" )	= type.ClipNearFactor;
 		xmlItem.append_attribute( "min_quality" )		= type.MinQuality;
+		xmlItem.append_attribute( "write_gloss" )		= type.WriteGloss;
 	}
 
 	xmlLibFile.save_file( libPath.c_str() );
@@ -1573,10 +1606,23 @@ DecalChief::Draw()
 
 			AutoLoadTextures( type );
 
+			const DWORD colorWrite0 =
+				D3DCOLORWRITEENABLE_RED |
+				D3DCOLORWRITEENABLE_GREEN |
+				D3DCOLORWRITEENABLE_BLUE |
+				( type.WriteGloss ? D3DCOLORWRITEENABLE_ALPHA : 0 );
+
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, colorWrite0 ) );
+
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1,
+				D3DCOLORWRITEENABLE_RED |
+				D3DCOLORWRITEENABLE_GREEN |
+				D3DCOLORWRITEENABLE_BLUE ) );
+
 			r3dRenderer->SetTex( type.DiffuseTex, 2 );
 			r3dRenderer->SetTex( type.NormalTex, 3 );
 
-			r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,	0, 0, vused, mIBOffset, icount / 3 );
+			r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, vused, mIBOffset, icount / 3 );
 
 			mIBOffset += icount;
 		}

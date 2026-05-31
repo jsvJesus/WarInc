@@ -57,6 +57,7 @@ struct DecalType
 
 	int			MinQuality;
 	bool		globalDecal;
+	int			WriteGloss;
 };
 
 bool operator != ( const DecalType& t0, const DecalType& t1 );
@@ -172,6 +173,7 @@ public:
 	int		Add( const DecalParams& params, bool checkProximity = true );
 	void	Remove( int idx );
 	void	Move( int idx, const r3dPoint3D& pos, const r3dPoint3D& norm );
+	bool	UpdateDecalParams( int idx, const DecalParams& params );
 
 	bool	LoadLib(const r3dString& levelPath);
 	void	SaveLib(const r3dString& levelPath) const;

@@ -24,6 +24,7 @@
 #include "../SF/Console/EngineConsole.h"
 #include "ObjectsCode\Effects\obj_ParticleSystem.h"
 #include "ObjectsCode\world\DecalChief.h"
+#include "ObjectsCode\world\WeatherPuddleManager.h"
 #include "ObjectsCode\Nature\wind.h"
 #include "ObjectsCode\Nature\GrassMap.h"
 #include "ObjectsCode\Nature\GrassLib.h"
@@ -761,6 +762,7 @@ void GameStateGameLoop()
 	if( r3dRenderer->DeviceAvailable )
 	{
 		R3DPROFILE_START("Decals");
+		gWeatherPuddleManager.Update();
 		g_pDecalChief->Update();
 		R3DPROFILE_END("Decals");
 	}

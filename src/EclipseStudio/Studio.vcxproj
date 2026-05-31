@@ -443,6 +443,7 @@
     <ClCompile Include="Sources\ObjectsCode\WORLD\waterAnim\fft.cpp" />
     <ClCompile Include="Sources\ObjectsCode\WORLD\waterAnim\wavesGenerator.cpp" />
     <ClCompile Include="Sources\ObjectsCode\WORLD\WaterPlane.CPP" />
+    <ClCompile Include="Sources\ObjectsCode\WORLD\WeatherPuddleManager.cpp" />
     <ClCompile Include="Sources\r3dAtmosphere.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\CommonPostFX.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\DeferredHelpers.cpp" />
@@ -652,6 +653,7 @@
     <ClInclude Include="Sources\ObjectsCode\WORLD\waterAnim\fft.h" />
     <ClInclude Include="Sources\ObjectsCode\WORLD\waterAnim\wavesGenerator.h" />
     <ClInclude Include="Sources\ObjectsCode\WORLD\WaterPlane.H" />
+    <ClInclude Include="Sources\ObjectsCode\WORLD\WeatherPuddleManager.h" />
     <ClInclude Include="Sources\r3dAtmosphere.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\CommonPostFX.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\DeferredHelpers.h" />

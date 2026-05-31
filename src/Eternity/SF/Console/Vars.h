@@ -213,6 +213,26 @@ REG_VAR( r_show_grass_tint_scale	, 1.f		, 0 );
 REG_VAR( r_decals					, 1			, 0 );
 REG_VAR( r_decals_proximity_multiplier	, 1.0f	, 0 );
 
+REG_VAR_C( r_rain_screen_drops,				1,		0,		1,		VF_CONSTRAINT );
+
+REG_VAR_C( r_weather_rain_intensity,		0.0f,	0.0f,	1.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_wetness,				0.0f,	0.0f,	1.0f,	VF_CONSTRAINT );
+
+REG_VAR_C( r_weather_puddles,				1,		0,		1,		VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_density,		0.55f,	0.0f,	1.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_radius,		32.0f,	4.0f,	160.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_spawn_rate,	18.0f,	0.0f,	128.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_max_count,		96,		0,		512,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_life,			55.0f,	2.0f,	300.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_min_wetness,	0.22f,	0.0f,	1.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_min_size,		0.75f,	0.1f,	8.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_max_size,		3.25f,	0.1f,	8.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_min_spacing,	2.2f,	0.0f,	16.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_min_normal_y,	0.86f,	0.0f,	1.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_reflection,	0.65f,	0.0f,	1.0f,	VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_normal_anim,	1,		0,		1,		VF_CONSTRAINT );
+REG_VAR_C( r_weather_puddles_normal_speed,	0.35f,	0.0f,	4.0f,	VF_CONSTRAINT );
+
 REG_VAR( r_lfsm_cache_dist			, 8.f		, 0 );
 REG_VAR( r_lfsm_wrap_mode			, 1			, 0 );
 
