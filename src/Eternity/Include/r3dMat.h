@@ -323,6 +323,20 @@ enum
 	// float4 TCamoColor1			: register(c17);
 	MC_TCAMO_COLOR1,
 
+	// float4 WetWeapon				: register(c18);
+	// x - wet amount
+	// y - diffuse dark multiplier
+	// z - gloss boost
+	// w - specular power multiplier
+	MC_WET_WEAPON,
+
+	// float4 WetWeaponRain			: register(c19);
+	// x - streak normal strength
+	// y - streak scale
+	// z - time
+	// w - unused
+	MC_WET_WEAPON_RAIN,
+
 	// float4 AerialDensity_Distance_Bias	: register (FOG_CONST0); // x - density, y - distance, z - bias
 	FOGC_CONST0 = 29,
 	// float4 g_fogColor		: register (FOG_CONST1);	//a = density

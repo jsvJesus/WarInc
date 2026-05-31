@@ -160,6 +160,7 @@ PSOUT main(	float3  uv1 	: TEXCOORD0,
 #endif
 	
 	TexCol.rgb *= Mat_Diffuse ;
+    	TexCol.rgb = ApplyWetWeaponDiffuse(TexCol.rgb);
 
 #if !FILL_ROADS && ALPHA_CUT
 	clip (TexCol.a - 0.15f); 
@@ -167,8 +168,8 @@ PSOUT main(	float3  uv1 	: TEXCOORD0,
 
 	float4 glossSample = tex2D(GlossMap, uv1.xy);
 	
-	float Metalness = GetGloss(glossSample);
-	float3 NMap = GetNormal(RealPos, uv1.xy);
+	float Metalness = ApplyWetWeaponGloss(GetGloss(glossSample));
+    	float3 NMap = ApplyWetWeaponNormal(GetNormal(RealPos, uv1.xy), uv1.xy);
 
 	float3x3 w2t; // world to tangent matrix
 	w2t = float3x3(t1, t2, Normal);
@@ -179,9 +180,9 @@ PSOUT main(	float3  uv1 	: TEXCOORD0,
 	Normal = normalize(vBump);
 
 	float SelfIlm = GetSelfIllum(uv1.xy); // that will also be a bloom
-	float Chromness = tex2D(EnvPowerMap, uv1.xy).r*Material_Params.y;
+    	float Chromness = ApplyWetWeaponChromeness(tex2D(EnvPowerMap, uv1.xy).r * Material_Params.y);
 
-	float SpecularPower = 	Material_Params.z * GetSpecularPowCoef( tex2D( SpecPowMap, uv1.xy ).r ) ;
+	float SpecularPower = ApplyWetWeaponSpecPower(Material_Params.z * GetSpecularPowCoef(tex2D(SpecPowMap, uv1.xy).r));
 	float MetalnessPower = 	Material_Params.x;
 	
 	

@@ -27,4 +27,92 @@ float4 TCamoExtra       : register(c15);
 float4 TCamoColor0      : register(c16);
 float4 TCamoColor1      : register(c17);
 
+float4 WetWeapon        : register(c18);
+// x = wet amount
+// y = diffuse dark multiplier
+// z = gloss boost
+// w = specular power multiplier
+
+float4 WetWeaponRain    : register(c19);
+// x = streak normal strength
+// y = streak scale
+// z = time
+// w = unused
+
+float WetWeaponHash21(float2 p)
+{
+	p = frac(p * float2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return frac(p.x * p.y);
+}
+
+float WetWeaponStreakMask(float2 uv)
+{
+	float wetAmount = saturate(WetWeapon.x);
+	float streakScale = max(WetWeaponRain.y, 1.0);
+
+	float2 suv = uv * float2(streakScale, streakScale * 0.42);
+
+	suv.y -= WetWeaponRain.z;
+
+	float2 cell = floor(suv);
+	float2 f = frac(suv);
+
+	float rnd0 = WetWeaponHash21(cell);
+	float rnd1 = WetWeaponHash21(cell + 17.13);
+
+	float centerX = 0.12 + rnd1 * 0.76;
+
+	float line = saturate(1.0 - abs(f.x - centerX) * 28.0);
+	line = pow(line, 4.0);
+
+	float verticalFade = saturate(1.0 - f.y);
+	verticalFade = pow(verticalFade, 1.35);
+
+	float appear = step(0.35, rnd0);
+
+	return line * verticalFade * appear * wetAmount;
+}
+
+float3 ApplyWetWeaponNormal(float3 normalTS, float2 uv)
+{
+	float streak = WetWeaponStreakMask(uv) * WetWeaponRain.x;
+
+	normalTS.xy += float2(streak * 0.08, -streak * 0.22);
+
+	return normalize(normalTS);
+}
+
+float3 ApplyWetWeaponDiffuse(float3 diffuseColor)
+{
+	float wetAmount = saturate(WetWeapon.x);
+	float darkMul = saturate(WetWeapon.y);
+
+	return lerp(diffuseColor, diffuseColor * darkMul, wetAmount);
+}
+
+float ApplyWetWeaponGloss(float gloss)
+{
+	float wetAmount = saturate(WetWeapon.x);
+	float glossBoost = saturate(WetWeapon.z);
+
+	return saturate(gloss + wetAmount * glossBoost);
+}
+
+float ApplyWetWeaponSpecPower(float specPower)
+{
+	float wetAmount = saturate(WetWeapon.x);
+	float specMul = max(WetWeapon.w, 1.0);
+
+	return specPower * lerp(1.0, specMul, wetAmount);
+}
+
+float ApplyWetWeaponChromeness(float chromeness)
+{
+	float wetAmount = saturate(WetWeapon.x);
+	float glossBoost = saturate(WetWeapon.z);
+
+	return saturate(chromeness + wetAmount * glossBoost * 0.35);
+}
+
 // NOTE : If you add constants, append to enum at r3dMat.h

@@ -408,6 +408,19 @@ REG_VAR( r_screen_rain_scale,				1.00f,		VF_SAVE );
 REG_VAR( r_screen_rain_streaks,				0.70f,		VF_SAVE );
 
 //------------------------------------------------------------------------
+// Wet Weapon
+//------------------------------------------------------------------------
+
+REG_VAR( r_wet_weapon,						1,			VF_SAVE );
+REG_VAR( r_wet_weapon_amount,				1.00f,		VF_SAVE );
+REG_VAR( r_wet_weapon_dark,					0.72f,		VF_SAVE );
+REG_VAR( r_wet_weapon_gloss_boost,			0.35f,		VF_SAVE );
+REG_VAR( r_wet_weapon_spec_mul,				1.65f,		VF_SAVE );
+REG_VAR( r_wet_weapon_streaks,				0.85f,		VF_SAVE );
+REG_VAR( r_wet_weapon_streak_scale,			38.0f,		VF_SAVE );
+REG_VAR( r_wet_weapon_streak_speed,			0.35f,		VF_SAVE );
+
+//------------------------------------------------------------------------
 
 REG_VAR( r_3d_stereo_post_fx,		0,				0 );
 REG_VAR( r_3d_stereo_separation,	0.08f,			0 );

@@ -53,14 +53,16 @@ PSOUT main(	float3  uv1 	: TEXCOORD0,
 
 	float4 TexCol = tex2D(DiffuseTex, uv1.xy);
 
-	TexCol.rgb = TexCol.rgb * Mat_Diffuse ; 
+	TexCol.rgb = TexCol.rgb * Mat_Diffuse ;
+    TexCol.rgb = ApplyWetWeaponDiffuse(TexCol.rgb);
 
 #if !FILL_ROADS
 	clip (TexCol.a - 0.25f); 
 #endif
 
 	float4 Metalness = tex2D(GlossMap, uv1.xy);
-	float3 NMap = (tex2D(NormalTex, uv1.xy).xyz)*2-1;
+    float3 NMap = (tex2D(NormalTex, uv1.xy).xyz)*2-1;
+    NMap = ApplyWetWeaponNormal(NMap, uv1.xy);
 	float3 DetailNMap = (tex2D(DetailNormalMap, uv1.xy*Mat_Glow.z).xyz)*2-1;
 
 	NMap.xy += DetailNMap.xy * Mat_Glow.w ;

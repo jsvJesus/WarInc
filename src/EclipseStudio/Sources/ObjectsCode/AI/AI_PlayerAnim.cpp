@@ -6,8 +6,60 @@
 #include "ObjectsCode/weapons/Gear.h"
 #include "ObjectsCode/weapons/Weapon.h"
 
+#include "GameLevel.h"
+#include "../SF/Console/Config.h"
+
 #include "AI_Player.h"
 #include "AI_PlayerAnim.h"
+
+static float WetWeaponClampFloat(float v, float minV, float maxV)
+{
+	if(v < minV)
+		return minV;
+
+	if(v > maxV)
+		return maxV;
+
+	return v;
+}
+
+static void SetWetWeaponShaderConstants(bool enable)
+{
+	float wet0[4] = { 0.0f, 0.72f, 0.0f, 1.0f };
+	float wet1[4] = { 0.0f, 38.0f, 0.0f, 0.0f };
+
+	if(enable && r_wet_weapon->GetBool())
+	{
+		const float rainStrength = WetWeaponClampFloat(r3dGameLevel::Environment.GetRainStrength(), 0.0f, 1.0f);
+		const float wetness = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetness(), 0.0f, 1.0f);
+
+		float wetAmount = R3D_MAX(wetness, rainStrength * 0.65f);
+		wetAmount *= WetWeaponClampFloat(r_wet_weapon_amount->GetFloat(), 0.0f, 2.0f);
+		wetAmount = WetWeaponClampFloat(wetAmount, 0.0f, 1.0f);
+
+		wet0[0] = wetAmount;
+		wet0[1] = WetWeaponClampFloat(r_wet_weapon_dark->GetFloat(), 0.25f, 1.0f);
+		wet0[2] = WetWeaponClampFloat(r_wet_weapon_gloss_boost->GetFloat(), 0.0f, 1.0f);
+		wet0[3] = WetWeaponClampFloat(r_wet_weapon_spec_mul->GetFloat(), 1.0f, 4.0f);
+
+		wet1[0] = WetWeaponClampFloat(r_wet_weapon_streaks->GetFloat(), 0.0f, 2.0f);
+		wet1[1] = WetWeaponClampFloat(r_wet_weapon_streak_scale->GetFloat(), 4.0f, 128.0f);
+		wet1[2] = r3dGetTime() * WetWeaponClampFloat(r_wet_weapon_streak_speed->GetFloat(), 0.0f, 4.0f);
+		wet1[3] = 0.0f;
+	}
+
+	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_WET_WEAPON, wet0, 1));
+	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_WET_WEAPON_RAIN, wet1, 1));
+}
+
+static bool IsWetWeaponSlot(ESlot slotId)
+{
+	return slotId == SLOT_Weapon ||
+		slotId == SLOT_WeaponBackRight ||
+		slotId == SLOT_WeaponBackLeft ||
+		slotId == SLOT_WeaponBackLeftRPG ||
+		slotId == SLOT_WeaponSide;
+}
 
 //////////////////////////////////////////////////////////////////////////
 	r3dAnimPool*	g_CharactersAnimationsPool = NULL;
@@ -742,6 +794,10 @@ void CUberEquip::DrawSlot(ESlot slotId, const D3DXMATRIX& world, DrawType dt, bo
 	if(!mesh->IsDrawable())
 		return;
 
+	const bool wetWeaponSlot = dt == DT_DEFERRED && IsWetWeaponSlot(slotId) && slots_[slotId].wpn != NULL;
+
+	SetWetWeaponShaderConstants(wetWeaponSlot);
+
 	DrawSlotMesh(mesh, world, dt, skin);
 
 	if(slots_[slotId].wpn && wpnSkeleton)
@@ -755,10 +811,12 @@ void CUberEquip::DrawSlot(ESlot slotId, const D3DXMATRIX& world, DrawType dt, bo
 			{
 				D3DXMATRIX attmWorld;
 				wpnSkeleton->GetBoneWorldTM(WeaponAttachmentBoneNames[i], &attmWorld, world);
+				SetWetWeaponShaderConstants(wetWeaponSlot);
 				DrawSlotMesh(mesh, attmWorld, dt, false);
 			}
 		}
 	}
+	SetWetWeaponShaderConstants(false);
 }
 
 void CUberEquip::DrawSlotMesh(r3dMesh* mesh, const D3DXMATRIX& world, DrawType dt, bool skin)
@@ -814,6 +872,11 @@ void CUberEquip::DrawSlotMesh(r3dMesh* mesh, const D3DXMATRIX& world, DrawType d
 
 void CUberEquip::Draw(const r3dSkeleton* skel, const D3DXMATRIX& CharMat, bool draw_weapon, DrawType dt, bool first_person)
 {
+	if(dt == DT_DEFERRED)
+	{
+		SetWetWeaponShaderConstants(false);
+	}
+	
 	//todo: call extern void r3dMeshSetWorldMatrix(const D3DXMATRIX& world)
 	// instead of mesh->SetWorldMatrix
 
