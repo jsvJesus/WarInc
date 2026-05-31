@@ -63,15 +63,15 @@ float WetWeaponStreakMask(float2 uv)
 
 	float centerX = 0.12 + rnd1 * 0.76;
 
-	float line = saturate(1.0 - abs(f.x - centerX) * 28.0);
-	line = pow(line, 4.0);
-
-	float verticalFade = saturate(1.0 - f.y);
-	verticalFade = pow(verticalFade, 1.35);
-
-	float appear = step(0.35, rnd0);
-
-	return line * verticalFade * appear * wetAmount;
+	float streakLine = saturate(1.0 - abs(f.x - centerX) * 28.0);
+    streakLine = pow(streakLine, 4.0);
+    
+    float verticalFade = saturate(1.0 - f.y);
+    verticalFade = pow(verticalFade, 1.35);
+    
+    float appear = step(0.35, rnd0);
+    
+    return streakLine * verticalFade * appear * wetAmount;
 }
 
 float3 ApplyWetWeaponNormal(float3 normalTS, float2 uv)

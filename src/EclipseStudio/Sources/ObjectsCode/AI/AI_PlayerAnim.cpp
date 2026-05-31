@@ -28,23 +28,23 @@ static void SetWetWeaponShaderConstants(bool enable)
 	float wet0[4] = { 0.0f, 0.72f, 0.0f, 1.0f };
 	float wet1[4] = { 0.0f, 38.0f, 0.0f, 0.0f };
 
-	if(enable && r_wet_weapon->GetBool())
+	if(enable && r_wet_weapon->GetBool() && r3dGameLevel::Environment.GetWetWeaponEnabled())
 	{
 		const float rainStrength = WetWeaponClampFloat(r3dGameLevel::Environment.GetRainStrength(), 0.0f, 1.0f);
 		const float wetness = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetness(), 0.0f, 1.0f);
 
 		float wetAmount = R3D_MAX(wetness, rainStrength * 0.65f);
-		wetAmount *= WetWeaponClampFloat(r_wet_weapon_amount->GetFloat(), 0.0f, 2.0f);
+		wetAmount *= WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponAmount(), 0.0f, 2.0f);
 		wetAmount = WetWeaponClampFloat(wetAmount, 0.0f, 1.0f);
 
 		wet0[0] = wetAmount;
-		wet0[1] = WetWeaponClampFloat(r_wet_weapon_dark->GetFloat(), 0.25f, 1.0f);
-		wet0[2] = WetWeaponClampFloat(r_wet_weapon_gloss_boost->GetFloat(), 0.0f, 1.0f);
-		wet0[3] = WetWeaponClampFloat(r_wet_weapon_spec_mul->GetFloat(), 1.0f, 4.0f);
+		wet0[1] = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponDark(), 0.25f, 1.0f);
+		wet0[2] = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponGlossBoost(), 0.0f, 1.0f);
+		wet0[3] = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponSpecMul(), 1.0f, 4.0f);
 
-		wet1[0] = WetWeaponClampFloat(r_wet_weapon_streaks->GetFloat(), 0.0f, 2.0f);
-		wet1[1] = WetWeaponClampFloat(r_wet_weapon_streak_scale->GetFloat(), 4.0f, 128.0f);
-		wet1[2] = r3dGetTime() * WetWeaponClampFloat(r_wet_weapon_streak_speed->GetFloat(), 0.0f, 4.0f);
+		wet1[0] = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponStreaks(), 0.0f, 2.0f);
+		wet1[1] = WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponStreakScale(), 4.0f, 128.0f);
+		wet1[2] = r3dGetTime() * WetWeaponClampFloat(r3dGameLevel::Environment.GetWetWeaponStreakSpeed(), 0.0f, 4.0f);
 		wet1[3] = 0.0f;
 	}
 

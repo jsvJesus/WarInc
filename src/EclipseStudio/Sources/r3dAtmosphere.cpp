@@ -64,6 +64,15 @@ void r3dAtmosphere :: Reset()
 	RainStrength = 0.0f;
 	Wetness = 0.0f;
 
+	WetWeaponEnabled = 1;
+	WetWeaponAmount = 1.0f;
+	WetWeaponDark = 0.72f;
+	WetWeaponGlossBoost = 0.35f;
+	WetWeaponSpecMul = 1.65f;
+	WetWeaponStreaks = 0.85f;
+	WetWeaponStreakScale = 38.0f;
+	WetWeaponStreakSpeed = 0.35f;
+
 	StaticSkyTexName = "" ;
 	bStaticSkyEnable = false ;
 	bCustomStaticMeshEnable = false ;
@@ -207,6 +216,15 @@ int r3dAtmosphere :: SerializeXML( pugi::xml_node root )
 		SerializeXMLVal<W>( "rain_particles"					, atmoNode, RainParticleSystemName		);
 		SerializeXMLVal<W>( "rain_strength"						, atmoNode, &RainStrength				);
 		SerializeXMLVal<W>( "wetness"							, atmoNode, &Wetness					);
+		SerializeXMLVal<W>( "wet_weapon_enabled"				, atmoNode, &WetWeaponEnabled			);
+		SerializeXMLVal<W>( "wet_weapon_amount"					, atmoNode, &WetWeaponAmount			);
+		SerializeXMLVal<W>( "wet_weapon_dark"					, atmoNode, &WetWeaponDark				);
+		SerializeXMLVal<W>( "wet_weapon_gloss_boost"			, atmoNode, &WetWeaponGlossBoost		);
+		SerializeXMLVal<W>( "wet_weapon_spec_mul"				, atmoNode, &WetWeaponSpecMul			);
+		SerializeXMLVal<W>( "wet_weapon_streaks"				, atmoNode, &WetWeaponStreaks			);
+		SerializeXMLVal<W>( "wet_weapon_streak_scale"			, atmoNode, &WetWeaponStreakScale		);
+		SerializeXMLVal<W>( "wet_weapon_streak_speed"			, atmoNode, &WetWeaponStreakSpeed		);
+
 		SerializeXMLVal<W>( "sunlight"							, atmoNode, &SunLightOn					);
 
 		if( !W )
@@ -493,6 +511,16 @@ void r3dAtmosphere::ClampWeatherState()
 {
 	RainStrength = r3dClamp01Weather( RainStrength );
 	Wetness = r3dClamp01Weather( Wetness );
+
+	WetWeaponEnabled = WetWeaponEnabled ? 1 : 0;
+
+	WetWeaponAmount = R3D_CLAMP( WetWeaponAmount, 0.0f, 2.0f );
+	WetWeaponDark = R3D_CLAMP( WetWeaponDark, 0.25f, 1.0f );
+	WetWeaponGlossBoost = R3D_CLAMP( WetWeaponGlossBoost, 0.0f, 1.0f );
+	WetWeaponSpecMul = R3D_CLAMP( WetWeaponSpecMul, 1.0f, 4.0f );
+	WetWeaponStreaks = R3D_CLAMP( WetWeaponStreaks, 0.0f, 2.0f );
+	WetWeaponStreakScale = R3D_CLAMP( WetWeaponStreakScale, 4.0f, 128.0f );
+	WetWeaponStreakSpeed = R3D_CLAMP( WetWeaponStreakSpeed, 0.0f, 4.0f );
 }
 
 void r3dAtmosphere::ApplyRainStateToParticles()

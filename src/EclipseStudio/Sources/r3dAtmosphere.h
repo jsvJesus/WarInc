@@ -92,6 +92,15 @@ class r3dAtmosphere
 	float				RainStrength;
 	float				Wetness;
 
+	int					WetWeaponEnabled;
+	float				WetWeaponAmount;
+	float				WetWeaponDark;
+	float				WetWeaponGlossBoost;
+	float				WetWeaponSpecMul;
+	float				WetWeaponStreaks;
+	float				WetWeaponStreakScale;
+	float				WetWeaponStreakSpeed;
+
   public:
 	r3dAtmosphere()
 	: StaticSkyTex( 0 )
@@ -129,6 +138,15 @@ class r3dAtmosphere
 
 	float	GetRainStrength() const { return RainStrength; }
 	float	GetWetness() const { return Wetness; }
+
+	int		GetWetWeaponEnabled() const { return WetWeaponEnabled; }
+	float	GetWetWeaponAmount() const { return WetWeaponAmount; }
+	float	GetWetWeaponDark() const { return WetWeaponDark; }
+	float	GetWetWeaponGlossBoost() const { return WetWeaponGlossBoost; }
+	float	GetWetWeaponSpecMul() const { return WetWeaponSpecMul; }
+	float	GetWetWeaponStreaks() const { return WetWeaponStreaks; }
+	float	GetWetWeaponStreakScale() const { return WetWeaponStreakScale; }
+	float	GetWetWeaponStreakSpeed() const { return WetWeaponStreakSpeed; }
 
 	void	ClampWeatherState();
 	void	ApplyRainStateToParticles();

@@ -12119,6 +12119,21 @@ const int FILE_LIST_HEIGHT = 330 ;
 			r3dGameLevel::Environment.SetWetness( wetness );
 
 			SliderY += 10.0f;
+			SliderY += imgui_Static( SliderX, SliderY, "Wet Weapon Settings" );
+
+			SliderY += imgui_Checkbox( SliderX, SliderY, "Wet Weapon Enabled", &r3dGameLevel::Environment.WetWeaponEnabled, 1 );
+
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Wet Amount", &r3dGameLevel::Environment.WetWeaponAmount, 0.0f, 2.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Dark Diffuse", &r3dGameLevel::Environment.WetWeaponDark, 0.25f, 1.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Gloss Boost", &r3dGameLevel::Environment.WetWeaponGlossBoost, 0.0f, 1.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Spec Power", &r3dGameLevel::Environment.WetWeaponSpecMul, 1.0f, 4.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Rain Streaks", &r3dGameLevel::Environment.WetWeaponStreaks, 0.0f, 2.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Scale", &r3dGameLevel::Environment.WetWeaponStreakScale, 4.0f, 128.0f, "%-02.2f", 1 );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Speed", &r3dGameLevel::Environment.WetWeaponStreakSpeed, 0.0f, 4.0f, "%-02.2f", 1 );
+
+			r3dGameLevel::Environment.ClampWeatherState();
+
+			SliderY += 10.0f;
 
 				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
 				{
