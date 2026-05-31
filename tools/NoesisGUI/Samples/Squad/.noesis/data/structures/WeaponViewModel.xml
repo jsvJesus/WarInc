@@ -1,0 +1,5 @@
+<Class Name="WeaponViewModel">
+  <Property Name="Icon" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/WeaponIcons"/>
+  <Property Name="WeaponName" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+  <Property Name="Modifier" Type="Number" NumberMinValue="0" NumberMaxValue="99" NumberDecimalCount="0"/>
+</Class>
