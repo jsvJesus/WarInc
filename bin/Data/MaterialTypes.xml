@@ -1,0 +1,230 @@
+<root>
+	<def_decals>
+		<def_decal source = "default" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Concrete_01" sndID="Sounds/BulletHits/Sand"/>
+		</def_decal>
+		<def_decal source = "rocket">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_RPG_01" sndID="Sounds/Effects/Explosions/RPG01"/>
+		</def_decal>
+		<def_decal source = "Rocket_RPO">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_RPG_02" sndID="Sounds/Effects/Explosions/Bomb01"/>
+		</def_decal>
+		<def_decal source = "grenade">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Grenade_01" sndID="Sounds/Effects/Explosions/Grenade_Hand"/>
+		</def_decal>
+		<def_decal source = "WhitePhosphorus">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Phosphoros_01" sndID="Sounds/Effects/Explosions/Grenade_Hand"/>
+		</def_decal>
+		<def_decal source = "FlashBang">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="explosion_flashbang_01" sndID="Sounds/Effects/Explosions/Grenade_Hand"/>
+		</def_decal>
+		<def_decal source = "ClaymoreMine">
+			<grenade_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Claymore_01" sndID="Sounds/NewWeapons/Special/Explosion_antipersonnel_mine_single"/>
+		</def_decal>
+		<def_decal source = "RegularMine">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Bomb_01" sndID="Sounds/NewWeapons/Special/Explosion_antipersonnel_mine_single"/>
+		</def_decal>
+		<def_decal source = "SatchelCharge">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_ThermicBomb_01" sndID="Sounds/Effects/Explosions/Mine"/>
+		</def_decal>
+		<def_decal source = "smoke_grenade_blue">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Smoke_Granade_Blue_01" sndID="Sounds/Effects/Explosions/Grenade_Smoke"/>
+		</def_decal>
+		<def_decal source = "smoke_grenade_green">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Smoke_Granade_Green_01" sndID="Sounds/Effects/Explosions/Grenade_Smoke"/>
+		</def_decal>
+		<def_decal source = "smoke_grenade_orange">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Smoke_Granade_Orange_01" sndID="Sounds/Effects/Explosions/Grenade_Smoke"/>
+		</def_decal>
+		<def_decal source = "smoke_grenade_red">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="Explosion_Smoke_Granade_Red_01" sndID="Sounds/Effects/Explosions/Grenade_Smoke"/>
+		</def_decal>
+		<def_decal source = "smoke_grenade_white">
+			<RPG_explosion_marking/>
+			<RPG_explosion_marking2/>
+			<RPG_explosion_marking3/>
+			<RPG_explosion_marking4/>
+			<RPG_explosion_marking5/>
+			<Impact_Particle name="explosion_smoke_granade_01" sndID="Sounds/Effects/Explosions/Grenade_Smoke"/>
+		</def_decal>
+		<def_decal source = "blood_ground">
+			<Blood_smash_small/>
+			<Blood_splat_spark_small/>
+			<Blood_dry_pal/>
+		</def_decal>
+	</def_decals>
+	<types>
+	<type name="player">
+		<entry source = "bullet" >
+			<Impact_Particle name="Impact_BloodSplat_01" sndID="Sounds/CallofWar/Impacts/Impacts-Body"/>
+		</entry>
+		<entry source = "melee" >
+			<Impact_Particle name="Impact_BloodSplat_01" sndID="Sounds/CallofWar/Impacts/Impacts-Body"/>
+		</entry>
+		<entry source = "melee_sharp" >
+			<Impact_Particle name="Impact_BloodSplat_01" sndID="Sounds/CallofWar/Impacts/Impacts-KnifeStab"/>
+		</entry>
+	</type>
+	<type name="Concrete">
+	    <vehicle sound="Sounds/Vehicles/TractionLoop_Concrete" crash="Sounds/Vehicles/Crashes/Crash_Rock" />
+		<footsteps sound="Sounds/Footsteps/Concrete" crouch="Sounds/Footsteps/Crouch/Concrete" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_HARD"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Concrete_01" sndID="Sounds/BulletHits/BulletMetal"/>
+		</entry>
+	</type>
+	<type name="Concrete_Resource">
+		<footsteps sound="Sounds/Footsteps/Concrete" crouch="Sounds/Footsteps/Crouch/Concrete" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_HARD"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Concrete_01" sndID="Sounds/BulletHits/BulletMetal"/>
+		</entry>
+		<resources type="stone"/>
+	</type>
+    <type name="Dirt">
+	  <vehicle sound="Sounds/Vehicles/TractionLoop_Dirt" crash="Sounds/Vehicles/Crashes/Crash_Rock"/>
+      <footsteps sound="Sounds/Footsteps/Dirt" crouch="Sounds/Footsteps/Crouch/Dirt" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+      <entry source = "bullet" >
+        <Impact_01/>
+        <Impact_Particle name="Impact_Dirt_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+    </type>
+    <type name="Grass">
+		<vehicle sound="Sounds/Vehicles/TractionLoop_Grass" crash="Sounds/Vehicles/Crashes/Crash_Rock" />
+      <footsteps sound="Sounds/Footsteps/Grass" crouch="Sounds/Footsteps/Crouch/Grass" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+      <entry source = "bullet" >
+        <Impact_01/>
+        <Impact_Particle name="Impact_Grass_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+    </type>
+    <type name="Forest">
+		<vehicle sound="Sounds/Vehicles/TractionLoop_Dirt" crash="Sounds/Vehicles/Crashes/Crash_Rock" />
+      <footsteps sound="Sounds/Footsteps/Forest" crouch="Sounds/Footsteps/Crouch/Forest" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+      <entry source = "bullet" >
+        <Impact_01/>
+        <Impact_Particle name="Impact_Grass_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+    </type>
+    <type name="Snow">
+		<vehicle sound="Sounds/Vehicles/TractionLoop_Dirt" crash="Sounds/Vehicles/Crashes/Crash_Rock" />
+      <footsteps sound="Sounds/footsteps/Snow" crouch="Sounds/footsteps/Crouch/Snow" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+      <entry source = "bullet" >
+        <Crack_Ice_01/>
+        <Impact_Particle name="Impact_Ice_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+      <entry source = "rocket" >
+        <Crack_Ice_RPG_01/>
+        <Impact_Particle name="Explosion_IceRPG_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+    </type>
+    <type name="Sand">
+	  <vehicle sound="Sounds/Vehicles/TractionLoop_Dirt" crash="Sounds/Vehicles/Crashes/Crash_Rock" />
+      <footsteps sound="Sounds/Footsteps/Sand" crouch="Sounds/Footsteps/Crouch/Sand" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+      <entry source = "bullet" >
+        <Impact_01/>
+        <Impact_Particle name="Impact_Dirt_01" sndID="Sounds/BulletHits/Sand"/>
+      </entry>
+    </type>
+    <type name="Wood">
+		<vehicle sound="Sounds/Vehicles/TractionLoop_Dirt" crash="Sounds/Vehicles/Crashes/Crash_Wood" />
+		<footsteps sound="Sounds/Footsteps/Wood" crouch="Sounds/Footsteps/Crouch/Wood" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Wood_01" sndID="Sounds/CallofWar/Impacts/Impacts-Wood"/>
+		</entry>
+	</type>
+    <type name="Wood_Resources">
+		<footsteps sound="Sounds/Footsteps/Wood" crouch="Sounds/Footsteps/Crouch/Wood" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_SOFT"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Wood_01" sndID="Sounds/CallofWar/Impacts/Impacts-Wood"/>
+		</entry>
+		<resources type="wood"/>
+	</type>
+	<type name="Water">
+		<footsteps sound="Sounds/Footsteps/Water" crouch="Sounds/Footsteps/Crouch/Water" prone="Sounds/Footsteps/Crouch/Water"/>
+		<entry source = "bullet" >
+			<Impact_Particle name="Impact_Water_01" sndID="Sounds/BulletHits/BulletMetal"/>
+		</entry>
+	</type>
+	<type name="Metal">
+		<vehicle sound="Sounds/Vehicles/TractionLoop_Concrete" crash="Sounds/Vehicles/Crashes/Crash_Metal" />
+		<footsteps sound="Sounds/Footsteps/Metal" crouch="Sounds/Footsteps/Crouch/Metal" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_HARD"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Metal_01" sndID="Sounds/CallofWar/Impacts/Impacts-Metal"/>
+			<Impact_Particle name="Impact_Metal_02" sndID="Sounds/CallofWar/Impacts/Impacts-Metal"/>
+		</entry>
+	</type>
+	<type name="Metal_Resources">
+		<footsteps sound="Sounds/Footsteps/Metal" crouch="Sounds/Footsteps/Crouch/Metal" prone="Sounds/CallofWar/PlayerSounds/PLAYER_CRAWL_HARD"/>
+		<entry source = "bullet" >
+			<Impact_01/>
+			<Impact_Particle name="Impact_Metal_01" sndID="Sounds/CallofWar/Impacts/Impacts-Metal"/>
+			<Impact_Particle name="Impact_Metal_02" sndID="Sounds/CallofWar/Impacts/Impacts-Metal"/>
+		</entry>
+		<resources type="metal"/>
+	</type>
+	</types>
+</root>

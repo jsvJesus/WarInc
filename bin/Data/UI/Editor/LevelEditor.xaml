@@ -1,0 +1,254 @@
+<UserControl
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Width="1920"
+    Height="1080"
+    Background="Transparent">
+
+    <UserControl.Resources>
+
+        <SolidColorBrush x:Key="PanelBrush" Color="#AA1E2229"/>
+        <SolidColorBrush x:Key="PanelBrushDark" Color="#D916191E"/>
+        <SolidColorBrush x:Key="ButtonBrush" Color="#DD050607"/>
+        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#DD20242B"/>
+        <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF303843"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#FFE9EDF6"/>
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#FFB9C0CC"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FFFF1D12"/>
+        <SolidColorBrush x:Key="StrokeBrush" Color="#FF48515D"/>
+
+        <Style x:Key="WarEditorButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="FontFamily" Value="Verdana"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Background" Value="{StaticResource ButtonBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="3">
+                            <Grid>
+                                <Border
+                                    CornerRadius="3"
+                                    Opacity="0.20">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+
+                                <ContentPresenter
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource ButtonHoverBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource ButtonPressedBrush}"/>
+                            </Trigger>
+
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Root" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WarEditorTabButton" TargetType="Button" BasedOn="{StaticResource WarEditorButton}">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="160"/>
+            <Setter Property="Margin" Value="6,0,6,0"/>
+        </Style>
+
+        <Style x:Key="WarEditorSmallButton" TargetType="Button" BasedOn="{StaticResource WarEditorButton}">
+            <Setter Property="Height" Value="23"/>
+            <Setter Property="MinWidth" Value="82"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="10,0"/>
+        </Style>
+
+        <Style x:Key="WarEditorSlider" TargetType="Slider">
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Foreground" Value="#FF8F969F"/>
+            <Setter Property="Background" Value="#FF15171B"/>
+            <Setter Property="BorderBrush" Value="#FF59616C"/>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid>
+
+        <DockPanel VerticalAlignment="Top">
+
+            <Border
+                DockPanel.Dock="Top"
+                Height="36"
+                Margin="6,6,6,0"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource StrokeBrush}"
+                BorderThickness="1"
+                CornerRadius="3">
+
+                <Grid Margin="6,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="BtnSettings" Grid.Column="0"  Style="{StaticResource WarEditorTabButton}" Tag="Active" Content="Settings"/>
+					<Button x:Name="BtnTerrain" Grid.Column="1"  Style="{StaticResource WarEditorTabButton}" Content="Terrain"/>
+					<Button x:Name="BtnObjects" Grid.Column="2"  Style="{StaticResource WarEditorTabButton}" Content="Objects"/>
+					<Button x:Name="BtnMaterials" Grid.Column="3"  Style="{StaticResource WarEditorTabButton}" Content="Materials"/>
+					<Button x:Name="BtnEnvironment" Grid.Column="4"  Style="{StaticResource WarEditorTabButton}" Content="Environment"/>
+					<Button x:Name="BtnCollections" Grid.Column="5"  Style="{StaticResource WarEditorTabButton}" Content="Collections"/>
+					<Button x:Name="BtnDecorators" Grid.Column="6"  Style="{StaticResource WarEditorTabButton}" Content="Decorators"/>
+					<Button x:Name="BtnRoads" Grid.Column="7"  Style="{StaticResource WarEditorTabButton}" Content="Roads"/>
+					<Button x:Name="BtnGameplay" Grid.Column="8"  Style="{StaticResource WarEditorTabButton}" Content="Gameplay"/>
+					<Button x:Name="BtnPostFX" Grid.Column="9"  Style="{StaticResource WarEditorTabButton}" Content="Post FX"/>
+					<Button x:Name="BtnColorCorrection" Grid.Column="10" Style="{StaticResource WarEditorTabButton}" Content="Color Correction"/>
+                </Grid>
+            </Border>
+
+        </DockPanel>
+
+        <Border
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Margin="12,44,0,0"
+            Width="248"
+            Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource StrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="3"
+            Padding="6">
+
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="BtnSystemSettings" Style="{StaticResource WarEditorSmallButton}" Tag="Active" Content="System Settings"/>
+					<Button x:Name="BtnOptionsMenu" Style="{StaticResource WarEditorSmallButton}" Margin="8,0,0,0" Content="Options Menu"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <Button x:Name="BtnSaveMap" Style="{StaticResource WarEditorButton}" Width="100" Content="SAVE MAP"/>
+					<Button x:Name="BtnSaveGlobal" Style="{StaticResource WarEditorButton}" Width="100" Margin="8,0,0,0" Content="SAVE GLOBAL"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="0,84,14,0"
+            Width="360"
+            Background="{StaticResource PanelBrush}"
+            BorderBrush="{StaticResource StrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="3"
+            Padding="6">
+
+            <StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="BtnCamera" Style="{StaticResource WarEditorSmallButton}" Tag="Active" Content="Camera"/>
+					<Button x:Name="BtnMap" Style="{StaticResource WarEditorSmallButton}" Margin="8,0,0,0" Content="Map"/>
+					<Button x:Name="BtnShadows" Style="{StaticResource WarEditorSmallButton}" Margin="8,0,0,0" Content="Shadows"/>
+					<Button x:Name="BtnMisc" Style="{StaticResource WarEditorSmallButton}" Margin="8,0,0,0" Content="Misc"/>
+                </StackPanel>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="92"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="68"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        Text="Camera Z Near"
+                        Foreground="{StaticResource TextBrush}"
+                        FontFamily="Verdana"
+                        FontSize="11"
+                        VerticalAlignment="Center"/>
+
+                    <Slider
+                        Grid.Column="1"
+                        Style="{StaticResource WarEditorSlider}"
+                        Minimum="0"
+                        Maximum="10"
+                        Value="0.1"/>
+
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="0.10"
+                        Foreground="{StaticResource TextBrush}"
+                        FontFamily="Verdana"
+                        FontSize="11"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+                </Grid>
+
+                <Grid Margin="0,7,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="92"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="68"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        Text="Camera Z Far"
+                        Foreground="{StaticResource TextBrush}"
+                        FontFamily="Verdana"
+                        FontSize="11"
+                        VerticalAlignment="Center"/>
+
+                    <Slider
+                        Grid.Column="1"
+                        Style="{StaticResource WarEditorSlider}"
+                        Minimum="500"
+                        Maximum="10000"
+                        Value="3000"/>
+
+                    <TextBlock
+                        Grid.Column="2"
+                        Text="3000.00"
+                        Foreground="{StaticResource TextBrush}"
+                        FontFamily="Verdana"
+                        FontSize="11"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+                </Grid>
+
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</UserControl>
