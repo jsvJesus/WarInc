@@ -16,6 +16,7 @@
 #include <NsGui/IView.h>
 #include <NsGui/IRenderer.h>
 #include <NsGui/InputEnums.h>
+#include <NsGui/FontProperties.h>
 
 #include "NoesisLicense.h"
 
