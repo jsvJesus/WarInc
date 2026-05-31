@@ -1,5 +1,6 @@
 #define WAR_NOESIS_BRIDGE_EXPORTS
 #include "WarNoesisBridge.h"
+#include "WarNoesisD3D9RenderDevice.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -30,6 +31,10 @@ static Noesis::Ptr<Noesis::FrameworkElement> gRoot;
 static Noesis::Ptr<Noesis::IView> gView;
 static WarNoesisCommandCallback gCommandCallback = NULL;
 
+static IDirect3DDevice9* gD3D9Device = NULL;
+static Noesis::Ptr<WarNoesisD3D9RenderDevice> gRenderDevice;
+static int gRendererInitialized = 0;
+
 static int gInitialized = 0;
 static int gLoaded = 0;
 static int gWidth = 1280;
@@ -41,6 +46,36 @@ static void BridgeLog(const char* text)
 {
 	OutputDebugStringA(text);
 	OutputDebugStringA("\n");
+}
+
+static int EnsureNoesisRenderer()
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	if(!gD3D9Device)
+	{
+		BridgeLog("WarNoesisBridge: D3D9 device is NULL");
+		return 0;
+	}
+
+	if(gRendererInitialized)
+		return 1;
+
+	gRenderDevice = *new WarNoesisD3D9RenderDevice(gD3D9Device);
+
+	if(!gRenderDevice)
+	{
+		BridgeLog("WarNoesisBridge: failed to create D3D9 render device");
+		return 0;
+	}
+
+	gView->GetRenderer()->Init(gRenderDevice);
+
+	gRendererInitialized = 1;
+
+	BridgeLog("WarNoesisBridge: D3D9 renderer initialized");
+	return 1;
 }
 
 static void EmitEditorCommand(const char* command, const char* value)
@@ -388,6 +423,15 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 
 	WarNoesis_UnloadXaml();
 
+	gRendererInitialized = 0;
+	gRenderDevice.Reset();
+
+	if(gD3D9Device)
+	{
+		gD3D9Device->Release();
+		gD3D9Device = NULL;
+	}
+
 	Noesis::GUI::Shutdown();
 
 	gInitialized = 0;
@@ -395,6 +439,24 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 
 	BridgeLog("WarNoesisBridge: Shutdown OK");
 	gCommandCallback = NULL;
+}
+
+WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
+{
+	IDirect3DDevice9* newDevice = (IDirect3DDevice9*)device;
+
+	if(newDevice)
+		newDevice->AddRef();
+
+	if(gD3D9Device)
+		gD3D9Device->Release();
+
+	gD3D9Device = newDevice;
+
+	gRendererInitialized = 0;
+	gRenderDevice.Reset();
+
+	BridgeLog(gD3D9Device ? "WarNoesisBridge: D3D9 device set" : "WarNoesisBridge: D3D9 device cleared");
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
@@ -458,6 +520,9 @@ WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
 	BindNoesisControls();
 
 	gLoaded = 1;
+	gRendererInitialized = 0;
+
+	EnsureNoesisRenderer();
 
 	BridgeLog("WarNoesisBridge: XAML loaded OK");
 	return 1;
@@ -472,6 +537,9 @@ WAR_NOESIS_API void __cdecl WarNoesis_UnloadXaml()
 
 		gView.Reset();
 	}
+
+	gRendererInitialized = 0;
+	gRenderDevice.Reset();
 
 	if(gRoot)
 		gRoot.Reset();
@@ -504,10 +572,17 @@ WAR_NOESIS_API void __cdecl WarNoesis_Render()
 	if(!gLoaded || !gView)
 		return;
 
-	/*
-		Пока рендера тут нет, потому что для WarInc нужен отдельный D3D9 RenderDevice.
-		Но Noesis уже работает в отдельной DLL и VS120 проект больше не компилирует Noesis headers.
-	*/
+	if(!EnsureNoesisRenderer())
+		return;
+
+	Noesis::IRenderer* renderer = gView->GetRenderer();
+
+	if(!renderer)
+		return;
+
+	renderer->UpdateRenderTree();
+	renderer->RenderOffscreen();
+	renderer->Render();
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_IsLoaded()

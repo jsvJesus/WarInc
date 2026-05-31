@@ -128,10 +128,10 @@ int r3dPixelShader :: LoadBinaryCache(const char* FName, const char* Path, const
 		}
 	}
 
-	if(g_IgnoreShaderCacheTimestamps)
-	{
-		r3dOutToLog("ShaderCache fallback: using stale pixel shader cache %s\n", FName2);
-	}
+	//if(g_IgnoreShaderCacheTimestamps)
+	//{
+		//r3dOutToLog("ShaderCache fallback: using stale pixel shader cache %s\n", FName2);
+	//}
 
 	size_t codeSize = f->size - ftell(f);
 

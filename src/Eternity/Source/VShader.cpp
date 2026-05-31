@@ -379,10 +379,10 @@ int r3dVertexShader :: LoadBinaryCache(const char* FName, const char* Path, cons
 		}
 	}
 
-	if(g_IgnoreShaderCacheTimestamps)
-	{
-		r3dOutToLog("ShaderCache fallback: using stale vertex shader cache %s\n", FName2);
-	}
+	//if(g_IgnoreShaderCacheTimestamps)
+	//{
+		//r3dOutToLog("ShaderCache fallback: using stale vertex shader cache %s\n", FName2);
+	//}
 
 	size_t codeSize = f->size - ftell(f);
 

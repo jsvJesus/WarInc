@@ -71,6 +71,7 @@ APINoesisGUI::APINoesisGUI()
 	FnRender = NULL;
 	FnIsLoaded = NULL;
 	FnSetCommandCallback = NULL;
+	FnSetD3D9Device = NULL;
 
 	FnMouseMove = NULL;
 	FnMouseButtonDown = NULL;
@@ -114,6 +115,7 @@ bool APINoesisGUI::Init()
 	FnRender = (FN_WarNoesis_Render)GetProcAddress(dll, "WarNoesis_Render");
 	FnIsLoaded = (FN_WarNoesis_IsLoaded)GetProcAddress(dll, "WarNoesis_IsLoaded");
 	FnSetCommandCallback = (FN_WarNoesis_SetCommandCallback)GetProcAddress(dll, "WarNoesis_SetCommandCallback");
+	FnSetD3D9Device = (FN_WarNoesis_SetD3D9Device)GetProcAddress(dll, "WarNoesis_SetD3D9Device");
 
 	FnMouseMove = (FN_WarNoesis_MouseMove)GetProcAddress(dll, "WarNoesis_MouseMove");
 	FnMouseButtonDown = (FN_WarNoesis_MouseButtonDown)GetProcAddress(dll, "WarNoesis_MouseButtonDown");
@@ -147,6 +149,9 @@ bool APINoesisGUI::Init()
 		return false;
 	}
 
+	if(FnSetD3D9Device && r3dRenderer && r3dRenderer->pd3ddev)
+		FnSetD3D9Device(r3dRenderer->pd3ddev);
+
 	if(FnSetCommandCallback)
 		FnSetCommandCallback(r3dNoesisEditorCommandCallback);
 
@@ -171,6 +176,9 @@ void APINoesisGUI::Shutdown()
 	if(!DllHandle)
 		return;
 
+	if(FnSetD3D9Device)
+		FnSetD3D9Device(NULL);
+
 	if(FnShutdown)
 		FnShutdown();
 
@@ -190,6 +198,7 @@ void APINoesisGUI::Shutdown()
 	FnRender = NULL;
 	FnIsLoaded = NULL;
 	FnSetCommandCallback = NULL;
+	FnSetD3D9Device = NULL;
 
 	FnMouseMove = NULL;
 	FnMouseButtonDown = NULL;
@@ -207,6 +216,12 @@ void APINoesisGUI::Shutdown()
 	gNoesisLastEditorCommand[0] = 0;
 
 	r3dOutToLog("NoesisBridge: Shutdown OK\n");
+}
+
+void APINoesisGUI::SetD3D9Device(void* device)
+{
+	if(FnSetD3D9Device)
+		FnSetD3D9Device(device);
 }
 
 bool APINoesisGUI::LoadXaml(const char* xamlFile)
@@ -443,6 +458,9 @@ void r3dNoesisGUIReset()
 {
 	if(!gNoesisGUI || !r3dRenderer)
 		return;
+
+	if(r3dRenderer->pd3ddev)
+		gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
 
 	gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 }
