@@ -1618,6 +1618,10 @@ void game::MainLoop()
 		ExecuteCharacterEditor();
 		break;
 #endif
+
+	case Menu_AppSelect::bQuit:
+	default:
+		return;
 	};
 
 #ifndef FINAL_BUILD

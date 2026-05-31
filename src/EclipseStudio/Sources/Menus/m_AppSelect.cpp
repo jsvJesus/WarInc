@@ -224,8 +224,8 @@ static int AppSelectCommandToResult(const char* command)
 	if(!command || !command[0])
 		return -1;
 
-	if(strcmp(command, "BtnUpdateDB") == 0)
-		return Menu_AppSelect::bUpdateDB;
+	if(strcmp(command, "BtnPlayGame") == 0)
+		return Menu_AppSelect::bStartGamePublic;
 
 	if(strcmp(command, "BtnGamePublic") == 0)
 		return Menu_AppSelect::bStartGamePublic;
@@ -244,6 +244,9 @@ static int AppSelectCommandToResult(const char* command)
 
 	if(strcmp(command, "BtnCharacterEditor") == 0)
 		return Menu_AppSelect::bStartCharacterEditor;
+
+	if(strcmp(command, "BtnExit") == 0)
+		return Menu_AppSelect::bQuit;
 
 	return -1;
 }
