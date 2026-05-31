@@ -14,6 +14,7 @@
 #include "fmod/soundsys.h"
 
 #include "APIScaleformGFX.h"
+#include "APINoesisGUI.h"
 #include "GameCommon.h"
 #include "GameLevel.h"
 
@@ -241,6 +242,15 @@ void InitRender(int bUseSet = 0)
 	}
 
 	r3dScaleformGfxCreate();
+
+	r3dNoesisGUICreate();
+
+	if(gNoesisGUI)
+	{
+		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+		gNoesisGUI->LoadXaml("TestNoesis.xaml");
+	}
+
 #if ENABLE_WEB_BROWSER
 	g_pBrowserManager = new EternityWebBrowser();
 #endif
@@ -286,6 +296,8 @@ void CloseRender()
 #if APEX_ENABLED
 	DestroyApexUserRenderer();
 #endif
+
+	r3dNoesisGUIDestroy();
 
 	r3dScaleformGfxDestroy();
 
