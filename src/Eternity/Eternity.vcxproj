@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    
-    
-    
-    
-    
-    
-    
     <ProjectConfiguration Include="Debug_NoCrashRpt|x64">
       <Configuration>Debug_NoCrashRpt</Configuration>
       <Platform>x64</Platform>
@@ -44,93 +37,78 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  
+  <ImportGroup Label="ExtensionSettings"></ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
   </ImportGroup>
-  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
@@ -139,21 +117,12 @@
   <PropertyGroup>
     <_ProjectFileVersion>17.0.36915.8</_ProjectFileVersion>
   </PropertyGroup>
-  
-  
-  
-  
-  
-  
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);Z:\WarInc\src\External\Scaleform\3rdParty\zlib-1.2.7\Lib\x64\Msvc10\Release</LibraryPath>
   </PropertyGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -180,11 +149,9 @@
       <OutputFile>lib\r3dLib.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -205,11 +172,9 @@
       <OutputFile>lib\r3dLibD.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -236,11 +201,9 @@
       <OutputFile>lib\r3dLibF.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -267,11 +230,9 @@
       <OutputFile>lib\r3dLib_StatCRT.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -292,11 +253,9 @@
       <OutputFile>lib\r3dLibD_StatCRT.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;.\include;.\..\External\RakNet\Source;.\..\External\Berkelium\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;DISABLE_CRASHRPT;WO_SERVER;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -317,11 +276,9 @@
       <OutputFile>lib\r3dLibD_StatCRT_server.lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
     <ClCompile>
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -350,50 +307,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\External\pugiXML\src\pugixml.cpp">
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\External\pugiXML\src\pugixpath.cpp">
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="SF\CmdProcessor\CmdCommands.cpp" />
     <ClCompile Include="SF\CmdProcessor\CmdConsole.cpp" />
@@ -440,45 +369,20 @@
     <ClCompile Include="Source\r3dIniFile.cpp" />
     <ClCompile Include="Source\r3dInput.cpp" />
     <ClCompile Include="Source\r3dLib.cpp">
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">ProgramDatabase</DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">ProgramDatabase</DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
-      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
-      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
-      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </DebugInformationFormat>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
-      
-      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </DebugInformationFormat>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></DebugInformationFormat>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></DebugInformationFormat>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></DebugInformationFormat>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></DebugInformationFormat>
     </ClCompile>
     <ClCompile Include="Source\r3dLight.cpp" />
     <ClCompile Include="Source\r3dMat.cpp" />
@@ -488,19 +392,12 @@
     <ClCompile Include="Source\r3dObj.cpp" />
     <ClCompile Include="Source\r3dObjLS.cpp" />
     <ClCompile Include="Source\r3dPCH.cpp">
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Create</PrecompiledHeader>
-      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\r3dPoint.cpp" />
@@ -537,592 +434,268 @@
     <ClCompile Include="Source\VShader.cpp" />
     <ClCompile Include="Source\WinMain.cpp" />
     <ClCompile Include="Source\ZLib\src\adler32.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\compress.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\crc32.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\deflate.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\gzio.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\infback.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\inffast.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\inflate.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\inftrees.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\trees.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\uncompr.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ZLib\src\zutil.c">
-      
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_NoCrashRpt|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug_Server|x64'"></PrecompiledHeader>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Disabled</Optimization>
-      
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Speed</FavorSizeOrSpeed>
-      
       <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Final|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_NoCrashRpt|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'">
-      </PrecompiledHeader>
-      
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_Server|x64'"></PrecompiledHeader>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Speed</FavorSizeOrSpeed>
-      
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="UndoHistory\UndoHistory.cpp" />
   </ItemGroup>
@@ -1557,6 +1130,5 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets"></ImportGroup>
 </Project>

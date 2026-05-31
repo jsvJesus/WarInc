@@ -638,6 +638,16 @@ BOOL terra_FindIntersection(const r3dPoint3D &vFrom, const r3dPoint3D &vTo, r3dP
 	return FALSE;
 }
 
+BOOL terra_FindIntersection(r3dPoint3D &vFrom, r3dPoint3D &vTo, r3dPoint3D &colpos, int iterations)
+{
+	return terra_FindIntersection(
+		static_cast<const r3dPoint3D&>(vFrom),
+		static_cast<const r3dPoint3D&>(vTo),
+		colpos,
+		iterations
+	);
+}
+
 //------------------------------------------------------------------------
 
 void terra_GetMinMaxTerraHeight( float miX, float miZ, float maX, float maZ, float* oMiH, float* oMaH ) 

@@ -111,6 +111,7 @@ struct r3dTerrainPaintBoundControl
 extern	bool		terra_IsValidPaintBounds( const r3dTerrainPaintBoundControl& ctrl, const r3dPoint3D &v, float fSize, float* oFactor );
 extern	float		terra_GetH(const r3dPoint3D &P);
 extern	BOOL		terra_FindIntersection(const r3dPoint3D &vFrom, const r3dPoint3D &vTo, r3dPoint3D &colpos, int iterations);
+extern	BOOL		terra_FindIntersection(r3dPoint3D &vFrom, r3dPoint3D &vTo, r3dPoint3D &colpos, int iterations);
 extern	void		terra_GetMinMaxTerraHeight( float miX, float miZ, float maX, float maZ, float* oMiH, float* oMaH ) ;
 
 //------------------------------------------------------------------------
