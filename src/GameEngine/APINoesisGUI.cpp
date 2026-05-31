@@ -7,6 +7,28 @@
 
 APINoesisGUI* gNoesisGUI = NULL;
 
+struct r3dNoesisEditorCommand
+{
+	char command[128];
+	char value[256];
+};
+
+static r3dNoesisEditorCommand gNoesisEditorCommands[64];
+static volatile LONG gNoesisEditorCommandWrite = 0;
+static volatile LONG gNoesisEditorCommandRead = 0;
+
+static void r3dNoesisPushEditorCommand(const char* command, const char* value)
+{
+	if(!command || !command[0])
+		return;
+
+	LONG writeIndex = InterlockedIncrement(&gNoesisEditorCommandWrite) - 1;
+	LONG slot = writeIndex % 64;
+
+	r3dscpy(gNoesisEditorCommands[slot].command, command);
+	r3dscpy(gNoesisEditorCommands[slot].value, value ? value : "");
+}
+
 typedef bool (*Win32MsgProc_fn)(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 extern void RegisterMsgProc(Win32MsgProc_fn proc);
@@ -28,55 +50,9 @@ static void __cdecl r3dNoesisEditorCommandCallback(const char* command, const ch
 	if(!command || !command[0])
 		return;
 
-	r3dOutToLog("NoesisEditorCommand: %s value=%s\n", command, value ? value : "");
+	r3dOutToLog("NoesisEditorCommand queued: %s value=%s\n", command, value ? value : "");
 
-	if(strcmp(command, "BtnSaveMap") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: SAVE MAP requested\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnSaveGlobal") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: SAVE GLOBAL requested\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnTerrain") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Terrain\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnObjects") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Objects\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnMaterials") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Materials\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnEnvironment") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Environment\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnRoads") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Roads\n");
-		return;
-	}
-
-	if(strcmp(command, "BtnGameplay") == 0)
-	{
-		r3dOutToLog("NoesisEditorCommand: switch tab Gameplay\n");
-		return;
-	}
+	r3dNoesisPushEditorCommand(command, value ? value : "");
 }
 
 APINoesisGUI::APINoesisGUI()
@@ -222,6 +198,9 @@ void APINoesisGUI::Shutdown()
 
 	Initialized = false;
 	Loaded = false;
+
+	gNoesisEditorCommandWrite = 0;
+	gNoesisEditorCommandRead = 0;
 
 	r3dOutToLog("NoesisBridge: Shutdown OK\n");
 }
@@ -395,6 +374,38 @@ bool APINoesisGUI::Char(unsigned int ch)
 		return FnChar(ch) ? true : false;
 
 	return false;
+}
+
+bool APINoesisGUI::PopEditorCommand(char* command, int commandSize, char* value, int valueSize)
+{
+	if(!command || commandSize <= 0)
+		return false;
+
+	if(!value || valueSize <= 0)
+		return false;
+
+	LONG readIndex = gNoesisEditorCommandRead;
+	LONG writeIndex = gNoesisEditorCommandWrite;
+
+	if(readIndex >= writeIndex)
+		return false;
+
+	LONG slot = readIndex % 64;
+
+	r3dscpy(command, gNoesisEditorCommands[slot].command);
+	r3dscpy(value, gNoesisEditorCommands[slot].value);
+
+	InterlockedIncrement(&gNoesisEditorCommandRead);
+
+	return true;
+}
+
+bool r3dNoesisPopEditorCommand(char* command, int commandSize, char* value, int valueSize)
+{
+	if(!gNoesisGUI)
+		return false;
+
+	return gNoesisGUI->PopEditorCommand(command, commandSize, value, valueSize);
 }
 
 void r3dNoesisGUICreate()

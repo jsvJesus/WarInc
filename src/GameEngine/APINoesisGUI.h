@@ -36,6 +36,8 @@ public:
 	bool KeyUp(int vk);
 	bool Char(unsigned int ch);
 
+	bool PopEditorCommand(char* command, int commandSize, char* value, int valueSize);
+
 private:
 	void* DllHandle;
 
@@ -86,5 +88,7 @@ extern APINoesisGUI* gNoesisGUI;
 void r3dNoesisGUICreate();
 void r3dNoesisGUIDestroy();
 void r3dNoesisGUIReset();
+
+bool r3dNoesisPopEditorCommand(char* command, int commandSize, char* value, int valueSize);
 
 #endif
