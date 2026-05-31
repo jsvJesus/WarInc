@@ -317,7 +317,6 @@ int Menu_AppSelect::DoModal()
 
 		if(noesisReady && gNoesisGUI && gNoesisGUI->IsLoaded())
 		{
-			gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
 			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 			gNoesisGUI->Update(r3dGetTime());
 			gNoesisGUI->Render();

@@ -59,18 +59,29 @@ static int EnsureNoesisRenderer()
 		return 0;
 	}
 
-	if(gRendererInitialized)
-		return 1;
+	Noesis::IRenderer* renderer = gView->GetRenderer();
 
-	gRenderDevice = *new WarNoesisD3D9RenderDevice(gD3D9Device);
-
-	if(!gRenderDevice)
+	if(!renderer)
 	{
-		BridgeLog("WarNoesisBridge: failed to create D3D9 render device");
+		BridgeLog("WarNoesisBridge: Noesis renderer is NULL");
 		return 0;
 	}
 
-	gView->GetRenderer()->Init(gRenderDevice);
+	if(gRendererInitialized)
+		return 1;
+
+	if(!gRenderDevice)
+	{
+		gRenderDevice = *new WarNoesisD3D9RenderDevice(gD3D9Device);
+
+		if(!gRenderDevice)
+		{
+			BridgeLog("WarNoesisBridge: failed to create D3D9 render device");
+			return 0;
+		}
+	}
+
+	renderer->Init(gRenderDevice);
 
 	gRendererInitialized = 1;
 
@@ -445,6 +456,20 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
 {
 	IDirect3DDevice9* newDevice = (IDirect3DDevice9*)device;
 
+	if(newDevice == gD3D9Device)
+		return;
+
+	if(gView && gRendererInitialized)
+	{
+		Noesis::IRenderer* renderer = gView->GetRenderer();
+
+		if(renderer)
+			renderer->Shutdown();
+	}
+
+	gRendererInitialized = 0;
+	gRenderDevice.Reset();
+
 	if(newDevice)
 		newDevice->AddRef();
 
@@ -452,9 +477,6 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
 		gD3D9Device->Release();
 
 	gD3D9Device = newDevice;
-
-	gRendererInitialized = 0;
-	gRenderDevice.Reset();
 
 	BridgeLog(gD3D9Device ? "WarNoesisBridge: D3D9 device set" : "WarNoesisBridge: D3D9 device cleared");
 }
