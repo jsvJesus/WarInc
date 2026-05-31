@@ -1,18 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Final|Win32">
-      <Configuration>Final</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
+    
+    
+    
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -34,26 +25,9 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
-  </PropertyGroup>
+  
+  
+  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
@@ -77,18 +51,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
-  </ImportGroup>
+  
+  
+  
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
@@ -108,21 +73,9 @@
   <PropertyGroup>
     <_ProjectFileVersion>17.0.36915.8</_ProjectFileVersion>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\obj\EclipseStudio\$(Configuration)\</IntDir>
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
-    <IntDir>$(Configuration)\</IntDir>
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
-    <OutDir>$(ProjectDir)..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\obj\EclipseStudio\$(Configuration)\</IntDir>
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+  
+  
+  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ProjectDir)..\..\bin\</OutDir>
     <IntDir>$(ProjectDir)..\..\obj\EclipseStudio\$(Configuration)_$(Platform)\</IntDir>
@@ -138,59 +91,7 @@
     <IntDir>$(ProjectDir)..\..\obj\EclipseStudio\$(Configuration)_$(Platform)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Midl>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MkTypLibCompatible>true</MkTypLibCompatible>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TargetEnvironment>Win32</TargetEnvironment>
-      <TypeLibraryName>.\Release/Studio.tlb</TypeLibraryName>
-    </Midl>
-    <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <Optimization>MaxSpeed</Optimization>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External\NoesisGUI\Src\Packages\App\Providers\Include;.\..\External\NoesisGUI\Include;.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <PrecompiledHeader />
-      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
-      <WarningLevel>Level3</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <CallingConvention>Cdecl</CallingConvention>
-    </ClCompile>
-    <ResourceCompile>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Culture>0x0409</Culture>
-    </ResourceCompile>
-    <Link>
-      <Addit-ionalOptions>/MACHINE:I386 %(AdditionalOptions)</Addit-ionalOptions>
-      <AdditionalDependencies>Noesis.lib;PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\NoesisGUI\Lib\windows_x86;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;;../External/Scaleform/Lib;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Windows</SubSystem>
-      <OptimizeReferences />
-      <LinkTimeCodeGeneration />
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
-    </Link>
-    <PostBuildEvent>
-      <Command />
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
+  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -243,50 +144,7 @@
       <Command />
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Midl>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MkTypLibCompatible>true</MkTypLibCompatible>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TargetEnvironment>Win32</TargetEnvironment>
-      <TypeLibraryName>.\Debug/Studio.tlb</TypeLibraryName>
-    </Midl>
-    <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <Optimization>Disabled</Optimization>
-      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>.\..\External\NoesisGUI\Src\Packages\App\Providers\Include;.\..\External\NoesisGUI\Include;.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
-      <WarningLevel>Level3</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-    </ClCompile>
-    <ResourceCompile>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Culture>0x0409</Culture>
-    </ResourceCompile>
-    <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Noesis.lib;PhysX3DEBUG_x86.lib;PhysX3CommonDEBUG_x86.lib;PhysX3CookingDEBUG_x86.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x86.lib;PxPvdSDKDEBUG_x86.lib;PsFastXmlDEBUG_x86.lib;PxTaskDEBUG_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;ChilkatDbg.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(SolutionDir)\..\..\bin\Studio_d.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\NoesisGUI\Lib\windows_x86;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
-      <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Windows</SubSystem>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
-    </Link>
-    <PostBuildEvent>
-      <Command />
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
+  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -331,58 +189,7 @@
       <Command />
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">
-    <Midl>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MkTypLibCompatible>true</MkTypLibCompatible>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TargetEnvironment>Win32</TargetEnvironment>
-      <TypeLibraryName>.\Release/Studio.tlb</TypeLibraryName>
-    </Midl>
-    <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
-      <Optimization>MaxSpeed</Optimization>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>.\..\External\NoesisGUI\Src\Packages\App\Providers\Include;.\..\External\NoesisGUI\Include;.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;..\External\PhysX_3.4\Include;..\External\PhysX_3.4\Include\characterkinematic;..\External\PhysX_3.4\Include\cooking;..\External\PxShared\include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;WIN32;NDEBUG;_WINDOWS;FINAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <PrecompiledHeader />
-      <PrecompiledHeaderFile>r3dPCH.h</PrecompiledHeaderFile>
-      <WarningLevel>Level3</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <CallingConvention>Cdecl</CallingConvention>
-    </ClCompile>
-    <ResourceCompile>
-      <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Culture>0x0409</Culture>
-    </ResourceCompile>
-    <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Noesis.lib;PhysX3_x86.lib;PhysX3Common_x86.lib;PhysX3Cooking_x86.lib;PhysX3CharacterKinematic_x86.lib;PhysX3Extensions.lib;PxFoundation_x86.lib;PxPvdSDK_x86.lib;PsFastXml_x86.lib;PxTask_x86.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex_vc.lib;fmod_event.lib;fmod_event_net.lib;libjpeg.lib;ChilkatRel.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(SolutionDir)\..\..\bin\WarInc.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\NoesisGUI\Lib\windows_x86;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\Lib\Win32\Msvc10\Release\;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\Win32\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win32;.\..\External\PhysX_3.4\bin\vc12win32;.\..\External\PxShared\lib\vc12win32;.\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/Scaleform/3rdParty/fmod/pc/Win32/lib;../External/Scaleform/Lib;../External/Chilkat/Libs;../External/Scaleform/3rdParty/jpeg-8d/Lib/Win32/Msvc10/Release;;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Windows</SubSystem>
-      <OptimizeReferences>true</OptimizeReferences>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <RandomizedBaseAddress>true</RandomizedBaseAddress>
-      <DataExecutionPrevention />
-    </Link>
-    <PostBuildEvent>
-      <Command />
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
+  
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
     <Midl>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;NDEBUG;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -510,7 +317,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="r3dPCH.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Sources\Backend\HttpDownload.cpp" />
@@ -561,11 +368,11 @@
     <ClCompile Include="Sources\ObjectsCode\AI\AI_PlayerAnim.cpp" />
     <ClCompile Include="Sources\ObjectsCode\AI\AI_PlayerSenses.cpp" />
     <ClCompile Include="Sources\ObjectsCode\AI\r3dPhysSkeleton.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\..\External\PhysX\PhysXAPI\extensions;.\..\External\PhysX\PhysXAPI\geometry;.\..\External\PhysX\PhysXAPI\common;.\..\External\PhysX\PhysXCommon\src;.\..\External\PhysX\GeomUtils\src;.\..\External\PhysX\RepXUpgrader\include;.\..\External\PhysX\PhysXAPI\cloth;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="Sources\ObjectsCode\Battlefield\obj_DBFMasterControl.cpp" />
