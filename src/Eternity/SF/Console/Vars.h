@@ -363,6 +363,22 @@ REG_VAR( r_modern_gamma,					0.98f,		VF_SAVE );
 REG_VAR( r_modern_contrast,					1.08f,		VF_SAVE );
 REG_VAR( r_modern_brightness,				-0.025f,	VF_SAVE );
 
+REG_VAR( r_modern_fxaa,						1,			VF_SAVE );
+
+REG_VAR( r_modern_reshade_look,				1,			VF_SAVE );
+
+REG_VAR( r_modern_reshade_phdr_strength,	0.30f,		VF_SAVE );
+REG_VAR( r_modern_reshade_phdr_exposure,	0.10f,		VF_SAVE );
+
+REG_VAR( r_modern_reshade_jasharpen,		1.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_unsharp,			1.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_unsharp_blur,		1.00f,		VF_SAVE );
+
+REG_VAR( r_modern_reshade_vignette_amount,	-1.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_vignette_radius,	2.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_vignette_slope,	2.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_vignette_ratio,	1.00f,		VF_SAVE );
+
 REG_VAR( r_modern_color_lut,				0,			VF_SAVE );
 REG_VAR( r_modern_lut_name,					"",			VF_SAVE );
 

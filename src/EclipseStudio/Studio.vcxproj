@@ -481,6 +481,7 @@
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_NightVision.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_ObjectMotionBlur.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_RadialBlur.cpp" />
+    <ClCompile Include="Sources\RENDERING\Deffered\PFX_ReShadeLook.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_ScopeEffect.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_SeedSunThroughStencil.cpp" />
     <ClCompile Include="Sources\RENDERING\Deffered\PFX_StarShapeBlur.cpp" />
@@ -689,6 +690,7 @@
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_NightVision.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_ObjectMotionBlur.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_RadialBlur.h" />
+    <ClInclude Include="Sources\RENDERING\Deffered\PFX_ReShadeLook.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_ScopeEffect.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_SeedSunThroughStencil.h" />
     <ClInclude Include="Sources\RENDERING\Deffered\PFX_StarShapeBlur.h" />

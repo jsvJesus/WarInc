@@ -3628,6 +3628,7 @@ void r3dInitShaders()
 	r3dRenderer->AddPixelShaderFromFile( "PS_SUNSPOT", "SunSpot_ps.hls" );
 	r3dRenderer->AddVertexShaderFromFile( "VS_SUNSPOT", "SunSpot_vs.hls" );
 	r3dRenderer->AddPixelShaderFromFile( "PS_BRIGHTNESS_CONTRAST", "BrightnessContrast_ps.hls" );
+	r3dRenderer->AddPixelShaderFromFile( "PS_RESHADER_LOOK", "ReShaderLook_ps.hls" );
 
 	for( int i = 2; i < 17; i += 2 )
 	{

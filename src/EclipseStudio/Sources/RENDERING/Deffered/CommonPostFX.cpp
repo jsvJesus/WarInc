@@ -106,6 +106,7 @@ PFX_MinExpand				gPFX_MinExpand;
 
 PFX_FXAA					gPFX_FXAA;
 PFX_FXAA_LumPass			gPFX_FXAA_LumPass;
+PFX_ReShadeLook				gPFX_ReShadeLook;
 
 PFX_FilmTone				gPFX_FilmTone ;
 PFX_CopyOutput				gPFX_CopyOutput ;
@@ -195,6 +196,7 @@ static void ApplyModernFeatureSwitches()
 
 	const int ssaoEnabled = r_modern_ssao_radius->GetFloat() > 0.001f ? 1 : 0;
 	const int bloomEnabled = r_modern_bloom_power->GetFloat() > 0.001f ? 1 : 0;
+	const int fxaaEnabled = r_modern_fxaa->GetBool() ? 1 : 0;
 
 	LevelBloom = bloomEnabled;
 	LevelSunRays = 0;
@@ -207,7 +209,8 @@ static void ApplyModernFeatureSwitches()
 	r_sun_rays->SetInt(0);
 	r_dof->SetInt(0);
 	r_film_grain->SetInt(0);
-	r_fxaa->SetInt(0);
+
+	r_fxaa->SetInt(fxaaEnabled);
 	r_mlaa->SetInt(0);
 
 	if(ssaoEnabled)
@@ -391,10 +394,39 @@ static void ApplyModernColorCorrection()
 	hfs.enableColorCorrection = 1;
 }
 
+void AddReShadeLookStack()
+{
+	if(!r_modern_graphics->GetBool())
+		return;
+
+	if(!r_modern_reshade_look->GetBool())
+		return;
+
+	PFX_ReShadeLook::Settings sts;
+
+	sts.PHDRStrength = ModernClampFloat(r_modern_reshade_phdr_strength->GetFloat(), 0.00f, 1.00f);
+	sts.PHDRExposure = ModernClampFloat(r_modern_reshade_phdr_exposure->GetFloat(), -1.00f, 1.00f);
+
+	sts.JaSharpen = ModernClampFloat(r_modern_reshade_jasharpen->GetFloat(), 0.00f, 2.00f);
+	sts.UnsharpAmount = ModernClampFloat(r_modern_reshade_unsharp->GetFloat(), 0.00f, 2.00f);
+	sts.UnsharpBlurScale = ModernClampFloat(r_modern_reshade_unsharp_blur->GetFloat(), 0.25f, 4.00f);
+
+	sts.VignetteAmount = ModernClampFloat(r_modern_reshade_vignette_amount->GetFloat(), -1.00f, 1.00f);
+	sts.VignetteRadius = ModernClampFloat(r_modern_reshade_vignette_radius->GetFloat(), 0.10f, 4.00f);
+	sts.VignetteSlope = ModernClampFloat(r_modern_reshade_vignette_slope->GetFloat(), 0.10f, 8.00f);
+	sts.VignetteRatio = ModernClampFloat(r_modern_reshade_vignette_ratio->GetFloat(), 0.25f, 4.00f);
+
+	gPFX_ReShadeLook.PushSettings(sts);
+	g_pPostFXChief->AddFX(gPFX_ReShadeLook);
+	g_pPostFXChief->AddSwapBuffers();
+}
+
 void AddModernFinalColorStack()
 {
 	if(!r_modern_graphics->GetBool())
 		return;
+
+	AddReShadeLookStack();
 
 	const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.20f, 0.20f);
 	const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.50f, 1.75f);
@@ -544,6 +576,7 @@ void InitCommonPostFX()
 	gPFX_StereoReproject.Init();
 	gPFX_FXAA.Init();
 	gPFX_FXAA_LumPass.Init();
+	gPFX_ReShadeLook.Init();
 
 	gPFX_3DLUTColorCorrection.Init();
 	gPFX_BlackWhiteColorCorrection.Init();
@@ -643,6 +676,7 @@ void CloseCommonPostFX()
 	gPFX_StereoReproject.Close();
 	gPFX_FXAA.Close();
 	gPFX_FXAA_LumPass.Close();
+	gPFX_ReShadeLook.Close();
 
 	gPFX_3DLUTColorCorrection.Close();
 	gPFX_BlackWhiteColorCorrection.Close();
