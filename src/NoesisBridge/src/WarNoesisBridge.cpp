@@ -114,6 +114,135 @@ static void BuildFullPath(char* outPath, int outPathSize, const char* filename)
 	outPath[outPathSize - 1] = 0;
 }
 
+static Noesis::MouseButton ConvertMouseButton(int button)
+{
+	switch(button)
+	{
+	case 0:
+		return Noesis::MouseButton_Left;
+	case 1:
+		return Noesis::MouseButton_Right;
+	case 2:
+		return Noesis::MouseButton_Middle;
+	default:
+		return Noesis::MouseButton_Left;
+	}
+}
+
+static Noesis::Key ConvertKey(int vk)
+{
+	if(vk >= '0' && vk <= '9')
+		return (Noesis::Key)(Noesis::Key_D0 + (vk - '0'));
+
+	if(vk >= 'A' && vk <= 'Z')
+		return (Noesis::Key)(Noesis::Key_A + (vk - 'A'));
+
+	if(vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9)
+		return (Noesis::Key)(Noesis::Key_NumPad0 + (vk - VK_NUMPAD0));
+
+	if(vk >= VK_F1 && vk <= VK_F24)
+		return (Noesis::Key)(Noesis::Key_F1 + (vk - VK_F1));
+
+	switch(vk)
+	{
+	case VK_BACK:
+		return Noesis::Key_Back;
+	case VK_TAB:
+		return Noesis::Key_Tab;
+	case VK_RETURN:
+		return Noesis::Key_Return;
+	case VK_PAUSE:
+		return Noesis::Key_Pause;
+	case VK_CAPITAL:
+		return Noesis::Key_Capital;
+	case VK_ESCAPE:
+		return Noesis::Key_Escape;
+	case VK_SPACE:
+		return Noesis::Key_Space;
+	case VK_PRIOR:
+		return Noesis::Key_PageUp;
+	case VK_NEXT:
+		return Noesis::Key_PageDown;
+	case VK_END:
+		return Noesis::Key_End;
+	case VK_HOME:
+		return Noesis::Key_Home;
+	case VK_LEFT:
+		return Noesis::Key_Left;
+	case VK_UP:
+		return Noesis::Key_Up;
+	case VK_RIGHT:
+		return Noesis::Key_Right;
+	case VK_DOWN:
+		return Noesis::Key_Down;
+	case VK_INSERT:
+		return Noesis::Key_Insert;
+	case VK_DELETE:
+		return Noesis::Key_Delete;
+	case VK_LWIN:
+		return Noesis::Key_LWin;
+	case VK_RWIN:
+		return Noesis::Key_RWin;
+	case VK_APPS:
+		return Noesis::Key_Apps;
+	case VK_NUMLOCK:
+		return Noesis::Key_NumLock;
+	case VK_SCROLL:
+		return Noesis::Key_Scroll;
+	case VK_SHIFT:
+	case VK_LSHIFT:
+		return Noesis::Key_LeftShift;
+	case VK_RSHIFT:
+		return Noesis::Key_RightShift;
+	case VK_CONTROL:
+	case VK_LCONTROL:
+		return Noesis::Key_LeftCtrl;
+	case VK_RCONTROL:
+		return Noesis::Key_RightCtrl;
+	case VK_MENU:
+	case VK_LMENU:
+		return Noesis::Key_LeftAlt;
+	case VK_RMENU:
+		return Noesis::Key_RightAlt;
+	case VK_MULTIPLY:
+		return Noesis::Key_Multiply;
+	case VK_ADD:
+		return Noesis::Key_Add;
+	case VK_SEPARATOR:
+		return Noesis::Key_Separator;
+	case VK_SUBTRACT:
+		return Noesis::Key_Subtract;
+	case VK_DECIMAL:
+		return Noesis::Key_Decimal;
+	case VK_DIVIDE:
+		return Noesis::Key_Divide;
+	case VK_OEM_1:
+		return Noesis::Key_OemSemicolon;
+	case VK_OEM_PLUS:
+		return Noesis::Key_OemPlus;
+	case VK_OEM_COMMA:
+		return Noesis::Key_OemComma;
+	case VK_OEM_MINUS:
+		return Noesis::Key_OemMinus;
+	case VK_OEM_PERIOD:
+		return Noesis::Key_OemPeriod;
+	case VK_OEM_2:
+		return Noesis::Key_OemQuestion;
+	case VK_OEM_3:
+		return Noesis::Key_OemTilde;
+	case VK_OEM_4:
+		return Noesis::Key_OemOpenBrackets;
+	case VK_OEM_5:
+		return Noesis::Key_OemPipe;
+	case VK_OEM_6:
+		return Noesis::Key_OemCloseBrackets;
+	case VK_OEM_7:
+		return Noesis::Key_OemQuotes;
+	default:
+		return Noesis::Key_None;
+	}
+}
+
 WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 {
 	if(gInitialized)
@@ -286,4 +415,60 @@ WAR_NOESIS_API void __cdecl WarNoesis_Render()
 WAR_NOESIS_API int __cdecl WarNoesis_IsLoaded()
 {
 	return gLoaded;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_MouseMove(int x, int y)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->MouseMove(x, y) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_MouseButtonDown(int x, int y, int button)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->MouseButtonDown(x, y, ConvertMouseButton(button)) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_MouseButtonUp(int x, int y, int button)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->MouseButtonUp(x, y, ConvertMouseButton(button)) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_MouseWheel(int x, int y, int delta)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->MouseWheel(x, y, delta) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_KeyDown(int vk)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->KeyDown(ConvertKey(vk)) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_KeyUp(int vk)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->KeyUp(ConvertKey(vk)) ? 1 : 0;
+}
+
+WAR_NOESIS_API int __cdecl WarNoesis_Char(unsigned int ch)
+{
+	if(!gLoaded || !gView)
+		return 0;
+
+	return gView->Char((uint32_t)ch) ? 1 : 0;
 }

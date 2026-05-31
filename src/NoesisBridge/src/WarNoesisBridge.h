@@ -17,3 +17,12 @@ WAR_NOESIS_API void __cdecl WarNoesis_Update(double timeSeconds);
 WAR_NOESIS_API void __cdecl WarNoesis_Render();
 
 WAR_NOESIS_API int  __cdecl WarNoesis_IsLoaded();
+
+WAR_NOESIS_API int __cdecl WarNoesis_MouseMove(int x, int y);
+WAR_NOESIS_API int __cdecl WarNoesis_MouseButtonDown(int x, int y, int button);
+WAR_NOESIS_API int __cdecl WarNoesis_MouseButtonUp(int x, int y, int button);
+WAR_NOESIS_API int __cdecl WarNoesis_MouseWheel(int x, int y, int delta);
+
+WAR_NOESIS_API int __cdecl WarNoesis_KeyDown(int vk);
+WAR_NOESIS_API int __cdecl WarNoesis_KeyUp(int vk);
+WAR_NOESIS_API int __cdecl WarNoesis_Char(unsigned int ch);
