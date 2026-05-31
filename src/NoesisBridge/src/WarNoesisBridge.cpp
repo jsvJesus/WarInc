@@ -21,6 +21,11 @@
 #include <NsGui/Button.h>
 #include <NsGui/BaseButton.h>
 #include <NsGui/RoutedEvent.h>
+#include <NsGui/Uri.h>
+
+#include <NsApp/LocalXamlProvider.h>
+#include <NsApp/LocalTextureProvider.h>
+#include <NsApp/LocalFontProvider.h>
 
 #include <NsGui/Visual.h>
 #include <NsGui/VisualTreeHelper.h>
@@ -405,6 +410,13 @@ WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 	Noesis::GUI::SetLicense(NS_LICENSE_NAME, NS_LICENSE_KEY);
 	Noesis::GUI::Init();
 
+	if(gRootPath[0])
+	{
+		Noesis::GUI::SetXamlProvider(Noesis::MakePtr<NoesisApp::LocalXamlProvider>(gRootPath));
+		Noesis::GUI::SetTextureProvider(Noesis::MakePtr<NoesisApp::LocalTextureProvider>(gRootPath));
+		Noesis::GUI::SetFontProvider(Noesis::MakePtr<NoesisApp::LocalFontProvider>(gRootPath));
+	}
+
 	const char* fontFallbacks[] =
 	{
 		"Arial",
@@ -486,34 +498,27 @@ WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
 	if(!gInitialized)
 		return 0;
 
+	if(!filename || !filename[0])
+		return 0;
+
 	WarNoesis_UnloadXaml();
 
 	char fullPath[MAX_PATH];
 	BuildFullPath(fullPath, sizeof(fullPath), filename);
 
-	char* xaml = ReadTextFile(fullPath);
+	char buffer[1024];
+	_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: loading xaml %s", fullPath);
+	buffer[sizeof(buffer) - 1] = 0;
+	BridgeLog(buffer);
 
-	if(!xaml)
-	{
-		char buffer[1024];
-		_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: failed to read xaml %s", fullPath);
-		buffer[sizeof(buffer) - 1] = 0;
-		BridgeLog(buffer);
-		return 0;
-	}
-
-	const char* xamlText = xaml;
-
-	if((unsigned char)xamlText[0] == 0xEF && (unsigned char)xamlText[1] == 0xBB && (unsigned char)xamlText[2] == 0xBF)
-		xamlText += 3;
-
-	Noesis::Ptr<Noesis::BaseComponent> component = Noesis::GUI::ParseXaml(xamlText);
-
-	free(xaml);
+	Noesis::Uri xamlUri(filename);
+	Noesis::Ptr<Noesis::BaseComponent> component = Noesis::GUI::LoadXaml(xamlUri);
 
 	if(!component)
 	{
-		BridgeLog("WarNoesisBridge: ParseXaml failed");
+		_snprintf(buffer, sizeof(buffer) - 1, "WarNoesisBridge: LoadXaml failed %s", filename);
+		buffer[sizeof(buffer) - 1] = 0;
+		BridgeLog(buffer);
 		return 0;
 	}
 
