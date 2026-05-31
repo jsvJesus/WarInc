@@ -70,7 +70,7 @@ static CD3DFont* StudioGetFont()
 		ig,
 		"Verdana",
 		10,
-		D3DFONT_BOLD | D3DFONT_FILTERED | D3DFONT_SKIPGLYPH
+		D3DFONT_BOLD | D3DFONT_FILTERED
 	);
 
 	if(FAILED(gStudioMenuFont->CreateSystemFont()))

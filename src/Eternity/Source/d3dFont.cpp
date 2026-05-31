@@ -538,43 +538,111 @@ const char* CD3DFont::ParseSpecialCodes(const char* in)
 //-----------------------------------------------------------------------------
 HRESULT CD3DFont::GetTextExtent(const char* strText, SIZE* pSize)
 {
-    if(NULL==strText || NULL==pSize)
-        return E_FAIL;
+  if(NULL == strText || NULL == pSize)
+    return E_FAIL;
 
-    float texWidth   = (float)glyphTexture->GetWidth();
-    float texHeight  = (float)glyphTexture->GetHeight();
+  pSize->cx = 0;
+  pSize->cy = 0;
 
-    float fRowWidth  = 0.0f;
-    float fRowHeight = (glyphTexCoords[0][3]-glyphTexCoords[0][1])*texHeight;
-    float fWidth     = 0.0f;
-    float fHeight    = fRowHeight;
-
-    while(*strText)
+  if(glyphTexture == NULL)
+  {
+    if(!fnt_pD3DXFont)
     {
-	strText = ParseSpecialCodes(strText);
-        char c = *strText++;
-
-        if(c == '\n')
-        {
-            fRowWidth = 0.0f;
-            fHeight  += fRowHeight;
-        }
-        if(c < ' ')
-            continue;
-
-        float tx1 = glyphTexCoords[c-32][0];
-        float tx2 = glyphTexCoords[c-32][2];
-
-        fRowWidth += (tx2-tx1)*texWidth/glyphTexScale;
-
-        if(fRowWidth > fWidth)
-            fWidth = fRowWidth;
+      if(r3dRenderer && r3dRenderer->pd3ddev)
+        CreateD3DXFont();
     }
 
-    pSize->cx = (int)fWidth;
-    pSize->cy = (int)fHeight;
+    if(!fnt_pD3DXFont)
+      return E_FAIL;
+
+    char cleanText[4096];
+    char* out = cleanText;
+    char* outEnd = cleanText + sizeof(cleanText) - 1;
+    const char* in = strText;
+
+    while(*in && out < outEnd)
+    {
+      if(in[0] == '#' && in[1] == 'c' &&
+        in[2] && in[3] && in[4] && in[5] && in[6] && in[7])
+      {
+        in += 8;
+        continue;
+      }
+
+      *out++ = *in++;
+    }
+
+    *out = 0;
+
+    RECT r;
+    r.left = 0;
+    r.top = 0;
+    r.right = 0;
+    r.bottom = 0;
+
+    fnt_pD3DXFont->DrawTextA(
+      NULL,
+      cleanText,
+      -1,
+      &r,
+      DT_CALCRECT | DT_NOCLIP,
+      0xFFFFFFFF
+    );
+
+    pSize->cx = r.right - r.left;
+    pSize->cy = r.bottom - r.top;
+
+    if(pSize->cx < 0)
+      pSize->cx = 0;
+
+    if(pSize->cy < 0)
+      pSize->cy = 0;
 
     return S_OK;
+  }
+
+  float texWidth = (float)glyphTexture->GetWidth();
+  float texHeight = (float)glyphTexture->GetHeight();
+
+  float fRowWidth = 0.0f;
+  float fRowHeight = (glyphTexCoords[0][3] - glyphTexCoords[0][1]) * texHeight;
+  float fWidth = 0.0f;
+  float fHeight = fRowHeight;
+
+  while(*strText)
+  {
+    strText = ParseSpecialCodes(strText);
+
+    char c = *strText++;
+
+    if(c == '\n')
+    {
+      fRowWidth = 0.0f;
+      fHeight += fRowHeight;
+      continue;
+    }
+
+    if((unsigned char)c < ' ')
+      continue;
+
+    int gc = (int)((unsigned char)c) - GlyphCodeCacheMin;
+
+    if(gc < 0 || gc >= GlyphCacheSize)
+      continue;
+
+    float tx1 = glyphTexCoords[gc][0];
+    float tx2 = glyphTexCoords[gc][2];
+
+    fRowWidth += (tx2 - tx1) * texWidth / glyphTexScale;
+
+    if(fRowWidth > fWidth)
+      fWidth = fRowWidth;
+  }
+
+  pSize->cx = (int)fWidth;
+  pSize->cy = (int)fHeight;
+
+  return S_OK;
 }
 
 
