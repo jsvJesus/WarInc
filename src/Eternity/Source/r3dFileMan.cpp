@@ -160,7 +160,7 @@ r3dFile* r3dFile_IntOpen(const char* fname, const char* mode)
     r3dFile* f = new r3dFile();
     sprintf(f->Location.FileName, "%s", fname);
     f->Location.Where  = FILELOC_Resource;
-    f->Location.id     = (DWORD)fe;
+    f->Location.id     = reinterpret_cast<UINT_PTR>(fe);
     f->data = data;
     f->size = (int)dwsize;
     return f;

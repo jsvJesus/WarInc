@@ -3,6 +3,9 @@
 
 #include "r3d.h"
 
+#include <vector>
+#include <climits>
+
 #include "r3dColor.h"
 #include "pShader.h"
 #include "VShader.h"
@@ -14,8 +17,8 @@ struct R3D_DEBUG_VERTEX;
 
 // bitwise flags for SetRenderingMode()
 #define R3D_BLEND_NONE          0
-#define R3D_BLEND_PUSH          (1<<30)
-#define R3D_BLEND_POP           (1<<31)
+#define R3D_BLEND_PUSH          (1 << 30)
+#define R3D_BLEND_POP           INT_MIN
 
 #define R3D_BLEND_NZ            (1<<1)      // No Z Check: zero flag
 #define R3D_BLEND_ZC            (1<<2)      // Z Check Enabled
@@ -983,9 +986,9 @@ public:
 	}
 
 	R3D_FORCEINLINE
-	int Valid()
+	int Valid() const
 	{
-		return (int)mRes ;
+		return mRes != NULL;
 	}
 
 	void ReleaseAndReset();
@@ -1020,7 +1023,7 @@ public:
 	{
 		R3D_ENSURE_MAIN_THREAD();
 
-		return (T*)mRes ;
+		return static_cast<T*>(mRes);
 	}
 
 	R3D_FORCEINLINE
@@ -1028,9 +1031,9 @@ public:
 	{
 		R3D_ENSURE_MAIN_THREAD();
 
-		r3d_assert( mRes );
+		r3d_assert(mRes);
 
-		return (T*)mRes ;
+		return static_cast<T*>(mRes);
 	}
 
 };

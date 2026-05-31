@@ -14,7 +14,7 @@ class r3dFileLoc
 	#define FILELOC_File		0
 	#define FILELOC_Resource	1
 	int		Where;
-	DWORD		id;
+	UINT_PTR	id;
 	r3dFileLoc() {
 	  FileName[0] = 0;
 	  Where       = 0xff;
