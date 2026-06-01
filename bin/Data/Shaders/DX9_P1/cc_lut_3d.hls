@@ -4,24 +4,53 @@
 #define LUT_COUNT 3
 #endif
 
+#if R3D_DX11
+
+Texture2D Screen_Texture : register(t0);
+SamplerState Screen : register(s0);
+
+Texture3D LUT3D_Texture[LUT_COUNT] : register(t4);
+SamplerState LUT3D[LUT_COUNT] : register(s4);
+
+#else
+
 sampler2D Screen				: register( s0 );
 sampler3D LUT3D[ LUT_COUNT ]	: register( s4 );
+
+#endif
 
 float4 LerpCoef	: register ( c0 );
 
 void main(	in half2 vTexc : TEXCOORD,
 			out half4 oColr : COLOR0 )
 {
+#if R3D_DX11
+
+	half4 colr = (half4)Screen_Texture.Sample(Screen, vTexc);
+
+	half3 res = LUT3D_Texture[0].Sample(LUT3D[0], colr.rgb).rgb;
+
+	[unroll]
+	for( int i = 1 ; i < LUT_COUNT; i ++ )
+	{
+		half3 extra = LUT3D_Texture[i].Sample(LUT3D[i], colr.rgb).rgb;
+		res = lerp( res, extra, LerpCoef[ i - 1 ] );
+	}
+
+#else
+
 	half4 colr = (half4)tex2D( Screen, vTexc );
-	
+
 	half3 res = tex3D( LUT3D[0], colr.rgb ).rgb;
-	
+
 	[unroll]
 	for( int i = 1 ; i < LUT_COUNT; i ++ )
 	{
 		half3 extra = tex3D( LUT3D[ i ], colr.rgb ).rgb;
 		res = lerp( res, extra, LerpCoef[ i - 1 ] );
 	}
-	
+
+#endif
+
 	oColr = float4( res, colr.a );
 }
