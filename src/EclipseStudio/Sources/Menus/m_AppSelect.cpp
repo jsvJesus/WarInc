@@ -8,6 +8,7 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <string.h>
 
 int AppSelectMode = 100;
 
@@ -47,17 +48,19 @@ struct StudioMenuButton
 	const char* text;
 	const char* command;
 	int result;
+	int primary;
 };
 
 static bool gStudioPrevMouseDown = false;
-
 static CD3DFont* gStudioMenuFont = NULL;
+
+static float StudioMinFloat(float a, float b)
+{
+	return a < b ? a : b;
+}
 
 static CD3DFont* StudioGetFont()
 {
-	if(Font_Label)
-		return Font_Label;
-
 	if(gStudioMenuFont)
 		return gStudioMenuFont;
 
@@ -69,8 +72,8 @@ static CD3DFont* StudioGetFont()
 	gStudioMenuFont = new CD3DFont(
 		ig,
 		"Verdana",
-		10,
-		D3DFONT_BOLD | D3DFONT_FILTERED
+		14,
+		D3DFONT_BOLD
 	);
 
 	if(FAILED(gStudioMenuFont->CreateSystemFont()))
@@ -132,28 +135,93 @@ static void StudioGetMouse(float* outX, float* outY, bool* outDown)
 	*outDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
 }
 
+static void StudioDrawTextCentered(float x, float y, float w, const r3dColor24& color, const char* text)
+{
+	float textW = StudioGetTextWidth(text);
+	StudioPrintText(x + w * 0.5f - textW * 0.5f, y, color, text);
+}
+
 static void StudioDrawButton(const StudioMenuButton& button, float mouseX, float mouseY, bool mouseDown)
 {
 	bool hovered = StudioPointInRect(mouseX, mouseY, button.x, button.y, button.w, button.h);
 	bool pressed = hovered && mouseDown;
 
-	r3dColor borderColor = hovered ? r3dColor(255, 30, 20, 255) : r3dColor(80, 88, 98, 255);
-	r3dColor fillColor = pressed ? r3dColor(46, 54, 64, 230) : hovered ? r3dColor(32, 36, 43, 230) : r3dColor(5, 6, 7, 230);
-	r3dColor glossColor = r3dColor(255, 255, 255, 22);
+	r3dColor fillColor;
+	r3dColor innerColor;
+	r3dColor borderColor;
+	r3dColor textColor;
+	r3dColor arrowColor;
 
-	r3dDrawBox2D(button.x, button.y, button.w, button.h, borderColor);
-	r3dDrawBox2D(button.x + 1, button.y + 1, button.w - 2, button.h - 2, fillColor);
-	r3dDrawBox2D(button.x + 2, button.y + 2, button.w - 4, 8, glossColor);
+	if(button.primary)
+	{
+		fillColor = pressed ? r3dColor(8, 34, 54, 235) : hovered ? r3dColor(20, 82, 122, 235) : r3dColor(16, 75, 114, 230);
+		innerColor = r3dColor(57, 168, 232, 210);
+		borderColor = hovered ? r3dColor(255, 255, 255, 255) : r3dColor(57, 168, 232, 255);
+		textColor = r3dColor(242, 247, 252, 255);
+		arrowColor = r3dColor(57, 168, 232, 255);
+	}
+	else
+	{
+		fillColor = pressed ? r3dColor(8, 34, 54, 220) : hovered ? r3dColor(16, 75, 114, 220) : r3dColor(11, 48, 75, 190);
+		innerColor = hovered ? r3dColor(57, 168, 232, 180) : r3dColor(35, 110, 158, 120);
+		borderColor = hovered ? r3dColor(57, 168, 232, 255) : r3dColor(30, 85, 120, 180);
+		textColor = hovered ? r3dColor(242, 247, 252, 255) : r3dColor(91, 155, 196, 230);
+		arrowColor = hovered ? r3dColor(57, 168, 232, 255) : r3dColor(57, 168, 232, 180);
+	}
 
-	const char* buttonText = button.text ? button.text : "";
+	r3dDrawBox2D(button.x, button.y, button.w, button.h, r3dColor(5, 16, 26, 170));
+	r3dDrawBox2D(button.x + 4, button.y + 4, button.w - 8, button.h - 8, fillColor);
 
-	float textW = StudioGetTextWidth(buttonText);
+	r3dDrawBox2D(button.x + 12, button.y + 8, button.w - 82, 2, borderColor);
+	r3dDrawBox2D(button.x + 12, button.y + button.h - 10, button.w - 82, 2, borderColor);
+	r3dDrawBox2D(button.x + 12, button.y + 8, 2, button.h - 16, borderColor);
+	r3dDrawBox2D(button.x + button.w - 72, button.y + 8, 2, button.h - 16, borderColor);
+
+	r3dDrawBox2D(button.x + button.w - 70, button.y + 4, 66, button.h - 8, r3dColor(10, 35, 55, 190));
+	r3dDrawBox2D(button.x + button.w - 68, button.y + 6, 2, button.h - 12, innerColor);
+
+	StudioDrawTextCentered(
+		button.x,
+		button.y + button.h * 0.5f - 8.0f,
+		button.w - 70.0f,
+		textColor,
+		button.text
+	);
 
 	StudioPrintText(
-		button.x + button.w * 0.5f - textW * 0.5f,
-		button.y + 8,
-		r3dColor(235, 240, 250, 255),
-		buttonText
+		button.x + button.w - 44.0f,
+		button.y + button.h * 0.5f - 12.0f,
+		arrowColor,
+		">"
+	);
+}
+
+static void StudioDrawLogo(float sw, float sh, float scale)
+{
+	float logoY = sh * 0.5f - 310.0f * scale;
+	float centerX = sw * 0.5f;
+
+	float iconSize = 76.0f * scale;
+	float iconX = centerX - 250.0f * scale;
+	float iconY = logoY + 4.0f * scale;
+
+	r3dDrawBox2D(iconX, iconY, iconSize, iconSize, r3dColor(57, 168, 232, 255));
+	r3dDrawBox2D(iconX + 10.0f * scale, iconY + 10.0f * scale, iconSize - 20.0f * scale, iconSize - 20.0f * scale, r3dColor(10, 35, 55, 255));
+	r3dDrawBox2D(iconX + 22.0f * scale, iconY + 22.0f * scale, iconSize - 44.0f * scale, iconSize - 44.0f * scale, r3dColor(57, 168, 232, 180));
+	r3dDrawBox2D(iconX + 29.0f * scale, iconY + 29.0f * scale, iconSize - 58.0f * scale, iconSize - 58.0f * scale, r3dColor(10, 35, 55, 255));
+
+	StudioPrintText(
+		centerX - 130.0f * scale,
+		logoY + 22.0f * scale,
+		r3dColor(242, 247, 252, 255),
+		"GAME"
+	);
+
+	StudioPrintText(
+		centerX + 10.0f * scale,
+		logoY + 22.0f * scale,
+		r3dColor(57, 168, 232, 255),
+		"STUDIO"
 	);
 }
 
@@ -171,37 +239,29 @@ static int StudioDrawAndProcessMenu()
 	bool clicked = !mouseDown && gStudioPrevMouseDown;
 	gStudioPrevMouseDown = mouseDown;
 
-	const float btnW = 220.0f;
-	const float btnH = 30.0f;
-	const float gap = 16.0f;
+	float scale = StudioMinFloat(sw / 1920.0f, sh / 1080.0f);
 
-	float row1W = btnW * 3.0f + gap * 2.0f;
-	float row2W = btnW * 4.0f + gap * 3.0f;
+	if(scale < 0.65f)
+		scale = 0.65f;
 
-	float row1X = sw * 0.5f - row1W * 0.5f;
-	float row2X = sw * 0.5f - row2W * 0.5f;
+	const float btnW = 720.0f * scale;
+	const float btnH = 62.0f * scale;
+	const float gap = 18.0f * scale;
 
-	float row1Y = sh * 0.5f - 55.0f;
-	float row2Y = sh * 0.5f + 28.0f;
+	float startX = sw * 0.5f - btnW * 0.5f;
+	float startY = sh * 0.5f - 105.0f * scale;
+
+	StudioDrawLogo(sw, sh, scale);
 
 	StudioMenuButton buttons[] =
 	{
-		{ row1X + (btnW + gap) * 0.0f, row1Y, btnW, btnH, "Update DB",             "BtnUpdateDB",        Menu_AppSelect::bUpdateDB },
-		{ row1X + (btnW + gap) * 1.0f, row1Y, btnW, btnH, "Game (Public Server)",  "BtnGamePublic",      Menu_AppSelect::bStartGamePublic },
-		{ row1X + (btnW + gap) * 2.0f, row1Y, btnW, btnH, "Game (DEV Server)",     "BtnGameDev",         Menu_AppSelect::bStartGameSVN },
-
-		{ row2X + (btnW + gap) * 0.0f, row2Y, btnW, btnH, "Level Editor",          "BtnLevelEditor",     Menu_AppSelect::bStartLevelEditor },
-		{ row2X + (btnW + gap) * 1.0f, row2Y, btnW, btnH, "Particle Editor",       "BtnParticleEditor",  Menu_AppSelect::bStartParticleEditor },
-		{ row2X + (btnW + gap) * 2.0f, row2Y, btnW, btnH, "Physics Editor",        "BtnPhysicsEditor",   Menu_AppSelect::bStartPhysicsEditor },
-		{ row2X + (btnW + gap) * 3.0f, row2Y, btnW, btnH, "Character Editor",      "BtnCharacterEditor", Menu_AppSelect::bStartCharacterEditor }
+		{ startX, startY + (btnH + gap) * 0.0f, btnW, btnH, "PLAY GAME",        "BtnPlayGame",        Menu_AppSelect::bStartGamePublic,      1 },
+		{ startX, startY + (btnH + gap) * 1.0f, btnW, btnH, "LEVEL EDITOR",     "BtnLevelEditor",     Menu_AppSelect::bStartLevelEditor,     0 },
+		{ startX, startY + (btnH + gap) * 2.0f, btnW, btnH, "PARTICLE EDITOR",  "BtnParticleEditor",  Menu_AppSelect::bStartParticleEditor,  0 },
+		{ startX, startY + (btnH + gap) * 3.0f, btnW, btnH, "PHYSICS EDITOR",   "BtnPhysicsEditor",   Menu_AppSelect::bStartPhysicsEditor,   0 },
+		{ startX, startY + (btnH + gap) * 4.0f, btnW, btnH, "CHARACTER EDITOR", "BtnCharacterEditor", Menu_AppSelect::bStartCharacterEditor, 0 },
+		{ startX, startY + (btnH + gap) * 5.0f, btnW, btnH, "EXIT",             "BtnExit",            Menu_AppSelect::bQuit,                 0 }
 	};
-
-	StudioPrintText(
-		sw * 0.5f - 78.0f,
-		sh * 0.5f - 125.0f,
-		r3dColor(190, 200, 215, 255),
-		"ECLIPSE STUDIO"
-	);
 
 	int result = -1;
 
@@ -226,12 +286,6 @@ static int AppSelectCommandToResult(const char* command)
 
 	if(strcmp(command, "BtnPlayGame") == 0)
 		return Menu_AppSelect::bStartGamePublic;
-
-	if(strcmp(command, "BtnGamePublic") == 0)
-		return Menu_AppSelect::bStartGamePublic;
-
-	if(strcmp(command, "BtnGameDev") == 0)
-		return Menu_AppSelect::bStartGameSVN;
 
 	if(strcmp(command, "BtnLevelEditor") == 0)
 		return Menu_AppSelect::bStartLevelEditor;
@@ -269,6 +323,12 @@ static int ProcessAppSelectNoesisCommands()
 	return -1;
 }
 
+static void AppSelectUnloadNoesis(bool noesisReady)
+{
+	if(noesisReady && gNoesisGUI)
+		gNoesisGUI->UnloadXaml();
+}
+
 int Menu_AppSelect::DoModal()
 {
 	AppSelectMode = 100;
@@ -300,13 +360,20 @@ int Menu_AppSelect::DoModal()
 	while(1)
 	{
 		if(g_bExit)
+		{
+			AppSelectUnloadNoesis(noesisReady);
 			return 0;
+		}
 
 		mUpdate();
 
 		int noesisResult = ProcessAppSelectNoesisCommands();
+
 		if(noesisResult != -1)
+		{
+			AppSelectUnloadNoesis(noesisReady);
 			return noesisResult;
+		}
 
 		r3dStartFrame();
 
@@ -332,6 +399,8 @@ int Menu_AppSelect::DoModal()
 			{
 				mDrawEnd();
 				r3dEndFrame();
+
+				AppSelectUnloadNoesis(noesisReady);
 				return nativeResult;
 			}
 
@@ -351,5 +420,6 @@ int Menu_AppSelect::DoModal()
 		r3dEndFrame();
 	}
 
+	AppSelectUnloadNoesis(noesisReady);
 	return 0;
 }

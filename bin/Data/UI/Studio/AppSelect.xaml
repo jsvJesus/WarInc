@@ -6,147 +6,37 @@
     mc:Ignorable="d"
     Width="1920"
     Height="1080"
-    Background="#FF000000"
-    d:DesignWidth="1920"
-    d:DesignHeight="1080">
+    Background="#FF000000" d:DesignWidth="1920" d:DesignHeight="1080">
 
     <UserControl.Resources>
 
-        <Storyboard x:Key="BackgroundLoop">
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="BackgroundMap"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
-                RepeatBehavior="Forever"
-                AutoReverse="True">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1.06"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:18" Value="1.14">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <SineEase EasingMode="EaseInOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
+        <SolidColorBrush x:Key="TextWhite" Color="#FFF2F7FC"/>
+        <SolidColorBrush x:Key="TextBlue" Color="#FF39A8E8"/>
+        <SolidColorBrush x:Key="TextBlueMuted" Color="#FF5B9BC4"/>
 
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="BackgroundMap"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
-                RepeatBehavior="Forever"
-                AutoReverse="True">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1.06"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:18" Value="1.14">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <SineEase EasingMode="EaseInOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="BackgroundMap"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)"
-                RepeatBehavior="Forever"
-                AutoReverse="True">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="-18"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:22" Value="18">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <SineEase EasingMode="EaseInOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="BackgroundMap"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)"
-                RepeatBehavior="Forever"
-                AutoReverse="True">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="-10"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:26" Value="14">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <SineEase EasingMode="EaseInOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-        </Storyboard>
-
-        <Storyboard x:Key="Intro">
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="Dialog"
-                Storyboard.TargetProperty="Opacity">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="1">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="Dialog"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0.94"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="1">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <BackEase EasingMode="EaseOut" Amplitude="0.25"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames
-                Storyboard.TargetName="Dialog"
-                Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
-                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0.94"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="1">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <BackEase EasingMode="EaseOut" Amplitude="0.25"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-            </DoubleAnimationUsingKeyFrames>
-        </Storyboard>
-
-        <SolidColorBrush x:Key="TextMain" Color="#FFF2F5F8"/>
-        <SolidColorBrush x:Key="TextMuted" Color="#FF8E9AA8"/>
-        <SolidColorBrush x:Key="AccentRed" Color="#FFE0352D"/>
-        <SolidColorBrush x:Key="AccentOrange" Color="#FFFF8A2A"/>
-
-        <LinearGradientBrush x:Key="PanelBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#EE111820" Offset="0"/>
-            <GradientStop Color="#DD070A0E" Offset="0.58"/>
-            <GradientStop Color="#F0000000" Offset="1"/>
+        <LinearGradientBrush x:Key="ButtonBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#5510334D" Offset="0"/>
+            <GradientStop Color="#DD0B304B" Offset="0.55"/>
+            <GradientStop Color="#99143D5A" Offset="1"/>
         </LinearGradientBrush>
 
-        <LinearGradientBrush x:Key="ButtonBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#FF2A333D" Offset="0"/>
-            <GradientStop Color="#FF111820" Offset="0.45"/>
-            <GradientStop Color="#FF06080B" Offset="1"/>
-        </LinearGradientBrush>
-
-        <LinearGradientBrush x:Key="ButtonHoverBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#FF3C4652" Offset="0"/>
-            <GradientStop Color="#FF281618" Offset="0.5"/>
-            <GradientStop Color="#FF090607" Offset="1"/>
-        </LinearGradientBrush>
-
-        <LinearGradientBrush x:Key="PlayButtonBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FFE64A34" Offset="0"/>
-            <GradientStop Color="#FF8F1B16" Offset="0.55"/>
-            <GradientStop Color="#FF260707" Offset="1"/>
-        </LinearGradientBrush>
-
-        <LinearGradientBrush x:Key="PlayButtonHoverBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#FFFF7750" Offset="0"/>
-            <GradientStop Color="#FFC72C22" Offset="0.55"/>
-            <GradientStop Color="#FF3B0908" Offset="1"/>
+        <LinearGradientBrush x:Key="ButtonHoverBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#9916466A" Offset="0"/>
+            <GradientStop Color="#FF104B72" Offset="0.55"/>
+            <GradientStop Color="#DD1D75A5" Offset="1"/>
         </LinearGradientBrush>
 
         <Style x:Key="MenuButton" TargetType="Button">
-            <Setter Property="Width" Value="360"/>
-            <Setter Property="Height" Value="46"/>
-            <Setter Property="Margin" Value="0,7,0,7"/>
-            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Width" Value="720"/>
+            <Setter Property="Height" Value="62"/>
+            <Setter Property="Margin" Value="0,9,0,9"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBlueMuted}"/>
             <Setter Property="FontFamily" Value="Verdana"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="31"/>
+            <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Background" Value="{StaticResource ButtonBrush}"/>
-            <Setter Property="BorderBrush" Value="#FF45505C"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#0039A8E8"/>
+            <Setter Property="BorderThickness" Value="3"/>
             <Setter Property="Cursor" Value="Hand"/>
 
             <Setter Property="Template">
@@ -155,29 +45,35 @@
                         <Border
                             x:Name="Root"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="4">
+                            BorderBrush="#3310334D"
+                            BorderThickness="4">
 
                             <Grid>
-                                <Border
-                                    Height="16"
-                                    VerticalAlignment="Top"
-                                    CornerRadius="4"
-                                    Opacity="0.35">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                                            <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
 
-                                <Rectangle
-                                    Height="1"
-                                    VerticalAlignment="Top"
-                                    Fill="#88FFFFFF"
-                                    Margin="1,1,1,0"/>
+                                <Border
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Margin="12,7,62,7"
+                                    Background="Transparent"/>
+
+                                <Border
+                                    Width="70"
+                                    HorizontalAlignment="Right"
+                                    Background="#2210334D"
+                                    BorderBrush="#6639A8E8"
+                                    BorderThickness="3"
+                                    Margin="0,0,0,0">
+
+                                    <TextBlock
+                                        Text=">"
+                                        Foreground="#FF39A8E8"
+                                        FontFamily="Verdana"
+                                        FontSize="48"
+                                        FontWeight="Bold"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="0,-7,0,0"/>
+                                </Border>
 
                                 <ContentPresenter
                                     HorizontalAlignment="Center"
@@ -188,16 +84,19 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Root" Property="Background" Value="{StaticResource ButtonHoverBrush}"/>
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#FFFF3B2F"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#FF39A8E8"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextWhite}"/>
                             </Trigger>
 
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#FF080A0D"/>
+                                <Setter TargetName="Root" Property="Background" Value="#FF082236"/>
                                 <Setter TargetName="Root" Property="BorderBrush" Value="#FFFFFFFF"/>
+                                <Setter Property="Foreground" Value="#FFBFEFFF"/>
                             </Trigger>
 
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Root" Property="Opacity" Value="0.35"/>
+                                <Setter Property="Foreground" Value="#FF2A526A"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -206,231 +105,110 @@
         </Style>
 
         <Style x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource MenuButton}">
-            <Setter Property="Width" Value="360"/>
-            <Setter Property="Height" Value="58"/>
-            <Setter Property="FontSize" Value="20"/>
-            <Setter Property="Background" Value="{StaticResource PlayButtonBrush}"/>
-            <Setter Property="BorderBrush" Value="#FFFF8A2A"/>
-
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border
-                            x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="5">
-
-                            <Grid>
-                                <Border
-                                    Height="20"
-                                    VerticalAlignment="Top"
-                                    CornerRadius="5"
-                                    Opacity="0.38">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                                            <GradientStop Color="#00FFFFFF" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-
-                                <Rectangle
-                                    Height="1"
-                                    VerticalAlignment="Top"
-                                    Fill="#AAFFFFFF"
-                                    Margin="1,1,1,0"/>
-
-                                <ContentPresenter
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{StaticResource PlayButtonHoverBrush}"/>
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#FFFFFFFF"/>
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#FF3B0908"/>
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#FFFFFFFF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="ExitButton" TargetType="Button" BasedOn="{StaticResource MenuButton}">
-            <Setter Property="Foreground" Value="#FFC9D0D8"/>
-            <Setter Property="BorderBrush" Value="#FF333A44"/>
-            <Setter Property="Background" Value="#CC05070A"/>
+            <Setter Property="Foreground" Value="{StaticResource TextWhite}"/>
+            <Setter Property="Background" Value="{StaticResource ButtonHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="#FF39A8E8"/>
+            <Setter Property="FontSize" Value="34"/>
         </Style>
 
     </UserControl.Resources>
 
-    <UserControl.Triggers>
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-            <BeginStoryboard Storyboard="{StaticResource BackgroundLoop}"/>
-        </EventTrigger>
-
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-            <BeginStoryboard Storyboard="{StaticResource Intro}"/>
-        </EventTrigger>
-    </UserControl.Triggers>
-
     <Grid Background="#FF000000">
 
         <Grid ClipToBounds="True">
-            <Grid
-                x:Name="BackgroundMap"
-                RenderTransformOrigin="0.5,0.5">
-
-                <Grid.RenderTransform>
-                    <TransformGroup>
-                        <ScaleTransform ScaleX="1.08" ScaleY="1.08"/>
-                        <SkewTransform/>
-                        <RotateTransform Angle="0"/>
-                        <TranslateTransform X="0" Y="0"/>
-                    </TransformGroup>
-                </Grid.RenderTransform>
-
+            <Grid x:Name="BackgroundMap">
                 <Grid.Background>
                     <ImageBrush Stretch="UniformToFill" ImageSource="Assets/Background.png"/>
                 </Grid.Background>
+                <MediaElement Source="Assets/Video_Smoke_Splash.mp4" Stretch="Fill" Volume="0.83" ScrubbingEnabled="True" Opacity="0.55"/>
             </Grid>
         </Grid>
 
+        <Rectangle Opacity="0.25" Fill="#AA0B2C45"/>
+
+        <Rectangle Opacity="0.25">
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="0.5,0.38" GradientOrigin="0.5,0.38" RadiusX="0.9" RadiusY="0.9">
+                    <GradientStop Color="#221E7AAD" Offset="0"/>
+                    <GradientStop Color="#99102F4A" Offset="0.58"/>
+                    <GradientStop Color="#DD071A2A" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
         <Grid
             x:Name="Dialog"
-            Width="520"
-            Height="720"
+            Width="880"
+            Height="760"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Opacity="0"
-            RenderTransformOrigin="0.5,0.5">
+            Opacity="1">
 
-            <Grid.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                    <SkewTransform/>
-                    <RotateTransform/>
-                    <TranslateTransform/>
-                </TransformGroup>
-            </Grid.RenderTransform>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel.Background>
+                    <SolidColorBrush Color="#00000000"/>
+                </StackPanel.Background>
 
-            <Border
-                Margin="20,26,20,12"
-                Background="#AA000000"
-                CornerRadius="18"
-                Opacity="0.55"/>
+                <StackPanel
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,58">
 
-            <Border
-                Margin="0,0,0,18"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="#663B4654"
-                BorderThickness="1"
-                CornerRadius="18">
+                    <Grid Width="104" Height="104" Margin="0,0,26,0">
+                        <Image Source="Assets/WarIncBattleZoneIcon.png"/>
+                    </Grid>
 
-                <Grid>
-                    <Rectangle
-                        Height="1"
-                        VerticalAlignment="Top"
-                        Fill="#55FFFFFF" StrokeLineJoin="Bevel"
-                        Margin="22,1,22,0"/>
+                    <TextBlock
+                        Foreground="{StaticResource TextWhite}" PPAAMode="Disabled"
+                        FontFamily="Verdana"
+                        FontSize="62"
+                        FontWeight="Bold" Text="GAME" VerticalAlignment="Center"/>
 
-                    <Rectangle
-                        Height="90"
-                        VerticalAlignment="Top"
-                        Opacity="0.42" StrokeLineJoin="Bevel">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#44FFFFFF" Offset="0"/>
-                                <GradientStop Color="#00FFFFFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
+                    <TextBlock
+                        Text="STUDIO"
+                        Foreground="{StaticResource TextBlue}" PPAAMode="Disabled"
+                        FontFamily="Verdana"
+                        FontSize="62"
+                        FontWeight="Bold"
+                        VerticalAlignment="Center"
+                        Margin="16,0,0,0"/>
 
-                    <Rectangle
-                        Width="3"
-                        HorizontalAlignment="Left"
-                        Margin="0,28,0,28" Fill="#FF127500" StrokeLineJoin="Bevel"/>
+                </StackPanel>
 
-                    <StackPanel Margin="54,46,54,42">
+                <Button
+                    x:Name="BtnPlayGame" BorderBrush="#00000000" BitmapScalingMode="HighQuality" Style="{StaticResource PlayButton}"
+                    Content="PLAY GAME"/>
 
-                        <TextBlock
-                            Text="WAR INC"
-                            Foreground="{StaticResource TextMain}"
-                            FontFamily="Verdana"
-                            FontSize="34"
-                            FontWeight="Bold"
-                            HorizontalAlignment="Center"
-                            Margin="0,0,0,4"/>
+                <Button
+                    x:Name="BtnLevelEditor" Margin="0" Style="{StaticResource MenuButton}"
+                    Content="LEVEL EDITOR"/>
 
-                        <TextBlock
-                            Foreground="{StaticResource TextMuted}"
-                            FontFamily="Verdana"
-                            FontSize="13"
-                            FontWeight="Bold" Text="By zsv Jesus" HorizontalAlignment="Center"
-                            Margin="0,0,0,34"/>
+                <Button
+                    x:Name="BtnParticleEditor" BorderBrush="#0039A8E8"
+                    Style="{StaticResource MenuButton}"
+                    Content="PARTICLE EDITOR"/>
 
-                        <Button
-                            x:Name="BtnPlayGame"
-                            Style="{StaticResource PlayButton}"
-                            Content="PLAY GAME"
-                            Margin="0,0,0,22"/>
+                <Button
+                    x:Name="BtnPhysicsEditor" BorderBrush="#0039A8E8" BitmapScalingMode="HighQuality"
+                    Style="{StaticResource MenuButton}"
+                    Content="PHYSICS EDITOR"/>
 
-                        <TextBlock
-                            Text="EDITORS"
-                            Foreground="#FF6F7A88"
-                            FontFamily="Verdana"
-                            FontSize="11"
-                            FontWeight="Bold"
-                            Margin="0,0,0,8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button
+                    x:Name="BtnCharacterEditor" BorderBrush="#0039A8E8"
+                    Style="{StaticResource MenuButton}"
+                    Content="CHARACTER EDITOR"/>
 
-                        <Button
-                            x:Name="BtnLevelEditor"
-                            Style="{StaticResource MenuButton}"
-                            Content="LEVEL EDITOR"/>
+                <Button
+                    x:Name="BtnExit"
+                    Style="{StaticResource MenuButton}"
+                    Content="EXIT">
+                    <Button.BorderBrush>
+                        <SolidColorBrush Color="#8839A8E8" Opacity="0"/>
+                    </Button.BorderBrush>
+                </Button>
 
-                        <Button
-                            x:Name="BtnParticleEditor"
-                            Style="{StaticResource MenuButton}"
-                            Content="PARTICLE EDITOR"/>
-
-                        <Button
-                            x:Name="BtnPhysicsEditor"
-                            Style="{StaticResource MenuButton}"
-                            Content="PHYSICS EDITOR"/>
-
-                        <Button
-                            x:Name="BtnCharacterEditor"
-                            Style="{StaticResource MenuButton}"
-                            Content="CHARACTER EDITOR"/>
-
-                        <Rectangle Height="1" Fill="#223B4654" Margin="0,22,0,14"/>
-
-                        <Button
-                            x:Name="BtnExit"
-                            Style="{StaticResource ExitButton}"
-                            Content="EXIT"/>
-
-                    </StackPanel>
-                </Grid>
-            </Border>
+            </StackPanel>
         </Grid>
-
-        <TextBlock
-            Text="WarInc / Studio"
-            Foreground="#554F5966"
-            FontFamily="Verdana"
-            FontSize="12"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="0,0,32,26"/>
 
     </Grid>
 </UserControl>
