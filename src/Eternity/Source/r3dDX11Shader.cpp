@@ -20,6 +20,7 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #pragma warning(pop)
+#include <string>
 
 #include "r3d.h"
 #include "r3dDX11.h"
@@ -139,8 +140,375 @@ static const char r3dDX11ShaderCompatibilityPrelude[] =
 	"#endif\r\n"
 	"#ifndef R3D_SHADER_MODEL\r\n"
 	"#define R3D_SHADER_MODEL 40\r\n"
-	"#endif\r\n"
-	"#line 1\r\n";
+	"#endif\r\n";
+
+static const char r3dDX11ShaderTextureCompatibility[] =
+	"#ifndef R3D_DX11_TEXTURE_COMPAT\r\n"
+	"#define R3D_DX11_TEXTURE_COMPAT 1\r\n"
+	"#define R3D_DX11_JOIN2_INNER(a,b) a##b\r\n"
+	"#define R3D_DX11_JOIN2(a,b) R3D_DX11_JOIN2_INNER(a,b)\r\n"
+	"#define tex2D(s,uv) R3D_DX11_JOIN2(s,_Texture).Sample(s,uv)\r\n"
+	"#define texCUBE(s,uv) R3D_DX11_JOIN2(s,_Texture).Sample(s,uv)\r\n"
+	"#define tex3D(s,uv) R3D_DX11_JOIN2(s,_Texture).Sample(s,uv)\r\n"
+	"#define tex2Dlod(s,uv) R3D_DX11_JOIN2(s,_Texture).SampleLevel(s,(uv).xy,(uv).w)\r\n"
+	"#define texCUBElod(s,uv) R3D_DX11_JOIN2(s,_Texture).SampleLevel(s,(uv).xyz,(uv).w)\r\n"
+	"#define tex3Dlod(s,uv) R3D_DX11_JOIN2(s,_Texture).SampleLevel(s,(uv).xyz,(uv).w)\r\n"
+	"#define tex2Dbias(s,uv) R3D_DX11_JOIN2(s,_Texture).SampleBias(s,(uv).xy,(uv).w)\r\n"
+	"#define tex2Dgrad(s,uv,ddxv,ddyv) R3D_DX11_JOIN2(s,_Texture).SampleGrad(s,uv,ddxv,ddyv)\r\n"
+	"#define tex2Dproj(s,uv) R3D_DX11_JOIN2(s,_Texture).Sample(s,(uv).xy / (uv).w)\r\n"
+	"#endif\r\n";
+
+static int r3dDX11Shader_IsIdentChar(char c)
+{
+	if(c >= 'a' && c <= 'z')
+		return 1;
+
+	if(c >= 'A' && c <= 'Z')
+		return 1;
+
+	if(c >= '0' && c <= '9')
+		return 1;
+
+	if(c == '_')
+		return 1;
+
+	return 0;
+}
+
+static int r3dDX11Shader_IsWhite(char c)
+{
+	return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+static const char* r3dDX11Shader_SkipWhite(const char* p)
+{
+	while(p && *p && r3dDX11Shader_IsWhite(*p))
+		++p;
+
+	return p;
+}
+
+static int r3dDX11Shader_MatchKeyword(const char* p, const char* keyword)
+{
+	if(!p || !keyword)
+		return 0;
+
+	const size_t len = strlen(keyword);
+
+	if(_strnicmp(p, keyword, len))
+		return 0;
+
+	if(r3dDX11Shader_IsIdentChar(p[len]))
+		return 0;
+
+	return 1;
+}
+
+static int r3dDX11Shader_LineHasToken(const std::string& line, const char* token)
+{
+	const size_t len = strlen(token);
+	size_t pos = 0;
+
+	while((pos = line.find(token, pos)) != std::string::npos)
+	{
+		const char before = pos > 0 ? line[pos - 1] : 0;
+		const char after = pos + len < line.length() ? line[pos + len] : 0;
+
+		if(!r3dDX11Shader_IsIdentChar(before) && !r3dDX11Shader_IsIdentChar(after))
+			return 1;
+
+		pos += len;
+	}
+
+	return 0;
+}
+
+static int r3dDX11Shader_StrIContains(const char* text, const char* find)
+{
+	if(!text || !find || !find[0])
+		return 0;
+
+	const size_t findLen = strlen(find);
+
+	for(const char* p = text; *p; ++p)
+	{
+		if(!_strnicmp(p, find, findLen))
+			return 1;
+	}
+
+	return 0;
+}
+
+static void r3dDX11Shader_ReplaceSemanticToken(std::string& line, const char* oldSemantic, const char* newSemantic)
+{
+	if(!oldSemantic || !newSemantic)
+		return;
+
+	const size_t oldLen = strlen(oldSemantic);
+	size_t colon = 0;
+
+	while((colon = line.find(':', colon)) != std::string::npos)
+	{
+		size_t semanticStart = colon + 1;
+
+		while(semanticStart < line.length() && (line[semanticStart] == ' ' || line[semanticStart] == '\t'))
+			++semanticStart;
+
+		if(semanticStart + oldLen <= line.length())
+		{
+			if(!_strnicmp(line.c_str() + semanticStart, oldSemantic, oldLen))
+			{
+				const char after = semanticStart + oldLen < line.length() ? line[semanticStart + oldLen] : 0;
+
+				if(!r3dDX11Shader_IsIdentChar(after))
+				{
+					line.replace(semanticStart, oldLen, newSemantic);
+					colon = semanticStart + strlen(newSemantic);
+					continue;
+				}
+			}
+		}
+
+		++colon;
+	}
+}
+
+static void r3dDX11Shader_ConvertPixelOutputSemantics(std::string& line)
+{
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR0", "SV_Target0");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR1", "SV_Target1");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR2", "SV_Target2");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR3", "SV_Target3");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR4", "SV_Target4");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR5", "SV_Target5");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR6", "SV_Target6");
+	r3dDX11Shader_ReplaceSemanticToken(line, "COLOR7", "SV_Target7");
+	r3dDX11Shader_ReplaceSemanticToken(line, "DEPTH", "SV_Depth");
+}
+
+static void r3dDX11Shader_ConvertVertexOutputSemantics(std::string& line)
+{
+	r3dDX11Shader_ReplaceSemanticToken(line, "POSITION0", "SV_Position");
+	r3dDX11Shader_ReplaceSemanticToken(line, "POSITION", "SV_Position");
+}
+
+static int r3dDX11Shader_ParseSamplerDeclaration(
+	const std::string& line,
+	std::string& outType,
+	std::string& outName,
+	int* outRegister
+)
+{
+	if(outRegister)
+		*outRegister = -1;
+
+	outType.clear();
+	outName.clear();
+
+	const char* p = line.c_str();
+	p = r3dDX11Shader_SkipWhite(p);
+
+	if(r3dDX11Shader_MatchKeyword(p, "uniform"))
+	{
+		p += strlen("uniform");
+		p = r3dDX11Shader_SkipWhite(p);
+	}
+
+	const char* textureType = NULL;
+	const char* samplerKeyword = NULL;
+
+	if(r3dDX11Shader_MatchKeyword(p, "sampler2D"))
+	{
+		textureType = "Texture2D";
+		samplerKeyword = "sampler2D";
+	}
+	else if(r3dDX11Shader_MatchKeyword(p, "samplerCUBE"))
+	{
+		textureType = "TextureCube";
+		samplerKeyword = "samplerCUBE";
+	}
+	else if(r3dDX11Shader_MatchKeyword(p, "sampler3D"))
+	{
+		textureType = "Texture3D";
+		samplerKeyword = "sampler3D";
+	}
+	else if(r3dDX11Shader_MatchKeyword(p, "sampler"))
+	{
+		textureType = "Texture2D";
+		samplerKeyword = "sampler";
+	}
+	else
+	{
+		return 0;
+	}
+
+	p += strlen(samplerKeyword);
+	p = r3dDX11Shader_SkipWhite(p);
+
+	if(!p || !*p)
+		return 0;
+
+	if(!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || *p == '_'))
+		return 0;
+
+	const char* nameStart = p;
+
+	while(*p && r3dDX11Shader_IsIdentChar(*p))
+		++p;
+
+	outType = textureType;
+	outName.assign(nameStart, p - nameStart);
+
+	const char* registerText = strstr(line.c_str(), "register");
+
+	if(registerText)
+	{
+		const char* s = strchr(registerText, 's');
+
+		if(!s)
+			s = strchr(registerText, 'S');
+
+		if(s && s[1] >= '0' && s[1] <= '9')
+		{
+			int reg = 0;
+			++s;
+
+			while(*s >= '0' && *s <= '9')
+			{
+				reg = reg * 10 + (*s - '0');
+				++s;
+			}
+
+			if(outRegister)
+				*outRegister = reg;
+		}
+	}
+
+	return 1;
+}
+
+static void r3dDX11Shader_AppendConvertedSampler(
+	std::string& out,
+	const std::string& textureType,
+	const std::string& name,
+	int reg
+)
+{
+	char line[512];
+
+	if(reg >= 0)
+	{
+		_snprintf_s(
+			line,
+			sizeof(line),
+			_TRUNCATE,
+			"%s %s_Texture : register(t%d);\r\nSamplerState %s : register(s%d);\r\n",
+			textureType.c_str(),
+			name.c_str(),
+			reg,
+			name.c_str(),
+			reg
+		);
+	}
+	else
+	{
+		_snprintf_s(
+			line,
+			sizeof(line),
+			_TRUNCATE,
+			"%s %s_Texture;\r\nSamplerState %s;\r\n",
+			textureType.c_str(),
+			name.c_str(),
+			name.c_str()
+		);
+	}
+
+	out += line;
+}
+
+static std::string r3dDX11Shader_BuildCompatibilitySource(
+	int shaderType,
+	const char* sourceCode,
+	unsigned int sourceSize
+)
+{
+	std::string out;
+
+	out.reserve(sourceSize + 8192);
+	out += r3dDX11ShaderCompatibilityPrelude;
+	out += r3dDX11ShaderTextureCompatibility;
+	out += "#line 1\r\n";
+
+	std::string source(sourceCode, sourceSize);
+
+	size_t pos = 0;
+	int inOutputStruct = 0;
+	int pendingOutputStruct = 0;
+
+	while(pos < source.length())
+	{
+		size_t end = source.find('\n', pos);
+
+		if(end == std::string::npos)
+			end = source.length();
+
+		std::string line = source.substr(pos, end - pos);
+
+		if(!inOutputStruct)
+		{
+			if(r3dDX11Shader_StrIContains(line.c_str(), "struct") &&
+				(
+					r3dDX11Shader_StrIContains(line.c_str(), "OUT") ||
+					r3dDX11Shader_StrIContains(line.c_str(), "OUTPUT") ||
+					r3dDX11Shader_StrIContains(line.c_str(), "PSOUT") ||
+					r3dDX11Shader_StrIContains(line.c_str(), "VSOUT")
+				))
+			{
+				pendingOutputStruct = 1;
+			}
+		}
+
+		if(pendingOutputStruct && line.find('{') != std::string::npos)
+		{
+			inOutputStruct = 1;
+			pendingOutputStruct = 0;
+		}
+
+		std::string samplerType;
+		std::string samplerName;
+		int samplerReg = -1;
+
+		if(r3dDX11Shader_ParseSamplerDeclaration(line, samplerType, samplerName, &samplerReg))
+		{
+			r3dDX11Shader_AppendConvertedSampler(out, samplerType, samplerName, samplerReg);
+		}
+		else
+		{
+			if(shaderType == R3D_DX11_SHADER_PIXEL)
+			{
+				if(inOutputStruct || r3dDX11Shader_LineHasToken(line, "main") || r3dDX11Shader_LineHasToken(line, "out"))
+					r3dDX11Shader_ConvertPixelOutputSemantics(line);
+
+				r3dDX11Shader_ReplaceSemanticToken(line, "VPOS", "SV_Position");
+			}
+			else if(shaderType == R3D_DX11_SHADER_VERTEX)
+			{
+				if(inOutputStruct || r3dDX11Shader_LineHasToken(line, "out"))
+					r3dDX11Shader_ConvertVertexOutputSemantics(line);
+			}
+
+			out += line;
+			out += "\n";
+		}
+
+		if(inOutputStruct && line.find("};") != std::string::npos)
+			inOutputStruct = 0;
+
+		pos = end + 1;
+	}
+
+	return out;
+}
 
 static int r3dDX11Shader_IsAbsolutePath(const char* fileName)
 {
@@ -498,13 +866,14 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 		}
 	}
 
-	const unsigned int preludeSize = sizeof(r3dDX11ShaderCompatibilityPrelude) - 1;
-	const unsigned int compileSourceSize = preludeSize + realSourceSize;
+	std::string compileSourceString = r3dDX11Shader_BuildCompatibilitySource(
+		shaderType,
+		sourceCode,
+		realSourceSize
+	);
 
-	char* compileSource = new char[compileSourceSize + 1];
-	memcpy(compileSource, r3dDX11ShaderCompatibilityPrelude, preludeSize);
-	memcpy(compileSource + preludeSize, sourceCode, realSourceSize);
-	compileSource[compileSourceSize] = 0;
+	const char* compileSource = compileSourceString.c_str();
+	const unsigned int compileSourceSize = (unsigned int)compileSourceString.length();
 
 	UINT flags = 0;
 
@@ -537,8 +906,6 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 		&shaderBlob,
 		&errors
 	);
-
-	delete[] compileSource;
 
 	if(FAILED(hr))
 	{
