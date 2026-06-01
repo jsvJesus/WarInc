@@ -32,6 +32,7 @@
 #include "r3dDX11RenderTarget.h"
 #include "r3dDX11InputLayout.h"
 #include "r3dDX11Geometry.h"
+#include "r3dDX11LegacyGeometryBridge.h"
 
 #ifdef Draw
 #undef Draw
@@ -255,6 +256,11 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 		r3dOutToLog("DX11: geometry state manager was not initialized\n");
 	}
 
+	if(!g_r3dDX11LegacyGeometryBridge.Init())
+	{
+		r3dOutToLog("DX11: legacy geometry bridge was not initialized\n");
+	}
+
 	if(!g_r3dDX11Constants.Init())
 	{
 		r3dOutToLog("DX11: constant buffer bridge was not initialized\n");
@@ -297,6 +303,7 @@ void r3dDX11Renderer::Shutdown()
 	ReleaseDebugTexturedQuad();
 	ReleaseDebugTriangle();
 
+	g_r3dDX11LegacyGeometryBridge.Shutdown();
 	g_r3dDX11Geometry.Shutdown();
 	g_r3dDX11InputLayouts.Shutdown();
 	g_r3dDX11Constants.Shutdown();
