@@ -29,6 +29,7 @@
 #include "r3dDX11Texture.h"
 #include "r3dDX11State.h"
 #include "r3dDX11InputLayout.h"
+#include "r3dDX11Geometry.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -210,6 +211,11 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 		g_r3dDX11State.ApplyDefaultSamplers();
 	}
 
+	if(!g_r3dDX11Geometry.Init())
+	{
+		r3dOutToLog("DX11: geometry state manager was not initialized\n");
+	}
+
 	if(!CreateDebugTriangle())
 	{
 		r3dOutToLog("DX11: debug triangle resources were not created\n");
@@ -247,6 +253,7 @@ void r3dDX11Renderer::Shutdown()
 	ReleaseDebugTexturedQuad();
 	ReleaseDebugTriangle();
 
+	g_r3dDX11Geometry.Shutdown();
 	g_r3dDX11InputLayouts.Shutdown();
 	g_r3dDX11State.Shutdown();
 
@@ -641,17 +648,15 @@ void r3dDX11Renderer::DrawDebugTriangle()
 	if(!DebugVB || !DebugInputLayout || !DebugVS || !DebugPS)
 		return;
 
-	UINT stride = sizeof(float) * 7;
-	UINT offset = 0;
-
 	Context->IASetInputLayout(DebugInputLayout);
-	Context->IASetVertexBuffers(0, 1, &DebugVB, &stride, &offset);
-	Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	g_r3dDX11Geometry.SetVertexBufferRaw(0, DebugVB, sizeof(float) * 7, 0);
+	g_r3dDX11Geometry.SetPrimitiveTopology(R3D_DX11_PRIM_TRIANGLELIST);
 
 	Context->VSSetShader(DebugVS, NULL, 0);
 	Context->PSSetShader(DebugPS, NULL, 0);
 
-	Context->Draw(3, 0);
+	g_r3dDX11Geometry.Draw(3, 0);
 }
 
 bool r3dDX11Renderer::CreateDebugTexturedQuad()
@@ -961,12 +966,10 @@ void r3dDX11Renderer::DrawDebugTexturedQuad()
 	if(!DebugTexVB || !DebugTexInputLayout || !DebugTexVS || !DebugTexPS || !DebugTexSampler)
 		return;
 
-	UINT stride = sizeof(float) * 5;
-	UINT offset = 0;
-
 	Context->IASetInputLayout(DebugTexInputLayout);
-	Context->IASetVertexBuffers(0, 1, &DebugTexVB, &stride, &offset);
-	Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	g_r3dDX11Geometry.SetVertexBufferRaw(0, DebugTexVB, sizeof(float) * 5, 0);
+	g_r3dDX11Geometry.SetPrimitiveTopology(R3D_DX11_PRIM_TRIANGLELIST);
 
 	Context->VSSetShader(DebugTexVS, NULL, 0);
 	Context->PSSetShader(DebugTexPS, NULL, 0);
@@ -976,7 +979,7 @@ void r3dDX11Renderer::DrawDebugTexturedQuad()
 	g_r3dDX11State.SetSRV(0, srv);
 	g_r3dDX11State.SetSampler(0, R3D_DX11_SAMPLER_LINEAR_WRAP);
 
-	Context->Draw(6, 0);
+	g_r3dDX11Geometry.Draw(6, 0);
 
 	g_r3dDX11State.ClearTexture(0);
 }
