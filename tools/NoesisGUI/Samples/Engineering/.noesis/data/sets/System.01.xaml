@@ -1,0 +1,24 @@
+<vdctx:ShortRangeSensorsSystemViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals" IsOrientatedTop="True" WheelRotation="0" Name="Short Range Sensors" Operation="Powered" Class="2" Location="Forward" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True" IsSelected="False">
+  <vdctx:SystemViewModel.Technician>
+    <vdctx:TechnicianViewModel Name="George M." RankIndex="2" PortraitKey="George">
+      <vdctx:TechnicianViewModel.Status>
+        <vdctx:AssignedStatusViewModel/>
+      </vdctx:TechnicianViewModel.Status>
+    </vdctx:TechnicianViewModel>
+  </vdctx:SystemViewModel.Technician>
+  <vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+    <vdctx:SystemModifierSingleViewModel Value="-23" Description="Integrity Damage"/>
+  </vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+  <vdctx:SystemViewModel.PowerBar>
+    <vdctx:BarViewModel CurrentValue="4" MaxValue="10"/>
+  </vdctx:SystemViewModel.PowerBar>
+  <vdctx:SystemViewModel.HeatBar>
+    <vdctx:BarViewModel MaxValue="300" CurrentValue="67"/>
+  </vdctx:SystemViewModel.HeatBar>
+  <vdctx:SystemViewModel.InstabilityBar>
+    <vdctx:BarViewModel MaxValue="100" CurrentValue="33"/>
+  </vdctx:SystemViewModel.InstabilityBar>
+  <vdctx:SystemViewModel.IntegrityBar>
+    <vdctx:BarViewModel MaxValue="2200" CurrentValue="1894"/>
+  </vdctx:SystemViewModel.IntegrityBar>
+</vdctx:ShortRangeSensorsSystemViewModel>

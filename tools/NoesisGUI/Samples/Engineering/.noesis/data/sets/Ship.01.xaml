@@ -1,0 +1,280 @@
+<vdctx:ShipViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals" Name="U.B.G. Albatross" PriorityMessageCount="3" TargettedCount="3">
+  <vdctx:ShipViewModel.ArmorSections>
+    <vdctx:ArmorSectionViewModel Name="Forward Left" Integrity="0.4"/>
+    <vdctx:ArmorSectionViewModel Name="Forward" Integrity="0.33"/>
+    <vdctx:ArmorSectionViewModel Name="Forward Right" Integrity="1"/>
+    <vdctx:ArmorSectionViewModel Name="Middle Left" Integrity="0.2"/>
+    <vdctx:ArmorSectionViewModel Name="MiddleRight" Integrity="0.88"/>
+    <vdctx:ArmorSectionViewModel Name="Rear" Integrity=".9"/>
+    <vdctx:ArmorSectionViewModel Name="Left Engine" Integrity="0.77"/>
+    <vdctx:ArmorSectionViewModel Name="Right Emgine" Integrity="0.1"/>
+  </vdctx:ShipViewModel.ArmorSections>
+  <vdctx:ShipViewModel.Messages>
+    <vdctx:TechnicianMessageViewModel Subject="Sensors Overload Imminent" Department="Engineering" IsHighPriority="True" TimeRemaining="0:52">
+      <vdctx:TechnicianMessageViewModel.Technician>
+        <vdctx:TechnicianViewModel RankIndex="0" PortraitKey="Kam"/>
+      </vdctx:TechnicianMessageViewModel.Technician>
+    </vdctx:TechnicianMessageViewModel>
+    <vdctx:TechnicianMessageViewModel Department="Engineering" TimeRemaining="5:06" Subject="Shields Overloaded" IsHighPriority="True">
+      <vdctx:TechnicianMessageViewModel.Technician>
+        <vdctx:TechnicianViewModel RankIndex="0" PortraitKey="Jane"/>
+      </vdctx:TechnicianMessageViewModel.Technician>
+    </vdctx:TechnicianMessageViewModel>
+    <vdctx:TechnicianMessageViewModel Department="Engineering" Subject="Technican Injured" IsHighPriority="True">
+      <vdctx:TechnicianMessageViewModel.Technician>
+        <vdctx:TechnicianViewModel RankIndex="0" PortraitKey="George"/>
+      </vdctx:TechnicianMessageViewModel.Technician>
+    </vdctx:TechnicianMessageViewModel>
+    <vdctx:TechnicianMessageViewModel IsHighPriority="False" Subject="Turret Repair Setback" Department="Engineering">
+      <vdctx:TechnicianMessageViewModel.Technician>
+        <vdctx:TechnicianViewModel RankIndex="0" PortraitKey="John"/>
+      </vdctx:TechnicianMessageViewModel.Technician>
+    </vdctx:TechnicianMessageViewModel>
+    <vdctx:TechnicianMessageViewModel IsHighPriority="False"/>
+    <vdctx:TechnicianMessageViewModel IsHighPriority="False"/>
+  </vdctx:ShipViewModel.Messages>
+  <vdctx:ShipViewModel.PowerSignatureBar>
+    <vdctx:BarViewModel MaxValue="61" CurrentValue="23"/>
+  </vdctx:ShipViewModel.PowerSignatureBar>
+  <vdctx:ShipViewModel.HullIntegrityBar>
+    <vdctx:BarViewModel CurrentValue="8427" MaxValue="10245"/>
+  </vdctx:ShipViewModel.HullIntegrityBar>
+  <vdctx:ShipViewModel.Engineering>
+    <vdctx:EngineeringScreenViewModel>
+      <vdctx:EngineeringScreenViewModel.Technicians>
+        <vdctx:TechnicianViewModel Name="John F." PortraitKey="John" RankIndex="2">
+          <vdctx:TechnicianViewModel.Status>
+            <vdctx:AssignedStatusViewModel>
+              <vdctx:AssignedStatusViewModel.System>
+                <vdctx:TorpedoSystemViewModel IsSelected="False" Class="0" PowerMin="0" PerformanceBase="0" PerformanceFinal="0" WheelRotation="0" IsOrientatedTop="False" Name="Torpedo Launcher"/>
+              </vdctx:AssignedStatusViewModel.System>
+            </vdctx:AssignedStatusViewModel>
+          </vdctx:TechnicianViewModel.Status>
+        </vdctx:TechnicianViewModel>
+        <vdctx:TechnicianViewModel Name="Jane M." PortraitKey="Jane" RankIndex="4">
+          <vdctx:TechnicianViewModel.Status>
+            <vdctx:UnassignedStatusViewModel/>
+          </vdctx:TechnicianViewModel.Status>
+        </vdctx:TechnicianViewModel>
+        <vdctx:TechnicianViewModel Name="George L." PortraitKey="George" RankIndex="0">
+          <vdctx:TechnicianViewModel.Status>
+            <vdctx:InjuredStatusViewModel InjuryTimeRemaining="5:05"/>
+          </vdctx:TechnicianViewModel.Status>
+        </vdctx:TechnicianViewModel>
+        <vdctx:TechnicianViewModel Name="Kam Y." PortraitKey="Kam" RankIndex="3">
+          <vdctx:TechnicianViewModel.Status>
+            <vdctx:AssignedStatusViewModel>
+              <vdctx:AssignedStatusViewModel.System>
+                <vdctx:LongRangeSensorsSystemViewModel IsVisible="False" IsSelected="False" Class="0" IsOrientatedTop="False" WheelRotation="0" PowerMin="0" PerformanceMin="0" PerformanceMax="0" PerformanceBase="0" PerformanceFinal="0" Name="Long Range Sensors"/>
+              </vdctx:AssignedStatusViewModel.System>
+            </vdctx:AssignedStatusViewModel>
+          </vdctx:TechnicianViewModel.Status>
+        </vdctx:TechnicianViewModel>
+      </vdctx:EngineeringScreenViewModel.Technicians>
+      <vdctx:EngineeringScreenViewModel.PowerPresets>
+        <vdctx:PowerPresetViewModel Name="Standard" IsSelected="True" Number="0"/>
+        <vdctx:PowerPresetViewModel Name="Cruise" Number="1"/>
+        <vdctx:PowerPresetViewModel Name="Engines" Number="2"/>
+        <vdctx:PowerPresetViewModel Name="Foward Shields" Number="3"/>
+        <vdctx:PowerPresetViewModel Name="Rear Shields" Number="4"/>
+        <vdctx:PowerPresetViewModel Name="Forward Weapons" Number="5"/>
+        <vdctx:PowerPresetViewModel Name="Rear Weapons" Number="6"/>
+      </vdctx:EngineeringScreenViewModel.PowerPresets>
+      <vdctx:EngineeringScreenViewModel.Systems>
+        <vdctx:ShortRangeSensorsSystemViewModel IsOrientatedTop="True" WheelRotation="0" Name="Short Range Sensors" Operation="Powered" Class="2" Location="Forward" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True" IsSelected="False">
+          <vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+            <vdctx:SystemModifierSingleViewModel Value="-23" Description="Integrity Damage"/>
+          </vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="4" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="67"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="33"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="1894"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:ShortRangeSensorsSystemViewModel>
+        <vdctx:TorpedoSystemViewModel IsOrientatedTop="True" WheelRotation="24" Operation="Powered" Class="3" Location="Forward" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" Name="Torpedo Launcher" IsVisible="True" IsSelected="False">
+          <vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+            <vdctx:SystemModifierSingleViewModel Value="-23" Description="Integrity Damage"/>
+            <vdctx:SystemModifierSingleViewModel Value="46" Description="Boosted"/>
+            <vdctx:SystemModifierParentViewModel Description="Technician">
+              <vdctx:SystemModifierParentViewModel.Children>
+                <vdctx:SystemModifierSingleViewModel Description="Experience" Value="13"/>
+              </vdctx:SystemModifierParentViewModel.Children>
+            </vdctx:SystemModifierParentViewModel>
+          </vdctx:TorpedoSystemViewModel.PerformanceModifiers>
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel MaxValue="10" CurrentValue="3"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="187"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="67"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="1234"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+          <vdctx:SystemViewModel.Technician>
+            <vdctx:TechnicianViewModel Name="John F." RankIndex="2" PortraitKey="John"/>
+          </vdctx:SystemViewModel.Technician>
+        </vdctx:TorpedoSystemViewModel>
+        <vdctx:TurretSystemViewModel IsOrientatedTop="True" WheelRotation="52" Name="Turret" IsSelected="False" Operation="Offline" Class="1" Location="Forward Right" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="0" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="0"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="0"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="2200"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:TurretSystemViewModel>
+        <vdctx:EngineSystemViewModel IsOrientatedTop="False" WheelRotation="112" Name="Engine" IsSelected="False" Operation="Powered" Class="2" Location="Right" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="4" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="113"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="51"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="781"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:EngineSystemViewModel>
+        <vdctx:LongRangeSensorsSystemViewModel IsOrientatedTop="False" WheelRotation="156" Name="Long Range Sensors" IsSelected="False" Operation="Powered" Class="3" Location="Rear" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:LongRangeSensorsSystemViewModel.PerformanceModifiers>
+            <vdctx:SystemModifierSingleViewModel Value="-56" Description="Integrity Damagge"/>
+            <vdctx:SystemModifierParentViewModel Description="Technician">
+              <vdctx:SystemModifierParentViewModel.Children>
+                <vdctx:SystemModifierSingleViewModel Value="27" Description="Experience"/>
+              </vdctx:SystemModifierParentViewModel.Children>
+            </vdctx:SystemModifierParentViewModel>
+          </vdctx:LongRangeSensorsSystemViewModel.PerformanceModifiers>
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="5" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="273"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="100"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="234"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+          <vdctx:SystemViewModel.Technician>
+            <vdctx:TechnicianViewModel Name="Kam M." PortraitKey="Kam" RankIndex="3"/>
+          </vdctx:SystemViewModel.Technician>
+        </vdctx:LongRangeSensorsSystemViewModel>
+        <vdctx:TurretSystemViewModel IsSelected="False" IsOrientatedTop="False" Name="Turret" Class="2" Location="Rear" PowerMin="3" PerformanceBase="124" PerformanceFinal="144" WheelRotation="180" Operation="Powered" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel MaxValue="10" CurrentValue="7"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="0"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="0"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="1456"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:TurretSystemViewModel>
+        <vdctx:ShieldSystemViewModel IsOrientatedTop="False" WheelRotation="204" Name="Shield" IsSelected="False" Operation="BelowMinPower" Class="3" Location="Rear" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="2" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="0"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="0"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="1890"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:ShieldSystemViewModel>
+        <vdctx:EngineSystemViewModel IsOrientatedTop="False" WheelRotation="248" Name="Engine" IsSelected="False" Operation="Powered" Class="2" Location="Left" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="4" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="159"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="55"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="2200"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:EngineSystemViewModel>
+        <vdctx:TurretSystemViewModel IsOrientatedTop="True" WheelRotation="308" Name="Turret" IsSelected="False" Operation="Powered" Class="1" Location="Forward Left" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="5" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="8"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="23"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="2100"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:TurretSystemViewModel>
+        <vdctx:ShieldSystemViewModel IsOrientatedTop="True" WheelRotation="336" Name="Shield" IsSelected="False" Operation="Powered" Class="4" Location="Forward" PowerMin="3" PerformanceBase="123" PerformanceFinal="140" IsVisible="True">
+          <vdctx:SystemViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="7" MaxValue="10"/>
+          </vdctx:SystemViewModel.PowerBar>
+          <vdctx:SystemViewModel.HeatBar>
+            <vdctx:BarViewModel MaxValue="300" CurrentValue="222"/>
+          </vdctx:SystemViewModel.HeatBar>
+          <vdctx:SystemViewModel.InstabilityBar>
+            <vdctx:BarViewModel MaxValue="100" CurrentValue="88"/>
+          </vdctx:SystemViewModel.InstabilityBar>
+          <vdctx:SystemViewModel.IntegrityBar>
+            <vdctx:BarViewModel MaxValue="2200" CurrentValue="1167"/>
+          </vdctx:SystemViewModel.IntegrityBar>
+        </vdctx:ShieldSystemViewModel>
+      </vdctx:EngineeringScreenViewModel.Systems>
+      <vdctx:EngineeringScreenViewModel.Reactors>
+        <vdctx:ReactorViewModel WheelRotation="0" Operation="Powered">
+          <vdctx:ReactorViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="5" MaxValue="10"/>
+          </vdctx:ReactorViewModel.PowerBar>
+        </vdctx:ReactorViewModel>
+        <vdctx:ReactorViewModel WheelRotation="60" Operation="MaxPower">
+          <vdctx:ReactorViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="10" MaxValue="10"/>
+          </vdctx:ReactorViewModel.PowerBar>
+        </vdctx:ReactorViewModel>
+        <vdctx:ReactorViewModel WheelRotation="155" Operation="Powered">
+          <vdctx:ReactorViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="3" MaxValue="10"/>
+          </vdctx:ReactorViewModel.PowerBar>
+        </vdctx:ReactorViewModel>
+        <vdctx:ReactorViewModel WheelRotation="205" Operation="Offline">
+          <vdctx:ReactorViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="0" MaxValue="10"/>
+          </vdctx:ReactorViewModel.PowerBar>
+        </vdctx:ReactorViewModel>
+        <vdctx:ReactorViewModel WheelRotation="300" Operation="Powered">
+          <vdctx:ReactorViewModel.PowerBar>
+            <vdctx:BarViewModel CurrentValue="7" MaxValue="10"/>
+          </vdctx:ReactorViewModel.PowerBar>
+        </vdctx:ReactorViewModel>
+      </vdctx:EngineeringScreenViewModel.Reactors>
+    </vdctx:EngineeringScreenViewModel>
+  </vdctx:ShipViewModel.Engineering>
+</vdctx:ShipViewModel>

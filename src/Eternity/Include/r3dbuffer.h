@@ -7,6 +7,7 @@ class r3dIBuffer32;
 
 #ifndef WO_SERVER
 struct ID3D11Buffer;
+struct ID3D11Query;
 #endif
 
 class r3dD3DQuery : public r3dIResource
@@ -14,6 +15,10 @@ class r3dD3DQuery : public r3dIResource
   protected:
 	D3DQUERYTYPE	type_;
 	IDirect3DQuery9* query_;
+#ifndef WO_SERVER
+	ID3D11Query*	dx11Query_;
+	int				dx11Open_;
+#endif
 	
   protected:
 	// you can't directly create it - use CreateClass()
@@ -38,17 +43,8 @@ static	r3dD3DQuery*	CreateClass(D3DQUERYTYPE type) {
 	  return 0;
 	}
 	
-	HRESULT		Issue(DWORD dwIssueFlags)
-	{
-		R3D_ENSURE_MAIN_THREAD();
-		return query_->Issue(dwIssueFlags);
-	}
-	
-	HRESULT		GetData(void* pData,DWORD dwSize,DWORD dwGetDataFlags) 
-	{
-		R3D_ENSURE_MAIN_THREAD();
-		return query_->GetData(pData, dwSize, dwGetDataFlags);
-	}
+	HRESULT		Issue(DWORD dwIssueFlags);
+	HRESULT		GetData(void* pData,DWORD dwSize,DWORD dwGetDataFlags);
 };
 
 

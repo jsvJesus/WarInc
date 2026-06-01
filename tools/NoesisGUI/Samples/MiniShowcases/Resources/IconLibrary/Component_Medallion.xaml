@@ -1,0 +1,32 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  x:Name="ComponentRoot" HorizontalAlignment="Center" VerticalAlignment="Center">
+  <Component.DynamicProperties>
+    <DynamicProperty Name="Badge_Rank_Number" Type="Integer" DefaultValue="0"/>
+    <DynamicProperty Name="Rank_Name" Type="String" DefaultValue="ABCDEFGH"/>
+  </Component.DynamicProperties>
+  <Grid Width="256" Height="256">
+    <Grid.Effect>
+      <DropShadowEffect Direction="-90" BlurRadius="32" ShadowDepth="0" Opacity="0.5" Color="{DynamicResource Resource_Medallion_Color_0}"/>
+    </Grid.Effect>
+    <Component Source="Component_Medallion_Rings.xaml">
+      <Component.LayoutTransform>
+        <TransformGroup>
+          <ScaleTransform ScaleX="0.85" ScaleY="0.85"/>
+          <SkewTransform/>
+          <RotateTransform Angle="90"/>
+          <TranslateTransform/>
+        </TransformGroup>
+      </Component.LayoutTransform>
+    </Component>
+    <Component Source="Component_Label_Badge_Rank_Number.xaml" Margin="0,0,0,160" Rank_Number_Int="{Binding Path=Rank_Number_Int, ElementName=ComponentRoot}"/>
+    <Component Source="Component_Medallion_Rings.xaml"/>
+    <Component Source="Component_Label_Badge_Name.xaml" Margin="0,96,0,0" Rank_Name_Str="{Binding Path=Rank_Name_Str, ElementName=ComponentRoot}"/>
+  </Grid>
+</Component>

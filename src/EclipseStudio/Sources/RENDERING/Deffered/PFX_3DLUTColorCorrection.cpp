@@ -95,7 +95,7 @@ PFX_3DLUTColorCorrection::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffe
 	{
 		mData.PixelShaderID = m3DLUTWithLocalPSID;
 		r3dRenderer->SetTex( pLocalCCTex, PostFXChief::FREE_TEX_STAGE_START + 1 );
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&D3DXVECTOR4 ( fFadeCoef, 0.0f, 0.0f, 0.0f ), 1 );
+		r3dRenderer->SetPixelShaderConstantF( 0, (float*)&D3DXVECTOR4 ( fFadeCoef, 0.0f, 0.0f, 0.0f ), 1 );
 	}
 	else
 		mData.PixelShaderID = m3DLUTPSID;

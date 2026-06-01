@@ -343,7 +343,7 @@ void r3dSetIdentityTransform( int constant )
 	D3DXMATRIX matrix ;
 	D3DXMatrixIdentity( &matrix ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( constant, (float*)&matrix, 4 ) ) ;
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( constant, (float*)&matrix, 4 ) ) ;
 }
 
 //------------------------------------------------------------------------
@@ -351,7 +351,7 @@ void r3dSetIdentityTransform( int constant )
 void r3dSetFwdColorShaders( r3dColor colr )
 {
 	float psConst[4] = { colr.R / 255.f, colr.G / 255.f, colr.B / 255.f, colr.A / 255.f };
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 );
 
 	r3dRenderer->SetPixelShader( g_FwdColorPS );
 	r3dRenderer->SetVertexShader( g_FwdColorVS );

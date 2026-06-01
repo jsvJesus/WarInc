@@ -1,0 +1,69 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot" d:DesignWidth="1920" d:DesignHeight="1080">
+  <Component.Resources>
+    <Storyboard x:Key="Header_Flicker" RepeatBehavior="Forever" AutoReverse="True">
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Header_Master" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="0.75">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+  </Component.Resources>
+  <Grid x:Name="Header_Master">
+    <StackPanel x:Name="Header_VerticalStack">
+      <Grid x:Name="ContentArea">
+        <Grid x:Name="UsernameArea" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+          <StackPanel x:Name="Username_HorizontalStack" Orientation="Horizontal">
+            <TextBlock x:Name="Text_Username" Text="GAMERTAG666" TextWrapping="Wrap" FontFamily="/Root;component/Assets/Fonts/#Libre Bodoni" FontSize="32" Margin="0,5,10,0" VerticalAlignment="Center" FontStyle="Oblique" FontWeight="Bold" Effect="{DynamicResource TextGlow_Regular}">
+              <TextBlock.Foreground>
+                <SolidColorBrush Color="{DynamicResource Purple_Light}"/>
+              </TextBlock.Foreground>
+            </TextBlock>
+            <Viewbox x:Name="Logo_Viewbox" Height="{Binding Path=ActualHeight, ElementName=Text_Username}">
+              <Grid x:Name="Logo_Grid">
+                <Canvas Height="720" Width="720">
+                  <Path Data="M460.13,0L590.53,34.94 660.49,295.44 437.84,517.83 307.44,482.89 284.12,396.05 414.52,430.99 573.55,272.15 526.91,98.48 396.51,63.54 460.13,0z M495.11,130.25L530.09,260.5 466.48,324.04 431.49,193.79 214.16,135.56 86.94,262.63 121.92,392.88 34.98,369.59 0,239.34 190.84,48.72 495.11,130.25z M312.75,202.27L225.82,178.97 130.4,274.28 212.02,578.19 472.82,648.08 568.24,552.77 544.92,465.94 449.5,561.24 275.64,514.66 217.34,297.58 312.75,202.27z" Stretch="None" StrokeThickness="0" Height="648.07996" Width="660.4901" Canvas.Top="35.96" Canvas.Left="1.6300049" Effect="{DynamicResource TextGlow_Regular}">
+                    <Path.Fill>
+                      <SolidColorBrush Color="{DynamicResource Purple_Light}"/>
+                    </Path.Fill>
+                  </Path>
+                </Canvas>
+              </Grid>
+            </Viewbox>
+          </StackPanel>
+        </Grid>
+        <Grid x:Name="ScreenTitleArea" HorizontalAlignment="Left">
+          <Grid x:Name="TitleBacker">
+            <Grid.Background>
+              <SolidColorBrush Color="{DynamicResource Purple_ExtraDark}"/>
+            </Grid.Background>
+          </Grid>
+          <TextBlock Text="OMBRAS" TextWrapping="Wrap" FontFamily="/Root;component/Assets/Fonts/#Libre Bodoni" FontSize="56" HorizontalAlignment="Left" Margin="-1,-8,-1,-17" FontWeight="Bold" Effect="{DynamicResource TextGlow_Regular}">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Purple_Light}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+        </Grid>
+      </Grid>
+      <Grid x:Name="DividerLine" Height="2" Margin="0,16,0,0">
+        <Grid.Background>
+          <SolidColorBrush Color="{DynamicResource Purple_Light}"/>
+        </Grid.Background>
+      </Grid>
+    </StackPanel>
+
+    <Grid.Triggers>
+      <EventTrigger RoutedEvent="Loaded">
+        <BeginStoryboard x:Name="Header_Flicker_Begin" Storyboard="{StaticResource Header_Flicker}"/>
+      </EventTrigger>
+    </Grid.Triggers>
+  </Grid>
+</Component>

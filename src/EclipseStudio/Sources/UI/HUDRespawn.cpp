@@ -397,7 +397,7 @@ void HUDRespawn::Draw()
 				SetMRTClearShaders( false );
 
 				D3DXVECTOR4 pconst0 = D3DXVECTOR4 ( gCam.NearClip, gCam.FarClip, 0.0f, 0.0f );
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*) pconst0, 1 );
+				r3dRenderer->SetPixelShaderConstantF( 0, (float*) pconst0, 1 );
 
 				r3dColor Cl = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
 				r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, Cl);
@@ -420,7 +420,7 @@ void HUDRespawn::Draw()
 			SetFillGBufferPixelShader( key ) ;
 
 			D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+			r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 			for( int i = 0; i < 6; i ++ )
 			{
 				r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
@@ -453,7 +453,7 @@ void HUDRespawn::Draw()
 			g_pPostFXChief->GetBuffer(PostFXChief::RTT_PINGPONG_NEXT_AS_TEMP)->Activate();
 			r3dRenderer->StartRender(0);
 			r3dColor Cl = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
-			r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, Cl.GetPacked(), 1.0f, 0 );
+			r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, Cl.GetPacked(), 1.0f, 0 );
 
 			r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA);
 			for (int i=0;i<8;i++)

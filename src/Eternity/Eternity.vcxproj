@@ -362,8 +362,10 @@
     <ClCompile Include="Source\r3dDebug.cpp" />
     <ClCompile Include="Source\r3dDeviceQueue.cpp" />
     <ClCompile Include="Source\r3dDX11.cpp" />
+    <ClCompile Include="Source\r3dDX11ConstantBuffer.cpp" />
     <ClCompile Include="Source\r3dDX11Geometry.cpp" />
     <ClCompile Include="Source\r3dDX11InputLayout.cpp" />
+    <ClCompile Include="Source\r3dDX11RenderTarget.cpp" />
     <ClCompile Include="Source\r3dDX11Shader.cpp" />
     <ClCompile Include="Source\r3dDX11State.cpp" />
     <ClCompile Include="Source\r3dDX11Texture.cpp" />
@@ -746,8 +748,10 @@
     <ClInclude Include="Include\r3dDebug.h" />
     <ClInclude Include="Include\r3dDeviceQueue.h" />
     <ClInclude Include="Include\r3dDX11.h" />
+    <ClInclude Include="Include\r3dDX11ConstantBuffer.h" />
     <ClInclude Include="Include\r3dDX11Geometry.h" />
     <ClInclude Include="Include\r3dDX11InputLayout.h" />
+    <ClInclude Include="Include\r3dDX11RenderTarget.h" />
     <ClInclude Include="Include\r3dDX11Shader.h" />
     <ClInclude Include="Include\r3dDX11State.h" />
     <ClInclude Include="Include\r3dDX11Texture.h" />

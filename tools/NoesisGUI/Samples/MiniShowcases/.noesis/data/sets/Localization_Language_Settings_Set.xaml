@@ -1,0 +1,11 @@
+<vdctx:Localization_Language_Settings_Collection xmlns:vdctx="clr-namespace:MiniShowcases" SoundLevel="100" MusicLevel="80">
+  <vdctx:Localization_Language_Settings_Collection.Languages>
+    <vdctx:Localization_Language_Properties Name="English" FlowDirection="LeftToRight" Source="studio:///MiniShowcases;component/Resources/Localization/Language-en.xaml"/>
+    <vdctx:Localization_Language_Properties FlowDirection="LeftToRight" Name="Fran&#xE7;ais" Source="studio:///MiniShowcases;component/Resources/Localization/Language-fr.xaml"/>
+    <vdctx:Localization_Language_Properties FlowDirection="LeftToRight" Name="&#x65E5;&#x672C;&#x8A9E;" Source="studio:///MiniShowcases;component/Resources/Localization/Language-jp.xaml"/>
+    <vdctx:Localization_Language_Properties FlowDirection="RightToLeft" Name="&#x639;&#x631;&#x628;&#x64A;" Source="studio:///MiniShowcases;component/Resources/Localization/Language-ar.xaml"/>
+  </vdctx:Localization_Language_Settings_Collection.Languages>
+  <vdctx:Localization_Language_Settings_Collection.Selected>
+    <vdctx:Localization_Language_Properties FlowDirection="LeftToRight" Name="English" Source="studio:///MiniShowcases;component/Resources/Localization/Language-en.xaml"/>
+  </vdctx:Localization_Language_Settings_Collection.Selected>
+</vdctx:Localization_Language_Settings_Collection>

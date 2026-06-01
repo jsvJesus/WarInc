@@ -75,7 +75,7 @@ PFX_RadialBlur::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src*/
 	{
 		D3DXVECTOR4(settings->BlurStart, settings->BlurStrength, 0, 0)
 	};
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)&pconst[0], 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float *)&pconst[0], 1 );
 
 	if (mSettingsArr.Count() > 0)
 		mSettingsArr.Erase(0);

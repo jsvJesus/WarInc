@@ -1,0 +1,6 @@
+    <Class Name="MessageViewModel">
+      <Property Name="Subject" Type="String" StringMinWordCount="0" StringMaxWordCount="10"/>
+      <Property Name="Department" Type="Enum" SubType="NoesisStudioInternals.ShipDepartment"/>
+      <Property Name="IsHighPriority" Type="Boolean"/>
+      <Property Name="TimeRemaining" Type="String" StringMinWordCount="0" StringMaxWordCount="10"/>
+    </Class>

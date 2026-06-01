@@ -1,0 +1,5 @@
+    <Class Name="PowerPresetViewModel">
+      <Property Name="Name" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+      <Property Name="Number" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="IsSelected" Type="Boolean"/>
+    </Class>

@@ -291,7 +291,7 @@ void SetupProjectiveTransform(D3DXVECTOR3 &From, D3DXVECTOR3 &To, float HotSpotA
 
   D3DXMatrixTranspose( &mat2, &mat2 );
 
-  r3dRenderer->pd3ddev->SetVertexShaderConstantF(  20, (float *)&mat2,  4 );
+  r3dRenderer->SetVertexShaderConstantF(  20, (float *)&mat2,  4 );
 }
 
 
@@ -441,15 +441,15 @@ void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 #if 0
 		LightVec = D3DXVECTOR4(X,Y,Z,0);
 
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15, (float *)&LightVec,	1 );
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, (float *)&LightVec,	1 );
+		r3dRenderer->SetVertexShaderConstantF( 15, (float *)&LightVec,	1 );
+		r3dRenderer->SetPixelShaderConstantF( 4, (float *)&LightVec,	1 );
 
 		Direction.Normalize();
 		LightVec = D3DXVECTOR4(Direction.X,Direction.Y,Direction.Z,0);
 
 		r3dVector vTo = r3dPoint3D(X,Y,Z) + Direction *100.0f;
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 5, (float *)&LightVec,	1 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 16, (float *)&LightVec,	1 );
+		r3dRenderer->SetPixelShaderConstantF( 5, (float *)&LightVec,	1 );
+		r3dRenderer->SetVertexShaderConstantF( 16, (float *)&LightVec,	1 );
 
 		r3dRenderer->SetTex(ProjectMap,3);
 		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
@@ -463,7 +463,7 @@ void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 
 	r3d_assert( NUM_CONSTANTS < MAX_CONSTANTS );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)vConsts, NUM_CONSTANTS );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float *)vConsts, NUM_CONSTANTS );
 
 }
 
@@ -1211,7 +1211,7 @@ void SetLightsIfTransparent(r3dMaterial *m, const r3dBoundBox &worldBBox)
 			lightParams[i * 3 + 2] = D3DXVECTOR4(invFadeDistance, l->GetInnerRadius() * invFadeDistance, 0, 0);
 		}
 		// PointLight ptLights[NUM_POINT_LIGHTS]: register(c243);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(243, &lightParams[0].x, _countof(lightParams));
+		r3dRenderer->SetVertexShaderConstantF(243, &lightParams[0].x, _countof(lightParams));
 	}
 
 }

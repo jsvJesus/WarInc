@@ -33,10 +33,63 @@
 
 static	HRESULT		hr;
 
+#ifndef WO_SERVER
+
+static int r3dD3DQuery_GetDX11Type(D3DQUERYTYPE type, D3D11_QUERY* outType)
+{
+	if(!outType)
+		return 0;
+
+	switch(type)
+	{
+	case D3DQUERYTYPE_EVENT:
+		*outType = D3D11_QUERY_EVENT;
+		return 1;
+
+	case D3DQUERYTYPE_OCCLUSION:
+		*outType = D3D11_QUERY_OCCLUSION;
+		return 1;
+
+	case D3DQUERYTYPE_TIMESTAMP:
+		*outType = D3D11_QUERY_TIMESTAMP;
+		return 1;
+
+	case D3DQUERYTYPE_TIMESTAMPFREQ:
+		*outType = D3D11_QUERY_TIMESTAMP_DISJOINT;
+		return 1;
+	}
+
+	return 0;
+}
+
+static void r3dD3DQuery_WriteCounterValue(void* pData, DWORD dwSize, UINT64 value)
+{
+	if(!pData || !dwSize)
+		return;
+
+	if(dwSize >= sizeof(UINT64))
+	{
+		*(UINT64*)pData = value;
+		return;
+	}
+
+	if(dwSize >= sizeof(DWORD))
+	{
+		*(DWORD*)pData = value > 0xffffffffull ? 0xffffffffu : (DWORD)value;
+	}
+}
+
+#endif
+
 r3dD3DQuery::r3dD3DQuery(D3DQUERYTYPE type, const r3dIntegrityGuardian& ig /*= r3dIntegrityGuardian()*/ )
 : r3dIResource( ig )
 {
 	type_ = type;
+	query_ = NULL;
+#ifndef WO_SERVER
+	dx11Query_ = NULL;
+	dx11Open_ = 0;
+#endif
 	CreateQueuedResource( this ) ;
 }
 
@@ -47,13 +100,143 @@ r3dD3DQuery::~r3dD3DQuery()
 
 void r3dD3DQuery::D3DCreateResource()
 {
-	D3D_V( r3dRenderer->pd3ddev->CreateQuery(type_, &query_) ) ;
+	R3D_ENSURE_MAIN_THREAD();
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && g_r3dDX11.GetDevice())
+	{
+		D3D11_QUERY dx11Type;
+		if(r3dD3DQuery_GetDX11Type(type_, &dx11Type))
+		{
+			D3D11_QUERY_DESC desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Query = dx11Type;
+
+			HRESULT dx11hr = g_r3dDX11.GetDevice()->CreateQuery(&desc, &dx11Query_);
+			if(FAILED(dx11hr))
+			{
+				r3dOutToLog(
+					"DX11Query: CreateQuery failed, D3D9 type=%d HRESULT=0x%08X\n",
+					(int)type_,
+					(unsigned int)dx11hr
+				);
+			}
+		}
+	}
+#endif
+
+	if(r3dRenderer && r3dRenderer->pd3ddev)
+	{
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery(type_, &query_) ) ;
+	}
 }
 
 void r3dD3DQuery::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 	SAFE_RELEASE(query_);
+
+#ifndef WO_SERVER
+	SAFE_RELEASE(dx11Query_);
+	dx11Open_ = 0;
+#endif
+}
+
+HRESULT r3dD3DQuery::Issue(DWORD dwIssueFlags)
+{
+	R3D_ENSURE_MAIN_THREAD();
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && dx11Query_)
+	{
+		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+		if(!context)
+			return D3DERR_INVALIDCALL;
+
+		if(type_ == D3DQUERYTYPE_OCCLUSION || type_ == D3DQUERYTYPE_TIMESTAMPFREQ)
+		{
+			if(dwIssueFlags & D3DISSUE_BEGIN)
+			{
+				context->Begin(dx11Query_);
+				dx11Open_ = 1;
+			}
+
+			if(dwIssueFlags & D3DISSUE_END)
+			{
+				if(type_ == D3DQUERYTYPE_TIMESTAMPFREQ && !dx11Open_)
+				{
+					context->Begin(dx11Query_);
+				}
+
+				context->End(dx11Query_);
+				dx11Open_ = 0;
+			}
+
+			return S_OK;
+		}
+
+		if(dwIssueFlags & D3DISSUE_END)
+		{
+			context->End(dx11Query_);
+			return S_OK;
+		}
+
+		return S_OK;
+	}
+#endif
+
+	return query_ ? query_->Issue(dwIssueFlags) : D3DERR_INVALIDCALL;
+}
+
+HRESULT r3dD3DQuery::GetData(void* pData, DWORD dwSize, DWORD dwGetDataFlags)
+{
+	R3D_ENSURE_MAIN_THREAD();
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && dx11Query_)
+	{
+		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+		if(!context)
+			return D3DERR_INVALIDCALL;
+
+		const UINT flags = (dwGetDataFlags & D3DGETDATA_FLUSH) ? 0 : D3D11_ASYNC_GETDATA_DONOTFLUSH;
+
+		if(!pData || !dwSize)
+			return context->GetData(dx11Query_, NULL, 0, flags);
+
+		if(type_ == D3DQUERYTYPE_EVENT)
+			return context->GetData(dx11Query_, pData, dwSize, flags);
+
+		if(type_ == D3DQUERYTYPE_OCCLUSION || type_ == D3DQUERYTYPE_TIMESTAMP)
+		{
+			UINT64 value = 0;
+			HRESULT dx11hr = context->GetData(dx11Query_, &value, sizeof(value), flags);
+			if(dx11hr == S_OK)
+				r3dD3DQuery_WriteCounterValue(pData, dwSize, value);
+
+			return dx11hr;
+		}
+
+		if(type_ == D3DQUERYTYPE_TIMESTAMPFREQ)
+		{
+			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT data;
+			ZeroMemory(&data, sizeof(data));
+
+			HRESULT dx11hr = context->GetData(dx11Query_, &data, sizeof(data), flags);
+			if(dx11hr == S_OK)
+			{
+				if(data.Disjoint)
+					return S_FALSE;
+
+				r3dD3DQuery_WriteCounterValue(pData, dwSize, data.Frequency);
+			}
+
+			return dx11hr;
+		}
+	}
+#endif
+
+	return query_ ? query_->GetData(pData, dwSize, dwGetDataFlags) : D3DERR_INVALIDCALL;
 }
 
 //------------------------------------------------------------------------
@@ -301,6 +484,11 @@ static void SetupSurfacePointers( void* params )
 				{
 					D3D_V(sbuf->AsTexCUBE()->GetCubeMapSurface( (D3DCUBEMAP_FACES)i, m, &surf ));
 					sbuf->Surfs[ i ][ m ].Set( surf );
+
+#ifndef WO_SERVER
+					if(sbuf->Tex)
+						sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ i ][ m ], i, m);
+#endif
 				}				
 			}
 		}
@@ -313,6 +501,11 @@ static void SetupSurfacePointers( void* params )
 			{
 				D3D_V(sbuf->AsTex2D()->GetSurfaceLevel(m, &surf ));
 				sbuf->Surfs[ 0 ][ m ].Set( surf ) ;
+
+#ifndef WO_SERVER
+				if(sbuf->Tex)
+					sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ 0 ][ m ], 0, m);
+#endif
 			}
 		}
 	}
@@ -974,14 +1167,11 @@ void r3dD3DBuffer::Activate()
 
 			if(m_DX11Buffer)
 			{
-				g_r3dDX11Geometry.SetVertexBufferRaw(
-					0,
+				g_r3dDX11Geometry.SetIndexBufferRaw(
 					m_DX11Buffer,
-					m_Stride,
+					m_Stride == 2 ? R3D_DX11_INDEX_16BIT : R3D_DX11_INDEX_32BIT,
 					0
 				);
-
-				r3dDX11_ApplyCurrentVertexShaderInputLayout(m_Decl);
 			}
 		}
 #endif

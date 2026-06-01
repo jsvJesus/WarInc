@@ -1,0 +1,32 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  x:Name="ComponentRoot" HorizontalAlignment="Center" VerticalAlignment="Center">
+  <Component.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Resources_Medallion_Colors.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Component.Resources>
+  <Component.DynamicProperties>
+    <DynamicProperty Name="Badge_Rank_Number" Type="Integer" DefaultValue="0"/>
+  </Component.DynamicProperties>
+  <Grid Width="40" Height="32">
+    <Border CornerRadius="20,20,0,0">
+      <Border.Background>
+        <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+      </Border.Background>
+    </Border>
+    <TextBlock Text="{Binding Path=Rank_Number_Int, ElementName=ComponentRoot}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Top" FontSize="28" FontFamily="./#Book Antiqua" FontWeight="Bold">
+      <TextBlock.Foreground>
+        <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+      </TextBlock.Foreground>
+    </TextBlock>
+  </Grid>
+</Component>

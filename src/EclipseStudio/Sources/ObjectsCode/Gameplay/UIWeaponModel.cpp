@@ -122,7 +122,7 @@ struct UIWeaponModelRenderable : Renderable
 			// NOTE : needed for transparent camo only..
 			// float4   WorldScale  		: register(c24);
 			D3DXVECTOR4 scale(mesh->unpackScale.x, mesh->unpackScale.y, mesh->unpackScale.z, 0.f) ;
-			D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
+			D3D_V(r3dRenderer->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
 		}
 
 		{

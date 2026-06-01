@@ -62,7 +62,7 @@ PFX_Interpolate::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) 
 	r3dRenderer->SetTex(sts.image2, PostFXChief::FREE_TEX_STAGE_START);
 
 	D3DXVECTOR4 psParams(sts.coef.x, sts.coef.y, sts.coef.z, 0.0f);
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams.x, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(0, &psParams.x, 1));
 
 	mSettings.Erase(0);
 }

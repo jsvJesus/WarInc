@@ -189,8 +189,8 @@ int QueryPool::CreateNamedQuery( const char* name )
 
 	if( r3dRenderer->SupportsStampQueries && r_allow_gpu_timestamps)
 	{
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.start_query ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.end_query ) ) ;
+		r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.start_query ) ;
+		r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.end_query ) ;
 
 		q.flushed = true ;
 	}
@@ -338,21 +338,21 @@ QueryPool::D3DCreateResource()  /*OVERRIDE*/
 			for( UINT i = 0, e = Queries::COUNT; i < e; i ++ )
 			{
 				r3d_assert( !mQueries[ j ][ i ] );
-				D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &mQueries[ j ][ i ] ) ) ;
+				r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &mQueries[ j ][ i ] ) ;
 			}
 		}
 
 		for( UINT i = 0, e = FreqQueries::COUNT; i < e; i ++ )
 		{
-			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &mFreqQueries[ i ] ) );
+			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &mFreqQueries[ i ] );
 		}
 
 		for( UINT i = 0, e = mNamedQueries.Count() ; i < e ; i ++ )
 		{
 			NamedQueries& q = mNamedQueries[ i ] ;
 
-			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.start_query ) );
-			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.end_query ) );
+			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.start_query );
+			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.end_query );
 
 			q.flushed = true ;
 		}

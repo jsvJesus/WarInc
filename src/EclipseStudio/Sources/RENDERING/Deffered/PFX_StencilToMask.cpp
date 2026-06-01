@@ -86,7 +86,7 @@ PFX_StencilToMask::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ 
 		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) );
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &sts.Value.x, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &sts.Value.x, 1 ) );
 }
 
 //------------------------------------------------------------------------

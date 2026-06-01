@@ -1,0 +1,5 @@
+    <Class Name="ReactorViewModel">
+      <Property Name="WheelRotation" Type="Number" NumberMinValue="0" NumberMaxValue="360"/>
+      <Property Name="PowerBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="Operation" Type="Enum" SubType="NoesisStudioInternals.OperatingStatus"/>
+    </Class>

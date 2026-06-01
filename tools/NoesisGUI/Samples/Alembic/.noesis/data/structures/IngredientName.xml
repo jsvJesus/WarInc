@@ -1,0 +1,13 @@
+<Enum Name="IngredientName">
+  <Item Name="Iron" Value="0"/>
+  <Item Name="Silver" Value="1"/>
+  <Item Name="Gold" Value="2"/>
+  <Item Name="SalPetrae" Value="3"/>
+  <Item Name="Coral" Value="4"/>
+  <Item Name="Moss" Value="5"/>
+  <Item Name="PoisonIvy" Value="6"/>
+  <Item Name="AquaFortis" Value="7"/>
+  <Item Name="GumArabic" Value="8"/>
+  <Item Name="BlueVitriol" Value="9"/>
+  <Item Name="None" Value="10"/>
+</Enum>

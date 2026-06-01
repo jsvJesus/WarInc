@@ -1,0 +1,7 @@
+<vdctx:IconLibrary_Icon_Collection xmlns:vdctx="clr-namespace:MiniShowcases">
+  <vdctx:IconLibrary_Icon_Collection.Icons>
+    <vdctx:IconLibrary_Icon_Properties Badge_Rank_Number="1" Badge="Mors" Badge_Color_Custom_0="#FFE892DC" Badge_Color_Custom_1="#FFCC47B1" Badge_Color_Custom_2="#FFB3F2FF"/>
+    <vdctx:IconLibrary_Icon_Properties Badge_Rank_Number="2" Badge_Color_Custom_0="#FFA3A4BF" Badge_Color_Custom_1="#FFB75D4A" Badge_Color_Custom_2="#FFB15E32" Badge_Color_Custom_3="#FF474747" Badge="Ave"/>
+    <vdctx:IconLibrary_Icon_Properties Badge_Rank_Number="3" Badge_Color_Custom_0="#FFE8C892" Badge_Color_Custom_1="#FF1A466C" Badge_Color_Custom_2="#FFE97F36" Badge_Color_Custom_3="#FF009838" Badge="Flor"/>
+  </vdctx:IconLibrary_Icon_Collection.Icons>
+</vdctx:IconLibrary_Icon_Collection>

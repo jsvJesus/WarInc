@@ -59,7 +59,7 @@ PFX_Fill::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src*/ )	/*O
 {
 	const Settings& sts = mSettingsStack[ 0 ];
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &sts.Value.x, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, &sts.Value.x, 1 );
 
 	if( sts.ColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		

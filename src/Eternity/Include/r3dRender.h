@@ -13,6 +13,9 @@
 #ifndef WO_SERVER
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
+#include "r3dDX11State.h"
+#include "r3dDX11ConstantBuffer.h"
+#include "r3dDX11RenderTarget.h"
 #endif
 
 class r3dMaterial;
@@ -659,6 +662,8 @@ public:
 	void		SetVertexShader(const char* name);
 	void		SetVertexShader(int id = -1);
 	void		SetValidVertexShader(int id );
+	HRESULT		SetVertexShaderConstantF(UINT startRegister, const float* data, UINT vector4fCount);
+	HRESULT		SetPixelShaderConstantF(UINT startRegister, const float* data, UINT vector4fCount);
 
 	void		SetDefaultCullMode( D3DCULL cullMode );
 	void		SetCullMode( D3DCULL cullMode );
@@ -698,6 +703,7 @@ public:
 	void		SetFog(int fogEnabled);
 
 	void		StretchRect( class r3dScreenBuffer* source, class r3dScreenBuffer* target, int filter = 0 );
+	void		Clear(DWORD count, const D3DRECT* rects, DWORD flags, D3DCOLOR color, float z, DWORD stencil);
 
 	//
 	// Rendering Function
@@ -844,6 +850,22 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 	void ZeroIndexCache();
 	ZeroIndexCache();
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Geometry.DrawIndexedPrimitiveUP(
+			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+			MinVertexIndex,
+			NumVertices,
+			PrimitiveCount,
+			pIndexData,
+			r3dDX11_ConvertD3D9IndexFormat((int)IndexDataFormat),
+			pVertexStreamZeroData,
+			VertexStreamZeroStride
+		);
+	}
+#endif
+
 	D3D_V( pd3ddev->DrawIndexedPrimitiveUP( PrimitiveType, MinVertexIndex, NumVertices, PrimitiveCount, pIndexData, IndexDataFormat, pVertexStreamZeroData, VertexStreamZeroStride ) );
 }
 
@@ -891,7 +913,53 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 	void ZeroZeroStreamCache();
 	ZeroZeroStreamCache();
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Geometry.DrawPrimitiveUP(
+			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+			PrimitiveCount,
+			pVertexStreamZeroData,
+			VertexStreamZeroStride
+		);
+	}
+#endif
+
 	D3D_V( pd3ddev->DrawPrimitiveUP( PrimitiveType, PrimitiveCount, pVertexStreamZeroData, VertexStreamZeroStride ) );
+}
+
+R3D_FORCEINLINE
+HRESULT r3dRenderLayer::SetVertexShaderConstantF(UINT startRegister, const float* data, UINT vector4fCount)
+{
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Constants.SetVertexShaderConstantF(
+			startRegister,
+			data,
+			vector4fCount
+		);
+	}
+#endif
+
+	return pd3ddev->SetVertexShaderConstantF(startRegister, data, vector4fCount);
+}
+
+R3D_FORCEINLINE
+HRESULT r3dRenderLayer::SetPixelShaderConstantF(UINT startRegister, const float* data, UINT vector4fCount)
+{
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Constants.SetPixelShaderConstantF(
+			startRegister,
+			data,
+			vector4fCount
+		);
+	}
+#endif
+
+	return pd3ddev->SetPixelShaderConstantF(startRegister, data, vector4fCount);
 }
 
 R3D_FORCEINLINE
@@ -899,6 +967,11 @@ void r3dRenderLayer::SetCullMode( D3DCULL CullMode )
 {
 	if( CullMode != CurrentCullMode )
 	{
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11State.SetRenderState(D3DRS_CULLMODE, CullMode);
+#endif
+
 		D3D_V( pd3ddev->SetRenderState( D3DRS_CULLMODE, CullMode ) );
 		CurrentCullMode = CullMode ;
 	}
@@ -921,6 +994,11 @@ r3dRenderLayer::SetRT( int slot, IDirect3DSurface9* surf )
 
 	if( surf != RTs[ slot ] )
 	{
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11RenderTargets.SetRenderTarget(slot, surf);
+#endif
+
 		RTs[ slot ] = surf ;	
 		D3D_V( pd3ddev->SetRenderTarget( slot, surf ) );
 	}
@@ -932,6 +1010,11 @@ r3dRenderLayer::SetDSS( IDirect3DSurface9* dss )
 {
 	if( dss != DSS )
 	{
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11RenderTargets.SetDepthStencil(dss);
+#endif
+
 		D3D_V( pd3ddev->SetDepthStencilSurface( dss ) );
 		DSS = dss ;
 	}
@@ -1103,6 +1186,11 @@ public:
 	R3D_FORCEINLINE
 	r3dD3DSurfaceTunnel()
 	: mFormat( D3DFMT_UNKNOWN )
+	, mDX11Texture( NULL )
+	, mDX11RTV( NULL )
+	, mDX11DSV( NULL )
+	, mDX11Width( 0 )
+	, mDX11Height( 0 )
 	{
 
 	}
@@ -1116,6 +1204,27 @@ public:
 	void Set( IDirect3DSurface9* resource );
 	int ReleaseAndReset();
 
+#ifndef WO_SERVER
+	void SetDX11RenderTargetMirror(
+		ID3D11Texture2D* texture,
+		ID3D11RenderTargetView* rtv,
+		unsigned int width,
+		unsigned int height
+	);
+
+	void SetDX11DepthStencilMirror(
+		ID3D11Texture2D* texture,
+		ID3D11DepthStencilView* dsv,
+		unsigned int width,
+		unsigned int height
+	);
+
+	void ReleaseDX11Mirror();
+
+	R3D_FORCEINLINE ID3D11RenderTargetView* GetDX11RTV() const { return mDX11RTV; }
+	R3D_FORCEINLINE ID3D11DepthStencilView* GetDX11DSV() const { return mDX11DSV; }
+#endif
+
 	using Parent::Get;
 	using Parent::Valid;
 	using Parent::operator ->;
@@ -1124,6 +1233,13 @@ public:
 
 private:
 	D3DFORMAT mFormat ;
+#ifndef WO_SERVER
+	ID3D11Texture2D* mDX11Texture;
+	ID3D11RenderTargetView* mDX11RTV;
+	ID3D11DepthStencilView* mDX11DSV;
+	unsigned int mDX11Width;
+	unsigned int mDX11Height;
+#endif
 };
 
 class r3dDeviceTunnel

@@ -15,8 +15,16 @@
 #undef DrawPrimitive
 #endif
 
+#ifdef DrawPrimitiveUP
+#undef DrawPrimitiveUP
+#endif
+
 #ifdef DrawIndexedPrimitive
 #undef DrawIndexedPrimitive
+#endif
+
+#ifdef DrawIndexedPrimitiveUP
+#undef DrawIndexedPrimitiveUP
 #endif
 
 #ifdef SetPrimitiveTopology
@@ -168,9 +176,31 @@ public:
 		unsigned int primitiveCount
 	);
 
+	void DrawPrimitiveUP(
+		r3dDX11PrimitiveType primitiveType,
+		unsigned int primitiveCount,
+		const void* vertexData,
+		unsigned int vertexStride
+	);
+
+	void DrawIndexedPrimitiveUP(
+		r3dDX11PrimitiveType primitiveType,
+		unsigned int minVertexIndex,
+		unsigned int numVertices,
+		unsigned int primitiveCount,
+		const void* indexData,
+		r3dDX11IndexFormat indexFormat,
+		const void* vertexData,
+		unsigned int vertexStride
+	);
+
 	void InvalidateCache();
 
 private:
+	bool EnsureTempVertexBuffer(unsigned int byteSize);
+	bool EnsureTempIndexBuffer(unsigned int byteSize);
+	bool UploadTempBuffer(ID3D11Buffer* buffer, const void* data, unsigned int byteSize);
+
 	bool Initialized;
 
 	ID3D11Buffer* BoundVertexBuffers[16];
@@ -182,6 +212,11 @@ private:
 	unsigned int BoundIndexOffset;
 
 	r3dDX11PrimitiveType BoundPrimitiveType;
+
+	ID3D11Buffer* TempVertexBuffer;
+	unsigned int TempVertexBufferBytes;
+	ID3D11Buffer* TempIndexBuffer;
+	unsigned int TempIndexBufferBytes;
 };
 
 extern r3dDX11GeometryState g_r3dDX11Geometry;

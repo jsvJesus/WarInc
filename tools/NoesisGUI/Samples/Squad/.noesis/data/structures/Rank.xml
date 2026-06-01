@@ -1,0 +1,11 @@
+<Enum Name="Rank">
+  <Item Name="SOLDIER" Value="1"/>
+  <Item Name="PRIVATE" Value="2"/>
+  <Item Name="SERGEANT" Value="3"/>
+  <Item Name="CORPORAL" Value="4"/>
+  <Item Name="LIEUTENANT" Value="5"/>
+  <Item Name="CAPTAIN" Value="6"/>
+  <Item Name="COMMANDER" Value="7"/>
+  <Item Name="CORONEL" Value="8"/>
+  <Item Name="MAJOR" Value="9"/>
+</Enum>

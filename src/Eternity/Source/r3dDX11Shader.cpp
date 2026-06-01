@@ -113,6 +113,35 @@ static void r3dDX11Shader_SetLastHRError(
 	OutputDebugStringA("\n");
 }
 
+static const char* r3dDX11Shader_NormalizeProfile(int shaderType, const char* profile)
+{
+	if(!profile || !profile[0])
+		return shaderType == R3D_DX11_SHADER_VERTEX ? "vs_4_0" : "ps_4_0";
+
+	if(!_strnicmp(profile, "vs_", 3))
+		return "vs_4_0";
+
+	if(!_strnicmp(profile, "ps_", 3))
+		return "ps_4_0";
+
+	return profile;
+}
+
+static const char r3dDX11ShaderCompatibilityPrelude[] =
+	"#ifndef R3D_DX11\r\n"
+	"#define R3D_DX11 1\r\n"
+	"#endif\r\n"
+	"#ifndef DX11\r\n"
+	"#define DX11 1\r\n"
+	"#endif\r\n"
+	"#ifndef SM4\r\n"
+	"#define SM4 1\r\n"
+	"#endif\r\n"
+	"#ifndef R3D_SHADER_MODEL\r\n"
+	"#define R3D_SHADER_MODEL 40\r\n"
+	"#endif\r\n"
+	"#line 1\r\n";
+
 static int r3dDX11Shader_IsAbsolutePath(const char* fileName)
 {
 	if(!fileName || !fileName[0])
@@ -454,8 +483,7 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 	if(!entryPoint || !entryPoint[0])
 		entryPoint = "main";
 
-	if(!profile || !profile[0])
-		profile = shaderType == R3D_DX11_SHADER_VERTEX ? "vs_4_0" : "ps_4_0";
+	const char* dx11Profile = r3dDX11Shader_NormalizeProfile(shaderType, profile);
 
 	const char* sourceCode = (const char*)sourceData;
 	unsigned int realSourceSize = sourceSize;
@@ -469,6 +497,14 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 			realSourceSize -= 3;
 		}
 	}
+
+	const unsigned int preludeSize = sizeof(r3dDX11ShaderCompatibilityPrelude) - 1;
+	const unsigned int compileSourceSize = preludeSize + realSourceSize;
+
+	char* compileSource = new char[compileSourceSize + 1];
+	memcpy(compileSource, r3dDX11ShaderCompatibilityPrelude, preludeSize);
+	memcpy(compileSource + preludeSize, sourceCode, realSourceSize);
+	compileSource[compileSourceSize] = 0;
 
 	UINT flags = 0;
 
@@ -489,18 +525,20 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 	ID3D10Blob* errors = NULL;
 
 	HRESULT hr = D3DCompile(
-		sourceCode,
-		realSourceSize,
+		compileSource,
+		compileSourceSize,
 		sourceName ? sourceName : "memory",
 		(const D3D_SHADER_MACRO*)macros,
 		&includeHandler,
 		entryPoint,
-		profile,
+		dx11Profile,
 		flags,
 		0,
 		&shaderBlob,
 		&errors
 	);
+
+	delete[] compileSource;
 
 	if(FAILED(hr))
 	{
@@ -509,7 +547,7 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 			hr,
 			sourceName,
 			entryPoint,
-			profile,
+			dx11Profile,
 			errors
 		);
 
@@ -540,7 +578,7 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 				hr,
 				sourceName,
 				entryPoint,
-				profile,
+				dx11Profile,
 				NULL
 			);
 
@@ -582,7 +620,7 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 			hr,
 			sourceName,
 			entryPoint,
-			profile,
+			dx11Profile,
 			NULL
 		);
 

@@ -4654,7 +4654,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 		- m_fShaderLODFadeStart / ( m_fShaderLODFadeEnd - m_fShaderLODFadeStart ) )
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(  25, (float *)&vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF(  25, (float *)&vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 	d3dc._SetDecl( r_terrain_quality->GetInt() == 1 ? m_HeightNormalVDeclLQ : m_HeightNormalVDecl );
 
@@ -4739,7 +4739,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 
 				vConsts[ 2 ][ 0 ] = 64.f * ( m_nTileCountX + m_nTileCountZ );
 
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 				r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, VertCount, IndexOffset, TriangleCount );
 		}
@@ -4930,7 +4930,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 
 					r3d_assert( MultiShaderID >= 0 || needLQ && LQShaderID >= 0 );
 
-					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, psConsts[0], sizeof psConsts / sizeof psConsts[ 0 ] ) );
+					D3D_V( r3dRenderer->SetPixelShaderConstantF( 1, psConsts[0], sizeof psConsts / sizeof psConsts[ 0 ] ) );
 
 					float vsConsts[ 4 ][ 4 ];
 
@@ -4948,7 +4948,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						if( oriData.XCount )
 						{
 							FillXVSConstants( vsConsts );
-							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ] ) );
+							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ] ) );
 							r3dRenderer->SetPixelShader( SingleShaderID );
 							singleShaderSet = true;
 							r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, m_nVertPerTile, oriData.XOffset, oriData.XCount );
@@ -4959,7 +4959,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						if( oriData.YCount )
 						{
 							FillYVSConstants( vsConsts );
-							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							if( !singleShaderSet )
 							{
@@ -4976,7 +4976,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillZVSConstants( vsConsts );
 
-							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							if( !singleShaderSet )
 							{
@@ -4993,7 +4993,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillMultiVSConstants( vsConsts );
 
-							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							r3dRenderer->SetPixelShader( MultiShaderID );
 
@@ -5031,7 +5031,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 							}
 						}
 
-						D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+						D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 						if( needLQ )
 						{
@@ -5055,7 +5055,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillMultiVSConstants( vsConsts );
 							r3dRenderer->SetPixelShader( MultiShaderID );
-							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 						}
 #endif
 						r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, VertCount, IndexOffset, TriangleCount );
@@ -5910,7 +5910,7 @@ r3dTerrain::DrawOrthographicTerrain( r3dCamera const &Cam, bool UseZ ) /*OVERRID
 	else
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 ) );
+	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 );
 
 	// need white alpha or else our d3dxsave/d3dxload bezzle produces enterily black dxt1...
 	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
@@ -5967,10 +5967,10 @@ r3dTerrain::SetupCommonConstants( const r3dCamera& Cam )
 	D3DXMATRIX ShaderMat;
 
 	D3DXMatrixTranspose( &ShaderMat, &r3dRenderer->ViewProjMatrix );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	D3DXVECTOR4 vCam ( Cam.x, Cam.y, Cam.z, 0 );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  15, (float *)&vCam, 1 );
+	r3dRenderer->SetVertexShaderConstantF(  15, (float *)&vCam, 1 );
 
 }
 
@@ -5983,10 +5983,10 @@ r3dTerrain::SetupCommonConstantsMP( const r3dCamera& Cam )
 
 	float fWorldSizeInv = 1.f / WorldSize;
 	D3DXVECTOR4 uv0( fWorldSizeInv, 0.f, 0.f, 0.f );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  24, (float *)&uv0,	1 );
+	r3dRenderer->SetVertexShaderConstantF(  24, (float *)&uv0,	1 );
 
 	D3DXVECTOR4 vCam ( Cam.x, Cam.y, Cam.z, 1.f / SplitDistance );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&vCam,	1 );
+	r3dRenderer->SetPixelShaderConstantF(  0, (float *)&vCam,	1 );
 }
 
 //------------------------------------------------------------------------
@@ -6001,18 +6001,18 @@ r3dTerrain::SetupMaterial( int idx )
 		m_dMatLayers[ idx ][ 1 ].fScale * fWorldSizeInv,
 		m_dMatLayers[ idx ][ 2 ].fScale * fWorldSizeInv );
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  20, (float *)&uv0,	1 );
+	r3dRenderer->SetVertexShaderConstantF(  20, (float *)&uv0,	1 );
 
 
 
 	D3DXVECTOR4 vGloss( m_tBaseLayer.fGloss, 0, 0, 0 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 14, (float *)&vGloss, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 14, (float *)&vGloss, 1 );
 
 	vGloss = D3DXVECTOR4( m_dMatLayers[ idx ][ 0 ].fGloss, m_dMatLayers[ idx ][ 1 ].fGloss, m_dMatLayers[ idx ][ 2 ].fGloss, m_dMatLayers[ idx ][ 3 ].fGloss );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 15, (float *)&vGloss, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 15, (float *)&vGloss, 1 );
 
 	D3DXVECTOR4 v3( m_dMatLayers[ idx ][ 2 ].fScale * fWorldSizeInv, -m_dMatLayers[idx][ 2 ].fScale * fWorldSizeInv, m_dMatLayers[idx][ 3 ].fScale * fWorldSizeInv, -m_dMatLayers[ idx ][ 3 ].fScale * fWorldSizeInv ); 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 7, (float *)&v3, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 7, (float *)&v3, 1 );
 
 	D3DXVECTOR4 vSplit; 
 	vSplit = D3DXVECTOR4(		1.0f/m_dMatLayers[ idx ][0].fSplit, 
@@ -6020,7 +6020,7 @@ r3dTerrain::SetupMaterial( int idx )
 		1.0f/m_dMatLayers[ idx ][2].fSplit, 
 		1.0f/m_dMatLayers[ idx ][3].fSplit );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  6, (float *)&vSplit, 1 );
+	r3dRenderer->SetPixelShaderConstantF(  6, (float *)&vSplit, 1 );
 
 
 #ifndef FINAL_BUILD
@@ -6322,7 +6322,7 @@ void r3dTerrain::DrawDepth()
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	SetupCommonConstants( gCam );
 
 	DrawTerrain( gCam, false, true, TRM_SIMPLE, true, false );
@@ -6369,7 +6369,7 @@ void r3dTerrain::DrawBlack(const r3dCamera &Cam, int bSetShader)
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	SetupCommonConstants( Cam );
 
 	DrawTerrain( Cam, false, true, TRM_SIMPLE, true, true );

@@ -80,6 +80,43 @@ static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void
 	r3dOutToLog("r3dTexture DX11: linked SRV '%s'\n", debugName ? debugName : "");
 }
 
+static void r3dTexture_CreateDX11RenderTargetMirror(
+	r3dDX11Texture** slot,
+	int width,
+	int height,
+	D3DFORMAT d3dFormat,
+	int mipCount,
+	bool cube
+)
+{
+	if(!slot || !g_r3dDX11.IsInitialized())
+		return;
+
+	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
+	if(dx11Format == 0)
+		return;
+
+	if(*slot)
+	{
+		delete *slot;
+		*slot = NULL;
+	}
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+
+	bool created = cube
+		? tex->CreateRenderTargetCube(width, dx11Format, mipCount)
+		: tex->CreateRenderTarget2D(width, height, dx11Format, mipCount);
+
+	if(!created)
+	{
+		delete tex;
+		return;
+	}
+
+	*slot = tex;
+}
+
 #endif
 
 //C
@@ -951,6 +988,27 @@ bool r3dTexture::HasDX11Texture()
 	return GetDX11SRV() != NULL;
 }
 
+void r3dTexture::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip)
+{
+	if(!surface || !(Flags & fRenderTarget))
+		return;
+
+	r3dDX11Texture* tex = GetDX11Texture();
+	if(!tex)
+		return;
+
+	ID3D11Texture2D* texture = NULL;
+	ID3D11RenderTargetView* rtv = NULL;
+
+	if(!tex->AddRefRenderTargetMirror(face, mip, &texture, &rtv))
+		return;
+
+	const unsigned int mipWidth = (unsigned int)R3D_MAX(1, Width >> mip);
+	const unsigned int mipHeight = (unsigned int)R3D_MAX(1, Height >> mip);
+
+	surface->SetDX11RenderTargetMirror(texture, rtv, mipWidth, mipHeight);
+}
+
 #endif
 
 void r3dTexture::SetNewD3DTexture(IDirect3DBaseTexture9* newTex) 
@@ -988,9 +1046,25 @@ void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int a
 	m_iNumTextures = 1;
 	m_TexArray[ 0 ] = *texture ;
 
+#ifndef WO_SERVER
+	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
+	m_DX11TexArray[0] = NULL;
+#endif
+
 	if( isRenderTarget )
 	{
 		Flags |= fRenderTarget ;
+
+#ifndef WO_SERVER
+		r3dTexture_CreateDX11RenderTargetMirror(
+			&m_DX11TexArray[0],
+			XSize,
+			YSize,
+			TexFmt,
+			aNumMipMaps,
+			false
+		);
+#endif
 	}
 	else
 	{
@@ -1020,9 +1094,25 @@ void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps
 	m_iNumTextures = 1;
 	m_TexArray[ 0 ] = *texture ;
 
+#ifndef WO_SERVER
+	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
+	m_DX11TexArray[0] = NULL;
+#endif
+
 	if( isRenderTarget )
 	{
 		Flags |= fRenderTarget ;
+
+#ifndef WO_SERVER
+		r3dTexture_CreateDX11RenderTargetMirror(
+			&m_DX11TexArray[0],
+			EdgeLength,
+			EdgeLength,
+			TexFmt,
+			aNumMipMaps,
+			true
+		);
+#endif
 	}
 	else
 	{

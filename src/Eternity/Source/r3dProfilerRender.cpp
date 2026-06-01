@@ -494,7 +494,7 @@ void r3dProfileRender::StartLineRender()
 
 	D3DXMatrixTranspose( &transform, &transform ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*)&transform, 4 ) ) ;
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*)&transform, 4 ) ) ;
 }
 
 void r3dProfileRender::StopLineRender()

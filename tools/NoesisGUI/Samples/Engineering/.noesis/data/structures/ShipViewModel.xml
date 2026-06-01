@@ -1,0 +1,10 @@
+    <Class Name="ShipViewModel">
+      <Property Name="HullIntegrityBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="TargettedCount" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PowerSignatureBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="Engineering" Type="Object" SubType="NoesisStudioInternals.EngineeringScreenViewModel"/>
+      <Property Name="Name" Type="String" StringMinWordCount="2" StringMaxWordCount="2"/>
+      <Property Name="Messages" Type="Collection" SubType="NoesisStudioInternals.MessageViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+      <Property Name="PriorityMessageCount" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="ArmorSections" Type="Collection" SubType="NoesisStudioInternals.ArmorSectionViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+    </Class>

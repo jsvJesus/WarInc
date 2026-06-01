@@ -1,0 +1,59 @@
+<vdctx:ViewModel xmlns:vdctx="clr-namespace:Alembic">
+  <vdctx:ViewModel.Collection>
+    <vdctx:CraftItem Qty="0" Type="RINGS" Name="Ring of Invisibility" Description="When worn, this enchanted ring cloaks its user in an ethereal veil, rendering them invisible to the naked eye. " Enabled="True" Icon="studio:///Alembic;component/Assets/ItemImages/RingInvisibility.png">
+      <vdctx:CraftItem.Ingredient3>
+        <vdctx:Ingredient IngredientName="Moss" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/6_Moss.png" IngredientQty="2"/>
+      </vdctx:CraftItem.Ingredient3>
+      <vdctx:CraftItem.Ingredient2>
+        <vdctx:Ingredient IngredientName="Silver" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/2_Silver.png" IngredientQty="1"/>
+      </vdctx:CraftItem.Ingredient2>
+      <vdctx:CraftItem.Ingredient1>
+        <vdctx:Ingredient IngredientName="Gold" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/3_Gold.png" IngredientQty="1"/>
+      </vdctx:CraftItem.Ingredient1>
+    </vdctx:CraftItem>
+    <vdctx:CraftItem Type="CRYSTALS" Qty="0" Name="Amulet of Wisdom" Description="A radiant amulet imbued with ancient knowledge and mystic power. Adventurers gain Insight and Clarity." Enabled="False" Icon="studio:///Alembic;component/Assets/ItemImages/AmuletWisdom.png">
+      <vdctx:CraftItem.Ingredient3>
+        <vdctx:Ingredient IngredientName="SalPetrae" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/4_SalPetrae.png" IngredientQty="2"/>
+      </vdctx:CraftItem.Ingredient3>
+      <vdctx:CraftItem.Ingredient2>
+        <vdctx:Ingredient IngredientName="PoisonIvy" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/7_PoisonIvy.png" IngredientQty="1"/>
+      </vdctx:CraftItem.Ingredient2>
+      <vdctx:CraftItem.Ingredient1>
+        <vdctx:Ingredient IngredientName="Coral" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/5_Coral.png" IngredientQty="2"/>
+      </vdctx:CraftItem.Ingredient1>
+    </vdctx:CraftItem>
+    <vdctx:CraftItem Type="POTIONS" Name="Aqua Vitae" Extension="Arcanum" Enabled="True" Qty="2" Description="This mystical elixir shimmers with a pale blue light, offering rejuvenation and vitality to the adventurer." Icon="studio:///Alembic;component/Assets/ItemImages/AquaVitae.png">
+      <vdctx:CraftItem.Ingredient3>
+        <vdctx:Ingredient IngredientQty="0" IngredientName="None"/>
+      </vdctx:CraftItem.Ingredient3>
+      <vdctx:CraftItem.Ingredient2>
+        <vdctx:Ingredient IngredientName="BlueVitriol" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/10_BlueVitriol.png" IngredientQty="1"/>
+      </vdctx:CraftItem.Ingredient2>
+      <vdctx:CraftItem.Ingredient1>
+        <vdctx:Ingredient IngredientName="AquaFortis" IngredientQty="2" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/8_AquaFortis.png"/>
+      </vdctx:CraftItem.Ingredient1>
+    </vdctx:CraftItem>
+    <vdctx:CraftItem Type="RINGS" Name="Treasure Seeker&apos;s Ring" Icon="studio:///Alembic;component/Assets/ItemImages/RingFinder.png" Extension="Basic" Description="This ring acts as a compass for hidden riches, emitting a faint glow when near valuable treasures." Enabled="True" Qty="2">
+      <vdctx:CraftItem.Ingredient3>
+        <vdctx:Ingredient IngredientName="GumArabic" IngredientQty="1" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/9_GumArabic.png"/>
+      </vdctx:CraftItem.Ingredient3>
+      <vdctx:CraftItem.Ingredient2>
+        <vdctx:Ingredient IngredientName="Gold" IngredientQty="1" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/3_Gold.png"/>
+      </vdctx:CraftItem.Ingredient2>
+      <vdctx:CraftItem.Ingredient1>
+        <vdctx:Ingredient IngredientName="Silver" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/2_Silver.png" IngredientQty="1"/>
+      </vdctx:CraftItem.Ingredient1>
+    </vdctx:CraftItem>
+    <vdctx:CraftItem Type="RINGS" Name="Ring of Armor" Icon="studio:///Alembic;component/Assets/ItemImages/RingArmor.png" Qty="1" Enabled="False" Description="Enhances the wearer&apos;s protection by creating a magical shield that deflects blows and reduces damage taken.">
+      <vdctx:CraftItem.Ingredient3>
+        <vdctx:Ingredient IngredientQty="0" IngredientName="None"/>
+      </vdctx:CraftItem.Ingredient3>
+      <vdctx:CraftItem.Ingredient2>
+        <vdctx:Ingredient IngredientName="SalPetrae" IngredientQty="2" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/4_SalPetrae.png"/>
+      </vdctx:CraftItem.Ingredient2>
+      <vdctx:CraftItem.Ingredient1>
+        <vdctx:Ingredient IngredientName="Iron" IngredientQty="2" IngredientIcon="studio:///Alembic;component/Assets/IngredientImages/1_Iron.png"/>
+      </vdctx:CraftItem.Ingredient1>
+    </vdctx:CraftItem>
+  </vdctx:ViewModel.Collection>
+</vdctx:ViewModel>

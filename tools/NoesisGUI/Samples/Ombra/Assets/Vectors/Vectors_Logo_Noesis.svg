@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <g id="FramedSymbol">
+    <rect id="InvisibleFrame" width="720" height="720" style="fill: none; stroke-width: 0px;"/>
+    <g id="Symbol">
+      <polygon id="Right" points="461.76 35.96 592.16 70.9 662.12 331.4 439.47 553.79 309.07 518.85 285.75 432.01 416.15 466.95 575.18 308.11 528.54 134.44 398.14 99.5 461.76 35.96" style="fill: #fff; stroke-width: 0px;"/>
+      <polygon id="Left" points="496.74 166.21 531.72 296.46 468.11 360 433.12 229.75 215.79 171.52 88.57 298.59 123.55 428.84 36.61 405.55 1.63 275.3 192.47 84.68 496.74 166.21" style="fill: #fff; stroke-width: 0px;"/>
+      <polygon id="Bottom" points="314.38 238.23 227.45 214.93 132.03 310.24 213.65 614.15 474.45 684.04 569.87 588.73 546.55 501.9 451.13 597.2 277.27 550.62 218.97 333.54 314.38 238.23" style="fill: #fff; stroke-width: 0px;"/>
+    </g>
+  </g>
+</svg>

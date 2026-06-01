@@ -1,0 +1,9 @@
+<vdctx:Screen_ViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals">
+  <vdctx:Screen_ViewModel.ActiveBanner>
+    <vdctx:Banner_ViewModel Name="healer.module" Description="Download the healer module and gain the one-time ability to restore team health to full.">
+      <vdctx:Banner_ViewModel.Image>
+        <BitmapImage UriSource="/Root;component/Assets/Bitmaps_Icons/Bitmap_Icons_Health.png"/>
+      </vdctx:Banner_ViewModel.Image>
+    </vdctx:Banner_ViewModel>
+  </vdctx:Screen_ViewModel.ActiveBanner>
+</vdctx:Screen_ViewModel>

@@ -1,0 +1,14 @@
+<Class Name="SoldierViewModel">
+  <Property Name="Avatar" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/Avatars"/>
+  <Property Name="Name" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+  <Property Name="Badge" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/RankIcons"/>
+  <Property Name="Level" Type="Number" NumberMinValue="0" NumberMaxValue="99" NumberDecimalCount="0"/>
+  <Property Name="XP" Type="Number" NumberMinValue="0" NumberMaxValue="99" NumberDecimalCount="0"/>
+  <Property Name="NextLevel" Type="Number" NumberMinValue="0" NumberMaxValue="999" NumberDecimalCount="0"/>
+  <Property Name="Points" Type="Number" NumberMinValue="0" NumberMaxValue="999" NumberDecimalCount="0"/>
+  <Property Name="Rank" Type="Enum" SubType="NoesisStudioInternals.Rank"/>
+  <Property Name="Specialization" Type="Enum" SubType="NoesisStudioInternals.Specialization"/>
+  <Property Name="Weapons" Type="Collection" SubType="NoesisStudioInternals.WeaponViewModel" CollectionMinItemCount="1" CollectionMaxItemCount="7"/>
+  <Property Name="Skills" Type="Collection" SubType="NoesisStudioInternals.SkillViewModel" CollectionMinItemCount="1" CollectionMaxItemCount="5"/>
+  <Property Name="Command" Type="Command"/>
+</Class>

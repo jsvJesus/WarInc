@@ -191,7 +191,7 @@ static R3D_FORCEINLINE void SetTransformMatrix( const D3DXMATRIX& mtx )
 	D3DXMATRIX ShaderMat = mtx ;
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 }
 
 void
@@ -235,7 +235,7 @@ r3dSkyDome::DrawDome( const r3dCamera& Cam, const D3DXMATRIX& viewProj, float mi
 			if( SSTSettings.bPlanarMapping )
 			{
 				float vConst[ 4 ] = {  SSTSettings.texScaleX, SSTSettings.texScaleY, SSTSettings.texOffsetX, SSTSettings.texOffsetY };
-				D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 8, vConst, 1 ) );
+				D3D_V( r3dRenderer->SetVertexShaderConstantF( 8, vConst, 1 ) );
 
 				r3dRenderer->SetVertexShader( StatidSkyTexgVS_ID ) ;
 			}
@@ -439,7 +439,7 @@ void r3dSkyDome::DrawCubemap( const r3dCamera& Cam )
 
 		D3DXMatrixTranspose( &ShaderMat, &viewProj );
 
-		d->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+		r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 		
 		tempRt0->Activate() ;
 		d->Clear(0, NULL, D3DCLEAR_TARGET, 0xFFFFFFFF, 0.0f, 0);

@@ -708,9 +708,9 @@ struct MeshPhysicsDebugRenderable : Renderable
 			D3DXVECTOR4 color(0.63f, 0.28f, 0.64f, 0.4f);
 			D3DXVECTOR4 color_plrOnly(237.0f/255.0f, 28.0f/255.0f, 36.0f/255.0f, 0.4f);
 			if(This->Parent->ObjFlags & OBJFLAG_PlayerCollisionOnly)
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color_plrOnly, 1);
+				r3dRenderer->SetPixelShaderConstantF(0, (float*)&color_plrOnly, 1);
 			else
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color, 1);
+				r3dRenderer->SetPixelShaderConstantF(0, (float*)&color, 1);
 
 			This->Parent->MeshLOD[0]->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->MeshLOD[0]->DrawMeshSimple( 0 );
@@ -721,7 +721,7 @@ struct MeshPhysicsDebugRenderable : Renderable
 		if(g_DrawPlayerOnlyCollisionMeshes && This->Parent->PhysicsObject && This->Parent->PlayerOnly_CollisionMesh)
 		{
 			D3DXVECTOR4 color(0.0f/255.0f, 255.0f/255.0f, 64.0f/255.0f, 0.4f);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color, 1);
+			r3dRenderer->SetPixelShaderConstantF(0, (float*)&color, 1);
 
 			This->Parent->PlayerOnly_CollisionMesh->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->PlayerOnly_CollisionMesh->DrawMeshSimple( 0 );
@@ -782,7 +782,7 @@ struct HighlightMeshRenderable : Renderable
 		r3dRenderer->SetVertexShader( VS_FWD_COLOR_ID ) ;
 		r3dRenderer->SetPixelShader( PS_FWD_COLOR_ID ) ;
 		float colr[ 4 ] = { 1, 0, 0, 0.5 } ;
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH ) ;
 		This->Mesh->DrawMeshSimple( 0 );
 		r3dRenderer->SetVertexShader( curVs ) ;
@@ -1337,7 +1337,7 @@ MeshGameObject::DrawSelected( const r3dCamera& Cam, const D3DXVECTOR4& color )
 		extern int g_FwdColorVS;
 		extern int g_FwdColorPS;
 
-		D3D_V ( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)&color, 1 ) );
+		D3D_V ( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&color, 1 ) );
 
 		r3dRenderer->SetPixelShader( g_FwdColorPS );
 		r3dRenderer->SetVertexShader( g_FwdColorVS );

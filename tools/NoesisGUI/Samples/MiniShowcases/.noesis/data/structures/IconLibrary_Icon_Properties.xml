@@ -1,0 +1,8 @@
+<Class Name="IconLibrary_Icon_Properties">
+  <Property Name="Badge" Type="Enum" SubType="MiniShowcases.IconLibrary_Badge_Ranks_Enum"/>
+  <Property Name="Badge_Rank_Number" Type="Number" NumberMinValue="0" NumberMaxValue="3" NumberDecimalCount="0"/>
+  <Property Name="Badge_Color_Custom_0" Type="Object" SubType="Brush"/>
+  <Property Name="Badge_Color_Custom_1" Type="Object" SubType="Brush"/>
+  <Property Name="Badge_Color_Custom_2" Type="Object" SubType="Brush"/>
+  <Property Name="Badge_Color_Custom_3" Type="Object" SubType="Brush"/>
+</Class>

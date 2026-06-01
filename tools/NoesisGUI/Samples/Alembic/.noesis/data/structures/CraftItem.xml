@@ -1,0 +1,13 @@
+<Class Name="CraftItem">
+  <Property Name="Name" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+  <Property Name="Extension" Type="String" StringMinWordCount="0" StringMaxWordCount="1"/>
+  <Property Name="Enabled" Type="Boolean"/>
+  <Property Name="Qty" Type="Number" NumberMinValue="0" NumberMaxValue="99" NumberDecimalCount="0"/>
+  <Property Name="Type" Type="Enum" SubType="Alembic.Type"/>
+  <Property Name="Ingredient1" Type="Object" SubType="Alembic.Ingredient"/>
+  <Property Name="Ingredient2" Type="Object" SubType="Alembic.Ingredient"/>
+  <Property Name="Ingredient3" Type="Object" SubType="Alembic.Ingredient"/>
+  <Property Name="Icon" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/ItemImages"/>
+  <Property Name="Description" Type="String" StringMinWordCount="10" StringMaxWordCount="20"/>
+  <Property Name="Color" Type="Object" SubType="Brush"/>
+</Class>

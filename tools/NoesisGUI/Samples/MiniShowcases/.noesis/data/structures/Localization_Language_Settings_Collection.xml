@@ -1,0 +1,6 @@
+<Class Name="Localization_Language_Settings_Collection">
+  <Property Name="Languages" Type="Collection" SubType="MiniShowcases.Localization_Language_Properties" CollectionMinItemCount="4" CollectionMaxItemCount="4"/>
+  <Property Name="Selected" Type="Object" SubType="MiniShowcases.Localization_Language_Properties"/>
+  <Property Name="SoundLevel" Type="Number" NumberMinValue="0" NumberMaxValue="100" NumberDecimalCount="0"/>
+  <Property Name="MusicLevel" Type="Number" NumberMinValue="0" NumberMaxValue="100" NumberDecimalCount="0"/>
+</Class>

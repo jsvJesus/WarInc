@@ -1,0 +1,6 @@
+<Class Name="DataGeneration_Map_Plot_Properties">
+  <Property Name="PlotType" Type="Number" NumberMinValue="3" NumberMaxValue="34" NumberDecimalCount="0"/>
+  <Property Name="VegetationDensity" Type="Number" NumberMinValue="0" NumberMaxValue="2" NumberDecimalCount="0"/>
+  <Property Name="BuildingColour_Primary" Type="Object" SubType="Brush"/>
+  <Property Name="BuildingColour_Secondary" Type="Object" SubType="Brush"/>
+</Class>

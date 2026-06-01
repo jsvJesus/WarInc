@@ -21,12 +21,12 @@ void r3dSetVshC( HoffmanScatter::VSConst iReg, const r3dPoint3D& v, float f4)
   f[1] = v.Y;
   f[2] = v.z;
   f[3] = f4;
-  r3dRenderer->pd3ddev->SetVertexShaderConstantF(iReg, (const float *)&f[0], 1);
+  r3dRenderer->SetVertexShaderConstantF(iReg, (const float *)&f[0], 1);
 }
 
 void r3dSetVshC( HoffmanScatter::VSConst iReg, const D3DXVECTOR4& v)
 {
-  r3dRenderer->pd3ddev->SetVertexShaderConstantF(iReg, (const float *)&v, 1);
+  r3dRenderer->SetVertexShaderConstantF(iReg, (const float *)&v, 1);
 }
 
 void r3dSetPshC( HoffmanScatter::PSConst iReg, const r3dPoint3D& v, float f4)
@@ -36,12 +36,12 @@ void r3dSetPshC( HoffmanScatter::PSConst iReg, const r3dPoint3D& v, float f4)
   f[1] = v.Y;
   f[2] = v.z;
   f[3] = f4;
-  r3dRenderer->pd3ddev->SetPixelShaderConstantF(iReg, (const float *)&f[0], 1);
+  r3dRenderer->SetPixelShaderConstantF(iReg, (const float *)&f[0], 1);
 }
 
 void r3dSetPshC( HoffmanScatter::PSConst iReg, const D3DXVECTOR4& v)
 {
-  r3dRenderer->pd3ddev->SetPixelShaderConstantF(iReg, (const float *)&v, 1);
+  r3dRenderer->SetPixelShaderConstantF(iReg, (const float *)&v, 1);
 }
 
 

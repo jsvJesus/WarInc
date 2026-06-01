@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="Purple_ExtraDark">#FF333340</Color>
+  <Color x:Key="Purple_Dark">#FF434354</Color>
+  <Color x:Key="Purple_Medium">#FF666680</Color>
+  <Color x:Key="Purple_Light">#FF8787A8</Color>
+  <Color x:Key="Purple_ExtraLight">#FF9999BF</Color>
+  <DropShadowEffect x:Key="TextGlow_Regular" Color="{DynamicResource Purple_ExtraLight}" Direction="0" BlurRadius="64" ShadowDepth="0"/>
+</ResourceDictionary>

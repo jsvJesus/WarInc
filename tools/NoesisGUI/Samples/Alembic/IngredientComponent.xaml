@@ -1,0 +1,79 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot" xmlns:b="http://schemas.microsoft.com/xaml/behaviors" Tag="{Binding Path=IngredientName_Str, ElementName=ComponentRoot}" xmlns:editor="clr-namespace:Editor" xmlns:noesis="clr-namespace:NoesisGUIExtensions">
+  <Component.DynamicProperties>
+    <DynamicProperty Type="Image" Name="IngredientIcon"/>
+    <DynamicProperty Name="IngredientQty" Type="Integer"/>
+  </Component.DynamicProperties>
+  <StackPanel>
+    <Grid x:Name="BordersGrid" Height="65" Width="65">
+      <Path Data="M32.5,0 60.6458,14.5 60.6458,46.5 32.5,62 4.35417,46.5 4.35418,15.5 32.5,0z" Stretch="Fill" Fill="{DynamicResource DarkGradient}" Height="62" Width="56.29165" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.288"/>
+      <Border x:Name="BackgroundIcon" Tag="Gunpowder" Margin="2,2,2,2" Opacity="0.4">
+        <Border.Background>
+          <ImageBrush Stretch="Uniform" ImageSource="{Binding Path=IngredientIcon_Img, ElementName=ComponentRoot}"/>
+        </Border.Background>
+      </Border>
+      <Grid x:Name="BorderEnableGrid" Visibility="Hidden">
+        <Border x:Name="BorderEnable" Tag="Gunpowder" Margin="2,2,2,2">
+          <b:Interaction.Triggers>
+            <b:DataTrigger Binding="{Binding Path=Selection.Ingredient1.IngredientName}" Value="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" Comparison="NotEqual">
+              <b:Interaction.Behaviors>
+                <b:ConditionBehavior>
+                  <b:ConditionalExpression ForwardChaining="Or">
+                    <b:ComparisonCondition LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" Operator="NotEqual" RightOperand="{Binding Path=Selection.Ingredient1.IngredientName}"/>
+                    <b:ComparisonCondition LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" Operator="NotEqual" RightOperand="{Binding Path=Selection.Ingredient2.IngredientName}"/>
+                    <b:ComparisonCondition RightOperand="{Binding Path=Selection.Ingredient3.IngredientName}" LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" Operator="NotEqual"/>
+                    </b:ConditionalExpression>
+                </b:ConditionBehavior>
+                <b:ConditionBehavior>
+                  <b:ConditionalExpression ForwardChaining="Or">
+                    <b:ComparisonCondition Operator="NotEqual" LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" RightOperand="{Binding Path=Selection.Ingredient2.IngredientName}"/>
+                    <b:ComparisonCondition LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" Operator="NotEqual" RightOperand="{Binding}"/>
+                  </b:ConditionalExpression>
+                </b:ConditionBehavior>
+              </b:Interaction.Behaviors>
+              <b:ChangePropertyAction PropertyName="Visibility" Value="Hidden" TargetName="BorderEnableGrid"/>
+            </b:DataTrigger>
+            <b:DataTrigger Binding="{Binding Path=Selection.Ingredient1.IngredientName}" Value="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}">
+              <b:ChangePropertyAction PropertyName="Visibility" Value="Visible" TargetName="BorderEnableGrid"/>
+            </b:DataTrigger>
+            <b:DataTrigger Binding="{Binding Path=Selection.Ingredient2.IngredientName}" Value="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}">
+              <b:ChangePropertyAction PropertyName="Visibility" Value="Visible" TargetName="BorderEnableGrid"/>
+            </b:DataTrigger>
+            <b:DataTrigger Binding="{Binding Path=Selection.Ingredient3.IngredientName}" Value="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}">
+              <b:Interaction.Behaviors>
+                <b:ConditionBehavior>
+                  <b:ConditionalExpression ForwardChaining="And">
+                    <b:ComparisonCondition Operator="NotEqual" LeftOperand="{Binding Path=Name, RelativeSource={RelativeSource AncestorType={x:TypeExtension Component}}}" RightOperand="None"/>
+                  </b:ConditionalExpression>
+                </b:ConditionBehavior>
+              </b:Interaction.Behaviors>
+              <b:ChangePropertyAction PropertyName="Visibility" Value="Visible" TargetName="BorderEnableGrid"/>
+            </b:DataTrigger>
+          </b:Interaction.Triggers>
+          <Border.Background>
+            <ImageBrush Stretch="Uniform" ImageSource="{Binding Path=IngredientIcon_Img, ElementName=ComponentRoot}"/>
+          </Border.Background>
+        </Border>
+        <Border x:Name="BorderOverlay" Opacity="0.637"/>
+      </Grid>
+    </Grid>
+    <TextBlock x:Name="Qty" Text="{Binding Path=IngredientQty_Int, ElementName=ComponentRoot, StringFormat=F0}" TextWrapping="Wrap" TextAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" FontSize="22" VerticalAlignment="Top" Margin="0,-7,0,0">
+      <TextBlock.Foreground>
+        <SolidColorBrush Color="{DynamicResource OldRed}"/>
+      </TextBlock.Foreground>
+      <b:Interaction.Triggers>
+        <b:DataTrigger Binding="{Binding Path=Text, ElementName=Qty}" Comparison="GreaterThanOrEqual" Value="1">
+          <b:ChangePropertyAction PropertyName="Foreground" TargetName="Qty" Value="#FFCCCCCC"/>
+        </b:DataTrigger>
+        <b:DataTrigger Value="0" Binding="{Binding Path=Text, ElementName=Qty}">
+          <b:ChangePropertyAction Value="#FFE7402C" PropertyName="Foreground" TargetName="Qty"/>
+        </b:DataTrigger>
+      </b:Interaction.Triggers>
+    </TextBlock>
+  </StackPanel>
+</Component>

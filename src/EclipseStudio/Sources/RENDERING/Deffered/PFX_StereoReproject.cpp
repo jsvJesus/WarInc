@@ -99,7 +99,7 @@ void PFX_StereoReproject::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* s
 
 	vConsts[ 9 ] = D3DXVECTOR4( sts.ViewDelta * r3dRenderer->ProjMatrix._11, -sts.ProjMtx._31, 0.f, 0.f );
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)vConsts, R3D_ARRAYSIZE( vConsts ) ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)vConsts, R3D_ARRAYSIZE( vConsts ) ) );
 
 	mData.PixelShaderID = sts.IsRight ? mRightPSID : mLeftPSID ;
 }

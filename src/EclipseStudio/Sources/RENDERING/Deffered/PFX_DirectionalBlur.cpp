@@ -166,7 +166,7 @@ PFX_DirectionalBlur::DoPrepare( r3dScreenBuffer* src, float stepAmplify )
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * offset / src->Height * stepAmplify;
 	}
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 }
 
 //------------------------------------------------------------------------
@@ -243,7 +243,7 @@ PFX_DirectionalBlurOptimized::DoPrepare(r3dScreenBuffer* src, float stepAmplify)
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * offset / src->Height * stepAmplify;
 	}
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 	r3dSetFiltering(R3D_BILINEAR, 0);
 }
 
@@ -347,7 +347,7 @@ void PFX_DirectionalDepthBlur::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuff
 
 	vConsts[ 3 ] = 0.f;
 	
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( PFX_DirectionalBlur::NUM_PS_CONSTS, vConsts, 1 );
+	r3dRenderer->SetPixelShaderConstantF( PFX_DirectionalBlur::NUM_PS_CONSTS, vConsts, 1 );
 
 	if( sts.UseStencil )
 	{

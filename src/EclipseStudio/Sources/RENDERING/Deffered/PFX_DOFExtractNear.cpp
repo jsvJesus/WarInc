@@ -72,7 +72,7 @@ PFX_DOFExtractNear::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*s
 			1.f + mSettings.NearStart / ( mSettings.NearEnd - mSettings.NearStart ),
 			0.f, 0.f 
 			);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)Const, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*)Const, 1 );
 }
 
 //------------------------------------------------------------------------

@@ -314,7 +314,7 @@ void ShadowBlurChangeCallback(int oldI, float oldF)
 void TurnOffSSS(int reg)
 {
 	float vConst[4] = { 0.0f, 0.0f, 0.f, 1.0f };
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( reg, vConst, 1 );
+	r3dRenderer->SetPixelShaderConstantF( reg, vConst, 1 );
 }
 
 void SetSSSParams(int reg, bool dirlight, const r3dSSScatterParams& SSSParams )
@@ -352,7 +352,7 @@ void SetSSSParams(int reg, bool dirlight, const r3dSSScatterParams& SSSParams )
 				SSSParams.distortion, SSSParams.power, scale, ambient,
 				trans_r, trans_g, trans_b, SSSParams.translucency.A / 255.f
 			};
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF( reg, vConst, 2 );
+			r3dRenderer->SetPixelShaderConstantF( reg, vConst, 2 );
 		}
 	}
 
@@ -867,11 +867,11 @@ void SetupSMTransform( ShadowSlice& slice )
 	D3DXVECTOR4 ShadowParams = D3DXVECTOR4(slice.depthBias, 1.0f/ SunShadowMap->Width, 0.0f, ShadowSplitDistancesOpaque[slice.index+1]*0.925f);
 		
 	// float4	vLightPos  		: register(c4);		// (c40); +
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  4, (float *)&From,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  4, (float *)&From,  1 );
 	// float4x4	mShadowProj 	: register(c5);		// (c41); +
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  5, (float *)&mat,  4 );
+	r3dRenderer->SetPixelShaderConstantF(  5, (float *)&mat,  4 );
 	// float4	ShadowParams	: register(c9);		// (c45); +
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  9, (float *)&ShadowParams,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  9, (float *)&ShadowParams,  1 );
 }
 
 static void ClearFloatSurface( const D3DXVECTOR4& value )
@@ -883,7 +883,7 @@ static void ClearFloatSurface( const D3DXVECTOR4& value )
 	r3dRenderer->SetVertexShader( VS_CLEAR_FLOAT_ID );
 	r3dRenderer->SetPixelShader( PS_CLEAR_FLOAT_ID );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*) &value, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*) &value, 1 );
 
 	r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::black );
 	D3DPERF_EndEvent();
@@ -933,7 +933,7 @@ void CopySurface( r3dScreenBuffer* source, r3dScreenBuffer* target )
 	float vSubPix[4] = {	+0.5f / target->Width, 
 							+0.5f / target->Height, 0.f, 0.f };
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
 
 	r3dRenderer->SetVertexShader( "VS_POSTFX" );
 	r3dRenderer->SetPixelShader( "PS_COPY" );
@@ -968,7 +968,7 @@ static void AdaptiveBlurDepth( r3dScreenBuffer* source, r3dScreenBuffer* temp, r
 	extern float g_DoubleDepthSSAO_BlurSens;
 
 	float commonPSConsts[ 4 ] = { g_DoubleDepthSSAO_Blur, g_DoubleDepthSSAO_BlurSens, 0.f, 0.f };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)commonPSConsts, sizeof commonPSConsts / sizeof commonPSConsts[0] ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)commonPSConsts, sizeof commonPSConsts / sizeof commonPSConsts[0] ) );
 
 	//------------------------------------------------------------------------
 	// first pass
@@ -982,11 +982,11 @@ static void AdaptiveBlurDepth( r3dScreenBuffer* source, r3dScreenBuffer* temp, r
 			0.f, source->Height / temp->Height * invHeight, 0.f, 0.f
 		};
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, (float*)steps, sizeof steps / sizeof steps[0] ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 1, (float*)steps, sizeof steps / sizeof steps[0] ) );
 
 		float vSubPix[4] = {	+0.0f / temp->Width		+ 0.25f / source->Width, 
 								+0.0f / temp->Height	+ 0.25f / source->Height, 0.f, 0.f };
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
 
 		r3dRenderer->SetTex( source->Tex );
 
@@ -1008,11 +1008,11 @@ static void AdaptiveBlurDepth( r3dScreenBuffer* source, r3dScreenBuffer* temp, r
 			invWidth, 0.f, 0.f, 0.f
 		};
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, (float*)steps, sizeof steps / sizeof steps[0] ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 1, (float*)steps, sizeof steps / sizeof steps[0] ) );
 
 		float vSubPix[4] = {	+0.0f / target->Width + 0.25f / temp->Width, 
 								+0.0f / target->Height + 0.25f / temp->Height, 0.f, 0.f };
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
 
 		r3dRenderer->SetTex( temp->Tex );
 
@@ -1051,7 +1051,7 @@ static void DrawMinimum( r3dScreenBuffer* source0, r3dScreenBuffer* source1, r3d
 			invW_0_5, invH_1_5, invW_1_5, invH_1_5
 		};
 		
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 		r3dRenderer->SetPixelShader( PS_PCF_MINIMUM_ID );
 	}
@@ -1071,7 +1071,7 @@ static void DrawMinimum( r3dScreenBuffer* source0, r3dScreenBuffer* source1, r3d
 	r3dRenderer->SetTex( source0->Tex, 0 );
 	r3dRenderer->SetTex( source1->Tex, 1 );
 	float vSubPix[4] = { 0.5f / target->Width, 0.5f / target->Height, 0.f, 0.f };
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
 
 	r3dDrawFullScreenQuad(false);
 
@@ -1098,7 +1098,7 @@ static void DrawMinimumMask( r3dScreenBuffer* source0, r3dScreenBuffer* source1,
 	r3dRenderer->SetTex( source0->Tex, 0 );
 	r3dRenderer->SetTex( source1->Tex, 1 );
 	float vSubPix[4] = { 0.5f / target->Width, 0.5f / target->Height, 0.f, 0.f };
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, vSubPix, 1 ) );
 
 	r3dDrawFullScreenQuad(false);
 
@@ -1189,7 +1189,7 @@ void SetupAccumSMConstants(	float gameNearClip, float gameFarClip,
 		D3DXVECTOR4( 1.f, 1.f, 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH )
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 32, (float*)VSConsts, sizeof VSConsts / sizeof VSConsts[ 0 ] ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 32, (float*)VSConsts, sizeof VSConsts / sizeof VSConsts[ 0 ] ) );
 
 	D3DXMATRIX mTexScale ;
 	SetupShadowTexMatrix( &mTexScale, SM, smSize ) ;
@@ -1222,7 +1222,7 @@ void SetupAccumSMConstants(	float gameNearClip, float gameFarClip,
 		D3DXVECTOR4( lightPos.x, lightPos.y, lightPos.z, 0.f )
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)PSConsts, sizeof PSConsts / sizeof PSConsts[ 0 ] ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)PSConsts, sizeof PSConsts / sizeof PSConsts[ 0 ] ) );
 }
 
 ShadowMapOptimizationData gShadowMapOptimizationDataOpaque[ NumShadowSlices ];
@@ -1444,7 +1444,7 @@ void RenderShadowMap(ShadowSlice& slice )
 		}
 
 		float PSConst[ 4 ] = { slice.pixelDiameter, 0.f, 0.f, 0.f };
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( SHADOWC_PIXELDIAMETER, PSConst, 1 ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( SHADOWC_PIXELDIAMETER, PSConst, 1 ) );
 
 		slice.camPos = lightSource;
 		r3dRenderer->SetCameraEx(slice.lightView, slice.lightProj, lightSource, 0.1f, 10000.f);
@@ -1490,7 +1490,7 @@ void RenderShadowMap(ShadowSlice& slice )
 				DWORD  prevValue;
 			} setRestoreScissor; (void)setRestoreScissor;
 
-			D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+			r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 
 			if ( targSM->AsTex2D() && !IsDepthTextureFormat( targSM->BufferFormat ) )
 				ClearFloatSurface( D3DXVECTOR4( 33.f, 0.f, 0.f, 0.f ) );
@@ -1499,7 +1499,7 @@ void RenderShadowMap(ShadowSlice& slice )
 			r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 			LightVec = D3DXVECTOR4(lightSource.X,lightSource.Y,lightSource.Z, 0);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
+			r3dRenderer->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
 
 			r3dRenderer->SetVertexShader( VS_SMDEPTHPASS_ORTHO_ID );
 			bool hwShadows = r_hardware_shadow_method->GetInt() > HW_SHADOW_METHOD_R32F;
@@ -1519,7 +1519,7 @@ void RenderShadowMap(ShadowSlice& slice )
 
 			GameWorld().DrawIntermediate( eRenderStageID( rsCreateSM + slice.index ) );
 
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
+			r3dRenderer->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
 
 			r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );		
 
@@ -1737,7 +1737,7 @@ void RenderTransparentShadowMap()
 			} setRestoreScissor; (void)setRestoreScissor;
 
 #if 0
-			D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+			r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 #endif
 
 			if ( targSM->AsTex2D() && !IsDepthTextureFormat( targSM->BufferFormat ) )
@@ -1992,7 +1992,7 @@ void BlurShadowMap( r3dScreenBuffer* ShadowBuffer, r3dScreenBuffer* TempBuffer, 
 	// float4 Params0 : register( c0 );
 	D3DXVECTOR4 PSConst = D3DXVECTOR4( SSSBParms.Bias, SSSBParms.Sense, rad / ShadowBuffer->Width, 0.f );
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&PSConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&PSConst, 1 ) );
 
 	if( r_shadows_quality->GetInt() >= HQ_BLUR_SHADOW_QL )
 	{
@@ -2024,7 +2024,7 @@ void BlurShadowMap( r3dScreenBuffer* ShadowBuffer, r3dScreenBuffer* TempBuffer, 
 	};
 
 	// VS Consts
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[0].x, _countof(vsConsts) ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[0].x, _countof(vsConsts) ) );
 
 	int prevShader = r3dRenderer->GetCurrentPixelShaderIdx();
 	r3dRenderer->SetVertexShader(VS_POSTFX_GEOM_TRANSFORM);
@@ -2040,7 +2040,7 @@ void BlurShadowMap( r3dScreenBuffer* ShadowBuffer, r3dScreenBuffer* TempBuffer, 
 	PSConst.z = 0.f;
 	PSConst.w = rad / ShadowBuffer->Height;
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&PSConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&PSConst, 1 ) );
 
 	r3dDrawFullScreenQuad(false);
 
@@ -2081,7 +2081,7 @@ void RenderShadowMap( const r3dCamera& lightCam )
 		lightCam.X, lightCam.Y, lightCam.Z, 0,
 		1.0f / r3dRenderer->ScreenW, 0.f, 0.f, 0.f
 	};
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( SHADOWC_PIXELDIAMETER - 1, Const, 2 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( SHADOWC_PIXELDIAMETER - 1, Const, 2 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
@@ -2467,7 +2467,7 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 		D3DXMATRIX ident ;
 		D3DXMatrixIdentity( &ident ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &ident._11, 4 ) ) ;
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &ident._11, 4 ) ) ;
 
 		// our original formula is " ( x - 0.5 ) * 2 * c + 0.5 + b - 0.5 "
 		// which converts to  2 * ( c * x + 0.5 * ( b - c ) )
@@ -2484,7 +2484,7 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 			
 			float colr[ 4 ] = { c, c, c, c } ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
 			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;	
 
@@ -2499,7 +2499,7 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 			float b = 0.5 * ( r_brightness->GetFloat() - r_contrast->GetFloat() ) ;
 			float bs = fabs( b ) ;
 			float colr[ 4 ] = { bs, bs, bs, bs } ;
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
 
 			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
@@ -2520,7 +2520,7 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 		// * 2 follows
 		{
 			float colr[ 4 ] = { 1.0f, 1.0f, 1.0f, 1.0f } ;
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
 			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR ) ) ;
 			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) ) ;
@@ -4192,7 +4192,7 @@ void RenderEditorPreview()
 		SetMRTClearShaders( false );
 
 		D3DXVECTOR4 pconst0 = D3DXVECTOR4 ( gCam.NearClip, gCam.FarClip, 0.0f, 0.0f );
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*) pconst0, 1 );
+		r3dRenderer->SetPixelShaderConstantF( 0, (float*) pconst0, 1 );
 
 		r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::black );
 
@@ -4219,7 +4219,7 @@ void RenderEditorPreview()
 		SetFillGBufferPixelShader( key ) ;
 
 		D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+		r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 
 		D3DXMATRIX m;
 		D3DXMatrixIdentity( &m );
@@ -4244,7 +4244,7 @@ void RenderEditorPreview()
 
 		ScreenBuffer->Activate();
 		r3dRenderer->StartRender(0);
-		r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, r3dColor::black.GetPacked(), 1.0f, 0 );
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, r3dColor::black.GetPacked(), 1.0f, 0 );
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA);
 
@@ -4402,7 +4402,7 @@ void SetupSunlightPS()
 				SunL->Intensity * g_SceneVisualizerColorMask.w
 			);
 		}
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, &vColor.x, 1 );
+		r3dRenderer->SetPixelShaderConstantF( 1, &vColor.x, 1 );
 	}
 
 	if (visualizeMode == SCENE_VISUALIZE_NORMALS)
@@ -4416,7 +4416,7 @@ void SetupSunlightPS()
 	else if (visualizeMode == SCENE_VISUALIZE_DEPTH)
 	{
 		r3dRenderer->SetPixelShader("PS_DS_SCENE_DEBUG_VISUALIZER_DEPTH");
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &depthMultiplier.x, 1 );
+		r3dRenderer->SetPixelShaderConstantF( 0, &depthMultiplier.x, 1 );
 	}
 	else if (visualizeMode == SCENE_VISUALIZE_DIFFUSE)
 	{
@@ -4502,13 +4502,13 @@ void Render_Deffered_Sunlight( bool ambient_only )
 		D3DXMatrixTranspose( &ShaderMat, &r3dRenderer->ViewProjMatrix );
 
 		// float4x4 mProj 	: register(c0);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+		r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 		float uv2Scale = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
 		float vScreenT[4] = { 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, uv2Scale, uv2Scale };
 		// float4 vScreenT : register( c24 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+		r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 	}
 
 	extern r3dSSScatterParams gSSSParams ;
@@ -4519,7 +4519,7 @@ void Render_Deffered_Sunlight( bool ambient_only )
 		float vConst[4] = { SunL->Direction.x, SunL->Direction.y, SunL->Direction.z, 1.f/DepthZ };
 
 		// float4   vLight_InvRefZ : register(c3);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 3, vConst, 1 );
+		r3dRenderer->SetPixelShaderConstantF( 3, vConst, 1 );
 
 		r3dColor BLight = r3dGameLevel::Environment.BacklightColor.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
 
@@ -4529,7 +4529,7 @@ void Render_Deffered_Sunlight( bool ambient_only )
 		vBacklight[1] = powf( vBacklight[1], 2.2f ) ;
 		vBacklight[2] = powf( vBacklight[2], 2.2f ) ;
 	
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 30, vBacklight, 1 );
+		r3dRenderer->SetPixelShaderConstantF( 30, vBacklight, 1 );
 
 		SetSSSParams(22, true, gSSSParams );
 
@@ -4582,7 +4582,7 @@ void Render_Deffered_Sunlight( bool ambient_only )
 				psConsts[ 3 ] = D3DXVECTOR4( invWi, 0.f, invHe, r_transp_shadowmap_fade->GetFloat() ) ;
 				psConsts[ 4 ] = D3DXVECTOR4( wi, he, invWi, invHe ) ;
 
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF( 31, (float*)&psConsts, R3D_ARRAYSIZE( psConsts ) ) ;
+				r3dRenderer->SetPixelShaderConstantF( 31, (float*)&psConsts, R3D_ARRAYSIZE( psConsts ) ) ;
 			}
 
 #if R3D_ALLOW_LIGHT_PROBES
@@ -4651,7 +4651,7 @@ void Render_Deffered_Sunlight( bool ambient_only )
 
 				} ;
 
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 37, psConsts[ 0 ], sizeof psConsts / sizeof( float[4] ) ) ) ;
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( 37, psConsts[ 0 ], sizeof psConsts / sizeof( float[4] ) ) ) ;
 			}
 #endif
 		}
@@ -4863,7 +4863,7 @@ void BlurPosLightShadow( r3dLight* l, const D3DXMATRIX& lightMtx, const D3DXMATR
 	};
 
 	// VS Consts
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[0].x, _countof(vsConsts) ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[0].x, _countof(vsConsts) ) );
 	r3dDrawFullScreenQuad(false);
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
@@ -4929,7 +4929,7 @@ R3D_FORCEINLINE void SetupCamForFace( r3dCamera& lightCam, r3dLight* l, int f )
 
 void RenderCubemapShadowmapFace( r3dLight* l, int f )
 {
-	D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+	r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 
 	// this is for ClearFloatSurface
 	r3dRenderer->SetCullMode( D3DCULL_CCW );
@@ -4948,7 +4948,7 @@ void RenderCubemapShadowmapFace( r3dLight* l, int f )
 
 void RenderParaboloidShadowmapFace( r3dLight* l, int face )
 {
-	D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+	r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 
 	if( face )
 	{
@@ -5285,7 +5285,7 @@ void UpdateFrozenLightShadowMaps()
 
 				r3dRenderer->SetDSS( depthBuf ) ;
 
-				D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+				r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 
 				// this is for ClearFloatSurface
 				r3dRenderer->SetCullMode( D3DCULL_CCW );
@@ -5416,7 +5416,7 @@ void Render_Deffered_Pointlights()
 			{
 				float vScreenT[4] = { 0.5f, -0.5f, 0.5f + 0.5f / r3dRenderer->ScreenW, 0.5f + 0.5f / r3dRenderer->ScreenH };
 				// float4 vScreenT : register( c24 );
-				r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+				r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 			}
 
 			r3dRenderer->SetVertexShader( "VS_DS_POINTLIGHT" );
@@ -5445,7 +5445,7 @@ void Render_Deffered_Pointlights()
 
 			float vConst[4] = { smoothSpread, scale, 0, 0 };
 			// float4  vMultiShadowParms   : register(c7);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 7, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 7, vConst, 1 ) );
 
 			if( do_shadow_blur )
 			{
@@ -5485,7 +5485,7 @@ void Render_Deffered_Pointlights()
 				0, 0, 1, 0,
 			};
 
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, vConst[0], 3 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 4, vConst[0], 3 ) );
 
 			r3dRenderer->SetTex( l->ProjectMap, 6 );
 		}
@@ -5531,7 +5531,7 @@ void Render_Deffered_Pointlights()
 			}
 
 			// float4	vSSAO_Scale			: register(c8);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 8, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 8, vConst, 1 ) );
 		}
 
 		r3dDrawGeoSphere();
@@ -5601,7 +5601,7 @@ void Render_Deffered_Planelights()
 			{
 				float vScreenT[4] = { 0.5f, -0.5f, 0.5f + 0.5f / r3dRenderer->ScreenW, 0.5f + 0.5f / r3dRenderer->ScreenH };
 				// float4 vScreenT : register( c24 );
-				r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+				r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 			}
 
 			r3dRenderer->SetVertexShader( "VS_DS_POINTLIGHT" );
@@ -5642,7 +5642,7 @@ void Render_Deffered_Planelights()
 		{
 			float vConst[4] = { smoothSpread, 0, 0, 0 };
 			// float4  vMultiShadowParms   : register(c10);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 10, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 10, vConst, 1 ) );
 
 			if( do_shadow_blur )
 			{
@@ -5694,7 +5694,7 @@ void Render_Deffered_Planelights()
 			}
 
 			// float4	vSSAO_Scale			: register(c9);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 9, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 9, vConst, 1 ) );
 		}
 
 		r3dDrawChamferBox();
@@ -5763,7 +5763,7 @@ void Render_Deffered_Tubelights()
 			{
 				float vScreenT[4] = { 0.5f, -0.5f, 0.5f + 0.5f / r3dRenderer->ScreenW, 0.5f + 0.5f / r3dRenderer->ScreenH };
 				// float4 vScreenT : register( c24 );
-				r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+				r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 			}
 
 			r3dRenderer->SetVertexShader( "VS_DS_POINTLIGHT" );
@@ -5804,7 +5804,7 @@ void Render_Deffered_Tubelights()
 		{
 			float vConst[4] = { smoothSpread, 0, 0, 0 };
 			// float4  vMultiShadowParms   : register(c10);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 10, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 10, vConst, 1 ) );
 
 			if( do_shadow_blur )
 			{
@@ -5857,7 +5857,7 @@ void Render_Deffered_Tubelights()
 			}
 
 			// float4	vSSAO_Scale			: register(c9);
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 9, vConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 9, vConst, 1 ) );
 		}
 
 		r3dDrawGeoSphere();
@@ -5985,7 +5985,7 @@ void Render_Deffered_Spotlights()
 			{
 				SharedShadowMap->Activate();
 				float fLightFar = l->GetOuterRadius();
-				D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 ) );
+				r3dRenderer->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, 1.0f, 0 );
 
 				// this is for ClearFloatSurface
 				r3dRenderer->SetCullMode( D3DCULL_CCW );
@@ -6043,7 +6043,7 @@ void Render_Deffered_Spotlights()
 			{
 				float vScreenT[4] = { 0.5f, -0.5f, 0.5f + 0.5f / r3dRenderer->ScreenW, 0.5f + 0.5f / r3dRenderer->ScreenH };
 				// float4 vScreenT : register( c24 );
-				r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+				r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 			}
 
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ADD | R3D_BLEND_NZ);
@@ -6164,7 +6164,7 @@ void Render_Deffered_Spotlights()
 					r3dSetFiltering( R3D_POINT, 4 );
 				}
 
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 6, (float*)&vConsts, vConstIdx ) );
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( 6, (float*)&vConsts, vConstIdx ) );
 			}
 			else
 			{
@@ -6177,7 +6177,7 @@ void Render_Deffered_Spotlights()
 
 				r3d_assert( vConstIdx == sizeof vConsts / sizeof vConsts[0] );
 
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 13, (float*)&vConsts, vConstIdx ) );
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( 13, (float*)&vConsts, vConstIdx ) );
 			}
 		}
 
@@ -6255,13 +6255,13 @@ void Render_Deffered_Volume_Lights()
 		D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
 		// float4x4 mProj 	: register(c0);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+		r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 		float uv2Scale = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
 		float vScreenT[4] = { 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, uv2Scale, uv2Scale };
 		// float4 vScreenT : register( c24 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, vScreenT, 1 );
+		r3dRenderer->SetVertexShaderConstantF( 24, vScreenT, 1 );
 	}
 
 	r3dRenderer->SetVertexShader("VS_DS_DIRLIGHT");
@@ -6421,12 +6421,12 @@ void DrawTansparentObjects()
 	}
 
 	D3DXVECTOR4 DepthPixelSize = D3DXVECTOR4(1.0f/gBuffer_Depth->Width, 1.0f/gBuffer_Depth->Height, 0, 0 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_PIXELSIZE, (float*)&DepthPixelSize, 1 ) ;
+	r3dRenderer->SetPixelShaderConstantF( MC_PIXELSIZE, (float*)&DepthPixelSize, 1 ) ;
 
 	if( r_distort->GetInt() )
 	{
 		DistortionBuffer->Activate();
-		D3D_V( r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(255,127,127,0), 1.0f, 0 ) );
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(255,127,127,0), 1.0f, 0 );
 		DistortionBuffer->Deactivate();
 	}
 
@@ -6436,7 +6436,7 @@ void DrawTansparentObjects()
 
 	if (gBuffer_Particles)
 	{
-		r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0,0,0,0), 1.0f, 0 );
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0,0,0,0), 1.0f, 0 );
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 	}
 	else
@@ -6466,7 +6466,7 @@ void DrawTansparentObjects()
 	{
 		// float4   WorldScale  		: register( c24 );
 		D3DXVECTOR4 unity( 1.f, 1.f, 1.f, 1.f ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 24, (float*)&unity, 1 ) ) ;
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 24, (float*)&unity, 1 ) ) ;
 	}
 
 	r3dRenderer->SetFog(0);
@@ -6728,7 +6728,7 @@ void r3dDefferedRenderer::Render()
 	CalculateSplitDistances();
 
 	TempShadowBuffer->Activate();
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET,0xffffffff, 1.f, 0 ) );
+	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET,0xffffffff, 1.f, 0 );
 	TempShadowBuffer->Deactivate();
 
 	// NOTE : important to go from least detailed map
@@ -6762,7 +6762,7 @@ void r3dDefferedRenderer::Render()
 		if( r_shadow_blur->GetBool() )
 		{
 			TempShadowBuffer->Activate();
-			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(255,255,255,255), 1.0f, 0 ) );
+			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(255,255,255,255), 1.0f, 0 );
 			TempShadowBuffer->Deactivate();
 		}
 	}
@@ -6822,7 +6822,7 @@ void r3dDefferedRenderer::Render()
 	r3dRenderer->SetZRange( R3D_ZRANGE_WORLD ) ;
 
 	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
-	r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0x00000000, 1.0f, 0 );
+	r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, 0x00000000, 1.0f, 0 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA|R3D_BLEND_NZ);
 
@@ -6840,7 +6840,7 @@ void r3dDefferedRenderer::Render()
 
 	r3dColor Cl = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
 
-	r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, Cl.GetPacked(), 1.0f, 0 );
+	r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, Cl.GetPacked(), 1.0f, 0 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA);
 
@@ -7022,10 +7022,10 @@ void r3dDefferedRenderer::Render()
 
 		// set vertex shader constants to defaults after rendering meshes
 		D3DXMATRIX ShaderMat; D3DXMatrixIdentity(&ShaderMat);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 4, (float *)&ShaderMat,  4 );
+		r3dRenderer->SetVertexShaderConstantF( 4, (float *)&ShaderMat,  4 );
 		ShaderMat =  r3dRenderer->ViewProjMatrix;
 		D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+		r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 		D3DPERF_EndEvent ();
 
 		/*D3DPERF_BeginEvent(0x0, L"Debug Data");
@@ -7105,11 +7105,11 @@ void r3dDefferedRenderer::Render()
 		pickCh[ 0 ] = 1.0f ;
 #endif
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 65, pickCh, 1 ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 65, pickCh, 1 ) );
 
 		r3dRenderer->SetPixelShader("PS_SSAO_OUT");
 
-		r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0xffffffff, 1.0f, 0 );
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, 0xffffffff, 1.0f, 0 );
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NZ);
 
@@ -7139,11 +7139,11 @@ void r3dDefferedRenderer::Render()
 		r3dRenderer->StartRender(0);
 
 		float pickA[4] = { 0, 0, 0, 1 };
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 65, pickA, 1 ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 65, pickA, 1 ) );
 
 		r3dRenderer->SetPixelShader( "PS_SSAO_OUT" );
 
-		r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0xffffffff, 1.0f, 0 );
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, 0xffffffff, 1.0f, 0 );
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NZ);
 
@@ -7756,7 +7756,7 @@ void UpdateD3DAntiCheat()
 
 			D3DXMatrixIdentity( &identity ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*)&identity, 4 ) );
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*)&identity, 4 ) );
 
 			float vPos[ 3 ][ 3 ] = 
 			{
@@ -7767,7 +7767,7 @@ void UpdateD3DAntiCheat()
 
 			AntiCheatBuffer->Activate( ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->Clear( 0, 0, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL | D3DCLEAR_TARGET, 0, 1.f, 0 ) );
+			r3dRenderer->Clear( 0, 0, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL | D3DCLEAR_TARGET, 0, 1.f, 0 );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_PUSH | R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
@@ -8257,7 +8257,7 @@ void SetupFilmToneConstants( int reg )
 	};
 
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( reg, vConsts, 4 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( reg, vConsts, 4 ) );
 }
 
 SSAOPSIds gSSAOPSIds ;

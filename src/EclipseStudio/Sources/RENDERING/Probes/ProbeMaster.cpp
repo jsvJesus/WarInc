@@ -876,7 +876,7 @@ void ProbeMaster::ShowProbes( ProbeVisualizationMode mode )
 		if( r_show_probe_boxes->GetInt() )
 		{
 			float psConst[ 4 ] = { 0, 1, 0, 1 };
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 			for( int z = 0, e = (int)m_ProbeMap.Height(); z < e; z ++ )
 			{
@@ -911,19 +911,19 @@ void ProbeMaster::ShowProbeVolumesScheme()
 
 	D3DXMATRIX mtx = r3dRenderer->ViewProjMatrix;
 	D3DXMatrixTranspose( &mtx, &mtx );
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &mtx._11, 4 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &mtx._11, 4 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );
 
 	float vColTr[ 4 ] = { 0.5f, 0.5f, 0.5f, 0.75f };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vColTr, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vColTr, 1 ) );
 
 	DrawProbeVolumesFrame();
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
 	float vColOp[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vColOp, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vColOp, 1 ) );
 
 	DrawProbeVolumesFrame();
 	
@@ -1043,7 +1043,7 @@ void ProbeMaster::UpdateSkyAndSun()
 
 	for( int f = 0; f < 6; f ++ )
 	{
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 ) );
+		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 );
 
 		// let it safely be black
 		if( f == D3DCUBEMAP_FACE_NEGATIVE_Y )
@@ -2042,7 +2042,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 ) );
+			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 );
 
 			r3dRenderer->SetCamera( gCam );
 
@@ -2060,7 +2060,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			D3DXMATRIX invViewNoTProj = r3dRenderer->InvProjMatrix * invViewNoT;
 
 			D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+			r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 
 			r3dRenderer->SetMipMapBias( 0.f );
 
@@ -2089,7 +2089,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ADD | R3D_BLEND_NZ );
 
-			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.F, 0 ) );
+			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.F, 0 );
 
 			r3dRenderer->SetTex( m_BounceDiffuseRT->Tex, 0 );
 			r3dRenderer->SetTex( m_BounceNormalRT->Tex, 1 );
@@ -2140,7 +2140,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			
 			};
 
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 			// see AccumSH_ps.hls
 			const int SAMPLE_COUNT = 8;
@@ -2166,7 +2166,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 						{ ppVec.x, ppVec.y, ppVec.z, 0.f }
 					};
 
-					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+					D3D_V( r3dRenderer->SetPixelShaderConstantF( 4, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 					r3dDrawFullScreenQuad( false );
 				}
@@ -2226,7 +2226,7 @@ void ProbeMaster::StartUpdatingSkyVisibility()
 	r3dRenderer->SetPixelShader( "PS_FWD_COLOR" );
 
 	float psConst[ 4 ] = { 0.F, 0.F, 0.F, 0.F };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 }
@@ -2315,7 +2315,7 @@ void ProbeMaster::UpdateProbeSkyVisibility( Probe* probe )
 
 		D3DPERF_BeginEvent( 0, msg );
 
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0xffffffff, 1.F, 0 ) );
+		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0xffffffff, 1.F, 0 );
 
 		SetupCamForFace( &gCam, probe->Position, f );
 
@@ -2394,7 +2394,7 @@ void ProbeMaster::StartProbesVisualization( ProbeVisualizationMode mode )
 	D3DXMatrixTranspose( &mtx, &r3dRenderer->ViewProjMatrix );
 
 	// float4x4 matVP : register( c3 );
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 3, &mtx._11, 4 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 3, &mtx._11, 4 ) );
 
 }
 
@@ -2412,7 +2412,7 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 	D3DXMatrixTranspose( &mtx, &mtx );
 
 	// float4x3 matW : register( c0 );
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &mtx._11, 3 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &mtx._11, 3 ) );
 
 	float psConsts[ 11 ][ 4 ];
 
@@ -2525,7 +2525,7 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 		memcpy( psConsts[ 7 + i ], colors, sizeof ( float[4] ) );
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 	r3dDrawGeoSphere();
 }
@@ -2554,13 +2554,13 @@ void ProbeMaster::StartProbeDirections()
 	r3dRenderer->SetPixelShader( "PS_FWD_COLOR" );
 
 	float psConst[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	D3DXMATRIX wvp;
 
 	D3DXMatrixTranspose( &wvp, &r3dRenderer->ViewProjMatrix );
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &wvp._11, 4 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &wvp._11, 4 ) );
 }
 
 //------------------------------------------------------------------------
@@ -2615,7 +2615,7 @@ void ProbeMaster::DrawProbeProximity( const Probe* probe )
 
 	float psConst[ 4 ] = { 0.f, 0.f, 1.f, 1.f };
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	r3dDrawUniformBoundBox( pbox, gCam, r3dColor::green );
 }
@@ -2637,7 +2637,7 @@ void ProbeMaster::DrawProximityBox()
 	proximityCell.Size = r3dPoint3D( cellSizeX, cellSizeY, cellSizeZ );
 
 	float psConst[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	r3dDrawUniformBoundBox( proximityCell, gCam, r3dColor24::green );
 
@@ -3094,7 +3094,7 @@ int ProbeMaster::OutputBakeProgress( const char* operationName, int total, int c
 {
 	m_LastInfoFrame = r3dGetTime();
 
-	r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
+	r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 

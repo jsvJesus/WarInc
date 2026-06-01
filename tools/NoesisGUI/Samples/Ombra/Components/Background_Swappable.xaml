@@ -1,0 +1,101 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot"
+  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+  d:DataContext="SelectedCharacterData" d:DesignWidth="1920" d:DesignHeight="1080">
+
+  <Grid x:Name="BackgroundGrid">
+
+    <b:Interaction.Triggers>
+      <b:DataTrigger Value="False" Binding="{Binding Path=IsEnabled, ElementName=ComponentRoot}">
+        <b:GoToStateAction StateName="BackgroundSwappable_Generic"/>
+      </b:DataTrigger>
+      <b:DataTrigger Value="True" Binding="{Binding Path=IsEnabled, ElementName=ComponentRoot}">
+        <b:GoToStateAction StateName="BackgroundSwappable_Character"/>
+      </b:DataTrigger>
+    </b:Interaction.Triggers>
+
+    <VisualStateManager.VisualStateGroups>
+      <VisualStateGroup x:Name="States_BackgroundSwappable">
+        <VisualStateGroup.Transitions>
+          <VisualTransition From="BackgroundSwappable_Character" GeneratedDuration="0" To="BackgroundSwappable_Generic">
+            <Storyboard>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Character" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+              </DoubleAnimationUsingKeyFrames>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Generic" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1"/>
+              </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+          </VisualTransition>
+        </VisualStateGroup.Transitions>
+        <VisualState x:Name="BackgroundSwappable_Generic">
+          <Storyboard>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Generic" Storyboard.TargetProperty="(UIElement.Opacity)">
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Character" Storyboard.TargetProperty="(UIElement.Opacity)">
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+          </Storyboard>
+        </VisualState>
+        <VisualState x:Name="BackgroundSwappable_Character">
+          <Storyboard>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Generic" Storyboard.TargetProperty="(UIElement.Opacity)">
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+              <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Character" Storyboard.TargetProperty="(UIElement.Opacity)">
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+              <EasingDoubleKeyFrame KeyTime="00:00:01.5000000" Value="1">
+                <EasingDoubleKeyFrame.EasingFunction>
+                  <PowerEase EasingMode="EaseOut"/>
+                </EasingDoubleKeyFrame.EasingFunction>
+              </EasingDoubleKeyFrame>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Component_Smoke_Splash" Storyboard.TargetProperty="(UIElement.Opacity)">
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+              <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="1"/>
+              <EasingDoubleKeyFrame KeyTime="00:00:02" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+          </Storyboard>
+        </VisualState>
+      </VisualStateGroup>
+    </VisualStateManager.VisualStateGroups>
+
+    <Grid x:Name="Background_Generic" Opacity="0">
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState/>
+          <VisualState/>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+      <Grid.Background>
+        <ImageBrush Stretch="UniformToFill">
+          <ImageBrush.ImageSource>
+            <BitmapImage UriSource="/Root;component/Assets/Bitmaps_Generic_BackgroundsForegrounds/Bitmaps_Generic_BackgroundsForegrounds_Background_CharacterSelection.png"/>
+          </ImageBrush.ImageSource>
+        </ImageBrush>
+      </Grid.Background>
+    </Grid>
+    <Grid x:Name="Background_Character">
+      <Grid.Background>
+        <ImageBrush ImageSource="{Binding Path=Character_Background}" Stretch="UniformToFill"/>
+      </Grid.Background>
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState/>
+          <VisualState/>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+    </Grid>
+    <Component x:Name="Component_Smoke_Splash" Source="Smoke_Splash.xaml" Opacity="0"/>
+
+  </Grid>
+</Component>

@@ -109,7 +109,7 @@ PFX_FilmGrain::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*
 	vConsts[1] = D3DXVECTOR4( mSettings.GrainScale, mSettings.GrainScale * aspect, mLastDSP1_X, mLastDSP1_Y );
 	// float4 GrainTransform 	: register (c2);
 	vConsts[2] = D3DXVECTOR4( strength, -strength * 0.5f, mLastNoiseDSP, 0 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)vConsts,  3 );
+	r3dRenderer->SetPixelShaderConstantF(  0, (float *)vConsts,  3 );
 }
 
 //------------------------------------------------------------------------

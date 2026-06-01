@@ -145,7 +145,7 @@ void PFX_MLAA_DiscontMap::CloseImpl()
 
 void PFX_MLAA_DiscontMap::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )
 {
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1.0f / r3dRenderer->ScreenW, 1.0f / r3dRenderer->ScreenH, MLAA_DiscontFactor, 0 ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1.0f / r3dRenderer->ScreenW, 1.0f / r3dRenderer->ScreenH, MLAA_DiscontFactor, 0 ), 1 );
 }
 
 void PFX_MLAA_DiscontMap::FinishImpl()
@@ -219,7 +219,7 @@ void PFX_MLAA_LineDetectV::InitImpl()
 void PFX_MLAA_LineDetectV::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )
 {
 	PFX_MLAA_LineDetect::PrepareImpl( dest, src );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, D3DXVECTOR4( GetLevel(), 1 / r3dRenderer->ScreenH, 0, 0 ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( GetLevel(), 1 / r3dRenderer->ScreenH, 0, 0 ), 1 );
 }
 
 //------------------------------------------------------------
@@ -240,7 +240,7 @@ void PFX_MLAA_LineDetectH::InitImpl()
 void PFX_MLAA_LineDetectH::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )
 {
 	PFX_MLAA_LineDetect::PrepareImpl( dest, src );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, D3DXVECTOR4( GetLevel(), 1 / r3dRenderer->ScreenW, 0, 0 ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( GetLevel(), 1 / r3dRenderer->ScreenW, 0, 0 ), 1 );
 }
 
 //------------------------------------------------------------
@@ -279,7 +279,7 @@ void PFX_MLAA_AlphaCalc::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* sr
 	g_pPostFXChief->BindBufferTexture( PostFXChief::RTT_MLAA_LINES_V, PostFXChief::FREE_TEX_STAGE_START + 1 );
 	r3dRenderer->SetTex( pAreaTex, PostFXChief::FREE_TEX_STAGE_START + 2 );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1 / r3dRenderer->ScreenW, 1 / r3dRenderer->ScreenH, 1.0f / nAreaSize, 1.0f / nAreaSize ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1 / r3dRenderer->ScreenW, 1 / r3dRenderer->ScreenH, 1.0f / nAreaSize, 1.0f / nAreaSize ), 1 );
 }
 
 void PFX_MLAA_AlphaCalc::FinishImpl()
@@ -323,7 +323,7 @@ void PFX_MLAA_Blend::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )
 	r3dSetFiltering( R3D_POINT, PostFXChief::FREE_TEX_STAGE_START );
 	g_pPostFXChief->BindBufferTexture( PostFXChief::RTT_TEMP0_64BIT, PostFXChief::FREE_TEX_STAGE_START );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1 / r3dRenderer->ScreenW, 1 / r3dRenderer->ScreenH, 0.0f, 0.0f ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( 1 / r3dRenderer->ScreenW, 1 / r3dRenderer->ScreenH, 0.0f, 0.0f ), 1 );
 }
 
 void PFX_MLAA_Blend::FinishImpl()

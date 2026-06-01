@@ -1,0 +1,7 @@
+<Class Name="DataGeneration_Map_Town_Properties">
+  <Property Name="TownName" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="TownPopulation" Type="Number" NumberMinValue="120" NumberMaxValue="512" NumberDecimalCount="0"/>
+  <Property Name="RegionName" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="MayorSurname" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="MayorPortrait" Type="Object" SubType="ImageSource" ImageSourcePath="Resources/DataGeneration"/>
+</Class>

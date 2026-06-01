@@ -1,0 +1,5 @@
+<Class Name="SkillViewModel">
+  <Property Name="Icon" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/SkillIcons"/>
+  <Property Name="SkillName" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+  <Property Name="Percentage" Type="Number" NumberMinValue="0" NumberMaxValue="100" NumberDecimalCount="0"/>
+</Class>

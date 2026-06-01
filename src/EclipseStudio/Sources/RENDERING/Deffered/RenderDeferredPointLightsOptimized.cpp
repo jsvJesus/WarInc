@@ -282,8 +282,8 @@ void PointLightsRenderer::RenderLights()
 		D3DXVECTOR4(0, 0, 0, 0),
 		D3DXVECTOR4(1, 1, 0, 0)
 	};
-	d->SetVertexShaderConstantF(0, &consts[0].x, 1);
-	d->SetVertexShaderConstantF(1, &m[0]._11, 8);
+	r3dRenderer->SetVertexShaderConstantF(0, &consts[0].x, 1);
+	r3dRenderer->SetVertexShaderConstantF(1, &m[0]._11, 8);
 
 	consts[0].x = 1.0f / LIGHT_TILE_TEXTURE_DEPTH;
 	consts[0].y = 1.0f / LIGHT_PARAMS_TEXTURE_SIZE;
@@ -297,7 +297,7 @@ void PointLightsRenderer::RenderLights()
 		consts[2].x = 0.5f;
 		consts[2].y = 0.5f;
 	}
-	d->SetPixelShaderConstantF(0, &consts[0].x, _countof(consts));
+	r3dRenderer->SetPixelShaderConstantF(0, &consts[0].x, _countof(consts));
 
 #if 0
 	SetSSSParams(4, false);

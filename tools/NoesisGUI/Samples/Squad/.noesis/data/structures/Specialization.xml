@@ -1,0 +1,9 @@
+<Enum Name="Specialization">
+  <Item Name="SNIPER" Value="1"/>
+  <Item Name="ASSAULT" Value="2"/>
+  <Item Name="MEDIC" Value="3"/>
+  <Item Name="ENGINEER" Value="4"/>
+  <Item Name="HEAVY" Value="5"/>
+  <Item Name="SCOUT" Value="6"/>
+  <Item Name="RECON" Value="7"/>
+</Enum>

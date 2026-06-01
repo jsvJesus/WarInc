@@ -104,9 +104,9 @@ BOOL obj_LampBulb::OnCreate()
  LightBBox.Org -= r3dPoint3D(BaseSize, 0.0f, BaseSize);
  LightBBox.Size = r3dPoint3D(BaseSize*2, BaseSize*2, BaseSize*2);
 
- Query = NULL;
- r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_OCCLUSION, &Query);
- VisiblePixels = 0;
+	Query = NULL;
+	r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_OCCLUSION, &Query);
+	VisiblePixels = 0;
 
  return 1;
 }

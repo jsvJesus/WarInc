@@ -64,6 +64,7 @@ public:
 	r3dDX11Texture* GetDX11Texture();
 	ID3D11ShaderResourceView* GetDX11SRV();
 	bool HasDX11Texture();
+	void RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip);
 #endif
 
 	int			GetFlags() const { return Flags; }

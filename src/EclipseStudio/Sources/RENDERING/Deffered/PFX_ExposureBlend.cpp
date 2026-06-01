@@ -60,7 +60,7 @@ PFX_ExposureBlend::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )	/*
 	mPrevTime = newTime ;
 
 	// float4      vLerpCtrl           : register(c3);
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, expCtrl, 1 ) ) ;
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 4, expCtrl, 1 ) ) ;
 	
 	r3dSetFiltering( R3D_POINT, PostFXChief::FREE_TEX_STAGE_START ) ;
 

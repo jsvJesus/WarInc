@@ -209,7 +209,7 @@ PostFXChief::Execute( bool toBackBuffer, bool resetTargets )
 
 		// NOTE : synchronize constant start with postfx_common.h
 		// float4x4 	g_mInvViewProj 		: register ( c32 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 32, (float*)InvViewProj, 4 );
+		r3dRenderer->SetVertexShaderConstantF( 32, (float*)InvViewProj, 4 );
 	}
 
 	// skip ping pong stage at s0
@@ -658,7 +658,7 @@ PostFXChief::DoDrawFX( PostFX* PFX, r3dScreenBuffer* src, r3dScreenBuffer* dest,
 	{
 		// NOTE : synchronize constant start with postfx_common.h
 		// float4 		g_vTexcTransform	: register ( c36 );
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 36, data.TexTransform, 1 ) );
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 36, data.TexTransform, 1 ) );
 	}
 
 	r3d_assert( data.VertexShaderID != data.WRONG_SHADER_ID && 
@@ -689,7 +689,7 @@ PostFXChief::DoDrawFX( PostFX* PFX, r3dScreenBuffer* src, r3dScreenBuffer* dest,
 void
 PostFXChief::DoClear( const Action& act )
 {
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, act.Clear.Color, 1.f, 0 ) );
+	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, act.Clear.Color, 1.f, 0 );
 }
 
 //------------------------------------------------------------------------

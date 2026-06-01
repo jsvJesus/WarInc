@@ -903,7 +903,7 @@ void startConsequtiveOcclusionQueries()
 
 	D3DXMATRIX matWVP;
 	D3DXMatrixTranspose( &matWVP, &r3dRenderer->ViewProjMatrix );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&matWVP,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&matWVP,  4 );
 }
 
 void endConsequitiveOcclusionQueries()

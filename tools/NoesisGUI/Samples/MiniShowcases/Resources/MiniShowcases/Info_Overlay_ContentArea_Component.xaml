@@ -1,0 +1,23 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Component.DynamicProperties>
+        <DynamicProperty Name="Text_Title" Type="String" DefaultValue="Title Field"/>
+        <DynamicProperty Name="Text_Description" Type="String" DefaultValue="This is the description area for the showcase overlay."/>
+    </Component.DynamicProperties>
+    <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+    <Border CornerRadius="0,4,4,4">
+            <Border.Background>
+                <SolidColorBrush Color="{DynamicResource Info_Color_Background}"/>
+            </Border.Background>
+      <StackPanel x:Name="Text_Stack" Margin="16,16,16,16" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <TextBlock x:Name="Title_Text" FontSize="18" FontFamily="./#PT Root UI" Foreground="#FFFFFFFF" TextWrapping="Wrap" FontWeight="Bold" VerticalAlignment="Top" Text="{Binding Path=Text_Title_Str, ElementName=ComponentRoot}"/>
+        <TextBlock x:Name="Description_Text" Foreground="#FFFFFFFF" TextWrapping="Wrap" Margin="0,16,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Text="{Binding Path=Text_Description_Str, ElementName=ComponentRoot}" FontFamily="./#PT Root UI"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Component>

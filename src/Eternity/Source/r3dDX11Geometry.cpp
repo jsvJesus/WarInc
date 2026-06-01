@@ -36,8 +36,16 @@
 #undef DrawPrimitive
 #endif
 
+#ifdef DrawPrimitiveUP
+#undef DrawPrimitiveUP
+#endif
+
 #ifdef DrawIndexedPrimitive
 #undef DrawIndexedPrimitive
+#endif
+
+#ifdef DrawIndexedPrimitiveUP
+#undef DrawIndexedPrimitiveUP
 #endif
 
 #ifdef SetPrimitiveTopology
@@ -538,6 +546,11 @@ r3dDX11GeometryState::r3dDX11GeometryState()
 	BoundIndexOffset = 0;
 
 	BoundPrimitiveType = R3D_DX11_PRIM_UNKNOWN;
+
+	TempVertexBuffer = NULL;
+	TempVertexBufferBytes = 0;
+	TempIndexBuffer = NULL;
+	TempIndexBufferBytes = 0;
 }
 
 r3dDX11GeometryState::~r3dDX11GeometryState()
@@ -571,6 +584,11 @@ void r3dDX11GeometryState::Shutdown()
 		ClearVertexBuffers();
 		ClearIndexBuffer();
 	}
+
+	r3dDX11Geometry_Release(TempIndexBuffer);
+	r3dDX11Geometry_Release(TempVertexBuffer);
+	TempIndexBufferBytes = 0;
+	TempVertexBufferBytes = 0;
 
 	Initialized = false;
 
@@ -841,6 +859,236 @@ void r3dDX11GeometryState::DrawIndexedPrimitive(
 	);
 
 	DrawIndexed(indexCount, startIndex, baseVertexIndex);
+}
+
+static unsigned int r3dDX11Geometry_GrowTempBufferSize(unsigned int byteSize)
+{
+	unsigned int result = 4096;
+
+	while(result < byteSize && result < 0x80000000u)
+		result *= 2;
+
+	return result < byteSize ? byteSize : result;
+}
+
+bool r3dDX11GeometryState::EnsureTempVertexBuffer(unsigned int byteSize)
+{
+	if(!Initialized || byteSize == 0)
+		return false;
+
+	if(TempVertexBuffer && TempVertexBufferBytes >= byteSize)
+		return true;
+
+	r3dDX11Geometry_Release(TempVertexBuffer);
+	TempVertexBufferBytes = 0;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+
+	if(!device)
+		return false;
+
+	const unsigned int newSize = r3dDX11Geometry_GrowTempBufferSize(byteSize);
+
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.ByteWidth = newSize;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	desc.StructureByteStride = 0;
+
+	HRESULT hr = device->CreateBuffer(&desc, NULL, &TempVertexBuffer);
+
+	if(FAILED(hr))
+	{
+		r3dDX11Geometry_LogHR("CreateBuffer TempVertexBuffer", hr);
+		return false;
+	}
+
+	TempVertexBufferBytes = newSize;
+	return true;
+}
+
+bool r3dDX11GeometryState::EnsureTempIndexBuffer(unsigned int byteSize)
+{
+	if(!Initialized || byteSize == 0)
+		return false;
+
+	if(TempIndexBuffer && TempIndexBufferBytes >= byteSize)
+		return true;
+
+	r3dDX11Geometry_Release(TempIndexBuffer);
+	TempIndexBufferBytes = 0;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+
+	if(!device)
+		return false;
+
+	const unsigned int newSize = r3dDX11Geometry_GrowTempBufferSize(byteSize);
+
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.ByteWidth = newSize;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	desc.StructureByteStride = 0;
+
+	HRESULT hr = device->CreateBuffer(&desc, NULL, &TempIndexBuffer);
+
+	if(FAILED(hr))
+	{
+		r3dDX11Geometry_LogHR("CreateBuffer TempIndexBuffer", hr);
+		return false;
+	}
+
+	TempIndexBufferBytes = newSize;
+	return true;
+}
+
+bool r3dDX11GeometryState::UploadTempBuffer(ID3D11Buffer* buffer, const void* data, unsigned int byteSize)
+{
+	if(!buffer || !data || byteSize == 0)
+		return false;
+
+	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+	if(!context)
+		return false;
+
+	D3D11_MAPPED_SUBRESOURCE mapped;
+	ZeroMemory(&mapped, sizeof(mapped));
+
+	HRESULT hr = context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+
+	if(FAILED(hr))
+	{
+		r3dDX11Geometry_LogHR("Map TempBuffer", hr);
+		return false;
+	}
+
+	memcpy(mapped.pData, data, byteSize);
+	context->Unmap(buffer, 0);
+
+	return true;
+}
+
+void r3dDX11GeometryState::DrawPrimitiveUP(
+	r3dDX11PrimitiveType primitiveType,
+	unsigned int primitiveCount,
+	const void* vertexData,
+	unsigned int vertexStride
+)
+{
+	if(!Initialized || !vertexData || vertexStride == 0)
+		return;
+
+	const unsigned int vertexCount = r3dDX11_GetPrimitiveVertexCount(
+		primitiveType,
+		primitiveCount
+	);
+
+	if(vertexCount == 0)
+		return;
+
+	if(r3dDX11Geometry_IsMulOverflow(vertexStride, vertexCount))
+		return;
+
+	const unsigned int vertexBytes = vertexStride * vertexCount;
+
+	if(!EnsureTempVertexBuffer(vertexBytes))
+		return;
+
+	if(!UploadTempBuffer(TempVertexBuffer, vertexData, vertexBytes))
+		return;
+
+	if(!SetVertexBufferRaw(0, TempVertexBuffer, vertexStride, 0))
+		return;
+
+	DrawPrimitive(primitiveType, 0, primitiveCount);
+
+	ClearVertexBuffer(0);
+}
+
+void r3dDX11GeometryState::DrawIndexedPrimitiveUP(
+	r3dDX11PrimitiveType primitiveType,
+	unsigned int minVertexIndex,
+	unsigned int numVertices,
+	unsigned int primitiveCount,
+	const void* indexData,
+	r3dDX11IndexFormat indexFormat,
+	const void* vertexData,
+	unsigned int vertexStride
+)
+{
+	(void)minVertexIndex;
+
+	if(!Initialized || !indexData || !vertexData || vertexStride == 0)
+		return;
+
+	if(numVertices == 0)
+		return;
+
+	const unsigned int indexCount = r3dDX11_GetPrimitiveIndexCount(
+		primitiveType,
+		primitiveCount
+	);
+
+	if(indexCount == 0)
+		return;
+
+	unsigned int indexSize = 0;
+
+	if(indexFormat == R3D_DX11_INDEX_16BIT)
+		indexSize = 2;
+	else if(indexFormat == R3D_DX11_INDEX_32BIT)
+		indexSize = 4;
+	else
+		return;
+
+	if(r3dDX11Geometry_IsMulOverflow(vertexStride, numVertices))
+		return;
+
+	if(r3dDX11Geometry_IsMulOverflow(indexSize, indexCount))
+		return;
+
+	const unsigned int vertexBytes = vertexStride * numVertices;
+	const unsigned int indexBytes = indexSize * indexCount;
+
+	if(!EnsureTempVertexBuffer(vertexBytes))
+		return;
+
+	if(!EnsureTempIndexBuffer(indexBytes))
+		return;
+
+	if(!UploadTempBuffer(TempVertexBuffer, vertexData, vertexBytes))
+		return;
+
+	if(!UploadTempBuffer(TempIndexBuffer, indexData, indexBytes))
+		return;
+
+	if(!SetVertexBufferRaw(0, TempVertexBuffer, vertexStride, 0))
+		return;
+
+	if(!SetIndexBufferRaw(TempIndexBuffer, indexFormat, 0))
+		return;
+
+	DrawIndexedPrimitive(
+		primitiveType,
+		0,
+		0,
+		numVertices,
+		0,
+		primitiveCount
+	);
+
+	ClearIndexBuffer();
+	ClearVertexBuffer(0);
 }
 
 void r3dDX11GeometryState::InvalidateCache()

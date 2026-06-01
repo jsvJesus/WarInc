@@ -1,0 +1,7 @@
+    <Class Name="TechnicianViewModel">
+      <Property Name="Name" Type="String" StringMinWordCount="0" StringMaxWordCount="10"/>
+      <Property Name="RankIndex" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PortraitKey" Type="String" StringMinWordCount="0" StringMaxWordCount="0"/>
+      <Property Name="Perks" Type="Collection" SubType="NoesisStudioInternals.TechnicianPerkViewModel" CollectionMinItemCount="1" CollectionMaxItemCount="3"/>
+      <Property Name="Status" Type="Object" SubType="NoesisStudioInternals.TechnicianStatusViewModel"/>
+    </Class>

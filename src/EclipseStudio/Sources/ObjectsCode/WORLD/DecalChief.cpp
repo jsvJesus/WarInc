@@ -1496,7 +1496,7 @@ DecalChief::Draw()
 		D3DXVECTOR4(mSettings.MaxDecalSize * DECAL_MAX_SCALE_COEF, 0.0f, 0.0f, 0.0f)
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*) vsConst, sizeof vsConst / sizeof vsConst[ 0 ] ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*) vsConst, sizeof vsConst / sizeof vsConst[ 0 ] ) );
 
 	float worldW = 2.f / r3dRenderer->ProjMatrix._11 / r3dRenderer->ScreenW;
 	float worldH = 2.f / r3dRenderer->ProjMatrix._22 / r3dRenderer->ScreenH;
@@ -1524,7 +1524,7 @@ DecalChief::Draw()
 		D3DXVECTOR4( dc_sts.ReliefMappingDepth, dc_sts.AlphaRef, 0.f, 0.f )
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)psConst, sizeof psConst / sizeof psConst[ 0 ] ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)psConst, sizeof psConst / sizeof psConst[ 0 ] ) );
 
 	r3dRenderer->SetVertexShader( VS_ID );
 	r3dRenderer->SetPixelShader( r_relief_decals->GetBool() ? PS_RELIEF_ID : PS_ID );
@@ -1546,7 +1546,7 @@ DecalChief::Draw()
 
 	//	Copy RT into frame buffer to use it as source texture during decal render.
 
-	D3D_V( r3dRenderer->pd3ddev->StretchRect(gBuffer_Color->GetTex2DSurface(), 0, gScreenSmall->GetTex2DSurface(), 0, D3DTEXF_POINT) );
+	r3dRenderer->StretchRect(gBuffer_Color, gScreenSmall, 0);
 
 	r3dRenderer->SetTex(gScreenSmall->Tex, 4);
 

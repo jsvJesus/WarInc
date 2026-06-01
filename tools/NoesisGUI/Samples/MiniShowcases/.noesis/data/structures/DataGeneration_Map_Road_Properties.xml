@@ -1,0 +1,3 @@
+<Class Name="DataGeneration_Map_Road_Properties">
+  <Property Name="RoadName_String" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+</Class>

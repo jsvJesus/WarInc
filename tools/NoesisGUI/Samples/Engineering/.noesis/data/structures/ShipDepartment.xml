@@ -1,0 +1,8 @@
+    <Enum Name="ShipDepartment">
+      <Item Name="None" Value="1"/>
+      <Item Name="Captain" Value="2"/>
+      <Item Name="Helm" Value="3"/>
+      <Item Name="Tactical" Value="4"/>
+      <Item Name="Engineering" Value="5"/>
+      <Item Name="Science" Value="6"/>
+    </Enum>

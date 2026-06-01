@@ -1243,19 +1243,19 @@ void r3dMeshSetVSTexcUnpackScale( r3dPoint2D unpackScale )
 		unpackScale.x, unpackScale.y, 0.f, 0.f
 	} ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 16, vConst, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 16, vConst, 1 ) );
 }
 
 //------------------------------------------------------------------------
 
 void r3dApplyPreparedMeshVSConsts(const PrecalculatedMeshVSConsts &vsc)
 {
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&vsc, sizeof vsc / 16 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF(0, (float*)&vsc, sizeof vsc / 16 ) );
 }
 
 void r3dApplyPreparedMeshVSConsts_DepthPrepass(const PrecalculatedMeshVSConsts &vsc)
 {
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&vsc, 4 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF(0, (float*)&vsc, 4 ) );
 }
 
 //------------------------------------------------------------------------
@@ -1350,10 +1350,10 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
 	AC[2] = float(r3dRenderer->AmbientColor.B)/255.0f;
 	AC[3] = 1;
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  7, AC,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  7, AC,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  7, AC,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  7, AC,  1 );
 	*/
 
 	float PPos[16][4]; 
@@ -1373,7 +1373,7 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
 		PPos[i+8][3] = 1;
 	}
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  30, PPos[0],  16 );
+	r3dRenderer->SetVertexShaderConstantF(  30, PPos[0],  16 );
 }
 
 extern int VS_SMDEPTHPASS_ORTHO_ID;
@@ -1426,7 +1426,7 @@ void r3dMesh::DrawMeshInstanced(const D3DXMATRIX* world, int ShadowMap, bool for
 
 			D3DXMATRIX mViewProjT ;
 			D3DXMatrixTranspose(&mViewProjT, &r3dRenderer->ViewProjMatrix );
-			r3dRenderer->pd3ddev->SetVertexShaderConstantF ( 0, (float*)&mViewProjT, 4 );
+			r3dRenderer->SetVertexShaderConstantF( 0, (float*)&mViewProjT, 4 );
 
 			d3dc._SetDecl( r3dInstancedUnionMeshVertex::getDecl() );
 
@@ -1664,7 +1664,7 @@ r3dMesh::DrawMeshStart( const r3dColor* objectColor )
 						texcUnpackScale.x, texcUnpackScale.y, ExtrudeAmmount, 0.f
 					};
 
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 22, vConst, 2 ) );
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 22, vConst, 2 ) );
 
 		d3dc._SetDecl( r3dSkinnedMeshVertex::getDecl() );
 	}

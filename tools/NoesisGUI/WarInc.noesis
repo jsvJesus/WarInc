@@ -1,0 +1,4 @@
+<Project>
+  <Assembly>WarInc</Assembly>
+  <DefaultDataNamespace>WarInc</DefaultDataNamespace>
+</Project>

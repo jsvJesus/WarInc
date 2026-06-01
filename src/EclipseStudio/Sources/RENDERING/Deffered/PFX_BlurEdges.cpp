@@ -187,7 +187,7 @@ PFX_BlurEdges::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * ( i + 1 ) / dest->Height;
 	}
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 }
 
 //------------------------------------------------------------------------

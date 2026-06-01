@@ -1034,13 +1034,13 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 
 	//set consts to be shared in rendering of shadow and main view
 	D3DXVECTOR4 cp(cameraPos.x, cameraPos.y, cameraPos.z, 0.0f);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(8, &cp.x, 1);
+	r3dRenderer->SetVertexShaderConstantF(8, &cp.x, 1);
 
 	D3DXVECTOR4 ts(tileSize.x, viewDist, tileSize.z, float(nClouds));
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(12, &ts.x, 1);
+	r3dRenderer->SetVertexShaderConstantF(12, &ts.x, 1);
 
 	D3DXVECTOR4 shift1(shift.x, 0.0f, shift.z, 0.0f);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(14, &shift1.x, 1);
+	r3dRenderer->SetVertexShaderConstantF(14, &shift1.x, 1);
 
 	IDirect3DSurface9* prevRT[4];
 	for(int i=0; i<2; i++)	r3dRenderer->GetRT(i, &prevRT[i]);
@@ -1088,44 +1088,44 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 
 		D3DXMATRIX v = view;
 		D3DXMatrixTranspose(&v, &v);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&v, 4);
+		r3dRenderer->SetVertexShaderConstantF(0, (float*)&v, 4);
 
 		D3DXMATRIX p = proj;
 		D3DXMatrixTranspose(&p, &p);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(4, (float*)&p, 4);
+		r3dRenderer->SetVertexShaderConstantF(4, (float*)&p, 4);
 
 		D3DXVECTOR4 ac(ambColor.x, ambColor.y, ambColor.z, 0.0f);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(13, &ac.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(13, &ac.x, 1);
 
 		D3DXVECTOR4 ld(lightDir.x, lightDir.y, lightDir.z, 0.0f);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(9, &ld.x, 1);
+		r3dRenderer->SetVertexShaderConstantF(9, &ld.x, 1);
 
 		D3DXVECTOR4 lc(sunColor.x, sunColor.y, sunColor.z, 0.0f);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(11, &lc.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(11, &lc.x, 1);
 
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(9, &ambSh.x, 1);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(10, &sunSh.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(9, &ambSh.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(10, &sunSh.x, 1);
 
 		
 		float fpc = (float)pointCount;
 		float pc[4] = {fpc, fpc, fpc, fpc}; 
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(25, pc, 1);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(17, (float*)pointPos, pointCount);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(21, (float*)pointColor, pointCount);
+		r3dRenderer->SetVertexShaderConstantF(25, pc, 1);
+		r3dRenderer->SetVertexShaderConstantF(17, (float*)pointPos, pointCount);
+		r3dRenderer->SetVertexShaderConstantF(21, (float*)pointColor, pointCount);
 
 		//fog
 		float DepthZ = r3dRenderer->FarClip * 0.9375f;
 		D3DXVECTOR4 DepthVector(cameraPos.x, cameraPos.y, cameraPos.z,1.f/DepthZ);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  15, (float *)&DepthVector,  1 );
+		r3dRenderer->SetVertexShaderConstantF(  15, (float *)&DepthVector,  1 );
 
 
 		//gradient colors
 		D3DXVECTOR4 topc(topColor.x, topColor.y, topColor.z, 0.0f);
 		D3DXVECTOR4 botc(bottomColor.x, bottomColor.y, bottomColor.z, 0.0f);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  26, (float *)&botc,  1 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  27, (float *)&topc,  1 );
+		r3dRenderer->SetVertexShaderConstantF(  26, (float *)&botc,  1 );
+		r3dRenderer->SetVertexShaderConstantF(  27, (float *)&topc,  1 );
 
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  28, (float *)atlas.rects,  atlas.count );
+		r3dRenderer->SetVertexShaderConstantF(  28, (float *)atlas.rects,  atlas.count );
 
 		//create temp rendertarget
 		if(rtTemp==0)
@@ -1137,7 +1137,7 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 		}
 		rtTemp->Activate();
 		for(int i=1; i<4; i++)	r3dRenderer->SetRT(i, 0);
-		r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+		r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
  		r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST, 0, 0, 4, 0, 2);
 		
 		//render offscreen surface with clouds into the main rendertarget
@@ -1167,10 +1167,10 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 			sv = 0.5f - sunDir.y*tanf(fovV)*0.5f/sunDir.z;
 		}
 		D3DXVECTOR4 sp(su, sv, r3dRenderer->ViewW/r3dRenderer->ViewH, 0.0f);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(20, &sp.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(20, &sp.x, 1);
 
 		D3DXVECTOR4 par(rimArea, rimPower, 0.0f, 0.0f);
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(21, &par.x, 1);
+		r3dRenderer->SetPixelShaderConstantF(21, &par.x, 1);
 
 		r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST, 0, 0, 4, 0, 2);
 	}
@@ -1198,7 +1198,7 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 		viewPort.MaxZ = 1.0f;
 		r3dRenderer->pd3ddev->SetViewport(&viewPort);
 
-		r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+		r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
 
 		D3DXMATRIX shView;
 		Vector3 shCamPos(cameraPos.x, 10000.0f, cameraPos.z);
@@ -1206,12 +1206,12 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 		Vector3 dir = shCamPos + Vector3( 0.0f,-1.0f, 0.0f);
 		D3DXMatrixLookAtLH( &shView, (D3DXVECTOR3*)&shCamPos, (D3DXVECTOR3*)&dir, (D3DXVECTOR3*)&up );
 		D3DXMatrixTranspose(&shView, &shView);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&shView, 4);
+		r3dRenderer->SetVertexShaderConstantF(0, (float*)&shView, 4);
 
 		D3DXMATRIX shProj;
 		D3DXMatrixPerspectiveFovLH(&shProj, 3.1415926f*0.12f, 1.0f, 10.0f, 11000.0f);
 		D3DXMatrixTranspose(&shProj, &shProj);
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(4, (float*)&shProj, 4);
+		r3dRenderer->SetVertexShaderConstantF(4, (float*)&shProj, 4);
 
 		//all other consts was set earlier
 

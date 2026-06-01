@@ -71,9 +71,9 @@ void PFX_ReShadeLook::PrepareImpl(r3dScreenBuffer* dest, r3dScreenBuffer* src)
         sts.VignetteRatio
     };
 
-    D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, texel, 1));
-    D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(1, look0, 1));
-    D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(2, look1, 1));
+    D3D_V(r3dRenderer->SetPixelShaderConstantF(0, texel, 1));
+    D3D_V(r3dRenderer->SetPixelShaderConstantF(1, look0, 1));
+    D3D_V(r3dRenderer->SetPixelShaderConstantF(2, look1, 1));
 
     mSettings.Erase(0);
 }

@@ -409,7 +409,7 @@ void RenderSSAORefEffect()
  float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
  D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, r3dRenderer->ScreenW * 0.25f * noiseScaleK, r3dRenderer->ScreenH * 0.25f * noiseScaleK );
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+ r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
  // mat proj
 
@@ -430,9 +430,9 @@ void RenderSSAORefEffect()
  D3DXVECTOR4 pconst2 = D3DXVECTOR4( sts.Contrast, sts.Brightness * sts.Contrast - 1.5f * sts.Contrast + 0.5f, 0.f, 0.f );
  
 
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&pconst0,  1 );
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  1, (float *)&pconst1,  1 );
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  2, (float *)&pconst2,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  0, (float *)&pconst0,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  1, (float *)&pconst1,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  2, (float *)&pconst2,  1 );
  
  r3dSetFiltering( R3D_POINT, 0 );
  r3dSetFiltering( R3D_POINT, 1 );
@@ -520,7 +520,7 @@ void RenderSSAOEffect( bool lightWeight )
 	float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, r3dRenderer->ScreenW * 0.25f * noiseScaleK, r3dRenderer->ScreenH * 0.25f * noiseScaleK );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
 	// mat proj
 
@@ -644,7 +644,7 @@ void RenderSSAOEffect( bool lightWeight )
 		}
 	}
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float*)pconsts, RAYS_START + NUM_RAYS );
+	r3dRenderer->SetPixelShaderConstantF(  0, (float*)pconsts, RAYS_START + NUM_RAYS );
 
 	r3dSetFiltering( R3D_POINT, 0 );
 	r3dSetFiltering( R3D_POINT, 1 );
@@ -704,7 +704,7 @@ void RenderSSAOEffect ()
 		// is SSAOed. With full scale ssao we use stencil to avoid expensive
 		// stuff where sky is, so we have to clear to not let it through.
 		// ( this step is done later if SSAO blur is on )
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ) ;
+		r3dRenderer->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ;
 	}
 
 	switch( r_ssao_method->GetInt() )
@@ -728,7 +728,7 @@ void RenderSSAOEffect ()
 static void SetupScreenTexDSP( int contNum )
 {
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, 0.f, 0.f );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  contNum, (float *)&vconst, 1  );
+	r3dRenderer->SetVertexShaderConstantF(  contNum, (float *)&vconst, 1  );
 }
 
 void RenderLUT1DColorCorrection( r3dScreenBuffer* SourceTex, bool hsv )
@@ -801,7 +801,7 @@ void DiluteSSAOMask( r3dScreenBuffer *sourceTex )
 	HalfScale = !!r_half_scale_ssao->GetInt() ;
 
 	float vConsts[ 4 ] = {	1.0f / r3dRenderer->ScreenW, 0.f, 0.f, 1.0f / r3dRenderer->ScreenH } ;
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConsts, 1 ) ) ;
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConsts, 1 ) ) ;
 
 	r3dRenderer->SetVertexShader( "VS_SSAO" ) ;
 	r3dRenderer->SetPixelShader( "PS_SSAO_MASK_DILUTE" ) ;
@@ -813,7 +813,7 @@ void DiluteSSAOMask( r3dScreenBuffer *sourceTex )
 	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst, 1 ) ;
+	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst, 1 ) ;
 
 	r3dDrawFullScreenQuad(!!HalfScale);
 
@@ -857,7 +857,7 @@ void CompositeSSAO( r3dScreenBuffer* currSSAO )
 	D3DXMatrixInverse( &fromPrevViewMtx, NULL, &toPrevViewMtx ) ;
 	D3DXMatrixTranspose( (D3DXMATRIX*)&psConsts[6], &fromPrevViewMtx );
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
 
 	extern r3dScreenBuffer* gBuffer_Depth ;
 
@@ -875,7 +875,7 @@ void CompositeSSAO( r3dScreenBuffer* currSSAO )
 	}
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&vconst, 1 ) ;
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&vconst, 1 ) ;
 
 	r3dDrawFullScreenQuad( !!HalfScale ) ;
 
@@ -908,7 +908,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 	int Normals = !!r_ssao_blur_w_normals->GetInt() ;
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
 	r3dRenderer->SetVertexShader("VS_SSAO"); 
 
@@ -955,7 +955,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		// with half scale ssao we don't use stencil so the background
 		// is SSAOed. With full scale ssao we use stencil to avoid expensive
 		// stuff where sky is, so we have to clear to not let it through.
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ) ;
+		r3dRenderer->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ;
 	}
 
 	TempTex->Deactivate();
@@ -969,7 +969,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		pconsts[0] = D3DXVECTOR4( -sts.BlurDepthSensitivity, sts.BlurStrength, 1.0f / r3dRenderer->ScreenW, 0.0f );
 		pconsts[1] = D3DXVECTOR4( 1.0f / r3dRenderer->ScreenW / resK, 0.0f, 0.0f, 0.0f );
 
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)pconsts,  2 );
+		r3dRenderer->SetPixelShaderConstantF(  0, (float *)pconsts,  2 );
 
 		r3dSetFiltering( R3D_POINT, 0 );
 		r3dSetFiltering( R3D_POINT, 1 );
@@ -989,7 +989,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		pconsts[0] = D3DXVECTOR4( -sts.BlurDepthSensitivity, sts.BlurStrength, 0.0f, 1.0f / r3dRenderer->ScreenH );
 		pconsts[1] = D3DXVECTOR4( 0.f, 1.0f / r3dRenderer->ScreenH / resK, 0.0f, 0.0f );
 
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)pconsts,  2 );
+		r3dRenderer->SetPixelShaderConstantF( 0, (float *)pconsts,  2 );
 
 		r3dSetFiltering( R3D_POINT, 0 );
 		r3dSetFiltering( R3D_POINT, 1 );

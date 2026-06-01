@@ -1418,7 +1418,7 @@ GrassMap::DrawCell( const GrassCell& cell, const r3dCamera& Cam, int X, int Z )
 			vConsts[9].y = -vConsts[9].y;
 			vConsts[9].w = 1.0f - vConsts[9].w;
 
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] ) );
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 #if 0
 			float len = 2.f * sqrtf( Cam.vPointTo.x * Cam.vPointTo.x + Cam.vPointTo.z * Cam.vPointTo.z );
@@ -1433,7 +1433,7 @@ GrassMap::DrawCell( const GrassCell& cell, const r3dCamera& Cam, int X, int Z )
 
 #endif
 
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vPSConsts, 2 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vPSConsts, 2 ) );
 
 			r3dSetFiltering( R3D_ANISOTROPIC, 0 );
 			r3dRenderer->SetTex( chunk.Texture );

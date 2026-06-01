@@ -1,0 +1,16 @@
+<Class Name="ViewModel">
+  <Property Name="Time" Type="String" StringMinWordCount="0" StringMaxWordCount="1"/>
+  <Property Name="Temperature" Type="Number" NumberMinValue="-10" NumberMaxValue="45"/>
+  <Property Name="Speed" Type="Number" NumberMinValue="0" NumberMaxValue="250"/>
+  <Property Name="RPM" Type="Number" NumberMinValue="0" NumberMaxValue="10"/>
+  <Property Name="RPM_Max" Type="Number" NumberMinValue="10" NumberMaxValue="10"/>
+  <Property Name="Fuel" Type="Number" NumberMinValue="0" NumberMaxValue="600"/>
+  <Property Name="Fuel_Max" Type="Number" NumberMinValue="600" NumberMaxValue="600"/>
+  <Property Name="Gear1" Type="Boolean"/>
+  <Property Name="Gear2" Type="Boolean"/>
+  <Property Name="Gear3" Type="Boolean"/>
+  <Property Name="Gear4" Type="Boolean"/>
+  <Property Name="Gear5" Type="Boolean"/>
+  <Property Name="Gear6" Type="Boolean"/>
+  <Property Name="GearN" Type="Boolean"/>
+</Class>

@@ -1,0 +1,4 @@
+<Class Name="ViewModel">
+  <Property Name="Collection" Type="Collection" SubType="Alembic.CraftItem" CollectionMinItemCount="10" CollectionMaxItemCount="20"/>
+  <Property Name="Selection" Type="Object" SubType="Alembic.CraftItem"/>
+</Class>

@@ -110,8 +110,8 @@ void DrawDepthEffectMask ()
 
 	D3DXVECTOR4 TintVector(55.0f/255.0f*Shade, 153.0f/255.0f*Shade, 221.0f/255.0f*Shade, ShadeAddit);
 	
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  9, (float *)&TintVector,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  9, (float *)&TintVector,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
 	
 	r3dRenderer->SetPixelShader("PS_ZDRAW");
 	r3dRenderer->SetVertexShader("VS_ZDRAW");
@@ -122,7 +122,7 @@ void DrawDepthEffectMask ()
 	ShaderMat =  mWorld * 	r3dRenderer->ViewProjMatrix;
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	GameWorld().Draw( rsDrawDepthEffect );
 
@@ -220,18 +220,18 @@ void DrawDepthEffect()
 	fBumpness_RefrIndex_TileSize[0] = 50 - wb->bumpness;	fBumpness_RefrIndex_TileSize[1] = wb->uRefractionIndex;	fBumpness_RefrIndex_TileSize[2] = wb->tileSize;	fBumpness_RefrIndex_TileSize[3] = 1;
 	texLerp.x = wb->SetNormalTextures(2,3,10.f);
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 14, fdeepColor_LakeHeight,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 15, fShallowColor_Depth,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 16, fAttenColor_Dist,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 17, fBumpness_RefrIndex_TileSize,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 18, &texLerp.x,  1 );
+	r3dRenderer->SetPixelShaderConstantF( 14, fdeepColor_LakeHeight,  1 );
+	r3dRenderer->SetPixelShaderConstantF( 15, fShallowColor_Depth,  1 );
+	r3dRenderer->SetPixelShaderConstantF( 16, fAttenColor_Dist,  1 );
+	r3dRenderer->SetPixelShaderConstantF( 17, fBumpness_RefrIndex_TileSize,  1 );
+	r3dRenderer->SetPixelShaderConstantF( 18, &texLerp.x,  1 );
 
 
 	D3DXVECTOR4 NearFarPlane(r3dRenderer->NearClip, r3dRenderer->FarClip, 0, 0);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
 	D3DXVECTOR4 halfInvRes( 1.f / r3dRenderer->ViewW, 1.f / r3dRenderer->ViewH, 0.f, 0.f );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  11, (float *)&halfInvRes,  1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  12, (float *)&NearFarPlane,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  11, (float *)&halfInvRes,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  12, (float *)&NearFarPlane,  1 );
 
 
 
@@ -245,7 +245,7 @@ void DrawDepthEffect()
 	//D3DXMatrixInverse(&ShaderMat, NULL, &ShaderMat );
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_MODULATE | R3D_BLEND_NZ);
 	//dest = dest*alpha + src;

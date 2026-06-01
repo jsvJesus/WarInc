@@ -2,8 +2,27 @@
 #include	"r3d.h"
 
 #ifndef WO_SERVER
+#pragma warning(push)
+#pragma warning(disable: 4005)
+#pragma warning(disable: 4061)
+#pragma warning(disable: 4062)
+#pragma warning(disable: 4191)
+#pragma warning(disable: 4255)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 4571)
+#pragma warning(disable: 4625)
+#pragma warning(disable: 4626)
+#pragma warning(disable: 4668)
+#pragma warning(disable: 4710)
+#pragma warning(disable: 4711)
+#pragma warning(disable: 4820)
+#include <d3d11.h>
+#pragma warning(pop)
+
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
+#include "r3dDX11RenderTarget.h"
+#include "r3dDX11Texture.h"
 #endif
 
 #pragma warning(disable:4996)
@@ -77,6 +96,13 @@ int	VS_Mode = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 DWORD gMainThreadID = GetCurrentThreadId();
 
 void r3dFrameQueryRelease();
+
+#ifndef WO_SERVER
+static void r3dDX11_UnregisterSurfaceMirror(IDirect3DSurface9* surface)
+{
+	g_r3dDX11RenderTargets.UnregisterSurface(surface);
+}
+#endif
 
 void r3dGPUStats::Reset()
 {
@@ -726,6 +752,11 @@ int r3dRenderLayer::Close()
 	SAFE_DELETE(vtxArray3D);
 	SAFE_DELETE(vtxArray3D_Lines);
 	SAFE_DELETE(vtxArrayMinimalist2D_Lines)
+
+#ifndef WO_SERVER
+	r3dDX11_UnregisterSurfaceMirror(MainRT);
+	r3dDX11_UnregisterSurfaceMirror(MainDSS);
+#endif
 
 	SAFE_RELEASE( MainRT );
 	SAFE_RELEASE( MainDSS );
@@ -2662,7 +2693,62 @@ r3dRenderLayer::StretchRect( r3dScreenBuffer* Source, r3dScreenBuffer* Target, i
 	Source->AsTex2D() ;
 	Target->AsTex2D();
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && !Filter && Source->Tex && Target->Tex)
+	{
+		r3dDX11Texture* srcDX11 = Source->Tex->GetDX11Texture();
+		r3dDX11Texture* dstDX11 = Target->Tex->GetDX11Texture();
+
+		ID3D11Texture2D* srcTexture = srcDX11 ? srcDX11->GetTexture2D() : NULL;
+		ID3D11Texture2D* dstTexture = dstDX11 ? dstDX11->GetTexture2D() : NULL;
+
+		if(srcTexture && dstTexture && srcTexture != dstTexture)
+		{
+			D3D11_TEXTURE2D_DESC srcDesc;
+			D3D11_TEXTURE2D_DESC dstDesc;
+
+			srcTexture->GetDesc(&srcDesc);
+			dstTexture->GetDesc(&dstDesc);
+
+			if(
+				srcDesc.Width == dstDesc.Width &&
+				srcDesc.Height == dstDesc.Height &&
+				srcDesc.Format == dstDesc.Format &&
+				srcDesc.SampleDesc.Count == dstDesc.SampleDesc.Count &&
+				srcDesc.SampleDesc.Quality == dstDesc.SampleDesc.Quality
+				)
+			{
+				ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+				if(context)
+					context->CopyResource(dstTexture, srcTexture);
+			}
+		}
+	}
+#endif
+
 	D3D_V( pd3ddev->StretchRect( Source->GetTex2DSurface(), NULL, Target->GetTex2DSurface(), NULL, Filter ? D3DTEXF_LINEAR : D3DTEXF_NONE ) );
+}
+
+void r3dRenderLayer::Clear(DWORD count, const D3DRECT* rects, DWORD flags, D3DCOLOR color, float z, DWORD stencil)
+{
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11RenderTargets.Clear(
+			count,
+			rects,
+			flags,
+			color,
+			z,
+			stencil
+		);
+	}
+#endif
+
+	if(pd3ddev)
+	{
+		D3D_V( pd3ddev->Clear(count, rects, flags, color, z, stencil) );
+	}
 }
 
 void r3dRenderLayer :: ResetStats()
@@ -2795,7 +2881,7 @@ void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 	}
 
 	if (bClear)
-		D3D_V( pd3ddev->Clear(0, NULL, ClearFlag, clearToWhite?D3DCOLOR_ARGB(255,255,255,255):Fog.Color.GetPacked(), 1.0f, 0 ) );
+		Clear(0, NULL, ClearFlag, clearToWhite?D3DCOLOR_ARGB(255,255,255,255):Fog.Color.GetPacked(), 1.0f, 0);
 
 
 	D3D_V( d3dc._SetVertexShader(0) );
@@ -2834,7 +2920,7 @@ void r3dRenderLayer::StartRenderSimple(int bClear)
 	}
 
 	if (bClear)
-		pd3ddev->Clear(0, NULL, ClearFlag, Fog.Color.GetPacked(), 1.0f, 0 );
+		Clear(0, NULL, ClearFlag, Fog.Color.GetPacked(), 1.0f, 0);
 
 
 	ResetViewport();
@@ -2956,9 +3042,9 @@ void r3dFrameQueryCreate()
 	{
 		eventCounter = 0;
 
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[0]) );
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[1]) );
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[2]) );
+		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[0]);
+		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[1]);
+		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[2]);
 
 		pQueryEvent[1]->Issue(D3DISSUE_END);
 		pQueryEvent[2]->Issue(D3DISSUE_END);
@@ -2967,7 +3053,7 @@ void r3dFrameQueryCreate()
 	{
 		for(int i =0; i<1000; ++i)
 		{
-			D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_OCCLUSION, &g_pOcclusionQueries[i] ) );
+			r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_OCCLUSION, &g_pOcclusionQueries[i]);
 		}
 	}
 }
@@ -3074,6 +3160,11 @@ int r3dRenderLayer::TryToRestoreDevice()
 			}
 			for(int i=0; i<16; ++i)
 				SetTex(NULL, i);
+
+#ifndef WO_SERVER
+			r3dDX11_UnregisterSurfaceMirror(MainRT);
+			r3dDX11_UnregisterSurfaceMirror(MainDSS);
+#endif
 
 			SAFE_RELEASE( MainRT ) ;
 			SAFE_RELEASE( MainDSS ) ;
@@ -3189,6 +3280,9 @@ void r3dRenderLayer::UpdateSettings()
 		int mainRTRefs = 0 ;
 		if( MainRT )
 		{
+#ifndef WO_SERVER
+			r3dDX11_UnregisterSurfaceMirror(MainRT);
+#endif
 			mainRTRefs = MainRT->Release() ;
 			MainRT = NULL ;
 		}
@@ -3196,6 +3290,9 @@ void r3dRenderLayer::UpdateSettings()
 		int dssRefs = 0 ;
 		if( MainDSS )
 		{
+#ifndef WO_SERVER
+			r3dDX11_UnregisterSurfaceMirror(MainDSS);
+#endif
 			dssRefs = MainDSS->Release() ;
 			MainDSS = NULL ;
 		}
@@ -3934,6 +4031,17 @@ void r3dRenderLayer::EndRenderSimple( bool present /*= false*/ )
 		pd3ddev->Present( NULL, NULL, NULL, NULL );
 }
 
+static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)
+{
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+		g_r3dDX11State.SetRenderState((int)state, (unsigned int)value);
+#else
+	(void)state;
+	(void)value;
+#endif
+}
+
 void r3dRenderLayer::SetRenderingMode(int Mode)
 {
 	if(Mode & R3D_BLEND_POP) 
@@ -3953,74 +4061,82 @@ void r3dRenderLayer::SetRenderingMode(int Mode)
 	CurrentRenderingMode = Mode;
 	Stats.AddNumModesChanges( 1 );
 
+#define R3D_SET_RENDER_STATE(state, value) \
+	do { \
+		r3dDX11_SetRenderStateMirror((state), (DWORD)(value)); \
+		pd3ddev->SetRenderState((state), (value)); \
+	} while(0)
+
 	// Z Buffer Control
 	if(Mode & R3D_BLEND_ZC)
-		pd3ddev->SetRenderState(D3DRS_ZENABLE,	ZBuffer_Mode);
+		R3D_SET_RENDER_STATE(D3DRS_ZENABLE, ZBuffer_Mode);
 	else
-		pd3ddev->SetRenderState(D3DRS_ZENABLE,	0);
+		R3D_SET_RENDER_STATE(D3DRS_ZENABLE, 0);
 
 	if(Mode & R3D_BLEND_ZW)
-		pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, 		TRUE);
+		R3D_SET_RENDER_STATE(D3DRS_ZWRITEENABLE, TRUE);
 	else
-		pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, 		0);
+		R3D_SET_RENDER_STATE(D3DRS_ZWRITEENABLE, 0);
 
 	// Blending Mode Control
 	if(Mode & R3D_BLEND_NOALPHA) 
 	{
-		pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, 	0);
+		R3D_SET_RENDER_STATE(D3DRS_ALPHABLENDENABLE, 0);
 	} 
 	else
 	{
-		pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, 	TRUE);
+		R3D_SET_RENDER_STATE(D3DRS_ALPHABLENDENABLE, TRUE);
 
 		if( Mode & R3D_BLEND_MAX )
 		{
-			pd3ddev->SetRenderState(D3DRS_SRCBLEND,			D3DBLEND_ONE );
-			pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_ONE );
-			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_MAX );
+			R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
+			R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
+			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_MAX);
 		}
 		else
 		if( Mode & R3D_BLEND_MIN )
 		{
-			pd3ddev->SetRenderState(D3DRS_SRCBLEND,			D3DBLEND_ONE );
-			pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_ONE );
-			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_MIN );
+			R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
+			R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
+			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_MIN);
 		}
 		else
 		{
-			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_ADD );
+			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 			if(Mode & R3D_BLEND_ALPHA) 
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_SRCALPHA);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 			}
 			else if(Mode & R3D_BLEND_ADD) 
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_ONE);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
 			} 
 			else if(Mode & R3D_BLEND_SUB) 
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ZERO);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
 			} 
 			else if(Mode & R3D_BLEND_MODULATE) 
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ZERO);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_SRCCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
 			}
 			else if(Mode & R3D_BLEND_ADDMODULATE) 
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_DESTCOLOR);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_SRCCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
 			}
 			else if(Mode & R3D_BLEND_COLOR)
 			{
-				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_SRCCOLOR);
-				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_INVSRCCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
 			}
 		}
 	}
+
+#undef R3D_SET_RENDER_STATE
 }
 
 int	r3dRenderLayer::GetRenderingMode() const
@@ -4125,6 +4241,10 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 		if (CurrentTexID[StageID] == -1) return;
 		CurrentTexID[StageID] = -1;
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11State.ClearTexture(StageID);
+#endif
 		D3D_V( pd3ddev->SetTexture(StageID, NULL) );
 		Stats.AddNumTextureChanges( 1 );
 		return;
@@ -4134,6 +4254,10 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 		Stats.AddNumTextureChanges( 1 );
 		CurrentTexID[StageID] = Tex->GetID();
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11State.BindTexture(StageID, Tex);
+#endif
 		D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
 	}
 }
@@ -4527,11 +4651,31 @@ r3dRenderLayer::SetFrustumType( r3dFrustumType type )
 
 void r3dRenderLayer::AquireMainRT()
 {
+#ifndef WO_SERVER
+	r3dDX11_UnregisterSurfaceMirror(MainRT);
+#endif
+
 	SAFE_RELEASE( MainRT );
 	D3D_V( pd3ddev->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, &MainRT ) );
 
 	D3DSURFACE_DESC sdesc ;
 	D3D_V( MainRT->GetDesc( &sdesc) );
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11RenderTargets.RegisterRenderTarget(
+			MainRT,
+			g_r3dDX11.GetBackBufferRTV(),
+			(unsigned int)g_r3dDX11.GetWidth(),
+			(unsigned int)g_r3dDX11.GetHeight()
+		);
+	}
+#endif
+
+#ifndef WO_SERVER
+	r3dDX11_UnregisterSurfaceMirror(MainDSS);
+#endif
 
 	SAFE_RELEASE( MainDSS );
 
@@ -4557,6 +4701,18 @@ void r3dRenderLayer::AquireMainRT()
 	void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName);
 	SetD3DResourcePrivateData(MainDSS, "Main DSS");
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11RenderTargets.RegisterDepthStencil(
+			MainDSS,
+			g_r3dDX11.GetDepthStencilView(),
+			(unsigned int)g_r3dDX11.GetWidth(),
+			(unsigned int)g_r3dDX11.GetHeight()
+		);
+	}
+#endif
+
 	DSS = NULL ;
 	SetDSS( MainDSS );
 
@@ -4568,6 +4724,11 @@ void r3dRenderLayer::AquireMainRT()
 void r3dRenderLayer::SetVertexDecl( IDirect3DVertexDeclaration9* decl ) const
 {
 	d3dc._SetDecl( decl ) ;
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+		r3dDX11_ApplyCurrentVertexShaderInputLayout(decl);
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -5234,6 +5395,20 @@ static void DoCreateRenderTarget( void* params )
 	D3D_V( r3dRenderer->pd3ddev->CreateRenderTarget( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Lockable, &surf, 0 ) );
 
 	pms->SurfaceTunnel->Set( surf ) ;
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11RenderTargets.CreateRenderTargetMirror(
+			pms->SurfaceTunnel,
+			pms->Width,
+			pms->Height,
+			pms->Format,
+			pms->MultiSample,
+			pms->MultisampleQuality
+		);
+	}
+#endif
 };
 
 void r3dDeviceTunnel::CreateRenderTarget( UINT Width,UINT Height,D3DFORMAT Format,D3DMULTISAMPLE_TYPE MultiSample,DWORD MultisampleQuality,BOOL Lockable,r3dD3DSurfaceTunnel* SurfaceTunnel )
@@ -5273,6 +5448,20 @@ static void DoCreateDepthStencil( void * params )
 	D3D_V( r3dRenderer->pd3ddev->CreateDepthStencilSurface( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Discard, &surf, 0 ) ) ;
 
 	pms->SurfaceTunnel->Set( surf );
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11RenderTargets.CreateDepthStencilMirror(
+			pms->SurfaceTunnel,
+			pms->Width,
+			pms->Height,
+			pms->Format,
+			pms->MultiSample,
+			pms->MultisampleQuality
+		);
+	}
+#endif
 }
 
 void
@@ -5288,7 +5477,38 @@ r3dDeviceTunnel::CreateDepthStencilSurface( UINT Width,UINT Height,D3DFORMAT For
 	params.Discard				= Discard ;
 	params.SurfaceTunnel		= SurfaceTunnel ;
 
-	ProcessCustomDeviceQueueItem( DoCreateDepthStencil, &params ) ;
+ProcessCustomDeviceQueueItem( DoCreateDepthStencil, &params ) ;
+}
+
+//------------------------------------------------------------------------
+
+struct CreateQueryParams
+{
+	D3DQUERYTYPE Type;
+	IDirect3DQuery9** ppQuery;
+};
+
+static void DoCreateQuery(void* params)
+{
+	CreateQueryParams* pms = (CreateQueryParams*) params;
+
+	if(pms->ppQuery)
+		*pms->ppQuery = NULL;
+
+	if(r3dRenderer && r3dRenderer->pd3ddev)
+	{
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery(pms->Type, pms->ppQuery) );
+	}
+}
+
+void r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE Type, IDirect3DQuery9** ppQuery)
+{
+	CreateQueryParams params;
+
+	params.Type = Type;
+	params.ppQuery = ppQuery;
+
+	ProcessCustomDeviceQueueItem( DoCreateQuery, &params );
 }
 
 //------------------------------------------------------------------------
@@ -5762,6 +5982,11 @@ r3dD3DSurfaceTunnel::Set( IDirect3DSurface9* resource )
 {
 	R3D_ENSURE_MAIN_THREAD();
 
+#ifndef WO_SERVER
+	if( mRes != resource )
+		ReleaseDX11Mirror();
+#endif
+
 	if( resource )
 	{
 		D3DSURFACE_DESC desc ;
@@ -5786,8 +6011,13 @@ r3dD3DSurfaceTunnel::ReleaseAndReset()
 
 	if( mRes )
 	{
+#ifndef WO_SERVER
+		ReleaseDX11Mirror();
+#endif
+
 		refCount = mRes->Release() ;
-		Set( 0 ) ;
+		Parent::Set( 0 ) ;
+		mFormat = D3DFMT_UNKNOWN ;
 	}
 
 	return refCount ;

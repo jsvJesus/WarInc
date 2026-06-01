@@ -1309,7 +1309,7 @@ r3dTerrain2::DrawDebug()
 		r3dRenderer->SetPixelShader( g_FwdColorPS ) ;
 
 		float psColor[ 4 ] = { 0, 1, 0, 1 } ;
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psColor, 1 ) ) ;
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psColor, 1 ) ) ;
 
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH ) ;
 
@@ -3616,7 +3616,7 @@ r3dTerrain2::DrawOrthographicTerrain( const r3dCamera& Cam, bool UseZ ) /*OVERRI
 	else
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 ) );
+	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 );
 
 	// need white alpha or else our d3dxsave/d3dxload bezzle produces enterily black dxt1...
 	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
@@ -6773,7 +6773,7 @@ r3dTerrain2::SetTileUpdateVSConsts( const AllocatedTile* tile, int passN, const 
 		setUnusedConst( vsConsts + 3 + c ) ;
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[0].x, vsConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[0].x, vsConsts.COUNT ) ) ;
 #endif
 }
 
@@ -6797,7 +6797,7 @@ r3dTerrain2::SetTileUpdatePSConsts( const AllocatedTile* tile, int startLayer, c
 		}
 
 		// float3 gSplatControls[3]    : register( c0 );
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, layerCount ) ;
+		r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, layerCount ) ;
 	}
 #endif
 }
@@ -7188,7 +7188,7 @@ r3dTerrain2::RenderTileMipChain( const AllocatedTile* tile )
 		vconst->z += mipMult / atlasDiffuse->Width ;
 		vconst->w += mipMult / atlasDiffuse->Height ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
 
 		r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 		r3dRenderer->Stats.AddNumTerrainTris( 2 );
@@ -7221,7 +7221,7 @@ r3dTerrain2::RenderTileMipChain( const AllocatedTile* tile )
 			vconst->z = vconst->x ;
 			vconst->w = dims.Height / atlasDiffuse->Height + vconst->y ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
 
 			r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 			r3dRenderer->Stats.AddNumTerrainTris( 2 );
@@ -7308,7 +7308,7 @@ r3dTerrain2::StartTileRendering()
 		extern r3dSun* Sun ;
 		psConsts[ 1 ] = float4( Sun->SunDir.x, Sun->SunDir.y, Sun->SunDir.z, 0.0f ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
 	}
 
 	// Vertex Shader
@@ -7423,7 +7423,7 @@ r3dTerrain2::SetTileRenderVSConsts( const AllocatedTile* tile )
 		SetAtlasTileTexcTransform( tile, cnst ) ;
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[ 0 ].x, vsConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[ 0 ].x, vsConsts.COUNT ) ) ;
 #endif
 }
 

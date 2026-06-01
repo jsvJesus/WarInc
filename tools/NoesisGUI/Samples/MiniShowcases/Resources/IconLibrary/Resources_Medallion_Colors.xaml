@@ -1,0 +1,6 @@
+<ResourceDictionary
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="Resource_Medallion_Color_0">#FF99804D</Color>
+  <Color x:Key="Resource_Medallion_Color_1">#FF0A0A1A</Color>
+</ResourceDictionary>

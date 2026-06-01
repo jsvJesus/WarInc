@@ -1,0 +1,13 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot" d:DesignWidth="1920" d:DesignHeight="1080">
+  <Grid>
+    <Grid.Background>
+      <ImageBrush ImageSource="/Root;component/Assets/Bitmaps_Generic_BackgroundsForegrounds/Bitmaps_Generic_BackgroundsForegrounds_Background_Base.png" Stretch="UniformToFill"/>
+    </Grid.Background>
+  </Grid>
+</Component>

@@ -1,0 +1,910 @@
+<Page
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080" xmlns:system="clr-namespace:System;assembly=mscorlib" xmlns:noesis="clr-namespace:NoesisGUIExtensions" xmlns:b="http://schemas.microsoft.com/xaml/behaviors" xmlns:editor="clr-namespace:Editor" d:DataContext="AlembicDataSet">
+  <Page.Resources>
+    <Style x:Key="Style.ScrollBar.PageButton" TargetType="RepeatButton">
+      <Setter Value="False" Property="IsTabStop"/>
+      <Setter Value="False" Property="Focusable"/>
+      <Setter Value="Press" Property="ClickMode"/>
+      <Setter Value="250" Property="Delay"/>
+      <Setter Value="100" Property="Interval"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RepeatButton">
+            <Border Background="#00FFFFFF"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="Style.ScrollBar.Thumb" TargetType="Thumb">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Thumb">
+            <Border x:Name="Thumb" CornerRadius="20,20,20,20">
+              <Border.Background>
+                <SolidColorBrush Color="{DynamicResource FlaxYellow}"/>
+              </Border.Background>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Value="True" Property="IsMouseOver">
+                <Setter TargetName="Thumb" Property="Background">
+                  <Setter.Value>
+                    <SolidColorBrush Color="{DynamicResource CrayolaBrown}"/>
+                  </Setter.Value>
+                </Setter>
+              </Trigger>
+              <Trigger Value="True" Property="IsDragging">
+                <Setter TargetName="Thumb" Property="Background">
+                  <Setter.Value>
+                    <SolidColorBrush Color="{DynamicResource CrayolaBrown}"/>
+                  </Setter.Value>
+                </Setter>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <ControlTemplate x:Key="Template.ScrollBar.Vertical" TargetType="ScrollBar">
+      <Track x:Name="PART_Track">
+        <Track.IncreaseRepeatButton>
+          <RepeatButton Command="ScrollBar.PageRightCommand" Style="{StaticResource Style.ScrollBar.PageButton}"/>
+        </Track.IncreaseRepeatButton>
+        <Track.DecreaseRepeatButton>
+          <RepeatButton Command="ScrollBar.PageLeftCommand" Style="{StaticResource Style.ScrollBar.PageButton}"/>
+        </Track.DecreaseRepeatButton>
+        <Track.Thumb>
+          <Thumb x:Name="Thumb" Height="6" Width="NaN" Style="{StaticResource Style.ScrollBar.Thumb}"/>
+        </Track.Thumb>
+      </Track>
+      <ControlTemplate.Triggers>
+        <Trigger Value="Vertical" Property="Orientation">
+          <Setter TargetName="PART_Track" Value="True" Property="IsDirectionReversed"/>
+          <Setter TargetName="Thumb" Value="6" Property="Width"/>
+          <Setter TargetName="Thumb" Value="NaN" Property="Height"/>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate>
+    <ControlTemplate x:Key="Template.ScrollViewer" TargetType="ScrollViewer">
+      <Border BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <ScrollContentPresenter ScrollViewer.CanContentScroll="{TemplateBinding CanContentScroll}" Margin="0" CanHorizontallyScroll="False" CanVerticallyScroll="False" HorizontalAlignment="Center" Width="736" VerticalAlignment="Center" Height="423"/>
+          <ScrollBar x:Name="PART_VerticalScrollBar" Orientation="Vertical" ViewportSize="{TemplateBinding ViewportHeight}" Maximum="{TemplateBinding ScrollableHeight}" Value="{Binding Path=VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" Margin="0" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Center" Width="17" VerticalAlignment="Center" Height="419" Template="{DynamicResource Template.ScrollBar.Vertical}"/>
+        </Grid>
+      </Border>
+    </ControlTemplate>
+    <ControlTemplate x:Key="Template.ListBox" TargetType="ListBox">
+      <ScrollViewer BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" BorderBrush="{TemplateBinding BorderBrush}" Focusable="False" Template="{DynamicResource Template.ScrollViewer}">
+        <ItemsPresenter/>
+      </ScrollViewer>
+    </ControlTemplate>
+    <ItemsPanelTemplate x:Key="Template.ListBox.ItemsPanel">
+      <VirtualizingStackPanel Margin="0,5,0,0" Height="414">
+        <VirtualizingStackPanel.Background>
+          <ImageBrush ImageSource="Assets/GridBackground.png" TileMode="Tile" Viewport="0,0,1,0.143" Opacity="0.363"/>
+        </VirtualizingStackPanel.Background>
+      </VirtualizingStackPanel>
+    </ItemsPanelTemplate>
+    <ControlTemplate x:Key="Template.ListBoxItem.Reset" TargetType="ListBoxItem">
+      <ContentPresenter/>
+    </ControlTemplate>
+    <Style x:Key="Style.ListBoxItem.Filtered" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+      <Setter Property="noesis:StyleInteraction.Triggers">
+        <Setter.Value>
+          <noesis:StyleTriggerCollection>
+            <b:DataTrigger Value="{Binding Path=Tag, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}" Binding="{Binding Path=Type}" Comparison="NotEqual">
+              <b:ChangePropertyAction PropertyName="Visibility" Value="Collapsed"/>
+            </b:DataTrigger>
+          </noesis:StyleTriggerCollection>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="Template" Value="{DynamicResource Template.ListBoxItem.Reset}"/>
+      <Setter Property="Height" Value="60"/>
+    </Style>
+    <Style x:Key="Style.ListBoxItem.All" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+      <Setter Property="Template" Value="{DynamicResource Template.ListBoxItem.Reset}"/>
+      <Setter Property="Height" Value="60"/>
+    </Style>
+    <ControlTemplate x:Key="Template.TabControl" TargetType="TabControl">
+      <DockPanel>
+        <TabPanel Background="#00FFFFFF" IsItemsHost="True" Panel.ZIndex="1" DockPanel.Dock="Top" KeyboardNavigation.TabIndex="1" Height="92" HorizontalAlignment="Center"/>
+        <Border>
+          <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+        </Border>
+      </DockPanel>
+    </ControlTemplate>
+    <ControlTemplate x:Key="Template.TabItem" TargetType="TabItem">
+      <Grid x:Name="Grid0" Width="185" Height="40">
+        <b:Interaction.Triggers>
+          <b:EventTrigger EventName="MouseDown">
+            <b:PlaySoundAction Source="Assets/MetalClick.mp3"/>
+          </b:EventTrigger>
+        </b:Interaction.Triggers>
+        <Border x:Name="BorderUnselected" BorderThickness="1,0,0.5,0" VerticalAlignment="Center" Height="40" Margin="0,0,-0.5,0">
+          <Border.BorderBrush>
+            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+              <GradientStop Offset="0" Color="#00B2B0AF"/>
+              <GradientStop Offset="1" Color="#00B2B0AF"/>
+              <GradientStop Color="{DynamicResource Color.005}" Offset="0.16412546"/>
+              <GradientStop Color="{DynamicResource Color.005}" Offset="0.82421494"/>
+            </LinearGradientBrush>
+          </Border.BorderBrush>
+        </Border>
+        <Grid x:Name="GridSelect" Visibility="Hidden">
+          <Border Width="19" HorizontalAlignment="Left" Opacity="0.494">
+            <Border.Background>
+              <RadialGradientBrush GradientOrigin="0,0.5" Center="0,0.5" RadiusX="1">
+                <RadialGradientBrush.RelativeTransform>
+                  <TransformGroup>
+                    <ScaleTransform CenterY="0.5" CenterX="0"/>
+                    <SkewTransform CenterY="0.5" CenterX="0"/>
+                    <RotateTransform CenterY="0.5"/>
+                    <TranslateTransform/>
+                  </TransformGroup>
+                </RadialGradientBrush.RelativeTransform>
+                <GradientStop Offset="0" Color="#FFFFFFFF"/>
+                <GradientStop Offset="1" Color="#002B2B2B"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <Border Width="19" HorizontalAlignment="Right" Opacity="0.494">
+            <Border.Background>
+              <RadialGradientBrush RadiusX="1" GradientOrigin="1,0.5" Center="1,0.5">
+                <RadialGradientBrush.RelativeTransform>
+                  <TransformGroup>
+                    <ScaleTransform CenterY="0.5" CenterX="0"/>
+                    <SkewTransform CenterY="0.5" CenterX="0"/>
+                    <RotateTransform CenterY="0.5" CenterX="1"/>
+                    <TranslateTransform/>
+                  </TransformGroup>
+                </RadialGradientBrush.RelativeTransform>
+                <GradientStop Offset="0" Color="#FFFFFFFF"/>
+                <GradientStop Color="#002B2B2B" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <Border x:Name="BorderSelected" BorderThickness="1,1,1,1">
+            <Border.Background>
+              <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                <GradientStop Offset="0.39636287" Color="#9B2B2B2B"/>
+                <GradientStop Offset="0.5852212" Color="#9B2B2B2B"/>
+                <GradientStop Color="#00343434" Offset="1"/>
+                <GradientStop Color="#00343434" Offset="0.013452368"/>
+              </LinearGradientBrush>
+            </Border.Background>
+            <Border.Effect>
+              <BlurEffect Radius="1"/>
+            </Border.Effect>
+          </Border>
+        </Grid>
+        <ContentPresenter x:Name="ContentPresenter0" ContentSource="Header" Opacity="0.756" VerticalAlignment="Center"/>
+      </Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Value="True" Property="IsSelected">
+          <Setter Value="2" Property="Panel.ZIndex"/>
+          <Setter TargetName="GridSelect" Property="Visibility" Value="Visible"/>
+          <Setter TargetName="ContentPresenter0" Property="Opacity" Value="1"/>
+          <Setter TargetName="BorderUnselected" Property="Opacity" Value="0.578"/>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate>
+    <DataTemplate x:Key="DataTemplate.TabItem.Header">
+      <Grid>
+        <TextBlock x:Name="TextBlock0" Text="{Binding}" FontFamily="Assets/Fonts/#Aquifer" FontSize="24" TextAlignment="Center">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="#FFFFFFFF"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="DataTemplate.CraftItem">
+      <Grid x:Name="RootGrid" Height="60">
+        <b:Interaction.Triggers>
+          <b:DataTrigger Value="True" Binding="{Binding Path=Enabled}">
+            <b:GoToStateAction StateName="Enabled"/>
+          </b:DataTrigger>
+          <b:DataTrigger Value="False" Binding="{Binding Path=Enabled}">
+            <b:GoToStateAction StateName="Disabled"/>
+          </b:DataTrigger>
+          <b:EventTrigger EventName="MouseEnter">
+            <b:GoToStateAction StateName="MouseOver"/>
+            <b:ChangePropertyAction Value="True" PropertyName="IsSelected" TargetObject="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}"/>
+          </b:EventTrigger>
+          <b:EventTrigger EventName="MouseLeave">
+            <b:GoToStateAction StateName="Normal"/>
+          </b:EventTrigger>
+          <b:EventTrigger>
+            <b:GoToStateAction StateName="Nocraft"/>
+          </b:EventTrigger>
+          <b:EventTrigger EventName="MouseDown">
+            <b:Interaction.Behaviors>
+              <b:ConditionBehavior>
+                <b:ConditionalExpression ForwardChaining="And">
+                  <b:ComparisonCondition RightOperand="True" LeftOperand="{Binding Path=Enabled}"/>
+                 </b:ConditionalExpression>
+              </b:ConditionBehavior>
+            </b:Interaction.Behaviors>
+            <b:GoToStateAction StateName="Craft"/>
+            <b:PlaySoundAction Source="Assets/MetalClick.mp3"/>
+          </b:EventTrigger>
+          <b:TimerTrigger EventName="MouseDown" TotalTicks="1">
+            <b:Interaction.Behaviors>
+              <b:ConditionBehavior>
+                <b:ConditionalExpression ForwardChaining="And">
+                  <b:ComparisonCondition RightOperand="True" LeftOperand="{Binding Path=Enabled}"/>
+               </b:ConditionalExpression>
+              </b:ConditionBehavior>
+            </b:Interaction.Behaviors>
+            <b:GoToStateAction StateName="Nocraft"/>
+            <b:ControlStoryboardAction Storyboard="{DynamicResource Anim.Toast}"/>
+          </b:TimerTrigger>
+        </b:Interaction.Triggers>
+        <Grid.RenderTransform>
+          <TransformGroup>
+            <ScaleTransform/>
+            <SkewTransform/>
+            <RotateTransform/>
+            <TranslateTransform/>
+          </TransformGroup>
+        </Grid.RenderTransform>
+        <VisualStateManager.VisualStateGroups>
+          <VisualStateGroup x:Name="CommonStates">
+            <VisualStateGroup.Transitions>
+              <VisualTransition GeneratedDuration="00:00:00.2000000"/>
+            </VisualStateGroup.Transitions>
+            <VisualState x:Name="Normal">
+              <Storyboard/>
+            </VisualState>
+            <VisualState x:Name="MouseOver">
+              <Storyboard>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SelectBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemName" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemQty" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemNameExt" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TransformGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TransformGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-7"/>
+                </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+          </VisualStateGroup>
+          <VisualStateGroup x:Name="EnabledStates">
+            <VisualState x:Name="Enabled">
+              <Storyboard>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="DisabledBorder" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Hidden}"/>
+                </ObjectAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="ItemName" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.005}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="ItemNameExt" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.005}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="ItemQty" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.006}"/>
+                </ColorAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemName" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemNameExt" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ItemQty" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.8"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="MQty1" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.006}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="MQty2" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.006}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="MQty3" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Color.006}"/>
+                </ColorAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+            <VisualState x:Name="Disabled">
+              <Storyboard>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="DisabledBorder" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Visible}"/>
+                </ObjectAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Icon" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <LinearDoubleKeyFrame KeyTime="00:00:00" Value="0.607"/>
+                </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+          </VisualStateGroup>
+          <VisualStateGroup x:Name="CraftStates">
+            <VisualStateGroup.Transitions>
+              <VisualTransition GeneratedDuration="00:00:00"/>
+            </VisualStateGroup.Transitions>
+            <VisualState x:Name="Nocraft">
+              <Storyboard>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="FinalRectangle" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Hidden}"/>
+                </ObjectAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="FinalRectangle" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ProgressRectangle" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Hidden}"/>
+                </ObjectAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+            <VisualState x:Name="Craft">
+              <Storyboard>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="FinalRectangle" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Visible}"/>
+                </ObjectAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="FinalRectangle" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                  <SplineDoubleKeyFrame Value="1" KeyTime="00:00:00.8000000" KeySpline="0.7,0,0.6,1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="SelectBorder" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ProgressRectangle" Storyboard.TargetProperty="(UIElement.Visibility)">
+                  <DiscreteObjectKeyFrame KeyTime="00:00:00" Value="{x:Static Visibility.Visible}"/>
+                </ObjectAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressRectangle" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.7500000" Value="0"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.8000000" Value="0.313"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.8500000" Value="0.275"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.9500000" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressRectangle" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.7500000" Value="0.9"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.9500000" Value="1.1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                      <QuarticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                  </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ProgressRectangle" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.7500000" Value="0.9"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.9500000" Value="1.1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                      <QuarticEase EasingMode="EaseOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                  </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+          </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <Border x:Name="DisabledBorder" IsEnabled="{Binding Path=Enabled}" Margin="10,0,0,0" Background="#542C2C2C" Opacity="0.309"/>
+        <Grid x:Name="TransformGrid" Margin="5,0,0,0" >
+          <Grid.RenderTransform>
+            <TransformGroup>
+              <ScaleTransform/>
+              <SkewTransform/>
+              <RotateTransform/>
+              <TranslateTransform X="7"/>
+            </TransformGroup>
+          </Grid.RenderTransform>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="75*"/>
+            <ColumnDefinition Width="347*"/>
+            <ColumnDefinition Width="330*"/>
+          </Grid.ColumnDefinitions>
+          <Border x:Name="SelectBorder" Grid.ColumnSpan="3" BorderThickness="0,1,0,1" Opacity="0">
+            <Border.BorderBrush>
+              <LinearGradientBrush EndPoint="1,0">
+                <GradientStop Offset="1" Color="#008A8A8A"/>
+                <GradientStop Color="#008A8A8A"/>
+                <GradientStop Color="{DynamicResource Color.006}" Offset="0.92200005"/>
+                <GradientStop Color="#F99A9393" Offset="0.537"/>
+                <GradientStop Color="{DynamicResource Color.006}" Offset="0.075"/>
+                <GradientStop Color="{DynamicResource Color.006}" Offset="0.33990997"/>
+                <GradientStop Color="{DynamicResource Color.006}" Offset="0.7094168"/>
+              </LinearGradientBrush>
+            </Border.BorderBrush>
+            <Border.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Border.RenderTransform>
+            <MediaElement Source="Assets/Smoke.mp4" SpeedRatio="1" Position="00:00:00" Stretch="UniformToFill" StretchDirection="DownOnly" VerticalAlignment="Center" BlendingMode="Screen">
+              <MediaElement.OpacityMask>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                  <GradientStop Color="#44000000" Offset="0.42100003"/>
+                  <GradientStop Color="#FF000000" Offset="0.157"/>
+                  <GradientStop Color="#FF000000" Offset="0.85200006"/>
+                  <GradientStop Color="#44000000" Offset="0.57600003"/>
+                </LinearGradientBrush>
+              </MediaElement.OpacityMask>
+            </MediaElement>
+          </Border>
+          <Border x:Name="Icon" Height="45" HorizontalAlignment="Right" Width="45" Margin="0,0,8,0">
+            <Border.Background>
+              <ImageBrush ImageSource="{Binding Path=Icon}" Stretch="Uniform"/>
+            </Border.Background>
+          </Border>
+          <StackPanel x:Name="ItemNameStack" Orientation="Horizontal" HorizontalAlignment="Left" Grid.Column="1">
+            <TextBlock x:Name="ItemName" Text="{Binding Path=Name}" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="26" FontFamily="Assets/Fonts/#Essays1743" Opacity="0.8">
+              <TextBlock.Foreground>
+                <SolidColorBrush Color="{DynamicResource Color.002}"/>
+              </TextBlock.Foreground>
+            </TextBlock>
+            <TextBlock x:Name="ItemNameExt" Text="{Binding Path=Extension}" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Column="1" HorizontalAlignment="Left" FontSize="26" FontFamily="Assets/Fonts/#Essays1743" Margin="5,0,0,10" Opacity="0.8" FontStyle="Italic">
+              <TextBlock.Foreground>
+                <SolidColorBrush Color="{DynamicResource Color.002}"/>
+              </TextBlock.Foreground>
+            </TextBlock>
+          </StackPanel>
+          <StackPanel x:Name="Materials" Grid.Column="2" Orientation="Horizontal" Margin="7,0,0,0">
+            <StackPanel x:Name="Materials1" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
+              <Border Width="38" Height="35" Grid.Column="2">
+                <Border.Background>
+                  <ImageBrush ImageSource="{Binding Path=Ingredient1.IngredientIcon}" Stretch="Uniform"/>
+                </Border.Background>
+              </Border>
+              <TextBlock x:Name="MQty1" Text="{Binding Path=Ingredient1.IngredientQty, StringFormat=F0}" TextWrapping="Wrap" Grid.Column="2" VerticalAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" FontSize="25" TextAlignment="Center" Style="{DynamicResource}" FontWeight="DemiBold" Margin="6,0,0,0" HorizontalAlignment="Center">
+                <TextBlock.Foreground>
+                  <SolidColorBrush Color="{DynamicResource OldRed}"/>
+                </TextBlock.Foreground>
+              </TextBlock>
+            </StackPanel>
+            <Grid Margin="20,0,11,0">
+              <Path Data="M0,0 0,8.10256M-4.0001,4.00005 3.99975,4.00005" StrokeThickness="1.2" Stretch="Fill" Margin="0,6.1,0.822,0" Height="9.099993" HorizontalAlignment="Center" VerticalAlignment="Center" Width="8.999847" Stroke="{DynamicResource CrossGradient}" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            </Grid>
+            <StackPanel x:Name="Materials2" Orientation="Horizontal" HorizontalAlignment="Left">
+              <Border Width="38" Height="35" Grid.Column="2">
+                <Border.Background>
+                  <ImageBrush ImageSource="{Binding Path=Ingredient2.IngredientIcon}" Stretch="Uniform"/>
+                </Border.Background>
+              </Border>
+              <TextBlock x:Name="MQty2" Text="{Binding Path=Ingredient2.IngredientQty}" TextWrapping="Wrap" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" FontFamily="Assets/Fonts/#Essays1743" FontSize="25" FontWeight="DemiBold">
+                <TextBlock.Foreground>
+                  <SolidColorBrush Color="{DynamicResource OldRed}"/>
+                </TextBlock.Foreground>
+              </TextBlock>
+            </StackPanel>
+            <StackPanel x:Name="Materials3" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="20,0,0,0">
+              <b:Interaction.Triggers>
+                <b:DataTrigger Value="None" Binding="{Binding Path=Ingredient3.IngredientName}">
+                  <b:ChangePropertyAction Value="Hidden" PropertyName="Visibility" TargetName="Materials3"/>
+                </b:DataTrigger>
+              </b:Interaction.Triggers>
+              <Grid x:Name="Cross001" Margin="0,0,11,0">
+                <Path Data="M0,0 -0.0889587,7.99999M-4.0001,4.00005 3.99975,4.00005" StrokeThickness="1.2" Stretch="Fill" Margin="0,6,0.822,0" Height="8.999987" HorizontalAlignment="Center" VerticalAlignment="Center" Width="8.999847" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stroke="{DynamicResource CrossGradient}"/>
+              </Grid>
+              <Border Width="38" Height="38" Grid.Column="2">
+                <Border.Background>
+                  <ImageBrush ImageSource="{Binding Path=Ingredient3.IngredientIcon}" Stretch="Uniform"/>
+                </Border.Background>
+              </Border>
+              <TextBlock x:Name="MQty3" Text="{Binding Path=Ingredient3.IngredientQty}" TextWrapping="Wrap" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" FontFamily="Assets/Fonts/#Essays1743" FontSize="25" FontWeight="DemiBold">
+                <TextBlock.Foreground>
+                  <SolidColorBrush Color="{DynamicResource OldRed}"/>
+                </TextBlock.Foreground>
+              </TextBlock>
+            </StackPanel>
+          </StackPanel>
+          <TextBlock x:Name="ItemQty" Text="{Binding Path=Qty, StringFormat=F0}" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top" FontFamily="Assets/Fonts/#Essays1743" FontSize="18" TextAlignment="Right" Opacity="0.801" FontStyle="Italic" Margin="3,-10,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Color.002}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+          <Rectangle x:Name="ProgressRectangle" Grid.ColumnSpan="3" BlendingMode="Additive" Opacity="0.406" StrokeThickness="0" Fill="#FFFFFFFF" RenderTransformOrigin="0.5,0.5">
+            <Rectangle.Effect>
+              <BlurEffect Radius="3"/>
+            </Rectangle.Effect>
+            <Rectangle.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform ScaleX="1"/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Rectangle.RenderTransform>
+          </Rectangle>
+          <Rectangle x:Name="FinalRectangle" Grid.ColumnSpan="3" BlendingMode="Additive" StrokeThickness="0" Fill="#FFFFFFFF" RenderTransformOrigin="0.0,0.5" Visibility="Collapsed" Opacity="0.774">
+            <Rectangle.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Rectangle.RenderTransform>
+          </Rectangle>
+        </Grid>
+      </Grid>
+    </DataTemplate>
+    <Style x:Key="Style.Component.Ingredient" TargetType="{x:Type Component}">
+      <Setter Property="Margin" Value="11,0,0,0"/>
+    </Style>
+    <Storyboard x:Key="Anim.Toast">
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ToastGrid" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="1"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.2000000" Value="1"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.5000000" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ToastGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="58"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <CubicEase EasingMode="EaseOut"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+  </Page.Resources>
+  <Page.Background>
+    <ImageBrush ImageSource="Assets/Images/Background.png"/>
+  </Page.Background>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="220*"/>
+      <RowDefinition Height="92*"/>
+      <RowDefinition Height="423*"/>
+      <RowDefinition Height="107*"/>
+      <RowDefinition Height="103*"/>
+      <RowDefinition Height="135*"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="278*"/>
+      <ColumnDefinition Width="757*"/>
+      <ColumnDefinition Width="885*"/>
+    </Grid.ColumnDefinitions>
+    <Border Margin="132,50,0,0" Height="342" HorizontalAlignment="Left" VerticalAlignment="Top" Width="567" Grid.Row="1" Grid.RowSpan="2" Grid.Column="2">
+      <Border.Background>
+        <ImageBrush ImageSource="{Binding Path=Selection.Icon}" Stretch="Uniform"/>
+      </Border.Background>
+    </Border>
+    <Grid x:Name="DescriptionGrid" Grid.Row="2" Grid.Column="2" Grid.RowSpan="3">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="337*"/>
+        <RowDefinition Height="62*"/>
+        <RowDefinition Height="234*"/>
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="131*"/>
+        <ColumnDefinition Width="591*"/>
+        <ColumnDefinition Width="163*"/>
+      </Grid.ColumnDefinitions>
+      <TextBlock x:Name="ItemName" Text="{Binding Path=Selection.Name}" TextWrapping="Wrap" Grid.Column="1" Grid.Row="1" FontFamily="Assets/Fonts/#Aquifer" FontSize="32" Foreground="{DynamicResource LinearGradientBrush.002}" TextAlignment="Right" HorizontalAlignment="Right"/>
+      <TextBlock x:Name="ItemName001" FontFamily="Assets/Fonts/#Essays1743" Text="{Binding Path=Selection.Description}" FontSize="26" TextWrapping="Wrap" Grid.Column="1" Grid.Row="2" Foreground="{DynamicResource LinearGradientBrush.002}" TextAlignment="Right"/>
+      <Border Grid.ColumnSpan="3" Grid.Row="1" VerticalAlignment="Bottom" Height="15">
+        <Border.Background>
+          <LinearGradientBrush EndPoint="1.0062,0.5">
+            <GradientStop Color="{DynamicResource FlaxYellow}" Offset="0.15087423"/>
+            <GradientStop Color="#00E7D390" Offset="0.86200005"/>
+            <GradientStop Color="{DynamicResource FlaxYellow}" Offset="0.7537687"/>
+            <GradientStop Color="#00E7D390" Offset="0.11999713"/>
+          </LinearGradientBrush>
+        </Border.Background>
+        <Border.OpacityMask>
+          <ImageBrush ImageSource="Assets/Images/Line.png"/>
+        </Border.OpacityMask>
+      </Border>
+    </Grid>
+    <StackPanel Grid.Column="1" Grid.Row="4" Orientation="Horizontal">
+      <Component x:Name="Iron" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/1_Iron.png"/>
+      <Component x:Name="Silver" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/2_Silver.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="4" Margin="11,0,0,0"/>
+      <Component x:Name="Gold" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/3_Gold.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="3"/>
+      <Component x:Name="SalPetrae" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/4_SalPetrae.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="1"/>
+      <Component x:Name="Coral" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/5_Coral.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="1"/>
+      <Component x:Name="Moss" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/6_Moss.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="10"/>
+      <Component x:Name="PoisonIvy" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/7_PoisonIvy.png" Style="{DynamicResource Style.Component.Ingredient}"/>
+      <Component x:Name="AquaFortis" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/8_AquaFortis.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="3"/>
+      <Component x:Name="GumArabic" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/9_GumArabic.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="1"/>
+      <Component x:Name="BlueVitriol" Source="IngredientComponent.xaml" IngredientIcon_Img="Assets/IngredientImages/10_BlueVitriol.png" Style="{DynamicResource Style.Component.Ingredient}" IngredientQty_Int="1"/>
+    </StackPanel>
+    <Grid x:Name="TabControlSubheaders" Grid.Column="1" Grid.Row="1">
+      <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="10,0,0,15" Opacity="0.743">
+        <TextBlock Text="ITEMS" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Aquifer" FontSize="19" TextAlignment="Center">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.004}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+        <TextBlock Text="REQUIRED" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Aquifer" FontSize="19" TextAlignment="Center" Margin="367,0,0,0">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.004}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+      </StackPanel>
+      <Border Height="15" VerticalAlignment="Bottom" Margin="0,0,0,-4">
+        <Border.Background>
+          <SolidColorBrush Color="{DynamicResource FlaxYellow}"/>
+        </Border.Background>
+        <Border.OpacityMask>
+          <ImageBrush ImageSource="Assets/Images/Line.png" Viewbox="0.0343912,0,0.965609,1"/>
+        </Border.OpacityMask>
+      </Border>
+    </Grid>
+    <Grid x:Name="ToastGrid" Grid.Column="2" Grid.RowSpan="2" Margin="0,199,0,0" Height="47" HorizontalAlignment="Right" VerticalAlignment="Top" Width="484.92603" Opacity="0">
+      <Grid.RenderTransform>
+        <TransformGroup>
+          <ScaleTransform/>
+          <SkewTransform/>
+          <RotateTransform/>
+          <TranslateTransform X="59"/>
+        </TransformGroup>
+      </Grid.RenderTransform>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="411*"/>
+        <ColumnDefinition Width="74*"/>
+      </Grid.ColumnDefinitions>
+      <Border Width="484.92603" Margin="0" Height="33" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border.Background>
+          <LinearGradientBrush EndPoint="0.655426,1" StartPoint="0,1">
+            <GradientStop Color="#00000000" Offset="0"/>
+            <GradientStop Color="#78000000" Offset="1"/>
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border x:Name="Icon" BorderThickness="1" Width="49" Height="47" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+        <Border.Background>
+          <ImageBrush ImageSource="{Binding Path=Selection.Icon}" Stretch="Uniform"/>
+        </Border.Background>
+      </Border>
+      <StackPanel Margin="0,0,9,0" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+        <TextBlock Text="{Binding Path=Selection.Name}" TextWrapping="Wrap" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="24" FontFamily="Assets/Fonts/#Essays1743">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.005}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+        <TextBlock Text="x1" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="Assets/Fonts/#Essays1743" FontSize="24" TextAlignment="Right" Margin="5,0,0,0">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.005}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+      </StackPanel>
+    </Grid>
+    <StackPanel x:Name="InfoStackpanel" Grid.Row="5" Grid.ColumnSpan="3" VerticalAlignment="Center">
+      <TextBlock Text="Choose an item to craft" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" FontSize="25" VerticalAlignment="Center">
+        <TextBlock.Foreground>
+          <SolidColorBrush Color="{DynamicResource Color.001}"/>
+        </TextBlock.Foreground>
+      </TextBlock>
+      <StackPanel VerticalAlignment="Center" Orientation="Horizontal" HorizontalAlignment="Center">
+        <Grid Height="40" Width="40" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Border>
+            <Border.Background>
+              <SolidColorBrush Color="{DynamicResource Color.002}"/>
+            </Border.Background>
+            <Border.OpacityMask>
+              <ImageBrush ImageSource="Assets/Images/RoundTexture.png"/>
+            </Border.OpacityMask>
+          </Border>
+          <TextBlock Text="C" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF000000" FontFamily="Assets/Fonts/#Aquifer" FontSize="25" TextAlignment="Center" Margin="0,3,3,0"/>
+        </Grid>
+        <TextBlock Text="Craft" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" FontSize="25">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.002}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+        <Grid Height="40" Width="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="45,0,0,0">
+          <Border>
+            <Border.Background>
+              <SolidColorBrush Color="{DynamicResource Color.002}"/>
+            </Border.Background>
+            <Border.OpacityMask>
+              <ImageBrush ImageSource="Assets/Images/RoundTexture.png"/>
+            </Border.OpacityMask>
+          </Border>
+          <TextBlock Text="B" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF000000" FontFamily="Assets/Fonts/#Aquifer" FontSize="25" TextAlignment="Center" Margin="0,3,3,0"/>
+        </Grid>
+        <TextBlock Text="Back" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" FontSize="25">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.002}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+      </StackPanel>
+    </StackPanel>
+    <Grid x:Name="MissionGrid" Grid.Column="0" Grid.ColumnSpan="2" Height="142" Width="548" HorizontalAlignment="Left" VerticalAlignment="Top">
+      <StackPanel Orientation="Horizontal" Margin="54,71,0,0">
+        <Viewbox Height="30">
+          <Path Data="F1M8.7,1.4 8.4,8.9 4.7,8.5v2.3c0.1,0 0.3,0 0.5,0 0.1,0 0.3,0 0.5,0 0.2,0 0.4,0 0.5,0 0.1,0 0.2,0 0.4,0V12c-0.3,0 -0.7,-0.1 -1,-0.1 -0.3,0 -0.7,0 -1,0v0.7c0.1,0 0.3,0 0.6,0.1s0.8,0 1.2,0c0.3,0 0.5,0 0.8,0 0.3,0 0.5,0 0.7,-0.1 0,0.3 0,0.4 0,0.5 0,0.1 0,0.2 0,0.5 0,0.2 0,0.4 0,0.5l-3.2,-0.3c0,0 -0.1,0.3 -0.1,1 0,0.4 0,0.8 0,1.2 0,0.4 0,0.7 0,1 -0.4,-0.1 -0.8,-0.1 -1.1,-0.1 -0.3,0 -0.5,0 -0.8,0l0.4,-3c-0.1,0 -0.6,-0.1 -1.4,-0.1 -0.8,0 -1.5,0 -1.9,0v-1.5l3.4,0.4c0,-0.1 0,-0.2 0,-0.3 0,-0.2 0,-0.3 0,-0.5 -0.1,0 -0.2,0 -0.4,0 -0.2,0 -0.5,0 -0.7,0H1.9c-0.1,0 -0.2,0 -0.2,0v-1.3l1.7,0.4V8.7c-0.6,0 -1.2,0 -1.7,0 -0.5,0 -1,0 -1.4,0 0.1,-0.4 0.1,-0.8 0.2,-1.3 0,-0.5 0,-1 0,-1.6L0.3,0c2.6,0 4.4,0 5.3,0 0.9,0 1.9,0.1 2.9,0.1l0.2,0.1V1.4z M7.5,1.3c-0.1,0 -0.6,0.1 -1.7,0.1 -1,0 -1.8,0 -2.5,0 -0.6,0 -1,0 -1.2,0 -0.2,0 -0.4,0 -0.6,0L1.4,7.5c1.3,0 2.6,0.1 3.9,0.1 1.3,0 2,0.1 2,0.1L7.5,1.3z" Stretch="Fill" Height="17" Width="8.9" Margin="-0.2,0,0.3,0" Fill="{DynamicResource IconGradient}"/>
+        </Viewbox>
+        <TextBlock Text="Travel back to Obsidian Maze" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Center" FontFamily="Assets/Fonts/#Essays1743" Padding="9,0,0,0" FontSize="27" Opacity="0.642">
+          <TextBlock.Foreground>
+            <SolidColorBrush Color="{DynamicResource Color.004}"/>
+          </TextBlock.Foreground>
+        </TextBlock>
+      </StackPanel>
+      <Border VerticalAlignment="Bottom" Height="15" Background="{DynamicResource LineGradient}">
+        <Border.OpacityMask>
+          <ImageBrush ImageSource="Assets/Images/Line.png"/>
+        </Border.OpacityMask>
+      </Border>
+    </Grid>
+    <Grid x:Name="MaterialsHeaderGrid" Grid.Column="1" Grid.Row="3" Margin="0,54,0,0">
+      <TextBlock Text="MATERIALS" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="Assets/Fonts/#Aquifer" FontSize="27" TextAlignment="Center">
+        <TextBlock.Foreground>
+          <SolidColorBrush Color="{DynamicResource Color.004}"/>
+        </TextBlock.Foreground>
+      </TextBlock>
+      <Border Height="15" VerticalAlignment="Bottom" Margin="0,0,0,4">
+        <Border.Background>
+          <SolidColorBrush Color="{DynamicResource FlaxYellow}"/>
+        </Border.Background>
+        <Border.OpacityMask>
+          <ImageBrush ImageSource="Assets/Images/Line.png" Viewbox="0.0343912,0,0.965609,1"/>
+        </Border.OpacityMask>
+      </Border>
+    </Grid>
+    <StackPanel x:Name="MoneyStackPanel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2" Margin="0,0,91,0" Height="173">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+        <Image Width="40" Source="Assets/Images/Diamond.png" Margin="0,0,3,0"/>
+        <TextBlock Text="x2" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Essays1743" Foreground="{DynamicResource LinearGradientBrush.002}" FontSize="26" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+        <Image Width="35" Source="Assets/Images/Coin.png" Margin="0,0,3,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <TextBlock Text="15 Coins" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Essays1743" Foreground="{DynamicResource LinearGradientBrush.002}" FontSize="26" VerticalAlignment="Center" HorizontalAlignment="Right" TextAlignment="Right" Margin="0,0,0,6"/>
+      </StackPanel>
+    </StackPanel>
+    <Grid x:Name="MainTabGradient" Grid.Column="1" Grid.ColumnSpan="2" Width="595" HorizontalAlignment="Center" Margin="0,75,278,0" VerticalAlignment="Top">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="90*"/>
+        <ColumnDefinition Width="421*"/>
+        <ColumnDefinition Width="84*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Viewbox Width="30" Opacity="0.548">
+          <Path Data="F1M12.8,0.9c1.1,0 1.9,0.3 2.4,1 0.5,0.6 0.8,1.4 0.8,2.3 0,0.3 -0.2,0.9 -0.6,1.8 -0.5,1.2 -1.1,2.2 -1.8,3 0.6,0.8 1.1,1.4 1.4,1.9 0.6,0.9 0.9,1.8 0.9,2.6 0,0.8 -0.3,1.4 -0.9,2 -0.5,0.4 -1,0.6 -1.7,0.6 -0.6,0 -1.3,-0.3 -1.9,-1 -0.8,-0.8 -1.2,-1.7 -1.2,-2.8 0,-0.4 0.1,-1 0.3,-1.5 0.2,-0.6 0.5,-1.1 0.9,-1.6 -0.1,-0.1 -0.3,-0.2 -0.3,-0.2h-0.6 -0.5H9.7 9.3 9 8.7c-0.3,0 -0.6,0 -0.9,0 -0.3,0 -0.6,0 -1,0H6.6C6.4,9.2 6.3,10 6.3,11.4c0,0.6 0,1.1 0,1.6 0,0.4 0.1,0.9 0.2,1.6 -0.2,0 -0.3,0 -0.4,0 -0.1,0 -0.3,0 -0.4,0 -0.1,0 -0.3,0 -0.4,0 -0.1,0 -0.2,0 -0.3,0l0.2,-5.7c-0.3,0 -0.5,0 -0.7,-0.1C4.4,9.1 4.4,9.3 4.4,9.6c0,0.2 0,0.6 0.1,1.1 0.1,0.5 0.1,0.9 0.1,1.1 0,0.3 0,0.5 0,0.6H3.2l0,-3.4C3.1,9 2.7,8.9 2.2,8.9c-0.3,0 -0.6,0 -1,0S0.4,9 -0.1,9V7.3l3.2,0.3c0,-0.1 0.1,-0.3 0.1,-0.5 0,-0.1 0,-0.5 -0.1,-1C3,5.6 3,5.1 3,4.9l1.5,-0.7c0,0.1 0,0.3 0,0.5 0,0.2 0,0.5 -0.1,1C4.3,6.2 4.3,6.6 4.3,6.8c0,0.3 0,0.6 0.1,0.7H5V2.2c0.1,0 0.2,0 0.5,0 0.2,0 0.4,0 0.6,0 0.2,0 0.3,0 0.4,0 0,1.1 0,2.1 -0.1,2.9C6.4,6 6.3,6.7 6.3,7.4c0.1,0.1 0.2,0.2 0.5,0.2 0.1,0 0.4,0 0.7,0s0.5,0 0.6,0c0.1,0 0.2,0 0.4,0 0.2,0 0.3,0 0.4,0l2.6,0.1c-0.4,-0.5 -0.6,-1 -0.8,-1.3C10.2,5.7 10,4.9 10,4.2c0,-1 0.3,-1.9 0.8,-2.4C11.3,1.2 12,0.9 12.8,0.9z M13.1,9.9c-0.4,0.6 -0.7,1.2 -1,1.7 -0.3,0.6 -0.4,1.1 -0.4,1.5 0,0.6 0.1,1 0.3,1.4 0.3,0.4 0.6,0.7 1,0.7 0.4,0 0.7,-0.3 1,-0.8 0.3,-0.4 0.4,-0.8 0.4,-1.1 0,-0.7 -0.2,-1.5 -0.6,-2.2C13.4,10.5 13.2,10.1 13.1,9.9z M13.3,1.8c-0.6,0 -1.1,0.3 -1.5,0.8 -0.4,0.5 -0.5,1.2 -0.5,1.9 0,0.5 0.1,1.1 0.4,1.8 0.3,0.6 0.6,1.1 0.9,1.4 0.6,-1 1.2,-1.9 1.5,-2.6 0.4,-0.8 0.6,-1.4 0.6,-1.9 0,-0.3 -0.1,-0.6 -0.3,-0.9C14.2,2 13.8,1.8 13.3,1.8z" Stretch="Fill" Fill="{DynamicResource LinearGradientBrush.002}" Height="15.200001" Width="16.1" Margin="-0.1,0,0,0"/>
+        </Viewbox>
+        <TextBlock Text="Q" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Assets/Fonts/#Aquifer" FontSize="27" Margin="6,0,0,0" Foreground="{DynamicResource LinearGradientBrush.002}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="2">
+        <TextBlock Text="E" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Assets/Fonts/#Aquifer" FontSize="27" Margin="6,0,6,0" Foreground="{DynamicResource LinearGradientBrush.002}"/>
+        <Viewbox Width="30">
+          <Path Data="F1M12.8,0.9c1.1,0 1.9,0.3 2.4,1 0.5,0.6 0.8,1.4 0.8,2.3 0,0.3 -0.2,0.9 -0.6,1.8 -0.5,1.2 -1.1,2.2 -1.8,3 0.6,0.8 1.1,1.4 1.4,1.9 0.6,0.9 0.9,1.8 0.9,2.6 0,0.8 -0.3,1.4 -0.9,2 -0.5,0.4 -1,0.6 -1.7,0.6 -0.6,0 -1.3,-0.3 -1.9,-1 -0.8,-0.8 -1.2,-1.7 -1.2,-2.8 0,-0.4 0.1,-1 0.3,-1.5 0.2,-0.6 0.5,-1.1 0.9,-1.6 -0.1,-0.1 -0.3,-0.2 -0.3,-0.2h-0.6 -0.5H9.7 9.3 9 8.7c-0.3,0 -0.6,0 -0.9,0 -0.3,0 -0.6,0 -1,0H6.6C6.4,9.2 6.3,10 6.3,11.4c0,0.6 0,1.1 0,1.6 0,0.4 0.1,0.9 0.2,1.6 -0.2,0 -0.3,0 -0.4,0 -0.1,0 -0.3,0 -0.4,0 -0.1,0 -0.3,0 -0.4,0 -0.1,0 -0.2,0 -0.3,0l0.2,-5.7c-0.3,0 -0.5,0 -0.7,-0.1C4.4,9.1 4.4,9.3 4.4,9.6c0,0.2 0,0.6 0.1,1.1 0.1,0.5 0.1,0.9 0.1,1.1 0,0.3 0,0.5 0,0.6H3.2l0,-3.4C3.1,9 2.7,8.9 2.2,8.9c-0.3,0 -0.6,0 -1,0S0.4,9 -0.1,9V7.3l3.2,0.3c0,-0.1 0.1,-0.3 0.1,-0.5 0,-0.1 0,-0.5 -0.1,-1C3,5.6 3,5.1 3,4.9l1.5,-0.7c0,0.1 0,0.3 0,0.5 0,0.2 0,0.5 -0.1,1C4.3,6.2 4.3,6.6 4.3,6.8c0,0.3 0,0.6 0.1,0.7H5V2.2c0.1,0 0.2,0 0.5,0 0.2,0 0.4,0 0.6,0 0.2,0 0.3,0 0.4,0 0,1.1 0,2.1 -0.1,2.9C6.4,6 6.3,6.7 6.3,7.4c0.1,0.1 0.2,0.2 0.5,0.2 0.1,0 0.4,0 0.7,0s0.5,0 0.6,0c0.1,0 0.2,0 0.4,0 0.2,0 0.3,0 0.4,0l2.6,0.1c-0.4,-0.5 -0.6,-1 -0.8,-1.3C10.2,5.7 10,4.9 10,4.2c0,-1 0.3,-1.9 0.8,-2.4C11.3,1.2 12,0.9 12.8,0.9z M13.1,9.9c-0.4,0.6 -0.7,1.2 -1,1.7 -0.3,0.6 -0.4,1.1 -0.4,1.5 0,0.6 0.1,1 0.3,1.4 0.3,0.4 0.6,0.7 1,0.7 0.4,0 0.7,-0.3 1,-0.8 0.3,-0.4 0.4,-0.8 0.4,-1.1 0,-0.7 -0.2,-1.5 -0.6,-2.2C13.4,10.5 13.2,10.1 13.1,9.9z M13.3,1.8c-0.6,0 -1.1,0.3 -1.5,0.8 -0.4,0.5 -0.5,1.2 -0.5,1.9 0,0.5 0.1,1.1 0.4,1.8 0.3,0.6 0.6,1.1 0.9,1.4 0.6,-1 1.2,-1.9 1.5,-2.6 0.4,-0.8 0.6,-1.4 0.6,-1.9 0,-0.3 -0.1,-0.6 -0.3,-0.9C14.2,2 13.8,1.8 13.3,1.8z" Stretch="Fill" Fill="{DynamicResource LinearGradientBrush.002}" Height="15.200001" Width="16.1" Margin="-0.1,0,0,0" RenderTransformOrigin="0.5,0.5" Opacity="0.55">
+            <Path.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform ScaleX="-1"/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Path.RenderTransform>
+          </Path>
+        </Viewbox>
+      </StackPanel>
+      <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
+        <Grid Height="80" VerticalAlignment="Center" Margin="13,0,13,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="50*"/>
+            <RowDefinition Height="30*"/>
+          </Grid.RowDefinitions>
+          <Border Grid.RowSpan="2" Opacity="0.29">
+            <Border.Background>
+              <RadialGradientBrush>
+                <GradientStop Color="#FFFFFFFF"/>
+                <GradientStop Color="#00A9A9A9" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <TextBlock Text="CRAFTING" TextWrapping="Wrap" Grid.Row="1" FontFamily="Assets/Fonts/#Essays1743" TextAlignment="Center" FontSize="18">
+            <TextBlock.Effect>
+              <DropShadowEffect BlurRadius="3" ShadowDepth="1"/>
+            </TextBlock.Effect>
+            <TextBlock.Foreground>
+              <RadialGradientBrush>
+                <GradientStop Color="#FFECECEC"/>
+                <GradientStop Color="#FFD6D6D6" Offset="0.37800002"/>
+                <GradientStop Color="#C4A9A9A9" Offset="1"/>
+              </RadialGradientBrush>
+            </TextBlock.Foreground>
+          </TextBlock>
+          <Viewbox Width="59" VerticalAlignment="Top">
+            <Path Data="F1M6.4,5.1c0.6,0.4 1.4,0.7 1.9,1.1 1.4,1.1 1.7,3.3 0.8,4.7C7.9,13 4.6,14 2.4,12.9 0.1,11.7 -0.3,9.8 1,7.5c0.6,-1 1.6,-2 2.6,-2.5C6.2,3.6 9,3.2 11.9,4.2c1.9,0.6 3.1,2 3.8,3.8 0.1,0.3 -0.2,0.7 -0.3,1.1 -0.3,-0.1 -0.7,-0.2 -1,-0.4 -0.3,-0.3 -0.5,-0.7 -0.6,-1C13,6 11.6,5.1 9.9,4.9c-1.1,-0.1 -2.3,0 -3.4,0C6.4,4.9 6.4,5 6.4,5.1z M4.2,12.3c1.7,0 3.1,-0.7 3.6,-1.9 0.6,-1.3 0.3,-2.8 -0.9,-4 -1.2,-1.2 -3,-0.9 -4.6,0.8 -0.9,1 -1.3,2.1 -0.8,3.3C1.9,11.8 3.1,12.3 4.2,12.3z" Stretch="Fill" Height="9.707527" Width="15.454897" Margin="0,0,0.015,0.003">
+              <Path.Fill>
+                <RadialGradientBrush RadiusX="1.2847424" RadiusY="1.6331352">
+                  <RadialGradientBrush.RelativeTransform>
+                    <TransformGroup>
+                      <ScaleTransform CenterY="0.5" CenterX="0.5"/>
+                      <SkewTransform CenterY="0.5" CenterX="0.5"/>
+                      <RotateTransform CenterY="0.5" CenterX="0.5"/>
+                      <TranslateTransform/>
+                    </TransformGroup>
+                  </RadialGradientBrush.RelativeTransform>
+                  <GradientStop Color="#FFA85F39" Offset="0.64033043"/>
+                  <GradientStop Color="#FFE7D390" Offset="0"/>
+                </RadialGradientBrush>
+              </Path.Fill>
+            </Path>
+            <Viewbox.Effect>
+              <DropShadowEffect BlurRadius="3" ShadowDepth="1"/>
+            </Viewbox.Effect>
+          </Viewbox>
+          <Path Data="M0,0 75,0" Stretch="Fill" StrokeThickness="1" Height="1" Width="99.36914" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+            <Path.Stroke>
+              <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                <GradientStop Offset="0.007" Color="#00E7D390"/>
+                <GradientStop Color="#00E7D390" Offset="1"/>
+                <GradientStop Offset="0.5156945" Color="#FFE8E4D9"/>
+              </LinearGradientBrush>
+            </Path.Stroke>
+          </Path>
+        </Grid>
+        <Grid Height="80" VerticalAlignment="Center" Margin="13,0,13,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="50*"/>
+            <RowDefinition Height="30*"/>
+          </Grid.RowDefinitions>
+          <Border Grid.RowSpan="2" Opacity="0">
+            <Border.Background>
+              <RadialGradientBrush>
+                <GradientStop Color="#FFFFFFFF"/>
+                <GradientStop Color="#00A9A9A9" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <TextBlock Text="INVENTORY" TextWrapping="Wrap" Grid.Row="1" FontFamily="Assets/Fonts/#Essays1743" TextAlignment="Center" FontSize="18" Foreground="{DynamicResource CrossGradient}" Opacity="0.8"/>
+          <Viewbox Width="59" VerticalAlignment="Top">
+            <Path Data="F1M15.6,12.7c0,0.7 -0.3,1.4 -0.8,1.9 -0.5,0.5 -1.2,0.8 -1.9,0.8 -0.7,0 -1.3,-0.2 -1.8,-0.5 -0.6,-0.4 -0.8,-0.9 -0.8,-1.5 0,-0.3 0,-0.6 0.1,-0.8 0.1,-0.2 0.2,-0.5 0.3,-0.8 0,-0.1 -0.1,-0.2 -0.4,-0.4 -0.2,-0.2 -0.6,-0.5 -1,-0.8 -0.7,0.7 -1.3,1.5 -2,2.4s-1.1,1.6 -1.3,2c-0.1,-0.1 -0.3,-0.2 -0.7,-0.6 -0.4,-0.3 -0.6,-0.6 -0.7,-0.7C5,13.5 5.5,13 6.2,12.2c0.7,-0.8 1.4,-1.6 2.1,-2.4C8.2,9.7 8.1,9.6 8,9.5S7.7,9.2 7.5,9.1c-0.7,0.6 -1.3,1.3 -1.9,2.2 -0.6,0.8 -1,1.6 -1.4,2.3 -0.2,-0.1 -0.4,-0.3 -0.8,-0.6 -0.2,-0.2 -0.5,-0.4 -0.7,-0.5 0.6,-0.6 1.1,-1.3 1.7,-2 1.2,-1.3 1.8,-2.1 2,-2.2l-2.4,-2C3.8,6.4 3.6,6.5 3.3,6.6 3.1,6.7 2.8,6.7 2.4,6.7c-0.7,0 -1.3,-0.3 -1.6,-0.8C0.5,5.5 0.4,5 0.4,4.3c0,-0.8 0.3,-1.4 1,-1.9C2,1.9 2.7,1.7 3.5,1.7c0.6,0 1,0.2 1.4,0.7 0.4,0.4 0.6,1 0.6,1.6 0,0.3 -0.1,0.5 -0.2,0.7C5.1,4.8 5,5 4.9,5.2 5.6,5.6 6.1,6 6.5,6.4 7,6.9 7.2,7.1 7.3,7.1c0.2,0 0.7,-0.7 1.7,-2.1 0.6,-1 1.2,-1.9 1.8,-2.9 0.1,0.1 0.4,0.2 0.8,0.6C12,3 12.2,3.3 12.3,3.4L8.3,7.9c0.1,0.2 0.2,0.3 0.3,0.4C8.8,8.5 9,8.6 9,8.7L12.9,4c0.3,0.2 0.5,0.3 0.6,0.4 0.4,0.2 0.6,0.4 0.7,0.6l-3.8,4.6c0.1,0.2 0.4,0.4 0.8,0.8 0.1,0.1 0.3,0.3 0.6,0.4 0,0 0.2,-0.1 0.5,-0.2 0.3,-0.1 0.5,-0.2 0.6,-0.2 0.9,0 1.5,0.2 2.1,0.6C15.3,11.4 15.6,11.9 15.6,12.7z M4.3,4.2c0,-0.3 -0.2,-0.7 -0.5,-1.1C3.4,2.7 3,2.5 2.7,2.5 2.3,2.5 2,2.7 1.8,3.1 1.6,3.5 1.4,3.8 1.4,4c0,0.3 0.2,0.6 0.6,1 0.4,0.4 0.7,0.6 1,0.6 0.2,0 0.5,-0.1 0.8,-0.4C4.1,4.9 4.3,4.6 4.3,4.2z M14.3,12.9c0,-0.6 -0.2,-1.1 -0.6,-1.5 -0.3,-0.3 -0.6,-0.4 -1,-0.4 -0.3,0 -0.6,0.2 -0.9,0.6 -0.2,0.4 -0.4,0.8 -0.4,1.2 0,0.3 0.2,0.7 0.6,1 0.4,0.3 0.8,0.5 1,0.5 0.2,0 0.5,-0.2 0.7,-0.5C14.2,13.6 14.3,13.3 14.3,12.9z" Stretch="Fill" Fill="{DynamicResource CrossGradient}" Height="13.7" Width="15.200001" Margin="0,0.1,0,0" Opacity="0.803"/>
+          </Viewbox>
+        </Grid>
+        <Grid Height="80" VerticalAlignment="Center" Margin="13,0,13,0" Width="100">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="50*"/>
+            <RowDefinition Height="30*"/>
+          </Grid.RowDefinitions>
+          <Border Grid.RowSpan="2" Opacity="0">
+            <Border.Background>
+              <RadialGradientBrush>
+                <GradientStop Color="#FFFFFFFF"/>
+                <GradientStop Color="#00A9A9A9" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <TextBlock TextWrapping="Wrap" Grid.Row="1" FontFamily="Assets/Fonts/#Essays1743" TextAlignment="Center" FontSize="18" Foreground="{DynamicResource CrossGradient}" Text="MESSAGES" Opacity="0.8"/>
+          <Viewbox Width="59" VerticalAlignment="Top">
+            <Path Data="F1M15,12.4c-0.3,0 -0.6,0 -0.8,0 -1.3,-0.1 -2.1,-0.1 -2.1,-0.1 -0.3,0 -0.5,0 -0.5,0.1l0.3,1.9v0.6l-1.6,0c0,-0.3 -0.1,-0.5 -0.1,-0.8 0,-0.1 0,-0.3 0,-0.7 0,-0.4 0,-0.8 0,-1.3l-5.3,0c0,0.6 0,1.2 0,1.7 0,0.5 0.1,0.9 0.1,1.1 -0.1,0 -0.2,0 -0.4,0 -0.1,0 -0.2,0 -0.4,0 -0.2,0 -0.4,0 -0.7,0H3.4l0.3,-2.7c-0.1,-0.1 -0.2,-0.1 -0.3,-0.1 -0.1,0 -0.2,0 -0.4,0 -0.2,0 -0.4,0 -0.7,0.1 -0.7,0.1 -1.2,0.1 -1.4,0.1 0.1,-0.2 0.1,-0.3 0.1,-0.4 0,-0.1 0,-0.2 0,-0.4 0,-0.2 0,-0.4 0,-0.5 0,-0.2 0,-0.3 0,-0.4 0.1,0 0.4,0.1 0.9,0.1 1,0.1 1.6,0.2 1.7,0.2 0.1,0 0.2,-0.2 0.3,-0.7C4,9.7 4,9.1 4,8.5V5.7C3.1,5.6 2.6,5.5 2.3,5.5c-0.3,0 -0.5,0 -0.7,0.1 -0.2,0 -0.4,0.1 -0.5,0.1 0,-0.1 0.1,-0.4 0.1,-0.8S1.2,4.1 1.2,4c0.3,0.1 0.7,0.2 1.3,0.3C3,4.3 3.5,4.4 4,4.4V2h1.5c0,0.1 0.1,0.1 0.1,0.1L5.2,4.4c0.2,0 0.3,0.1 0.5,0.1 0.4,0 0.9,0 1.7,0 0.7,0 1.7,0 3.1,0V2.5h1.7l-0.3,1.8c0,0.2 0.3,0.2 1,0.2 0.7,0 1.4,-0.1 2,-0.2 0,0.2 0,0.4 0,0.6 0,0.2 0,0.4 0,0.6V6C14.7,6 14.6,6 14.5,6S14,6 13.4,6c-0.7,0 -1.3,0 -1.8,0l0,4.9c0,0 0.2,0 0.6,0.1 0.4,0 0.8,0.1 1.2,0.1 0.3,0 0.6,0 0.8,0 0.2,0 0.5,0 0.8,-0.1V12.4z M10.5,5.7H5.2c0,0.1 0.1,0.5 0.1,1.3 0,0.7 0,1.4 0,2.1 0,0.6 0,1.2 0,1.8h5.1L10.5,5.7z M9.9,8.3c-0.1,0.4 -0.2,0.8 -0.3,1 -0.4,0.7 -1.1,1 -2.1,1 -0.5,0 -1,-0.2 -1.4,-0.5C5.7,9.4 5.5,9 5.5,8.5c0,-0.7 0.2,-1.2 0.6,-1.7C6.5,6.3 7,6 7.6,6c0.7,0 1.3,0.2 1.7,0.7C9.7,7.2 9.9,7.7 9.9,8.3z M8.9,8.2c0,-0.2 -0.1,-0.4 -0.4,-0.7C8.2,7.1 7.9,7 7.5,7 7.3,7 7,7.1 6.8,7.4 6.5,7.6 6.4,7.9 6.4,8.2c0,0.3 0.1,0.6 0.4,0.8C7,9.3 7.3,9.5 7.6,9.5c0.4,0 0.6,-0.1 0.8,-0.2C8.7,9.1 8.9,8.7 8.9,8.2z" Stretch="Fill" Fill="{DynamicResource CrossGradient}" Height="12.9" Width="14.1" Margin="0.9,0,0,0.1" Opacity="0.8"/>
+          </Viewbox>
+        </Grid>
+      </StackPanel>
+    </Grid>
+    <TabControl x:Name="CraftTabControl" SelectedIndex="{Binding Path=Value, ElementName=source}" Grid.Column="1" Grid.RowSpan="2" Grid.Row="1" Background="{x:Null}" Template="{DynamicResource Template.TabControl}" Focusable="False">
+      <TabItem IsSelected="True" Header="ALL" Template="{DynamicResource Template.TabItem}" HeaderTemplate="{DynamicResource DataTemplate.TabItem.Header}">
+        <Grid>
+          <ListBox x:Name="ListBox0" ItemsSource="{Binding Path=Collection}" SelectedValue="{Binding Path=Selection}" ItemTemplate="{DynamicResource DataTemplate.CraftItem}" SelectedIndex="0" ItemContainerStyle="{DynamicResource Style.ListBoxItem.All}" ItemsPanel="{DynamicResource Template.ListBox.ItemsPanel}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Template="{DynamicResource Template.ListBox}"/>
+        </Grid>
+      </TabItem>
+      <TabItem Header="CRYSTALS" Tag="AMMO" Template="{DynamicResource Template.TabItem}" HeaderTemplate="{DynamicResource DataTemplate.TabItem.Header}">
+        <Grid>
+          <ListBox ItemsSource="{Binding Path=Collection}" SelectedValue="{Binding Path=Selection}" ItemTemplate="{DynamicResource DataTemplate.CraftItem}" Tag="CRYSTALS" ItemContainerStyle="{DynamicResource Style.ListBoxItem.Filtered}" ItemsPanel="{DynamicResource Template.ListBox.ItemsPanel}" SelectedIndex="0" Template="{DynamicResource Template.ListBox}"/>
+        </Grid>
+      </TabItem>
+      <TabItem Header="POTIONS" Template="{DynamicResource Template.TabItem}" HeaderTemplate="{DynamicResource DataTemplate.TabItem.Header}">
+        <Grid>
+          <ListBox ItemsSource="{Binding Path=Collection}" SelectedValue="{Binding Path=Selection}" ItemTemplate="{DynamicResource DataTemplate.CraftItem}" ItemContainerStyle="{DynamicResource Style.ListBoxItem.Filtered}" Tag="POTIONS" ItemsPanel="{DynamicResource Template.ListBox.ItemsPanel}" Template="{DynamicResource Template.ListBox}"/>
+        </Grid>
+      </TabItem>
+      <TabItem Header="RINGS" Template="{DynamicResource Template.TabItem}" HeaderTemplate="{DynamicResource DataTemplate.TabItem.Header}">
+        <Grid>
+          <ListBox ItemsSource="{Binding Path=Collection}" SelectedValue="{Binding Path=Selection}" ItemTemplate="{DynamicResource DataTemplate.CraftItem}" Tag="RINGS" ItemContainerStyle="{DynamicResource Style.ListBoxItem.Filtered}" ItemsPanel="{DynamicResource Template.ListBox.ItemsPanel}" Template="{DynamicResource Template.ListBox}"/>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Page>

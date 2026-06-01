@@ -1,0 +1,51 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  x:Name="ComponentRoot" HorizontalAlignment="Center" VerticalAlignment="Center" xmlns:noesis="clr-namespace:NoesisGUIExtensions">
+  <Component.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Resources_Medallion_Colors.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Component.Resources>
+  <Component.DynamicProperties>
+    <DynamicProperty Name="Rank_Name" Type="String" DefaultValue="ABCDEFGH"/>
+  </Component.DynamicProperties>
+
+  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Height="40" MinWidth="80">
+    <Border Padding="4,4,4,4" CornerRadius="20,20,20,20">
+      <Border.Background>
+        <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+      </Border.Background>
+      <Border Padding="4,4,4,4" CornerRadius="16,16,16,16">
+        <Border.Background>
+          <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+        </Border.Background>
+        <Border Padding="4,4,4,4" CornerRadius="12,12,12,12">
+          <Border.Background>
+            <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+          </Border.Background>
+          <TextBlock TextWrapping="Wrap" FontFamily="./#Book Antiqua" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="800" Margin="8,1,8,0" FontSize="16" FontWeight="Bold" FontStyle="Italic">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+            </TextBlock.Foreground>
+            <TextBlock.Text>
+              <Binding Path="Rank_Name_Str" ElementName="ComponentRoot">
+                <Binding.Converter>
+                  <noesis:CaseConverter/>
+                </Binding.Converter>
+              </Binding>
+            </TextBlock.Text>
+          </TextBlock>
+        </Border>
+      </Border>
+    </Border>
+  </Grid>
+  
+</Component>

@@ -1,0 +1,130 @@
+<Page x:Name="Page_Master"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DataContext="CharacterData"
+  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+  xmlns:noesis="clr-namespace:NoesisGUIExtensions" d:DesignWidth="1920" d:DesignHeight="1080">
+
+  <Page.Background>
+    <SolidColorBrush Color="{DynamicResource Purple_ExtraDark}"/>
+  </Page.Background>
+
+  <b:Interaction.Triggers>
+    <b:EventTrigger>
+      <b:ControlStoryboardAction Storyboard="{DynamicResource Screen_In}"/>
+    </b:EventTrigger>
+    <b:DataTrigger Binding="{Binding Path=IsEnabled, ElementName=Component_Character_Selector}" Value="False">
+      <b:ChangePropertyAction PropertyName="IsEnabled" TargetName="Component_Character_Details" Value="True"/>
+    </b:DataTrigger>
+    <b:DataTrigger Binding="{Binding Path=IsEnabled, ElementName=Component_Character_Details}" Value="False">
+      <b:ChangePropertyAction PropertyName="IsEnabled" Value="True" TargetName="Component_Character_Selector"/>
+    </b:DataTrigger>
+  </b:Interaction.Triggers>
+
+  <Page.Resources>
+    <ResourceDictionary>
+      <Storyboard x:Key="Screen_In">
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Base" Storyboard.TargetProperty="(UIElement.Opacity)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1">
+            <EasingDoubleKeyFrame.EasingFunction>
+              <BounceEase EasingMode="EaseInOut"/>
+            </EasingDoubleKeyFrame.EasingFunction>
+          </EasingDoubleKeyFrame>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Background_Swappable" Storyboard.TargetProperty="(UIElement.Opacity)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1"/>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="HeaderArea" Storyboard.TargetProperty="(UIElement.Opacity)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1"/>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ContentArea" Storyboard.TargetProperty="(UIElement.Opacity)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:03" Value="1">
+            <EasingDoubleKeyFrame.EasingFunction>
+              <ExponentialEase EasingMode="EaseOut"/>
+            </EasingDoubleKeyFrame.EasingFunction>
+          </EasingDoubleKeyFrame>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Vignette" Storyboard.TargetProperty="(UIElement.Effect).(NoesisGUIExtensions.VignetteEffect.Strength)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="40"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="64"/>
+        </DoubleAnimationUsingKeyFrames>
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Vignette" Storyboard.TargetProperty="(UIElement.Effect).(NoesisGUIExtensions.VignetteEffect.Size)">
+          <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.25"/>
+          <EasingDoubleKeyFrame KeyTime="00:00:00.5000000" Value="0.25"/>
+        </DoubleAnimationUsingKeyFrames>
+      </Storyboard>
+    </ResourceDictionary>
+  </Page.Resources>
+
+  <Grid x:Name="Master">
+
+    <Grid x:Name="Backgrounds">
+      <Grid x:Name="Background_Base">
+        <Component Source="Components/Background_Base.xaml"/>
+      </Grid>
+      <Grid x:Name="Background_Smoke">
+        <Component Source="Components/Smoke_Ambient.xaml" BlendingMode="Additive"/>
+      </Grid>
+      <Grid x:Name="Background_Swappable">
+        <Component x:Name="Component_Background_Swappable" Source="Components/Background_Swappable.xaml" IsEnabled="{Binding Path=IsEnabled, ElementName=Component_Character_Details}" DataContext="{Binding Path=SelectedCharacter_Obj, ElementName=Component_Character_Selector}"/>
+      </Grid>
+      <Grid x:Name="VignetteArea">
+        <Grid x:Name="Vignette">
+          <Grid.Effect>
+            <noesis:VignetteEffect Strength="64"/>
+          </Grid.Effect>
+          <Grid.Background>
+            <SolidColorBrush Color="#FF000000" Opacity="0"/>
+          </Grid.Background>
+        </Grid>
+      </Grid>
+    </Grid>
+    <Grid x:Name="InterfaceGrid">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="64"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="1*"/>
+        <RowDefinition Height="64"/>
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="64"/>
+        <ColumnDefinition Width="1*"/>
+        <ColumnDefinition Width="64"/>
+      </Grid.ColumnDefinitions>
+      <Grid x:Name="HeaderArea" Grid.Column="1" Grid.Row="1" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+          <TransformGroup>
+            <ScaleTransform/>
+            <SkewTransform/>
+            <RotateTransform/>
+            <TranslateTransform/>
+          </TransformGroup>
+        </Grid.RenderTransform>
+        <Component Source="Components/Header.xaml"/>
+      </Grid>
+      <Grid x:Name="ContentArea" Grid.Column="1" Grid.Row="2">
+        <Grid x:Name="Character_Details">
+          <Component x:Name="Component_Character_Details" Source="Components/Character_Details.xaml" IsEnabled="False" DataContext="{Binding Path=SelectedCharacter_Obj, ElementName=Component_Character_Selector}"/>
+        </Grid>
+        <Grid x:Name="Character_Selector">
+          <Component x:Name="Component_Character_Selector" Source="Components/Character_Selector.xaml" IsEnabled="True"/>
+        </Grid>
+      </Grid>
+    </Grid>
+    <Grid x:Name="Foregrounds" IsHitTestVisible="False">
+      <Component Source="Components/Foreground.xaml"/>
+    </Grid>
+
+  </Grid>
+
+</Page>

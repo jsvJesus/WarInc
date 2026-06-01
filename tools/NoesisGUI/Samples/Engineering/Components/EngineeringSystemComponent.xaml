@@ -1,0 +1,954 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+  xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+  xmlns:local="clr-namespace:NoesisStudioInternals"
+  mc:Ignorable="d" d:DataContext="System.01" d:DesignWidth="1280" d:DesignHeight="720">
+  <Component.Resources>
+    <ControlTemplate x:Key="ContentControl.ControlTemplate.UpdateAnimation" TargetType="ContentControl">
+      <Grid x:Name="Grid0" RenderTransformOrigin="0.5,0.5">
+        <b:Interaction.Triggers>
+          <b:DataTrigger Binding="{Binding Path=IsEnabled, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+            <b:GoToStateAction StateName="Visible"/>
+          </b:DataTrigger>
+          <b:DataTrigger Binding="{Binding Path=IsEnabled, RelativeSource={RelativeSource TemplatedParent}}" Value="False">
+            <b:GoToStateAction StateName="Hidden"/>
+          </b:DataTrigger>
+        </b:Interaction.Triggers>
+        <Grid.RenderTransform>
+          <TransformGroup>
+            <ScaleTransform/>
+            <SkewTransform/>
+            <RotateTransform/>
+            <TranslateTransform/>
+          </TransformGroup>
+        </Grid.RenderTransform>
+        <Grid.OpacityMask>
+          <LinearGradientBrush StartPoint="0,1">
+            <GradientStop Color="#FF000000" Offset="0"/>
+            <GradientStop Color="#FFFFFFFF" Offset="1"/>
+            <GradientStop Color="#FF333333" Offset="0.20228153"/>
+            <GradientStop Color="#FF626262" Offset="0.4"/>
+            <GradientStop Color="#FF8D8D8D" Offset="0.6"/>
+            <GradientStop Color="#FFC2C2C2" Offset="0.8"/>
+          </LinearGradientBrush>
+        </Grid.OpacityMask>
+        <VisualStateManager.VisualStateGroups>
+          <VisualStateGroup x:Name="States">
+            <VisualStateGroup.Transitions>
+              <VisualTransition From="Hidden" GeneratedDuration="0" To="Visible">
+                <Storyboard>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#00000000"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.1000000" Value="#FF000000"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[2].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#00333333"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.1500000" Value="#FF333333"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[3].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#00626262"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.1000000" Value="#00626262"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.2000000" Value="#FF626262"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[4].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#008D8D8D"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.1500000" Value="#008D8D8D"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.2500000" Value="#FF8D8D8D"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[5].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#00C2C2C2"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.2000000" Value="#00C2C2C2"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.3000000" Value="#FFC2C2C2"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                    <EasingColorKeyFrame KeyTime="0:0:0" Value="#00FFFFFF"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.2500000" Value="#00FFFFFF"/>
+                    <EasingColorKeyFrame KeyTime="0:0:0.3499999" Value="#FFFFFFFF"/>
+                  </ColorAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                    <EasingDoubleKeyFrame KeyTime="0:0:0" Value="-5"/>
+                    <EasingDoubleKeyFrame KeyTime="0:0:0.2000000" Value="0">
+                      <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseIn"/>
+                      </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter0" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="0:0:0.1000000" Value="1">
+                      <EasingDoubleKeyFrame.EasingFunction>
+                        <CubicEase EasingMode="EaseIn"/>
+                      </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                  </DoubleAnimationUsingKeyFrames>
+                </Storyboard>
+              </VisualTransition>
+            </VisualStateGroup.Transitions>
+            <VisualState x:Name="Visible"/>
+            <VisualState x:Name="Hidden">
+              <Storyboard>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#00000000"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[2].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#00333333"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[3].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#00626262"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[4].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#008D8D8D"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[5].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#00C2C2C2"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Grid0" Storyboard.TargetProperty="(UIElement.OpacityMask).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                  <EasingColorKeyFrame KeyTime="0:0:0" Value="#00FFFFFF"/>
+                </ColorAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+          </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <ContentPresenter x:Name="ContentPresenter0" ContentSource="Content"/>
+      </Grid>
+    </ControlTemplate>
+    <Storyboard x:Key="Storyboard0">
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="IntegrityDetails" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.2000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="InstabilityDetails" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.3000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="HeatDetails" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.4000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="PowerDetails" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.5000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="AlertDetails" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.6000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="SystemTitle" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.1000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="SystemClass" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.2000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="SystemLocation" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.3000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="Operation" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.3000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="Technician" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.5000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="UnassignedTechnician" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.5000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="TechnicianOptions" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.6000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="Modifiers" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.5000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="PerformanceOutputValue" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.6000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="SystemIcon" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.1000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+      <BooleanAnimationUsingKeyFrames Storyboard.TargetName="Performance" Storyboard.TargetProperty="(UIElement.IsEnabled)">
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+        <DiscreteBooleanKeyFrame KeyTime="0:0:0.2000000" Value="True"/>
+      </BooleanAnimationUsingKeyFrames>
+    </Storyboard>
+  </Component.Resources>
+  <Canvas>
+    <b:Interaction.Triggers>
+      <b:PropertyChangedTrigger Binding="{Binding Path=Name}">
+        <b:ControlStoryboardAction Storyboard="{DynamicResource Storyboard0}"/>
+      </b:PropertyChangedTrigger>
+    </b:Interaction.Triggers>
+    <Path x:Name="SystemStatusTitleBarBackground" Fill="{DynamicResource Brush.PanelHeaderBackground}" Data="M 791.15 35 Q 833.5 11.2 881.05 0 L 0 0 0 35 791.15 35 Z"/>
+    <Path x:Name="SystemStatusBackground" Fill="{DynamicResource Brush.PanelBackground}" Data="M 782.55 40 Q 786.8 37.45 791.15 35 L 0 35 0 440 608 440 Q 606.95 435.05 606.05 430 600 396.25 600 360 600 206.75 708.4 98.35 743.15 63.6 782.55 40 M 713 80.1 Q 718.5 74.95 724.15 70.1 L 430 70 430 80 430 70 724.15 70.1 Q 718.5 74.95 713 80.1 M 675.05 120.1 Q 679.25 115.05 683.65 110.1 679.25 115.05 675.05 120.1 L 430 120 430 110 430 120 675.05 120.1 M 430 150 L 430 160 430 150 652.55 150 Q 649.15 154.95 646 160 649.15 154.95 652.55 150 L 430 150 M 595.9 430 Q 595.05 425.05 594.3 420 595.05 425.05 595.9 430 L 430 430 430 420 430 430 595.9 430 M 420 80 L 420 70 10 70 10 80 10 70 420 70 420 80 M 420 240 L 420 230 420 240 10 240 10 230 10 240 420 240 Z"/>
+    
+    <Canvas x:Name="SystemStatusTitleBar" Canvas.Left="0" Canvas.Top="0" Width="882" Height="35">
+      <TextBlock Text="SYSTEM STATUS" Style="{DynamicResource TextBlock.Style.Header1}" Canvas.Left="15" Canvas.Top="8"/>
+
+      <ContentControl x:Name="SystemTitle" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="200" Canvas.Top="7">
+        <Grid>
+          <TextBlock Foreground="{DynamicResource Brush.Title}" Margin="30,3,0,2.598" Style="{DynamicResource TextBlock.Style.Header2}">
+            <TextBlock.Text>
+              <Binding Path="Name">
+                <Binding.Converter>
+                  <noesis:CaseConverter Format="UpperCase"/>
+                </Binding.Converter>
+              </Binding>
+            </TextBlock.Text>
+          </TextBlock>
+          <Viewbox Margin="0,0,165.801,0" Height="20" Width="20">
+            <Canvas Height="128" Width="128">
+              <ContentControl Content="{Binding}" ContentTemplateSelector="{DynamicResource TemplateSelector.DynamicKey.Icon}"/>
+            </Canvas>
+          </Viewbox>
+        </Grid>
+      </ContentControl>
+      <ContentControl x:Name="SystemClass" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="463" Canvas.Top="7">
+        <Grid>
+          <TextBlock Foreground="{DynamicResource Brush.Text}" Text="CLASS" Margin="27,3,16.748,2.598" Style="{DynamicResource TextBlock.Style.Header2}"/>
+          <Viewbox Margin="0,0,65.279,0" Height="20" Width="20">
+            <Canvas Height="128" Width="128">
+              <Path Data="{DynamicResource Geometry.ClassIcon}" Fill="{DynamicResource Brush.Text}"/>
+            </Canvas>
+          </Viewbox>
+          <TextBlock Foreground="{DynamicResource Brush.Text}" Text="{Binding Path=Class}" Margin="77,3,0,2.598" Style="{DynamicResource TextBlock.Style.Header2}"/>
+        </Grid>
+      </ContentControl>
+      <ContentControl x:Name="SystemLocation" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="640" Canvas.Top="7">
+        <Grid>
+          <Viewbox Margin="0,0,69.738,0" Height="20" Width="20">
+            <Canvas Height="128" Width="128">
+              <Path Data="{DynamicResource Geometry.LocationIcon}" Style="{DynamicResource Path.Style.InteractableIcon}"/>
+            </Canvas>
+          </Viewbox>
+          <TextBlock Margin="26,3,0,2.598" Style="{DynamicResource TextBlock.Style.Header2}">
+            <TextBlock.Text>
+              <Binding Path="Location">
+                <Binding.Converter>
+                  <noesis:CaseConverter Format="UpperCase"/>
+                </Binding.Converter>
+              </Binding>
+            </TextBlock.Text>
+          </TextBlock>
+        </Grid>
+      </ContentControl>  
+    </Canvas>
+    <Canvas x:Name="SystemStatusContent" Width="882" Height="405" Canvas.Left="0" Canvas.Top="35">
+      <Path x:Name="SystemStatusBackgroundLines" StrokeThickness="1" Stroke="{DynamicResource Brush.BarBackground}" Data="M 713.5 45.6 Q 719 40.45 724.65 35.6 L 430.5 35.5 430.5 45.5 M 430.5 75.5 L 430.5 85.5 675.55 85.6 Q 679.75 80.55 684.15 75.6 M 420.5 45.5 L 420.5 35.5 10.5 35.5 10.5 45.5 M 646.5 125.5 Q 649.65 120.45 653.05 115.5 L 430.5 115.5 430.5 125.5 M 10.5 245.5 L 10.5 235.5 420.5 235.5 420.5 245.5 M 10.5 385.5 L 10.5 395.5 420.5 395.5 420.5 385.5 M 430.5 385.5 L 430.5 395.5 596.4 395.5 Q 595.55 390.55 594.8 385.5 M 10.5 195.5 L 10.5 205.5 420.5 205.5 420.5 195.5 M 180.5 45.5 L 180.5 195.5 M 250.5 245.5 L 250.5 385.5"/>
+      <TextBlock Text="STATUS"  Style="{DynamicResource TextBlock.Style.Header2}" TextAlignment="Left" Canvas.Left="15" Canvas.Top="18"/>
+      <Canvas x:Name="Status" Width="410" Height="160" Canvas.Left="10" Canvas.Top="35">
+        <Viewbox Width="100" Height="100" Canvas.Left="35" Canvas.Top="35">
+          <Canvas Width="128" Height="128">
+            <ContentControl x:Name="SystemIcon" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" ContentTemplateSelector="{DynamicResource TemplateSelector.DynamicKey.Icon}" Content="{Binding}"/>
+          </Canvas>
+        </Viewbox>
+
+        <Grid x:Name="StatusDetails" Width="220" Height="170" Canvas.Left="180" Canvas.Top="5">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="2*"/>
+          </Grid.RowDefinitions>
+          <ContentControl x:Name="IntegrityDetails" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+              </Grid.RowDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Viewbox Width="10" Height="10">
+                  <Canvas Width="128" Height="128">
+                    <Path Fill="{DynamicResource Brush.Header3Icon}" Data="{DynamicResource Geometry.IntegrityIcon}"/>
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="INTEGRITY" Style="{DynamicResource TextBlock.Style.Header3}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding IntegrityBar.CurrentValue, StringFormat='{}{0:F0}'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+                <TextBlock Text="/" Style="{DynamicResource TextBlock.Style.Header4}" Margin="3,0,3,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding IntegrityBar.MaxValue, StringFormat='{}{0:F0}'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+              </StackPanel>
+              <ContentControl Grid.Row="1" Content="{Binding IntegrityBar}" ContentTemplate="{DynamicResource BarViewModel.DataTemplate.Integrity}"/>
+            </Grid>
+          </ContentControl>
+          <ContentControl x:Name="InstabilityDetails" Grid.Row="1" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+              </Grid.RowDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Viewbox Width="10" Height="10">
+                  <Canvas Width="128" Height="128">
+                    <Path Fill="{DynamicResource Brush.Header3Icon}" Data="{DynamicResource Geometry.InstabilityIcon}"/>
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="INSTABILITY" Style="{DynamicResource TextBlock.Style.Header3}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding InstabilityBar.CurrentValue, StringFormat='{}{0:F0} %'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+              </StackPanel>
+              <ContentControl Grid.Row="1" Content="{Binding InstabilityBar}" ContentTemplate="{DynamicResource BarViewModel.DataTemplate.Instability}"/>
+            </Grid>
+          </ContentControl>
+          <ContentControl x:Name="HeatDetails" Grid.Row="2" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+              </Grid.RowDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Viewbox Width="10" Height="10">
+                  <Canvas Width="128" Height="128">
+                    <Path Fill="{DynamicResource Brush.Header3Icon}" Data="{DynamicResource Geometry.HeatIcon}"/>
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="HEAT" Style="{DynamicResource TextBlock.Style.Header3}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding HeatBar.CurrentValue, StringFormat='{}{0:F0} C'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+                <TextBlock Text="/" Style="{DynamicResource TextBlock.Style.Header4}" Margin="3,0,3,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding HeatBar.MaxValue, StringFormat='{}{0:F0} C'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+              </StackPanel>
+              <ContentControl Grid.Row="1" Content="{Binding HeatBar}" ContentTemplate="{DynamicResource BarViewModel.DataTemplate.Heat}"/>
+            </Grid>
+          </ContentControl>
+          <ContentControl x:Name="PowerDetails" Grid.Row="3" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+              </Grid.RowDefinitions>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Viewbox Width="10" Height="10">
+                  <Canvas Width="128" Height="128">
+                    <Path Fill="{DynamicResource Brush.Header3Icon}" Data="{DynamicResource Geometry.PowerIcon}"/>
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="POWER" Style="{DynamicResource TextBlock.Style.Header3}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding PowerBar.CurrentValue, StringFormat='{}{0:F0} MW'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+                <TextBlock Text="/" Style="{DynamicResource TextBlock.Style.Header4}" Margin="3,0,3,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding PowerBar.MaxValue, StringFormat='{}{0:F0} MW'}" Style="{DynamicResource TextBlock.Style.Header4}" VerticalAlignment="Center"/>
+              </StackPanel>
+              <ContentControl Grid.Row="1" Content="{Binding PowerBar}" ContentTemplate="{DynamicResource BarViewModel.DataTemplate.Power}"/>
+            </Grid>
+          </ContentControl>
+          <ContentControl x:Name="AlertDetails" Grid.Row="4" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}">
+            <Grid>
+              <TextBlock Text="NO STATUS ALERTS" Foreground="{DynamicResource Brush.Text}" Style="{DynamicResource TextBlock.Style.Header3}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            </Grid> 
+          </ContentControl>       
+        </Grid>
+      </Canvas>
+
+      <TextBlock Text="PERFORMANCE" Style="{DynamicResource TextBlock.Style.Header2}" TextAlignment="Left" Canvas.Left="15" Canvas.Top="218"/>
+
+      <ContentControl x:Name="Performance" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="10" Canvas.Top="235">
+        <Canvas Height="160" Width="410">
+          <Canvas x:Name="PowerToPerformanceGraph" Canvas.Left="10" Canvas.Top="10" Height="120" Width="180">
+            <Grid Canvas.Left="0" Canvas.Top="0">
+              <Path x:Name="PowerGraph" Data="M310.474,324.293L310.474,353.085 632.139,353.085 632.139,202.71C632.139,202.71 536.773,303.945 310.474,324.293z" Fill="{DynamicResource Brush.PowerGraph}" StrokeThickness="0" Stretch="Fill" Margin="0,5,0,0" Height="115" Width="180"/>
+              <Grid Height="120" Width="180">
+                <Line x:Name="PowerInLine" Y2="120" Fill="{DynamicResource Brush.Text}" StrokeDashArray="1,2" StrokeDashCap="Round" Stroke="{DynamicResource Brush.Power}">
+                  <Line.X2>
+                    <Binding Path="PowerBar.CurrentValue" ConverterParameter="18">
+                      <Binding.Converter>
+                        <noesis:MathConverter Expression="{}{0} * {_}"/>
+                      </Binding.Converter>
+                    </Binding>
+                  </Line.X2>
+                  <Line.X1>
+                    <Binding Path="PowerBar.CurrentValue" ConverterParameter="18">
+                      <Binding.Converter>
+                        <noesis:MathConverter Expression="{}{0} * {_}"/>
+                      </Binding.Converter>
+                    </Binding>
+                  </Line.X1>
+                  <Line.Style>
+                    <Style TargetType="Line">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="0">
+                          <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="1">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="2">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="2">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="2">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="20">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="20">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="3">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="40">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="40">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="4">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="60">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="60">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="5">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="80">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="80">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="6">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="100">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="100">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="7">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="120">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="120">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="8">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="140">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="140">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="9">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="160">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="160">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="10">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X1" To="178">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="X2" To="178">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger>
+                          <Setter Value="Visible" Property="Visibility"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Line.Style>
+                </Line>
+                <Line x:Name="PerformanceBaseLine" X2="180" X1="0" Fill="{DynamicResource Brush.Text}" StrokeDashArray="1,2" StrokeDashCap="Round" Stroke="{DynamicResource Brush.Power}">
+                  <Line.Style>
+                    <Style TargetType="Line">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="0">
+                          <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="1">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="97">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="97">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="2">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="94">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="94">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="3">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="89">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="89">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="4">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="84">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="84">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="5">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="77">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="77">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="6">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="68">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="68">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="7">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="57">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="57">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="8">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="43">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="43">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="9">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="26">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="26">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PowerBar.CurrentValue}" Value="10">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard>
+                              <Storyboard>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y1" To="6">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Duration="0:0:0.4" Storyboard.TargetProperty="Y2" To="6">
+                                  <DoubleAnimation.EasingFunction>
+                                      <CubicEase EasingMode="EaseOut"/>
+                                  </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                              </Storyboard>
+                            </BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Line.Style>
+                </Line>
+              </Grid>
+            </Grid>
+            <Path x:Name="PowerToPerformanceGraphOutlines" Data="M0.5,128.5L0.5,120.5 0.5,0.5 180.5,0.5 188.5,0.5M180.5,0.5L180.5,120.5 188.5,120.5M180.5,128.5L180.5,120.5 0.5,120.5" StrokeThickness="1" Stroke="{DynamicResource Brush.BarBackground}"/>
+          </Canvas>
+          <TextBlock Text="{Binding Path=PowerMin}" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Detail.Secondary}" Width="20" Canvas.Left="10" Canvas.Top="140"/>
+          <TextBlock Text="{Binding Path=PowerBar.MaxValue}" TextAlignment="Right" Style="{DynamicResource TextBlock.Style.Detail.Secondary}" Width="20" Canvas.Left="171" Canvas.Top="140"/>
+          <TextBlock Text="POWER IN" TextAlignment="Right" Style="{DynamicResource TextBlock.Style.Header4}" Canvas.Left="65" Canvas.Top="140"/>
+          <TextBlock Text="{Binding Path=PowerBar.CurrentValue}" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Detail.Primary}" Canvas.Left="120" Canvas.Top="140"/>
+          <TextBlock Text="{Binding Path=PerformanceMax}" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Detail.Secondary}" Width="40" Canvas.Left="203" Canvas.Top="8"/>
+          <TextBlock Text="{Binding Path=PerformanceMin}" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Detail.Secondary}" Width="40" Canvas.Left="203" Canvas.Top="122"/>
+          <TextBlock Text="PERF." TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Header4}" Width="50" Canvas.Left="203" Canvas.Top="54"/>
+          <TextBlock Text="OUT" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Header4}" Width="50" Canvas.Left="203" Canvas.Top="64"/>
+          <TextBlock Text="{Binding Path=PerformanceBase}" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Detail.Primary}" Canvas.Left="203" Canvas.Top="80"/>
+          <ContentControl x:Name="Modifiers" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Width="150" Canvas.Left="250" Canvas.Top="8">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+              </Grid.RowDefinitions>
+              <TextBlock Text="MODIFIERS" TextAlignment="Left" Style="{DynamicResource TextBlock.Style.Header3}"/>
+              <TextBlock Text="NO MODIFIERS" TextAlignment="Left" Margin="0,8,0,0" Canvas.Left="5" Grid.Row="1" Canvas.Top="18">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlock.Style.Header4}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Path=PerformanceModifiers.Count}" Value="0">
+                        <Setter Property="Visibility" Value="Visible"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <ItemsControl ItemsSource="{Binding Path=PerformanceModifiers}" Grid.Row="1">
+                <ItemsControl.ItemContainerStyle>
+                  <Style TargetType="ContentPresenter">
+                    <Setter Value="0,6,0,0" Property="Margin"/>
+                  </Style>
+                </ItemsControl.ItemContainerStyle>
+              </ItemsControl>
+            </Grid>
+          </ContentControl>
+          <ContentControl x:Name="PerformanceOutputValue" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="250" Canvas.Top="125">
+            <Grid>
+              <Canvas x:Name="PerformanceOutputType" Background="{DynamicResource Brush.PanelHeaderBackground}" Margin="0,0,60,0" Height="25" Width="90">
+                <TextBlock Foreground="{DynamicResource Brush.Text}" Text="PERF." TextAlignment="Center" Style="{DynamicResource TextBlock.Style.Header2}" Width="90" Canvas.Top="6"/>
+              </Canvas>
+              <Canvas x:Name="PerformanceOutput" Background="{DynamicResource Brush.PowerGraph}" Margin="90,0,0,0" Height="25" Width="60">
+                <TextBlock Foreground="{DynamicResource Brush.Text}" Text="{Binding Path=PerformanceFinal}" TextAlignment="Center" Style="{DynamicResource TextBlock.Style.Header2}" Width="60" Canvas.Top="6"/>
+              </Canvas>
+            </Grid>
+          </ContentControl>
+        </Canvas>
+      </ContentControl>
+      <TextBlock Text="OPERATION" Style="{DynamicResource TextBlock.Style.Header2}" TextAlignment="Left" Canvas.Left="435" Canvas.Top="18"/>
+
+      <ContentControl x:Name="Operation" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="430" Canvas.Top="35">
+        <Canvas Height="50" Width="245">
+          <Viewbox Height="30" Width="30" Canvas.Left="10" Canvas.Top="10">
+            <Canvas Height="128" Width="128">
+              <Path x:Name="OperationIcon" Data="{DynamicResource Geometry.OperationIcon}" Style="{DynamicResource Path.Style.OperationIcon}"/>
+            </Canvas>
+          </Viewbox>
+          <TextBlock x:Name="OperationText" Foreground="{DynamicResource Brush.Text}" Style="{DynamicResource TextBlock.Style.Operation}" Canvas.Left="50" Canvas.Top="18">
+          <Run Text="ONLINE"/></TextBlock>
+        </Canvas>
+      </ContentControl>
+      <TextBlock Text="TECHNICIAN" Style="{DynamicResource TextBlock.Style.Header2}" TextAlignment="Left" Canvas.Left="435" Canvas.Top="98"/>
+      <Grid Canvas.Left="430" Canvas.Top="115">
+        <Canvas x:Name="AssignedTechnician" Width="160" Height="280">
+          <Canvas.Style>
+            <Style TargetType="{x:Type Canvas}">
+              <Setter Property="Visibility" Value="Visible"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Technician}" Value="{x:Null}">
+                  <DataTrigger.Setters>
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                  </DataTrigger.Setters>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Canvas.Style>          
+          
+          <ContentControl x:Name="Technician" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="10" Canvas.Top="10">
+            <Grid>
+              <Path Data="{DynamicResource Geometry.TechnicianSlotBackground}" Fill="{DynamicResource Brush.TechnicianSlotBackground}"/>
+              <Viewbox Margin="0,0,208,288" Height="32" Width="32">
+                <ContentControl Content="{Binding Path=Technician.PortraitKey}" ContentTemplateSelector="{DynamicResource TemplateSelector.DynamicKey.TechnicianPortrait}"/>
+              </Viewbox>
+              <Canvas Margin="40,0,0,0" Height="320" Width="200">
+                <Canvas.RenderTransform>
+                  <TransformGroup>
+                    <ScaleTransform ScaleX="0.1" ScaleY="0.1"/>
+                    <SkewTransform/>
+                    <RotateTransform/>
+                    <TranslateTransform/>
+                  </TransformGroup>
+                </Canvas.RenderTransform>
+                <ContentControl Content="{Binding Path=Technician.RankIndex}" ContentTemplateSelector="{DynamicResource TemplateSelector.DynamicKey.TechnicianRank}"/>
+              </Canvas>
+              <TextBlock Foreground="{DynamicResource Brush.Text}" TextAlignment="Center" Margin="68,10,113.221,297.998" Style="{DynamicResource TextBlock.Style.Header3}">
+                <TextBlock.Text>
+                  <Binding Path="Technician.Name">
+                    <Binding.Converter>
+                      <noesis:CaseConverter Format="UpperCase"/>
+                    </Binding.Converter>
+                  </Binding>
+                </TextBlock.Text>
+              </TextBlock>
+            </Grid>
+          </ContentControl>
+          
+          <ContentControl x:Name="TechnicianOptions" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="10" Canvas.Top="100">
+            <StackPanel Orientation="Vertical" Width="140">
+              <Button x:Name="TechnicianUnassignButton" Height="24" Style="{DynamicResource Button.Style.Rectangle}" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="6,0,0,0">
+                  <Viewbox Width="14" Height="14">
+                    <Canvas Width="128" Height="128">
+                      <Path Style="{DynamicResource Path.Style.InteractableIcon}" Data="{DynamicResource Geometry.UnassignIcon}"/>
+                    </Canvas>
+                  </Viewbox>
+                  <Grid>                  
+                    <TextBlock Text="UNASSIGN" Style="{DynamicResource TechnicianTextBlockStyle}"/>
+                  </Grid>
+                </StackPanel>
+              </Button>
+
+              <TextBlock Text="AVAILABLE ACTIONS" Style="{DynamicResource TextBlock.Style.Header3}" TextAlignment="Center" Margin="0,12,0,6"/>
+
+              <Button Height="24" Style="{DynamicResource Button.Style.Rectangle}" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="6,0,0,0">
+                  <Viewbox Width="14" Height="14">
+                    <Canvas Width="128" Height="128">
+                      <Path Style="{DynamicResource Path.Style.InteractableIcon}" Data="{DynamicResource Geometry.StabilizeIcon}"/>
+                    </Canvas>
+                  </Viewbox>
+                  <Grid>                  
+                    <TextBlock Text="STABILIZE" Style="{DynamicResource TechnicianTextBlockStyle}"/>
+                  </Grid>
+                </StackPanel>
+              </Button>
+
+              <Button Height="24" Style="{DynamicResource Button.Style.Rectangle}" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="6,0,0,0">
+                  <Viewbox Width="14" Height="14">
+                    <Canvas Width="128" Height="128">
+                      <Path Style="{DynamicResource Path.Style.InteractableIcon}" Data="{DynamicResource Geometry.RepairIcon}"/>
+                    </Canvas>
+                  </Viewbox>
+                  <Grid>                  
+                    <TextBlock Text="REPAIR" Style="{DynamicResource TechnicianTextBlockStyle}"/>
+                  </Grid>
+                </StackPanel>
+              </Button>
+
+              <Button Height="24" Style="{DynamicResource Button.Style.Rectangle}" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="6,0,0,0">
+                  <Viewbox Width="14" Height="14">
+                    <Canvas Width="128" Height="128">
+                      <Path Style="{DynamicResource Path.Style.InteractableIcon}" Data="{DynamicResource Geometry.ModifyIcon}"/>
+                    </Canvas>
+                  </Viewbox>
+                  <Grid>                  
+                    <TextBlock Text="BOOST" Style="{DynamicResource TechnicianTextBlockStyle}"/>
+                  </Grid>
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </ContentControl>
+        </Canvas>
+        <ContentControl x:Name="UnassignedTechnician" Template="{DynamicResource ContentControl.ControlTemplate.UpdateAnimation}" Canvas.Left="10" Canvas.Top="100">
+          <Canvas Width="160" Height="280">
+            <Canvas.Style>
+              <Style TargetType="{x:Type Canvas}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Technician}" Value="{x:Null}">
+                    <DataTrigger.Setters>
+                      <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger.Setters>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Canvas.Style>
+            <TextBlock Text="NO TECHNICIAN ASSIGNED" Foreground="{DynamicResource Brush.Text}" Style="{DynamicResource TextBlock.Style.Header3}" TextAlignment="Center" Width="165" Canvas.Left="0" Canvas.Top="120"/>
+          </Canvas>
+        </ContentControl>
+      </Grid>    </Canvas>
+  </Canvas>
+</Component>

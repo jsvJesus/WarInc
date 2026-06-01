@@ -1315,7 +1315,7 @@ static void DrawNoninstancedMesh(r3dMesh * pMesh, int iCount)
 	for (int i = 0; i < iCount; ++i)
 	{
 		//	Set instance data as vertex shader constant
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(9, &((InstanceData_t*)InstanceDataBuffer)[i].vPos.x, 2);
+		r3dRenderer->SetVertexShaderConstantF(9, &((InstanceData_t*)InstanceDataBuffer)[i].vPos.x, 2);
 		pMesh->DrawMeshSimpleInstances(1);
 	}
 }
@@ -1359,7 +1359,7 @@ void SetupAnimationConstants( int iInst )
 
 	vParms[ 4 ] = g_pWind->GetTexcXfm() ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 4, (float*)vParms, sizeof vParms / sizeof vParms[ 0 ] ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 4, (float*)vParms, sizeof vParms / sizeof vParms[ 0 ] ) );
 
 	r3dRenderer->SetTex( g_pWind->GetWindTexture(), D3DVERTEXTEXTURESAMPLER0 ) ;
 
@@ -1429,8 +1429,8 @@ void Draw_Instance_Map( InstanceDrawModeEnum drawMode )
 // 		D3DXMATRIX Identity;
 // 		D3DXMatrixIdentity(&Identity);
 
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF ( 0, (float*)&mViewProj, 4 );
-		//r3dRenderer->pd3ddev->SetVertexShaderConstantF ( 4, (float*)&Identity, 4 );
+		r3dRenderer->SetVertexShaderConstantF( 0, (float*)&mViewProj, 4 );
+		//r3dRenderer->SetVertexShaderConstantF( 4, (float*)&Identity, 4 );
 
 		for ( int iInst = 0; iInst < MAX_INSTANCE_TYPE; iInst++ )
 		{

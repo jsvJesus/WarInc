@@ -1,0 +1,59 @@
+<vdctx:Screen_ViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals">
+  <vdctx:Screen_ViewModel.Characters>
+    <vdctx:Character_ViewModel Character_Description="I&apos;ve seen it all before
+&#x0a;Beauty and splendor torn
+&#x0a;
+&#x0a;Feel it turning your heart into stone
+&#x0a;Feel it piercing your courageous soul
+&#x0a;
+&#x0a;You&apos;re beyond redemption now
+&#x0a;And no one&apos;s going to catch you when you fall
+&#x0a;I see you crawl
+&#x0a;You can barely walk
+&#x0a;
+&#x0a;You keep on begging for more
+&#x0a;I&apos;ve been there before
+&#x0a;Knocking on the same door" Character_Portrait="/Root;component/Assets/Bitmaps_Character_Portraits/Bitmaps_Character_Portraits_Ombra_1.png" Character_Background="/Root;component/Assets/Bitmaps_Character_Backgrounds/Bitmaps_Character_Backgrounds_Ombra_1.png" Character_Number="1" Character_Name="despair"/>
+    <vdctx:Character_ViewModel Character_Number="2" Character_Description="Heartache is knocking on her door
+&#x0a;Shadows dance outside her window
+&#x0a;Tears keep falling on the floor
+&#x0a;As the world around her crumbles
+&#x0a;
+&#x0a;If you want to save her
+&#x0a;First you have to save yourself
+&#x0a;If you want to free her from the hurt
+&#x0a;Don&apos;t do it with your pain
+&#x0a;If you want to see her smile again
+&#x0a;Don&apos;t show her you&apos;re afraid
+&#x0a;Because your circle of fear is the same
+&#x0a;
+&#x0a;A one-way ticket to endless sorrow
+&#x0a;Today without tomorrow" Character_Portrait="/Root;component/Assets/Bitmaps_Character_Portraits/Bitmaps_Character_Portraits_Ombra_2.png" Character_Background="/Root;component/Assets/Bitmaps_Character_Backgrounds/Bitmaps_Character_Backgrounds_Ombra_2.png" Character_Name="fear"/>
+    <vdctx:Character_ViewModel Character_Number="3" Character_Portrait="/Root;component/Assets/Bitmaps_Character_Portraits/Bitmaps_Character_Portraits_Ombra_3.png" Character_Background="/Root;component/Assets/Bitmaps_Character_Backgrounds/Bitmaps_Character_Backgrounds_Ombra_3.png" Character_Description="I&apos;m losing my faith in you
+&#x0a;You don&apos;t want it to be true
+&#x0a;But there&apos;s nothing you can do
+&#x0a;
+&#x0a;There&apos;s nothing you can do, yes,
+&#x0a;I&apos;ve lost my faith in you
+&#x0a;I&apos;m waiting for your call and I&apos;m ready to take
+&#x0a;your six six six in my heart
+&#x0a;I&apos;m longing for your touch and I welcome your
+&#x0a;sweet six six six in my heart
+&#x0a;
+&#x0a;How long we have to wait
+&#x0a;I know it&apos;s too late" Character_Name="regret"/>
+    <vdctx:Character_ViewModel Character_Number="4" Character_Portrait="/Root;component/Assets/Bitmaps_Character_Portraits/Bitmaps_Character_Portraits_Ombra_4.png" Character_Background="/Root;component/Assets/Bitmaps_Character_Backgrounds/Bitmaps_Character_Backgrounds_Ombra_4.png" Character_Description="Again the burden of losing
+&#x0a;rests upon my shoulders
+&#x0a;And its weight seems unbearable
+&#x0a;Your tomb is where your heart is,
+&#x0a;I should have told her
+&#x0a;
+&#x0a;But within me hid a secret so terrible
+&#x0a;To cry is to know that you&apos;re alive
+&#x0a;But my river of tears has run dry
+&#x0a;
+&#x0a;And if I wake before I die
+&#x0a;Rescue me with your smile
+" Character_Name="grief"/>
+  </vdctx:Screen_ViewModel.Characters>
+</vdctx:Screen_ViewModel>

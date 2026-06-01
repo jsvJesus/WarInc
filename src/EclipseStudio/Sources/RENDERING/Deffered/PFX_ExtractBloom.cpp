@@ -98,7 +98,7 @@ PFX_ExtractBloom::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src
 
 	};
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&bloom_params, sizeof bloom_params / sizeof bloom_params[ 0 ] );
+	r3dRenderer->SetPixelShaderConstantF(0, (float*)&bloom_params, sizeof bloom_params / sizeof bloom_params[ 0 ] );
 
 	r3dRenderer->SetTex(g_pPostFXChief->GetBuffer(PostFXChief::RTT_DIFFUSE_32BIT)->Tex, 4);
 

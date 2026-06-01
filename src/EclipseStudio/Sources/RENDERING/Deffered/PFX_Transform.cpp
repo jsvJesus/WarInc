@@ -52,7 +52,7 @@ PFX_Transform::CloseImpl()		/*OVERRIDE*/
 void
 PFX_Transform::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src*/ )	/*OVERRIDE*/
 {
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)mTCoefs, 2 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)mTCoefs, 2 ) );
 }
 
 //------------------------------------------------------------------------

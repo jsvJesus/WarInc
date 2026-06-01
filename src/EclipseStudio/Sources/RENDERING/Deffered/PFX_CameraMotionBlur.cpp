@@ -91,11 +91,11 @@ PFX_CameraMotionBlur::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* s
 {
 	D3DPERF_BeginEvent( 0x1, L"camera motion blur" );
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)&mMotionMatrix._11, 1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, (float*)&mMotionMatrix._21, 1 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 2, (float*)&mMotionMatrix._41, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*)&mMotionMatrix._11, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 1, (float*)&mMotionMatrix._21, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 2, (float*)&mMotionMatrix._41, 1 );
 	D3DXVECTOR4 vCamScale = D3DXVECTOR4 ( mSettings.MotionScale,1.0f / r3dRenderer->FarClip,0,0);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 3, (float*)&vCamScale, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 3, (float*)&vCamScale, 1 );
 
 	r3dRenderer->SetTex( src->Tex, PostFXChief::FREE_TEX_STAGE_START );
 }

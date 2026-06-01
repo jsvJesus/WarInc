@@ -1,0 +1,9 @@
+<vdctx:Screen_ViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals">
+  <vdctx:Screen_ViewModel.ActiveBanner>
+    <vdctx:Banner_ViewModel Name="credits.module" Description="Download the credits module and earn double currency during one online engagement.">
+      <vdctx:Banner_ViewModel.Image>
+        <BitmapImage UriSource="/Root;component/Assets/Bitmaps_Icons/Bitmap_Icons_Currency.png"/>
+      </vdctx:Banner_ViewModel.Image>
+    </vdctx:Banner_ViewModel>
+  </vdctx:Screen_ViewModel.ActiveBanner>
+</vdctx:Screen_ViewModel>

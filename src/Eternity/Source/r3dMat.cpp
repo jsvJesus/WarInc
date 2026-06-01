@@ -354,7 +354,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 	{
 		D3DXVECTOR4 diffuse ;
 		SetupCompoundDiffuse( &diffuse, Flags & R3D_MAT_TRANSPARENT ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MAT_DIFFUSE, (float*)&diffuse, 1 ) ) ;
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_MAT_DIFFUSE, (float*)&diffuse, 1 ) ) ;
 		return;
 	}
 	else
@@ -482,7 +482,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 			camoLerpF = r3dTL::Clamp(camoLerpF, 0.0f, 1.0f);
 
 			D3DXVECTOR4 v(camoLerpF, 0, 0, 0);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMOINTERPOLATOR, &v.x, 1);
+			r3dRenderer->SetPixelShaderConstantF(MC_CAMOINTERPOLATOR, &v.x, 1);
 		}
 		else
 		{
@@ -553,7 +553,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 
 		SetupCompoundDiffuse( &vConsts[ 1 ], Flags & R3D_MAT_TRANSPARENT ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)vConsts,  R3D_ARRAYSIZE( vConsts ) ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)vConsts,  R3D_ARRAYSIZE( vConsts ) ) );
 
 		TL_STATIC_ASSERT( MC_MAT_DIFFUSE - MC_MATERIAL_PARAMS >= 0 ) ;
 		TL_STATIC_ASSERT( MC_MAT_SPECULAR - MC_MATERIAL_PARAMS >= 0 ) ;
@@ -566,7 +566,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 		if ( m_DoDispl )
 		{
 			D3DXVECTOR4 v = D3DXVECTOR4( m_DisplDepthVal, 0, 0, 0 );
-			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DISPLACE, (float*)&v, 1 ) );
+			D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_DISPLACE, (float*)&v, 1 ) );
 		}
 	}
 
@@ -621,7 +621,7 @@ void r3dMaterial::StartTransparent()
 		D3DXVECTOR4 vecs[3];
 		vecs[0] = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
 		// float3 vCamera					: register( c17 );
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(17, &vecs[0].x, 1);
+		r3dRenderer->SetVertexShaderConstantF(17, &vecs[0].x, 1);
 		if (Sun)
 		{
 			r3dVector v(-Sun->SunDir);
@@ -637,10 +637,10 @@ void r3dMaterial::StartTransparent()
 		if (!(Flags & (R3D_MAT_TRANSPARENT_CAMOUFLAGE | R3D_MAT_TRANSPARENT_CAMO_FP ) ) )
 		{
 			float extrudeAmount[4] = {0};
-			D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(23, &extrudeAmount[0], 1));
+			D3D_V(r3dRenderer->SetVertexShaderConstantF(23, &extrudeAmount[0], 1));
 		}
 		
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_SUNDIR, &vecs[0].x, R3D_ARRAYSIZE(vecs)) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF(MC_SUNDIR, &vecs[0].x, R3D_ARRAYSIZE(vecs)) );
 
 		TL_STATIC_ASSERT( MC_SUNCOLOR - MC_SUNDIR >= 0 ) ;
 		TL_STATIC_ASSERT( MC_AMBIENTCOLOR - MC_SUNDIR >= 0 ) ;
@@ -650,7 +650,7 @@ void r3dMaterial::StartTransparent()
 
 		vecs[0] = D3DXVECTOR4(SpecularPower1, SpecularPower, ReflectionPower, 0.0f);
 
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &vecs[0].x, 1) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &vecs[0].x, 1) );
 	}
 }
 

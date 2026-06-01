@@ -97,9 +97,9 @@ void PFX_ScreenRainDrops::PrepareImpl(r3dScreenBuffer* dest, r3dScreenBuffer* sr
 	mData.TexTransform[2] = 0.5f / src->Width;
 	mData.TexTransform[3] = 0.5f / src->Height;
 
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, rain0, 1));
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(1, rain1, 1));
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(2, rain2, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(0, rain0, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(1, rain1, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(2, rain2, 1));
 
 	D3D_V(r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_ADDRESSU, &mPrevAddressU));
 	D3D_V(r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_ADDRESSV, &mPrevAddressV));

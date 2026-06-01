@@ -1,0 +1,5 @@
+<Class Name="DataGeneration_Map_Collection">
+  <Property Name="Plots" Type="Collection" SubType="MiniShowcases.DataGeneration_Map_Plot_Properties" CollectionMinItemCount="120" CollectionMaxItemCount="120"/>
+  <Property Name="Roads" Type="Collection" SubType="MiniShowcases.DataGeneration_Map_Road_Properties" CollectionMinItemCount="16" CollectionMaxItemCount="16"/>
+  <Property Name="Town" Type="Collection" SubType="MiniShowcases.DataGeneration_Map_Town_Properties" CollectionMinItemCount="1" CollectionMaxItemCount="1"/>
+</Class>

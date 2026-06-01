@@ -1,0 +1,425 @@
+<Page
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+    xmlns:system="clr-namespace:System;assembly=mscorlib"
+    FontFamily="Assets/#Eurostile"
+    mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080" d:DataContext="SQUAD_1">
+    <Page.Background>
+        <ImageBrush
+            ImageSource="Assets/ListBox_Background.png"
+            Stretch="UniformToFill"
+            Viewbox="0,0,1,0.844813" />
+    </Page.Background>
+    <Page.Resources>
+        <ResourceDictionary>
+            <Storyboard x:Key="Storyboard.Load">
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MainLayout" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="500"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <CircleEase EasingMode="EaseOut"/>
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MainLayout" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1.1"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <CircleEase EasingMode="EaseOut"/>
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MainLayout" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1.1"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <CircleEase EasingMode="EaseOut"/>
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MainLayout" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+            <Storyboard x:Key="Storyboard.StatsChange">
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Stats" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="150"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <CircleEase EasingMode="EaseOut"/>
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Stats" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="WeaponsAndSkills" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="150"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+                        <EasingDoubleKeyFrame.EasingFunction>
+                            <CircleEase EasingMode="EaseOut"/>
+                        </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="WeaponsAndSkills" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+        </ResourceDictionary>
+    </Page.Resources>
+    <Grid x:Name="MainLayout" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <TransformGroup>
+                <ScaleTransform />
+                <SkewTransform />
+                <RotateTransform />
+                <TranslateTransform />
+            </TransformGroup>
+        </Grid.RenderTransform>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60*" />
+            <RowDefinition Height="967*" />
+            <RowDefinition Height="60*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="65*" />
+            <ColumnDefinition Width="86*" />
+            <ColumnDefinition Width="11*" />
+            <ColumnDefinition Width="132*" />
+            <ColumnDefinition Width="28*" />
+            <ColumnDefinition Width="398*" />
+            <ColumnDefinition Width="33*" />
+            <ColumnDefinition Width="646*" />
+            <ColumnDefinition Width="34*" />
+            <ColumnDefinition Width="426*" />
+            <ColumnDefinition Width="61*" />
+        </Grid.ColumnDefinitions>
+        <Rectangle
+            x:Name="SquadBackground"
+            Grid.Row="1"
+            Grid.Column="3"
+            Fill="#FF000000"
+            Opacity="0.9045259" />
+        <TextBlock
+            Grid.Row="1"
+            Grid.Column="3"
+            Padding="54,0,0,0"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            FontSize="86"
+            FontWeight="Bold"
+            Foreground="{DynamicResource C1C1C3}"
+            Text="SQUAD"
+            TextWrapping="Wrap">
+            <TextBlock.LayoutTransform>
+                <TransformGroup>
+                    <ScaleTransform />
+                    <SkewTransform />
+                    <RotateTransform Angle="90" />
+                    <TranslateTransform />
+                </TransformGroup>
+            </TextBlock.LayoutTransform>
+        </TextBlock>
+        <ListBox
+            x:Name="Squad_ListBox"
+            Grid.Row="1"
+            Grid.Column="5"
+            FocusVisualStyle="{DynamicResource ListBox.Style.003}"
+            ItemContainerStyle="{DynamicResource ListBox.Style.001}"
+            ItemTemplate="{DynamicResource DataTemplate.001}"
+            ItemsPanel="{DynamicResource ItemsPanelTemplate.001}"
+            ItemsSource="{Binding Path=Soldiers}"
+            SelectedIndex="{Binding Path=SelectedSoldier}"
+            Style="{DynamicResource ListBox.Style.002}"
+            Template="{DynamicResource ListBox.ControlTemplate.001}" />
+        <StackPanel
+            x:Name="WeaponsAndSkills"
+            Grid.Row="1"
+            Grid.Column="7"
+            VerticalAlignment="Top">
+            <StackPanel.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform />
+                    <SkewTransform />
+                    <RotateTransform />
+                    <TranslateTransform />
+                </TransformGroup>
+            </StackPanel.RenderTransform>
+            <Grid
+                x:Name="WeaponsGridHeader"
+                Width="646"
+                Height="60"
+                Margin="0,0,0,15"
+                HorizontalAlignment="Center">
+                <Rectangle Height="60" Fill="{DynamicResource F37A11}" />
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="37"
+                    Text="WEAPONS"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <ItemsControl
+                x:Name="Skills_ItemsControl"
+                Grid.Row="1"
+                Grid.Column="7"
+                Focusable="False"
+                ItemContainerStyle="{DynamicResource ItemsControl.Style.001}"
+                ItemTemplate="{DynamicResource Weapons.DataTemplate}"
+                ItemsSource="{Binding Path=SelectedItem.Weapons, ElementName=Squad_ListBox}" />
+            <Grid
+                x:Name="SkillsGridHeader"
+                Width="646"
+                Height="60"
+                Margin="0,0,0,15"
+                HorizontalAlignment="Stretch">
+                <Rectangle Height="60" Fill="{DynamicResource F37A11}" />
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="37"
+                    Text="SKILLS"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <ItemsControl
+                x:Name="Weapons_ItemsControl"
+                Grid.Row="1"
+                Grid.Column="7"
+                Focusable="False"
+                ItemContainerStyle="{DynamicResource ItemsControl.Style.001}"
+                ItemTemplate="{DynamicResource Skills.DataTemplate}"
+                ItemsSource="{Binding Path=SelectedItem.Skills, ElementName=Squad_ListBox}" />
+        </StackPanel>
+        <StackPanel
+            x:Name="Stats"
+            Grid.Row="1"
+            Grid.Column="9"
+            VerticalAlignment="Top">
+            <StackPanel.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform />
+                    <SkewTransform />
+                    <RotateTransform />
+                    <TranslateTransform />
+                </TransformGroup>
+            </StackPanel.RenderTransform>
+            <Grid
+                x:Name="StatsHeader"
+                Width="426"
+                Height="215"
+                Margin="0,0,0,15">
+                <Rectangle
+                    x:Name="AvatarBAckground"
+                    Height="215"
+                    VerticalAlignment="Center"
+                    DataContext="{Binding}">
+                    <Rectangle.Fill>
+                        <ImageBrush ImageSource="{Binding Path=SelectedItem.Avatar, ElementName=Squad_ListBox}" Stretch="UniformToFill" />
+                    </Rectangle.Fill>
+                </Rectangle>
+                <Rectangle
+                    Height="215"
+                    VerticalAlignment="Center"
+                    Fill="#A7000000"
+                    Opacity="0.6499937" />
+                <TextBlock
+                    x:Name="PropertyChangedTrigger"
+                    Margin="43,50,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    FontSize="50"
+                    FontWeight="Black"
+                    Foreground="{DynamicResource F37A11}"
+                    Text="{Binding Path=SelectedItem.Rank, ElementName=Squad_ListBox}"
+                    TextWrapping="Wrap">
+                    <b:Interaction.Triggers>
+                        <b:PropertyChangedTrigger Binding="{Binding Path=SelectedItem.Name, ElementName=Squad_ListBox}">
+                            <b:Interaction.Behaviors>
+                                <b:ConditionBehavior>
+                                    <b:ConditionalExpression ForwardChaining="And">
+                                        <b:ComparisonCondition />
+                                    </b:ConditionalExpression>
+                                </b:ConditionBehavior>
+                            </b:Interaction.Behaviors>
+                            <b:ControlStoryboardAction Storyboard="{DynamicResource Storyboard.StatsChange}" />
+                        </b:PropertyChangedTrigger>
+                    </b:Interaction.Triggers>
+                </TextBlock>
+                <TextBlock
+                    Margin="43,0,0,48"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    FontSize="40"
+                    FontWeight="Medium"
+                    Foreground="{DynamicResource F37A11}"
+                    Text="{Binding Path=SelectedItem.Specialization, ElementName=Squad_ListBox}"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <Grid x:Name="BadgeGrid" Margin="0,0,0,15">
+                <Rectangle
+                    Grid.Row="1"
+                    Grid.Column="9"
+                    Height="380"
+                    Fill="#D0000000" />
+                <Image
+                    x:Name="BadgeImage"
+                    Height="300"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Source="{Binding Path=SelectedItem.Badge, ElementName=Squad_ListBox}" />
+            </Grid>
+            <Grid
+                x:Name="Stat1"
+                Grid.Row="1"
+                Grid.Column="9"
+                Height="60"
+                Margin="0,0,0,15"
+                Background="{DynamicResource SolidColorBrush.002}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="327*" />
+                    <ColumnDefinition Width="99*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource 7D7D7D}"
+                    Text="Level"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Grid.Column="1"
+                    Height="39.6"
+                    Margin="0,0,35,0"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource C1C1C3}"
+                    Text="{Binding Path=SelectedItem.Level, StringFormat=F0, ElementName=Squad_ListBox}"
+                    TextAlignment="Right"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <Grid
+                x:Name="Stat2"
+                Grid.Row="1"
+                Grid.Column="9"
+                Height="60"
+                Margin="0,0,0,15"
+                Background="{DynamicResource SolidColorBrush.002}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="327*" />
+                    <ColumnDefinition Width="99*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource 7D7D7D}"
+                    Text="XP"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Grid.Column="1"
+                    Height="39.6"
+                    Margin="0,0,35,0"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource C1C1C3}"
+                    Text="{Binding Path=SelectedItem.XP, StringFormat=F0, ElementName=Squad_ListBox}"
+                    TextAlignment="Right"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <Grid
+                x:Name="Stat3"
+                Grid.Row="1"
+                Grid.Column="9"
+                Height="60"
+                Background="{DynamicResource SolidColorBrush.002}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="311*" />
+                    <ColumnDefinition Width="115*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource 7D7D7D}"
+                    Text="Next Level"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="0,0,35,0"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource C1C1C3}"
+                    Text="{Binding Path=SelectedItem.NextLevel, StringFormat=F0, ElementName=Squad_ListBox}"
+                    TextAlignment="Right"
+                    TextWrapping="Wrap" />
+            </Grid>
+            <Grid
+                x:Name="Stat5"
+                Grid.Row="1"
+                Grid.Column="9"
+                Height="50"
+                Margin="0,0,0,15"
+                Background="{DynamicResource SolidColorBrush.002}">
+                <ProgressBar
+                    Margin="35,15,35,15"
+                    Background="{DynamicResource 7D7D7D}"
+                    Foreground="#FFD2D2D2"
+                    Maximum="999"
+                    Value="{Binding Path=SelectedItem.NextLevel, StringFormat=F0, ElementName=Squad_ListBox}" />
+            </Grid>
+            <Grid
+                x:Name="Stat4"
+                Grid.Row="1"
+                Grid.Column="9"
+                Height="60"
+                Background="{DynamicResource SolidColorBrush.002}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="317*" />
+                    <ColumnDefinition Width="109*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Margin="35,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource C1C1C3}"
+                    Text="Points"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="0,0,35,0"
+                    VerticalAlignment="Center"
+                    FontSize="33"
+                    Foreground="{DynamicResource FFFFFF}"
+                    Text="{Binding Path=SelectedItem.Points, StringFormat=F0, ElementName=Squad_ListBox}"
+                    TextAlignment="Right"
+                    TextWrapping="Wrap" />
+            </Grid>
+        </StackPanel>        
+        <Button
+            x:Name="MainMenu_Button"
+            Grid.Row="1"
+            Grid.Column="1"
+            Content="Button"
+            Template="{DynamicResource Button.ControlTemplate.001}" Focusable="False" />
+    </Grid>
+    <Page.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard x:Name="Storyboard.Load_Begin" Storyboard="{DynamicResource Storyboard.Load}" />
+        </EventTrigger>
+    </Page.Triggers>
+
+</Page>

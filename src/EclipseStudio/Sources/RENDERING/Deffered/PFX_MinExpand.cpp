@@ -47,7 +47,7 @@ PFX_MinExpand::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* src )	/*
 						0.0f ,					0.5f / src->Height )
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)&vConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&vConst, 1 ) );
 
 	r3dSetFiltering( R3D_POINT, 0 );
 

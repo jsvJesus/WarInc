@@ -1,0 +1,4 @@
+    <Class Name="BarViewModel">
+      <Property Name="CurrentValue" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="MaxValue" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+    </Class>

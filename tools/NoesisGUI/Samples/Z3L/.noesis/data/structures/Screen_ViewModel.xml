@@ -1,0 +1,8 @@
+<Class Name="Screen_ViewModel">
+  <Property Name="ActiveBanner" Type="Object" SubType="NoesisStudioInternals.Banner_ViewModel"/>
+  <Property Name="StoryCommand" Type="Command"/>
+  <Property Name="OnlineCommand" Type="Command"/>
+  <Property Name="ArmouryCommand" Type="Command"/>
+  <Property Name="SettingsCommand" Type="Command"/>
+  <Property Name="RetireCommand" Type="Command"/>
+</Class>

@@ -343,6 +343,35 @@ int r3dPixelShader :: Load(const char* FName, int Type, const r3dTL::TArray <D3D
 
 #ifndef WO_SERVER
 
+static int r3dDX11_HasShaderMacro(
+	const r3dTL::TArray<r3dDX11ShaderMacro>& macros,
+	const char* name
+)
+{
+	for(unsigned int i = 0; i < macros.Count(); ++i)
+	{
+		if(macros[i].Name && !_stricmp(macros[i].Name, name))
+			return 1;
+	}
+
+	return 0;
+}
+
+static void r3dDX11_AddShaderMacro(
+	r3dTL::TArray<r3dDX11ShaderMacro>& macros,
+	const char* name,
+	const char* definition
+)
+{
+	if(r3dDX11_HasShaderMacro(macros, name))
+		return;
+
+	r3dDX11ShaderMacro macro;
+	macro.Name = name;
+	macro.Definition = definition;
+	macros.PushBack(macro);
+}
+
 static void r3dDX11_BuildPixelShaderMacros(
 	r3dTL::TArray<r3dDX11ShaderMacro>& outMacros,
 	const r3dTL::TArray<D3DXMACRO>& defines
@@ -361,15 +390,14 @@ static void r3dDX11_BuildPixelShaderMacros(
 		outMacros.PushBack(macro);
 	}
 
-	r3dDX11ShaderMacro vertexMacro;
-	vertexMacro.Name = "VERTEX_SHADER";
-	vertexMacro.Definition = "0";
-	outMacros.PushBack(vertexMacro);
-
-	r3dDX11ShaderMacro pixelMacro;
-	pixelMacro.Name = "PIXEL_SHADER";
-	pixelMacro.Definition = "1";
-	outMacros.PushBack(pixelMacro);
+	r3dDX11_AddShaderMacro(outMacros, "VERTEX_SHADER", "0");
+	r3dDX11_AddShaderMacro(outMacros, "PIXEL_SHADER", "1");
+	r3dDX11_AddShaderMacro(outMacros, "R3D_VERTEX_SHADER", "0");
+	r3dDX11_AddShaderMacro(outMacros, "R3D_PIXEL_SHADER", "1");
+	r3dDX11_AddShaderMacro(outMacros, "R3D_DX11", "1");
+	r3dDX11_AddShaderMacro(outMacros, "DX11", "1");
+	r3dDX11_AddShaderMacro(outMacros, "SM4", "1");
+	r3dDX11_AddShaderMacro(outMacros, "R3D_SHADER_MODEL", "40");
 
 	r3dDX11ShaderMacro nullMacro;
 	nullMacro.Name = NULL;

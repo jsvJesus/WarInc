@@ -29,7 +29,7 @@ void Post_DrawTerrainBounds( const r3dTerrainPaintBoundControl& boundCtrl )
    D3DXVECTOR4( invV._13, invV._23, invV._33, invV._43 )
  } ;
 
- D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(  7, (float *)psConts,  R3D_ARRAYSIZE( psConts ) ) );
+ D3D_V( r3dRenderer->SetPixelShaderConstantF(  7, (float *)psConts,  R3D_ARRAYSIZE( psConts ) ) );
 
  r3dRenderer->SetPixelShader( "POST_TERRAINBOUNDS" );
  r3dRenderer->SetVertexShader( "VS_POST_QUAD" );
@@ -42,7 +42,7 @@ void Post_DrawTerrainBounds( const r3dTerrainPaintBoundControl& boundCtrl )
 
  D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
- r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+ r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
  r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
  r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));
@@ -76,8 +76,8 @@ void Post_DrawTerrainMaterialTest()
  D3DXVECTOR4 CamVector(gCam.x,gCam.y,gCam.z, DepthZ);
  D3DXVECTOR4 PVector(20,100, 0,0);
 
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  7, (float *)&CamVector,  1 );
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  8, (float *)&PVector,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  7, (float *)&CamVector,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  8, (float *)&PVector,  1 );
 
  r3dRenderer->SetPixelShader( "POST_TERRAINMAT" );
  r3dRenderer->SetVertexShader( "VS_POST_QUAD" );
@@ -90,7 +90,7 @@ void Post_DrawTerrainMaterialTest()
 
  D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
- r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+ r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
  r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
  r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));

@@ -1,0 +1,7 @@
+<Class Name="Character_ViewModel">
+  <Property Name="Character_Number" Type="Number" NumberMinValue="0" NumberMaxValue="9"/>
+  <Property Name="Character_Name" Type="String" StringMinWordCount="1" StringMaxWordCount="2"/>
+  <Property Name="Character_Description" Type="String" StringMinWordCount="8" StringMaxWordCount="512"/>
+  <Property Name="Character_Portrait" Type="Object" SubType="ImageSource"/>
+  <Property Name="Character_Background" Type="Object" SubType="ImageSource"/>
+</Class>

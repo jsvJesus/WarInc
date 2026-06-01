@@ -273,7 +273,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 
 
 	D3DXVECTOR4 params(	1.0f/RIPPLES_TEXTURE_SIZE,	1.0f/RIPPLES_AREA_SIZE,	RIPPLES_VISCOSITY,	0.0f);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  6, &params.x,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  6, &params.x,  1 );
 
 	for(int i=0; i<nIterations; i++)
 	{
@@ -284,7 +284,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		if( needClear )
 		{
 			ripplesRT[prevRT]->Activate();
-			r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0x80808080, 1.0f, 0 );
+			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0x80808080, 1.0f, 0 );
 			ripplesRT[prevRT]->Deactivate();
 		}
 
@@ -306,18 +306,18 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 				if(nSplashes>0)	r3dRenderer->SetPixelShader("RIPPLESR_N_PS");
 				else	r3dRenderer->SetPixelShader("RIPPLES_N_PS");
 
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(  5, &camd.x,  1 );
+			r3dRenderer->SetPixelShaderConstantF(  5, &camd.x,  1 );
 			camd.x = camd.z = 0.0f;
 
 			D3DXVECTOR4 splash(0.0f, 0.0f, 0.0f, 0.0f);
 			for(int s=nSplashes; s<MaxSplashes; s++)
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  s, &splash.x,  1 );
+				r3dRenderer->SetPixelShaderConstantF(  s, &splash.x,  1 );
 			for(; nSplashes>0; nSplashes--)
 			{
 				splash = splashes[nSplashes-1].params;
 				splash.z = floorf(100000.0f*splash.z/RIPPLES_TEXTURE_SIZE/512.0f * RIPPLES_AREA_SIZE) + float(splashes[nSplashes-1].texIdx+1)*0.2f;
 				splash.w *= RIPPLES_TEXTURE_SIZE/512.0f;
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  nSplashes-1, &splash.x,  1 );
+				r3dRenderer->SetPixelShaderConstantF(  nSplashes-1, &splash.x,  1 );
 			}
 
 
@@ -330,7 +330,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		if(0)	//rain
 		{
 			rainRipplesRT[curRipplesRT]->Activate();
-			if(needs2clear)	r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+			if(needs2clear)	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
 
 			bool drops = GetAsyncKeyState('1')<0;
 			for(int n=0; n<4; n++)
@@ -342,7 +342,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 					drop.y = float(rand())/RAND_MAX;
 					drop.z = 0.05f*float(rand())/RAND_MAX;
 				}
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  n, &drop.x,  1 );
+				r3dRenderer->SetPixelShaderConstantF(  n, &drop.x,  1 );
 			}
 
 			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
@@ -469,22 +469,22 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	D3DXMATRIX ShaderMat;
 	ShaderMat =  mWorld * 	r3dRenderer->ViewProjMatrix ;
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	D3DXVECTOR4 vWaveParam( specularTiling, 0, waterLevel, 0);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  5, (float *)&vWaveParam,	1 );
+	r3dRenderer->SetVertexShaderConstantF(  5, (float *)&vWaveParam,	1 );
 
 
 	D3DXVECTOR4 vsCamReg (r3dRenderer->CameraPosition.x, r3dRenderer->CameraPosition.y, r3dRenderer->CameraPosition.z, 0.f );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  8, (float *)&vsCamReg,	1 );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  22, fBumpness_RefrIndex_TileSize,  1 );
+	r3dRenderer->SetVertexShaderConstantF(  8, (float *)&vsCamReg,	1 );
+	r3dRenderer->SetVertexShaderConstantF(  22, fBumpness_RefrIndex_TileSize,  1 );
 
 	if( r_water_quality->GetInt() == 1 )
 	{
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  23, (float *)&RefractViewProjTexXf,	4 );
+		r3dRenderer->SetVertexShaderConstantF(  23, (float *)&RefractViewProjTexXf,	4 );
 	}
 	else
 	{
-		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  23, (float *)&vSun,	1 );
+		r3dRenderer->SetVertexShaderConstantF(  23, (float *)&vSun,	1 );
 	}
 
 	//---------------------------------------
@@ -659,7 +659,7 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	psConsts[ 26 ] = D3DXVECTOR4 ( 1.0f / farTileBumpiness, SetNormalTextures(10,11,10.f / farTileScale ), 1.0f / fresnelBumpiness, 0.f ) ;
 
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[0].x, psConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[0].x, psConsts.COUNT ) ) ;
 	
 	//-----------------------------------------------------
 	// TEXTURES

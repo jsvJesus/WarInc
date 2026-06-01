@@ -73,7 +73,7 @@ void PFX_DirectionalStreaks::PrepareImpl(r3dScreenBuffer* /*dest*/, r3dScreenBuf
 		psParams[4].z = 0;
 		psParams[4].w = 0;
 
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
+		r3dRenderer->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
 		settingsVec.Erase(0);
 		r3dSetFiltering(R3D_BILINEAR, 0);
 	}

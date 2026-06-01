@@ -72,9 +72,9 @@ PFX_ExplosionBlur::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*sr
 	{
 		D3DXVECTOR4(settings->BrightnessThreshold, settings->BlurStrength, 0, 0)
 	};
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)&pconst[0], _countof(pconst) );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float *)&pconst[0], _countof(pconst) );
 	pconst[0] = D3DXVECTOR4( settings->centerX, settings->centerY, 0, 0 );
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&pconst[0], 1 );
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&pconst[0], 1 );
 
 	if (mSettingsArr.Count() > 0)
 		mSettingsArr.Erase(0);

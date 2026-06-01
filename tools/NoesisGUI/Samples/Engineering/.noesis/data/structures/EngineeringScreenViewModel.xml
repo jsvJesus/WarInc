@@ -1,0 +1,6 @@
+    <Class Name="EngineeringScreenViewModel">
+      <Property Name="Reactors" Type="Collection" SubType="NoesisStudioInternals.ReactorViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+      <Property Name="Systems" Type="Collection" SubType="NoesisStudioInternals.SystemViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+      <Property Name="PowerPresets" Type="Collection" SubType="NoesisStudioInternals.PowerPresetViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+      <Property Name="Technicians" Type="Collection" SubType="NoesisStudioInternals.TechnicianViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="10"/>
+    </Class>

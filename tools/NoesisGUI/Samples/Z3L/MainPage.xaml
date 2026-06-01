@@ -1,0 +1,769 @@
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:noesis="clr-namespace:NoesisGUIExtensions" d:DataContext="Banner_Health" d:DesignWidth="1920" d:DesignHeight="1080">
+
+  <Page.Resources>
+
+    <Storyboard x:Key="ScreenFlicker" RepeatBehavior="Forever">
+
+        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Master" Storyboard.TargetProperty="(UIElement.Opacity)">
+            <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+            <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0.95"/>
+            <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1"/>
+          </DoubleAnimationUsingKeyFrames>
+
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Foreground_Overlay_FX" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00"/>
+
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0.2">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+
+        <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0.2"/>
+
+      </DoubleAnimationUsingKeyFrames>
+
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Foreground_Overlay_FX" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="16"/>
+      </DoubleAnimationUsingKeyFrames>
+
+    </Storyboard>
+
+    <Storyboard x:Key="ScreenEnter">
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Bar_Footer" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Bar_Footer" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <ExponentialEase EasingMode="EaseOut"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Bar_Header" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Bar_Header" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-16"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <ExponentialEase EasingMode="EaseOut"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="NoesisLogo" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ScreenTitle_Anchor" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ScreenTitle_Text_Main" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ScreenTitle_Text_Period" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.4000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ScreenTitle_Text_Menu" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.6000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:00.8000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Menu_Anchor" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.1000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.3000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Menu_Anchor" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.1000000" Value="0.3"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.8999999" Value="1"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button0" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.2000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="1" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button0" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.2000000" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button1" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.2000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.4000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="1" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button1" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.2000000" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.4000000" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button2" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.4000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.6000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="1" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button2" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.4000000" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.6000000" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button3" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.6000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.8000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="1" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button3" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.6000000" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.8000000" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button4" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.8000000" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:02" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="1" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Button4" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.4000000" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:01.8000000" Value="-32"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:02" Value="0"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Banner" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:02" Value="0"/>
+        <EasingDoubleKeyFrame KeyTime="00:00:02.2000000" Value="1">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BounceEase EasingMode="EaseInOut" Bounces="2" Bounciness="1"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+
+    <ControlTemplate x:Key="MenuButton" TargetType="{x:Type Button}">
+
+      <Grid x:Name="MenuButton_Master" Cursor="Hand">
+        <Grid.Background>
+          <SolidColorBrush Color="#FFFFFFFF" Opacity="0"/>
+        </Grid.Background>
+
+        <VisualStateManager.VisualStateGroups>
+          <VisualStateGroup x:Name="CommonStates">
+            <VisualStateGroup.Transitions>
+              <VisualTransition To="MouseOver">
+                <Storyboard>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Text_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Text_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Text_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1">
+                      <EasingDoubleKeyFrame.EasingFunction>
+                        <ExponentialEase EasingMode="EaseInOut"/>
+                      </EasingDoubleKeyFrame.EasingFunction>
+                    </EasingDoubleKeyFrame>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Text_Hover" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_Backer" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_Anchor" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_VertLine" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_VertLine" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                </Storyboard>
+              </VisualTransition>
+            </VisualStateGroup.Transitions>
+            <VisualState x:Name="Normal"/>
+            <VisualState x:Name="MouseOver">
+              <Storyboard>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Text_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Text_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Backer" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Backer" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Text_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Text_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1">
+                    <EasingDoubleKeyFrame.EasingFunction>
+                      <ExponentialEase EasingMode="EaseInOut"/>
+                    </EasingDoubleKeyFrame.EasingFunction>
+                  </EasingDoubleKeyFrame>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Subtitle_Text_Hover" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_Backer" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_Anchor" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_VertLine" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Decorative_VertLine" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="MenuButton_Title_Text" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Green_Light}"/>
+                </ColorAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+            <VisualState x:Name="Pressed"/>
+            <VisualState x:Name="Disabled"/>
+          </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <StackPanel x:Name="MenuButton_HorzStack" Orientation="Horizontal">
+          
+          <Grid x:Name="MenuButton_DecorativeBlock" Width="64">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="16"/>
+              <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="MenuButton_Decorative_Backer" Grid.Column="1" Opacity="0">
+              <Grid.Background>
+                <SolidColorBrush Color="{DynamicResource Blue_Dark}" Opacity="0.1"/>
+              </Grid.Background>
+            </Grid>
+            <Grid x:Name="MenuButton_Decorative_Anchor" Opacity="0">
+              <Grid.Background>
+                <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+              </Grid.Background>
+            </Grid>
+            <Grid x:Name="MenuButton_Decorative_VertLine" Width="8" HorizontalAlignment="Center" Grid.Column="1" Opacity="0" VerticalAlignment="Center" Height="32">
+              <Grid.Background>
+                <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+              </Grid.Background>
+              <Grid.RenderTransform>
+                <ScaleTransform CenterY="16"/>
+              </Grid.RenderTransform>
+            </Grid>
+          </Grid><StackPanel x:Name="MenuButton_VertStack" Margin="8,0,0,0">
+            <Grid x:Name="MenuButton_Title">
+              <Grid x:Name="MenuButton_Title_Backer" Opacity="0">
+                <Grid.Background>
+                  <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+                </Grid.Background>
+              </Grid>
+              <TextBlock x:Name="MenuButton_Title_Text" Text="{Binding Path=Content, RelativeSource={RelativeSource TemplatedParent}}" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Octuple max Solid" FontSize="48" Margin="8,4,16,0">
+                <TextBlock.Foreground>
+                  <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+                </TextBlock.Foreground>
+              </TextBlock>
+            </Grid>
+            <Grid x:Name="MenuButton_Subtitle" Margin="0,4,0,0">
+              <Grid x:Name="MenuButton_Subtitle_Backer" Opacity="0.1">
+                <Grid.Background>
+                  <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+                </Grid.Background>
+              </Grid>
+              <Grid x:Name="MenuButton_Subtitle_ContentVariants" Margin="8,0,8,2">
+                
+                <TextBlock x:Name="MenuButton_Subtitle_Text_Normal" Text="&gt;&gt;&gt;" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Blaec" VerticalAlignment="Center" Margin="0,2,0,0" FontSize="20">
+                  <TextBlock.Foreground>
+                    <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+                  </TextBlock.Foreground>
+                </TextBlock><StackPanel x:Name="MenuButton_Subtitle_Text_Hover" Orientation="Horizontal" Opacity="0">
+                  <StackPanel.RenderTransform>
+                    <TranslateTransform/>
+                  </StackPanel.RenderTransform>
+                  <TextBlock x:Name="MenuButton_Subtitle_Text_Hover_Action" Text="NAVIGATE" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Gasoek One" VerticalAlignment="Center" FontSize="20">
+                    <TextBlock.Foreground>
+                      <SolidColorBrush Color="{DynamicResource Grey_Med}"/>
+                    </TextBlock.Foreground>
+                  </TextBlock>
+                  <TextBlock x:Name="MenuButton_Subtitle_Text_Hover_Text_Detail" Text="&gt;&gt;&gt;" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Blaec" VerticalAlignment="Center" Margin="4,2,0,0" FontSize="20">
+                    <TextBlock.Foreground>
+                      <SolidColorBrush Color="{DynamicResource Grey_Med}"/>
+                    </TextBlock.Foreground>
+                  </TextBlock>
+                </StackPanel>
+              </Grid>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="BannerButton" TargetType="{x:Type Button}">
+      <Grid x:Name="BannerButton_Master" Cursor="Hand">
+        <VisualStateManager.VisualStateGroups>
+          <VisualStateGroup x:Name="CommonStates">
+
+            <VisualStateGroup.Transitions>
+              <VisualTransition To="MouseOver">
+              <Storyboard>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Backer_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Backer_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Text_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Text_Hover_Text" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Left" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Right" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="32"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Left" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="-32"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Right" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+              </VisualTransition>
+            </VisualStateGroup.Transitions>
+
+            <VisualState x:Name="Normal"/>
+
+            <VisualState x:Name="MouseOver">
+              <Storyboard>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Backer_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Backer_Hover" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Text_Normal" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Text_Hover_Text" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Right" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Right" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Left" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Backer" Storyboard.TargetProperty="(Panel.Background).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Green_Light}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="BannerButton_Text" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00" Value="{DynamicResource Blue_Dark}"/>
+                </ColorAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Chevrons_Left" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+
+            <VisualState x:Name="Pressed"/>
+
+            <VisualState x:Name="Disabled"/>
+
+          </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        
+        <Border x:Name="BannerButton_Backer" BorderThickness="4,4,4,4" CornerRadius="24,24,24,24">
+          <Border.BorderBrush>
+            <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+          </Border.BorderBrush>
+          <Border.Background>
+            <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+          </Border.Background>
+        </Border>
+        <StackPanel x:Name="BannerButton_Content" Orientation="Horizontal" HorizontalAlignment="Center" Margin="8,8,8,8">
+          
+          <TextBlock x:Name="Chevrons_Left" Text="&gt;&gt;&gt;" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Blaec" FontSize="24" VerticalAlignment="Center" Opacity="0" Padding="0,1,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TranslateTransform/>
+            </TextBlock.RenderTransform>
+          </TextBlock><TextBlock x:Name="BannerButton_Text" Text="{Binding Path=Content, RelativeSource={RelativeSource TemplatedParent}}" TextWrapping="Wrap" TextAlignment="Center" FontFamily="Assets/Fonts/#Gasoek One" FontSize="24" VerticalAlignment="Center" Margin="8,0,8,0" Padding="0,0,0,1">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+          <TextBlock x:Name="Chevrons_Right" Text="&lt;&lt;&lt;" TextWrapping="Wrap" FontSize="24" FontFamily="Assets/Fonts/#Blaec" VerticalAlignment="Center" Opacity="0" Padding="0,1,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TranslateTransform/>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+    </ControlTemplate>
+    <Storyboard x:Key="HeartPulse" RepeatBehavior="Forever" AutoReverse="True">
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Banner_Image_AssetArea" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1.34"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Banner_Image_AssetArea" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="1.34"/>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Banner_Image_AssetArea" Storyboard.TargetProperty="(UIElement.Opacity)">
+        <EasingDoubleKeyFrame KeyTime="00:00:01" Value="0.9"/>
+      </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+  </Page.Resources>
+  
+  <b:Interaction.Triggers>
+    <b:EventTrigger x:Name="OnPageLoad_EventTrigger">
+      <b:ControlStoryboardAction x:Name="PlayScreenEnter" Storyboard="{DynamicResource ScreenEnter}"/>
+      <b:ControlStoryboardAction x:Name="PlayScreenFlicker" Storyboard="{DynamicResource ScreenFlicker}"/>
+      <b:ControlStoryboardAction x:Name="PlayHeartPulse" Storyboard="{DynamicResource HeartPulse}"/>
+    </b:EventTrigger>
+  </b:Interaction.Triggers>
+
+  <Grid x:Name="Master">
+    <Grid x:Name="Backgrounds">
+
+        <MediaElement x:Name="Background_Idle" Source="Assets/Videos/Video_AnimatedMechBackground_Idle.mp4" Stretch="UniformToFill" LoadedBehavior="Manual">
+
+            <b:Interaction.Triggers>
+
+                <b:EventTrigger EventName="Loaded">
+                    <noesis:PlayMediaAction/>
+                    <noesis:PauseMediaAction/>
+                </b:EventTrigger>
+
+                <b:EventTrigger SourceName="Background_Intro" EventName="MediaEnded">
+                    <noesis:PlayMediaAction/>
+                </b:EventTrigger>
+
+                <b:EventTrigger EventName="MediaEnded">
+                    <noesis:StopMediaAction/>
+                    <noesis:PlayMediaAction/>
+                </b:EventTrigger>
+            
+            </b:Interaction.Triggers>
+
+        </MediaElement>
+
+        <MediaElement x:Name="Background_Intro" Source="Assets/Videos/Video_AnimatedMechBackground_Intro.mp4" Stretch="UniformToFill" LoadedBehavior="Manual">
+
+            <b:Interaction.Triggers>
+
+                <b:EventTrigger EventName="Loaded">
+                    <noesis:PlayMediaAction/>
+                </b:EventTrigger>
+
+                <b:EventTrigger EventName="MediaEnded">
+                    <noesis:StopMediaAction/>
+                    <b:ChangePropertyAction PropertyName="Visibility" Value="Hidden"/>
+                </b:EventTrigger>
+                
+            </b:Interaction.Triggers>
+
+        </MediaElement>
+
+    </Grid>
+
+    
+    <Grid x:Name="InterfaceGrid">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="64"/>
+        <ColumnDefinition Width="1*"/>
+        <ColumnDefinition Width="2*"/>
+        <ColumnDefinition Width="1*"/>
+        <ColumnDefinition Width="64"/>
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="16"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="1*"/>
+        <RowDefinition Height="32"/>
+      </Grid.RowDefinitions>
+      <Grid x:Name="Bar_Footer" Grid.ColumnSpan="5" Grid.Row="4">
+        <Grid.RenderTransform>
+          <TranslateTransform/>
+        </Grid.RenderTransform>
+        <Grid.Background>
+          <SolidColorBrush Color="{DynamicResource Blue_Dark}" Opacity="0.2"/>
+        </Grid.Background>
+      </Grid>
+      <Grid x:Name="Bar_Header" Grid.ColumnSpan="5">
+        <Grid.RenderTransform>
+          <TranslateTransform/>
+        </Grid.RenderTransform>
+        <Grid.Background>
+          <SolidColorBrush Color="{DynamicResource Blue_Dark}" Opacity="0.2"/>
+        </Grid.Background>
+      </Grid>
+      <Viewbox x:Name="NoesisLogo" Width="64" Height="64" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="2" Grid.Column="3" Margin="0,0,0,32">
+        <Grid x:Name="LogoGrid">
+          <Canvas Height="720" Width="720">
+            <Path Data="M460.13,0L590.53,34.94 660.49,295.44 437.84,517.83 307.44,482.89 284.12,396.05 414.52,430.99 573.55,272.15 526.91,98.48 396.51,63.54 460.13,0z M312.75,202.27L225.82,178.97 130.4,274.28 212.02,578.19 472.82,648.08 568.24,552.77 544.92,465.94 449.5,561.24 275.64,514.66 217.34,297.58 312.75,202.27z M495.11,130.25L530.09,260.5 466.48,324.04 431.49,193.79 214.16,135.56 86.94,262.63 121.92,392.88 34.98,369.59 0,239.34 190.84,48.72 495.11,130.25z" Stretch="None" StrokeThickness="0" Height="648.07996" Width="660.4901" Canvas.Top="35.960022" Canvas.Left="1.6300049">
+              <Path.Fill>
+                <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+              </Path.Fill>
+            </Path>
+          </Canvas>
+        </Grid>
+      </Viewbox>
+      <Grid x:Name="ScreenTitle" Grid.ColumnSpan="3" Grid.Row="1" Margin="0,32,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="64"/>
+          <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="ScreenTitle_Anchor" VerticalAlignment="Center" Height="16">
+          <Grid.Background>
+            <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+          </Grid.Background>
+        </Grid>
+        <StackPanel x:Name="ScreenTitle_TextBlocks" Orientation="Horizontal" Grid.Column="1" VerticalAlignment="Top" Margin="16,0,0,0">
+          <TextBlock x:Name="ScreenTitle_Text_Main" Text="main" TextWrapping="Wrap" FontSize="56" FontFamily="Assets/Fonts/#Octuple max Solid" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+          
+          <TextBlock x:Name="ScreenTitle_Text_Period" Text="." TextWrapping="Wrap" FontFamily="Assets/Fonts/#Octuple max Solid" FontSize="56" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+          <TextBlock x:Name="ScreenTitle_Text_Menu" Text="menu" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Octuple max Solid" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="56">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+            </TextBlock.Foreground>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+      <Grid x:Name="Menu" Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="6"/>
+          <ColumnDefinition Width="4"/>
+          <ColumnDefinition Width="6"/>
+          <ColumnDefinition Width="432*"/>
+        </Grid.ColumnDefinitions>
+        
+        <Grid x:Name="Menu_Anchor" Grid.Column="1">
+          <Grid.Background>
+            <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+          </Grid.Background>
+          <Grid.RenderTransform>
+            <ScaleTransform/>
+          </Grid.RenderTransform>
+        </Grid><StackPanel x:Name="MenuStack" Grid.ColumnSpan="4">
+          <Button x:Name="Button0" Template="{DynamicResource MenuButton}" Margin="0,0,0,32" Content="story" Command="{Binding Path=StoryCommand}" CommandParameter="Open Story Menu " HorizontalAlignment="Left">
+            <Button.RenderTransform>
+              <TranslateTransform/>
+            </Button.RenderTransform>
+          </Button>
+          <Button x:Name="Button1" Template="{DynamicResource MenuButton}" Margin="0,0,0,32" Content="online" Command="{Binding Path=OnlineCommand}" CommandParameter="Open Online Menu" HorizontalAlignment="Left">
+            <Button.RenderTransform>
+              <TranslateTransform/>
+            </Button.RenderTransform>
+          </Button>
+          <Button x:Name="Button2" Template="{DynamicResource MenuButton}" Margin="0,0,0,32" Content="armoury" Command="{Binding Path=ArmouryCommand}" CommandParameter="Open Armoury Menu" HorizontalAlignment="Left">
+            <Button.RenderTransform>
+              <TranslateTransform/>
+            </Button.RenderTransform>
+          </Button>
+          <Button x:Name="Button3" Template="{DynamicResource MenuButton}" Margin="0,0,0,32" Content="settings" Command="{Binding Path=SettingsCommand}" CommandParameter="Open Settings Menu" HorizontalAlignment="Left">
+            <Button.RenderTransform>
+              <TranslateTransform/>
+            </Button.RenderTransform>
+          </Button>
+          <Button x:Name="Button4" Template="{DynamicResource MenuButton}" Content="retire" Command="{Binding Path=RetireCommand}" CommandParameter="Close Application" HorizontalAlignment="Left">
+            <Button.RenderTransform>
+              <TranslateTransform/>
+            </Button.RenderTransform>
+          </Button>
+        </StackPanel>
+      </Grid>
+      <Grid x:Name="Banner" Grid.RowSpan="2" Grid.Row="1" Grid.Column="3" VerticalAlignment="Top" Margin="0,32,0,0">
+        <Border x:Name="Banner_Backer" CornerRadius="32,32,32,32">
+          <Border.Background>
+            <SolidColorBrush Color="{DynamicResource Blue_Dark}"/>
+          </Border.Background>
+        </Border>
+        <StackPanel x:Name="Banner_VerticalStack" Margin="16,16,16,16">
+            
+          <Grid x:Name="Banner_ImageArea" Height="256">
+            <Border x:Name="Banner_Image_Backer" CornerRadius="24,24,24,24">
+              <Border.Background>
+                <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+              </Border.Background>
+            </Border>
+
+            <Border x:Name="Banner_Image_Pattern" CornerRadius="24,24,24,24">
+              <Border.Background>
+                <ImageBrush ImageSource="Assets/Bitmaps_BackgroundForegrounds/Bitmap_Background_ChaosPattern.png" Stretch="UniformToFill" Opacity="0.2"/>
+              </Border.Background>
+            </Border>
+
+            <Border x:Name="Banner_Image_InnerGlow" CornerRadius="24,24,24,24" BorderThickness="16,16,16,16" ClipToBounds="True" Opacity="0.5">
+              <Border.BorderBrush>
+                <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+              </Border.BorderBrush>
+              <Border.Effect>
+                <BlurEffect Radius="16"/>
+              </Border.Effect>
+            </Border><Border x:Name="Banner_Image_Border" BorderThickness="4,4,4,4" CornerRadius="24,24,24,24">
+              <Border.BorderBrush>
+                <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+              </Border.BorderBrush>
+            </Border>
+            <Grid x:Name="Banner_Image_AssetArea" RenderTransformOrigin="0.5,0.5">
+              <Grid.RenderTransform>
+                <TransformGroup>
+                  <ScaleTransform ScaleY="1.3" ScaleX="1.3"/>
+                  <SkewTransform/>
+                  <RotateTransform/>
+                  <TranslateTransform/>
+                </TransformGroup>
+              </Grid.RenderTransform>
+              <Border x:Name="Banner_Image_Asset" RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                  <TransformGroup>
+                    <ScaleTransform/>
+                    <SkewTransform/>
+                    <RotateTransform/>
+                    <TranslateTransform X="0"/>
+                  </TransformGroup>
+                </Border.RenderTransform>
+                <Panel.Background>
+                  <ImageBrush Stretch="Uniform" ImageSource="{Binding Path=ActiveBanner.Image}"/>
+                </Panel.Background>
+              </Border>
+            </Grid>
+
+            
+          </Grid>
+          <Grid x:Name="Banner_ContentArea">
+            <StackPanel x:Name="Banner_ContentStack" Margin="8,8,8,8">
+              <StackPanel x:Name="Banner_Content_TextStack" Margin="0,8,0,16">
+                <TextBlock x:Name="Banner_Content_TextStack_Title" Text="{Binding Path=ActiveBanner.Name}" TextWrapping="Wrap" TextAlignment="Center" FontFamily="Assets/Fonts/#Octuple max Solid" FontSize="32" Margin="0,0,0,8">
+                  <TextBlock.Foreground>
+                    <SolidColorBrush Color="{DynamicResource Green_Light}"/>
+                  </TextBlock.Foreground>
+                </TextBlock>
+                <TextBlock x:Name="Banner_Content_TextStack_Description" Text="{Binding Path=ActiveBanner.Description}" TextWrapping="Wrap" FontFamily="Assets/Fonts/#Roboto" FontSize="20" TextAlignment="Center">
+                  <TextBlock.Foreground>
+                    <SolidColorBrush Color="{DynamicResource Grey_Med}"/>
+                  </TextBlock.Foreground>
+                </TextBlock>
+              </StackPanel>
+              <Button Content="DOWNLOAD" Template="{DynamicResource BannerButton}" Command="{Binding Path=ActiveBanner.DownloadCommand}" CommandParameter="Initiate Download."/>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Grid>
+    </Grid><Grid x:Name="Foregrounds" d:IsLocked="True">
+      <Grid x:Name="Foreground_Overlay" IsHitTestVisible="False">
+        <Grid.Background>
+          <ImageBrush ImageSource="Assets/Bitmaps_BackgroundForegrounds/Bitmap_Foreground_Overlay.png"/>
+        </Grid.Background>
+      </Grid>
+      <Grid x:Name="Foreground_Overlay_FX" IsHitTestVisible="False">
+        <Grid.RenderTransform>
+          <TranslateTransform/>
+        </Grid.RenderTransform>
+        <Grid.Background>
+          <ImageBrush ImageSource="Assets/Bitmaps_BackgroundForegrounds/Bitmap_Foreground_Overlay.png"/>
+        </Grid.Background>
+
+      </Grid>
+    </Grid>
+  </Grid>
+
+</Page>

@@ -1,0 +1,6 @@
+    <Enum Name="OperatingStatus">
+      <Item Name="Offline" Value="1"/>
+      <Item Name="BelowMinPower" Value="2"/>
+      <Item Name="Powered" Value="3"/>
+      <Item Name="MaxPower" Value="4"/>
+    </Enum>

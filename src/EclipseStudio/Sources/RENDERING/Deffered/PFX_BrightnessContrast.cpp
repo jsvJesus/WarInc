@@ -68,7 +68,7 @@ PFX_BrightnessContrast::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*s
 
 	float vConst[ 4 ] = { sts.constrast, -0.5f * sts.constrast + sts.brightness + 0.5f, 0.f, 0.f };
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConst, 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConst, 1 ) );
 
 	mSettings.Erase( 0 );
 }

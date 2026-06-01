@@ -1,0 +1,64 @@
+<ResourceDictionary
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+  mc:Ignorable="d">
+
+  <Color x:Key="Info_Color_Background">#FF1D2226</Color>
+  <Color x:Key="Info_Color_Background_Highlight">#FF272E33</Color>
+  <Color x:Key="Info_Color_Foreground">#FFE4E6E8</Color>
+  <Color x:Key="Info_Color_Accent">#FF4682B4</Color>
+
+  <Geometry x:Key="Info_Off_Geometry">F1M222.86,28.37l-10.85,-8.18c4.11,-6.35 7.65,-13.1 10.53,-20.19h-21.94c-7.57,15.02 -18.79,27.88 -32.81,37.5 -16.67,11.45 -36.21,17.5 -56.52,17.5s-39.85,-6.05 -56.52,-17.5C40.73,27.88 29.51,15.02 21.94,0H0c3.07,7.57 6.9,14.75 11.37,21.46l-9.16,6.91 12.04,15.97 9.54,-7.2c7.66,8.15 16.45,15.23 26.11,20.99l-7.38,12.92 17.36,9.92 8.03,-14.05c10.86,4.21 22.48,6.89 34.6,7.76v20.32h20v-20.54c11.98,-1.12 23.44,-3.98 34.14,-8.36l8.5,14.87 17.36,-9.92 -8.04,-14.06c9.36,-5.82 17.86,-12.89 25.27,-20.98l11.04,8.33 12.04,-15.97z</Geometry>
+  <Geometry x:Key="Info_On_Geometry">M111.27,50C125.06,50 136.27,61.21 136.27,75 136.27,88.79 125.06,100 111.27,100 97.48,100 86.27,88.79 86.27,75 86.27,61.21 97.48,50 111.27,50M111.27,30C86.42,30 66.27,50.15 66.27,75 66.27,99.85 86.42,120 111.27,120 136.12,120 156.27,99.85 156.27,75 156.27,50.15 136.12,30 111.27,30L111.27,30z M111.27,20C131.58,20 151.12,26.05 167.79,37.5 181.81,47.13 193.03,59.98 200.6,75 193.03,90.02 181.81,102.88 167.79,112.5 151.12,123.95 131.58,130 111.27,130 90.96,130 71.42,123.95 54.75,112.5 40.73,102.87 29.51,90.02 21.94,75 29.51,59.98 40.73,47.12 54.75,37.5 71.42,26.05 90.96,20 111.27,20M111.27,0C60.91,0 17.8,31.02 0,75 17.8,118.98 60.91,150 111.27,150 161.63,150 204.74,118.98 222.54,75 204.73,31.02 161.63,0 111.27,0L111.27,0z</Geometry>
+
+  <ControlTemplate TargetType="TabItem" x:Key="TabItem_Info_Template">
+    <Border x:Name="TabBorder" BorderBrush="#00FFFFFF">
+      <Border.Background>
+        <SolidColorBrush Color="{DynamicResource Info_Color_Background_Highlight}"/>
+      </Border.Background>
+      <Grid>
+        <Border BorderThickness="0,2,0,2">
+          <Border.BorderBrush>
+            <SolidColorBrush Color="{DynamicResource Info_Color_Background}"/>
+          </Border.BorderBrush>
+        </Border>
+        <Grid x:Name="Highlight" VerticalAlignment="Top" Height="2" Visibility="Hidden" Margin="0,-2,0,0">
+          <Grid.Background>
+            <SolidColorBrush Color="{DynamicResource Info_Color_Accent}"/>
+          </Grid.Background>
+        </Grid>
+        <TextBlock x:Name="Label_TextBlock" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,8,8,8" Visibility="Hidden" Text="XXX" FontFamily="Resources/MiniShowcases/#PT Root UI"/>
+        <Path x:Name="Icon" Data="{Binding Path=Header, RelativeSource={RelativeSource TemplatedParent}}" Stretch="Uniform" Width="{Binding Path=ActualHeight, ElementName=Label_TextBlock}" VerticalAlignment="Center" HorizontalAlignment="Center">
+          <Path.Fill>
+            <SolidColorBrush Color="{DynamicResource Info_Color_Foreground}"/>
+          </Path.Fill>
+        </Path>
+      </Grid>
+    </Border>
+    <ControlTemplate.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Panel.ZIndex" Value="1"/>
+        <Setter TargetName="TabBorder" Property="Background">
+          <Setter.Value>
+            <SolidColorBrush Color="{DynamicResource Info_Color_Background}"/>
+          </Setter.Value>
+        </Setter>
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Panel.ZIndex" Value="2"/>
+        <Setter TargetName="Highlight" Property="Visibility" Value="Visible"/>
+        <Setter TargetName="TabBorder" Property="Background">
+          <Setter.Value>
+            <SolidColorBrush Color="{DynamicResource Info_Color_Background}"/>
+          </Setter.Value>
+        </Setter>
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
+  <!--Start Loc Stuff-->
+
+</ResourceDictionary>

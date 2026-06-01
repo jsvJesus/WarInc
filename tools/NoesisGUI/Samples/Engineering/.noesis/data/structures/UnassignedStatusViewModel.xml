@@ -1,0 +1,1 @@
+    <Class Name="UnassignedStatusViewModel" Base="NoesisStudioInternals.TechnicianStatusViewModel"/>

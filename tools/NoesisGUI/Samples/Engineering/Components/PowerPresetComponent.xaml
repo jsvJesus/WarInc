@@ -1,0 +1,39 @@
+<Component x:Name="ComponentRoot"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d" d:DataContext="PowerPreset.01" xmlns:noesis="clr-namespace:NoesisGUIExtensions" xmlns:system="clr-namespace:System;assembly=mscorlib" d:DesignWidth="420" d:DesignHeight="42">
+    <Component.DynamicProperties>
+        <DynamicProperty Type="String" Name="PathData"/>
+    </Component.DynamicProperties>
+
+    <Canvas Width="420" Height="40" Canvas.Right="20" Canvas.Top="100">
+      <Path Style="{DynamicResource Path.Style.PowerPresetBox}" Data="{DynamicResource Geometry.PresetNumberBox}" Canvas.Right="0" Canvas.Top="0"/>
+      <TextBlock Style="{DynamicResource TextBlock.Style.PresetSelectionNumber}">
+            <TextBlock.Text>
+                <Binding Path="Number">
+                    <Binding.Converter>
+                        <noesis:MathConverter Expression="{}{0} + 1"/>
+                    </Binding.Converter>
+                </Binding>
+            </TextBlock.Text>
+        </TextBlock>
+      <Button Width="397" Height="40" Canvas.Right="24" Canvas.Top="0" Style="{DynamicResource Button.Style.PowerPreset}">
+        <Canvas Width="397" Height="40" HorizontalAlignment="Right">
+          <Path x:Name="ButtonDecor" Style="{DynamicResource Path.Style.InteractableDecor}" Data="{DynamicResource Geometry.PresetButtonDecor}"/>
+          <Path x:Name="Button" Style="{DynamicResource Path.Style.PresetSelectButton}" Data="{Binding Path=PathData_Str, ElementName=ComponentRoot}"/>
+          <TextBlock Style="{DynamicResource TextBlock.Style.PresetSelectButton}">
+              <TextBlock.Text>
+                  <Binding Path="Name">
+                      <Binding.Converter>
+                          <noesis:CaseConverter Format="UpperCase"/>
+                      </Binding.Converter>
+                  </Binding>
+              </TextBlock.Text>
+          </TextBlock>
+        </Canvas>
+      </Button>
+    </Canvas>
+
+</Component>

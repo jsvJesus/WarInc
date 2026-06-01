@@ -1,0 +1,88 @@
+<vdctx:SquadScreenViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals" SelectedSoldier="0">
+  <vdctx:SquadScreenViewModel.Soldiers>
+    <vdctx:SoldierViewModel Name="Katherine Towle" Points="811.5046" Level="1.5650024" XP="37.043427" NextLevel="250.57315" Rank="LIEUTENANT" Specialization="SCOUT" Avatar="studio:///Root;component/Assets/Avatars/Avatar_01.jpg" Badge="studio:///Root;component/Assets/RankIcons/Major.png">
+      <vdctx:SoldierViewModel.Command>
+        <MessageCommand Message="Command Executed" IsEnabled="True"/>
+      </vdctx:SoldierViewModel.Command>
+      <vdctx:SoldierViewModel.Skills>
+        <vdctx:SkillViewModel SkillName="Close combat" Percentage="16.07666" Icon="studio:///Root;component/Assets/SkillIcons/close-combat.png"/>
+        <vdctx:SkillViewModel SkillName="Sharpshooter" Percentage="7.1258545" Icon="studio:///Root;component/Assets/SkillIcons/on-target.png"/>
+        <vdctx:SkillViewModel SkillName="Lucky shot" Percentage="25.473022" Icon="studio:///Root;component/Assets/SkillIcons/dice-target.png"/>
+        <vdctx:SkillViewModel SkillName="Scouting" Percentage="59.56421" Icon="studio:///Root;component/Assets/SkillIcons/eye-target.png"/>
+      </vdctx:SoldierViewModel.Skills>
+      <vdctx:SoldierViewModel.Weapons>
+        <vdctx:WeaponViewModel WeaponName="Bayonet" Modifier="6.537964" Icon="studio:///Root;component/Assets/WeaponIcons/bayonet.png"/>
+        <vdctx:WeaponViewModel WeaponName="AK-47 assault rifle" Modifier="23.420654" Icon="studio:///Root;component/Assets/WeaponIcons/ak47.png"/>
+        <vdctx:WeaponViewModel WeaponName="FAMAS assault rifle" Modifier="26.716827" Icon="studio:///Root;component/Assets/WeaponIcons/famas.png"/>
+        <vdctx:WeaponViewModel WeaponName="Glock pistol" Modifier="91.33209" Icon="studio:///Root;component/Assets/WeaponIcons/glock.png"/>
+        <vdctx:WeaponViewModel WeaponName="Mortar" Modifier="6.4986877" Icon="studio:///Root;component/Assets/WeaponIcons/mortar.png"/>
+      </vdctx:SoldierViewModel.Weapons>
+    </vdctx:SoldierViewModel>
+    <vdctx:SoldierViewModel Name="Eric M. Smith" Points="387.97833" Level="96.98483" XP="71.582245" NextLevel="396.94153" Rank="SOLDIER" Specialization="ASSAULT" Avatar="studio:///Root;component/Assets/Avatars/Avatar_05.jpg" Badge="studio:///Root;component/Assets/RankIcons/Private.png">
+      <vdctx:SoldierViewModel.Command>
+        <MessageCommand Message="Command Executed" IsEnabled="True"/>
+      </vdctx:SoldierViewModel.Command>
+      <vdctx:SoldierViewModel.Skills>
+        <vdctx:SkillViewModel SkillName="Assault rampage" Percentage="30.493164" Icon="studio:///Root;component/Assets/SkillIcons/multiple-targets.png"/>
+        <vdctx:SkillViewModel SkillName="Close combat" Percentage="60.946655" Icon="studio:///Root;component/Assets/SkillIcons/close-combat.png"/>
+        <vdctx:SkillViewModel SkillName="Defensive fire" Percentage="15.274048" Icon="studio:///Root;component/Assets/SkillIcons/flying-target.png"/>
+        <vdctx:SkillViewModel SkillName="Scouting" Percentage="83.47473" Icon="studio:///Root;component/Assets/SkillIcons/eye-target.png"/>
+        <vdctx:SkillViewModel SkillName="Morale boosting" Percentage="71.23718" Icon="studio:///Root;component/Assets/SkillIcons/target-arrows.png"/>
+      </vdctx:SoldierViewModel.Skills>
+      <vdctx:SoldierViewModel.Weapons>
+        <vdctx:WeaponViewModel WeaponName="Bayonet" Modifier="90.26257" Icon="studio:///Root;component/Assets/WeaponIcons/bayonet.png"/>
+        <vdctx:WeaponViewModel WeaponName="Glock pistol" Modifier="72.40402" Icon="studio:///Root;component/Assets/WeaponIcons/glock.png"/>
+        <vdctx:WeaponViewModel WeaponName="FAMAS assault rifle" Modifier="52.06201" Icon="studio:///Root;component/Assets/WeaponIcons/famas.png"/>
+        <vdctx:WeaponViewModel WeaponName="CZ Scorpion" Modifier="2.2357178" Icon="studio:///Root;component/Assets/WeaponIcons/cz-skorpion.png"/>
+        <vdctx:WeaponViewModel WeaponName="Minigun" Modifier="77.93591" Icon="studio:///Root;component/Assets/WeaponIcons/minigun.png"/>
+      </vdctx:SoldierViewModel.Weapons>
+    </vdctx:SoldierViewModel>
+    <vdctx:SoldierViewModel Name="Angela Salinas" Points="57.65103" Level="47.814148" XP="97.743164" NextLevel="490.68924" Rank="CORPORAL" Specialization="SNIPER" Avatar="studio:///Root;component/Assets/Avatars/Avatar_06.jpg" Badge="studio:///Root;component/Assets/RankIcons/Corporal.png">
+      <vdctx:SoldierViewModel.Command>
+        <MessageCommand Message="Command Executed" IsEnabled="True"/>
+      </vdctx:SoldierViewModel.Command>
+      <vdctx:SoldierViewModel.Skills>
+        <vdctx:SkillViewModel SkillName="Sharpshooter" Percentage="97.837524" Icon="studio:///Root;component/Assets/SkillIcons/on-target.png"/>
+      </vdctx:SoldierViewModel.Skills>
+      <vdctx:SoldierViewModel.Weapons>
+        <vdctx:WeaponViewModel WeaponName="Bayonet" Modifier="12.26257" Icon="studio:///Root;component/Assets/WeaponIcons/bayonet.png"/>
+        <vdctx:WeaponViewModel WeaponName="Glock pistol" Modifier="40.40402" Icon="studio:///Root;component/Assets/WeaponIcons/glock.png"/>
+        <vdctx:WeaponViewModel WeaponName="FAMAS assault rifle" Modifier="33.06201" Icon="studio:///Root;component/Assets/WeaponIcons/famas.png"/>
+        <vdctx:WeaponViewModel WeaponName="Sniper rifle" Modifier="77.93591" Icon="studio:///Root;component/Assets/WeaponIcons/steyr-aug.png"/>
+      </vdctx:SoldierViewModel.Weapons>
+    </vdctx:SoldierViewModel>
+    <vdctx:SoldierViewModel Name="Carlos A. Ruiz" Points="943.08673" Level="33.674744" XP="70.76047" NextLevel="111.06436" Rank="SERGEANT" Specialization="HEAVY" Avatar="studio:///Root;component/Assets/Avatars/Avatar_02.jpg" Badge="studio:///Root;component/Assets/RankIcons/Sergeant.png">
+      <vdctx:SoldierViewModel.Command>
+        <MessageCommand Message="Command Executed" IsEnabled="True"/>
+      </vdctx:SoldierViewModel.Command>
+      <vdctx:SoldierViewModel.Skills>
+        <vdctx:SkillViewModel SkillName="Defensive fire" Percentage="29.019165" Icon="studio:///Root;component/Assets/SkillIcons/flying-target.png"/>
+        <vdctx:SkillViewModel SkillName="Heavy gear" Percentage="24.749756" Icon="studio:///Root;component/Assets/SkillIcons/targeted.png"/>
+        <vdctx:SkillViewModel SkillName="Assault rampage" Percentage="47.60437" Icon="studio:///Root;component/Assets/SkillIcons/multiple-targets.png"/>
+        <vdctx:SkillViewModel SkillName="Lucky shot" Percentage="67.02881" Icon="studio:///Root;component/Assets/SkillIcons/dice-target.png"/>
+      </vdctx:SoldierViewModel.Skills>
+      <vdctx:SoldierViewModel.Weapons>
+        <vdctx:WeaponViewModel WeaponName="Anti-Aircraft gun" Modifier="90.26257" Icon="studio:///Root;component/Assets/WeaponIcons/anti-aircraft-gun.png"/>
+        <vdctx:WeaponViewModel WeaponName="Desert Eagle pistol" Modifier="72.40402" Icon="studio:///Root;component/Assets/WeaponIcons/desert-eagle.png"/>
+        <vdctx:WeaponViewModel WeaponName="Mortar" Modifier="52.06201" Icon="studio:///Root;component/Assets/WeaponIcons/mortar.png"/>
+        <vdctx:WeaponViewModel WeaponName="Minigun" Modifier="77.93591" Icon="studio:///Root;component/Assets/WeaponIcons/minigun.png"/>
+      </vdctx:SoldierViewModel.Weapons>
+    </vdctx:SoldierViewModel>
+    <vdctx:SoldierViewModel Name="Howard P. Perry" Points="239.71976" Level="74.57025" XP="84.13248" NextLevel="52.10239" Rank="CAPTAIN" Specialization="SNIPER" Avatar="studio:///Root;component/Assets/Avatars/Avatar_03.jpg" Badge="studio:///Root;component/Assets/RankIcons/Captain.png">
+      <vdctx:SoldierViewModel.Command>
+        <MessageCommand Message="Command Executed" IsEnabled="True"/>
+      </vdctx:SoldierViewModel.Command>
+      <vdctx:SoldierViewModel.Skills>
+        <vdctx:SkillViewModel SkillName="Scouting" Percentage="93.811035" Icon="studio:///Root;component/Assets/SkillIcons/eye-target.png"/>
+        <vdctx:SkillViewModel SkillName="Sharpshooter" Percentage="83.87146" Icon="studio:///Root;component/Assets/SkillIcons/on-target.png"/>
+        <vdctx:SkillViewModel SkillName="First aid" Percentage="66.16211" Icon="studio:///Root;component/Assets/SkillIcons/select.png"/>
+        <vdctx:SkillViewModel SkillName="Assault rampage" Percentage="47.60437" Icon="studio:///Root;component/Assets/SkillIcons/multiple-targets.png"/>
+      </vdctx:SoldierViewModel.Skills>
+      <vdctx:SoldierViewModel.Weapons>
+        <vdctx:WeaponViewModel WeaponName="Glock pistol" Modifier="15.40402" Icon="studio:///Root;component/Assets/WeaponIcons/glock.png"/>
+        <vdctx:WeaponViewModel WeaponName="FAMAS assault rifle" Modifier="45.06201" Icon="studio:///Root;component/Assets/WeaponIcons/famas.png"/>
+        <vdctx:WeaponViewModel WeaponName="Sniper rifle" Modifier="90.93591" Icon="studio:///Root;component/Assets/WeaponIcons/steyr-aug.png"/>
+      </vdctx:SoldierViewModel.Weapons>
+    </vdctx:SoldierViewModel>
+  </vdctx:SquadScreenViewModel.Soldiers>
+</vdctx:SquadScreenViewModel>

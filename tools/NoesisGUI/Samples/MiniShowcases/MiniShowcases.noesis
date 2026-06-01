@@ -1,0 +1,5 @@
+<Project>
+  <Assembly>MiniShowcases</Assembly>
+  <DefaultDataNamespace>MiniShowcases</DefaultDataNamespace>
+  <StartupDocument>MainPage.xaml</StartupDocument>
+</Project>

@@ -1,0 +1,116 @@
+<Page
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  Background="#FF4D5052" xmlns:noesis="clr-namespace:NoesisGUIExtensions">
+
+  <Page.Resources>
+    <ResourceDictionary/>
+  </Page.Resources>
+
+  <Grid x:Name="Master_Grid">
+    <Grid x:Name="Background" d:IsLocked="True">
+      <Grid x:Name="BackgroundImage_Grid">
+        <Grid.Background>
+          <ImageBrush ImageSource="Resources/TextureTiling/Background.png" Stretch="UniformToFill"/>
+        </Grid.Background>
+      </Grid>
+      <Grid x:Name="BackgroundSolid_Grid">
+        <Grid.Background>
+          <SolidColorBrush Color="#FF0D0D0D" Opacity="0.5"/>
+        </Grid.Background>
+      </Grid>
+      <Grid x:Name="Vignette_Grid" Background="#FFFFFFFF" BlendingMode="Multiply">
+        <Grid.Effect>
+          <noesis:VignetteEffect Strength="16"/>
+        </Grid.Effect>
+      </Grid>
+    </Grid>
+    <Grid x:Name="Interface_Grid">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="64"/>
+        <RowDefinition Height="1*"/>
+        <RowDefinition Height="64"/>
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="64"/>
+        <ColumnDefinition Width="1*"/>
+        <ColumnDefinition Width="64"/>
+      </Grid.ColumnDefinitions>
+      <Grid x:Name="Panel_Grid" Grid.Column="1" Grid.Row="1">
+        <Border x:Name="TilingPattern_Border" BorderThickness="16,16,16,16" Width="{Binding Path=Value, ElementName=XAxis_Slider}" Height="{Binding Path=Value, ElementName=YAxis_Slider}" Margin="64,64,64,64">
+          <Border.Background>
+            <ImageBrush ImageSource="Resources/TextureTiling/Pattern_Floral.png" Viewport="0,0,128,128" ViewportUnits="Absolute" TileMode="Tile" Opacity="0.5"/>
+          </Border.Background>
+          <Border.BorderBrush>
+            <ImageBrush ImageSource="Resources/TextureTiling/Pattern_Hash.png" Viewport="0,0,16,16" TileMode="Tile" Stretch="None" ViewportUnits="Absolute" Opacity="0.25"/>
+          </Border.BorderBrush>
+        </Border>
+        <StackPanel x:Name="Specimens_StackPanel" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" d:IsLocked="True">
+          <Border x:Name="Specimen_FloralPattern_Spacing_Border" BorderThickness="2,2,2,2" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border.BorderBrush>
+              <SolidColorBrush Color="{DynamicResource Info_Color_Background_Highlight}"/>
+            </Border.BorderBrush>
+            <Border x:Name="Specimen_FloralPattern_Border" BorderThickness="16,16,16,16" Width="128" Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Self}}">
+              <Border.Background>
+                <ImageBrush ImageSource="Resources/TextureTiling/Pattern_Floral.png" Opacity="0.33"/>
+              </Border.Background>
+            </Border>
+          </Border>
+          <Border x:Name="Specimen_HashPattern_Spacing_Border" BorderThickness="2,2,2,2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,16,16,16" Padding="8,8,8,8">
+            <Border.BorderBrush>
+              <SolidColorBrush Color="{DynamicResource Info_Color_Background_Highlight}"/>
+            </Border.BorderBrush>
+            <Border x:Name="Specimen_HashPattern_Border" Width="16" Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Self}}">
+              <Border.Background>
+                <ImageBrush ImageSource="Resources/TextureTiling/Pattern_Hash.png" Stretch="UniformToFill" Opacity="0.33"/>
+              </Border.Background>
+            </Border>
+          </Border>
+        </StackPanel>
+      </Grid>
+      <StackPanel x:Name="XAxisSlider_StackPanel" Grid.Column="1" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
+        <Path x:Name="ScaleIcon_Horizontal_Path" Data="F1M0,51.21 14.14,65.35 41.21,38.28 41.21,50 41.21,50 41.21,161.72 14.14,134.64 0,148.79 51.21,200 102.42,148.79 88.28,134.65 61.21,161.72 61.21,150 61.21,150 61.21,38.28 88.28,65.36 102.42,51.21 51.21,0 0,51.21z" Stretch="Uniform" Fill="#FFFFFFFF" Height="{Binding Path=ActualHeight, ElementName=XAxis_Slider}">
+          <Path.LayoutTransform>
+            <TransformGroup>
+              <ScaleTransform/>
+              <SkewTransform/>
+              <RotateTransform Angle="90"/>
+              <TranslateTransform/>
+            </TransformGroup>
+          </Path.LayoutTransform>
+        </Path>
+        <Slider x:Name="XAxis_Slider" Grid.Row="3" Grid.Column="1" Margin="16,0,0,0" Width="512" VerticalAlignment="Center" Maximum="800" Cursor="Hand" LargeChange="128" SmallChange="64" Value="256" Minimum="16"/>
+      </StackPanel>
+      <StackPanel x:Name="YAxisSlider_StackPanel" Grid.Column="2" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+        <Slider x:Name="YAxis_Slider" Grid.Row="3" Grid.Column="1" Height="512" Orientation="Vertical" Margin="0,0,0,16" HorizontalAlignment="Center" Cursor="Hand" Maximum="800" Minimum="16" Value="256"/>
+        <Path x:Name="ScaleIcon_Vertical__Path" Data="F1M0,51.21 14.14,65.35 41.21,38.28 41.21,50 41.21,50 41.21,161.72 14.14,134.64 0,148.79 51.21,200 102.42,148.79 88.28,134.65 61.21,161.72 61.21,150 61.21,150 61.21,38.28 88.28,65.36 102.42,51.21 51.21,0 0,51.21z" Stretch="Uniform" Fill="#FFFFFFFF" Height="{Binding Path=ActualHeight, ElementName=ScaleIcon_Horizontal_Path}"/>
+      </StackPanel>
+    </Grid>
+    <StackPanel xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+      x:Name="Infoverlay_HorizontalStack" Margin="32,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+      <Component Source="Resources/MiniShowcases/Info_Info_Component.xaml" Height="{Binding Path=ActualHeight, ElementName=TabItem_Off}" Width="{Binding Path=ActualHeight, RelativeSource={RelativeSource Self}}" VerticalAlignment="Top" HorizontalAlignment="Left" d:IsLocked="True"/>
+      <TabControl x:Name="Infoverlay_TabControl" Background="{x:Null}" Padding="0,0,0,0">
+        <TabControl.MaxWidth>
+          <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType={x:Type Page}}">
+            <Binding.Converter>
+              <noesis:MathConverter Expression="{}{0}/3"/>
+            </Binding.Converter>
+          </Binding>
+        </TabControl.MaxWidth>
+        <TabItem x:Name="TabItem_Off" Cursor="Hand" IsSelected="True" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_Off_Geometry}">
+          <Grid Background="#FFE5E5E5" d:IsHidden="True"/>
+        </TabItem>
+        <TabItem x:Name="TabItem_On" Cursor="Hand" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_On_Geometry}">
+          <Grid VerticalAlignment="Top" HorizontalAlignment="Left">
+            <Component Source="Resources/MiniShowcases/Info_Overlay_ContentArea_Component.xaml" Text_Description_Str="Noesis offers the ability to set any visual to seamlessly tile across any area.  &#x0A; &#x0A;Tiling enables Elements featuring repeating patterns to be seamlessly scaled to an infinite amount of dimensions, using far smaller assets than would typically be required to fill a similar space using non-tiling imagery. &#x0A; &#x0A;To see the Tiling in action: &#x0A; &#x0A;- The slider at the bottom of the screen can be used to adjust the width of the panel. &#x0A;- The slider on the right can be used to adjust the height of the panel. &#x0A; &#x0A;Any supported image can be set to tile by navigating to an Element&apos;s Brush, and under its &apos;Advanced Properties&apos;, setting its TileMode to &apos;Tile&apos;, setting its Viewport Units to &apos;Absolute&apos;, and setting its ViewPort Width and Height to the dimensions in pixels of the exported image asset." Text_Title_Str="Texture Tiling" d:IsLocked="True"/>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </StackPanel>
+  </Grid>
+</Page>

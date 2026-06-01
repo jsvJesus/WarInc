@@ -1,0 +1,4 @@
+    <Class Name="ArmorSectionViewModel">
+      <Property Name="Name" Type="String" StringMinWordCount="0" StringMaxWordCount="10"/>
+      <Property Name="Integrity" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+    </Class>

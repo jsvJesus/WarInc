@@ -1,0 +1,9 @@
+<vdctx:Screen_ViewModel xmlns:vdctx="clr-namespace:NoesisStudioInternals">
+  <vdctx:Screen_ViewModel.ActiveBanner>
+    <vdctx:Banner_ViewModel Name="armour.module" Description="Download the armour module and benefit from an extra 50% shield during one engagement across story and online modes.">
+      <vdctx:Banner_ViewModel.Image>
+        <BitmapImage UriSource="/Root;component/Assets/Bitmaps_Icons/Bitmap_Icons_Shield.png"/>
+      </vdctx:Banner_ViewModel.Image>
+    </vdctx:Banner_ViewModel>
+  </vdctx:Screen_ViewModel.ActiveBanner>
+</vdctx:Screen_ViewModel>

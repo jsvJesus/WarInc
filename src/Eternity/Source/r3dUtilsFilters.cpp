@@ -186,11 +186,11 @@ void r3dBlurBufferG(r3dScreenBuffer *SourceTex1, r3dScreenBuffer *SourceTex, r3d
 				samples4[k+1] *= YS;
 			}
 
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(  1, (float *)samples4,  2 );
+			r3dRenderer->SetPixelShaderConstantF(  1, (float *)samples4,  2 );
 
 
 			//  D3DXVECTOR4 BlurMul(XS, YS, 0,0);
-			//  r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
+			//  r3dRenderer->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
 
 			Buffer[CurBB]->Activate();
 			//  r3dRenderer->StartRenderSimple(0);

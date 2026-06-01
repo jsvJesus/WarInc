@@ -329,7 +329,7 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 				D3DXVECTOR4(1.0f / texFullWidth, 0.0f, numTaps, 1 / numTaps),
 				D3DXVECTOR4(2.0f, 0, 0, 0)
 			};
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
+			r3dRenderer->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
 			r3dDrawBoxFS((float)texWidth, (float)texFullHeight, r3dColor::white, rtFull->Tex);
 
 			rtIntermediate->Deactivate();
@@ -339,7 +339,7 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 			numTaps = static_cast<float>(texFullHeight) / texHeight;
 			psParams[0] = D3DXVECTOR4(0.0f, 1.0f / texFullHeight, numTaps, 1 / numTaps );
 			psParams[1] = D3DXVECTOR4(1.0f, 0, 0, 0);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
+			r3dRenderer->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
 			r3dDrawBoxFS((float)texWidth, (float)texHeight, r3dColor::white, rtIntermediate->Tex);
 
 			rt->Deactivate();

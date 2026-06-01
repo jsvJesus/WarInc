@@ -97,11 +97,11 @@ PFX_SeedSunThroughStencil::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* 
 		sunDir.x, sunDir.y, sunDir.z, 0
 	};
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, conts, 2 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, conts, 2 ) );
 	
 	conts[0] = dest->Height / dest->Width;
 
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, conts, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, conts, 1 ) );
 }
 
 //------------------------------------------------------------------------

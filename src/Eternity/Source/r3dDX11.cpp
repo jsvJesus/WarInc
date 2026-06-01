@@ -28,6 +28,8 @@
 #include "r3dDX11.h"
 #include "r3dDX11Texture.h"
 #include "r3dDX11State.h"
+#include "r3dDX11ConstantBuffer.h"
+#include "r3dDX11RenderTarget.h"
 #include "r3dDX11InputLayout.h"
 #include "r3dDX11Geometry.h"
 
@@ -234,6 +236,11 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 		return false;
 	}
 
+	if(!g_r3dDX11RenderTargets.Init())
+	{
+		r3dOutToLog("DX11: render target bridge was not initialized\n");
+	}
+
 	if(!g_r3dDX11State.Init())
 	{
 		r3dOutToLog("DX11: state manager was not initialized\n");
@@ -246,6 +253,11 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 	if(!g_r3dDX11Geometry.Init())
 	{
 		r3dOutToLog("DX11: geometry state manager was not initialized\n");
+	}
+
+	if(!g_r3dDX11Constants.Init())
+	{
+		r3dOutToLog("DX11: constant buffer bridge was not initialized\n");
 	}
 
 	if(!CreateDebugTriangle())
@@ -287,7 +299,9 @@ void r3dDX11Renderer::Shutdown()
 
 	g_r3dDX11Geometry.Shutdown();
 	g_r3dDX11InputLayouts.Shutdown();
+	g_r3dDX11Constants.Shutdown();
 	g_r3dDX11State.Shutdown();
+	g_r3dDX11RenderTargets.Shutdown();
 
 	ReleaseBackBuffer();
 
@@ -397,6 +411,7 @@ bool r3dDX11Renderer::Resize(int width, int height)
 	Width = width;
 	Height = height;
 
+	g_r3dDX11RenderTargets.ClearCurrentTargets();
 	Context->OMSetRenderTargets(0, NULL, NULL);
 	ReleaseBackBuffer();
 
@@ -414,7 +429,11 @@ bool r3dDX11Renderer::Resize(int width, int height)
 		return false;
 	}
 
-	return CreateBackBuffer();
+	if(!CreateBackBuffer())
+		return false;
+
+	g_r3dDX11RenderTargets.ResetToBackBuffer();
+	return true;
 }
 
 void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)

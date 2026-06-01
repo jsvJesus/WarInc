@@ -1,0 +1,5 @@
+<Class Name="Localization_Language_Properties">
+  <Property Name="Name" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="Source" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="FlowDirection" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+</Class>

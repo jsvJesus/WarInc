@@ -1,0 +1,37 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot" d:DesignWidth="1280" d:DesignHeight="720">
+    <Grid>
+    <Border BorderThickness="2,2,0,2" CornerRadius="4,0,0,4">
+            <Border.BorderBrush>
+                <SolidColorBrush Color="{DynamicResource Info_Color_Background}"/>
+            </Border.BorderBrush>
+      <Border.Background>
+        <SolidColorBrush Color="{DynamicResource Info_Color_Background}" Opacity="0.502"/>
+      </Border.Background>
+    </Border>
+        <Border x:Name="Icon_CounterBorder" BorderThickness="1,0,0,0">
+            <Grid x:Name="IconFraming">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="3*"/>
+                    <RowDefinition Height="5*"/>
+                    <RowDefinition Height="3*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+                <Path x:Name="InformationIcon" Data="F1M1461.92,464.69c-38.32,-90.61 -93.18,-171.97 -163.04,-241.84s-151.23,-124.72 -241.84,-163.04C963.21,20.12 863.56,0 760.86,0s-202.34,20.12 -296.17,59.81c-90.61,38.32 -171.97,93.18 -241.84,163.04 -69.86,69.86 -124.72,151.23 -163.04,241.84C20.12,558.52 0,658.17 0,760.86s20.12,202.34 59.81,296.18c38.32,90.61 93.18,171.97 163.04,241.84 69.86,69.86 151.23,124.72 241.84,163.04 93.83,39.69 193.48,59.81 296.17,59.81s202.34,-20.12 296.18,-59.81c90.61,-38.32 171.97,-93.18 241.84,-163.04s124.72,-151.23 163.04,-241.84c39.69,-93.83 59.81,-193.48 59.81,-296.18s-20.12,-202.34 -59.81,-296.18z M922.38,1029.48c-4.48,33.79 -83.3,115.29 -83.3,115.29 0,0 -113.26,120.75 -249,120.75s-86.61,-147.4 -86.61,-147.4c12.18,-40.85 102.95,-262.64 161.79,-415.56 14.01,-36.45 5.79,-98.52 -50.2,-50.8 -24.04,16.52 -81.81,80.17 -103.12,106.21 -2.33,2.08 -4.93,3.85 -7.83,4.98 -18.3,7.13 -39.92,-7.85 -5.64,-50.4 0,0 127.42,-175.72 292.31,-175.72 0,0 80.02,-4.59 98.03,79.95 4.06,19.06 3.79,38.78 0.02,57.9 -5.28,26.8 -17.72,77.85 -45.32,146.96 -41.9,104.93 -96.03,246.5 -96.03,246.5 0,0 -30.81,76.62 9.16,76.62s135.74,-119.92 135.74,-119.92c0,0 11.5,-15.32 22.82,-9.56 5.16,2.62 7.94,8.45 7.18,14.2z M925.66,423.77c-36.35,48.84 -102.49,61.13 -147.72,27.46 -45.24,-33.67 -52.44,-100.55 -16.09,-149.39 36.35,-48.84 102.49,-61.13 147.72,-27.46 45.24,33.67 52.44,100.55 16.09,149.39z" Stretch="Uniform" Grid.Row="1" Grid.Column="1">
+                    <Path.Fill>
+                        <SolidColorBrush Color="{DynamicResource Info_Color_Foreground}"/>
+                    </Path.Fill>
+                </Path>
+            </Grid>
+        </Border>
+  </Grid>
+</Component>

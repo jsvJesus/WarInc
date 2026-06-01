@@ -1,0 +1,6 @@
+<Class Name="Banner_ViewModel">
+  <Property Name="Name" Type="String" StringMinWordCount="1" StringMaxWordCount="1"/>
+  <Property Name="Description" Type="String" StringMinWordCount="16" StringMaxWordCount="32"/>
+  <Property Name="Image" Type="Object" SubType="ImageSource"/>
+  <Property Name="DownloadCommand" Type="Command"/>
+</Class>

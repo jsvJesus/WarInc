@@ -54,8 +54,8 @@ void SetupSMTransform(r3dCamera &Cam, float W, float H)
 // ShaderMat =  mWorld * 	r3dRenderer->mCamera * r3dRenderer->mProj;
   D3DXMatrixTranspose( &mat2, &mat2 );
 
-  r3dRenderer->pd3ddev->SetPixelShaderConstantF(  20, (float *)&From,  1 );
-  r3dRenderer->pd3ddev->SetVertexShaderConstantF(  8, (float *)&mat2,  4 );
+  r3dRenderer->SetPixelShaderConstantF(  20, (float *)&From,  1 );
+  r3dRenderer->SetVertexShaderConstantF(  8, (float *)&mat2,  4 );
 }
 
 
@@ -156,7 +156,7 @@ void RenderDX9Scene(int FullDraw = 1)
 
 	LightVec = D3DXVECTOR4(ShadowCam.X,ShadowCam.Y,ShadowCam.Z, 0);
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
+	r3dRenderer->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
 
 	r3dRenderer->SetVertexShader("VS_SMDEPTHPASS");
 	r3dRenderer->SetPixelShader("PS_SMDEPTHPASS");
@@ -165,7 +165,7 @@ void RenderDX9Scene(int FullDraw = 1)
 
 	LightVec = D3DXVECTOR4(ShadowCam.X,ShadowCam.Y,ShadowCam.Z, 0);
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
+	r3dRenderer->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
@@ -513,7 +513,7 @@ void RenderDX9Scene(int FullDraw = 1)
 		if (bRenderSoftShadows && 0)
 		{
 			D3DXVECTOR4 BlurMul(0.25f, 0.25, 0.25f, 1.0f);
-			r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
+			r3dRenderer->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
 			r3dBlurBuffer(ScreenBuffer, TempBuffer, 8);
 		}
 
@@ -571,7 +571,7 @@ void RenderDX9Scene(int FullDraw = 1)
     D3DXMatrixMultiply( &mat2, &V, &mat ); 
     D3DXMatrixTranspose( &mat2, &mat2 );
 
-    //r3dRenderer->pd3ddev->SetVertexShaderConstantF(25 , (float *)&mat2,  4 );
+    //r3dRenderer->SetVertexShaderConstantF(25 , (float *)&mat2,  4 );
 
 	r3dRenderer->SetTexture(ScreenBuffer->Tex, 5);
 

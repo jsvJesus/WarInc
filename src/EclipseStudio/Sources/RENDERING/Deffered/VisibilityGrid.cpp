@@ -543,7 +543,7 @@ VisibiltyGrid::Calculate()
 
 			for( uint32_t i = 0, e = queries->Count(); i < e; i ++ )
 			{
-				D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_OCCLUSION, &(*queries)[ i ] ) );
+				r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_OCCLUSION, &(*queries)[ i ] );
 			}			
 		}
 
@@ -664,7 +664,7 @@ VisibiltyGrid::Calculate()
 								{
 									SetupCamForFace( &cam, camP, Far, face );
 
-									D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER, 0, 1.f, 0 ) );
+									r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER, 0, 1.f, 0 );
 
 									r3dRenderer->SetCamera( cam ) ;
 
@@ -685,7 +685,7 @@ VisibiltyGrid::Calculate()
 									D3DXMATRIX shaderMtx = r3dRenderer->ViewProjMatrix ;
 									D3DXMatrixTranspose( &shaderMtx, &shaderMtx ) ;
 
-									D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*)&shaderMtx, 4 ) ) ;
+									D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*)&shaderMtx, 4 ) ) ;
 
 									d3dc._SetDecl( modifyRestoreRender.vdecl ) ;
 
@@ -791,7 +791,7 @@ VisibiltyGrid::Calculate()
 								{
 									lastInfoFrame = r3dGetTime() ;
 
-									r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
+									r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
 
 									r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ ) ;
 

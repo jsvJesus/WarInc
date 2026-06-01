@@ -64,7 +64,7 @@ PFX_ObjectMotionBlur::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* s
 	D3DPERF_BeginEvent( 0x1, L"Object Motion Blur" );
 
 	D3DXVECTOR4 vSettings = D3DXVECTOR4( mSettings.BlurStrength, 0, 0, 0 );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&vSettings, 1 ); 
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*)&vSettings, 1 ); 
 
 	r3dRenderer->SetTex( src->Tex, PostFXChief::FREE_TEX_STAGE_START );
 }

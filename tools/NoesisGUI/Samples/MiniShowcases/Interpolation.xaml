@@ -1,0 +1,253 @@
+<Page
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  Background="#FF4D5052" xmlns:noesis="clr-namespace:NoesisGUIExtensions" xmlns:b="http://schemas.microsoft.com/xaml/behaviors">
+  <b:Interaction.Triggers>
+    <b:EventTrigger x:Name="PlayAnimationOnLoad">
+      <b:ControlStoryboardAction x:Name="PlayAnimation_FlyingKites" Storyboard="{DynamicResource Animation_FlyingKites}"/>
+    </b:EventTrigger>
+  </b:Interaction.Triggers>
+  <Page.Resources>
+    <Storyboard x:Key="Animation_FlyingKites" AutoReverse="True" RepeatBehavior="Forever">
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="KiteAndString_Girl_INTERPOLATED" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)">
+        <LinearDoubleKeyFrame KeyTime="00:00:00" Value="-12"/>
+        <EasingDoubleKeyFrame Value="12" KeyTime="0:0:4">
+          <EasingDoubleKeyFrame.EasingFunction>
+            <BackEase EasingMode="EaseInOut" Amplitude="2"/>
+          </EasingDoubleKeyFrame.EasingFunction>
+        </EasingDoubleKeyFrame>
+      </DoubleAnimationUsingKeyFrames>
+      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="KiteAndString_Boy_LINEAR" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[2].(RotateTransform.Angle)">
+        <LinearDoubleKeyFrame KeyTime="00:00:00" Value="-12"/>
+        <LinearDoubleKeyFrame Value="12" KeyTime="0:0:4"/>
+      </DoubleAnimationUsingKeyFrames>
+    </Storyboard>
+    <Color x:Key="TextColour">#FF33281C</Color>
+  </Page.Resources>
+  <Grid>
+    <Grid x:Name="Scene">
+      <Grid x:Name="Background" d:IsLocked="True">
+        <Grid x:Name="BackgroundScene">
+          <Grid.Background>
+            <ImageBrush ImageSource="Resources/Interpolation/Background.png" Stretch="UniformToFill"/>
+          </Grid.Background>
+        </Grid>
+      </Grid>
+      <Grid x:Name="TitleTextArea_Grid" d:IsLocked="True">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="4*"/>
+          <RowDefinition Height="3*"/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name="TitleTexts_Stack" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+          <StackPanel.RenderTransform>
+            <TransformGroup>
+              <ScaleTransform/>
+              <SkewTransform/>
+              <RotateTransform Angle="-1"/>
+              <TranslateTransform/>
+            </TransformGroup>
+          </StackPanel.RenderTransform>
+          <TextBlock x:Name="BeholdAn_Text" Text="behold, an" TextWrapping="Wrap" FontSize="80" FontFamily="Resources/Interpolation/#Blackadder ITC" TextAlignment="Center" RenderTransformOrigin="0.5,0.5">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource TextColour}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform AngleX="-24"/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+          <TextBlock x:Name="IncredibleInstance_Text" Text="incredible instance" TextWrapping="Wrap" FontSize="120" FontFamily="Resources/Interpolation/#Blackadder ITC" TextAlignment="Center" RenderTransformOrigin="0.5,0.5" Margin="0,-44,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource TextColour}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform AngleX="-24"/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+          <TextBlock x:Name="Of_Text" Text="of" TextWrapping="Wrap" FontSize="80" FontFamily="Resources/Interpolation/#Blackadder ITC" TextAlignment="Center" RenderTransformOrigin="0.5,0.5" Margin="0,-64,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource TextColour}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform AngleX="-24"/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+          <TextBlock x:Name="Interpolation_Text" Text="interpolation" TextWrapping="Wrap" FontSize="120" FontFamily="Resources/Interpolation/#Blackadder ITC" TextAlignment="Center" RenderTransformOrigin="0.5,0.5" Margin="0,-68,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource TextColour}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform AngleX="-24"/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+          <TextBlock x:Name="Squiggle_Text" Text="~" TextWrapping="Wrap" FontSize="80" FontFamily="Resources/Interpolation/#Blackadder ITC" TextAlignment="Center" RenderTransformOrigin="0.5,0.5" Margin="0,-64,0,0">
+            <TextBlock.Foreground>
+              <SolidColorBrush Color="{DynamicResource TextColour}"/>
+            </TextBlock.Foreground>
+            <TextBlock.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform AngleX="-24"/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </TextBlock.RenderTransform>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+      <Grid x:Name="CharactersAndKites">
+        <StackPanel x:Name="KiteAndString_Boy_LINEAR" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,1.0" Margin="430,0,0,130">
+          <StackPanel.RenderTransform>
+            <TransformGroup>
+              <ScaleTransform/>
+              <SkewTransform/>
+              <RotateTransform/>
+              <TranslateTransform/>
+            </TransformGroup>
+          </StackPanel.RenderTransform>
+          <Grid x:Name="Kite_Boy" Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Self}}" RenderTransformOrigin="0.5,0.5" Panel.ZIndex="1" Margin="0,0,0,-88" Width="256" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.98">
+            <Grid.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Grid.RenderTransform>
+            <Grid.Background>
+              <ImageBrush ImageSource="Resources/Interpolation/Kite.png" Stretch="Uniform">
+                <ImageBrush.Shader>
+                  <noesis:MonochromeBrush Color="#FF8F6F46"/>
+                </ImageBrush.Shader>
+              </ImageBrush>
+            </Grid.Background>
+          </Grid>
+          <Path x:Name="KiteString_Boy" Data="M-4.88045,-31.0702C-10.5129,93.8498 -9.4473,382.459 0,417" Stretch="Fill" Height="520" Width="8" VerticalAlignment="Top" Stroke="#FF3C322E" RenderTransformOrigin="0.5,0.5" Opacity="0.5">
+            <Path.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Path.RenderTransform>
+            <Path.Effect>
+              <noesis:PixelateEffect Size="1"/>
+            </Path.Effect>
+          </Path>
+        </StackPanel>
+        <StackPanel x:Name="KiteAndString_Girl_INTERPOLATED" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,1.0" Margin="0,-17,488,393" Height="704" Width="280">
+          <StackPanel.RenderTransform>
+            <TransformGroup>
+              <ScaleTransform/>
+              <SkewTransform/>
+              <RotateTransform/>
+              <TranslateTransform/>
+            </TransformGroup>
+          </StackPanel.RenderTransform>
+          <Grid x:Name="Kite_Girl" Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Self}}" RenderTransformOrigin="0.5,0.5" Panel.ZIndex="1" Margin="0,0,0,-88" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.98">
+            <Grid.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Grid.RenderTransform>
+            <Grid.Background>
+              <ImageBrush ImageSource="Resources/Interpolation/Kite.png" Stretch="Uniform">
+                <ImageBrush.Shader>
+                  <noesis:MonochromeBrush Color="#FFFF5500"/>
+                </ImageBrush.Shader>
+              </ImageBrush>
+            </Grid.Background>
+          </Grid>
+          <Path x:Name="KiteString_Girl" Data="M-4.88045,-31.0702C-10.5129,93.8498 -9.44734,382.991 0,417" Stretch="Fill" Height="512" Width="8" VerticalAlignment="Top" Stroke="#FF3C322E" RenderTransformOrigin="0.5,0.5" Opacity="0.5">
+            <Path.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Path.RenderTransform>
+            <Path.Effect>
+              <noesis:PixelateEffect Size="1"/>
+            </Path.Effect>
+          </Path>
+        </StackPanel>
+        <Grid x:Name="Characters" Width="512" Margin="0,580,0,60" Height="440" HorizontalAlignment="Center" d:IsLocked="True">
+          <Grid.Background>
+            <ImageBrush ImageSource="Resources/Interpolation/Characters.png" Stretch="UniformToFill"/>
+          </Grid.Background>
+        </Grid>
+      </Grid>
+      <Grid x:Name="OverlayFX" d:IsLocked="True">
+        <Grid x:Name="Vignette" Background="#FFFFFFFF" BlendingMode="Multiply">
+          <Grid.Effect>
+            <noesis:VignetteEffect Strength="16"/>
+          </Grid.Effect>
+        </Grid>
+        <Grid x:Name="Noise" Background="#FFFFFFFF" BlendingMode="Multiply">
+          <Grid.Effect>
+            <noesis:NoiseEffect/>
+          </Grid.Effect>
+        </Grid>
+        <Grid x:Name="ScreenTint" BlendingMode="Multiply" Opacity="0.33">
+          <Grid.Background>
+            <ImageBrush ImageSource="Resources/Interpolation/Background.png">
+              <ImageBrush.Shader>
+                <noesis:MonochromeBrush Color="#FF8EEBFF"/>
+              </ImageBrush.Shader>
+            </ImageBrush>
+          </Grid.Background>
+        </Grid>
+      </Grid>
+    </Grid>
+    <StackPanel xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+      x:Name="Infoverlay_HorizontalStack" Margin="32,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+      <Component Source="Resources/MiniShowcases/Info_Info_Component.xaml" Height="{Binding Path=ActualHeight, ElementName=TabItem_Off}" Width="{Binding Path=ActualHeight, RelativeSource={RelativeSource Self}}" VerticalAlignment="Top" HorizontalAlignment="Left" d:IsLocked="True"/>
+      <TabControl x:Name="Infoverlay_TabControl" Background="{x:Null}" Padding="0,0,0,0">
+        <TabControl.MaxWidth>
+          <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType={x:Type Page}}">
+            <Binding.Converter>
+              <noesis:MathConverter Expression="{}{0}/3"/>
+            </Binding.Converter>
+          </Binding>
+        </TabControl.MaxWidth>
+        <TabItem x:Name="TabItem_Off" Cursor="Hand" IsSelected="True" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_Off_Geometry}">
+          <Grid Background="#FFE5E5E5" d:IsHidden="True"/>
+        </TabItem>
+        <TabItem x:Name="TabItem_On" Cursor="Hand" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_On_Geometry}">
+          <Grid VerticalAlignment="Top" HorizontalAlignment="Left" d:IsLocked="True">
+            <Component Source="Resources/MiniShowcases/Info_Overlay_ContentArea_Component.xaml" Text_Description_Str="To try out Noesis Studio&apos;s many animation easing options: &#x0A;&#x0A;Navigate to the Animation Panel [Ctrl+4], then under the &apos;Storyboard&apos; tab, select &apos;Animation_Flyingkites&apos;. &#x0A; &#x0A;With the Storyboard Timeline open, identify &apos;KiteAndString_Girl_INTERPOLATED&apos;, and select its final keyframe. &#x0A; &#x0A;In the Keyframe&apos;s Properties Panel on the far-right of the application window, you will then be able to try out different interpolation options, including, but not limited to &apos;Hold&apos;; (no tweening), Linear, custom Splines, or from many of our customizable Easing presets. &#x0A; &#x0A;The play icon can be clicked within the Storyboard&apos;s timeline to start looping the animation and preview in real-time the different types of available interpolations." Text_Title_Str="Interpolation"/>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </StackPanel>
+  </Grid>
+</Page>

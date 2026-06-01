@@ -85,7 +85,7 @@ PFX_GodRays::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*OV
 		D3DXVECTOR4( scr.x/dest->Width, scr.y/dest->Height, 1.f, 1.f )
 	};	
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)vConsts, 2 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)vConsts, 2 ) );
 
 }
 

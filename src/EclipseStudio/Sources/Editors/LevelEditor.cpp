@@ -1227,7 +1227,7 @@ namespace
 		r3dRenderer->SetCullMode( D3DCULL_CCW );
 
 		float data[ 4 ] = { 0.0f, 1.0f, 0.0f, 1.0f };
-		D3D_V ( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, data, 1 ) );
+		D3D_V ( r3dRenderer->SetPixelShaderConstantF( 0, data, 1 ) );
 
 		r3dRenderer->SetPixelShader( g_FwdColorPS );
 		r3dRenderer->SetVertexShader( g_FwdColorVS );
@@ -2678,7 +2678,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_PUSH | R3D_BLEND_ZC | R3D_BLEND_ZW | R3D_BLEND_NOALPHA);
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20,(float *)&vSun, 1);
+	r3dRenderer->SetPixelShaderConstantF( 20,(float *)&vSun, 1);
 
 	r3dRenderer->SetMipMapBias( -2 );
 
@@ -2694,7 +2694,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 	key.flags.low_q = 1 ;
 	SetFillGBufferPixelShader( key ) ;
 	D3DXVECTOR4 CamVec = D3DXVECTOR4(cam.x, cam.y, cam.z, 1);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+	r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 
 	int old_OQ = r_use_oq->GetInt() ;
 	int old_LQ = r_lighting_quality->GetInt() ;
@@ -14622,7 +14622,7 @@ void Editor_Level::ProcessAssets()
 				extern int VS_CLEAR_FLOAT_ID;
 				r3dRenderer->SetPixelShader( VS_CLEAR_FLOAT_ID );
 				r3dRenderer->SetPixelShader( PS_CLEAR_FLOAT_ID );
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, D3DXVECTOR4( r3dRenderer->FarClip, 0, 0, 0 ), 1 );
+				r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( r3dRenderer->FarClip, 0, 0, 0 ), 1 );
 				r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::white );
 				r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
 				DepthBuffer->Deactivate();

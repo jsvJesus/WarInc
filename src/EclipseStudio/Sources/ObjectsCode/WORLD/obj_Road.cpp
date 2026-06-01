@@ -534,7 +534,7 @@ void obj_Road::DrawRoad()
 	float vConst[4] = { -r_roads_zdisplace->GetFloat(), r3dRenderer->ProjMatrix._43, r3dRenderer->ProjMatrix._33, 0 };
 	//	Disable z-displacement when error show mode is on
 	if (_road_ShowZFail > 0 || _road_FixZInShader == 0) { vConst[0] = 0; }
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DDEPTH, vConst, 1 );
+	r3dRenderer->SetPixelShaderConstantF( MC_DDEPTH, vConst, 1 );
 
 	//r3dRenderer->SetMipMapBias(-2.0f);
 
@@ -615,7 +615,7 @@ void obj_Road::DrawRoad()
  		r3dRenderer->SetPixelShader( PS_CLEAR_FLOAT_ID );
 
 		float cl[4] = { 1.0f, 0, 0, 0 };
-		r3dRenderer->pd3ddev->SetPixelShaderConstantF (0, &cl[0], 1);
+		r3dRenderer->SetPixelShaderConstantF(0, &cl[0], 1);
 
 		r3dDrawBoxFS(r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::red);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_POP);

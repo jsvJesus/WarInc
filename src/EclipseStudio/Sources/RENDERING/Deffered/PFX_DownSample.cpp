@@ -76,7 +76,7 @@ PFX_DownSample::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* src ) /
 
 	float vConst[ 4 ] = { 1.0f / src->Width, 1.0f / src->Height, 0.f, 0.f } ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConst, 1 ) ) ;
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConst, 1 ) ) ;
 
 	D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) ) ;
 	

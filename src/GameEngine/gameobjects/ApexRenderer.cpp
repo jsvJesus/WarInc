@@ -735,11 +735,11 @@ void UserRenderer::renderResource(const NxApexRenderContext& context)
 	mts[1] = world;
 
 	IDirect3DDevice9 *d = r3dRenderer->pd3ddev;
-	d->SetVertexShaderConstantF(0, &mts[0]._11, 8);
+	r3dRenderer->SetVertexShaderConstantF(0, &mts[0]._11, 8);
 
 	UserRenderBoneBuffer *ubb = static_cast<UserRenderBoneBuffer*>(urr->getBoneBuffer());
 	if (ubb)
-		d->SetVertexShaderConstantF(12, &ubb->boneMatrices[urr->firstBone].x, urr->numBones * BONE_MATRIX_SIZE);
+		r3dRenderer->SetVertexShaderConstantF(12, &ubb->boneMatrices[urr->firstBone].x, urr->numBones * BONE_MATRIX_SIZE);
 
 	r3dMaterial * m = urr->mtl;
 	shadowRenderMode

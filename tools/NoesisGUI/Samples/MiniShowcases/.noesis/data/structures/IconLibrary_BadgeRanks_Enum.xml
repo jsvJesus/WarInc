@@ -1,0 +1,5 @@
+<Enum Name="IconLibrary_Badge_Ranks_Enum">
+  <Item Name="Mors" Value="0"/>
+  <Item Name="Ave" Value="1"/>
+  <Item Name="Flor" Value="2"/>
+</Enum>

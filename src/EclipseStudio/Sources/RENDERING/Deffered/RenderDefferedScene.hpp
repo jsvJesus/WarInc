@@ -175,10 +175,10 @@ void ClearMRTUsingShaders()
 	SetMRTClearShaders( false );
 
 	D3DXVECTOR4 pconst0 = D3DXVECTOR4 ( gCam.NearClip, gCam.FarClip, 0.0f, 0.0f );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*) pconst0, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*) pconst0, 1 );
 
 	pconst0 = D3DXVECTOR4 ( Sun->SunLight.Direction.x, Sun->SunLight.Direction.y, Sun->SunLight.Direction.z, 0.0f );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( MC_SUNDIR, (float*) pconst0, 1  );
+	r3dRenderer->SetPixelShaderConstantF( MC_SUNDIR, (float*) pconst0, 1  );
 
 	r3dColor Cl = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
 
@@ -245,7 +245,7 @@ void RenderDeferredScene1()
 
 		gBuffer_Normal->Activate(0);
 		// NOTE : sync clear value with DS_ClearBuffer_ps.hls
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0x7fff7f, 0.f, 0 ) );
+		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0x7fff7f, 0.f, 0 );
 		gBuffer_Normal->Deactivate();
 
 		// we need to clear this only because half scale ssao can occupy 1/2 upper left of gAux RT
@@ -270,12 +270,12 @@ void RenderDeferredScene1()
 #ifndef FINAL_BUILD
 	if( r_full_zreject->GetInt() )
 	{
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 0.f, 0 ) );
+		r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 0.f, 0 );
 	}
 	else
 #endif
 	{
-		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.f, 0 ) );
+		r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.f, 0 );
 	}
 
 	gDEBUG_DrawPositions.Clear();
@@ -465,7 +465,7 @@ void RenderDeferredScene1()
 
 
 	D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+	r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 
 
 	r3dRenderer->SetMipMapBias(__WorldRenderBias);
@@ -562,7 +562,7 @@ void RenderDeferredScene()
 
 	D3DXVECTOR4 BlurMul;
 	BlurMul = D3DXVECTOR4(0.25f, 0.25f, 0.25f, 1.0f);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
 
 	// r3dBlur2Buffer(ScreenBuffer, BlurBuffer, TempBuffer,4);
 

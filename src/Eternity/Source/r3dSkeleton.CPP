@@ -559,7 +559,7 @@ void r3dSkeleton::SetShaderConstants() const
     MM += 12;
   }
 
-  r3dRenderer->pd3ddev->SetVertexShaderConstantF(START_BONE_CONSTANT, Mat, 3*NumBones);
+  r3dRenderer->SetVertexShaderConstantF(START_BONE_CONSTANT, Mat, 3*NumBones);
   return;
 }
 
@@ -572,7 +572,7 @@ void r3dSkeleton::SetShaderConstants() const
         D3DXMatrixIdentity( (D3DXMATRIX*) &idents[ i * 12 ] );
     }
 
-    r3dRenderer->pd3ddev->SetVertexShaderConstantF(START_BONE_CONSTANT, (float*)idents, 3*MAX_BONES);
+    r3dRenderer->SetVertexShaderConstantF(START_BONE_CONSTANT, (float*)idents, 3*MAX_BONES);
 }
 
 void r3dDumpSkeleton(const r3dSkeleton* skel, int bone)

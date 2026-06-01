@@ -344,6 +344,9 @@ r3dDX11Texture::r3dDX11Texture()
 {
 	Texture = NULL;
 	SRV = NULL;
+	RTVs = NULL;
+	RTVCount = 0;
+	IsCube = false;
 
 	Width = 0;
 	Height = 0;
@@ -446,6 +449,183 @@ bool r3dDX11Texture::Create2D(int width, int height, R3D_DX11_FORMAT format, con
 	Format = format;
 
 	r3dOutToLog("DX11Texture: created 2D texture %dx%d format=%d\n", Width, Height, Format);
+
+	return true;
+}
+
+bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT format, int mipCount)
+{
+	Destroy();
+
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	if(width <= 0 || height <= 0 || format == 0)
+		return false;
+
+	if(mipCount <= 0)
+		mipCount = 1;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+	if(!device)
+		return false;
+
+	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.Width = width;
+	desc.Height = height;
+	desc.MipLevels = mipCount;
+	desc.ArraySize = 1;
+	desc.Format = (DXGI_FORMAT)format;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+
+	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
+	if(FAILED(hr))
+	{
+		r3dDX11Texture_LogHR("CreateTexture2D RenderTarget", hr);
+		Destroy();
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+
+	srvDesc.Format = desc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = mipCount;
+
+	hr = device->CreateShaderResourceView(Texture, &srvDesc, &SRV);
+	if(FAILED(hr))
+	{
+		r3dDX11Texture_LogHR("CreateShaderResourceView RenderTarget", hr);
+		Destroy();
+		return false;
+	}
+
+	RTVCount = mipCount;
+	RTVs = new ID3D11RenderTargetView*[RTVCount];
+	ZeroMemory(RTVs, sizeof(ID3D11RenderTargetView*) * RTVCount);
+
+	for(int mip = 0; mip < mipCount; ++mip)
+	{
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+		ZeroMemory(&rtvDesc, sizeof(rtvDesc));
+
+		rtvDesc.Format = desc.Format;
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = mip;
+
+		hr = device->CreateRenderTargetView(Texture, &rtvDesc, &RTVs[mip]);
+		if(FAILED(hr))
+		{
+			r3dDX11Texture_LogHR("CreateRenderTargetView Texture2D", hr);
+			Destroy();
+			return false;
+		}
+	}
+
+	Width = width;
+	Height = height;
+	MipCount = mipCount;
+	Format = format;
+	IsCube = false;
+
+	return true;
+}
+
+bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT format, int mipCount)
+{
+	Destroy();
+
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	if(edgeLength <= 0 || format == 0)
+		return false;
+
+	if(mipCount <= 0)
+		mipCount = 1;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+	if(!device)
+		return false;
+
+	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.Width = edgeLength;
+	desc.Height = edgeLength;
+	desc.MipLevels = mipCount;
+	desc.ArraySize = 6;
+	desc.Format = (DXGI_FORMAT)format;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
+	if(FAILED(hr))
+	{
+		r3dDX11Texture_LogHR("CreateTexture2D RenderTargetCube", hr);
+		Destroy();
+		return false;
+	}
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+
+	srvDesc.Format = desc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	srvDesc.TextureCube.MipLevels = mipCount;
+
+	hr = device->CreateShaderResourceView(Texture, &srvDesc, &SRV);
+	if(FAILED(hr))
+	{
+		r3dDX11Texture_LogHR("CreateShaderResourceView RenderTargetCube", hr);
+		Destroy();
+		return false;
+	}
+
+	RTVCount = 6 * mipCount;
+	RTVs = new ID3D11RenderTargetView*[RTVCount];
+	ZeroMemory(RTVs, sizeof(ID3D11RenderTargetView*) * RTVCount);
+
+	for(int face = 0; face < 6; ++face)
+	{
+		for(int mip = 0; mip < mipCount; ++mip)
+		{
+			D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+			ZeroMemory(&rtvDesc, sizeof(rtvDesc));
+
+			rtvDesc.Format = desc.Format;
+			rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+			rtvDesc.Texture2DArray.MipSlice = mip;
+			rtvDesc.Texture2DArray.FirstArraySlice = face;
+			rtvDesc.Texture2DArray.ArraySize = 1;
+
+			const int index = face * mipCount + mip;
+			hr = device->CreateRenderTargetView(Texture, &rtvDesc, &RTVs[index]);
+			if(FAILED(hr))
+			{
+				r3dDX11Texture_LogHR("CreateRenderTargetView TextureCube", hr);
+				Destroy();
+				return false;
+			}
+		}
+	}
+
+	Width = edgeLength;
+	Height = edgeLength;
+	MipCount = mipCount;
+	Format = format;
+	IsCube = true;
 
 	return true;
 }
@@ -752,6 +932,18 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 
 void r3dDX11Texture::Destroy()
 {
+	if(RTVs)
+	{
+		for(int i = 0; i < RTVCount; ++i)
+			r3dDX11Texture_Release(RTVs[i]);
+
+		delete [] RTVs;
+		RTVs = NULL;
+	}
+
+	RTVCount = 0;
+	IsCube = false;
+
 	r3dDX11Texture_Release(SRV);
 	r3dDX11Texture_Release(Texture);
 
@@ -774,6 +966,64 @@ ID3D11Texture2D* r3dDX11Texture::GetTexture2D() const
 ID3D11ShaderResourceView* r3dDX11Texture::GetSRV() const
 {
 	return SRV;
+}
+
+ID3D11RenderTargetView* r3dDX11Texture::GetRTV(int face, int mip) const
+{
+	if(!RTVs || mip < 0 || mip >= MipCount)
+		return NULL;
+
+	if(IsCube)
+	{
+		if(face < 0 || face >= 6)
+			return NULL;
+
+		return RTVs[face * MipCount + mip];
+	}
+
+	return RTVs[mip];
+}
+
+ID3D11Texture2D* r3dDX11Texture::AddRefTexture2D() const
+{
+	if(Texture)
+		Texture->AddRef();
+
+	return Texture;
+}
+
+ID3D11RenderTargetView* r3dDX11Texture::AddRefRTV(int face, int mip) const
+{
+	ID3D11RenderTargetView* rtv = GetRTV(face, mip);
+	if(rtv)
+		rtv->AddRef();
+
+	return rtv;
+}
+
+bool r3dDX11Texture::AddRefRenderTargetMirror(
+	int face,
+	int mip,
+	ID3D11Texture2D** texture,
+	ID3D11RenderTargetView** rtv
+) const
+{
+	if(texture)
+		*texture = NULL;
+
+	if(rtv)
+		*rtv = NULL;
+
+	ID3D11RenderTargetView* view = GetRTV(face, mip);
+	if(!Texture || !view || !texture || !rtv)
+		return false;
+
+	Texture->AddRef();
+	view->AddRef();
+
+	*texture = Texture;
+	*rtv = view;
+	return true;
 }
 
 int r3dDX11Texture::GetWidth() const

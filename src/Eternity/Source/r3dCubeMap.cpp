@@ -146,7 +146,7 @@ int r3dCubeMap::Render(const r3dPoint3D& pos, r3dCamera &Cam1, fn_DrawWorld draw
 
   for(int face = 0; face < 6; face++) {
     m_pRenderToEnvMap->Face((D3DCUBEMAP_FACES)face, D3DX_FILTER_LINEAR);
-    r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, r3dRenderer->Fog.Color.GetPacked(), 1.0f, 0 );
+    r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, r3dRenderer->Fog.Color.GetPacked(), 1.0f, 0 );
 
     D3DXMATRIX mWorld, mView, mProj;
 
@@ -308,7 +308,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 
 		// float4 		g_vTexcTransform	: register ( c36 );
 		float vsConst[ 4 ] = { dims.Width / temp0->Width , dims.Height / temp0->Height, 0.5f / temp0->Width, 0.5f / temp0->Height } ;
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
 
 		r3dDrawFullScreenQuad( false );
 
@@ -332,7 +332,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 
 		// float4 		g_vTexcTransform	: register ( c36 );
 		float vsConst[ 4 ] = { prevDims.Width / temp0->Width , prevDims.Height / temp0->Height, 1.0f / temp0->Width, 1.0f / temp0->Height } ;
-		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
+		D3D_V( r3dRenderer->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
 
 		r3dRenderer->SetViewport( 0, 0, dims.Width, dims.Height ) ;
 
@@ -349,7 +349,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 
 			// float4 		g_vTexcTransform	: register ( c36 );
 			float vsConst[ 4 ] = { dims.Width / temp1->Width , dims.Height / temp1->Height, 0.5f / temp1->Width, 0.5f / temp1->Height } ;
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 36, vsConst, 1 ) ) ;
 
 			r3dDrawFullScreenQuad( false );
 

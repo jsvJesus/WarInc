@@ -1597,11 +1597,11 @@ void r3dMesh::BuildWorldMatrix()
  ShaderMat =  mWorld * 	r3dRenderer->mCamera * r3dRenderer->mProj;
  D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&ShaderMat,  4 );
+ r3dRenderer->SetVertexShaderConstantF(  0, (float *)&ShaderMat,  4 );
 
  ShaderMat =  mWorld;
  D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  4, (float *)&ShaderMat,  4 );
+ r3dRenderer->SetVertexShaderConstantF(  4, (float *)&ShaderMat,  4 );
 }
 
 
@@ -1739,10 +1739,10 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
  AC[2] = float(r3dRenderer->AmbientColor.B)/255.0f;
  AC[3] = 1;
  
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  7, AC,  1 );
- r3dRenderer->pd3ddev->SetPixelShaderConstantF(  7, AC,  1 );
+ r3dRenderer->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
+ r3dRenderer->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
+ r3dRenderer->SetVertexShaderConstantF(  7, AC,  1 );
+ r3dRenderer->SetPixelShaderConstantF(  7, AC,  1 );
 */
 
   float PPos[16][4]; 
@@ -1762,7 +1762,7 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
   PPos[i+8][3] = 1;
  }
 
- r3dRenderer->pd3ddev->SetVertexShaderConstantF(  30, PPos[0],  16 );
+ r3dRenderer->SetVertexShaderConstantF(  30, PPos[0],  16 );
 }
 
 
@@ -2162,7 +2162,7 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
  ShaderMat =  mWorld * 	r3dRenderer->mCamera * r3dRenderer->mProj;
  D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
- r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+ r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 //  for(i = 0; i < 32; i++)
 //          r3dRenderer->pd3ddev->LightEnable( i, 0 );

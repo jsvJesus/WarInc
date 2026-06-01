@@ -1,0 +1,5 @@
+<Class Name="Ingredient">
+  <Property Name="IngredientName" Type="Enum" SubType="Alembic.IngredientName"/>
+  <Property Name="IngredientIcon" Type="Object" SubType="ImageSource" ImageSourcePath="Assets/IngredientImages"/>
+  <Property Name="IngredientQty" Type="Number" NumberMinValue="0" NumberMaxValue="99" NumberDecimalCount="0"/>
+</Class>

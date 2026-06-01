@@ -42,7 +42,7 @@ void DrawDeferredBox3D ( float x, float y, float z, float w, float h, float d, c
 	vconst /= 255.0f;
 
 	// float4 vColor : register( c64 );
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 64, (float*)&vconst, 1 ) );
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 64, (float*)&vconst, 1 ) );
 
 	D3DXMATRIX world;
 	D3DXMatrixIdentity( &world );

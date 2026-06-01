@@ -21,23 +21,23 @@ void RenderDensityShader::Begin(CloudGrid* pCloud, const SSceneParamter& scenePa
 	// world to projection transform 
 	D3DXMATRIX mtx = sceneParam.viewProj;
 	D3DXMatrixTranspose(&mtx, &mtx);
-	pDev->SetVertexShaderConstantF(0, (float*)&mtx, 4);
+	r3dRenderer->SetVertexShaderConstantF(0, (float*)&mtx, 4);
 	// view position
-	pDev->SetVertexShaderConstantF(6, (float*)&sceneParam.eyePt, 1);
+	r3dRenderer->SetVertexShaderConstantF(6, (float*)&sceneParam.eyePt, 1);
 
 	CloudGrid::SVSParam param;
 	pCloud->GetVSParam( param, sceneParam );
 	// uv scale and offset parameter
-	pDev->SetVertexShaderConstantF(7, (float*)&param.vUVParam, 1);
+	r3dRenderer->SetVertexShaderConstantF(7, (float*)&param.vUVParam, 1);
 	// xz position scale and offset parameter
-	pDev->SetVertexShaderConstantF(4, (float*)&param.vXZParam, 1);
+	r3dRenderer->SetVertexShaderConstantF(4, (float*)&param.vXZParam, 1);
 	// height parameters
-	pDev->SetVertexShaderConstantF(5, (float*)&param.vHeight, 1);
+	r3dRenderer->SetVertexShaderConstantF(5, (float*)&param.vHeight, 1);
 
 	// cloud cover
 	float fCloudCover = pCloud->GetCurrentCloudCover();
 	D3DXVECTOR4 v(sceneParam.m_vFade_Density.x + sceneParam.eyePt.y, sceneParam.m_vFade_Density.y + sceneParam.eyePt.y, sceneParam.m_vFade_Density.z, fCloudCover);
-	pDev->SetPixelShaderConstantF(8, (float*)&v, 1);
+	r3dRenderer->SetPixelShaderConstantF(8, (float*)&v, 1);
 }
 
 
@@ -120,22 +120,22 @@ void RenderShadowShader::Begin(CloudGrid* pCloud, const SSceneParamter& scenePar
 	// world to projection transform 
 	D3DXMATRIX mtx = m_mW2SProj;
 	D3DXMatrixTranspose(&mtx, &mtx);
-	pDev->SetVertexShaderConstantF(0, (float*)&mtx, 4 );
+	r3dRenderer->SetVertexShaderConstantF(0, (float*)&mtx, 4 );
 	// view position
-	pDev->SetVertexShaderConstantF(6, (float*)&sceneParam.eyePt, 1 );
+	r3dRenderer->SetVertexShaderConstantF(6, (float*)&sceneParam.eyePt, 1 );
 
 	CloudGrid::SVSParam param;
 	pCloud->GetVSParam( param, sceneParam );		
 	// uv scale and offset parameter
-	pDev->SetVertexShaderConstantF(7, (float*)&param.vUVParam, 1 );
+	r3dRenderer->SetVertexShaderConstantF(7, (float*)&param.vUVParam, 1 );
 	// xz position scale and offset parameter
-	pDev->SetVertexShaderConstantF(4, (float*)&param.vXZParam, 1 );
+	r3dRenderer->SetVertexShaderConstantF(4, (float*)&param.vXZParam, 1 );
 	// height parameters
-	pDev->SetVertexShaderConstantF(5, (float*)&param.vHeight, 1 );
+	r3dRenderer->SetVertexShaderConstantF(5, (float*)&param.vHeight, 1 );
 
 	// cloud cover
 	float fCloudCover = pCloud->GetCurrentCloudCover();
-	pDev->SetPixelShaderConstantF(0, (float*)&fCloudCover, 1 );
+	r3dRenderer->SetPixelShaderConstantF(0, (float*)&fCloudCover, 1 );
 }
 
 
@@ -220,16 +220,16 @@ void CloudBlurShader::SetShaderConstant(r3dTexture* pTex, const SSceneParamter& 
 
 	// offset parameter to sample center of texels.
 	D3DXVECTOR2 vv( 0.5f / (float)pTex->GetWidth(), 0.5f / (float)pTex->GetHeight() );
-	pDev->SetVertexShaderConstantF(4, (float*)&vv, 1);
+	r3dRenderer->SetVertexShaderConstantF(4, (float*)&vv, 1);
 
 	// view position
-	pDev->SetPixelShaderConstantF(9, (float*)&sceneParam.eyePt, 1);
+	r3dRenderer->SetPixelShaderConstantF(9, (float*)&sceneParam.eyePt, 1);
 
 	// transform screen position to world space
 	D3DXMATRIX mC2W;
 	D3DXMatrixInverse( &mC2W, NULL, &sceneParam.viewProj );
 	D3DXMatrixTranspose(&mC2W, &mC2W);
-	pDev->SetVertexShaderConstantF(0, (float*)&mC2W, 4);
+	r3dRenderer->SetVertexShaderConstantF(0, (float*)&mC2W, 4);
 
 	// Directional Light in projection space.
 	D3DXVECTOR4 vLit( sceneParam.m_vLightDir.x, sceneParam.m_vLightDir.y, sceneParam.m_vLightDir.z, 0.0f );
@@ -278,25 +278,25 @@ void CloudBlurShader::SetShaderConstant(r3dTexture* pTex, const SSceneParamter& 
 			vBlurDir = D3DXVECTOR4( -1.0f, -1.0f, vProjPos.x, vProjPos.y );
 		}
 	}
-	pDev->SetVertexShaderConstantF(5, (float*)&vBlurDir, 1);
+	r3dRenderer->SetVertexShaderConstantF(5, (float*)&vBlurDir, 1);
 
 	// parameter to scale down blur vector acoording to the distance from the view position.
 	SScatteringShaderParameters param;
 	sceneParam.GetShaderParam( param );
 
 	D3DXVECTOR3 v( param.vESun.w, param.vSum.w, sceneParam.m_fAtomosHeight );
-	pDev->SetPixelShaderConstantF(6, (float*)&v, 1);
+	r3dRenderer->SetPixelShaderConstantF(6, (float*)&v, 1);
 
 
 	// maximum length of blur vector in texture space.
 	float fMaxMove = 0.1f/(float)16;
 	D3DXVECTOR2 vInvMax( 1.0f/fMaxMove, 1.0f/fMaxMove );
-	pDev->SetPixelShaderConstantF(8, (float*)&vInvMax, 1);
+	r3dRenderer->SetPixelShaderConstantF(8, (float*)&vInvMax, 1);
 
 
 	// fall off parameter of weights.
 	D3DXVECTOR4 vFallOff( -5000.0f, -1.5f, -1.5f, -1000.0f );
-	pDev->SetPixelShaderConstantF(7, (float*)&vFallOff, 1);
+	r3dRenderer->SetPixelShaderConstantF(7, (float*)&vFallOff, 1);
 }
 
 
@@ -483,21 +483,21 @@ void CloudPlaneShader::SetShaderConstant(const SSceneParamter& sceneParam)
 	D3DXMatrixInverse( &mC2W, NULL, &sceneParam.viewProj );
 	D3DXMatrixTranspose(&mC2W, &mC2W);
 
-	pDev->SetVertexShaderConstantF(0, (float*)&mC2W, 4);
-	pDev->SetVertexShaderConstantF(4, (float*)&sceneParam.eyePt, 1);
-	pDev->SetVertexShaderConstantF(5, (float*)&sceneParam.m_vLightDir, 1);
+	r3dRenderer->SetVertexShaderConstantF(0, (float*)&mC2W, 4);
+	r3dRenderer->SetVertexShaderConstantF(4, (float*)&sceneParam.eyePt, 1);
+	r3dRenderer->SetVertexShaderConstantF(5, (float*)&sceneParam.m_vLightDir, 1);
 
-	pDev->SetPixelShaderConstantF(4, (float*)&sceneParam.eyePt, 1);
-	pDev->SetPixelShaderConstantF(5, (float*)&sceneParam.m_vLightDir, 1);
-	pDev->SetPixelShaderConstantF(12, (float*)&sceneParam.m_vLightColor, 1);
-	pDev->SetPixelShaderConstantF(13, (float*)&sceneParam.m_vAmbientLight, 1);
+	r3dRenderer->SetPixelShaderConstantF(4, (float*)&sceneParam.eyePt, 1);
+	r3dRenderer->SetPixelShaderConstantF(5, (float*)&sceneParam.m_vLightDir, 1);
+	r3dRenderer->SetPixelShaderConstantF(12, (float*)&sceneParam.m_vLightColor, 1);
+	r3dRenderer->SetPixelShaderConstantF(13, (float*)&sceneParam.m_vAmbientLight, 1);
 
 	SScatteringShaderParameters param;
 	sceneParam.GetShaderParam( param );
-	pDev->SetPixelShaderConstantF(6, (float*)&param, 5);
+	r3dRenderer->SetPixelShaderConstantF(6, (float*)&param, 5);
 
 	// parameter to compute distance of cloud.
 	D3DXVECTOR2 v;
 	sceneParam.GetCloudDistance( v );
-	pDev->SetPixelShaderConstantF(11, (float*)&v, 1);
+	r3dRenderer->SetPixelShaderConstantF(11, (float*)&v, 1);
 }

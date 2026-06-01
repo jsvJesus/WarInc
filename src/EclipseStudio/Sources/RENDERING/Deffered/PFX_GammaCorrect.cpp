@@ -35,7 +35,7 @@ void PFX_GammaCorrect::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src 
 {
 	r3d_assert( mPow > 0.f );
 
-	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&D3DXVECTOR4 ( 1.f / mPow, 0.0f, 0.0f, 0.0f ), 1 ) );
+	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&D3DXVECTOR4 ( 1.f / mPow, 0.0f, 0.0f, 0.0f ), 1 ) );
 }
 
 void PFX_GammaCorrect::FinishImpl()

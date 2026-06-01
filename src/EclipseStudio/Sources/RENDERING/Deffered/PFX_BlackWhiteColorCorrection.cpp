@@ -38,7 +38,7 @@ void PFX_BlackWhiteColorCorrection::CloseImpl()
 
 void PFX_BlackWhiteColorCorrection::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )
 {
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*)&D3DXVECTOR4 ( m_fPower, 0.0f, 0.0f, 0.0f ), 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*)&D3DXVECTOR4 ( m_fPower, 0.0f, 0.0f, 0.0f ), 1 );
 }
 
 void PFX_BlackWhiteColorCorrection::FinishImpl()

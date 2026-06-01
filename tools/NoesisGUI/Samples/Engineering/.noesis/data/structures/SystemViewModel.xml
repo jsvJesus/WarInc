@@ -1,0 +1,21 @@
+    <Class Name="SystemViewModel">
+      <Property Name="Name" Type="String" StringMinWordCount="2" StringMaxWordCount="2"/>
+      <Property Name="Class" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="Location" Type="String" StringMinWordCount="0" StringMaxWordCount="10"/>
+      <Property Name="Operation" Type="Enum" SubType="NoesisStudioInternals.OperatingStatus"/>
+      <Property Name="IntegrityBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="InstabilityBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="HeatBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="PowerBar" Type="Object" SubType="NoesisStudioInternals.BarViewModel"/>
+      <Property Name="PowerMin" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PerformanceMin" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PerformanceMax" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PerformanceModifiers" Type="Collection" SubType="NoesisStudioInternals.SystemModifierViewModel" CollectionMinItemCount="0" CollectionMaxItemCount="1"/>
+      <Property Name="PerformanceBase" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="PerformanceFinal" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
+      <Property Name="WheelRotation" Type="Number" NumberMinValue="0" NumberMaxValue="360"/>
+      <Property Name="IsSelected" Type="Boolean"/>
+      <Property Name="Technician" Type="Object" SubType="NoesisStudioInternals.TechnicianViewModel"/>
+      <Property Name="IsOrientatedTop" Type="Boolean"/>
+      <Property Name="IsVisible" Type="Boolean"/>
+    </Class>

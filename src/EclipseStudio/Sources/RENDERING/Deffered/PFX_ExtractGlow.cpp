@@ -64,7 +64,7 @@ PFX_ExtractGlow::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src*
 	D3DXVECTOR4 Const( mSettings.TintColor.R, mSettings.TintColor.G, mSettings.TintColor.B, mSettings.TintColor.A );
 	Const *= mSettings.Multiplier / 255.0f,
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)Const, 1 );
+	r3dRenderer->SetPixelShaderConstantF( 0, (float*)Const, 1 );
 }
 
 //------------------------------------------------------------------------

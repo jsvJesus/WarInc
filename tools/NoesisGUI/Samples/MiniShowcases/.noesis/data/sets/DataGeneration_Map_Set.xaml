@@ -1,0 +1,145 @@
+<vdctx:DataGeneration_Map_Collection xmlns:vdctx="clr-namespace:MiniShowcases">
+  <vdctx:DataGeneration_Map_Collection.Town>
+    <vdctx:DataGeneration_Map_Town_Properties TownName="Diam" TownPopulation="390" RegionName="Amet" MayorSurname="Purus" MayorPortrait="studio:///MiniShowcases;component/Resources/DataGeneration/Portraiture_Mayor_6.png"/>
+  </vdctx:DataGeneration_Map_Collection.Town>
+  <vdctx:DataGeneration_Map_Collection.Roads>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Et dolore"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Lobortis"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Magna"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Do eiusmod"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Lorem ipsum"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Gravida rutrum"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Enim"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Rutrum quisque"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Cursus"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Blandit"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Lectus vestibulum"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Enim"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Volutpat"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Aliquam"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Sagittis nisl"/>
+    <vdctx:DataGeneration_Map_Road_Properties RoadName_String="Semper"/>
+  </vdctx:DataGeneration_Map_Collection.Roads>
+  <vdctx:DataGeneration_Map_Collection.Plots>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="15" VegetationDensity="0" BuildingColour_Primary="#FFF8F8FF" BuildingColour_Secondary="#FF228B22"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="29" VegetationDensity="2" BuildingColour_Primary="#FFD3D3D3" BuildingColour_Secondary="#FF5F9EA0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="13" VegetationDensity="1" BuildingColour_Primary="#FFF5F5DC" BuildingColour_Secondary="#FFFF8C00"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="24" VegetationDensity="2" BuildingColour_Primary="#FF6495ED" BuildingColour_Secondary="#FF808000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="4" VegetationDensity="2" BuildingColour_Primary="#FFB0C4DE" BuildingColour_Secondary="#FF9400D3"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="26" VegetationDensity="0" BuildingColour_Primary="#FF6B8E23" BuildingColour_Secondary="#FFB8860B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="1" BuildingColour_Primary="#FF696969" BuildingColour_Secondary="#FF483D8B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="0" BuildingColour_Primary="#FF00FFFF" BuildingColour_Secondary="#FFA52A2A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="17" VegetationDensity="1" BuildingColour_Primary="#FF00FFFF" BuildingColour_Secondary="#FFFAF0E6"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="7" VegetationDensity="2" BuildingColour_Primary="#FF00FFFF" BuildingColour_Secondary="#FFFF69B4"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="1" BuildingColour_Primary="#FF800000" BuildingColour_Secondary="#FFADD8E6"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="0" BuildingColour_Primary="#FFC71585" BuildingColour_Secondary="#FF228B22"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="5" VegetationDensity="1" BuildingColour_Primary="#FFAFEEEE" BuildingColour_Secondary="#FFEEE8AA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="7" VegetationDensity="1" BuildingColour_Primary="#FFEEE8AA" BuildingColour_Secondary="#FF8B008B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="14" VegetationDensity="0" BuildingColour_Primary="#FFCD5C5C" BuildingColour_Secondary="#FFFFF8DC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="1" BuildingColour_Primary="#FFB0C4DE" BuildingColour_Secondary="#FF800000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="1" BuildingColour_Primary="#FF6B8E23" BuildingColour_Secondary="#FFFFC0CB"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="21" VegetationDensity="1" BuildingColour_Primary="#FF8FBC8F" BuildingColour_Secondary="#FF008000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="1" BuildingColour_Primary="#FFC71585" BuildingColour_Secondary="#FF87CEEB"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="2" BuildingColour_Primary="#FFFFF8DC" BuildingColour_Secondary="#FF87CEFA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="30" VegetationDensity="1" BuildingColour_Primary="#FFF5FFFA" BuildingColour_Secondary="#FFE9967A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="15" VegetationDensity="2" BuildingColour_Primary="#FF66CDAA" BuildingColour_Secondary="#FFDCDCDC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="0" BuildingColour_Primary="#FFFF0000" BuildingColour_Secondary="#FF006400"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="2" BuildingColour_Primary="#FFFF8C00" BuildingColour_Secondary="#FF483D8B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="10" VegetationDensity="1" BuildingColour_Primary="#FFB0E0E6" BuildingColour_Secondary="#FFF0F8FF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="32" VegetationDensity="1" BuildingColour_Primary="#FFE0FFFF" BuildingColour_Secondary="#FF87CEEB"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="16" VegetationDensity="2" BuildingColour_Primary="#FFA0522D" BuildingColour_Secondary="#FFB0C4DE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="1" BuildingColour_Primary="#FF00008B" BuildingColour_Secondary="#FFDCDCDC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="31" VegetationDensity="1" BuildingColour_Primary="#FFC0C0C0" BuildingColour_Secondary="#FFFFFFE0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="15" VegetationDensity="2" BuildingColour_Primary="#FF6A5ACD" BuildingColour_Secondary="#FF778899"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="16" VegetationDensity="0" BuildingColour_Primary="#FF228B22" BuildingColour_Secondary="#FFDCDCDC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="31" VegetationDensity="1" BuildingColour_Primary="#FFDA70D6" BuildingColour_Secondary="#FFC0C0C0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="0" BuildingColour_Primary="#FF00008B" BuildingColour_Secondary="#FFF0F8FF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="1" BuildingColour_Primary="#FF00FF00" BuildingColour_Secondary="#FF000000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="0" BuildingColour_Primary="#FFFFE4C4" BuildingColour_Secondary="#FF00CED1"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="27" VegetationDensity="1" BuildingColour_Primary="#FFFFFFF0" BuildingColour_Secondary="#FF3CB371"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="1" BuildingColour_Primary="#FFFF8C00" BuildingColour_Secondary="#FFFFDEAD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="11" VegetationDensity="1" BuildingColour_Primary="#FFFFFACD" BuildingColour_Secondary="#FFFFA500"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="15" VegetationDensity="2" BuildingColour_Primary="#FFFAFAD2" BuildingColour_Secondary="#FFB0C4DE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="19" VegetationDensity="0" BuildingColour_Primary="#FFC0C0C0" BuildingColour_Secondary="#FFFF00FF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="1" BuildingColour_Primary="#FFFFFAF0" BuildingColour_Secondary="#FFFF4500"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="24" VegetationDensity="1" BuildingColour_Primary="#FF8B008B" BuildingColour_Secondary="#FFFAF0E6"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="24" VegetationDensity="1" BuildingColour_Primary="#FF191970" BuildingColour_Secondary="#FFF0F8FF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="1" BuildingColour_Primary="#FF3CB371" BuildingColour_Secondary="#FFFF69B4"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="2" BuildingColour_Primary="#FF556B2F" BuildingColour_Secondary="#FF66CDAA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="0" BuildingColour_Primary="#FFDDA0DD" BuildingColour_Secondary="#FFFA8072"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="27" VegetationDensity="0" BuildingColour_Primary="#FF8A2BE2" BuildingColour_Secondary="#FFFF4500"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="12" VegetationDensity="1" BuildingColour_Primary="#FFF0FFF0" BuildingColour_Secondary="#FF006400"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="2" BuildingColour_Primary="#FF8A2BE2" BuildingColour_Secondary="#FF00CED1"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="1" BuildingColour_Primary="#FFF0FFFF" BuildingColour_Secondary="#FF87CEFA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="0" BuildingColour_Primary="#FF00FF00" BuildingColour_Secondary="#FF7B68EE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="2" BuildingColour_Primary="#FF90EE90" BuildingColour_Secondary="#FF87CEFA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="2" BuildingColour_Primary="#FFFF00FF" BuildingColour_Secondary="#FFFF8C00"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="14" VegetationDensity="1" BuildingColour_Primary="#FF98FB98" BuildingColour_Secondary="#FFF4A460"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="19" VegetationDensity="0" BuildingColour_Primary="#FFFFE4E1" BuildingColour_Secondary="#FFFA8072"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="16" VegetationDensity="1" BuildingColour_Primary="#FFFFC0CB" BuildingColour_Secondary="#FF66CDAA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="26" VegetationDensity="1" BuildingColour_Primary="#FFFFEBCD" BuildingColour_Secondary="#FFFFFFF0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="1" BuildingColour_Primary="#FF808000" BuildingColour_Secondary="#FFDDA0DD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="30" VegetationDensity="0" BuildingColour_Primary="#FFF0FFF0" BuildingColour_Secondary="#FF8B0000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="4" VegetationDensity="1" BuildingColour_Primary="#FFF5FFFA" BuildingColour_Secondary="#FF7FFFD4"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="1" BuildingColour_Primary="#FFD2691E" BuildingColour_Secondary="#FFFFFFF0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="0" BuildingColour_Primary="#FFFFFAFA" BuildingColour_Secondary="#FF000080"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="13" VegetationDensity="0" BuildingColour_Primary="#FF6495ED" BuildingColour_Secondary="#FF8B4513"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="12" VegetationDensity="0" BuildingColour_Primary="#FFA0522D" BuildingColour_Secondary="#FFDDA0DD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="1" BuildingColour_Primary="#FF00FF7F" BuildingColour_Secondary="#FFBDB76B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="25" VegetationDensity="0" BuildingColour_Primary="#FF0000FF" BuildingColour_Secondary="#FF4B0082"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="20" VegetationDensity="1" BuildingColour_Primary="#FFFFDAB9" BuildingColour_Secondary="#FF0000CD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="17" VegetationDensity="1" BuildingColour_Primary="#FF4169E1" BuildingColour_Secondary="#FFFDF5E6"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="30" VegetationDensity="0" BuildingColour_Primary="#FF008000" BuildingColour_Secondary="#FFFF8C00"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="6" VegetationDensity="2" BuildingColour_Primary="#FFDEB887" BuildingColour_Secondary="#FF00BFFF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="27" VegetationDensity="0" BuildingColour_Primary="#FF00FF7F" BuildingColour_Secondary="#FFC71585"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="24" VegetationDensity="1" BuildingColour_Primary="#FF008000" BuildingColour_Secondary="#FFDB7093"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="19" VegetationDensity="1" BuildingColour_Primary="#FFFFA07A" BuildingColour_Secondary="#FFF08080"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="31" VegetationDensity="1" BuildingColour_Primary="#FF9370DB" BuildingColour_Secondary="#FF556B2F"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="1" BuildingColour_Primary="#FF87CEFA" BuildingColour_Secondary="#FFAFEEEE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="9" VegetationDensity="0" BuildingColour_Primary="#FFDA70D6" BuildingColour_Secondary="#FF00FA9A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="1" BuildingColour_Primary="#FFDC143C" BuildingColour_Secondary="#FFFAFAD2"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="1" BuildingColour_Primary="#FFFFEFD5" BuildingColour_Secondary="#FF20B2AA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="12" VegetationDensity="2" BuildingColour_Primary="#FFF0F8FF" BuildingColour_Secondary="#FFFF8C00"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="27" VegetationDensity="0" BuildingColour_Primary="#FF4169E1" BuildingColour_Secondary="#FFFFFFF0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="30" VegetationDensity="0" BuildingColour_Primary="#FFF0FFF0" BuildingColour_Secondary="#FF483D8B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="15" VegetationDensity="2" BuildingColour_Primary="#FFBDB76B" BuildingColour_Secondary="#FF00008B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="1" BuildingColour_Primary="#FF2F4F4F" BuildingColour_Secondary="#FF48D1CC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="4" VegetationDensity="0" BuildingColour_Primary="#FFFFEBCD" BuildingColour_Secondary="#FFFFDEAD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="24" VegetationDensity="0" BuildingColour_Primary="#FF000000" BuildingColour_Secondary="#FFE9967A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="17" VegetationDensity="0" BuildingColour_Primary="#FFB0E0E6" BuildingColour_Secondary="#FFFF69B4"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="9" VegetationDensity="2" BuildingColour_Primary="#FFFFDAB9" BuildingColour_Secondary="#FFCD5C5C"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="34" VegetationDensity="2" BuildingColour_Primary="#FFD2691E" BuildingColour_Secondary="#FF7B68EE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="1" BuildingColour_Primary="#FF00CED1" BuildingColour_Secondary="#FFFFFFF0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="21" VegetationDensity="1" BuildingColour_Primary="#FF008000" BuildingColour_Secondary="#FFA9A9A9"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="13" VegetationDensity="1" BuildingColour_Primary="#FF9370DB" BuildingColour_Secondary="#FF8B008B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="2" BuildingColour_Primary="#FFADFF2F" BuildingColour_Secondary="#FF800080"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="11" VegetationDensity="1" BuildingColour_Primary="#FF98FB98" BuildingColour_Secondary="#FFDCDCDC"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="11" VegetationDensity="2" BuildingColour_Primary="#FF4169E1" BuildingColour_Secondary="#FFCD853F"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="20" VegetationDensity="1" BuildingColour_Primary="#FFA9A9A9" BuildingColour_Secondary="#FFE9967A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="8" VegetationDensity="0" BuildingColour_Primary="#FF808000" BuildingColour_Secondary="#FFFFFFF0"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="32" VegetationDensity="1" BuildingColour_Primary="#FFFFDAB9" BuildingColour_Secondary="#FF6A5ACD"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="12" VegetationDensity="0" BuildingColour_Primary="#FFFFF5EE" BuildingColour_Secondary="#FFE9967A"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="19" VegetationDensity="2" BuildingColour_Primary="#FF008000" BuildingColour_Secondary="#FF696969"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="3" VegetationDensity="1" BuildingColour_Primary="#FFE0FFFF" BuildingColour_Secondary="#FF00FFFF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="31" VegetationDensity="1" BuildingColour_Primary="#FFDEB887" BuildingColour_Secondary="#FFFF4500"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="1" BuildingColour_Primary="#FFFAF0E6" BuildingColour_Secondary="#FF6B8E23"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="14" VegetationDensity="1" BuildingColour_Primary="#FF000080" BuildingColour_Secondary="#FFFF00FF"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="18" VegetationDensity="2" BuildingColour_Primary="#FFADD8E6" BuildingColour_Secondary="#FF191970"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="29" VegetationDensity="1" BuildingColour_Primary="#FFFFA500" BuildingColour_Secondary="#FFFF4500"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="22" VegetationDensity="1" BuildingColour_Primary="#FFF08080" BuildingColour_Secondary="#FF483D8B"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="33" VegetationDensity="2" BuildingColour_Primary="#FFA9A9A9" BuildingColour_Secondary="#FF2E8B57"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="17" VegetationDensity="1" BuildingColour_Primary="#FF000000" BuildingColour_Secondary="#FFD2691E"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="19" VegetationDensity="0" BuildingColour_Primary="#FF00FF00" BuildingColour_Secondary="#FFE6E6FA"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="29" VegetationDensity="2" BuildingColour_Primary="#FF48D1CC" BuildingColour_Secondary="#FFD2691E"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="16" VegetationDensity="1" BuildingColour_Primary="#FF006400" BuildingColour_Secondary="#FF7CFC00"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="16" VegetationDensity="2" BuildingColour_Primary="#FF7FFFD4" BuildingColour_Secondary="#FFFFD700"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="32" VegetationDensity="1" BuildingColour_Primary="#FFFFA500" BuildingColour_Secondary="#FFAFEEEE"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="4" VegetationDensity="2" BuildingColour_Primary="#FFFFA500" BuildingColour_Secondary="#FFA9A9A9"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="14" VegetationDensity="2" BuildingColour_Primary="#FFFFE4E1" BuildingColour_Secondary="#FFFAEBD7"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="23" VegetationDensity="2" BuildingColour_Primary="#FF000080" BuildingColour_Secondary="#FFDEB887"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="32" VegetationDensity="0" BuildingColour_Primary="#FFFAEBD7" BuildingColour_Secondary="#FFB22222"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="20" VegetationDensity="0" BuildingColour_Primary="#FFFFEFD5" BuildingColour_Secondary="#FFCD853F"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="14" VegetationDensity="2" BuildingColour_Primary="#FF556B2F" BuildingColour_Secondary="#FF808000"/>
+    <vdctx:DataGeneration_Map_Plot_Properties PlotType="28" VegetationDensity="1" BuildingColour_Primary="#FFF0FFFF" BuildingColour_Secondary="#FF008000"/>
+  </vdctx:DataGeneration_Map_Collection.Plots>
+</vdctx:DataGeneration_Map_Collection>

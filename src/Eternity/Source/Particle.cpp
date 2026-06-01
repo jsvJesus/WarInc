@@ -3245,8 +3245,8 @@ void r3dParticleSystem::DrawMeshParticles()
 				};
 				D3DXVECTOR4 UVSpeed(UVScroll, pot.BlendMode, 1.f / PD->DepthBlendValue, 0);
 
-				r3dRenderer->pd3ddev->SetVertexShaderConstantF(29, &vConsts[0].x, _countof(vConsts));
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(18,(float *)&UVSpeed, 1);
+				r3dRenderer->SetVertexShaderConstantF(29, &vConsts[0].x, _countof(vConsts));
+				r3dRenderer->SetPixelShaderConstantF(18,(float *)&UVSpeed, 1);
 
 				D3DXMATRIX mr;
 				if(PE.bDirectionOriented)
@@ -3490,7 +3490,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	}
 
 	// ParticleLight lights[ MAX_LIGHTS ] : register( c40 ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 40, &lightParams->x, R3D_ARRAYSIZE( lightParams ) ) ) ;
+	D3D_V( r3dRenderer->SetVertexShaderConstantF( 40, &lightParams->x, R3D_ARRAYSIZE( lightParams ) ) ) ;
 
 
 	IsVisible = true;
@@ -3586,14 +3586,14 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 		D3DXVECTOR4( 1.0f / g_ShadowMap->Width, 0.0f, 0.f, 1.0f / g_ShadowMap->Height )
 	};
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 27,(float *)&vNormal_BumpPower, 1);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 28,(float *)&vLight, 1);	
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
+	r3dRenderer->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
+	r3dRenderer->SetVertexShaderConstantF( 27,(float *)&vNormal_BumpPower, 1);
+	r3dRenderer->SetVertexShaderConstantF( 28,(float *)&vLight, 1);	
 	D3DXVECTOR4 halfDepthUVOffset(vConsts[0] * 0.5f);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 29,(float *)&halfDepthUVOffset, 1);	
+	r3dRenderer->SetVertexShaderConstantF( 29,(float *)&halfDepthUVOffset, 1);	
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0,(float *)vConsts, R3D_ARRAYSIZE(vConsts) );
+	r3dRenderer->SetPixelShaderConstantF( 0,(float *)vConsts, R3D_ARRAYSIZE(vConsts) );
 
 	// First draw mesh particles
 	// shadow map is filled in other call for mesh particles.
@@ -3624,7 +3624,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	if(NumTrisToDraw==0)	return;
 
 	// someone is overwriting this constant after rendering meshes
- 	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
+ 	r3dRenderer->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
 
 	D3DXMATRIX matTexScale1;
 	D3DXMATRIX VP = r3dRenderer->ViewProjMatrix ;
@@ -3652,11 +3652,11 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	D3DXMatrixMultiply(&mat, &VP, &matTexScale1);
 	D3DXMatrixTranspose(&mat, &mat);
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF(20 ,(float *)&mat,  4);
+	r3dRenderer->SetVertexShaderConstantF(20 ,(float *)&mat,  4);
 
 
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
-	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 12,(float *)&FogCamVec, 1);
+	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
+	r3dRenderer->SetVertexShaderConstantF( 12,(float *)&FogCamVec, 1);
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
 	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ONE);
@@ -3748,25 +3748,25 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 
 			r3d_assert( VSConstCount <= R3D_ARRAYSIZE( vConsts ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 30, (float*)vConsts, VSConstCount ) );
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 30, (float*)vConsts, VSConstCount ) );
 
 		}
 
 		if(PD->Atlas.count>0)
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(64, &PD->Atlas.rects[0].minX, PD->Atlas.count) );
+			D3D_V( r3dRenderer->SetVertexShaderConstantF(64, &PD->Atlas.rects[0].minX, PD->Atlas.count) );
 		}
 		else
 		{
 			D3DXVECTOR4 temp = D3DXVECTOR4(0.0f, 0.0f, 1.0f, 1.0f);
-			r3dRenderer->pd3ddev->SetVertexShaderConstantF(41, &temp.x, 1);
+			r3dRenderer->SetVertexShaderConstantF(41, &temp.x, 1);
 		}
 
 		if( bShadowMap )
 		{
 			// float vWriteShadowParams : register( c52 ) ;
 			D3DXVECTOR4 vsConst ( r_transp_shadow_coef->GetFloat(), 0.f, 0.f, 0.f ) ;
-			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 52, (float*)vsConst, 1 ) ) ;
+			D3D_V( r3dRenderer->SetVertexShaderConstantF( 52, (float*)vsConst, 1 ) ) ;
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_MIN ) ;
 
@@ -3904,16 +3904,16 @@ void r3dParticleSystem::DrawDefferedMeshes(const r3dCamera &Cam, bool bShadowMap
 
 	D3DXVECTOR4 B;
 	B = D3DXVECTOR4(0.0f,0.0f,0.5f,1.0f);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)&B,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)&B,  1 );
 
 	B = D3DXVECTOR4( -0.5f, 0.5f, 1.0f, 1.0f );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MAT_GLOW, (float*)&B, 1 );
+	r3dRenderer->SetPixelShaderConstantF( MC_MAT_GLOW, (float*)&B, 1 );
 
 	B = D3DXVECTOR4(Cam.x,Cam.y,Cam.z,1.0f);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_CAMVEC, (float *)&B,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  MC_CAMVEC, (float *)&B,  1 );
 
 	B =  D3DXVECTOR4 ( 0.0f, r3dRenderer->ProjMatrix._43, r3dRenderer->ProjMatrix._33, 0.0f );
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DDEPTH, (float *)&B, 1 );
+	r3dRenderer->SetPixelShaderConstantF( MC_DDEPTH, (float *)&B, 1 );
 
 
 	for(int i=NumAliveParticles-1;i>=0;i--)
@@ -3935,9 +3935,9 @@ void r3dParticleSystem::DrawDefferedMeshes(const r3dCamera &Cam, bool bShadowMap
 			if(PE.Mesh)
 			{
 				B = D3DXVECTOR4 (float(pot.Color.R)/255.0f, float(pot.Color.G)/255.0f, float(pot.Color.B)/255.0f, float(pot.Color.A)/255.0f);
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MAT_DIFFUSE, (float *)&B,  1 );
+				r3dRenderer->SetPixelShaderConstantF(  MC_MAT_DIFFUSE, (float *)&B,  1 );
 				B = D3DXVECTOR4 (0.0f, 0.0f, 0.0f, 0.0f);
-				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MAT_SPECULAR, (float *)&B,  1 );
+				r3dRenderer->SetPixelShaderConstantF(  MC_MAT_SPECULAR, (float *)&B,  1 );
 
 				D3DXMATRIX mr;
 				if(PE.bDirectionOriented)

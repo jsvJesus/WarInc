@@ -284,9 +284,9 @@ void MeshTextureDensityVisualizer::SetShaderConstants()
 	if (!d_visualize_tex_density->GetBool())
 		return;
 
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &gMinTexDensityParams.x, 1);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_MAT_DIFFUSE, &gOptTexDensityParams.x, 1);
-	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_MAT_SPECULAR, &gMaxTexDensityParams.x, 1);
+	r3dRenderer->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &gMinTexDensityParams.x, 1);
+	r3dRenderer->SetPixelShaderConstantF(MC_MAT_DIFFUSE, &gOptTexDensityParams.x, 1);
+	r3dRenderer->SetPixelShaderConstantF(MC_MAT_SPECULAR, &gMaxTexDensityParams.x, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////

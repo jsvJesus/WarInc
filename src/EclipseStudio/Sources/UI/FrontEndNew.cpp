@@ -7925,7 +7925,7 @@ int FrontendUI::Update()
 		drawPlayer( 1, 1 ) ;
 #if 0
 		TempTestBuffer->Activate();
-		r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
+		r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
 		TempTestBuffer->Deactivate();
 #endif
 

@@ -1,0 +1,159 @@
+<Page
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  Background="#FF4D5052" xmlns:noesis="clr-namespace:NoesisGUIExtensions">
+
+  <Page.Resources>
+    <ResourceDictionary/>
+  </Page.Resources>
+
+  <Grid>
+    <Grid x:Name="Background">
+      <Grid x:Name="BackgroundImage_Grid">
+        <Grid.Background>
+          <ImageBrush ImageSource="Resources/9Slicing/Background.png" Stretch="UniformToFill"/>
+        </Grid.Background>
+      </Grid>
+      <Grid x:Name="Vignette_Grid" Background="#FFFFFFFF" BlendingMode="Multiply">
+        <Grid.Effect>
+          <noesis:VignetteEffect Strength="16"/>
+        </Grid.Effect>
+      </Grid>
+    </Grid>
+    <Grid x:Name="Interface_Grid">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="64"/>
+        <RowDefinition Height="1*"/>
+        <RowDefinition Height="64"/>
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="64"/>
+        <ColumnDefinition Width="1*"/>
+        <ColumnDefinition Width="64"/>
+      </Grid.ColumnDefinitions>
+      <Grid x:Name="SlicePanel" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.RowSpan="2">
+        <noesis:NineSliceImage x:Name="NineSliceImage" ImageSource="Resources/9Slicing/Panel_9Slice.png" Slices="420,195,420,195"/>
+        <Grid x:Name="PanelBackgroundImage_Grid" Grid.RowSpan="3" Grid.ColumnSpan="3" Opacity="0.66">
+          <Grid.OpacityMask>
+            <RadialGradientBrush>
+              <GradientStop Color="#00000000" Offset="1"/>
+              <GradientStop Color="#FFFFFFFF" Offset="0.25"/>
+            </RadialGradientBrush>
+          </Grid.OpacityMask>
+          <Grid.Background>
+            <ImageBrush ImageSource="Resources/9Slicing/Background.png" Stretch="UniformToFill"/>
+          </Grid.Background>
+        </Grid>
+        <Grid x:Name="ContentArea_Grid" Margin="120,80,120,88" VerticalAlignment="Center" HorizontalAlignment="Center">
+          <StackPanel x:Name="Content_Stack" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,32,0,32">
+            <StackPanel.Effect>
+              <DropShadowEffect Color="#FF33679F" Direction="-90" ShadowDepth="4" BlurRadius="8"/>
+            </StackPanel.Effect>
+            <StackPanel.LayoutTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </StackPanel.LayoutTransform>
+            <TextBlock x:Name="UnlockMessage_TextBlock" TextWrapping="Wrap" FontSize="24" TextAlignment="Center" FontFamily="Resources/9Slicing/#Aldrich" Text="PROMOTION UNLOCKED" HorizontalAlignment="Center">
+              <TextBlock.CharacterSpacing>
+                <Binding Path="Value" ElementName="XAxis_Slider">
+                  <Binding.Converter>
+                    <noesis:MathConverter Expression="{}{0}+512"/>
+                  </Binding.Converter>
+                </Binding>
+              </TextBlock.CharacterSpacing>
+              <TextBlock.LayoutTransform>
+                <TransformGroup>
+                  <ScaleTransform/>
+                  <SkewTransform/>
+                  <RotateTransform/>
+                  <TranslateTransform/>
+                </TransformGroup>
+              </TextBlock.LayoutTransform>
+            </TextBlock>
+            <Grid x:Name="Spacer_Top" Height="{Binding Path=Value, ElementName=YAxis_Slider}"/>
+            <TextBlock x:Name="Level_TextBlock" Text="CAPTAIN" FontSize="116" TextAlignment="Center" FontFamily="Resources/9Slicing/#Aldrich" TextWrapping="WrapWithOverflow" HorizontalAlignment="Center" Padding="0,-4,0,0">
+              <TextBlock.CharacterSpacing>
+                <Binding Path="Value" ElementName="XAxis_Slider">
+                  <Binding.Converter>
+                    <noesis:MathConverter Expression="{}{0}+104"/>
+                  </Binding.Converter>
+                </Binding>
+              </TextBlock.CharacterSpacing>
+              <TextBlock.Foreground>
+                <LinearGradientBrush StartPoint="0.5,1" EndPoint="0.5,0">
+                  <GradientStop Color="#FF284763" Offset="0"/>
+                  <GradientStop Color="#FFE1E4E6" Offset="0.5"/>
+                </LinearGradientBrush>
+              </TextBlock.Foreground>
+              <TextBlock.LayoutTransform>
+                <TransformGroup>
+                  <ScaleTransform/>
+                  <SkewTransform/>
+                  <RotateTransform/>
+                  <TranslateTransform/>
+                </TransformGroup>
+              </TextBlock.LayoutTransform>
+            </TextBlock>
+
+            <Grid x:Name="Spacer_Bottom" Height="{Binding Path=Value, ElementName=YAxis_Slider}"/>
+            <TextBlock x:Name="NewRank_TextBlock" FontSize="24" TextAlignment="Center" FontFamily="Resources/9Slicing/#Aldrich" TextWrapping="Wrap" Text="NORTH BATTALION" HorizontalAlignment="Center" Margin="0,-12,0,0">
+              <TextBlock.CharacterSpacing>
+                <Binding Path="Value" ElementName="XAxis_Slider">
+                  <Binding.Converter>
+                    <noesis:MathConverter Expression="{}{0}+256"/>
+                  </Binding.Converter>
+                </Binding>
+              </TextBlock.CharacterSpacing>
+              <TextBlock.LayoutTransform>
+                <TransformGroup>
+                  <ScaleTransform/>
+                  <SkewTransform/>
+                  <RotateTransform/>
+                  <TranslateTransform/>
+                </TransformGroup>
+              </TextBlock.LayoutTransform>
+            </TextBlock>
+          </StackPanel>
+        </Grid>
+      </Grid>
+      <StackPanel x:Name="XAxisSlider_StackPanel" Grid.Column="1" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
+        <Path x:Name="TrackingIcon_Path" Data="M145,65.3 145,115.3 170,90.3 145,65.3z M25,115.3 25,65.3 0,90.3 25,115.3z M35,19 73.7,19 73.7,138.8 96.3,138.8 96.3,19 135,19 135,0 35,0 35,19z" Stretch="UniformToFill" Fill="#FFFFFFFF" Height="{Binding Path=ActualHeight, ElementName=XAxis_Slider}"/>
+        <Slider x:Name="XAxis_Slider" Grid.Row="3" Grid.Column="1" Margin="16,0,0,0" Width="512" VerticalAlignment="Center" Maximum="1280" Cursor="Hand" LargeChange="128" SmallChange="64"/>
+      </StackPanel>
+      <StackPanel x:Name="YAxisSlider_StackPanel" Grid.Column="2" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+        <Slider x:Name="YAxis_Slider" Grid.Row="3" Grid.Column="1" Height="512" Orientation="Vertical" Margin="0,0,0,16" HorizontalAlignment="Center" Cursor="Hand" Maximum="256"/>
+        <Path x:Name="ScaleIcon_Path" Data="F1M0,51.21 14.14,65.35 41.21,38.28 41.21,50 41.21,50 41.21,161.72 14.14,134.64 0,148.79 51.21,200 102.42,148.79 88.28,134.65 61.21,161.72 61.21,150 61.21,150 61.21,38.28 88.28,65.36 102.42,51.21 51.21,0 0,51.21z" Stretch="Uniform" Fill="#FFFFFFFF" Height="{Binding Path=ActualHeight, ElementName=TrackingIcon_Path}"/>
+      </StackPanel>
+    </Grid>
+    <StackPanel xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+      x:Name="Infoverlay_HorizontalStack" Margin="32,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+      <Component Source="Resources/MiniShowcases/Info_Info_Component.xaml" Height="{Binding Path=ActualHeight, ElementName=TabItem_Off}" Width="{Binding Path=ActualHeight, RelativeSource={RelativeSource Self}}" VerticalAlignment="Top" HorizontalAlignment="Left" d:IsLocked="True"/>
+      <TabControl x:Name="Infoverlay_TabControl" Background="{x:Null}" Padding="0,0,0,0">
+        <TabControl.MaxWidth>
+          <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType={x:Type Page}}">
+            <Binding.Converter>
+              <noesis:MathConverter Expression="{}{0}/3"/>
+            </Binding.Converter>
+          </Binding>
+        </TabControl.MaxWidth>
+        <TabItem x:Name="TabItem_Off" Cursor="Hand" IsSelected="True" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_Off_Geometry}">
+          <Grid Background="#FFE5E5E5" d:IsHidden="True"/>
+        </TabItem>
+        <TabItem x:Name="TabItem_On" Cursor="Hand" Template="{DynamicResource TabItem_Info_Template}" Header="{DynamicResource Info_On_Geometry}">
+          <Grid VerticalAlignment="Top" HorizontalAlignment="Left" d:IsLocked="True">
+            <Component Source="Resources/MiniShowcases/Info_Overlay_ContentArea_Component.xaml" Text_Description_Str="Noesis offers a NineSliceImage Element, which offers the ability to omnidirectionally scale a carefully-prepared bitmap image to any size, and any aspect ratio, without any visible distortion.  &#x0A; &#x0A;This makes Nine-Slicing an ideal method to simultaneously benefit from the advantages of using a bitmap, without the drawback of being strictly limited to displaying it at the size at which it was exported at. Beyond improved scalability and layout flexibility, since Nine-Slicing allows a bitmap to seamlessly scale to sizes far greater than the original asset footprint. It also offers a great opportunity for improved performance compared to a dimensionally-larger asset. &#x0A; &#x0A;To see the NineSliceImage Element in action: &#x0A;- The slider at the bottom of the screen can be used to adjust the width of the panel (as a result of adjusting the Character Spacing of the TextBlocks) &#x0A;- The slider on the right can be used to adjust the height of the panel (as a result of adjusting the vertical spacing between the TextBlocks) &#x0A; &#x0A;An important consideration when preparing an image to be nine-sliced, is to leave at least 2 pixels of &apos;flat&apos; area both horizontally and vertically that don&apos;t include any angles, curves, patterns, or texturing that could face distortion if stretched. In the NineSliceImage Element, the Slice Properties can then be configured then set to target these &apos;flat&apos; areas found along both the X and Y axis of the image." Text_Title_Str="Nine-Slicing"/>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </StackPanel>
+  </Grid>
+</Page>

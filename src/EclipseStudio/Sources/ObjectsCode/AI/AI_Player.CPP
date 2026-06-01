@@ -5965,7 +5965,7 @@ struct PlayerRenderable : Renderable
 
 			{
 				float vConst[ 4 ] = { r, g, b, r3dGetTime()  } ;
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_AURA, vConst, 1 ) );
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_AURA, vConst, 1 ) );
 			}
 
 			void SetupFilmToneConstants( int reg ) ;
@@ -6001,10 +6001,10 @@ struct PlayerRenderable : Renderable
 					// float4 TCamoColor1			: register(c17);
 					{ gCamoSettings.color1.R / 255.f, gCamoSettings.color1.G / 255.f, gCamoSettings.color1.B / 255.f, gCamoSettings.color1.A / 255.f }
 				};
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_AURA, (float*)vConst, 4 ) );
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_AURA, (float*)vConst, 4 ) );
 				
 				vConst[0][3] = 0.01f;
-				D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 23, (float*)vConst, 1 ) ) ;
+				D3D_V( r3dRenderer->SetVertexShaderConstantF( 23, (float*)vConst, 1 ) ) ;
 
 				for(int i=0; i<=SLOT_Head3; i++)
 				{
@@ -6042,7 +6042,7 @@ struct PlayerRenderable : Renderable
  			vCData[ 0 ] = 0 ; vCData[ 1 ] = 0 ; vCData[ 2 ] = 1 ; 
  		}
 #endif
-		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MASKCOLOR, vCData, 1 ) );
+		D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_MASKCOLOR, vCData, 1 ) );
 
 		if (This->matFlagsModifier)
 		{
@@ -6124,7 +6124,7 @@ struct PlayerRenderable : Renderable
 					{ sm1._31, sm1._32, sm1._33, sm1._34 },
 				} ;
 
-				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 32, (float*)consts, 6 ) ) ;
+				D3D_V( r3dRenderer->SetPixelShaderConstantF( 32, (float*)consts, 6 ) ) ;
 			}
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );

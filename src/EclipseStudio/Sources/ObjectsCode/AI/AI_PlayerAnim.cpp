@@ -48,8 +48,8 @@ static void SetWetWeaponShaderConstants(bool enable)
 		wet1[3] = 0.0f;
 	}
 
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_WET_WEAPON, wet0, 1));
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_WET_WEAPON_RAIN, wet1, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(MC_WET_WEAPON, wet0, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(MC_WET_WEAPON_RAIN, wet1, 1));
 }
 
 static bool IsWetWeaponSlot(ESlot slotId)
@@ -832,7 +832,7 @@ void CUberEquip::DrawSlotMesh(r3dMesh* mesh, const D3DXMATRIX& world, DrawType d
 		// NOTE : needed for transparent camo only..
 		// float4   WorldScale  		: register(c24);
 		D3DXVECTOR4 scale(mesh->unpackScale.x, mesh->unpackScale.y, mesh->unpackScale.z, 0.f) ;
-		D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
+		D3D_V(r3dRenderer->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
 	}
 
 	switch(dt)
@@ -884,7 +884,7 @@ void CUberEquip::Draw(const r3dSkeleton* skel, const D3DXMATRIX& CharMat, bool d
 	if(dt == DT_AURA)
 	{
 		float expandConst[ 4 ] = { r_aura_extrude->GetFloat(), 0.f, 0.f, 0.f } ;
-		D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(23, expandConst, 1)) ;
+		D3D_V(r3dRenderer->SetVertexShaderConstantF(23, expandConst, 1)) ;
 	}
 
 	skel->SetShaderConstants();

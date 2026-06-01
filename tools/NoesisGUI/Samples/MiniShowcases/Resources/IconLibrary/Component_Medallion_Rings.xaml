@@ -1,0 +1,49 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  d:DesignWidth="1920"
+  d:DesignHeight="1080"
+  x:Name="ComponentRoot" Width="256" Height="256">
+  <Component.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Resources_Medallion_Colors.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Component.Resources>
+  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="192" Height="128">
+    <Border CornerRadius="64,64,64,64" Padding="4,4,4,4">
+      <Border.Background>
+        <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+      </Border.Background>
+      <Border CornerRadius="60,60,60,60" Padding="4,4,4,4">
+        <Border.Background>
+          <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+        </Border.Background>
+        <Border CornerRadius="56,56,56,56" Padding="16,16,16,16">
+          <Border.Background>
+            <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+          </Border.Background>
+          <Border CornerRadius="40,40,40,40" Padding="4,4,4,4">
+            <Border.Background>
+              <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+            </Border.Background>
+            <Border CornerRadius="36,36,36,36" Padding="4,4,4,4">
+              <Border.Background>
+                <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_0}"/>
+              </Border.Background>
+              <Border CornerRadius="32,32,32,32">
+                <Border.Background>
+                  <SolidColorBrush Color="{DynamicResource Resource_Medallion_Color_1}"/>
+                </Border.Background>
+              </Border>
+            </Border>
+          </Border>
+        </Border>
+      </Border>
+    </Border>
+  </Grid>
+</Component>

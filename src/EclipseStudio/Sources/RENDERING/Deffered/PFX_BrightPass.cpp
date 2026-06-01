@@ -61,7 +61,7 @@ PFX_BrightPass::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /
 	const Settings& sts = mSettings[ 0 ];
 
 	D3DXVECTOR4 psParams(sts.minimumBrightness, 0.0f, 0.0f, 0.0f);
-	D3D_V(r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams.x, 1));
+	D3D_V(r3dRenderer->SetPixelShaderConstantF(0, &psParams.x, 1));
 
 	mSettings.Erase(0);
 }

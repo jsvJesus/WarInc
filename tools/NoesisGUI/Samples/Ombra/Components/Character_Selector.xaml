@@ -1,0 +1,354 @@
+<Component
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d"
+  x:Name="ComponentRoot"
+  xmlns:system="clr-namespace:System;assembly=mscorlib"
+  xmlns:noesis="clr-namespace:NoesisGUIExtensions"
+  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+  d:DataContext="CharacterData" d:DesignWidth="1920" d:DesignHeight="1080">
+  
+  <Component.DynamicProperties>
+    <DynamicProperty Name="SelectedCharacter" Type="Object"/>
+  </Component.DynamicProperties>
+
+  <Component.Resources>
+
+    <ControlTemplate x:Key="ListBoxTemplate_CharacterGrid" TargetType="ListBox">
+      <Grid>
+        <ItemsPresenter/>
+      </Grid>
+    </ControlTemplate>
+
+    <ItemsPanelTemplate x:Key="ItemsPanelTemplate_CharacterGrid">
+      <UniformGrid Columns="4"/>
+    </ItemsPanelTemplate>
+
+    <ControlTemplate x:Key="ListBoxItemTemplate_CharacterGrid">
+      <Grid>
+        <ContentPresenter/>
+      </Grid>
+    </ControlTemplate>
+
+    <Style x:Key="ListBoxItemStyle_CharacterGrid" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+      <Setter Property="Template" Value="{DynamicResource ListBoxItemTemplate_CharacterGrid}"/>
+    </Style>
+
+    <DataTemplate x:Key="ItemTemplate_CharacterGrid">
+
+      <Grid x:Name="CharacterTile_Master" Margin="16,0,16,0">
+
+        <Grid.RowDefinitions>
+          <RowDefinition Height="1*"/>
+          <RowDefinition Height="4*"/>
+          <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+
+        <b:Interaction.Triggers>
+          <b:EventTrigger EventName="MouseEnter">
+            <b:GoToStateAction StateName="Hover"/>
+          </b:EventTrigger>
+          <b:EventTrigger EventName="MouseLeave">
+            <b:GoToStateAction StateName="Normal"/>
+          </b:EventTrigger>
+        </b:Interaction.Triggers>
+
+        <VisualStateManager.VisualStateGroups>
+          <VisualStateGroup x:Name="InteractionStates">
+
+            <VisualStateGroup.Transitions>
+              <VisualTransition From="Hover" GeneratedDuration="0" To="Normal">
+                <Storyboard>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterTile_Area" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1.05"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterTile_Area" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1.05"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Hoverlay" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.5"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0"/>
+                  </DoubleAnimationUsingKeyFrames>
+                  <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterPortrait_Crisp" Storyboard.TargetProperty="(UIElement.Opacity)">
+                    <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                    <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0.7488208"/>
+                  </DoubleAnimationUsingKeyFrames>
+                </Storyboard>
+              </VisualTransition>
+            </VisualStateGroup.Transitions>
+
+            <VisualState x:Name="Normal"/>
+
+            <VisualState x:Name="Hover">
+              <Storyboard>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterTile_Area" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1.05"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterTile_Area" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1.05"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Hoverlay" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0.5"/>
+                </DoubleAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterPortrait_Crisp" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0.75"/>
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="1"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Text_CharacterName" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00.1000000" Value="{DynamicResource Purple_Light}"/>
+                </ColorAnimationUsingKeyFrames>
+                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Text_CharacterNumber" Storyboard.TargetProperty="(TextElement.Foreground).(SolidColorBrush.Color)">
+                  <EasingColorKeyFrame KeyTime="00:00:00.1000000" Value="{DynamicResource Purple_ExtraLight}"/>
+                </ColorAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Shadow" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="4"/>
+                </DoubleAnimationUsingKeyFrames>
+                <ThicknessAnimationUsingKeyFrames Storyboard.TargetName="Shadow_Area" Storyboard.TargetProperty="(FrameworkElement.Margin)">
+                  <EasingThicknessKeyFrame KeyTime="00:00:00.1000000" Value="20,0"/>
+                </ThicknessAnimationUsingKeyFrames>
+                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Shadow" Storyboard.TargetProperty="(UIElement.Opacity)">
+                  <EasingDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0.75"/>
+                </DoubleAnimationUsingKeyFrames>
+              </Storyboard>
+            </VisualState>
+
+          </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+      
+        <Grid x:Name="CharacterTile_Area" RenderTransformOrigin="0.5,0.5" Cursor="Hand" Grid.Row="1">
+
+          <Grid.RenderTransform>
+            <TransformGroup>
+              <ScaleTransform ScaleX="1" ScaleY="1"/>
+              <SkewTransform/>
+              <RotateTransform/>
+              <TranslateTransform/>
+            </TransformGroup>
+          </Grid.RenderTransform>
+
+          <Grid x:Name="Backer">
+
+            <Grid x:Name="PortraitArea">
+
+              <Border x:Name="CharacterPortrait_Crisp" Opacity="0.75">
+                <Border.Background>
+                  <ImageBrush ImageSource="{Binding Path=Character_Portrait}" Stretch="UniformToFill"/>
+                </Border.Background>
+              </Border>
+
+              <Border x:Name="CharacterPortrait_Blur" Opacity="0.33">
+                <Border.Effect>
+                  <BlurEffect Radius="64"/>
+                </Border.Effect>
+                <Border.Background>
+                  <ImageBrush ImageSource="{Binding Path=Character_Portrait}" Stretch="UniformToFill"/>
+                </Border.Background>
+              </Border>
+
+            </Grid>
+
+            <Border x:Name="BottomGradient">
+              <Border.Background>
+                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                  <GradientStop Color="#00000000" Offset="0.66"/>
+                  <GradientStop Color="#19000000" Offset="1"/>
+                  <GradientStop Color="#64000000" Offset="0.9"/>
+                </LinearGradientBrush>
+              </Border.Background>
+            </Border>
+
+          </Grid>
+
+          <Grid x:Name="TileGridVerticalDivision">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="1*"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid x:Name="Top">
+
+              <Border x:Name="Hoverlay" Opacity="0">
+                <Border.Background>
+                  <SolidColorBrush Opacity="0"/>
+                </Border.Background>
+                <Border.Effect>
+                  <noesis:VignetteEffect Strength="64" Size="1" Color="{DynamicResource Purple_ExtraDark}"/>
+                </Border.Effect>
+              </Border>
+
+              <Grid x:Name="CharacterNameArea" VerticalAlignment="Bottom" Margin="0,0,0,24">
+                <TextBlock x:Name="Text_CharacterName" Text="{Binding Path=Character_Name, StringFormat={}{0}...}" VerticalAlignment="Bottom" TextAlignment="Center" FontSize="32" FontFamily="/Root;component/Assets/Fonts/#Libre Bodoni" FontStyle="Oblique" FontWeight="Bold" Effect="{DynamicResource TextGlow_Regular}">
+                  <TextBlock.Foreground>
+                    <SolidColorBrush Color="{DynamicResource Purple_Medium}"/>
+                  </TextBlock.Foreground>
+                </TextBlock>
+              </Grid>
+
+            </Grid>
+
+            <Grid x:Name="Bottom" Grid.Row="1">
+
+              <StackPanel x:Name="Bottom_VerticalStack">
+
+                <Grid x:Name="Divider" Height="2">
+                  <Grid.Background>
+                    <SolidColorBrush Color="{DynamicResource Purple_Dark}"/>
+                  </Grid.Background>
+                </Grid>
+
+                <Grid x:Name="CharacterNumberArea" Margin="8,8,8,8">
+
+                  <Grid x:Name="CharacterNumber_Backer">
+                    <Grid.Background>
+                      <SolidColorBrush Color="{DynamicResource Purple_ExtraDark}"/>
+                    </Grid.Background>
+                  </Grid>
+
+                  <TextBlock x:Name="Text_CharacterNumber" Text="{Binding Path=Character_Number, StringFormat=(0{0})}" TextWrapping="Wrap" FontFamily="/Root;component/Assets/Fonts/#Libre Bodoni" FontSize="20" Effect="{DynamicResource TextGlow_Regular}" FontStyle="Oblique" TextAlignment="Center" Padding="0,3,0,2">
+                    <TextBlock.Foreground>
+                      <SolidColorBrush Color="{DynamicResource Purple_Light}"/>
+                    </TextBlock.Foreground>
+                  </TextBlock>
+
+                </Grid>
+
+              </StackPanel>
+            </Grid>
+          
+          </Grid>
+
+          <Grid x:Name="OuterBorder">
+            <Border BorderThickness="2,2,2,2">
+              <Border.BorderBrush>
+                <SolidColorBrush Color="{DynamicResource Purple_Dark}"/>
+              </Border.BorderBrush>
+            </Border>
+          </Grid>
+
+        </Grid>
+        <Grid x:Name="Shadow_Area" Grid.Row="2" Margin="16,0,16,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="4*"/>
+            <RowDefinition Height="1*"/>
+          </Grid.RowDefinitions>
+          <Grid x:Name="Shadow" Height="2" VerticalAlignment="Top" Grid.Row="1" Opacity="0.7">
+            <Grid.Effect>
+              <BlurEffect Radius="24"/>
+            </Grid.Effect>
+            <Grid.RenderTransform>
+              <TransformGroup>
+                <ScaleTransform/>
+                <SkewTransform/>
+                <RotateTransform/>
+                <TranslateTransform/>
+              </TransformGroup>
+            </Grid.RenderTransform>
+            <Grid.Background>
+              <SolidColorBrush Color="#FF000000"/>
+            </Grid.Background>
+          </Grid>
+        </Grid>
+      </Grid>
+
+    </DataTemplate>
+  </Component.Resources>
+
+  <Grid x:Name="CharacterGrid" RenderTransformOrigin="0.5,0.5">
+
+    <Grid.RenderTransform>
+      <TransformGroup>
+        <ScaleTransform/>
+        <SkewTransform/>
+        <RotateTransform/>
+        <TranslateTransform/>
+      </TransformGroup>
+    </Grid.RenderTransform>
+
+    <b:Interaction.Triggers>
+      <b:DataTrigger Value="False" Binding="{Binding Path=IsEnabled, ElementName=ComponentRoot}">
+        <b:GoToStateAction StateName="CharacterSelector_IsHidden"/>
+      </b:DataTrigger>
+      <b:DataTrigger Value="True" Binding="{Binding Path=IsEnabled, ElementName=ComponentRoot}">
+        <b:GoToStateAction StateName="CharacterSelector_IsVisible"/>
+      </b:DataTrigger>
+    </b:Interaction.Triggers>
+    
+    <VisualStateManager.VisualStateGroups>
+
+      <VisualStateGroup x:Name="States_CharacterSelector">
+
+        <VisualStateGroup.Transitions>
+          <VisualTransition From="CharacterSelector_IsHidden" GeneratedDuration="0" To="CharacterSelector_IsVisible">
+            <Storyboard>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="1"/>
+              </DoubleAnimationUsingKeyFrames>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="32"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.3000000" Value="0"/>
+              </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+          </VisualTransition>
+
+          <VisualTransition From="CharacterSelector_IsVisible" GeneratedDuration="0" To="CharacterSelector_IsHidden">
+            <Storyboard>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.Opacity)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="1"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="0"/>
+              </DoubleAnimationUsingKeyFrames>
+              <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">
+                <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="00:00:00.2000000" Value="16"/>
+              </DoubleAnimationUsingKeyFrames>
+            </Storyboard>
+          </VisualTransition>
+        </VisualStateGroup.Transitions>
+
+        <VisualState x:Name="CharacterSelector_IsVisible">
+          <Storyboard/>
+        </VisualState>
+
+        <VisualState x:Name="CharacterSelector_IsHidden">
+          <Storyboard>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.Opacity)">              
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="0"/>
+            </DoubleAnimationUsingKeyFrames>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="CharacterGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.Y)">              
+              <EasingDoubleKeyFrame KeyTime="00:00:00" Value="16"/>
+            </DoubleAnimationUsingKeyFrames>
+          </Storyboard>
+        </VisualState>
+      </VisualStateGroup>
+    </VisualStateManager.VisualStateGroups>
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="1*"/>
+      <ColumnDefinition Width="4*"/>
+      <ColumnDefinition Width="1*"/>
+    </Grid.ColumnDefinitions>
+
+    <ListBox Grid.Column="1"
+             Template="{DynamicResource ListBoxTemplate_CharacterGrid}"
+             ItemsPanel="{DynamicResource ItemsPanelTemplate_CharacterGrid}"
+             ItemContainerStyle="{DynamicResource ListBoxItemStyle_CharacterGrid}"
+             ItemTemplate="{DynamicResource ItemTemplate_CharacterGrid}"
+             ItemsSource="{Binding Path=Characters}"
+             SelectedItem="{Binding Path=SelectedCharacter_Obj, ElementName=ComponentRoot, Mode=OneWayToSource}"
+             SelectedIndex="0">
+      <b:Interaction.Triggers>
+        <b:EventTrigger EventName="PreviewMouseUp">
+          <b:ChangePropertyAction PropertyName="IsEnabled" Value="False" TargetName="ComponentRoot"/>
+        </b:EventTrigger>
+      </b:Interaction.Triggers>
+    </ListBox>
+
+  </Grid>
+</Component>

@@ -1,0 +1,49 @@
+<ResourceDictionary
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="Color.001">#FF86807E</Color>
+  <Color x:Key="Color.002">#FF7D7D7D</Color>
+  <Color x:Key="Color.003">#FFC32639</Color>
+  <Color x:Key="Color.004">#FFCCCCCC</Color>
+  <Color x:Key="Color.005">#FFCCCCCC</Color>
+  <StreamGeometry x:Key="StreamGeometry.001">M0,0 -0.0889587,7.99999M-4.0001,4.00005 3.99975,4.00005</StreamGeometry>
+  <Color x:Key="Color.006">#FFC4C4C4</Color>
+  <Color x:Key="Color.007">#4F8A8A8A</Color>
+  <LinearGradientBrush x:Key="LinearGradientBrush.001" EndPoint="0.5,1" StartPoint="0.5,0">
+    <GradientStop Color="#00000000" Offset="0.42100003"/>
+    <GradientStop Color="#FF000000" Offset="0.157"/>
+    <GradientStop Color="#FF000000" Offset="0.85200006"/>
+    <GradientStop Color="#00000000" Offset="0.57600003"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="LinearGradientBrush.002" StartPoint="0,1" EndPoint="0.5,1">
+    <GradientStop Color="#FFCBCBCB" Offset="0.523"/>
+    <GradientStop Color="#FFAFAFAF"/>
+    <GradientStop Color="#FFA9A9A9" Offset="1"/>
+  </LinearGradientBrush>
+  <Color x:Key="OldRed">#FF902835</Color>
+  <Color x:Key="EerieBlack">#FF131F1D</Color>
+  <Color x:Key="DeepMossGreen">#FF35503D</Color>
+  <Color x:Key="FlaxYellow">#FFE7D390</Color>
+  <Color x:Key="CrayolaBrown">#FFA85F39</Color>
+  <Color x:Key="RaisinBlack">#FF252324</Color>
+  <Color x:Key="DarkCharcoal">#FF313131</Color>
+  <RadialGradientBrush x:Key="CrossGradient">
+    <GradientStop Color="#FFCBCBCB"/>
+    <GradientStop Color="#FFAFAFAF" Offset="0.37800002"/>
+    <GradientStop Color="#C4A9A9A9" Offset="1"/>
+  </RadialGradientBrush>
+  <LinearGradientBrush x:Key="LineGradient" StartPoint="0.41692,0" EndPoint="0.837227,0">
+    <GradientStop Color="{DynamicResource FlaxYellow}" Offset="0"/>
+    <GradientStop Color="#00E7D390" Offset="1"/>
+    <GradientStop Color="{DynamicResource FlaxYellow}" Offset="0.5156945"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="IconGradient" StartPoint="0.5,0" EndPoint="0.5,1">
+    <GradientStop Color="{DynamicResource CrayolaBrown}" Offset="0"/>
+    <GradientStop Color="{DynamicResource FlaxYellow}" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="DarkGradient" StartPoint="0.5,0" EndPoint="0.5,1">
+    <GradientStop Color="{DynamicResource Color.002}" Offset="0"/>
+    <GradientStop Color="#FF000000" Offset="1"/>
+  </LinearGradientBrush>
+  <Color x:Key="Aquamarine">#FF00F6FF</Color>
+</ResourceDictionary>
