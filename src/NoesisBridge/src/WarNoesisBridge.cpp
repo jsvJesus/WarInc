@@ -1,6 +1,7 @@
 #define WAR_NOESIS_BRIDGE_EXPORTS
 #include "WarNoesisBridge.h"
 #include "WarNoesisD3D9RenderDevice.h"
+#include "WarNoesisMediaPlayer.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -11,6 +12,9 @@
 #include <NsCore/Ptr.h>
 #include <NsCore/Log.h>
 #include <NsCore/Init.h>
+#include <NsCore/RegisterComponent.h>
+#include <NsCore/EnumConverter.h>
+#include <NsApp/MediaElement.h>
 
 #include <NsGui/IntegrationAPI.h>
 #include <NsGui/FrameworkElement.h>
@@ -410,6 +414,11 @@ WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 	Noesis::GUI::SetLicense(NS_LICENSE_NAME, NS_LICENSE_KEY);
 	Noesis::GUI::Init();
 
+	Noesis::RegisterComponent<NoesisApp::MediaElement>();
+	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::MediaState> >();
+
+	WarNoesisMediaPlayer_Init(gRootPath);
+
 	if(gRootPath[0])
 	{
 		Noesis::GUI::SetXamlProvider(Noesis::MakePtr<NoesisApp::LocalXamlProvider>(gRootPath));
@@ -454,6 +463,8 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 		gD3D9Device->Release();
 		gD3D9Device = NULL;
 	}
+
+	WarNoesisMediaPlayer_Shutdown();
 
 	Noesis::GUI::Shutdown();
 

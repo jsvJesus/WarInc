@@ -15,11 +15,13 @@
   <ItemGroup>
     <ClInclude Include="src\WarNoesisBridge.h" />
     <ClInclude Include="src\WarNoesisD3D9RenderDevice.h" />
+    <ClInclude Include="src\WarNoesisMediaPlayer.h" />
   </ItemGroup>
 
   <ItemGroup>
     <ClCompile Include="src\WarNoesisBridge.cpp" />
     <ClCompile Include="src\WarNoesisD3D9RenderDevice.cpp" />
+    <ClCompile Include="src\WarNoesisMediaPlayer.cpp" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">
@@ -83,12 +85,12 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;WAR_NOESIS_BRIDGE_EXPORTS;WIN64;_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Noesis.lib;d3d9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Noesis.lib;d3d9.lib;d3d9.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\External\NoesisGUI\Lib\windows_x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(OutDir)WarNoesisBridge.dll</OutputFile>
     </Link>
@@ -103,14 +105,14 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;WAR_NOESIS_BRIDGE_EXPORTS;WIN64;_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>NoesisApp.lib;Noesis.lib;d3d9.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NoesisApp.lib;Noesis.lib;d3d9.lib;d3d9.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\External\NoesisGUI\Lib\windows_x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(OutDir)WarNoesisBridge.dll</OutputFile>
     </Link>
