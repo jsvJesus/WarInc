@@ -26,6 +26,7 @@
 
 #include "r3d.h"
 #include "r3dDX11.h"
+#include "r3dDX11Texture.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -64,6 +65,7 @@ r3dDX11Renderer::r3dDX11Renderer()
 	Windowed = true;
 	VSync = true;
 	DebugTriangleEnabled = false;
+	DebugTexturedQuadEnabled = false;
 
 	FeatureLevel = 0;
 
@@ -79,6 +81,12 @@ r3dDX11Renderer::r3dDX11Renderer()
 	DebugPS = NULL;
 	DebugInputLayout = NULL;
 	DebugVB = NULL;
+	DebugTexVS = NULL;
+	DebugTexPS = NULL;
+	DebugTexInputLayout = NULL;
+	DebugTexVB = NULL;
+	DebugTexSampler = NULL;
+	DebugTexture = NULL;
 }
 
 r3dDX11Renderer::~r3dDX11Renderer()
@@ -196,6 +204,11 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 		r3dOutToLog("DX11: debug triangle resources were not created\n");
 	}
 
+	if(!CreateDebugTexturedQuad())
+	{
+		r3dOutToLog("DX11: debug textured quad resources were not created\n");
+	}
+
 	r3dOutToLog(
 		"DX11: initialized %dx%d windowed=%d featureLevel=0x%X\n",
 		Width,
@@ -220,6 +233,7 @@ void r3dDX11Renderer::Shutdown()
 		SwapChain->SetFullscreenState(FALSE, NULL);
 	}
 
+	ReleaseDebugTexturedQuad();
 	ReleaseDebugTriangle();
 	ReleaseBackBuffer();
 
@@ -625,6 +639,324 @@ void r3dDX11Renderer::DrawDebugTriangle()
 	Context->Draw(3, 0);
 }
 
+bool r3dDX11Renderer::CreateDebugTexturedQuad()
+{
+	if(!Device)
+		return false;
+
+	static const char* shaderCode =
+		"Texture2D DiffuseTexture : register(t0);"
+		"SamplerState DiffuseSampler : register(s0);"
+
+		"struct VS_IN"
+		"{"
+		"	float3 Pos : POSITION;"
+		"	float2 UV  : TEXCOORD0;"
+		"};"
+
+		"struct PS_IN"
+		"{"
+		"	float4 Pos : SV_POSITION;"
+		"	float2 UV  : TEXCOORD0;"
+		"};"
+
+		"PS_IN VSMain(VS_IN input)"
+		"{"
+		"	PS_IN output;"
+		"	output.Pos = float4(input.Pos, 1.0f);"
+		"	output.UV = input.UV;"
+		"	return output;"
+		"}"
+
+		"float4 PSMain(PS_IN input) : SV_Target"
+		"{"
+		"	return DiffuseTexture.Sample(DiffuseSampler, input.UV);"
+		"}";
+
+	ID3DBlob* vsBlob = NULL;
+	ID3DBlob* psBlob = NULL;
+	ID3DBlob* errors = NULL;
+
+	UINT flags = 0;
+
+#if defined(_DEBUG)
+	flags |= D3DCOMPILE_DEBUG;
+	flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+	HRESULT hr = D3DCompile(
+		shaderCode,
+		strlen(shaderCode),
+		"r3dDX11DebugTexVS",
+		NULL,
+		NULL,
+		"VSMain",
+		"vs_4_0",
+		flags,
+		0,
+		&vsBlob,
+		&errors
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_LogBlob(errors);
+		r3dDX11_Release(errors);
+		r3dDX11_LogHR("D3DCompile textured VS", hr);
+		return false;
+	}
+
+	r3dDX11_Release(errors);
+
+	hr = D3DCompile(
+		shaderCode,
+		strlen(shaderCode),
+		"r3dDX11DebugTexPS",
+		NULL,
+		NULL,
+		"PSMain",
+		"ps_4_0",
+		flags,
+		0,
+		&psBlob,
+		&errors
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_LogBlob(errors);
+		r3dDX11_Release(errors);
+		r3dDX11_Release(vsBlob);
+		r3dDX11_LogHR("D3DCompile textured PS", hr);
+		return false;
+	}
+
+	r3dDX11_Release(errors);
+
+	hr = Device->CreateVertexShader(
+		vsBlob->GetBufferPointer(),
+		vsBlob->GetBufferSize(),
+		NULL,
+		&DebugTexVS
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_Release(vsBlob);
+		r3dDX11_Release(psBlob);
+		r3dDX11_LogHR("CreateVertexShader textured", hr);
+		return false;
+	}
+
+	hr = Device->CreatePixelShader(
+		psBlob->GetBufferPointer(),
+		psBlob->GetBufferSize(),
+		NULL,
+		&DebugTexPS
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_Release(vsBlob);
+		r3dDX11_Release(psBlob);
+		r3dDX11_LogHR("CreatePixelShader textured", hr);
+		return false;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC layout[2];
+
+	layout[0].SemanticName = "POSITION";
+	layout[0].SemanticIndex = 0;
+	layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	layout[0].InputSlot = 0;
+	layout[0].AlignedByteOffset = 0;
+	layout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	layout[0].InstanceDataStepRate = 0;
+
+	layout[1].SemanticName = "TEXCOORD";
+	layout[1].SemanticIndex = 0;
+	layout[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+	layout[1].InputSlot = 0;
+	layout[1].AlignedByteOffset = 12;
+	layout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	layout[1].InstanceDataStepRate = 0;
+
+	hr = Device->CreateInputLayout(
+		layout,
+		2,
+		vsBlob->GetBufferPointer(),
+		vsBlob->GetBufferSize(),
+		&DebugTexInputLayout
+	);
+
+	r3dDX11_Release(vsBlob);
+	r3dDX11_Release(psBlob);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_LogHR("CreateInputLayout textured", hr);
+		return false;
+	}
+
+	struct DX11DebugTexVertex
+	{
+		float x, y, z;
+		float u, v;
+	};
+
+	DX11DebugTexVertex vertices[6];
+
+	const float left = -0.85f;
+	const float right = -0.25f;
+	const float top = 0.85f;
+	const float bottom = 0.25f;
+
+	vertices[0].x = left;
+	vertices[0].y = top;
+	vertices[0].z = 0.0f;
+	vertices[0].u = 0.0f;
+	vertices[0].v = 0.0f;
+
+	vertices[1].x = right;
+	vertices[1].y = top;
+	vertices[1].z = 0.0f;
+	vertices[1].u = 1.0f;
+	vertices[1].v = 0.0f;
+
+	vertices[2].x = left;
+	vertices[2].y = bottom;
+	vertices[2].z = 0.0f;
+	vertices[2].u = 0.0f;
+	vertices[2].v = 1.0f;
+
+	vertices[3].x = left;
+	vertices[3].y = bottom;
+	vertices[3].z = 0.0f;
+	vertices[3].u = 0.0f;
+	vertices[3].v = 1.0f;
+
+	vertices[4].x = right;
+	vertices[4].y = top;
+	vertices[4].z = 0.0f;
+	vertices[4].u = 1.0f;
+	vertices[4].v = 0.0f;
+
+	vertices[5].x = right;
+	vertices[5].y = bottom;
+	vertices[5].z = 0.0f;
+	vertices[5].u = 1.0f;
+	vertices[5].v = 1.0f;
+
+	D3D11_BUFFER_DESC vbDesc;
+	ZeroMemory(&vbDesc, sizeof(vbDesc));
+
+	vbDesc.ByteWidth = sizeof(vertices);
+	vbDesc.Usage = D3D11_USAGE_DEFAULT;
+	vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbDesc.CPUAccessFlags = 0;
+	vbDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA initData;
+	ZeroMemory(&initData, sizeof(initData));
+
+	initData.pSysMem = vertices;
+
+	hr = Device->CreateBuffer(&vbDesc, &initData, &DebugTexVB);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_LogHR("CreateBuffer textured VB", hr);
+		return false;
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc;
+	ZeroMemory(&samplerDesc, sizeof(samplerDesc));
+
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.BorderColor[1] = 0.0f;
+	samplerDesc.BorderColor[2] = 0.0f;
+	samplerDesc.BorderColor[3] = 0.0f;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	hr = Device->CreateSamplerState(&samplerDesc, &DebugTexSampler);
+
+	if(FAILED(hr))
+	{
+		r3dDX11_LogHR("CreateSamplerState", hr);
+		return false;
+	}
+
+	DebugTexture = new r3dDX11Texture();
+
+	if(!DebugTexture->CreateChecker(256))
+	{
+		delete DebugTexture;
+		DebugTexture = NULL;
+		r3dOutToLog("DX11: failed to create debug checker texture\n");
+		return false;
+	}
+
+	return true;
+}
+
+void r3dDX11Renderer::ReleaseDebugTexturedQuad()
+{
+	if(DebugTexture)
+	{
+		delete DebugTexture;
+		DebugTexture = NULL;
+	}
+
+	r3dDX11_Release(DebugTexSampler);
+	r3dDX11_Release(DebugTexVB);
+	r3dDX11_Release(DebugTexInputLayout);
+	r3dDX11_Release(DebugTexPS);
+	r3dDX11_Release(DebugTexVS);
+}
+
+void r3dDX11Renderer::DrawDebugTexturedQuad()
+{
+	if(!IsInitialized())
+		return;
+
+	if(!DebugTexturedQuadEnabled)
+		return;
+
+	if(!DebugTexture || !DebugTexture->IsValid())
+		return;
+
+	if(!DebugTexVB || !DebugTexInputLayout || !DebugTexVS || !DebugTexPS || !DebugTexSampler)
+		return;
+
+	UINT stride = sizeof(float) * 5;
+	UINT offset = 0;
+
+	Context->IASetInputLayout(DebugTexInputLayout);
+	Context->IASetVertexBuffers(0, 1, &DebugTexVB, &stride, &offset);
+	Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	Context->VSSetShader(DebugTexVS, NULL, 0);
+	Context->PSSetShader(DebugTexPS, NULL, 0);
+
+	ID3D11ShaderResourceView* srv = DebugTexture->GetSRV();
+
+	Context->PSSetShaderResources(0, 1, &srv);
+	Context->PSSetSamplers(0, 1, &DebugTexSampler);
+
+	Context->Draw(6, 0);
+
+	ID3D11ShaderResourceView* nullSRV = NULL;
+	Context->PSSetShaderResources(0, 1, &nullSRV);
+}
+
 void r3dDX11Renderer::SetVSync(bool enabled)
 {
 	VSync = enabled;
@@ -633,6 +965,11 @@ void r3dDX11Renderer::SetVSync(bool enabled)
 void r3dDX11Renderer::SetDebugTriangle(bool enabled)
 {
 	DebugTriangleEnabled = enabled;
+}
+
+void r3dDX11Renderer::SetDebugTexturedQuad(bool enabled)
+{
+	DebugTexturedQuadEnabled = enabled;
 }
 
 bool r3dDX11Renderer::IsInitialized() const

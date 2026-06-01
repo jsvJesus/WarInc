@@ -1992,6 +1992,10 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 				strstr(__r3dCmdLine, "-dx11tri") || strstr(__r3dCmdLine, "/dx11tri")
 			);
 
+			g_r3dDX11.SetDebugTexturedQuad(
+		strstr(__r3dCmdLine, "-dx11tex") || strstr(__r3dCmdLine, "/dx11tex")
+			);
+
 			r3dOutToLog("DX11: renderer layer started %dx%d windowed=%d\n", mode.Width, mode.Height, dx11Windowed ? 1 : 0);
 		}
 		else
@@ -3912,6 +3916,7 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 	if(g_r3dDX11.IsInitialized())
 	{
 		g_r3dDX11.DrawDebugTriangle();
+		g_r3dDX11.DrawDebugTexturedQuad();
 		g_r3dDX11.EndFrame(present);
 	}
 #endif

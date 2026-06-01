@@ -13,6 +13,9 @@ struct ID3D11VertexShader;
 struct ID3D11PixelShader;
 struct ID3D11InputLayout;
 struct ID3D11Buffer;
+struct ID3D11SamplerState;
+
+class r3dDX11Texture;
 
 typedef int R3D_DX11_FORMAT;
 typedef int R3D_DX11_FEATURE_LEVEL;
@@ -29,6 +32,8 @@ public:
     bool Resize(int width, int height);
 
     void BeginFrame(float r, float g, float b, float a);
+    void DrawDebugTexturedQuad();
+    void SetDebugTexturedQuad(bool enabled);
     void DrawDebugTriangle();
     void EndFrame(bool present);
 
@@ -50,7 +55,8 @@ public:
 private:
     bool CreateBackBuffer();
     void ReleaseBackBuffer();
-
+    bool CreateDebugTexturedQuad();
+    void ReleaseDebugTexturedQuad();
     bool CreateDebugTriangle();
     void ReleaseDebugTriangle();
 
@@ -60,6 +66,14 @@ private:
     bool Windowed;
     bool VSync;
     bool DebugTriangleEnabled;
+    bool DebugTexturedQuadEnabled;
+
+    ID3D11VertexShader* DebugTexVS;
+    ID3D11PixelShader* DebugTexPS;
+    ID3D11InputLayout* DebugTexInputLayout;
+    ID3D11Buffer* DebugTexVB;
+    ID3D11SamplerState* DebugTexSampler;
+    r3dDX11Texture* DebugTexture;
 
     R3D_DX11_FEATURE_LEVEL FeatureLevel;
 

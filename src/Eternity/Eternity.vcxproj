@@ -362,6 +362,7 @@
     <ClCompile Include="Source\r3dDebug.cpp" />
     <ClCompile Include="Source\r3dDeviceQueue.cpp" />
     <ClCompile Include="Source\r3dDX11.cpp" />
+    <ClCompile Include="Source\r3dDX11Texture.cpp" />
     <ClCompile Include="Source\r3dEternityWebBrowser.cpp" />
     <ClCompile Include="Source\r3dFileMan.cpp" />
     <ClCompile Include="Source\r3dFileTracker.cpp" />
@@ -741,6 +742,7 @@
     <ClInclude Include="Include\r3dDebug.h" />
     <ClInclude Include="Include\r3dDeviceQueue.h" />
     <ClInclude Include="Include\r3dDX11.h" />
+    <ClInclude Include="Include\r3dDX11Texture.h" />
     <ClInclude Include="INCLUDE\r3dFileMan.h" />
     <ClInclude Include="Include\r3dFileTracker.h" />
     <ClInclude Include="Include\r3dGeoSphere.h" />
