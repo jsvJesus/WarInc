@@ -601,6 +601,50 @@ static void r3dDX11_BuildVertexShaderMacros(
 	outMacros.PushBack(nullMacro);
 }
 
+static r3dDX11Shader* g_r3dDX11CurrentVertexShader = NULL;
+
+r3dDX11Shader* r3dDX11_GetCurrentVertexShader()
+{
+	return g_r3dDX11CurrentVertexShader;
+}
+
+bool r3dDX11_ApplyCurrentVertexShaderInputLayout(IDirect3DVertexDeclaration9* decl)
+{
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	if(!decl)
+		return false;
+
+	if(!g_r3dDX11CurrentVertexShader)
+		return false;
+
+	D3DVERTEXELEMENT9 elements[64];
+	ZeroMemory(elements, sizeof(elements));
+
+	UINT elementCount = sizeof(elements) / sizeof(elements[0]);
+
+	HRESULT hr = decl->GetDeclaration(elements, &elementCount);
+
+	if(FAILED(hr))
+	{
+		r3dOutToLog(
+			"DX11InputLayout: IDirect3DVertexDeclaration9::GetDeclaration failed, HRESULT=0x%08X\n",
+			(unsigned int)hr
+		);
+
+		return false;
+	}
+
+	if(elementCount == 0)
+	{
+		r3dOutToLog("DX11InputLayout: empty D3D9 vertex declaration\n");
+		return false;
+	}
+
+	return g_r3dDX11InputLayouts.Set(elements, g_r3dDX11CurrentVertexShader);
+}
+
 #endif
 
 int r3dVertexShader :: LoadDX11(const char* FName, int Type)
@@ -690,9 +734,25 @@ void r3dVertexShader :: SetActive(int Act)
 		if(m_dx11Shader)
 		{
 			if(Act)
+			{
 				m_dx11Shader->SetActive();
+
+				if(g_r3dDX11CurrentVertexShader != m_dx11Shader)
+				{
+					g_r3dDX11CurrentVertexShader = m_dx11Shader;
+					g_r3dDX11InputLayouts.InvalidateCache();
+				}
+			}
 			else
+			{
 				m_dx11Shader->ClearActive();
+
+				if(g_r3dDX11CurrentVertexShader == m_dx11Shader)
+				{
+					g_r3dDX11CurrentVertexShader = NULL;
+					g_r3dDX11InputLayouts.InvalidateCache();
+				}
+			}
 		}
 
 		return;

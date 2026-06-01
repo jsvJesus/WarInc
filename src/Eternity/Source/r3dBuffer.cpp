@@ -27,6 +27,7 @@
 
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
+#include "VShader.h"
 
 #endif
 
@@ -973,11 +974,14 @@ void r3dD3DBuffer::Activate()
 
 			if(m_DX11Buffer)
 			{
-				g_r3dDX11Geometry.SetIndexBufferRaw(
+				g_r3dDX11Geometry.SetVertexBufferRaw(
+					0,
 					m_DX11Buffer,
-					m_Stride == 2 ? R3D_DX11_INDEX_16BIT : R3D_DX11_INDEX_32BIT,
+					m_Stride,
 					0
 				);
+
+				r3dDX11_ApplyCurrentVertexShaderInputLayout(m_Decl);
 			}
 		}
 #endif

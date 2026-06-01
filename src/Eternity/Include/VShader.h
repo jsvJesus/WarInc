@@ -3,6 +3,13 @@
 
 class r3dDX11Shader;
 
+#ifndef WO_SERVER
+struct IDirect3DVertexDeclaration9;
+
+r3dDX11Shader* r3dDX11_GetCurrentVertexShader();
+bool r3dDX11_ApplyCurrentVertexShaderInputLayout(IDirect3DVertexDeclaration9* decl);
+#endif
+
 class   r3dVertexShader
 {
 public:
