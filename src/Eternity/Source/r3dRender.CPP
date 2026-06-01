@@ -18,6 +18,9 @@
 #include "../SF/Console/Config.h"
 
 #include "r3dDeviceQueue.h"
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#endif
 
 #include "r3dBackgroundTaskDispatcher.h"
 
@@ -644,6 +647,10 @@ int r3dRenderLayer::Close()
 			r3dOutToLog( R3D_NVAPI "failed to destroy stereo handle!" ) ;
 		}
 	}
+#endif
+
+#ifndef WO_SERVER
+	g_r3dDX11.Shutdown();
 #endif
 
 	r3dMesh::Close() ;
@@ -1663,8 +1670,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 			r_driver_hash->SetInt(newHash);
 		}
 	}
-
-
+	
 	// display monitor info
 	MONITORINFOEX mi;
 	ZeroMemory(&mi, sizeof(mi));
@@ -1676,8 +1682,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 
 		r3dOutToLog("Monitor: %s (%dx%d)\n", mi.szDevice, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
 	}
-
-
+	
 	ModesArray allModes;
 	__EvaluateDisplayModes(pd3d, allModes);
 
@@ -1691,7 +1696,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	//	Modify mode for stereo
 	FindCompatibleNVidiaStereoDisplayMode(mi.szDevice, mode, allModes);
 
-	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d)\n", mode.Width, mode.Height, BPP, Flags, mode.RefreshRate); 
+	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d)\n", mode.Width, mode.Height, BPP, Flags, mode.RefreshRate);
 
 	// Set up the structure used to create the D3DDevice. Since we are now
 	ZeroMemory( &d3dpp, sizeof(d3dpp) );
@@ -1976,6 +1981,26 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	r_contrast->SetChangeCallback( BrightnessContrastCallback ) ;
 	r_3d_vision_direct->SetChangeCallback( &StereoChangeCallback );
 
+#ifndef WO_SERVER
+	if(strstr(__r3dCmdLine, "-dx11") || strstr(__r3dCmdLine, "/dx11"))
+	{
+		const bool dx11Windowed = isWindowed ? true : false;
+
+		if(g_r3dDX11.Init(HLibWin, mode.Width, mode.Height, dx11Windowed))
+		{
+			g_r3dDX11.SetDebugTriangle(
+				strstr(__r3dCmdLine, "-dx11tri") || strstr(__r3dCmdLine, "/dx11tri")
+			);
+
+			r3dOutToLog("DX11: renderer layer started %dx%d windowed=%d\n", mode.Width, mode.Height, dx11Windowed ? 1 : 0);
+		}
+		else
+		{
+			r3dOutToLog("DX11: renderer layer failed, DX9 fallback active\n");
+		}
+	}
+#endif
+	
 	return TRUE;
 }
 
@@ -2737,6 +2762,16 @@ void r3dRenderLayer::SetBackBufferViewport()
 
 void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 {
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		if(clearToWhite)
+			g_r3dDX11.BeginFrame(1.0f, 1.0f, 1.0f, 1.0f);
+		else
+			g_r3dDX11.BeginFrame(0.015f, 0.017f, 0.022f, 1.0f);
+	}
+#endif
+	
 	static int ClearFlag = D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL;
 	static int _FlagSet = 0;
 
@@ -3872,6 +3907,14 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 		while(S_FALSE == pQueryEvent[eventCounter]->GetData(0, 0, D3DGETDATA_FLUSH)) {};
 		R3DPROFILE_END("SyncGPUtoCPU(3frames)")
 	}
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11.DrawDebugTriangle();
+		g_r3dDX11.EndFrame(present);
+	}
+#endif
 }
 
 

@@ -14,6 +14,8 @@
 #include <NsCore/Init.h>
 #include <NsCore/RegisterComponent.h>
 #include <NsCore/EnumConverter.h>
+#include <NsCore/ReflectionImplement.h>
+#include <NsRender/RenderContext.h>
 #include <NsApp/MediaElement.h>
 
 #include <NsApp/PixelateEffect.h>
@@ -62,6 +64,49 @@ static IDirect3DDevice9* gD3D9Device = NULL;
 static Noesis::Ptr<WarNoesisD3D9RenderDevice> gRenderDevice;
 static int gRendererInitialized = 0;
 
+static Noesis::Ptr<NoesisApp::RenderContext> gRenderContext;
+
+class WarNoesisD3D9RenderContext : public NoesisApp::RenderContext
+{
+public:
+	const char* Description() const override
+	{
+		return "WarInc D3D9 RenderContext";
+	}
+
+	const char* ShaderLang() const override
+	{
+		return "";
+	}
+
+	uint32_t Score() const override
+	{
+		return 1000;
+	}
+
+	bool Validate() const override
+	{
+		return true;
+	}
+
+	Noesis::RenderDevice* GetDevice() const override
+	{
+		return gRenderDevice.GetPtr();
+	}
+
+	void* CreatePixelShader(const char* label, uint8_t shader, Noesis::ArrayRef<uint8_t> code) override
+	{
+		return NULL;
+	}
+
+private:
+	NS_DECLARE_REFLECTION(WarNoesisD3D9RenderContext, NoesisApp::RenderContext)
+};
+
+NS_IMPLEMENT_REFLECTION(WarNoesisD3D9RenderContext)
+{
+}
+
 static int gInitialized = 0;
 static int gLoaded = 0;
 static int gWidth = 1280;
@@ -83,6 +128,7 @@ static void BridgeLog(const char* text)
 
 static void RegisterWarNoesisAppComponents()
 {
+	Noesis::RegisterComponent<WarNoesisD3D9RenderContext>();
 	Noesis::RegisterComponent<NoesisApp::PixelateEffect>();
 	Noesis::RegisterComponent<NoesisApp::DirectionalBlurEffect>();
 	Noesis::RegisterComponent<NoesisApp::SaturationEffect>();
@@ -476,6 +522,11 @@ WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::MediaState> >();
 	RegisterWarNoesisAppComponents();
 
+	gRenderContext = NoesisApp::RenderContext::Create("WarNoesisD3D9");
+
+	if(gRenderContext)
+		BridgeLog("WarNoesisBridge: WarNoesisD3D9 RenderContext created");
+
 	WarNoesisMediaPlayer_Init(gRootPath);
 
 	if(gRootPath[0])
@@ -524,6 +575,8 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 	}
 
 	WarNoesisMediaPlayer_Shutdown();
+
+	gRenderContext.Reset();
 
 	Noesis::GUI::Shutdown();
 
