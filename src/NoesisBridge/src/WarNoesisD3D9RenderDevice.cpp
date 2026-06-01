@@ -270,24 +270,61 @@ void WarNoesisD3D9RenderDevice::BeginOffscreenRender()
 {
 	CaptureState();
 	SetDefaultStates();
+
+	Device->SetTexture(0, NULL);
+	Device->SetTexture(1, NULL);
+	Device->SetTexture(2, NULL);
+	Device->SetTexture(3, NULL);
+
+	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 }
 
 void WarNoesisD3D9RenderDevice::EndOffscreenRender()
 {
+	Device->SetTexture(0, NULL);
+	Device->SetTexture(1, NULL);
+	Device->SetTexture(2, NULL);
+	Device->SetTexture(3, NULL);
+
+	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+	RestoreState();
+
+	CurrentTargetHeight = 0;
 }
 
 void WarNoesisD3D9RenderDevice::BeginOnscreenRender()
 {
 	CaptureState();
+
+	D3DVIEWPORT9 viewport;
+	memset(&viewport, 0, sizeof(viewport));
+
+	if(SUCCEEDED(Device->GetViewport(&viewport)))
+		CurrentTargetHeight = viewport.Height;
+
 	SetDefaultStates();
+
+	Device->SetTexture(0, NULL);
+	Device->SetTexture(1, NULL);
+	Device->SetTexture(2, NULL);
+	Device->SetTexture(3, NULL);
+
+	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 }
 
 void WarNoesisD3D9RenderDevice::EndOnscreenRender()
 {
 	Device->SetTexture(0, NULL);
+	Device->SetTexture(1, NULL);
+	Device->SetTexture(2, NULL);
+	Device->SetTexture(3, NULL);
+
 	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 
 	RestoreState();
+
+	CurrentTargetHeight = 0;
 }
 
 void WarNoesisD3D9RenderDevice::SetRenderTarget(Noesis::RenderTarget* surface)
@@ -342,6 +379,12 @@ void WarNoesisD3D9RenderDevice::ResolveRenderTarget(
 	uint32_t numTiles
 )
 {
+	Device->SetTexture(0, NULL);
+	Device->SetTexture(1, NULL);
+	Device->SetTexture(2, NULL);
+	Device->SetTexture(3, NULL);
+
+	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 }
 
 void* WarNoesisD3D9RenderDevice::MapVertices(uint32_t bytes)
@@ -534,6 +577,20 @@ void WarNoesisD3D9RenderDevice::ApplyRenderState(const Noesis::RenderState& stat
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
 		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
 		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_ONE);
+		break;
+
+	case Noesis::BlendMode::SrcOver_Multiply:
+		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
+		break;
+
+	case Noesis::BlendMode::SrcOver_Screen:
+		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
 		break;
 
 	default:
