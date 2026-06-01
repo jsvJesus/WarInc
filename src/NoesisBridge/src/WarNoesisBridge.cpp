@@ -56,6 +56,7 @@
 static Noesis::Ptr<Noesis::FrameworkElement> gRoot;
 static Noesis::Ptr<Noesis::IView> gView;
 static WarNoesisCommandCallback gCommandCallback = NULL;
+static WarNoesisLogCallback gLogCallback = NULL;
 
 static IDirect3DDevice9* gD3D9Device = NULL;
 static Noesis::Ptr<WarNoesisD3D9RenderDevice> gRenderDevice;
@@ -70,8 +71,14 @@ static char gRootPath[MAX_PATH];
 
 static void BridgeLog(const char* text)
 {
+	if(!text || !text[0])
+		return;
+
 	OutputDebugStringA(text);
 	OutputDebugStringA("\n");
+
+	if(gLogCallback)
+		gLogCallback(text);
 }
 
 static void RegisterWarNoesisAppComponents()
@@ -244,7 +251,7 @@ static void NoesisLogHandler(const char* file, uint32_t line, uint32_t level, co
 	_snprintf(
 		buffer,
 		sizeof(buffer) - 1,
-		"Noesis[%u] %s(%u): %s\n",
+		"Noesis[%u] %s(%u): %s",
 		level,
 		file ? file : "",
 		line,
@@ -252,7 +259,7 @@ static void NoesisLogHandler(const char* file, uint32_t line, uint32_t level, co
 	);
 
 	buffer[sizeof(buffer) - 1] = 0;
-	OutputDebugStringA(buffer);
+	BridgeLog(buffer);
 }
 
 static char* ReadTextFile(const char* filename)
@@ -683,6 +690,11 @@ WAR_NOESIS_API int __cdecl WarNoesis_IsLoaded()
 WAR_NOESIS_API void __cdecl WarNoesis_SetCommandCallback(WarNoesisCommandCallback callback)
 {
 	gCommandCallback = callback;
+}
+
+WAR_NOESIS_API void __cdecl WarNoesis_SetLogCallback(WarNoesisLogCallback callback)
+{
+	gLogCallback = callback;
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_MouseMove(int x, int y)

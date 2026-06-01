@@ -7,6 +7,7 @@
 #endif
 
 typedef void (__cdecl* WarNoesisCommandCallback)(const char* command, const char* value);
+typedef void (__cdecl* WarNoesisLogCallback)(const char* text);
 
 WAR_NOESIS_API int  __cdecl WarNoesis_Init(const char* rootPath);
 WAR_NOESIS_API void __cdecl WarNoesis_Shutdown();
@@ -23,6 +24,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device);
 WAR_NOESIS_API int  __cdecl WarNoesis_IsLoaded();
 
 WAR_NOESIS_API void __cdecl WarNoesis_SetCommandCallback(WarNoesisCommandCallback callback);
+WAR_NOESIS_API void __cdecl WarNoesis_SetLogCallback(WarNoesisLogCallback callback);
 
 WAR_NOESIS_API int __cdecl WarNoesis_MouseMove(int x, int y);
 WAR_NOESIS_API int __cdecl WarNoesis_MouseButtonDown(int x, int y, int button);

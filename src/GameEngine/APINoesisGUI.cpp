@@ -58,6 +58,14 @@ static void __cdecl r3dNoesisEditorCommandCallback(const char* command, const ch
 	r3dNoesisPushEditorCommand(command, value ? value : "");
 }
 
+static void __cdecl r3dNoesisLogCallback(const char* text)
+{
+	if(!text || !text[0])
+		return;
+
+	r3dOutToLog("NoesisBridgeDLL: %s\n", text);
+}
+
 APINoesisGUI::APINoesisGUI()
 {
 	DllHandle = NULL;
@@ -71,6 +79,7 @@ APINoesisGUI::APINoesisGUI()
 	FnRender = NULL;
 	FnIsLoaded = NULL;
 	FnSetCommandCallback = NULL;
+	FnSetLogCallback = NULL;
 	FnSetD3D9Device = NULL;
 
 	FnMouseMove = NULL;
@@ -115,6 +124,7 @@ bool APINoesisGUI::Init()
 	FnRender = (FN_WarNoesis_Render)GetProcAddress(dll, "WarNoesis_Render");
 	FnIsLoaded = (FN_WarNoesis_IsLoaded)GetProcAddress(dll, "WarNoesis_IsLoaded");
 	FnSetCommandCallback = (FN_WarNoesis_SetCommandCallback)GetProcAddress(dll, "WarNoesis_SetCommandCallback");
+	FnSetLogCallback = (FN_WarNoesis_SetLogCallback)GetProcAddress(dll, "WarNoesis_SetLogCallback");
 	FnSetD3D9Device = (FN_WarNoesis_SetD3D9Device)GetProcAddress(dll, "WarNoesis_SetD3D9Device");
 
 	FnMouseMove = (FN_WarNoesis_MouseMove)GetProcAddress(dll, "WarNoesis_MouseMove");
@@ -140,6 +150,9 @@ bool APINoesisGUI::Init()
 		DllHandle = NULL;
 		return false;
 	}
+
+	if(FnSetLogCallback)
+		FnSetLogCallback(r3dNoesisLogCallback);
 
 	if(!FnInit("Data/UI"))
 	{
@@ -185,6 +198,9 @@ void APINoesisGUI::Shutdown()
 	if(FnSetCommandCallback)
 		FnSetCommandCallback(NULL);
 
+	if(FnSetLogCallback)
+		FnSetLogCallback(NULL);
+
 	FreeLibrary((HMODULE)DllHandle);
 
 	DllHandle = NULL;
@@ -198,6 +214,7 @@ void APINoesisGUI::Shutdown()
 	FnRender = NULL;
 	FnIsLoaded = NULL;
 	FnSetCommandCallback = NULL;
+	FnSetLogCallback = NULL;
 	FnSetD3D9Device = NULL;
 
 	FnMouseMove = NULL;
