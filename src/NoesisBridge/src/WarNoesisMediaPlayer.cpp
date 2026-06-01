@@ -328,8 +328,6 @@ private:
 		return self->TextureRender(device);
 	}
 
-	bool SourceHasAlpha = false;
-
 	Noesis::Texture* TextureRender(Noesis::RenderDevice* device)
 	{
 		if(!device || Width == 0 || Height == 0 || FrameRGBA.empty())
@@ -546,6 +544,7 @@ private:
 		Playing = false;
 		DirtyFrame = false;
 		ForceFrame = true;
+		SourceHasAlpha = false;
 	}
 
 	void Seek(double position)
@@ -687,6 +686,7 @@ private:
 	bool Playing = false;
 	bool DirtyFrame = false;
 	bool ForceFrame = true;
+	bool SourceHasAlpha = false;
 
 	DWORD FrameDelayMs = 33;
 	ULONGLONG StartTick = 0;

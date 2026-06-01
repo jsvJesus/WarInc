@@ -16,6 +16,23 @@
 #include <NsCore/EnumConverter.h>
 #include <NsApp/MediaElement.h>
 
+#include <NsApp/PixelateEffect.h>
+#include <NsApp/DirectionalBlurEffect.h>
+#include <NsApp/SaturationEffect.h>
+#include <NsApp/TintEffect.h>
+#include <NsApp/VignetteEffect.h>
+
+#include <NsApp/Interaction.h>
+#include <NsApp/StyleInteraction.h>
+#include <NsApp/TriggerCollection.h>
+#include <NsApp/BehaviorCollection.h>
+#include <NsApp/EventTrigger.h>
+#include <NsApp/KeyTrigger.h>
+#include <NsApp/ControlStoryboardAction.h>
+#include <NsApp/MediaActions.h>
+#include <NsApp/SetFocusAction.h>
+#include <NsApp/PlaySoundAction.h>
+
 #include <NsGui/IntegrationAPI.h>
 #include <NsGui/FrameworkElement.h>
 #include <NsGui/IView.h>
@@ -55,6 +72,40 @@ static void BridgeLog(const char* text)
 {
 	OutputDebugStringA(text);
 	OutputDebugStringA("\n");
+}
+
+static void RegisterWarNoesisAppComponents()
+{
+	Noesis::RegisterComponent<NoesisApp::PixelateEffect>();
+	Noesis::RegisterComponent<NoesisApp::DirectionalBlurEffect>();
+	Noesis::RegisterComponent<NoesisApp::SaturationEffect>();
+	Noesis::RegisterComponent<NoesisApp::TintEffect>();
+	Noesis::RegisterComponent<NoesisApp::VignetteEffect>();
+
+	Noesis::TypeOf<NoesisApp::Interaction>();
+	Noesis::TypeOf<NoesisApp::StyleInteraction>();
+
+	Noesis::RegisterComponent<NoesisApp::BehaviorCollection>();
+	Noesis::RegisterComponent<NoesisApp::TriggerCollection>();
+	Noesis::RegisterComponent<NoesisApp::StyleBehaviorCollection>();
+	Noesis::RegisterComponent<NoesisApp::StyleTriggerCollection>();
+
+	Noesis::RegisterComponent<NoesisApp::EventTrigger>();
+	Noesis::RegisterComponent<NoesisApp::KeyTrigger>();
+
+	Noesis::RegisterComponent<NoesisApp::ControlStoryboardAction>();
+	Noesis::RegisterComponent<NoesisApp::PlaySoundAction>();
+	Noesis::RegisterComponent<NoesisApp::SetFocusAction>();
+
+	Noesis::RegisterComponent<NoesisApp::PlayMediaAction>();
+	Noesis::RegisterComponent<NoesisApp::PauseMediaAction>();
+	Noesis::RegisterComponent<NoesisApp::RewindMediaAction>();
+	Noesis::RegisterComponent<NoesisApp::StopMediaAction>();
+
+	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::ControlStoryboardOption> >();
+	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::KeyTriggerFiredOn> >();
+
+	BridgeLog("WarNoesisBridge: NoesisApp shaders and interactivity registered");
 }
 
 static int EnsureNoesisRenderer()
@@ -416,6 +467,7 @@ WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 
 	Noesis::RegisterComponent<NoesisApp::MediaElement>();
 	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::MediaState> >();
+	RegisterWarNoesisAppComponents();
 
 	WarNoesisMediaPlayer_Init(gRootPath);
 

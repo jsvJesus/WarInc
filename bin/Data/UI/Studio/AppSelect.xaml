@@ -379,23 +379,14 @@
 
             <StackPanel
                 x:Name="TitleHost"
-                Grid.Row="0"
-                Orientation="Horizontal"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Opacity="0">
-
-                <Grid Width="96" Height="96" Margin="0,0,28,0">
-                    <Image Source="Assets/WarIncBattleZoneIcon.png" Stretch="Uniform"/>
-                </Grid>
+                Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Orientation="Horizontal" Opacity="0">
 
                 <TextBlock
-                    Text="ECLIPSE"
                     Foreground="{StaticResource TextWhite}"
                     FontFamily="Verdana"
                     FontSize="64"
-                    FontWeight="Bold"
-                    VerticalAlignment="Center"/>
+                    FontWeight="Bold" Text="WAR" VerticalAlignment="Center"/>
 
                 <TextBlock
                     Text="STUDIO"

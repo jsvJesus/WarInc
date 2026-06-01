@@ -85,7 +85,19 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;WAR_NOESIS_BRIDGE_EXPORTS;WIN64;_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        ..\External\NoesisGUI\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Providers\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Shaders\Include;
+        ..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Interactivity\Include;
+        ..\External\NoesisGUI\Src\Packages\App\ApplicationLauncher\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Display\Include;
+        ..\External\NoesisGUI\Src\Packages\App\DisplayLauncher\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Launcher\Include;
+        ..\External\NoesisGUI\Src\Packages\Render\RenderContext\Include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -105,7 +117,19 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;WAR_NOESIS_BRIDGE_EXPORTS;WIN64;_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\External\NoesisGUI\Include;..\External\NoesisGUI\Src\Packages\App\Providers\Include;..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        ..\External\NoesisGUI\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Providers\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Shaders\Include;
+        ..\External\NoesisGUI\Src\Packages\App\MediaElement\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Interactivity\Include;
+        ..\External\NoesisGUI\Src\Packages\App\ApplicationLauncher\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Display\Include;
+        ..\External\NoesisGUI\Src\Packages\App\DisplayLauncher\Include;
+        ..\External\NoesisGUI\Src\Packages\App\Launcher\Include;
+        ..\External\NoesisGUI\Src\Packages\Render\RenderContext\Include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
