@@ -4,9 +4,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Width="1920"
-    Height="1080"
-    Background="#FF000000" d:DesignWidth="1920" d:DesignHeight="1080">
+    Background="#FF000000"
+    d:DesignWidth="1920"
+    d:DesignHeight="1080">
 
     <UserControl.Resources>
 
@@ -120,7 +120,20 @@
                 <Grid.Background>
                     <ImageBrush Stretch="UniformToFill" ImageSource="Assets/Background.png"/>
                 </Grid.Background>
-                <MediaElement Source="Assets/Video_Smoke_Splash.mp4" Stretch="Fill" Volume="0.83" ScrubbingEnabled="True" Opacity="0.55"/>
+                <MediaElement
+					x:Name="SmokeVideo"
+					Width="1920"
+					Height="1080"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Stretch"
+					Source="Assets/Video_Smoke_Splash.mp4"
+					Stretch="Fill"
+					LoadedBehavior="Play"
+					UnloadedBehavior="Close"
+					IsMuted="True"
+					Volume="0"
+					ScrubbingEnabled="True"
+					IsHitTestVisible="False"/>
             </Grid>
         </Grid>
 

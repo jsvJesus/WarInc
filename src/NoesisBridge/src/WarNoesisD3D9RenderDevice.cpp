@@ -412,19 +412,14 @@ void WarNoesisD3D9RenderDevice::DrawBatch(const Noesis::Batch& batch)
 		if(coverage > 1.0f)
 			coverage = 1.0f;
 
-		float alpha = ((float)a / 255.0f) * coverage;
-
-		unsigned char outA = (unsigned char)(alpha * 255.0f);
-		unsigned char outR = (unsigned char)((float)r * alpha);
-		unsigned char outG = (unsigned char)((float)g * alpha);
-		unsigned char outB = (unsigned char)((float)b * alpha);
+		a = (unsigned char)((float)a * coverage);
 
 		D3D9Vertex out;
 		out.x = src.x - 0.5f;
 		out.y = src.y - 0.5f;
 		out.z = 0.0f;
 		out.rhw = 1.0f;
-		out.color = D3DCOLOR_ARGB(outA, outR, outG, outB);
+		out.color = D3DCOLOR_ARGB(a, r, g, b);
 		out.u = src.u;
 		out.v = src.v;
 
@@ -507,9 +502,6 @@ void WarNoesisD3D9RenderDevice::ApplyRenderState(const Noesis::RenderState& stat
 	else
 		Device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 
-	Device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	Device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-
 	switch(state.f.blendMode)
 	{
 	case Noesis::BlendMode::Src:
@@ -518,21 +510,17 @@ void WarNoesisD3D9RenderDevice::ApplyRenderState(const Noesis::RenderState& stat
 		break;
 
 	case Noesis::BlendMode::SrcOver_Additive:
-		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
 		break;
 
 	default:
-		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 		break;
 	}
 
-	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
-	Device->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
-	Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
-	Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
-
+	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, FALSE);
 	Device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 }
 
@@ -665,15 +653,9 @@ void WarNoesisD3D9RenderDevice::ConvertCopyRGBA8(
 			unsigned char b = s[x * 4 + 2];
 			unsigned char a = s[x * 4 + 3];
 
-			float alpha = (float)a / 255.0f;
-
-			unsigned char pr = (unsigned char)((float)r * alpha);
-			unsigned char pg = (unsigned char)((float)g * alpha);
-			unsigned char pb = (unsigned char)((float)b * alpha);
-
-			d[x * 4 + 0] = pb;
-			d[x * 4 + 1] = pg;
-			d[x * 4 + 2] = pr;
+			d[x * 4 + 0] = b;
+			d[x * 4 + 1] = g;
+			d[x * 4 + 2] = r;
 			d[x * 4 + 3] = a;
 		}
 	}
@@ -723,9 +705,9 @@ void WarNoesisD3D9RenderDevice::ConvertCopyR8(
 		{
 			unsigned char a = s[x];
 
-			d[x * 4 + 0] = a;
-			d[x * 4 + 1] = a;
-			d[x * 4 + 2] = a;
+			d[x * 4 + 0] = 255;
+			d[x * 4 + 1] = 255;
+			d[x * 4 + 2] = 255;
 			d[x * 4 + 3] = a;
 		}
 	}
