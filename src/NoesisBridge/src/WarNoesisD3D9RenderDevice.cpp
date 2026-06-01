@@ -476,12 +476,25 @@ void WarNoesisD3D9RenderDevice::SetDefaultStates()
 	Device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 	Device->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 	Device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, FALSE);
+	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
 	Device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+	Device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	Device->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
+
+	Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+	Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+
+	Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+	Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
+
+	Device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+	Device->SetRenderState(D3DRS_COLORWRITEENABLE, 0x0000000F);
 
 	Device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 	Device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 	Device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+
 	Device->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	Device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 	Device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
@@ -502,25 +515,35 @@ void WarNoesisD3D9RenderDevice::ApplyRenderState(const Noesis::RenderState& stat
 	else
 		Device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 
+	Device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
+	Device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	Device->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
+
 	switch(state.f.blendMode)
 	{
 	case Noesis::BlendMode::Src:
 		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_ZERO);
 		break;
 
 	case Noesis::BlendMode::SrcOver_Additive:
 		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_ONE);
 		break;
 
 	default:
 		Device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
 		Device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		Device->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
+		Device->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
 		break;
 	}
 
-	Device->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, FALSE);
 	Device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 }
 

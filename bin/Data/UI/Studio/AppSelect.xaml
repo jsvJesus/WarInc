@@ -61,8 +61,7 @@
                                     HorizontalAlignment="Right"
                                     Background="#2210334D"
                                     BorderBrush="#6639A8E8"
-                                    BorderThickness="3"
-                                    Margin="0,0,0,0">
+                                    BorderThickness="3">
 
                                     <TextBlock
                                         Text=">"
@@ -78,6 +77,7 @@
                                 <ContentPresenter
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"/>
+
                             </Grid>
                         </Border>
 
@@ -113,37 +113,32 @@
 
     </UserControl.Resources>
 
-    <Grid Background="#FF000000">
+    <Grid Background="#FF000000" ClipToBounds="True">
 
-        <Grid ClipToBounds="True">
-            <Grid x:Name="BackgroundMap">
-                <Grid.Background>
-                    <ImageBrush Stretch="UniformToFill" ImageSource="Assets/Background.png"/>
-                </Grid.Background>
-                <MediaElement
-					x:Name="SmokeVideo"
-					Width="1920"
-					Height="1080"
-					HorizontalAlignment="Stretch"
-					VerticalAlignment="Stretch"
-					Source="Assets/Video_Smoke_Splash.mp4"
-					Stretch="Fill"
-					LoadedBehavior="Play"
-					UnloadedBehavior="Close"
-					IsMuted="True"
-					Volume="0"
-					ScrubbingEnabled="True"
-					IsHitTestVisible="False"/>
-            </Grid>
-        </Grid>
+        <Image
+            Source="Assets/Background.png"
+            Stretch="UniformToFill"
+            IsHitTestVisible="False"/>
 
-        <Rectangle Fill="#400B2C45"/>
+        <MediaElement
+            x:Name="SmokeVideo"
+            Source="Assets/Video_Smoke_Splash.mp4"
+            Stretch="UniformToFill"
+            LoadedBehavior="Play"
+            UnloadedBehavior="Close"
+            IsMuted="True"
+            Volume="0"
+            ScrubbingEnabled="True"
+            IsHitTestVisible="False"
+            Opacity="0.35"/>
 
-        <Rectangle Opacity="0.25">
+        <Rectangle Fill="#66030D16"/>
+
+        <Rectangle Opacity="0.35">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="0.5,0.38" GradientOrigin="0.5,0.38" RadiusX="0.9" RadiusY="0.9">
-                    <GradientStop Color="#221E7AAD" Offset="0"/>
-                    <GradientStop Color="#99102F4A" Offset="0.58"/>
+                    <GradientStop Color="#111E7AAD" Offset="0"/>
+                    <GradientStop Color="#88102F4A" Offset="0.58"/>
                     <GradientStop Color="#DD071A2A" Offset="1"/>
                 </RadialGradientBrush>
             </Rectangle.Fill>
@@ -158,9 +153,6 @@
             Opacity="1">
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel.Background>
-                    <SolidColorBrush Color="#00000000"/>
-                </StackPanel.Background>
 
                 <StackPanel
                     Orientation="Horizontal"
@@ -168,17 +160,21 @@
                     Margin="0,0,0,58">
 
                     <Grid Width="104" Height="104" Margin="0,0,26,0">
-                        <Image Source="Assets/WarIncBattleZoneIcon.png"/>
+                        <Image Source="Assets/WarIncBattleZoneIcon.png" Stretch="Uniform"/>
                     </Grid>
 
                     <TextBlock
-                        Foreground="{StaticResource TextWhite}" FontFamily="Verdana"
+                        Text="ECLIPSE"
+                        Foreground="{StaticResource TextWhite}"
+                        FontFamily="Verdana"
                         FontSize="62"
-                        FontWeight="Bold" Text="GAME" VerticalAlignment="Center"/>
+                        FontWeight="Bold"
+                        VerticalAlignment="Center"/>
 
                     <TextBlock
                         Text="STUDIO"
-                        Foreground="{StaticResource TextBlue}" FontFamily="Verdana"
+                        Foreground="{StaticResource TextBlue}"
+                        FontFamily="Verdana"
                         FontSize="62"
                         FontWeight="Bold"
                         VerticalAlignment="Center"
@@ -187,36 +183,34 @@
                 </StackPanel>
 
                 <Button
-                    x:Name="BtnPlayGame" BorderBrush="#00000000" BitmapScalingMode="HighQuality" Style="{StaticResource PlayButton}"
+                    x:Name="BtnPlayGame" BorderBrush="#0039A8E8"
+                    Style="{StaticResource PlayButton}"
                     Content="PLAY GAME"/>
 
                 <Button
-                    x:Name="BtnLevelEditor" Margin="0" Style="{StaticResource MenuButton}"
+                    x:Name="BtnLevelEditor"
+                    Style="{StaticResource MenuButton}"
                     Content="LEVEL EDITOR"/>
 
                 <Button
-                    x:Name="BtnParticleEditor" BorderBrush="#0039A8E8"
+                    x:Name="BtnParticleEditor"
                     Style="{StaticResource MenuButton}"
                     Content="PARTICLE EDITOR"/>
 
                 <Button
-                    x:Name="BtnPhysicsEditor" BorderBrush="#0039A8E8" BitmapScalingMode="HighQuality"
+                    x:Name="BtnPhysicsEditor"
                     Style="{StaticResource MenuButton}"
                     Content="PHYSICS EDITOR"/>
 
                 <Button
-                    x:Name="BtnCharacterEditor" BorderBrush="#0039A8E8"
+                    x:Name="BtnCharacterEditor"
                     Style="{StaticResource MenuButton}"
                     Content="CHARACTER EDITOR"/>
 
                 <Button
                     x:Name="BtnExit"
                     Style="{StaticResource MenuButton}"
-                    Content="EXIT">
-                    <Button.BorderBrush>
-                        <SolidColorBrush Color="#8839A8E8" Opacity="0"/>
-                    </Button.BorderBrush>
-                </Button>
+                    Content="EXIT"/>
 
             </StackPanel>
         </Grid>

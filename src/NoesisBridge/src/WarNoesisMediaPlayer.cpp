@@ -328,6 +328,8 @@ private:
 		return self->TextureRender(device);
 	}
 
+	bool SourceHasAlpha = false;
+
 	Noesis::Texture* TextureRender(Noesis::RenderDevice* device)
 	{
 		if(!device || Width == 0 || Height == 0 || FrameRGBA.empty())
@@ -418,6 +420,8 @@ private:
 			return;
 		}
 
+		SourceHasAlpha = false;
+
 		IMFMediaType* type = NULL;
 
 		hr = MFCreateMediaType(&type);
@@ -425,8 +429,29 @@ private:
 		if(SUCCEEDED(hr))
 		{
 			type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-			type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
-			Reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, NULL, type);
+			type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_ARGB32);
+
+			HRESULT setHr = Reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, NULL, type);
+
+			if(SUCCEEDED(setHr))
+			{
+				SourceHasAlpha = true;
+			}
+			else
+			{
+				WarSafeRelease(type);
+
+				hr = MFCreateMediaType(&type);
+
+				if(SUCCEEDED(hr))
+				{
+					type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+					type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
+					Reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, NULL, type);
+				}
+
+				SourceHasAlpha = false;
+			}
 		}
 
 		WarSafeRelease(type);
@@ -616,11 +641,12 @@ private:
 					unsigned char b = src[i * 4 + 0];
 					unsigned char g = src[i * 4 + 1];
 					unsigned char r = src[i * 4 + 2];
+					unsigned char a = SourceHasAlpha ? src[i * 4 + 3] : 255;
 
 					dst[i * 4 + 0] = r;
 					dst[i * 4 + 1] = g;
 					dst[i * 4 + 2] = b;
-					dst[i * 4 + 3] = 255;
+					dst[i * 4 + 3] = a;
 				}
 
 				DirtyFrame = true;
