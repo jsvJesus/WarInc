@@ -3,8 +3,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-    xmlns:noesis="clr-namespace:NoesisGUIExtensions;assembly=Noesis.GUI.Extensions"
     mc:Ignorable="d"
     Background="#FF000000"
     d:DesignWidth="1920"
@@ -12,232 +10,320 @@
 
     <UserControl.Resources>
 
-        <SolidColorBrush x:Key="TextWhite" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="TextBlue" Color="#FF2AA6E2"/>
-        <SolidColorBrush x:Key="TextBlueDark" Color="#FF488EB5"/>
-
         <LinearGradientBrush x:Key="StudioBg" StartPoint="0.5,0" EndPoint="0.5,1">
             <GradientStop Offset="0" Color="#FF184C79"/>
             <GradientStop Offset="0.05" Color="#FF1B5688"/>
             <GradientStop Offset="1" Color="#FF071A2A"/>
         </LinearGradientBrush>
 
-        <Storyboard x:Key="Intro">
+        <SolidColorBrush x:Key="TextWhite" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="TextBlue" Color="#FF2AA6E2"/>
+        <SolidColorBrush x:Key="TextBlueDark" Color="#FF488EB5"/>
 
+        <Storyboard x:Key="Intro">
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="TitleHost" Storyboard.TargetProperty="Opacity">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
                 <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="1"/>
             </DoubleAnimationUsingKeyFrames>
 
             <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ButtonsHost" Storyboard.TargetProperty="Opacity">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.20" Value="0"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:0.75" Value="1"/>
+                <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.25" Value="0"/>
+                <EasingDoubleKeyFrame KeyTime="0:0:0.7" Value="1"/>
             </DoubleAnimationUsingKeyFrames>
 
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ButtonsHostTransform" Storyboard.TargetProperty="X">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="-90"/>
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ButtonsHost" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                <EasingDoubleKeyFrame KeyTime="0" Value="-120"/>
                 <EasingDoubleKeyFrame KeyTime="0:0:0.75" Value="0">
                     <EasingDoubleKeyFrame.EasingFunction>
                         <CircleEase EasingMode="EaseOut"/>
                     </EasingDoubleKeyFrame.EasingFunction>
                 </EasingDoubleKeyFrame>
             </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="VideoMain" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0.30"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:3" Value="0.42"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:6" Value="0.30"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:8" Value="0.30"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="VideoGhostA" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0.06"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.12" Value="0.22"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.24" Value="0.05"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.00" Value="0.05"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.15" Value="0.18"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.30" Value="0.06"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:6.00" Value="0.06"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="VideoGhostB" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0.05"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.18" Value="0.18"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.30" Value="0.04"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:4.10" Value="0.04"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:4.25" Value="0.16"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:4.40" Value="0.05"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.00" Value="0.05"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="VideoGhostATransform" Storyboard.TargetProperty="X" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="-10"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.12" Value="-34"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.24" Value="-8"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.15" Value="-28"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.30" Value="-10"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:6.00" Value="-10"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="VideoGhostBTransform" Storyboard.TargetProperty="X" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="10"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.18" Value="30"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.30" Value="8"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:4.25" Value="34"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:4.40" Value="10"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.00" Value="10"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="GlitchSweepTransform" Storyboard.TargetProperty="X" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="-2200"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:3.2" Value="2200">
-                    <EasingDoubleKeyFrame.EasingFunction>
-                        <CubicEase EasingMode="EaseInOut"/>
-                    </EasingDoubleKeyFrame.EasingFunction>
-                </EasingDoubleKeyFrame>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:5.0" Value="-2200"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="GlitchSweep" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:0.8" Value="0.24"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:1.0" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.2" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.35" Value="0.20"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.55" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:5.0" Value="0"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PixelLayer" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:2.8" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.0" Value="0.20"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.2" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.0" Value="0"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.15" Value="0.16"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.35" Value="0"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="PixelLayer" Storyboard.TargetProperty="Effect.Size" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0.001"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:2.8" Value="0.001"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.0" Value="5"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:3.2" Value="0.001"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.0" Value="0.001"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.15" Value="4"/>
-                <DiscreteDoubleKeyFrame KeyTime="0:0:7.35" Value="0.001"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BlurLayer" Storyboard.TargetProperty="Opacity" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="0.10"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:2.0" Value="0.18"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:4.0" Value="0.08"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:6.0" Value="0.15"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:8.0" Value="0.10"/>
-            </DoubleAnimationUsingKeyFrames>
-
-            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BlurLayer" Storyboard.TargetProperty="Effect.Radius" RepeatBehavior="Forever">
-                <DiscreteDoubleKeyFrame KeyTime="0" Value="2"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:2.0" Value="9"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:4.0" Value="3"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:6.0" Value="7"/>
-                <EasingDoubleKeyFrame KeyTime="0:0:8.0" Value="2"/>
-            </DoubleAnimationUsingKeyFrames>
-
         </Storyboard>
 
-        <Style x:Key="StudioButton" TargetType="Button">
+        <Style x:Key="TutorialButton" TargetType="Button">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Width" Value="720"/>
-            <Setter Property="Height" Value="64"/>
+            <Setter Property="Height" Value="76"/>
             <Setter Property="Margin" Value="0,9,0,9"/>
             <Setter Property="Foreground" Value="{StaticResource TextBlueDark}"/>
             <Setter Property="FontFamily" Value="Verdana"/>
             <Setter Property="FontSize" Value="31"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Background" Value="#7710334D"/>
-            <Setter Property="BorderBrush" Value="#551F4A6F"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Cursor" Value="Hand">
-
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                        <SkewTransform/>
+                        <RotateTransform/>
+                        <TranslateTransform/>
+                    </TransformGroup>
+                </Setter.Value>
             </Setter>
 
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid>
-                            <Border
-                                x:Name="ButtonBg"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Opacity="0.92"/>
+                        <ControlTemplate.Resources>
+                            <Geometry x:Key="BackgroundGeometry">
+                                M739.2,0 L768,29 739.2,57.6 739.2,57.6 2.6830986,57.6 C0.84507042,57.595981 0.004258133,57.122541 0,56.17857 L0,1.2790178 C0,0.4642857 0.92957746,0.0066964284 2.5352113,0 L739.2,0
+                            </Geometry>
 
-                            <Border
-                                Margin="8,7,64,7"
-                                BorderBrush="#552AA6E2"
-                                BorderThickness="2"
-                                Opacity="0.65"/>
+                            <Geometry x:Key="OuterGeometry">
+                                M763.49945,29 L738.14788,55.050287 4.0466106,55.050287 4.0466106,2.5497334 738.14788,2.5497334 z
+                            </Geometry>
 
-                            <Rectangle
-                                x:Name="LeftLine"
-                                HorizontalAlignment="Left"
-                                Width="8"
-                                Margin="10,10,0,10"
-                                Fill="#442AA6E2"/>
+                            <Geometry x:Key="OuterHiGeometry">
+                                M4.0466106,2.5497334 L738.14788,2.5497334
+                            </Geometry>
 
-                            <Border
-                                x:Name="ArrowBox"
-                                Width="62"
-                                HorizontalAlignment="Right"
-                                BorderBrush="#6639A8E8"
-                                BorderThickness="2"
-                                Background="#2210334D">
+                            <Geometry x:Key="InnerGeometry">
+                                M752.94514,29 L732.36003,47.708038 9.4939725,47.708038 9.4939725,9.8921791 732.36003,9.8921791 z
+                            </Geometry>
+
+                            <Geometry x:Key="IndicatorGeometry">
+                                M22.669079,2.25 L30.000323,2.25 41.087033,23.9 30.000323,45.39 22.669079,45.39 33.584941,23.816666 z
+                            </Geometry>
+                        </ControlTemplate.Resources>
+
+                        <Viewbox Stretch="Fill">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.12" To="MouseOver">
+                                            <VisualTransition.GeneratedEasingFunction>
+                                                <BackEase EasingMode="EaseOut" Amplitude="0.45"/>
+                                            </VisualTransition.GeneratedEasingFunction>
+                                        </VisualTransition>
+
+                                        <VisualTransition GeneratedDuration="0:0:0.12" To="Pressed"/>
+                                        <VisualTransition GeneratedDuration="0:0:0.18" From="MouseOver">
+                                            <VisualTransition.GeneratedEasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </VisualTransition.GeneratedEasingFunction>
+                                        </VisualTransition>
+                                    </VisualStateGroup.Transitions>
+
+                                    <VisualState x:Name="Normal"/>
+
+                                    <VisualState x:Name="MouseOver">
+                                        <Storyboard>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Bg" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BaseOuter" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BaseInner" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="FocusedOuter" Storyboard.TargetProperty="(Shape.Stroke).(Brush.Opacity)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="FocusedOuterHi" Storyboard.TargetProperty="(Shape.Stroke).(Brush.Opacity)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="FocusedInner" Storyboard.TargetProperty="(Shape.Stroke).(Brush.Opacity)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Indicator" Storyboard.TargetProperty="(Shape.Fill).(Brush.Opacity)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="1"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Indicator" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ContentHost" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="LayoutRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="10"/>
+                                            </DoubleAnimationUsingKeyFrames>
+
+                                            <ColorAnimationUsingKeyFrames Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Shape.Fill).(GradientBrush.GradientStops)[3].(GradientStop.Color)">
+                                                <EasingColorKeyFrame KeyTime="0" Value="#B2083C5E"/>
+                                            </ColorAnimationUsingKeyFrames>
+
+                                            <ColorAnimationUsingKeyFrames Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Shape.Fill).(GradientBrush.GradientStops)[2].(GradientStop.Color)">
+                                                <EasingColorKeyFrame KeyTime="0" Value="#990D3559"/>
+                                            </ColorAnimationUsingKeyFrames>
+
+                                            <ColorAnimationUsingKeyFrames Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Shape.Fill).(GradientBrush.GradientStops)[1].(GradientStop.Color)">
+                                                <EasingColorKeyFrame KeyTime="0" Value="#7F0D3559"/>
+                                            </ColorAnimationUsingKeyFrames>
+
+                                            <ColorAnimationUsingKeyFrames Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Shape.Fill).(GradientBrush.GradientStops)[0].(GradientStop.Color)">
+                                                <EasingColorKeyFrame KeyTime="0" Value="#3F0B3150"/>
+                                            </ColorAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="LeftRect" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)">
+                                                <EasingDoubleKeyFrame KeyTime="0" Value="4">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CircleEase EasingMode="EaseOut"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+
+                                                <EasingDoubleKeyFrame KeyTime="0:0:0.1" Value="1">
+                                                    <EasingDoubleKeyFrame.EasingFunction>
+                                                        <CircleEase EasingMode="EaseIn"/>
+                                                    </EasingDoubleKeyFrame.EasingFunction>
+                                                </EasingDoubleKeyFrame>
+                                            </DoubleAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+
+                                    <VisualState x:Name="Disabled"/>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+
+                            <Grid x:Name="LayoutRoot" Height="81" Width="768" RenderTransformOrigin="0.5,0.5" UseLayoutRounding="False">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform/>
+                                </Grid.RenderTransform>
+
+                                <Path x:Name="Bg" Data="{StaticResource BackgroundGeometry}" Stretch="Fill" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Fill>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0">
+                                            <GradientStop Color="#2D0C2B45" Offset="0"/>
+                                            <GradientStop Color="#660C2943" Offset="0.2"/>
+                                            <GradientStop Color="#7F0C2943" Offset="0.853"/>
+                                            <GradientStop Color="#99082C45" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Path.Fill>
+                                </Path>
+
+                                <Path x:Name="BaseOuter" Data="{StaticResource OuterGeometry}" Stretch="Fill" Margin="3,2.666,3.333,2.666" StrokeThickness="4" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Stroke>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0">
+                                            <GradientStop Color="#191F4A6F" Offset="0.02"/>
+                                            <GradientStop Color="#991F4A6F" Offset="0.5"/>
+                                            <GradientStop Color="#CC215078" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Path.Stroke>
+                                </Path>
+
+                                <Path x:Name="BaseInner" Data="{StaticResource InnerGeometry}" Stretch="Fill" Margin="7.002,9.418,11.086,9.418" StrokeThickness="4" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Stroke>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0">
+                                            <GradientStop Color="#001F466B" Offset="0.05"/>
+                                            <GradientStop Color="#9916395A" Offset="0.5"/>
+                                            <GradientStop Color="#CC1A4061" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Path.Stroke>
+                                </Path>
+
+                                <Path x:Name="FocusedOuter" Data="{StaticResource OuterGeometry}" Stretch="Fill" Margin="3,2.666,3.333,2.666" StrokeThickness="4" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Stroke>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0" Opacity="0">
+                                            <GradientStop Color="#0C4096BF" Offset="0.02"/>
+                                            <GradientStop Color="#7F4096BF" Offset="0.5"/>
+                                            <GradientStop Color="#B24096BF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Path.Stroke>
+                                </Path>
+
+                                <Path x:Name="FocusedOuterHi" Data="{StaticResource OuterHiGeometry}" Stretch="Fill" Margin="3,2.666,21.949,74.334" StrokeThickness="4" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Stroke>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0" Opacity="0">
+                                            <GradientStop Color="#0C4096BF" Offset="0.02"/>
+                                            <GradientStop Color="#7F4096BF" Offset="0.35"/>
+                                            <GradientStop Color="#B25BB6E2" Offset="0.65"/>
+                                            <GradientStop Color="#004096BF" Offset="1"/>
+                                            <GradientStop Color="#9BDCF4FF" Offset="0.55"/>
+                                        </LinearGradientBrush>
+                                    </Path.Stroke>
+                                </Path>
+
+                                <Path x:Name="FocusedInner" Data="{StaticResource InnerGeometry}" Stretch="Fill" Margin="7.002,9.418,11.086,9.418" StrokeThickness="4" RenderTransformOrigin="0,0.5">
+                                    <Path.RenderTransform>
+                                        <ScaleTransform ScaleX="0.95"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Stroke>
+                                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,0" Opacity="0">
+                                            <GradientStop Color="#002D6986" Offset="0.05"/>
+                                            <GradientStop Color="#99265A73" Offset="0.5"/>
+                                            <GradientStop Color="#B22D6986" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Path.Stroke>
+                                </Path>
+
+                                <Path x:Name="Indicator" Data="{StaticResource IndicatorGeometry}" Margin="0,18.75,21.63,18.75" Stretch="Fill" HorizontalAlignment="Right" Width="18.412" RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <TranslateTransform X="-70"/>
+                                    </Path.RenderTransform>
+
+                                    <Path.Fill>
+                                        <SolidColorBrush Color="#FF2AA6E2" Opacity="0"/>
+                                    </Path.Fill>
+                                </Path>
+
+                                <Rectangle x:Name="LeftRect" Margin="10" HorizontalAlignment="Left" Width="9" Fill="#0C215078" RenderTransformOrigin="0,0.5">
+                                    <Rectangle.RenderTransform>
+                                        <ScaleTransform/>
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
 
                                 <TextBlock
-                                    Text=">"
-                                    Foreground="#88488EB5"
-                                    FontFamily="Verdana"
-                                    FontSize="42"
-                                    FontWeight="Bold"
+                                    x:Name="ContentHost"
+                                    Text="{TemplateBinding Content}"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    FontFamily="{TemplateBinding FontFamily}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    FontWeight="{TemplateBinding FontWeight}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Margin="0,-5,0,0"/>
-                            </Border>
+                                    RenderTransformOrigin="0.5,0.5">
 
-                            <ContentPresenter
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBg" Property="Background" Value="#DD104B72"/>
-                                <Setter TargetName="ButtonBg" Property="BorderBrush" Value="#FF39A8E8"/>
-                                <Setter TargetName="LeftLine" Property="Fill" Value="#FF2AA6E2"/>
-                                <Setter TargetName="ArrowBox" Property="Background" Value="#55104B72"/>
-                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBg" Property="Background" Value="#FF082236"/>
-                                <Setter TargetName="ButtonBg" Property="BorderBrush" Value="#FFFFFFFF"/>
-                                <Setter Property="Foreground" Value="#FFBFEFFF"/>
-                            </Trigger>
-
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.35"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
+                                    <TextBlock.RenderTransform>
+                                        <TranslateTransform X="-30"/>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+                            </Grid>
+                        </Viewbox>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <Style x:Key="StudioButtonActive" TargetType="Button" BasedOn="{StaticResource StudioButton}">
+        <Style x:Key="TutorialButtonActive" TargetType="Button" BasedOn="{StaticResource TutorialButton}">
             <Setter Property="Foreground" Value="{StaticResource TextWhite}"/>
-            <Setter Property="Background" Value="#DD104B72"/>
-            <Setter Property="BorderBrush" Value="#FF39A8E8"/>
         </Style>
 
     </UserControl.Resources>
@@ -254,10 +340,10 @@
             Source="Assets/Background.png"
             Stretch="UniformToFill"
             IsHitTestVisible="False"
-            Opacity="0.90"/>
+            Opacity="0.85"/>
 
         <MediaElement
-            x:Name="VideoMain"
+            x:Name="SmokeVideo"
             Source="Assets/Video_Smoke_Splash.mp4"
             Stretch="UniformToFill"
             LoadedBehavior="Play"
@@ -266,113 +352,11 @@
             Volume="0"
             ScrubbingEnabled="True"
             IsHitTestVisible="False"
-            Opacity="0.34">
+            Opacity="0.28"/>
 
-            <b:Interaction.Triggers>
-                <b:EventTrigger EventName="Loaded">
-                    <noesis:PlayMediaAction/>
-                </b:EventTrigger>
-            </b:Interaction.Triggers>
-        </MediaElement>
+        <Rectangle Fill="#88020A12"/>
 
-        <MediaElement
-            x:Name="VideoGhostA"
-            Source="Assets/Video_Smoke_Splash.mp4"
-            Stretch="UniformToFill"
-            LoadedBehavior="Play"
-            UnloadedBehavior="Close"
-            IsMuted="True"
-            Volume="0"
-            ScrubbingEnabled="True"
-            IsHitTestVisible="False"
-            Opacity="0.06">
-            <MediaElement.RenderTransform>
-                <TranslateTransform x:Name="VideoGhostATransform" X="-10" Y="0"/>
-            </MediaElement.RenderTransform>
-        </MediaElement>
-
-        <MediaElement
-            x:Name="VideoGhostB"
-            Source="Assets/Video_Smoke_Splash.mp4"
-            Stretch="UniformToFill"
-            LoadedBehavior="Play"
-            UnloadedBehavior="Close"
-            IsMuted="True"
-            Volume="0"
-            ScrubbingEnabled="True"
-            IsHitTestVisible="False"
-            Opacity="0.05">
-            <MediaElement.RenderTransform>
-                <TranslateTransform x:Name="VideoGhostBTransform" X="10" Y="0"/>
-            </MediaElement.RenderTransform>
-        </MediaElement>
-
-        <Grid
-            x:Name="BlurLayer"
-            IsHitTestVisible="False"
-            Opacity="0.10">
-            <Grid.Effect>
-                <noesis:DirectionalBlurEffect Radius="2" Angle="0"/>
-            </Grid.Effect>
-
-            <Image
-                Source="Assets/Background.png"
-                Stretch="UniformToFill"
-                Opacity="0.50"/>
-
-            <Rectangle Fill="#330B6FA4"/>
-        </Grid>
-
-        <Grid
-            x:Name="PixelLayer"
-            IsHitTestVisible="False"
-            Opacity="0">
-            <Grid.Effect>
-                <noesis:PixelateEffect Size="0.001"/>
-            </Grid.Effect>
-
-            <Image
-                Source="Assets/Background.png"
-                Stretch="UniformToFill"
-                Opacity="0.70"/>
-
-            <Rectangle Fill="#3300AEEF"/>
-        </Grid>
-
-        <Rectangle Fill="#66020A12"/>
-
-        <Rectangle
-            x:Name="GlitchSweep"
-            Width="620"
-            HorizontalAlignment="Left"
-            Opacity="0"
-            IsHitTestVisible="False">
-            <Rectangle.Fill>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#00104B72" Offset="0"/>
-                    <GradientStop Color="#5539A8E8" Offset="0.45"/>
-                    <GradientStop Color="#AAFFFFFF" Offset="0.50"/>
-                    <GradientStop Color="#5539A8E8" Offset="0.55"/>
-                    <GradientStop Color="#00104B72" Offset="1"/>
-                </LinearGradientBrush>
-            </Rectangle.Fill>
-            <Rectangle.RenderTransform>
-                <TranslateTransform x:Name="GlitchSweepTransform" X="-2200"/>
-            </Rectangle.RenderTransform>
-        </Rectangle>
-
-        <Canvas Opacity="0.15" IsHitTestVisible="False">
-            <Rectangle Canvas.Top="60" Width="1920" Height="2" Fill="#FF39A8E8"/>
-            <Rectangle Canvas.Top="140" Width="1920" Height="1" Fill="#AA39A8E8"/>
-            <Rectangle Canvas.Top="230" Width="1920" Height="2" Fill="#8839A8E8"/>
-            <Rectangle Canvas.Top="360" Width="1920" Height="1" Fill="#AAFFFFFF"/>
-            <Rectangle Canvas.Top="520" Width="1920" Height="2" Fill="#6639A8E8"/>
-            <Rectangle Canvas.Top="690" Width="1920" Height="1" Fill="#AA39A8E8"/>
-            <Rectangle Canvas.Top="840" Width="1920" Height="2" Fill="#7739A8E8"/>
-            <Rectangle Canvas.Top="1010" Width="1920" Height="1" Fill="#AAFFFFFF"/>
-        </Canvas>
-
-        <Rectangle Opacity="0.44">
+        <Rectangle Opacity="0.55">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="0.5,0.42" GradientOrigin="0.5,0.42" RadiusX="0.85" RadiusY="0.85">
                     <GradientStop Color="#001B5688" Offset="0"/>
@@ -395,23 +379,14 @@
 
             <StackPanel
                 x:Name="TitleHost"
-                Grid.Row="0"
-                Orientation="Horizontal"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Opacity="0">
-
-                <Grid Width="96" Height="96" Margin="0,0,28,0">
-                    <Image Source="Assets/WarIncBattleZoneIcon.png" Stretch="Uniform"/>
-                </Grid>
+                Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Orientation="Horizontal" Opacity="0">
 
                 <TextBlock
-                    Text="ECLIPSE"
                     Foreground="{StaticResource TextWhite}"
                     FontFamily="Verdana"
                     FontSize="64"
-                    FontWeight="Bold"
-                    VerticalAlignment="Center"/>
+                    FontWeight="Bold" Text="WAR" VerticalAlignment="Center"/>
 
                 <TextBlock
                     Text="STUDIO"
@@ -431,37 +406,37 @@
                 Opacity="0">
 
                 <StackPanel.RenderTransform>
-                    <TranslateTransform x:Name="ButtonsHostTransform" X="-90"/>
+                    <TranslateTransform X="-120"/>
                 </StackPanel.RenderTransform>
 
                 <Button
                     x:Name="BtnPlayGame"
-                    Style="{StaticResource StudioButtonActive}"
+                    Style="{StaticResource TutorialButtonActive}"
                     Content="PLAY GAME"/>
 
                 <Button
                     x:Name="BtnLevelEditor"
-                    Style="{StaticResource StudioButton}"
+                    Style="{StaticResource TutorialButton}"
                     Content="LEVEL EDITOR"/>
 
                 <Button
                     x:Name="BtnParticleEditor"
-                    Style="{StaticResource StudioButton}"
+                    Style="{StaticResource TutorialButton}"
                     Content="PARTICLE EDITOR"/>
 
                 <Button
                     x:Name="BtnPhysicsEditor"
-                    Style="{StaticResource StudioButton}"
+                    Style="{StaticResource TutorialButton}"
                     Content="PHYSICS EDITOR"/>
 
                 <Button
                     x:Name="BtnCharacterEditor"
-                    Style="{StaticResource StudioButton}"
+                    Style="{StaticResource TutorialButton}"
                     Content="CHARACTER EDITOR"/>
 
                 <Button
                     x:Name="BtnExit"
-                    Style="{StaticResource StudioButton}"
+                    Style="{StaticResource TutorialButton}"
                     Content="EXIT"/>
 
             </StackPanel>

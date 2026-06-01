@@ -38,6 +38,7 @@ public:
     int		LoadDX11(const char* FName, int Type, const r3dTL::TArray <D3DXMACRO> & defines);
     bool	CreateDX11PosTexInputLayout();
     bool	CreateDX11PosColorInputLayout();
+    bool	SetDX11InputLayoutFromD3D9Decl(const void* d3d9Declaration);
     r3dDX11Shader* GetDX11Shader() const;
 
     void    SetActive(int Act = 0);

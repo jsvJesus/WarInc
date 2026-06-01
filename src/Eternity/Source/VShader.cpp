@@ -4,6 +4,7 @@
 #ifndef WO_SERVER
 #include "r3dDX11.h"
 #include "r3dDX11Shader.h"
+#include "r3dDX11InputLayout.h"
 #endif
 
 extern	char	__r3dBaseShaderPath[256];
@@ -659,6 +660,18 @@ bool r3dVertexShader :: CreateDX11PosColorInputLayout()
 		return false;
 
 	return m_dx11Shader->CreatePosColorInputLayout();
+#else
+	return false;
+#endif
+}
+
+bool r3dVertexShader :: SetDX11InputLayoutFromD3D9Decl(const void* d3d9Declaration)
+{
+#ifndef WO_SERVER
+	if(!m_dx11Shader)
+		return false;
+
+	return g_r3dDX11InputLayouts.Set(d3d9Declaration, m_dx11Shader);
 #else
 	return false;
 #endif

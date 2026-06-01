@@ -28,6 +28,7 @@
 #include "r3dDX11.h"
 #include "r3dDX11Texture.h"
 #include "r3dDX11State.h"
+#include "r3dDX11InputLayout.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -246,6 +247,7 @@ void r3dDX11Renderer::Shutdown()
 	ReleaseDebugTexturedQuad();
 	ReleaseDebugTriangle();
 
+	g_r3dDX11InputLayouts.Shutdown();
 	g_r3dDX11State.Shutdown();
 
 	ReleaseBackBuffer();
