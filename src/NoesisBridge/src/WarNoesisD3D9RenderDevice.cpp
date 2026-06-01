@@ -723,9 +723,9 @@ void WarNoesisD3D9RenderDevice::ConvertCopyR8(
 		{
 			unsigned char a = s[x];
 
-			d[x * 4 + 0] = 255;
-			d[x * 4 + 1] = 255;
-			d[x * 4 + 2] = 255;
+			d[x * 4 + 0] = a;
+			d[x * 4 + 1] = a;
+			d[x * 4 + 2] = a;
 			d[x * 4 + 3] = a;
 		}
 	}
