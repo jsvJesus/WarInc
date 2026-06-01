@@ -1,11 +1,14 @@
 #ifndef	__ETERNITY_R3DTEXTURE_H
 #define	__ETERNITY_R3DTEXTURE_H
 
-// textures can be allocated only with helper functions from r3dRenderer class
-
 #include "r3dRender.h"
 
 struct DeviceQueueItem ;
+
+#ifndef WO_SERVER
+class r3dDX11Texture;
+struct ID3D11ShaderResourceView;
+#endif
 
 class r3dTexture
 {
@@ -13,14 +16,15 @@ class r3dTexture
 	friend r3dTexture* _CreateTexture();
 	friend void _DeleteTexture(r3dTexture* tex);
 	friend void ProcessItem( const DeviceQueueItem& item );
+
 public:
 	enum Flags_e
 	{
 		fCreated        = (1<<3),
 		fLocked         = (1<<4),
-		fLockedForWrite = (1<<5),	// so, when Unlock() MipMaps will be regenerated
+		fLockedForWrite = (1<<5),
 		fRenderTarget	= (1<<6),
-		fPlayerTexture	= (1<<7)	// add to player textures when calculating memory stats
+		fPlayerTexture	= (1<<7)
 	};
 
 	static void Init() ;
@@ -39,7 +43,7 @@ public:
 	int			CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetTexFormat, int NumMipMaps, int SystemMem = 0 );
 	int			CreateCubemap( int EdgeLength, D3DFORMAT TargetTexFormat, int NumMipMaps );	
 
-	bool		IsValid() { return m_TexArray && (m_TexArray[0].Valid() != NULL) && !IsMissing(); } // do not consider texture valid if it's missing
+	bool		IsValid() { return m_TexArray && (m_TexArray[0].Valid() != NULL) && !IsMissing(); }
 	bool		IsMissing() const { return Missing; }
 
 	void		Unload();
@@ -49,13 +53,18 @@ public:
 	void*		Lock(int LockForWrite, const RECT *LocRect=NULL);
 	void		Unlock();
 
-	int			GetTextureSizeInVideoMemory(); // return size of this texture in video memory
-
+	int			GetTextureSizeInVideoMemory();
 
 	R3D_FORCEINLINE r3dD3DTextureTunnel GetD3DTunnel() const { r3d_assert(m_TexArray[0].Valid()); return m_TexArray[0] ; };
 	R3D_FORCEINLINE IDirect3DTexture9* AsTex2D() const { r3d_assert(m_TexArray[0].Valid()); return m_TexArray[0].AsTex2D(); }
 	R3D_FORCEINLINE IDirect3DCubeTexture9* AsTexCUBE() const { r3d_assert(m_TexArray[0].Valid()); return m_TexArray[0].AsTexCube() ; }
 	R3D_FORCEINLINE IDirect3DVolumeTexture9* AsTexVolume() const { r3d_assert(m_TexArray[0].Valid()); return m_TexArray[0].AsTexVolume(); }
+
+#ifndef WO_SERVER
+	r3dDX11Texture* GetDX11Texture();
+	ID3D11ShaderResourceView* GetDX11SRV();
+	bool HasDX11Texture();
+#endif
 
 	int			GetFlags() const { return Flags; }
 	int			GetID() const { return ID; }
@@ -79,6 +88,7 @@ public:
 	int		Instances;
 	r3dTexture	*pNext, *pPrev;
 	bool		bPersistent;
+
 private:
 	void	DestroyInternal() ;
 	int 	DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, int SystemMem );
@@ -101,17 +111,21 @@ private:
 	volatile LONG m_Loaded ;
 
 	r3dD3DTextureTunnel*	m_TexArray ;
+
+#ifndef WO_SERVER
+	r3dDX11Texture**		m_DX11TexArray;
+#endif
+
 	int						m_iNumTextures;
-	float*					m_pDelayTextureArray; // array of delays before switching to next texture
+	float*					m_pDelayTextureArray;
 	float					m_LastAccess;
 	int						m_AccessCounter;
 
 	D3DFORMAT	TexFormat;	
-	int			Pitch;				// pitch of line, in bytes;
+	int			Pitch;
 
 	r3dFileLoc	Location;
 
-	// you can't directly create or destroy texture... protected from accidents
 protected:
 	r3dTexture();
 	~r3dTexture();
@@ -133,4 +147,4 @@ void RemoveTextureReloadListener( TextureReloadListener listener ) ;
 
 bool HasTextureReloadListener( TextureReloadListener listener ) ;
 
-#endif // __ETERNITY_R3DTEXTURE_H
+#endif

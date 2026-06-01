@@ -1,6 +1,10 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11Texture.h"
+#endif
+
 #include "../SF/script.h"
 #include "r3dBackgroundTaskDispatcher.h"
 
@@ -17,6 +21,67 @@ int	r3dTexture_MinSize   = 1;		// Minimum possible texture dimension after scali
 int	r3dTexture_ScaleBoxInterpolate = 0;	// Use D3D_FILTER_BOX interpolation
 int	r3dTexture_UseEmpty  = 0; // for server
 
+#ifndef WO_SERVER
+
+static bool r3dTexture_DX11LinkEnabled()
+{
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	if(strstr(__r3dCmdLine, "-dx11linktex"))
+		return true;
+
+	if(strstr(__r3dCmdLine, "/dx11linktex"))
+		return true;
+
+	return false;
+}
+
+static bool r3dTexture_IsDDSMemory(const void* data, uint32_t dataSize)
+{
+	if(!data || dataSize < 4)
+		return false;
+
+	const unsigned int magic = *(const unsigned int*)data;
+	return magic == 0x20534444;
+}
+
+static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void* data, uint32_t dataSize, const char* debugName)
+{
+	if(!slot)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(!r3dTexture_IsDDSMemory(data, dataSize))
+		return;
+
+	if(*slot)
+	{
+		delete *slot;
+		*slot = NULL;
+	}
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+
+	if(!tex->LoadDDSFromMemory(data, (int)dataSize, debugName))
+	{
+		delete tex;
+		r3dOutToLog("r3dTexture DX11: failed to create SRV for '%s'\n", debugName ? debugName : "");
+		return;
+	}
+
+	*slot = tex;
+
+	r3dOutToLog("r3dTexture DX11: linked SRV '%s'\n", debugName ? debugName : "");
+}
+
+#endif
+
 //C
 //
 // r3dTexture
@@ -30,7 +95,9 @@ r3dTexture::r3dTexture()
 	m_Loaded = 0 ;
 
 	m_TexArray = NULL;
-
+#ifndef WO_SERVER
+	m_DX11TexArray = NULL;
+#endif
 	m_pDelayTextureArray = 0;
 	m_iNumTextures = 0;
 	m_LastAccess = 0;
@@ -527,6 +594,17 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 		}
 	}
 
+#ifndef WO_SERVER
+	if(m_DX11TexArray && index >= 0 && index < m_iNumTextures)
+	{
+		r3dTexture_CreateDX11FromDDSMemory(
+			&m_DX11TexArray[index],
+			FileInMemoryData,
+			FileInMemorySize,
+			DEBUG_NAME
+		);
+	}
+#endif
 
 	if( !ALLOW_ASYNC )
 	{
@@ -695,6 +773,22 @@ void r3dTexture::DestroyInternal()
 		delete [] m_TexArray;
 		m_TexArray = NULL ;
 	}
+#ifndef WO_SERVER
+	if(m_DX11TexArray)
+	{
+		for(int i = 0; i < m_iNumTextures; ++i)
+		{
+			if(m_DX11TexArray[i])
+			{
+				delete m_DX11TexArray[i];
+				m_DX11TexArray[i] = NULL;
+			}
+		}
+
+		delete [] m_DX11TexArray;
+		m_DX11TexArray = NULL;
+	}
+#endif
 	SAFE_DELETE_ARRAY(m_pDelayTextureArray);
 }
 
@@ -746,7 +840,13 @@ int r3dTexture::DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleM
 
 		m_iNumTextures = numElements;
 		m_TexArray = new r3dD3DTextureTunnel [ numElements ] ;
+
+#ifndef WO_SERVER
+		m_DX11TexArray = new r3dDX11Texture* [ numElements ];
+		memset(m_DX11TexArray, 0, sizeof(r3dDX11Texture*) * numElements);
+#endif
 		m_pDelayTextureArray = new float[numElements];
+		
 		for(int i=0; i<numElements; ++i)
 		{
 			char fullpath[512];
@@ -759,6 +859,11 @@ int r3dTexture::DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleM
 	{
 		m_iNumTextures = 1;
 		m_TexArray = new r3dD3DTextureTunnel[ 1 ] ;
+
+#ifndef WO_SERVER
+		m_DX11TexArray = new r3dDX11Texture* [ 1 ];
+		m_DX11TexArray[0] = NULL;
+#endif
 
 		LoadTextureInternal( 0, FName, TargetTexFormat, DownScale, DownScaleMinDim, SystemMem );
 	}
@@ -796,12 +901,72 @@ IDirect3DBaseTexture9* r3dTexture::GetD3DTexture()
 	return NULL;
 }
 
+#ifndef WO_SERVER
+
+r3dDX11Texture* r3dTexture::GetDX11Texture()
+{
+	if(!m_Loaded)
+		return NULL;
+
+	if(!m_DX11TexArray)
+		return NULL;
+
+	if(m_iNumTextures == 1)
+	{
+		return m_DX11TexArray[0];
+	}
+	else if(m_iNumTextures > 1)
+	{
+		r3d_assert(m_pDelayTextureArray);
+		r3d_assert(m_AccessCounter >= 0 && m_AccessCounter < m_iNumTextures);
+
+		if((r3dGetTime() - m_LastAccess) > m_pDelayTextureArray[m_AccessCounter])
+		{
+			m_LastAccess = r3dGetTime();
+			m_AccessCounter = (m_AccessCounter + 1) % m_iNumTextures;
+		}
+
+		r3d_assert(m_AccessCounter >= 0 && m_AccessCounter < m_iNumTextures);
+		return m_DX11TexArray[m_AccessCounter];
+	}
+
+	return NULL;
+}
+
+ID3D11ShaderResourceView* r3dTexture::GetDX11SRV()
+{
+	r3dDX11Texture* tex = GetDX11Texture();
+
+	if(!tex)
+		return NULL;
+
+	if(!tex->IsValid())
+		return NULL;
+
+	return tex->GetSRV();
+}
+
+bool r3dTexture::HasDX11Texture()
+{
+	return GetDX11SRV() != NULL;
+}
+
+#endif
+
 void r3dTexture::SetNewD3DTexture(IDirect3DBaseTexture9* newTex) 
 {
 	if(m_TexArray[0].Valid()) 
 		m_TexArray[0].ReleaseAndReset(); 
 
 	m_TexArray[0].Set( newTex );
+
+#ifndef WO_SERVER
+	if(m_DX11TexArray && m_DX11TexArray[0])
+	{
+		delete m_DX11TexArray[0];
+		m_DX11TexArray[0] = NULL;
+	}
+#endif
 }
 
 void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int aNumMipMaps, r3dD3DTextureTunnel* texture, bool isRenderTarget )
