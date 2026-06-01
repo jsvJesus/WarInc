@@ -241,6 +241,62 @@ static int r3dDX11Shader_StrIContains(const char* text, const char* find)
 	return 0;
 }
 
+static int r3dDX11Shader_LineIsPreprocessor(const std::string& line)
+{
+	for(size_t i = 0; i < line.length(); ++i)
+	{
+		if(r3dDX11Shader_IsWhite(line[i]))
+			continue;
+
+		return line[i] == '#';
+	}
+
+	return 0;
+}
+
+static int r3dDX11Shader_IsPixelOutputStructLine(const std::string& line)
+{
+	if(!r3dDX11Shader_StrIContains(line.c_str(), "struct"))
+		return 0;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "PSOUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "PS_OUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "PIXEL_OUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "PIXEL_OUTPUT"))
+		return 1;
+
+	return 0;
+}
+
+static int r3dDX11Shader_IsVertexOutputStructLine(const std::string& line)
+{
+	if(!r3dDX11Shader_StrIContains(line.c_str(), "struct"))
+		return 0;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "VSOUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "VS_OUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "VERT_OUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "VERTEX_OUTPUT"))
+		return 1;
+
+	if(r3dDX11Shader_StrIContains(line.c_str(), "OUTPUT"))
+		return 1;
+
+	return 0;
+}
+
 static void r3dDX11Shader_ReplaceSemanticToken(std::string& line, const char* oldSemantic, const char* newSemantic)
 {
 	if(!oldSemantic || !newSemantic)
@@ -396,6 +452,35 @@ static void r3dDX11Shader_ConvertPixelOutputSemantics(std::string& line, int for
 				colon += 1;
 				continue;
 			}
+		}
+
+		++colon;
+	}
+}
+
+static void r3dDX11Shader_ConvertPixelVPOSSemantic(std::string& line)
+{
+	size_t colon = 0;
+
+	while((colon = line.find(':', colon)) != std::string::npos)
+	{
+		if(r3dDX11Shader_ReplaceSemanticAtColon(line, colon, "VPOS", "SV_Position"))
+		{
+			size_t typePos = line.rfind("float2", colon);
+
+			if(typePos != std::string::npos)
+			{
+				const char before = typePos > 0 ? line[typePos - 1] : 0;
+				const char after = typePos + 6 < line.length() ? line[typePos + 6] : 0;
+
+				if(!r3dDX11Shader_IsIdentChar(before) && !r3dDX11Shader_IsIdentChar(after))
+				{
+					line.replace(typePos, 6, "float4");
+				}
+			}
+
+			colon += 1;
+			continue;
 		}
 
 		++colon;
@@ -1168,6 +1253,7 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 
 	out.reserve(sourceSize + 8192);
 	out += r3dDX11ShaderCompatibilityPrelude;
+	out += r3dDX11ShaderTextureCompatibility;
 	out += "#line 1\r\n";
 
 	std::string source(sourceCode, sourceSize);
@@ -1189,15 +1275,15 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 
 		if(!inOutputStruct)
 		{
-			if(r3dDX11Shader_StrIContains(line.c_str(), "struct") &&
-				(
-					r3dDX11Shader_StrIContains(line.c_str(), "OUT") ||
-					r3dDX11Shader_StrIContains(line.c_str(), "OUTPUT") ||
-					r3dDX11Shader_StrIContains(line.c_str(), "PSOUT") ||
-					r3dDX11Shader_StrIContains(line.c_str(), "VSOUT")
-				))
+			if(shaderType == R3D_DX11_SHADER_PIXEL)
 			{
-				pendingOutputStruct = 1;
+				if(r3dDX11Shader_IsPixelOutputStructLine(line))
+					pendingOutputStruct = 1;
+			}
+			else if(shaderType == R3D_DX11_SHADER_VERTEX)
+			{
+				if(r3dDX11Shader_IsVertexOutputStructLine(line))
+					pendingOutputStruct = 1;
 			}
 		}
 
@@ -1218,33 +1304,38 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 		}
 		else
 		{
-			r3dDX11Shader_RemoveConstantRegisterAnnotation(line);
-			r3dDX11Shader_ConvertSamplerFunctionParameters(line, samplerFunctions);
-			r3dDX11Shader_ConvertSamplerFunctionCalls(line, samplerFunctions);
-			r3dDX11Shader_ConvertTextureFetches(line);
+			const int isPreprocessorLine = r3dDX11Shader_LineIsPreprocessor(line);
 
-			if(shaderType == R3D_DX11_SHADER_PIXEL)
+			if(!isPreprocessorLine)
 			{
-				if(inOutputStruct)
-				{
-					r3dDX11Shader_ConvertPixelOutputSemantics(line, 1);
-				}
-				else if(r3dDX11Shader_LineHasToken(line, "main") || r3dDX11Shader_LineHasToken(line, "out"))
-				{
-					r3dDX11Shader_ConvertPixelOutputSemantics(line, 0);
-				}
+				r3dDX11Shader_RemoveConstantRegisterAnnotation(line);
+				r3dDX11Shader_ConvertSamplerFunctionParameters(line, samplerFunctions);
+				r3dDX11Shader_ConvertSamplerFunctionCalls(line, samplerFunctions);
+				r3dDX11Shader_ConvertTextureFetches(line);
 
-				r3dDX11Shader_ReplaceSemanticToken(line, "VPOS", "SV_Position");
-			}
-			else if(shaderType == R3D_DX11_SHADER_VERTEX)
-			{
-				if(inOutputStruct)
+				if(shaderType == R3D_DX11_SHADER_PIXEL)
 				{
-					r3dDX11Shader_ConvertVertexOutputSemantics(line, 1);
+					if(inOutputStruct)
+					{
+						r3dDX11Shader_ConvertPixelOutputSemantics(line, 1);
+					}
+					else if(r3dDX11Shader_LineHasToken(line, "main") || r3dDX11Shader_LineHasToken(line, "out"))
+					{
+						r3dDX11Shader_ConvertPixelOutputSemantics(line, 0);
+					}
+
+					r3dDX11Shader_ConvertPixelVPOSSemantic(line);
 				}
-				else if(r3dDX11Shader_LineHasToken(line, "main") || r3dDX11Shader_LineHasToken(line, "out"))
+				else if(shaderType == R3D_DX11_SHADER_VERTEX)
 				{
-					r3dDX11Shader_ConvertVertexOutputSemantics(line, 0);
+					if(inOutputStruct)
+					{
+						r3dDX11Shader_ConvertVertexOutputSemantics(line, 1);
+					}
+					else if(r3dDX11Shader_LineHasToken(line, "main") || r3dDX11Shader_LineHasToken(line, "out"))
+					{
+						r3dDX11Shader_ConvertVertexOutputSemantics(line, 0);
+					}
 				}
 			}
 
