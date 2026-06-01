@@ -17,6 +17,9 @@ public:
     bool Create2D(int width, int height, R3D_DX11_FORMAT format, const void* pixels, int pitch);
     bool CreateChecker(int size);
 
+    bool LoadDDSFromFile(const char* fileName);
+    bool LoadDDSFromMemory(const void* data, int dataSize, const char* debugName);
+
     void Destroy();
 
     bool IsValid() const;
@@ -26,6 +29,7 @@ public:
 
     int GetWidth() const;
     int GetHeight() const;
+    int GetMipCount() const;
     R3D_DX11_FORMAT GetFormat() const;
 
 private:
@@ -34,6 +38,7 @@ private:
 
     int Width;
     int Height;
+    int MipCount;
     R3D_DX11_FORMAT Format;
 };
 

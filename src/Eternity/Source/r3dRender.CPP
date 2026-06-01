@@ -3922,16 +3922,12 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 #endif
 }
 
-
-
 void r3dRenderLayer::EndRenderSimple( bool present /*= false*/ )
 {
 	// Present the backbuffer contents to the display
 	if( present )
 		pd3ddev->Present( NULL, NULL, NULL, NULL );
 }
-
-
 
 void r3dRenderLayer::SetRenderingMode(int Mode)
 {

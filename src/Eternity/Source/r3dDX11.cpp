@@ -896,12 +896,22 @@ bool r3dDX11Renderer::CreateDebugTexturedQuad()
 
 	DebugTexture = new r3dDX11Texture();
 
-	if(!DebugTexture->CreateChecker(256))
+	if(!DebugTexture->LoadDDSFromFile("Data\\Shaders\\Texture\\Missing.dds"))
 	{
-		delete DebugTexture;
-		DebugTexture = NULL;
-		r3dOutToLog("DX11: failed to create debug checker texture\n");
-		return false;
+		r3dOutToLog("DX11: failed to load Missing.dds, trying MissingTexture.dds\n");
+
+		if(!DebugTexture->LoadDDSFromFile("Data\\Shaders\\Texture\\MissingTexture.dds"))
+		{
+			r3dOutToLog("DX11: failed to load real DDS debug texture, using checker fallback\n");
+
+			if(!DebugTexture->CreateChecker(256))
+			{
+				delete DebugTexture;
+				DebugTexture = NULL;
+				r3dOutToLog("DX11: failed to create debug checker texture\n");
+				return false;
+			}
+		}
 	}
 
 	return true;
@@ -1021,6 +1031,16 @@ R3D_DX11_FORMAT r3dDX11_ConvertLegacyD3DFormat(int d3dFormat)
 {
 	switch((D3DFORMAT)d3dFormat)
 	{
+	case D3DFMT_DXT1:
+		return (R3D_DX11_FORMAT)DXGI_FORMAT_BC1_UNORM;
+
+	case D3DFMT_DXT2:
+	case D3DFMT_DXT3:
+		return (R3D_DX11_FORMAT)DXGI_FORMAT_BC2_UNORM;
+
+	case D3DFMT_DXT4:
+	case D3DFMT_DXT5:
+		return (R3D_DX11_FORMAT)DXGI_FORMAT_BC3_UNORM;
 	case D3DFMT_A8R8G8B8:
 		return (R3D_DX11_FORMAT)DXGI_FORMAT_B8G8R8A8_UNORM;
 
