@@ -599,6 +599,104 @@ static void r3dDX11Shader_AppendConvertedSampler(
 	out += line;
 }
 
+struct r3dDX11SamplerFunctionDesc
+{
+	std::string Name;
+};
+
+static void r3dDX11Shader_AddSamplerFunction(
+	std::vector<r3dDX11SamplerFunctionDesc>& functions,
+	const std::string& name
+)
+{
+	if(name.empty())
+		return;
+
+	for(size_t i = 0; i < functions.size(); ++i)
+	{
+		if(!_stricmp(functions[i].Name.c_str(), name.c_str()))
+			return;
+	}
+
+	r3dDX11SamplerFunctionDesc desc;
+	desc.Name = name;
+	functions.push_back(desc);
+}
+
+static void r3dDX11Shader_RegisterSamplerFunctionFromKeyword(
+	const std::string& line,
+	size_t keywordPos,
+	std::vector<r3dDX11SamplerFunctionDesc>* functions
+)
+{
+	if(!functions)
+		return;
+
+	const size_t openParen = line.rfind('(', keywordPos);
+
+	if(openParen == std::string::npos)
+		return;
+
+	size_t nameEnd = openParen;
+
+	while(nameEnd > 0 && r3dDX11Shader_IsWhite(line[nameEnd - 1]))
+		--nameEnd;
+
+	size_t nameStart = nameEnd;
+
+	while(nameStart > 0 && r3dDX11Shader_IsIdentChar(line[nameStart - 1]))
+		--nameStart;
+
+	if(nameStart >= nameEnd)
+		return;
+
+	std::string functionName = line.substr(nameStart, nameEnd - nameStart);
+
+	if(!_stricmp(functionName.c_str(), "if") ||
+		!_stricmp(functionName.c_str(), "for") ||
+		!_stricmp(functionName.c_str(), "while") ||
+		!_stricmp(functionName.c_str(), "switch"))
+	{
+		return;
+	}
+
+	r3dDX11Shader_AddSamplerFunction(*functions, functionName);
+}
+
+static void r3dDX11Shader_RemoveConstantRegisterAnnotation(std::string& line)
+{
+	size_t registerPos = line.find("register");
+
+	if(registerPos == std::string::npos)
+		return;
+
+	size_t openParen = line.find('(', registerPos);
+	size_t closeParen = line.find(')', openParen);
+
+	if(openParen == std::string::npos || closeParen == std::string::npos)
+		return;
+
+	size_t regType = openParen + 1;
+
+	while(regType < closeParen && r3dDX11Shader_IsWhite(line[regType]))
+		++regType;
+
+	if(regType >= closeParen)
+		return;
+
+	const char c = line[regType];
+
+	if(c == 's' || c == 'S' || c == 't' || c == 'T')
+		return;
+
+	size_t colon = line.rfind(':', registerPos);
+
+	if(colon == std::string::npos)
+		return;
+
+	line.erase(colon, closeParen - colon + 1);
+}
+
 static void r3dDX11Shader_TrimString(std::string& text)
 {
 	while(!text.empty() && r3dDX11Shader_IsWhite(text[0]))
@@ -821,7 +919,8 @@ static void r3dDX11Shader_ConvertTextureFetches(std::string& line)
 static void r3dDX11Shader_ConvertSamplerFunctionParameterType(
 	std::string& line,
 	const char* keyword,
-	const char* textureType
+	const char* textureType,
+	std::vector<r3dDX11SamplerFunctionDesc>* samplerFunctions
 )
 {
 	if(!keyword || !textureType)
@@ -840,6 +939,8 @@ static void r3dDX11Shader_ConvertSamplerFunctionParameterType(
 			pos += keywordLen;
 			continue;
 		}
+
+		r3dDX11Shader_RegisterSamplerFunctionFromKeyword(line, pos, samplerFunctions);
 
 		size_t nameStart = pos + keywordLen;
 
@@ -882,15 +983,179 @@ static void r3dDX11Shader_ConvertSamplerFunctionParameterType(
 	}
 }
 
-static void r3dDX11Shader_ConvertSamplerFunctionParameters(std::string& line)
+static void r3dDX11Shader_ConvertSamplerFunctionParameters(
+	std::string& line,
+	std::vector<r3dDX11SamplerFunctionDesc>& samplerFunctions
+)
 {
 	if(line.find('(') == std::string::npos && line.find(',') == std::string::npos)
 		return;
 
-	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler2D", "Texture2D");
-	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "samplerCUBE", "TextureCube");
-	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler3D", "Texture3D");
-	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler", "Texture2D");
+	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler2D", "Texture2D", &samplerFunctions);
+	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "samplerCUBE", "TextureCube", &samplerFunctions);
+	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler3D", "Texture3D", &samplerFunctions);
+	r3dDX11Shader_ConvertSamplerFunctionParameterType(line, "sampler", "Texture2D", &samplerFunctions);
+}
+
+static int r3dDX11Shader_IsLikelyFunctionDeclaration(
+	const std::string& line,
+	size_t functionPos
+)
+{
+	if(functionPos == 0 || functionPos > line.length())
+		return 0;
+
+	std::string prefix = line.substr(0, functionPos);
+	r3dDX11Shader_TrimString(prefix);
+
+	if(prefix.empty())
+		return 0;
+
+	size_t tokenEnd = prefix.length();
+
+	while(tokenEnd > 0 && r3dDX11Shader_IsWhite(prefix[tokenEnd - 1]))
+		--tokenEnd;
+
+	size_t tokenStart = tokenEnd;
+
+	while(tokenStart > 0 && r3dDX11Shader_IsIdentChar(prefix[tokenStart - 1]))
+		--tokenStart;
+
+	if(tokenStart >= tokenEnd)
+		return 0;
+
+	std::string token = prefix.substr(tokenStart, tokenEnd - tokenStart);
+
+	if(!_stricmp(token.c_str(), "void") ||
+		!_stricmp(token.c_str(), "float") ||
+		!_stricmp(token.c_str(), "float2") ||
+		!_stricmp(token.c_str(), "float3") ||
+		!_stricmp(token.c_str(), "float4") ||
+		!_stricmp(token.c_str(), "half") ||
+		!_stricmp(token.c_str(), "half2") ||
+		!_stricmp(token.c_str(), "half3") ||
+		!_stricmp(token.c_str(), "half4") ||
+		!_stricmp(token.c_str(), "int") ||
+		!_stricmp(token.c_str(), "bool"))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+static void r3dDX11Shader_ConvertSamplerFunctionCallByName(
+	std::string& line,
+	const char* functionName
+)
+{
+	if(!functionName || !functionName[0])
+		return;
+
+	const size_t nameLen = strlen(functionName);
+	size_t pos = 0;
+
+	while((pos = line.find(functionName, pos)) != std::string::npos)
+	{
+		const char before = pos > 0 ? line[pos - 1] : 0;
+		const char after = pos + nameLen < line.length() ? line[pos + nameLen] : 0;
+
+		if(r3dDX11Shader_IsIdentChar(before) || after != '(')
+		{
+			pos += nameLen;
+			continue;
+		}
+
+		if(r3dDX11Shader_IsLikelyFunctionDeclaration(line, pos))
+		{
+			pos += nameLen;
+			continue;
+		}
+
+		const size_t openPos = pos + nameLen;
+		size_t closePos = std::string::npos;
+
+		if(!r3dDX11Shader_FindMatchingParen(line, openPos, &closePos))
+		{
+			pos += nameLen;
+			continue;
+		}
+
+		std::string args = line.substr(openPos + 1, closePos - openPos - 1);
+		const size_t comma0 = r3dDX11Shader_FindTopLevelComma(args, 0);
+
+		if(comma0 == std::string::npos)
+		{
+			pos = closePos + 1;
+			continue;
+		}
+
+		std::string samplerArg = args.substr(0, comma0);
+		std::string restArg = args.substr(comma0 + 1);
+
+		r3dDX11Shader_TrimString(samplerArg);
+		r3dDX11Shader_TrimString(restArg);
+
+		if(samplerArg.empty())
+		{
+			pos = closePos + 1;
+			continue;
+		}
+
+		if(samplerArg.find(' ') != std::string::npos || samplerArg.find('\t') != std::string::npos)
+		{
+			pos = closePos + 1;
+			continue;
+		}
+
+		if(r3dDX11Shader_StrIContains(samplerArg.c_str(), "_Texture"))
+		{
+			pos = closePos + 1;
+			continue;
+		}
+
+		const std::string textureExpression = r3dDX11Shader_TextureExpressionFromSamplerExpression(samplerArg);
+
+		std::string replacement;
+		replacement.reserve(nameLen + textureExpression.length() + samplerArg.length() + restArg.length() + 16);
+
+		replacement += functionName;
+		replacement += "(";
+		replacement += textureExpression;
+		replacement += ", ";
+		replacement += samplerArg;
+		replacement += ", ";
+		replacement += restArg;
+		replacement += ")";
+
+		line.replace(pos, closePos - pos + 1, replacement);
+		pos += replacement.length();
+	}
+}
+
+static void r3dDX11Shader_ConvertSamplerFunctionCalls(
+	std::string& line,
+	const std::vector<r3dDX11SamplerFunctionDesc>& samplerFunctions
+)
+{
+	static const char* hardcodedSamplerFunctions[] =
+	{
+		"PCF1",
+		"PCF3",
+		"VSA",
+		"CalculateShadow",
+		"CalculateShadowN",
+		"ray_intersect_rm",
+		"ray_intersect_rm_lin",
+		"ray_intersect_rm_bin",
+		NULL
+	};
+
+	for(int i = 0; hardcodedSamplerFunctions[i]; ++i)
+		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, hardcodedSamplerFunctions[i]);
+
+	for(size_t i = 0; i < samplerFunctions.size(); ++i)
+		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, samplerFunctions[i].Name.c_str());
 }
 
 static std::string r3dDX11Shader_BuildCompatibilitySource(
@@ -903,7 +1168,6 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 
 	out.reserve(sourceSize + 8192);
 	out += r3dDX11ShaderCompatibilityPrelude;
-	out += r3dDX11ShaderTextureCompatibility;
 	out += "#line 1\r\n";
 
 	std::string source(sourceCode, sourceSize);
@@ -911,6 +1175,8 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 	size_t pos = 0;
 	int inOutputStruct = 0;
 	int pendingOutputStruct = 0;
+
+	std::vector<r3dDX11SamplerFunctionDesc> samplerFunctions;
 
 	while(pos < source.length())
 	{
@@ -952,7 +1218,9 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 		}
 		else
 		{
-			r3dDX11Shader_ConvertSamplerFunctionParameters(line);
+			r3dDX11Shader_RemoveConstantRegisterAnnotation(line);
+			r3dDX11Shader_ConvertSamplerFunctionParameters(line, samplerFunctions);
+			r3dDX11Shader_ConvertSamplerFunctionCalls(line, samplerFunctions);
 			r3dDX11Shader_ConvertTextureFetches(line);
 
 			if(shaderType == R3D_DX11_SHADER_PIXEL)
