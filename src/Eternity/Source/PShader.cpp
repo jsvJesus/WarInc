@@ -1,6 +1,11 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#include "r3dDX11Shader.h"
+#endif
+
 extern	char	__r3dBaseShaderPath[256];
 extern	char	__r3dBaseShaderCachePath[256];
 extern int g_IgnoreShaderCacheTimestamps;
@@ -25,14 +30,25 @@ void ReadIncludesFromFile( r3dFile* f1, r3dTL::TArray< r3dString >& oIncludes );
 
 r3dPixelShader::r3dPixelShader()
 {
-  m_pShader   = NULL; 
-  FileName[0] = 0;
-  Name[0]     = 0;
+	m_pShader = NULL;
+	m_dx11Shader = NULL;
+
+	FileName[0] = 0;
+	Name[0] = 0;
+	bSystem = 0;
 }
 
 void r3dPixelShader :: Unload()
 {
 	R3D_ENSURE_MAIN_THREAD();
+
+#ifndef WO_SERVER
+	if(m_dx11Shader)
+	{
+		delete m_dx11Shader;
+		m_dx11Shader = NULL;
+	}
+#endif
 
 	if(m_pShader)
 	{
@@ -320,14 +336,109 @@ int r3dPixelShader :: Load(const char* FName, int Type, const r3dTL::TArray <D3D
 		macro.Definition = dxmacro.Definition;
 	}
 
+	LoadDX11(FName, Type, defines);
+
 	return 1;
 }
 
+#ifndef WO_SERVER
 
+static void r3dDX11_BuildPixelShaderMacros(
+	r3dTL::TArray<r3dDX11ShaderMacro>& outMacros,
+	const r3dTL::TArray<D3DXMACRO>& defines
+)
+{
+	outMacros.Clear();
 
+	for(unsigned int i = 0; i < defines.Count(); ++i)
+	{
+		if(!defines[i].Name)
+			continue;
+
+		r3dDX11ShaderMacro macro;
+		macro.Name = defines[i].Name;
+		macro.Definition = defines[i].Definition ? defines[i].Definition : "1";
+		outMacros.PushBack(macro);
+	}
+
+	r3dDX11ShaderMacro vertexMacro;
+	vertexMacro.Name = "VERTEX_SHADER";
+	vertexMacro.Definition = "0";
+	outMacros.PushBack(vertexMacro);
+
+	r3dDX11ShaderMacro pixelMacro;
+	pixelMacro.Name = "PIXEL_SHADER";
+	pixelMacro.Definition = "1";
+	outMacros.PushBack(pixelMacro);
+
+	r3dDX11ShaderMacro nullMacro;
+	nullMacro.Name = NULL;
+	nullMacro.Definition = NULL;
+	outMacros.PushBack(nullMacro);
+}
+
+#endif
+
+int r3dPixelShader :: LoadDX11(const char* FName, int Type)
+{
+	r3dTL::TArray<D3DXMACRO> defines;
+	return LoadDX11(FName, Type, defines);
+}
+
+int r3dPixelShader :: LoadDX11(const char* FName, int Type, const r3dTL::TArray<D3DXMACRO>& defines)
+{
+	(void)Type;
+
+#ifndef WO_SERVER
+	if(!g_r3dDX11.IsInitialized())
+		return 0;
+
+	r3dTL::TArray<r3dDX11ShaderMacro> dx11Defines;
+	r3dDX11_BuildPixelShaderMacros(dx11Defines, defines);
+
+	if(!m_dx11Shader)
+		m_dx11Shader = new r3dDX11Shader();
+
+	if(!m_dx11Shader->CompilePixelFromFile(FName, "main", "ps_4_0", dx11Defines.Count() ? &dx11Defines[0] : NULL))
+	{
+		r3dOutToLog("DX11: failed to compile pixel shader '%s'\n%s\n", FName, r3dDX11Shader_GetLastError());
+
+		delete m_dx11Shader;
+		m_dx11Shader = NULL;
+
+		return 0;
+	}
+
+	r3dOutToLog("DX11: pixel shader compiled '%s'\n", FName);
+
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+r3dDX11Shader* r3dPixelShader :: GetDX11Shader() const
+{
+	return m_dx11Shader;
+}
 
 void r3dPixelShader :: SetActive(int Act)
 {
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		if(m_dx11Shader)
+		{
+			if(Act)
+				m_dx11Shader->SetActive();
+			else
+				m_dx11Shader->ClearActive();
+		}
+
+		return;
+	}
+#endif
+
 	if(!m_pShader) return;
 
 	r3dRenderer->Flush();
@@ -344,5 +455,3 @@ void r3dPixelShader :: SetActive(int Act)
 		D3D_V( d3dc._SetPixelShader(0) );
 	}
 }
-
-
