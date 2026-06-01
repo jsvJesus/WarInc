@@ -623,7 +623,7 @@ void r3dDX11LegacyGeometryBridge::LegacyDrawIndexedPrimitiveUP(
 	if(dx11IndexFormat == R3D_DX11_INDEX_UNKNOWN)
 		return;
 
-	g_r3dDX11Geometry.DrawIndexedPrimitiveUP(
+	g_r3dDX11Geometry.DrawIndexedPrimitiveUP( // ebana v rot
 		dx11PrimitiveType,
 		minVertexIndex,
 		numVertices,
