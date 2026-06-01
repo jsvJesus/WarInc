@@ -3,6 +3,38 @@
 
 #ifndef WO_SERVER
 
+#ifdef Draw
+#undef Draw
+#endif
+
+#ifdef DrawIndexed
+#undef DrawIndexed
+#endif
+
+#ifdef DrawPrimitive
+#undef DrawPrimitive
+#endif
+
+#ifdef DrawIndexedPrimitive
+#undef DrawIndexedPrimitive
+#endif
+
+#ifdef SetPrimitiveTopology
+#undef SetPrimitiveTopology
+#endif
+
+#ifdef IASetPrimitiveTopology
+#undef IASetPrimitiveTopology
+#endif
+
+#ifdef IASetVertexBuffers
+#undef IASetVertexBuffers
+#endif
+
+#ifdef IASetIndexBuffer
+#undef IASetIndexBuffer
+#endif
+
 struct ID3D11Buffer;
 
 enum r3dDX11PrimitiveType

@@ -10,6 +10,11 @@
 #include "pShader.h"
 #include "VShader.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#include "r3dDX11Geometry.h"
+#endif
+
 class r3dMaterial;
 
 struct R3D_SCREEN_VERTEX;
@@ -801,8 +806,21 @@ void r3dRenderLayer::DrawIndexed( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UI
 	Stats.AddAverageStripLength ( primCount * InstanceCount );
 #endif
 
-	D3D_V( pd3ddev->DrawIndexedPrimitive( Type, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount ) );
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Geometry.DrawIndexedPrimitive(
+			r3dDX11_ConvertD3D9PrimitiveType((int)Type),
+			BaseVertexIndex,
+			MinVertexIndex,
+			NumVertices,
+			startIndex,
+			primCount
+		);
+	}
+#endif
 
+	D3D_V( pd3ddev->DrawIndexedPrimitive( Type, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount ) );
 }
 
 R3D_FORCEINLINE
@@ -840,6 +858,17 @@ void r3dRenderLayer::Draw( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UIN
 
 	Stats.AddNumTrianglesRendered ( PrimitiveCount );
 	Stats.AddAverageStripLength	( PrimitiveCount );
+#endif
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11Geometry.DrawPrimitive(
+			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+			StartVertex,
+			PrimitiveCount
+		);
+	}
 #endif
 
 	D3D_V( pd3ddev->DrawPrimitive( PrimitiveType, StartVertex, PrimitiveCount ) );

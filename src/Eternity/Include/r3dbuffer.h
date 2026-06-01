@@ -5,6 +5,10 @@ class r3dVBuffer;
 class r3dIBuffer16;
 class r3dIBuffer32;
 
+#ifndef WO_SERVER
+struct ID3D11Buffer;
+#endif
+
 class r3dD3DQuery : public r3dIResource
 {
   protected:
@@ -73,6 +77,12 @@ class r3dD3DBuffer : public r3dIResource
 	// for vertex buffer
 	LPDIRECT3DVERTEXDECLARATION9		m_Decl;
 
+#ifndef WO_SERVER
+	ID3D11Buffer*	m_DX11Buffer;
+	void*			m_DX11MappedPtr;
+	void*			m_DX9LockedPtr;
+#endif
+
 	// locked start/size
 	DWORD		m_LockStart;
 	DWORD		m_LockSize;
@@ -94,15 +104,26 @@ class r3dD3DBuffer : public r3dIResource
 	}
 	void*		LockData(int size, int* lstart);
 	void		Unlock();
+
+#ifndef WO_SERVER
+	void			DX11CreateResource();
+	void			DX11ReleaseResource();
+
+	ID3D11Buffer*	GetDX11Buffer() const { return m_DX11Buffer; }
+#endif
+
+	DWORD			GetStride() const { return m_Stride; }
+	DWORD			GetCount() const { return m_Size; }
+	type_e			GetType() const { return m_Type; }
 	
 	IDirect3DVertexBuffer9* GetVB() { 
 	  r3d_assert(m_Type == BUFFER_Vertex);
 	  return pVB;
 	}
 
-	IDirect3DVertexBuffer9* GetIB() { 
-	  r3d_assert(m_Type == BUFFER_Index);
-	  return pVB;
+	IDirect3DIndexBuffer9* GetIB() { 
+		r3d_assert(m_Type == BUFFER_Index);
+		return pIB;
 	}
 	
 	void		Activate();

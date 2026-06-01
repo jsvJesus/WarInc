@@ -5,6 +5,31 @@
 
 #include "r3dDeviceQueue.h"
 
+#ifndef WO_SERVER
+
+#pragma warning(push)
+#pragma warning(disable: 4005)
+#pragma warning(disable: 4061)
+#pragma warning(disable: 4062)
+#pragma warning(disable: 4191)
+#pragma warning(disable: 4255)
+#pragma warning(disable: 4365)
+#pragma warning(disable: 4571)
+#pragma warning(disable: 4625)
+#pragma warning(disable: 4626)
+#pragma warning(disable: 4668)
+#pragma warning(disable: 4710)
+#pragma warning(disable: 4711)
+#pragma warning(disable: 4820)
+#include <dxgi.h>
+#include <d3d11.h>
+#pragma warning(pop)
+
+#include "r3dDX11.h"
+#include "r3dDX11Geometry.h"
+
+#endif
+
 static	HRESULT		hr;
 
 r3dD3DQuery::r3dD3DQuery(D3DQUERYTYPE type, const r3dIntegrityGuardian& ig /*= r3dIntegrityGuardian()*/ )
@@ -604,6 +629,12 @@ r3dD3DBuffer::r3dD3DBuffer(type_e type, int size, int stride, LPDIRECT3DVERTEXDE
 
 	m_Decl    = decl;
 
+#ifndef WO_SERVER
+	m_DX11Buffer = NULL;
+	m_DX11MappedPtr = NULL;
+	m_DX9LockedPtr = NULL;
+#endif
+
 	R3D_ENSURE_MAIN_THREAD();
 
 	D3DCreateResource();
@@ -615,6 +646,100 @@ r3dD3DBuffer::~r3dD3DBuffer()
 
 	D3DReleaseResource();
 }
+
+#ifndef WO_SERVER
+
+void r3dD3DBuffer::DX11CreateResource()
+{
+	if(m_DX11Buffer)
+		return;
+
+	if(!g_r3dDX11.IsInitialized())
+		return;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+
+	if(!device)
+		return;
+
+	if(!m_Size || !m_Stride)
+		return;
+
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.ByteWidth = m_Size * m_Stride;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.MiscFlags = 0;
+	desc.StructureByteStride = 0;
+
+	switch(m_Type)
+	{
+	default:
+		r3d_assert(0);
+		return;
+
+	case BUFFER_Index:
+		desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		break;
+
+	case BUFFER_Vertex:
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		break;
+	}
+
+	HRESULT dx11hr = device->CreateBuffer(&desc, NULL, &m_DX11Buffer);
+
+	if(FAILED(dx11hr))
+	{
+		r3dOutToLog(
+			"DX11Geometry: failed to create mirror %s buffer, size=%d stride=%d bytes=%d HRESULT=0x%08X\n",
+			m_Type == BUFFER_Index ? "index" : "vertex",
+			m_Size,
+			m_Stride,
+			m_Size * m_Stride,
+			(unsigned int)dx11hr
+		);
+
+		m_DX11Buffer = NULL;
+		return;
+	}
+
+	r3dOutToLog(
+		"DX11Geometry: created mirror %s buffer, size=%d stride=%d bytes=%d\n",
+		m_Type == BUFFER_Index ? "index" : "vertex",
+		m_Size,
+		m_Stride,
+		m_Size * m_Stride
+	);
+}
+
+void r3dD3DBuffer::DX11ReleaseResource()
+{
+	if(m_DX11MappedPtr)
+	{
+		if(g_r3dDX11.IsInitialized())
+		{
+			ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+			if(context && m_DX11Buffer)
+				context->Unmap(m_DX11Buffer, 0);
+		}
+
+		m_DX11MappedPtr = NULL;
+	}
+
+	if(m_DX11Buffer)
+	{
+		m_DX11Buffer->Release();
+		m_DX11Buffer = NULL;
+	}
+
+	m_DX9LockedPtr = NULL;
+}
+
+#endif
 
 void r3dD3DBuffer::D3DCreateResource()
 {
@@ -662,7 +787,11 @@ void r3dD3DBuffer::D3DCreateResource()
 		SetD3DResourcePrivateData(pVB, "r3dD3DBuffer: VB");
 		r3dRenderer->Stats.AddBufferMem ( + m_Size * m_Stride );
 		break;
-	} 
+	}
+
+#ifndef WO_SERVER
+	DX11CreateResource();
+#endif
 
 	return;
 }
@@ -670,6 +799,10 @@ void r3dD3DBuffer::D3DCreateResource()
 void r3dD3DBuffer::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
+
+#ifndef WO_SERVER
+	DX11ReleaseResource();
+#endif
 
 	switch(m_Type) 
 	{
@@ -723,6 +856,53 @@ void* r3dD3DBuffer::LockData(int size, int *lstart)
 	// advance to the next position
 	m_Pos      += size;
 
+#ifndef WO_SERVER
+	m_DX9LockedPtr = pOut;
+	m_DX11MappedPtr = NULL;
+
+	if(g_r3dDX11.IsInitialized())
+	{
+		if(!m_DX11Buffer)
+			DX11CreateResource();
+
+		if(m_DX11Buffer)
+		{
+			ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+			if(context)
+			{
+				D3D11_MAPPED_SUBRESOURCE mapped;
+				ZeroMemory(&mapped, sizeof(mapped));
+
+				D3D11_MAP mapType = D3D11_MAP_WRITE_NO_OVERWRITE;
+
+				if(dwLockFlags & D3DLOCK_DISCARD)
+					mapType = D3D11_MAP_WRITE_DISCARD;
+
+				HRESULT dx11hr = context->Map(
+					m_DX11Buffer,
+					0,
+					mapType,
+					0,
+					&mapped
+				);
+
+				if(SUCCEEDED(dx11hr))
+				{
+					m_DX11MappedPtr = (BYTE*)mapped.pData + m_LockStart * m_Stride;
+				}
+				else
+				{
+					r3dOutToLog(
+						"DX11Geometry: failed to map mirror buffer, HRESULT=0x%08X\n",
+						(unsigned int)dx11hr
+					);
+				}
+			}
+		}
+	}
+#endif
+
 	if(lstart)
 		*lstart = m_LockStart;
 
@@ -736,6 +916,25 @@ void r3dD3DBuffer::Unlock()
 {
 	r3d_assert(m_LockSize);
 
+#ifndef WO_SERVER
+	if(m_DX11Buffer && m_DX11MappedPtr && m_DX9LockedPtr)
+	{
+		memcpy(
+			m_DX11MappedPtr,
+			m_DX9LockedPtr,
+			m_LockSize * m_Stride
+		);
+
+		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+		if(context)
+			context->Unmap(m_DX11Buffer, 0);
+
+		m_DX11MappedPtr = NULL;
+		m_DX9LockedPtr = NULL;
+	}
+#endif
+
 	switch(m_Type) {
 	case BUFFER_Index:
 		hr = pIB->Unlock();
@@ -746,6 +945,11 @@ void r3dD3DBuffer::Unlock()
 	}
 
 	m_LockSize = 0;
+
+#ifndef WO_SERVER
+	m_DX11MappedPtr = NULL;
+	m_DX9LockedPtr = NULL;
+#endif
 }
 
 void r3dD3DBuffer::Activate()
@@ -754,19 +958,59 @@ void r3dD3DBuffer::Activate()
 
 	switch(m_Type) 
 	{
-	default: r3d_assert(0);
+	default:
+		r3d_assert(0);
+		break;
+
 	case BUFFER_Index:
 		d3dc._SetIndices(pIB);
+
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+		{
+			if(!m_DX11Buffer)
+				DX11CreateResource();
+
+			if(m_DX11Buffer)
+			{
+				g_r3dDX11Geometry.SetIndexBufferRaw(
+					m_DX11Buffer,
+					m_Stride == 2 ? R3D_DX11_INDEX_16BIT : R3D_DX11_INDEX_32BIT,
+					0
+				);
+			}
+		}
+#endif
+
 		break;
+
 	case BUFFER_Vertex:
 		d3dc._SetDecl(m_Decl);
 		d3dc._SetStreamSource(0, GetVB(), 0, m_Stride);
+
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+		{
+			if(!m_DX11Buffer)
+				DX11CreateResource();
+
+			if(m_DX11Buffer)
+			{
+				g_r3dDX11Geometry.SetVertexBufferRaw(
+					0,
+					m_DX11Buffer,
+					m_Stride,
+					0
+				);
+			}
+		}
+#endif
+
 		break;
 	}
 
 	return;
 }
-
 
 void r3dVertexArray::D3DCreateResource()
 {

@@ -31,6 +31,38 @@
 #include "r3dDX11InputLayout.h"
 #include "r3dDX11Geometry.h"
 
+#ifdef Draw
+#undef Draw
+#endif
+
+#ifdef DrawIndexed
+#undef DrawIndexed
+#endif
+
+#ifdef DrawPrimitive
+#undef DrawPrimitive
+#endif
+
+#ifdef DrawIndexedPrimitive
+#undef DrawIndexedPrimitive
+#endif
+
+#ifdef SetPrimitiveTopology
+#undef SetPrimitiveTopology
+#endif
+
+#ifdef IASetPrimitiveTopology
+#undef IASetPrimitiveTopology
+#endif
+
+#ifdef IASetVertexBuffers
+#undef IASetVertexBuffers
+#endif
+
+#ifdef IASetIndexBuffer
+#undef IASetIndexBuffer
+#endif
+
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")

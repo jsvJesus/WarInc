@@ -24,6 +24,38 @@
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
 
+#ifdef Draw
+#undef Draw
+#endif
+
+#ifdef DrawIndexed
+#undef DrawIndexed
+#endif
+
+#ifdef DrawPrimitive
+#undef DrawPrimitive
+#endif
+
+#ifdef DrawIndexedPrimitive
+#undef DrawIndexedPrimitive
+#endif
+
+#ifdef SetPrimitiveTopology
+#undef SetPrimitiveTopology
+#endif
+
+#ifdef IASetPrimitiveTopology
+#undef IASetPrimitiveTopology
+#endif
+
+#ifdef IASetVertexBuffers
+#undef IASetVertexBuffers
+#endif
+
+#ifdef IASetIndexBuffer
+#undef IASetIndexBuffer
+#endif
+
 template<typename T>
 static void r3dDX11Geometry_Release(T*& ptr)
 {

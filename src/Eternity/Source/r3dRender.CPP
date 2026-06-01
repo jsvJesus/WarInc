@@ -1,6 +1,11 @@
 #include	"r3dPCH.h"
 #include	"r3d.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#include "r3dDX11Geometry.h"
+#endif
+
 #pragma warning(disable:4996)
 
 #include <ddraw.h>
