@@ -540,7 +540,7 @@ WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
 		return 0;
 	}
 
-	gView->SetFlags(Noesis::RenderFlags_PPAA | Noesis::RenderFlags_LCD);
+	gView->SetFlags((Noesis::RenderFlags)0);
 	gView->SetSize((uint32_t)gWidth, (uint32_t)gHeight);
 	gView->Activate();
 
