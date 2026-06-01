@@ -27,6 +27,7 @@
 #include "r3d.h"
 #include "r3dDX11.h"
 #include "r3dDX11Texture.h"
+#include "r3dDX11State.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -199,6 +200,15 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 		return false;
 	}
 
+	if(!g_r3dDX11State.Init())
+	{
+		r3dOutToLog("DX11: state manager was not initialized\n");
+	}
+	else
+	{
+		g_r3dDX11State.ApplyDefaultSamplers();
+	}
+
 	if(!CreateDebugTriangle())
 	{
 		r3dOutToLog("DX11: debug triangle resources were not created\n");
@@ -235,6 +245,9 @@ void r3dDX11Renderer::Shutdown()
 
 	ReleaseDebugTexturedQuad();
 	ReleaseDebugTriangle();
+
+	g_r3dDX11State.Shutdown();
+
 	ReleaseBackBuffer();
 
 	r3dDX11_Release(SwapChain);
@@ -958,13 +971,12 @@ void r3dDX11Renderer::DrawDebugTexturedQuad()
 
 	ID3D11ShaderResourceView* srv = DebugTexture->GetSRV();
 
-	Context->PSSetShaderResources(0, 1, &srv);
-	Context->PSSetSamplers(0, 1, &DebugTexSampler);
+	g_r3dDX11State.SetSRV(0, srv);
+	g_r3dDX11State.SetSampler(0, R3D_DX11_SAMPLER_LINEAR_WRAP);
 
 	Context->Draw(6, 0);
 
-	ID3D11ShaderResourceView* nullSRV = NULL;
-	Context->PSSetShaderResources(0, 1, &nullSRV);
+	g_r3dDX11State.ClearTexture(0);
 }
 
 void r3dDX11Renderer::SetVSync(bool enabled)
