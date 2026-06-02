@@ -324,7 +324,96 @@
     <ClCompile Include="ai\NavMesh.cpp" />
     <ClCompile Include="ai\NavMeshActor.cpp" />
     <ClCompile Include="APIScaleformGfx.cpp" />
-    <ClCompile Include="APIScaleformGfxDX11.cpp" />
+
+    <ClCompile Include="APIScaleformGfxDX11.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_HAL.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_MeshCache.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_ShaderBinary.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_ShaderDescs.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_Shader.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
+
+    <ClCompile Include="..\External\Scaleform\Src\Render\D3D1x\D3D1x_Texture.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Final|x64'">..\External\Scaleform\Src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SF_D3D_VERSION=11;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Final|x64'">SF_D3D_VERSION=11;SF_BUILD_SHIPPING;DISABLE_PROFILER 1;DISABLE_CONSOLE 1;DISABLE_BUDGETER 1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Final|x64'"></PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="CamouflageDataManager.cpp" />
     <ClCompile Include="DebugHelpers.cpp" />
     <ClCompile Include="fmod\SoundSys.cpp" />
