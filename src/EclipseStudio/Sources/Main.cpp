@@ -14,7 +14,7 @@
 #include "fmod/soundsys.h"
 
 #include "APIScaleformGFX.h"
-#include "APIImGui.h"
+#include "APIScaleformGfxDX11.h"
 #include "GameCommon.h"
 #include "GameLevel.h"
 
@@ -243,12 +243,13 @@ void InitRender(int bUseSet = 0)
 		Font_Editor->CreateSystemFont();
 	}
 
-	r3dScaleformGfxCreate();
-
 	if(g_r3dDX11.IsInitialized())
 	{
-		r3dImGuiCreate();
-		r3dImGuiResetDX11();
+		r3dScaleformGfxDX11Create();
+	}
+	else
+	{
+		r3dScaleformGfxCreate();
 	}
 
 #if ENABLE_WEB_BROWSER
@@ -298,7 +299,7 @@ void CloseRender()
 	DestroyApexUserRenderer();
 #endif
 
-	r3dImGuiDestroy();
+	r3dScaleformGfxDX11Destroy();
 
 	r3dScaleformGfxDestroy();
 

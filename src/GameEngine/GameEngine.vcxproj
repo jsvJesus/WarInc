@@ -324,6 +324,7 @@
     <ClCompile Include="ai\NavMesh.cpp" />
     <ClCompile Include="ai\NavMeshActor.cpp" />
     <ClCompile Include="APIScaleformGfx.cpp" />
+    <ClCompile Include="APIScaleformGfxDX11.cpp" />
     <ClCompile Include="CamouflageDataManager.cpp" />
     <ClCompile Include="DebugHelpers.cpp" />
     <ClCompile Include="fmod\SoundSys.cpp" />
@@ -407,6 +408,7 @@
     <ClInclude Include="ai\NavMesh.h" />
     <ClInclude Include="ai\NavMeshActor.h" />
     <ClInclude Include="APIScaleformGfx.h" />
+    <ClInclude Include="APIScaleformGfxDX11.h" />
     <ClInclude Include="CamouflageDataManager.h" />
     <ClInclude Include="DebugHelpers.h" />
     <ClInclude Include="fmod\SoundSys.h" />

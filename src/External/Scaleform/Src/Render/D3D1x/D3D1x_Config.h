@@ -23,7 +23,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 // In VS2011+ d3d11_1.h should exist. Include d3d11_1.h unconditionally (even in D3D10), because
 // d3d10.h does not include the common ID3DUserAnnotation interfaces.
-#if defined(SF_OS_WINMETRO) || (_MSC_VER >= 1700)   
+#if defined(SF_OS_WINMETRO)
+    #include <d3d11_1.h>
+#elif defined(SF_ENABLE_D3D11_1) && (_MSC_VER >= 1700)
     #include <d3d11_1.h>
 #endif
 
