@@ -20,6 +20,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_Update(double timeSeconds);
 WAR_NOESIS_API void __cdecl WarNoesis_Render();
 
 WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device);
+WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11Device(void* device, void* context);
 
 WAR_NOESIS_API int  __cdecl WarNoesis_IsLoaded();
 

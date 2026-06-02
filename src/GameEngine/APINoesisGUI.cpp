@@ -126,6 +126,7 @@ bool APINoesisGUI::Init()
 	FnSetCommandCallback = (FN_WarNoesis_SetCommandCallback)GetProcAddress(dll, "WarNoesis_SetCommandCallback");
 	FnSetLogCallback = (FN_WarNoesis_SetLogCallback)GetProcAddress(dll, "WarNoesis_SetLogCallback");
 	FnSetD3D9Device = (FN_WarNoesis_SetD3D9Device)GetProcAddress(dll, "WarNoesis_SetD3D9Device");
+	FnSetD3D11Device = (FN_WarNoesis_SetD3D11Device)GetProcAddress(dll, "WarNoesis_SetD3D11Device");
 
 	FnMouseMove = (FN_WarNoesis_MouseMove)GetProcAddress(dll, "WarNoesis_MouseMove");
 	FnMouseButtonDown = (FN_WarNoesis_MouseButtonDown)GetProcAddress(dll, "WarNoesis_MouseButtonDown");
@@ -189,6 +190,9 @@ void APINoesisGUI::Shutdown()
 	if(!DllHandle)
 		return;
 
+	if(FnSetD3D11Device)
+		FnSetD3D11Device(NULL, NULL);
+
 	if(FnSetD3D9Device)
 		FnSetD3D9Device(NULL);
 
@@ -216,6 +220,7 @@ void APINoesisGUI::Shutdown()
 	FnSetCommandCallback = NULL;
 	FnSetLogCallback = NULL;
 	FnSetD3D9Device = NULL;
+	FnSetD3D11Device = NULL;
 
 	FnMouseMove = NULL;
 	FnMouseButtonDown = NULL;
@@ -239,6 +244,12 @@ void APINoesisGUI::SetD3D9Device(void* device)
 {
 	if(FnSetD3D9Device)
 		FnSetD3D9Device(device);
+}
+
+void APINoesisGUI::SetD3D11Device(void* device, void* context)
+{
+	if(FnSetD3D11Device)
+		FnSetD3D11Device(device, context);
 }
 
 bool APINoesisGUI::LoadXaml(const char* xamlFile)

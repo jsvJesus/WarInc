@@ -96,6 +96,7 @@
         ..\External\NoesisGUI\Src\Packages\App\DisplayLauncher\Include;
         ..\External\NoesisGUI\Src\Packages\App\Launcher\Include;
         ..\External\NoesisGUI\Src\Packages\Render\RenderContext\Include;
+        ..\External\NoesisGUI\Src\Packages\Render\D3D11RenderDevice\Include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
@@ -128,6 +129,7 @@
         ..\External\NoesisGUI\Src\Packages\App\DisplayLauncher\Include;
         ..\External\NoesisGUI\Src\Packages\App\Launcher\Include;
         ..\External\NoesisGUI\Src\Packages\Render\RenderContext\Include;
+        ..\External\NoesisGUI\Src\Packages\Render\D3D11RenderDevice\Include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>

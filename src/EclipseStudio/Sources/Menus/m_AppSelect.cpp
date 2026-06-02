@@ -5,6 +5,9 @@
 
 #include "m_AppSelect.h"
 #include "APINoesisGUI.h"
+#include "r3dDX11.h"
+#include "r3dDX11State.h"
+#include "r3dDX11Geometry.h"
 
 #include <windows.h>
 #include <windowsx.h>
@@ -342,7 +345,17 @@ int Menu_AppSelect::DoModal()
 
 	if(gNoesisGUI)
 	{
-		gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
+		if(g_r3dDX11.IsInitialized())
+		{
+			gNoesisGUI->SetD3D11Device(g_r3dDX11.GetDevice(), g_r3dDX11.GetContext());
+			gNoesisGUI->SetD3D9Device(NULL);
+		}
+		else
+		{
+			gNoesisGUI->SetD3D11Device(NULL, NULL);
+			gNoesisGUI->SetD3D9Device(r3dRenderer->pd3ddev);
+		}
+
 		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 		noesisReady = gNoesisGUI->LoadXaml("Studio/AppSelect.xaml");
 	}
@@ -390,6 +403,12 @@ int Menu_AppSelect::DoModal()
 			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 			gNoesisGUI->Update(r3dGetTime());
 			gNoesisGUI->Render();
+
+			if(g_r3dDX11.IsInitialized())
+			{
+				g_r3dDX11State.InvalidateCache();
+				g_r3dDX11Geometry.InvalidateCache();
+			}
 		}
 		else
 		{
