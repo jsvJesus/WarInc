@@ -100,7 +100,7 @@ void FlashbangVisualController::IssueVisibilityQuery()
 
 	DWORD oldCLWE = 0;
 	r3dRenderer->pd3ddev->GetRenderState(D3DRS_COLORWRITEENABLE, &oldCLWE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
 
 	HRESULT hr = visQuery->Issue(D3DISSUE_BEGIN);
 	r3d_assert(SUCCEEDED(hr));
@@ -110,7 +110,7 @@ void FlashbangVisualController::IssueVisibilityQuery()
 	hr = visQuery->Issue(D3DISSUE_END);
 	r3d_assert(SUCCEEDED(hr));
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, oldCLWE);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, oldCLWE);
 
 	r3dDrawGeoSpheresEnd();
 	isVisible = -1;

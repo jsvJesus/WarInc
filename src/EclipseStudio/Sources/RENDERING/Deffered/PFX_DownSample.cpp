@@ -78,7 +78,7 @@ PFX_DownSample::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* src ) /
 
 	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConst, 1 ) ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) ) ;
+	D3D_V( r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) ) ;
 	
 }
 

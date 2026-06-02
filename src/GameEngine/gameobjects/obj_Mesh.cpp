@@ -714,9 +714,9 @@ struct MeshPhysicsDebugRenderable : Renderable
 
 			This->Parent->MeshLOD[0]->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->MeshLOD[0]->DrawMeshSimple( 0 );
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
 			This->Parent->MeshLOD[0]->DrawMeshSimple( 0 );
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 		}
 		if(g_DrawPlayerOnlyCollisionMeshes && This->Parent->PhysicsObject && This->Parent->PlayerOnly_CollisionMesh)
 		{
@@ -725,9 +725,9 @@ struct MeshPhysicsDebugRenderable : Renderable
 
 			This->Parent->PlayerOnly_CollisionMesh->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->PlayerOnly_CollisionMesh->DrawMeshSimple( 0 );
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
 			This->Parent->PlayerOnly_CollisionMesh->DrawMeshSimple( 0 );
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 		}
 		/*else
 		{
@@ -1345,7 +1345,7 @@ MeshGameObject::DrawSelected( const r3dCamera& Cam, const D3DXVECTOR4& color )
 		DWORD prevFillMode;
 
 		D3D_V ( r3dRenderer->pd3ddev->GetRenderState( D3DRS_FILLMODE, &prevFillMode ) );
-		D3D_V ( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME ) );
+		D3D_V ( r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME ) );
 
 		// evil proj mtx hack
 		float prev43 = r3dRenderer->ProjMatrix._43;
@@ -1357,7 +1357,7 @@ MeshGameObject::DrawSelected( const r3dCamera& Cam, const D3DXVECTOR4& color )
 
 		MeshLOD[0]->DrawMeshWithoutMaterials();
 
-		D3D_V ( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, prevFillMode ) );
+		D3D_V ( r3dRenderer->SetRenderState( D3DRS_FILLMODE, prevFillMode ) );
 
 		r3dRenderer->SetPixelShader();
 		r3dRenderer->SetVertexShader();

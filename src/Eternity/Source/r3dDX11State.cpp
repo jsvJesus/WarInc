@@ -44,6 +44,23 @@ static void r3dDX11State_LogHR(const char* text, HRESULT hr)
 	r3dOutToLog("DX11State: %s failed, HRESULT=0x%08X\n", text, (unsigned int)hr);
 }
 
+static int r3dDX11State_GetVertexSamplerSlot(int slot)
+{
+	switch(slot)
+	{
+	case D3DVERTEXTEXTURESAMPLER0:
+		return 0;
+	case D3DVERTEXTEXTURESAMPLER1:
+		return 1;
+	case D3DVERTEXTEXTURESAMPLER2:
+		return 2;
+	case D3DVERTEXTEXTURESAMPLER3:
+		return 3;
+	default:
+		return -1;
+	}
+}
+
 static D3D11_BLEND r3dDX11State_ToBlend(int blend)
 {
 	switch(blend)
@@ -93,6 +110,32 @@ static D3D11_BLEND_OP r3dDX11State_ToBlendOp(int op)
 	default:
 		r3dOutToLog("DX11State: unsupported D3DBLENDOP %d, using ADD\n", op);
 		return D3D11_BLEND_OP_ADD;
+	}
+}
+
+static D3D11_STENCIL_OP r3dDX11State_ToStencilOp(int op)
+{
+	switch(op)
+	{
+	case D3DSTENCILOP_KEEP:
+		return D3D11_STENCIL_OP_KEEP;
+	case D3DSTENCILOP_ZERO:
+		return D3D11_STENCIL_OP_ZERO;
+	case D3DSTENCILOP_REPLACE:
+		return D3D11_STENCIL_OP_REPLACE;
+	case D3DSTENCILOP_INCRSAT:
+		return D3D11_STENCIL_OP_INCR_SAT;
+	case D3DSTENCILOP_DECRSAT:
+		return D3D11_STENCIL_OP_DECR_SAT;
+	case D3DSTENCILOP_INVERT:
+		return D3D11_STENCIL_OP_INVERT;
+	case D3DSTENCILOP_INCR:
+		return D3D11_STENCIL_OP_INCR;
+	case D3DSTENCILOP_DECR:
+		return D3D11_STENCIL_OP_DECR;
+	default:
+		r3dOutToLog("DX11State: unsupported D3DSTENCILOP %d, using KEEP\n", op);
+		return D3D11_STENCIL_OP_KEEP;
 	}
 }
 
@@ -168,6 +211,75 @@ static unsigned char r3dDX11State_ToColorWriteMask(unsigned int mask)
 	return result;
 }
 
+static D3D11_TEXTURE_ADDRESS_MODE r3dDX11State_ToAddressMode(int addressMode)
+{
+	switch(addressMode)
+	{
+	case D3DTADDRESS_WRAP:
+		return D3D11_TEXTURE_ADDRESS_WRAP;
+	case D3DTADDRESS_MIRROR:
+		return D3D11_TEXTURE_ADDRESS_MIRROR;
+	case D3DTADDRESS_CLAMP:
+		return D3D11_TEXTURE_ADDRESS_CLAMP;
+	case D3DTADDRESS_BORDER:
+		return D3D11_TEXTURE_ADDRESS_BORDER;
+	default:
+		r3dOutToLog("DX11State: unsupported D3DTADDRESS %d, using WRAP\n", addressMode);
+		return D3D11_TEXTURE_ADDRESS_WRAP;
+	}
+}
+
+static D3D11_FILTER r3dDX11State_ToFilter(int minFilter, int magFilter, int mipFilter)
+{
+	if(minFilter == D3DTEXF_ANISOTROPIC || magFilter == D3DTEXF_ANISOTROPIC)
+		return D3D11_FILTER_ANISOTROPIC;
+
+	const int minLinear = minFilter == D3DTEXF_LINEAR;
+	const int magLinear = magFilter == D3DTEXF_LINEAR;
+	const int mipLinear = mipFilter == D3DTEXF_LINEAR;
+
+	return (D3D11_FILTER)(
+		(minLinear ? 0x10 : 0) |
+		(magLinear ? 0x04 : 0) |
+		(mipLinear ? 0x01 : 0)
+	);
+}
+
+static void r3dDX11State_DecodeBorderColor(unsigned int color, FLOAT outColor[4])
+{
+	outColor[0] = ((color >> 16) & 0xff) / 255.0f;
+	outColor[1] = ((color >> 8) & 0xff) / 255.0f;
+	outColor[2] = (color & 0xff) / 255.0f;
+	outColor[3] = ((color >> 24) & 0xff) / 255.0f;
+}
+
+static bool r3dDX11State_SetIntIfChanged(int& state, int value)
+{
+	if(state == value)
+		return false;
+
+	state = value;
+	return true;
+}
+
+static bool r3dDX11State_SetUIntIfChanged(unsigned int& state, unsigned int value)
+{
+	if(state == value)
+		return false;
+
+	state = value;
+	return true;
+}
+
+static bool r3dDX11State_SetFloatIfChanged(float& state, float value)
+{
+	if(state == value)
+		return false;
+
+	state = value;
+	return true;
+}
+
 r3dDX11State g_r3dDX11State;
 
 r3dDX11State::r3dDX11State()
@@ -178,6 +290,14 @@ r3dDX11State::r3dDX11State()
 	{
 		BoundSRV[i] = NULL;
 		BoundSampler[i] = NULL;
+		CustomSamplers[i] = NULL;
+	}
+
+	for(int i = 0; i < 4; ++i)
+	{
+		BoundVSSRV[i] = NULL;
+		BoundVSSampler[i] = NULL;
+		CustomVSSamplers[i] = NULL;
 	}
 
 	for(int i = 0; i < R3D_DX11_SAMPLER_MAX; ++i)
@@ -189,6 +309,7 @@ r3dDX11State::r3dDX11State()
 	BlendState = NULL;
 	RasterizerState = NULL;
 
+	ResetSamplerStateCache();
 	ResetRenderStateCache();
 }
 
@@ -216,6 +337,7 @@ bool r3dDX11State::Init()
 	InvalidateCache();
 
 	Initialized = true;
+	ResetSamplerStateCache();
 	ResetRenderStateCache();
 
 	ApplyDepthState();
@@ -235,11 +357,13 @@ void r3dDX11State::Shutdown()
 	}
 
 	ReleaseSamplers();
+	ReleaseCustomSamplers();
 	r3dDX11State_Release(RasterizerState);
 	r3dDX11State_Release(BlendState);
 	r3dDX11State_Release(DepthState);
 
 	Initialized = false;
+	ResetSamplerStateCache();
 	ResetRenderStateCache();
 
 	InvalidateCache();
@@ -336,9 +460,22 @@ void r3dDX11State::ReleaseSamplers()
 	}
 }
 
+void r3dDX11State::ReleaseCustomSamplers()
+{
+	for(int i = 0; i < 16; ++i)
+	{
+		r3dDX11State_Release(CustomSamplers[i]);
+	}
+
+	for(int i = 0; i < 4; ++i)
+	{
+		r3dDX11State_Release(CustomVSSamplers[i]);
+	}
+}
+
 bool r3dDX11State::BindTexture(int slot, r3dTexture* texture)
 {
-	if(slot < 0 || slot >= 16)
+	if((slot < 0 || slot >= 16) && r3dDX11State_GetVertexSamplerSlot(slot) < 0)
 		return false;
 
 	ID3D11ShaderResourceView* srv = NULL;
@@ -368,12 +505,25 @@ bool r3dDX11State::SetSRV(int slot, ID3D11ShaderResourceView* srv)
 	if(g_r3dDX11.IsDeviceLost())
 		return false;
 
-	if(slot < 0 || slot >= 16)
-		return false;
-
 	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
 
 	if(!context)
+		return false;
+
+	const int vsSlot = r3dDX11State_GetVertexSamplerSlot(slot);
+
+	if(vsSlot >= 0)
+	{
+		if(BoundVSSRV[vsSlot] == srv)
+			return true;
+
+		context->VSSetShaderResources(vsSlot, 1, &srv);
+		BoundVSSRV[vsSlot] = srv;
+
+		return true;
+	}
+
+	if(slot < 0 || slot >= 16)
 		return false;
 
 	if(BoundSRV[slot] == srv)
@@ -388,7 +538,7 @@ bool r3dDX11State::SetSRV(int slot, ID3D11ShaderResourceView* srv)
 
 void r3dDX11State::ClearTexture(int slot)
 {
-	if(slot < 0 || slot >= 16)
+	if((slot < 0 || slot >= 16) && r3dDX11State_GetVertexSamplerSlot(slot) < 0)
 		return;
 
 	ID3D11ShaderResourceView* nullSRV = NULL;
@@ -415,6 +565,16 @@ void r3dDX11State::ClearTextures()
 	}
 
 	context->PSSetShaderResources(0, 16, nullSRV);
+
+	ID3D11ShaderResourceView* nullVSSRV[4];
+
+	for(int i = 0; i < 4; ++i)
+	{
+		nullVSSRV[i] = NULL;
+		BoundVSSRV[i] = NULL;
+	}
+
+	context->VSSetShaderResources(0, 4, nullVSSRV);
 }
 
 bool r3dDX11State::SetSampler(int slot, r3dDX11SamplerMode mode)
@@ -447,8 +607,113 @@ bool r3dDX11State::SetSampler(int slot, r3dDX11SamplerMode mode)
 	context->PSSetSamplers(slot, 1, &sampler);
 
 	BoundSampler[slot] = sampler;
+	r3dDX11State_Release(CustomSamplers[slot]);
+
+	if(mode == R3D_DX11_SAMPLER_LINEAR_WRAP || mode == R3D_DX11_SAMPLER_LINEAR_CLAMP)
+	{
+		SamplerMinFilter[slot] = D3DTEXF_LINEAR;
+		SamplerMagFilter[slot] = D3DTEXF_LINEAR;
+		SamplerMipFilter[slot] = D3DTEXF_LINEAR;
+	}
+	else
+	{
+		SamplerMinFilter[slot] = D3DTEXF_POINT;
+		SamplerMagFilter[slot] = D3DTEXF_POINT;
+		SamplerMipFilter[slot] = D3DTEXF_POINT;
+	}
+
+	if(mode == R3D_DX11_SAMPLER_LINEAR_CLAMP || mode == R3D_DX11_SAMPLER_POINT_CLAMP)
+	{
+		SamplerAddressU[slot] = D3DTADDRESS_CLAMP;
+		SamplerAddressV[slot] = D3DTADDRESS_CLAMP;
+		SamplerAddressW[slot] = D3DTADDRESS_CLAMP;
+	}
+	else
+	{
+		SamplerAddressU[slot] = D3DTADDRESS_WRAP;
+		SamplerAddressV[slot] = D3DTADDRESS_WRAP;
+		SamplerAddressW[slot] = D3DTADDRESS_WRAP;
+	}
+
+	SamplerMipLODBias[slot] = 0.0f;
+	SamplerMaxAnisotropy[slot] = 1;
+	SamplerBorderColor[slot] = 0;
+	SamplerMaxMipLevel[slot] = 0;
 
 	return true;
+}
+
+bool r3dDX11State::SetSamplerState(int slot, int samplerState, unsigned int value)
+{
+	const int vsSlot = r3dDX11State_GetVertexSamplerSlot(slot);
+	const int targetSlot = vsSlot >= 0 ? vsSlot : slot;
+	int* minFilter = vsSlot >= 0 ? VSSamplerMinFilter : SamplerMinFilter;
+	int* magFilter = vsSlot >= 0 ? VSSamplerMagFilter : SamplerMagFilter;
+	int* mipFilter = vsSlot >= 0 ? VSSamplerMipFilter : SamplerMipFilter;
+	int* addressU = vsSlot >= 0 ? VSSamplerAddressU : SamplerAddressU;
+	int* addressV = vsSlot >= 0 ? VSSamplerAddressV : SamplerAddressV;
+	int* addressW = vsSlot >= 0 ? VSSamplerAddressW : SamplerAddressW;
+	float* mipLODBias = vsSlot >= 0 ? VSSamplerMipLODBias : SamplerMipLODBias;
+	unsigned int* maxAnisotropy = vsSlot >= 0 ? VSSamplerMaxAnisotropy : SamplerMaxAnisotropy;
+	unsigned int* borderColor = vsSlot >= 0 ? VSSamplerBorderColor : SamplerBorderColor;
+	unsigned int* maxMipLevel = vsSlot >= 0 ? VSSamplerMaxMipLevel : SamplerMaxMipLevel;
+	ID3D11SamplerState** customSamplers = vsSlot >= 0 ? CustomVSSamplers : CustomSamplers;
+	ID3D11SamplerState** boundSamplers = vsSlot >= 0 ? BoundVSSampler : BoundSampler;
+	bool changed = false;
+
+	if(vsSlot < 0 && (slot < 0 || slot >= 16))
+		return false;
+
+	switch(samplerState)
+	{
+	case D3DSAMP_ADDRESSU:
+		changed = r3dDX11State_SetIntIfChanged(addressU[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_ADDRESSV:
+		changed = r3dDX11State_SetIntIfChanged(addressV[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_ADDRESSW:
+		changed = r3dDX11State_SetIntIfChanged(addressW[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_MAGFILTER:
+		changed = r3dDX11State_SetIntIfChanged(magFilter[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_MINFILTER:
+		changed = r3dDX11State_SetIntIfChanged(minFilter[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_MIPFILTER:
+		changed = r3dDX11State_SetIntIfChanged(mipFilter[targetSlot], (int)value);
+		break;
+
+	case D3DSAMP_MIPMAPLODBIAS:
+		changed = r3dDX11State_SetFloatIfChanged(mipLODBias[targetSlot], *(const float*)&value);
+		break;
+
+	case D3DSAMP_MAXANISOTROPY:
+		changed = r3dDX11State_SetUIntIfChanged(maxAnisotropy[targetSlot], value ? value : 1);
+		break;
+
+	case D3DSAMP_BORDERCOLOR:
+		changed = r3dDX11State_SetUIntIfChanged(borderColor[targetSlot], value);
+		break;
+
+	case D3DSAMP_MAXMIPLEVEL:
+		changed = r3dDX11State_SetUIntIfChanged(maxMipLevel[targetSlot], value);
+		break;
+
+	default:
+		return false;
+	}
+
+	if(!changed && customSamplers[targetSlot] && boundSamplers[targetSlot] == customSamplers[targetSlot])
+		return true;
+
+	return ApplySamplerState(slot);
 }
 
 void r3dDX11State::ApplyDefaultSamplers()
@@ -459,16 +724,131 @@ void r3dDX11State::ApplyDefaultSamplers()
 	}
 }
 
+void r3dDX11State::ResetSamplerStateCache()
+{
+	for(int i = 0; i < 16; ++i)
+	{
+		SamplerMinFilter[i] = D3DTEXF_LINEAR;
+		SamplerMagFilter[i] = D3DTEXF_LINEAR;
+		SamplerMipFilter[i] = D3DTEXF_LINEAR;
+		SamplerAddressU[i] = D3DTADDRESS_WRAP;
+		SamplerAddressV[i] = D3DTADDRESS_WRAP;
+		SamplerAddressW[i] = D3DTADDRESS_WRAP;
+		SamplerMipLODBias[i] = 0.0f;
+		SamplerMaxAnisotropy[i] = 1;
+		SamplerBorderColor[i] = 0;
+		SamplerMaxMipLevel[i] = 0;
+	}
+
+	for(int i = 0; i < 4; ++i)
+	{
+		VSSamplerMinFilter[i] = D3DTEXF_LINEAR;
+		VSSamplerMagFilter[i] = D3DTEXF_LINEAR;
+		VSSamplerMipFilter[i] = D3DTEXF_LINEAR;
+		VSSamplerAddressU[i] = D3DTADDRESS_WRAP;
+		VSSamplerAddressV[i] = D3DTADDRESS_WRAP;
+		VSSamplerAddressW[i] = D3DTADDRESS_WRAP;
+		VSSamplerMipLODBias[i] = 0.0f;
+		VSSamplerMaxAnisotropy[i] = 1;
+		VSSamplerBorderColor[i] = 0;
+		VSSamplerMaxMipLevel[i] = 0;
+	}
+}
+
+bool r3dDX11State::ApplySamplerState(int slot)
+{
+	if(!Initialized)
+		return false;
+
+	if(g_r3dDX11.IsDeviceLost())
+		return false;
+
+	const int vsSlot = r3dDX11State_GetVertexSamplerSlot(slot);
+	const int targetSlot = vsSlot >= 0 ? vsSlot : slot;
+	int* minFilter = vsSlot >= 0 ? VSSamplerMinFilter : SamplerMinFilter;
+	int* magFilter = vsSlot >= 0 ? VSSamplerMagFilter : SamplerMagFilter;
+	int* mipFilter = vsSlot >= 0 ? VSSamplerMipFilter : SamplerMipFilter;
+	int* addressU = vsSlot >= 0 ? VSSamplerAddressU : SamplerAddressU;
+	int* addressV = vsSlot >= 0 ? VSSamplerAddressV : SamplerAddressV;
+	int* addressW = vsSlot >= 0 ? VSSamplerAddressW : SamplerAddressW;
+	float* mipLODBias = vsSlot >= 0 ? VSSamplerMipLODBias : SamplerMipLODBias;
+	unsigned int* maxAnisotropy = vsSlot >= 0 ? VSSamplerMaxAnisotropy : SamplerMaxAnisotropy;
+	unsigned int* borderColor = vsSlot >= 0 ? VSSamplerBorderColor : SamplerBorderColor;
+	unsigned int* maxMipLevel = vsSlot >= 0 ? VSSamplerMaxMipLevel : SamplerMaxMipLevel;
+	ID3D11SamplerState** customSamplers = vsSlot >= 0 ? CustomVSSamplers : CustomSamplers;
+	ID3D11SamplerState** boundSamplers = vsSlot >= 0 ? BoundVSSampler : BoundSampler;
+
+	if(vsSlot < 0 && (slot < 0 || slot >= 16))
+		return false;
+
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplySamplerState"))
+		return false;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+	if(!device || !context)
+		return false;
+
+	D3D11_SAMPLER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+
+	desc.Filter = r3dDX11State_ToFilter(minFilter[targetSlot], magFilter[targetSlot], mipFilter[targetSlot]);
+	desc.AddressU = r3dDX11State_ToAddressMode(addressU[targetSlot]);
+	desc.AddressV = r3dDX11State_ToAddressMode(addressV[targetSlot]);
+	desc.AddressW = r3dDX11State_ToAddressMode(addressW[targetSlot]);
+	desc.MipLODBias = mipLODBias[targetSlot];
+	desc.MaxAnisotropy = maxAnisotropy[targetSlot] ? maxAnisotropy[targetSlot] : 1;
+	desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	r3dDX11State_DecodeBorderColor(borderColor[targetSlot], desc.BorderColor);
+	desc.MinLOD = (FLOAT)maxMipLevel[targetSlot];
+	desc.MaxLOD = mipFilter[targetSlot] == D3DTEXF_NONE ? 0.0f : D3D11_FLOAT32_MAX;
+	if(desc.MaxLOD < desc.MinLOD)
+		desc.MaxLOD = desc.MinLOD;
+
+	ID3D11SamplerState* newSampler = NULL;
+	HRESULT hr = device->CreateSamplerState(&desc, &newSampler);
+
+	if(FAILED(hr))
+	{
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11State::CreateSamplerState", hr))
+			r3dDX11State_LogHR("CreateSamplerState", hr);
+
+		return false;
+	}
+
+	ID3D11SamplerState* oldSampler = customSamplers[targetSlot];
+
+	if(vsSlot >= 0)
+		context->VSSetSamplers(vsSlot, 1, &newSampler);
+	else
+		context->PSSetSamplers(slot, 1, &newSampler);
+
+	boundSamplers[targetSlot] = newSampler;
+	customSamplers[targetSlot] = newSampler;
+	r3dDX11State_Release(oldSampler);
+
+	return true;
+}
+
 void r3dDX11State::ResetRenderStateCache()
 {
 	DepthEnable = 1;
 	DepthWriteEnable = 1;
 	DepthFunc = D3DCMP_LESSEQUAL;
 	StencilEnable = 0;
+	StencilFunc = D3DCMP_ALWAYS;
+	StencilFailOp = D3DSTENCILOP_KEEP;
+	StencilZFailOp = D3DSTENCILOP_KEEP;
+	StencilPassOp = D3DSTENCILOP_KEEP;
+	StencilRef = 0;
+	StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
 	AlphaBlendEnable = 0;
 	SrcBlend = D3DBLEND_ONE;
 	DestBlend = D3DBLEND_ZERO;
 	BlendOp = D3DBLENDOP_ADD;
+	BlendOpAlpha = D3DBLENDOP_ADD;
 	CullMode = D3DCULL_CCW;
 	FillMode = D3DFILL_SOLID;
 	ScissorEnable = 0;
@@ -488,6 +868,9 @@ bool r3dDX11State::ApplyDepthState()
 	if(!Initialized)
 		return false;
 
+	if(g_r3dDX11.IsDeviceLost())
+		return false;
+
 	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyDepthState"))
 		return false;
 
@@ -504,12 +887,12 @@ bool r3dDX11State::ApplyDepthState()
 	desc.DepthWriteMask = DepthWriteEnable ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 	desc.DepthFunc = r3dDX11State_ToComparisonFunc(DepthFunc);
 	desc.StencilEnable = StencilEnable ? TRUE : FALSE;
-	desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-	desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	desc.StencilReadMask = (UINT8)StencilReadMask;
+	desc.StencilWriteMask = (UINT8)StencilWriteMask;
+	desc.FrontFace.StencilFailOp = r3dDX11State_ToStencilOp(StencilFailOp);
+	desc.FrontFace.StencilDepthFailOp = r3dDX11State_ToStencilOp(StencilZFailOp);
+	desc.FrontFace.StencilPassOp = r3dDX11State_ToStencilOp(StencilPassOp);
+	desc.FrontFace.StencilFunc = r3dDX11State_ToComparisonFunc(StencilFunc);
 	desc.BackFace = desc.FrontFace;
 
 	ID3D11DepthStencilState* newState = NULL;
@@ -523,7 +906,7 @@ bool r3dDX11State::ApplyDepthState()
 		return false;
 	}
 
-	context->OMSetDepthStencilState(newState, 0);
+	context->OMSetDepthStencilState(newState, StencilRef);
 	r3dDX11State_Release(DepthState);
 	DepthState = newState;
 
@@ -533,6 +916,9 @@ bool r3dDX11State::ApplyDepthState()
 bool r3dDX11State::ApplyBlendState()
 {
 	if(!Initialized)
+		return false;
+
+	if(g_r3dDX11.IsDeviceLost())
 		return false;
 
 	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyBlendState"))
@@ -558,7 +944,7 @@ bool r3dDX11State::ApplyBlendState()
 		desc.RenderTarget[i].BlendOp = r3dDX11State_ToBlendOp(BlendOp);
 		desc.RenderTarget[i].SrcBlendAlpha = r3dDX11State_ToBlend(SrcBlend);
 		desc.RenderTarget[i].DestBlendAlpha = r3dDX11State_ToBlend(DestBlend);
-		desc.RenderTarget[i].BlendOpAlpha = r3dDX11State_ToBlendOp(BlendOp);
+		desc.RenderTarget[i].BlendOpAlpha = r3dDX11State_ToBlendOp(BlendOpAlpha);
 		desc.RenderTarget[i].RenderTargetWriteMask = r3dDX11State_ToColorWriteMask(ColorWriteMask[i]);
 	}
 
@@ -584,6 +970,9 @@ bool r3dDX11State::ApplyBlendState()
 bool r3dDX11State::ApplyRasterizerState()
 {
 	if(!Initialized)
+		return false;
+
+	if(g_r3dDX11.IsDeviceLost())
 		return false;
 
 	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyRasterizerState"))
@@ -638,63 +1027,118 @@ bool r3dDX11State::SetRenderState(int state, unsigned int value)
 	switch(state)
 	{
 	case D3DRS_ZENABLE:
-		DepthEnable = value ? 1 : 0;
+		if(!r3dDX11State_SetIntIfChanged(DepthEnable, value ? 1 : 0) && DepthState)
+			return true;
 		return ApplyDepthState();
 
 	case D3DRS_ZWRITEENABLE:
-		DepthWriteEnable = value ? 1 : 0;
+		if(!r3dDX11State_SetIntIfChanged(DepthWriteEnable, value ? 1 : 0) && DepthState)
+			return true;
 		return ApplyDepthState();
 
 	case D3DRS_ZFUNC:
-		DepthFunc = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(DepthFunc, (int)value) && DepthState)
+			return true;
 		return ApplyDepthState();
 
 	case D3DRS_STENCILENABLE:
-		StencilEnable = value ? 1 : 0;
+		if(!r3dDX11State_SetIntIfChanged(StencilEnable, value ? 1 : 0) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILFUNC:
+		if(!r3dDX11State_SetIntIfChanged(StencilFunc, (int)value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILFAIL:
+		if(!r3dDX11State_SetIntIfChanged(StencilFailOp, (int)value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILZFAIL:
+		if(!r3dDX11State_SetIntIfChanged(StencilZFailOp, (int)value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILPASS:
+		if(!r3dDX11State_SetIntIfChanged(StencilPassOp, (int)value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILREF:
+		if(!r3dDX11State_SetUIntIfChanged(StencilRef, value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILMASK:
+		if(!r3dDX11State_SetUIntIfChanged(StencilReadMask, value) && DepthState)
+			return true;
+		return ApplyDepthState();
+
+	case D3DRS_STENCILWRITEMASK:
+		if(!r3dDX11State_SetUIntIfChanged(StencilWriteMask, value) && DepthState)
+			return true;
 		return ApplyDepthState();
 
 	case D3DRS_ALPHABLENDENABLE:
-		AlphaBlendEnable = value ? 1 : 0;
+		if(!r3dDX11State_SetIntIfChanged(AlphaBlendEnable, value ? 1 : 0) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_SRCBLEND:
-		SrcBlend = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(SrcBlend, (int)value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_DESTBLEND:
-		DestBlend = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(DestBlend, (int)value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_BLENDOP:
-		BlendOp = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(BlendOp, (int)value) && BlendState)
+			return true;
+		return ApplyBlendState();
+
+	case D3DRS_BLENDOPALPHA:
+		if(!r3dDX11State_SetIntIfChanged(BlendOpAlpha, (int)value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_COLORWRITEENABLE:
-		ColorWriteMask[0] = value;
+		if(!r3dDX11State_SetUIntIfChanged(ColorWriteMask[0], value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_COLORWRITEENABLE1:
-		ColorWriteMask[1] = value;
+		if(!r3dDX11State_SetUIntIfChanged(ColorWriteMask[1], value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_COLORWRITEENABLE2:
-		ColorWriteMask[2] = value;
+		if(!r3dDX11State_SetUIntIfChanged(ColorWriteMask[2], value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_COLORWRITEENABLE3:
-		ColorWriteMask[3] = value;
+		if(!r3dDX11State_SetUIntIfChanged(ColorWriteMask[3], value) && BlendState)
+			return true;
 		return ApplyBlendState();
 
 	case D3DRS_CULLMODE:
-		CullMode = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(CullMode, (int)value) && RasterizerState)
+			return true;
 		return ApplyRasterizerState();
 
 	case D3DRS_FILLMODE:
-		FillMode = (int)value;
+		if(!r3dDX11State_SetIntIfChanged(FillMode, (int)value) && RasterizerState)
+			return true;
 		return ApplyRasterizerState();
 
 	case D3DRS_SCISSORTESTENABLE:
-		ScissorEnable = value ? 1 : 0;
+		if(!r3dDX11State_SetIntIfChanged(ScissorEnable, value ? 1 : 0) && RasterizerState)
+			return true;
 		return ApplyRasterizerState();
 
 	default:
@@ -708,6 +1152,12 @@ void r3dDX11State::InvalidateCache()
 	{
 		BoundSRV[i] = NULL;
 		BoundSampler[i] = NULL;
+	}
+
+	for(int i = 0; i < 4; ++i)
+	{
+		BoundVSSRV[i] = NULL;
+		BoundVSSampler[i] = NULL;
 	}
 }
 

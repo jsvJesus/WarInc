@@ -399,12 +399,12 @@ void RenderSSAORefEffect()
  //r3dRenderer->SetRenderingMode(R3D_BLEND_MODULATE | R3D_BLEND_NZ);
  r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
- r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
- r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
- r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
- r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
- r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
+ r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+ r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+ r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
+ r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+ r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
 
  float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
@@ -443,7 +443,7 @@ void RenderSSAORefEffect()
  r3dRenderer->SetTex( SSAO_RotTex, 2 );
  r3dRenderer->SetTex( DepthBuffer->Tex );
 
- r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	D3DCOLORWRITEENABLE_RED );
+ r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	D3DCOLORWRITEENABLE_RED );
 
  r3dDrawFullScreenQuad(!!r_half_scale_ssao->GetInt());
 
@@ -451,7 +451,7 @@ void RenderSSAORefEffect()
 
  r3dRenderer->SetVertexShader();
  r3dRenderer->SetPixelShader();
- r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
+ r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
 }
 
 D3DXMATRIX g_PrevSSAO_View ;
@@ -510,12 +510,12 @@ void RenderSSAOEffect( bool lightWeight )
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
@@ -660,10 +660,10 @@ void RenderSSAOEffect( bool lightWeight )
 
 	if( doSSAOTemporalOptimize )
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 		r3dSetFiltering( R3D_BILINEAR, 3 );
 		r3dSetFiltering( R3D_POINT, 4 );
@@ -674,10 +674,10 @@ void RenderSSAOEffect( bool lightWeight )
 
 #if R3D_ALLOW_TEMPORAL_SSAO
 	if( r_ssao_temporal_filter->GetInt() == R3D_SSAO_TEMPORAL_FILTER )
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN );
+		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN );
 	else
 #endif
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED );
+		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED );
 
 	r3dDrawFullScreenQuad(!!r_half_scale_ssao->GetInt());
 
@@ -685,7 +685,7 @@ void RenderSSAOEffect( bool lightWeight )
 
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
 }
 
 
@@ -743,10 +743,10 @@ void RenderLUT1DColorCorrection( r3dScreenBuffer* SourceTex, bool hsv )
 	r3dSetFiltering( R3D_POINT,		0 );
 	r3dSetFiltering( R3D_BILINEAR,	1 );
 
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 	r3dRenderer->SetTex( SourceTex->Tex );
 	extern r3dTexture* CC_LUT1D_HSV_Tex, *CC_LUT1D_RGB_Tex;
@@ -771,10 +771,10 @@ void CopyScreen( r3dScreenBuffer* SourceTex )
 	r3dRenderer->SetVertexShader( "VS_POSTFX" );
 	r3dRenderer->SetPixelShader( "PS_FSCOPY" );
 
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 	r3dSetFiltering( R3D_POINT, 0 );
 
@@ -809,8 +809,8 @@ void DiluteSSAOMask( r3dScreenBuffer *sourceTex )
 	r3dRenderer->SetTex( sourceTex->Tex, 0 ) ;
 	r3dSetFiltering( R3D_BILINEAR, 0 ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
 	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst, 1 ) ;
@@ -870,8 +870,8 @@ void CompositeSSAO( r3dScreenBuffer* currSSAO )
 	{
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 	}
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
@@ -921,14 +921,14 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 
 	D3DXVECTOR4 pconsts[2];
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 
 	TempTex->Activate();
 
@@ -948,7 +948,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		clearRects[1].y1 = int( TempTex->Height * 0.5f ) - FilterDim;
 		clearRects[1].y2 = int( TempTex->Height * 0.5f ) + FilterDim;
 
-		D3D_V( r3dRenderer->pd3ddev->Clear( 2, clearRects, D3DCLEAR_TARGET,	0xffffffff,	1.0f, 0 ) );
+		r3dRenderer->Clear( 2, clearRects, D3DCLEAR_TARGET,	0xffffffff,	1.0f, 0 );
 	}
 	else
 	{
@@ -1005,7 +1005,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 	r3dRenderer->SetPixelShader();
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->EndRenderSimple();
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
 																	D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA );
 }
 

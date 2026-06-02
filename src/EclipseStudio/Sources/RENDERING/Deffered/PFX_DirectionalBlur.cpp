@@ -352,7 +352,7 @@ void PFX_DirectionalDepthBlur::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuff
 	if( sts.UseStencil )
 	{
 		SetupLightMaskStencilStates( SCM_LITAREA );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
 	}
 
 }
@@ -372,7 +372,7 @@ PFX_DirectionalDepthBlur::FinishImpl() /*OVERRIDE*/
 
 	if( sts.UseStencil )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
 	}
 }
 

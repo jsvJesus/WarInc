@@ -67,26 +67,26 @@ void r3dDrawPB(float x, float y, float w, float h)
  V[3] = V[1];
  V[5] = V[2];
 
-r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 	
  D3D_V( d3dc._SetVertexShader(0) );
  r3dDrawTriangleList(V, _countof(V));
 
- r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 }
 
@@ -97,8 +97,8 @@ void DrawDepthEffectMask ()
 
 	r3dRenderer->SetTex(DepthBuffer->Tex,4);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	D3DXVECTOR4 CamVector(gCam.x,gCam.y,gCam.z,1.0f);
 	
@@ -131,8 +131,8 @@ void DrawDepthEffectMask ()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	D3DPERF_EndEvent ();
 }
@@ -203,9 +203,9 @@ void DrawDepthEffect()
 	float DepthZ = r3dRenderer->FarClip * 0.9375f;
 	D3DXVECTOR4 CamVector(gCam.x,gCam.y,gCam.z,1.0f/DepthZ);
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	float fdeepColor_LakeHeight[4];
 	float fShallowColor_Depth[4];
@@ -249,9 +249,9 @@ void DrawDepthEffect()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_MODULATE | R3D_BLEND_NZ);
 	//dest = dest*alpha + src;
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
+	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
 
 	r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));
 	
@@ -261,8 +261,8 @@ void DrawDepthEffect()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(NULL);
 	r3dRenderer->SetMaterial(NULL);

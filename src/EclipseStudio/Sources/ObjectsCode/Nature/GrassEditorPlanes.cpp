@@ -97,7 +97,7 @@ void GrassPlane::Draw() const
 {
 	DWORD oldStencil = 0;
 	r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldStencil);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	int oldRenderMode = r3dRenderer->GetRenderingMode();
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ZC);
 	//	Prepare 4 corner points
@@ -126,7 +126,7 @@ void GrassPlane::Draw() const
  	r3dDrawTriangle3D(p[1], p[3], p[2], gCam, cl);
 	r3dRenderer->Flush();
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, oldStencil);
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, oldStencil);
 	r3dRenderer->SetRenderingMode(oldRenderMode);
 }
 

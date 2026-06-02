@@ -37,6 +37,7 @@ public:
     void ClearTextures();
 
     bool SetSampler(int slot, r3dDX11SamplerMode mode);
+    bool SetSamplerState(int slot, int samplerState, unsigned int value);
     void ApplyDefaultSamplers();
 
     bool SetRenderState(int state, unsigned int value);
@@ -46,7 +47,10 @@ public:
 private:
     bool CreateSamplers();
     void ReleaseSamplers();
+    void ReleaseCustomSamplers();
+    void ResetSamplerStateCache();
     void ResetRenderStateCache();
+    bool ApplySamplerState(int slot);
     bool ApplyDepthState();
     bool ApplyBlendState();
     bool ApplyRasterizerState();
@@ -54,9 +58,35 @@ private:
     bool Initialized;
 
     ID3D11ShaderResourceView* BoundSRV[16];
+    ID3D11ShaderResourceView* BoundVSSRV[4];
     ID3D11SamplerState* BoundSampler[16];
+    ID3D11SamplerState* BoundVSSampler[4];
 
     ID3D11SamplerState* Samplers[R3D_DX11_SAMPLER_MAX];
+    ID3D11SamplerState* CustomSamplers[16];
+    ID3D11SamplerState* CustomVSSamplers[4];
+
+    int SamplerMinFilter[16];
+    int SamplerMagFilter[16];
+    int SamplerMipFilter[16];
+    int SamplerAddressU[16];
+    int SamplerAddressV[16];
+    int SamplerAddressW[16];
+    float SamplerMipLODBias[16];
+    unsigned int SamplerMaxAnisotropy[16];
+    unsigned int SamplerBorderColor[16];
+    unsigned int SamplerMaxMipLevel[16];
+
+    int VSSamplerMinFilter[4];
+    int VSSamplerMagFilter[4];
+    int VSSamplerMipFilter[4];
+    int VSSamplerAddressU[4];
+    int VSSamplerAddressV[4];
+    int VSSamplerAddressW[4];
+    float VSSamplerMipLODBias[4];
+    unsigned int VSSamplerMaxAnisotropy[4];
+    unsigned int VSSamplerBorderColor[4];
+    unsigned int VSSamplerMaxMipLevel[4];
 
     ID3D11DepthStencilState* DepthState;
     ID3D11BlendState* BlendState;
@@ -66,10 +96,18 @@ private:
     int DepthWriteEnable;
     int DepthFunc;
     int StencilEnable;
+    int StencilFunc;
+    int StencilFailOp;
+    int StencilZFailOp;
+    int StencilPassOp;
+    unsigned int StencilRef;
+    unsigned int StencilReadMask;
+    unsigned int StencilWriteMask;
     int AlphaBlendEnable;
     int SrcBlend;
     int DestBlend;
     int BlendOp;
+    int BlendOpAlpha;
     int CullMode;
     int FillMode;
     int ScissorEnable;

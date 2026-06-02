@@ -779,7 +779,7 @@ void r3dScreenBuffer::Deactivate(int bReset)
 	{
 		r3dRenderer->SetRT(BufferID, NULL);
 
-		//  r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, 0x00000000 );
+		//  r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, 0x00000000 );
 
 		return;
 	}

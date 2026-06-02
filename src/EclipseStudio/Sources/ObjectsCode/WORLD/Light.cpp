@@ -1,5 +1,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
+#include "r3dBuffer.h"
 
 #include "GameObjects\gameobj.h"
 #include "GameObjects\objmanag.h"

@@ -110,6 +110,6 @@ PFX_SeedSunThroughStencil::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* 
 void
 PFX_SeedSunThroughStencil::FinishImpl() /*OVERRIDE*/
 {
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 }
 

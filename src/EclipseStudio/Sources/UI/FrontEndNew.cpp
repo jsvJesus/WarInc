@@ -8195,10 +8195,10 @@ void FrontendUI::drawPlayer( int numStereoPasses, int toTemp )
 						minX, maxY};
 
 
-		r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_BORDER );
-		r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_BORDER );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
+		r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_BORDER );
+		r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_BORDER );
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, false);
+		r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
 		r3dRenderer->SetBackBufferViewport();
 		r3dTexture* Tex2 = g_pPostFXChief->GetBuffer( PostFXChief::RTT_PINGPONG_LAST )->Tex;
 		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_PUSH );

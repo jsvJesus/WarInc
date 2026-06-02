@@ -3602,8 +3602,8 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	{
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
 
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
+		r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 		r3dRenderer->SetVertexShader(ParticleVShaderMesh_ID);
 
 		if( r_distort->GetInt() )
@@ -3659,11 +3659,11 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	r3dRenderer->SetVertexShaderConstantF( 12,(float *)&FogCamVec, 1);
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ONE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_INVSRCALPHA);
+	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ONE);
+	r3dRenderer->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_INVSRCALPHA);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	if(!bRenderUntextured)
 		r3dRenderer->SetTex(PD->Texture);
@@ -3702,9 +3702,9 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 		r3dSetFiltering( R3D_BILINEAR, 2 );
 
 		// TODO : eliminate.
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, 	FALSE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF,        	5);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAFUNC, 			D3DCMP_GREATEREQUAL);
+		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, 	FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ALPHAREF,        	5);
+		r3dRenderer->SetRenderState(D3DRS_ALPHAFUNC, 			D3DCMP_GREATEREQUAL);
 
 		extern void SetVolumeFogParams();
 		SetVolumeFogParams();
@@ -3870,8 +3870,8 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	r3dRenderer->Stats.AddNumDraws( 1 );
 	r3dRenderer->RestoreCullMode();
 
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(0, 7); // remove skydome cubemap texture
 	r3dRenderer->SetVertexShader(-1);
@@ -3880,7 +3880,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	r3dSetFiltering( R3D_BILINEAR, 1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_COPY_ZCW);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE,	FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE,	FALSE);
 
 	{ // reset world transform
 		D3DXMATRIX  mWorld;

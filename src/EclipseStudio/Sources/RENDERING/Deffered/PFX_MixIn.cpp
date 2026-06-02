@@ -66,7 +66,7 @@ PFX_MixIn::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )	/*OVERRIDE
 
 	if( sts.ColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) );
 	}
 
 	mData.PixelShaderID = PixelShaderIDs[ sts.Sel ] ;

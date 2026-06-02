@@ -51,7 +51,7 @@ void
 PFX_CalcLuma::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )	/*OVERRIDE*/
 {
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) ) ;
 
 #if 0
 	r3dRenderer->SetTex( mDebugChecker, 4 ) ;

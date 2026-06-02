@@ -452,8 +452,8 @@ void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 		r3dRenderer->SetVertexShaderConstantF( 16, (float *)&LightVec,	1 );
 
 		r3dRenderer->SetTex(ProjectMap,3);
-		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 		SetupProjectiveTransform(D3DXVECTOR3(X,Y,Z),D3DXVECTOR3(vTo.x,vTo.y, vTo.Z), SpotAngle);
 		break;

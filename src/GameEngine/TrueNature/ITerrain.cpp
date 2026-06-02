@@ -234,8 +234,8 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 			r3dRenderer->RestoreCullMode();
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
 		}
 
 		IDirect3DSurface9*	PrevRTs[ 4 ];
@@ -267,9 +267,9 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	float nearClip = 0.f;
 	float farClip = m_Desc.MaxHeight * 2.f ;

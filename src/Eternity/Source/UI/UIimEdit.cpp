@@ -238,7 +238,7 @@ void Desktop_c::Activate()
 	rc.right = m_fViewPosX + m_fViewWidth;
 	rc.bottom = m_fViewPosY + m_fViewHeight;
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
+	r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
 	HRESULT hr = r3dRenderer->pd3ddev->SetScissorRect( &rc );
 	r3d_assert( SUCCEEDED( hr ) );
 	m_bActive = true;
@@ -248,7 +248,7 @@ void Desktop_c::Activate()
 void Desktop_c::Deactivate()
 {
 	r3d_assert( m_bActive );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, false );
+	r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, false );
 	m_bActive = false;
 }
 

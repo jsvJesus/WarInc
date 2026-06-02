@@ -397,7 +397,7 @@ void r3dSkyDome::Draw( const r3dCamera &Cam, bool normals, float amplify, bool h
 
 	DrawDome( Cam, viewProj, 1.f, normals, amplify, hemisphere );
 
-	//r3dRenderer->pd3ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+	//r3dRenderer->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
 
 	r3dRenderer->SetCamera(Cam);
 	r3dRenderer->RestoreCullMode();

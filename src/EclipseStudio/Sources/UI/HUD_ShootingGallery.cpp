@@ -154,8 +154,8 @@ void ShootingGalleryHUD :: Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -166,8 +166,8 @@ void ShootingGalleryHUD :: Draw()
 		Font_Label->PrintF(10, r3dRenderer->ScreenH-25,r3dColor(255,255,255), "FPS %3.1f[%02.2fms]", 1.0f/r3dGetFrameTime(), r3dGetFrameTime()*1000.0f );
 	}
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 #endif

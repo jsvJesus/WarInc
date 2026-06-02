@@ -4,6 +4,7 @@
 
 #include "r3d.h"
 #include "r3dStats.h"
+#include "r3dBuffer.h"
 
 struct r3dSampleQueryLink
 {
@@ -11,8 +12,8 @@ struct r3dSampleQueryLink
 
 	void Init();
 
-	IDirect3DQuery9*	Start ;
-	IDirect3DQuery9*	End ;
+	r3dD3DQuery*	Start ;
+	r3dD3DQuery*	End ;
 	int					Frame ;
 	r3dSampleQueryLink*	Next ;
 };
@@ -36,15 +37,15 @@ class QueryPool : public r3dIResource
 {
 public:
 	static const UINT MAX_QUERY_COUNT = 8192 ;
-	typedef r3dTL::TFixedArray< IDirect3DQuery9*, MAX_QUERY_COUNT > Queries ;
+	typedef r3dTL::TFixedArray< r3dD3DQuery*, MAX_QUERY_COUNT > Queries ;
 	typedef r3dTL::TFixedArray< r3dSampleQueryLink, MAX_QUERY_COUNT * 2 > QueryLinks ;
-	typedef r3dTL::TFixedArray< IDirect3DQuery9*, NUM_D3D_PROFILE_FRAMES > FreqQueries ;
+	typedef r3dTL::TFixedArray< r3dD3DQuery*, NUM_D3D_PROFILE_FRAMES > FreqQueries ;
 
 	struct NamedQueries
 	{
 		r3dString				name ;
-		IDirect3DQuery9*	start_query ;
-		IDirect3DQuery9*	end_query ;
+		r3dD3DQuery*	start_query ;
+		r3dD3DQuery*	end_query ;
 		LONGLONG			last_value ;
 		int					open_guard ;
 
@@ -64,10 +65,10 @@ public:
 
 public:
 	r3dSampleQueryLink*	AquireLink() ;
-	IDirect3DQuery9*	GetLastQuery() const ;
-	IDirect3DQuery9*	GetNextQuery() ;
+	r3dD3DQuery*	GetLastQuery() const ;
+	r3dD3DQuery*	GetNextQuery() ;
 
-	IDirect3DQuery9*	GetFreqQuery( uint32_t frame ) const;
+	r3dD3DQuery*	GetFreqQuery( uint32_t frame ) const;
 
 	void Reset();
 
@@ -146,7 +147,7 @@ QueryPool::AquireLink()
 
 //------------------------------------------------------------------------
 
-IDirect3DQuery9*
+r3dD3DQuery*
 QueryPool::GetLastQuery() const
 {
 	r3d_assert( mLastQuery );
@@ -156,7 +157,7 @@ QueryPool::GetLastQuery() const
 
 //------------------------------------------------------------------------
 
-IDirect3DQuery9*
+r3dD3DQuery*
 QueryPool::GetNextQuery() 
 {
 	return mQueries[ gFrame ][ mLastQuery ++ ];
@@ -164,7 +165,7 @@ QueryPool::GetNextQuery()
 
 //------------------------------------------------------------------------
 
-IDirect3DQuery9*
+r3dD3DQuery*
 QueryPool::GetFreqQuery( uint32_t frame ) const
 {
 	return mFreqQueries[ frame ];
@@ -899,7 +900,7 @@ void r3dProfiler::EndFrame()
 
 	if( ( profileRenderOn || g_ShowD3DMarks ) && r3dRenderer->SupportsStampQueries  )
 	{
-		IDirect3DQuery9* q = g_pQueryPool->GetFreqQuery( diametricFrame );
+		r3dD3DQuery* q = g_pQueryPool->GetFreqQuery( diametricFrame );
 		for( ; S_OK != q->GetData( &NewGPUFreq, sizeof NewGPUFreq, 0 ) ; ) 
 			q->GetData( 0, 0, D3DGETDATA_FLUSH ) ;
 		InvGPUFreq = 1.f / NewGPUFreq;

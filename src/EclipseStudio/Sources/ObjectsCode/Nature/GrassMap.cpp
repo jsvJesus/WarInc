@@ -638,14 +638,14 @@ namespace
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSU, &PrevAddressU ) );
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSV, &PrevAddressV ) );
 
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 		}
 
 		~SetRestoreClampAddressMode()
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
 		}
 
 		DWORD PrevAddressU;
@@ -761,14 +761,14 @@ GrassMap::Draw( const r3dCamera& cam, Path path, bool useDepthEqual )
 	case COLOR_PATH:
 		r3dRenderer->SetPixelShader( P1_PIXEL_SHADER_ID );
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
 		break ;
 	}
 
 	if( useDepthEqual )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZFUNC, D3DCMP_EQUAL ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_ZFUNC, D3DCMP_EQUAL ) ) ;
 	}
 
 	r3dTexture *tex = __r3dShadeTexture[2];
@@ -842,13 +842,13 @@ GrassMap::Draw( const r3dCamera& cam, Path path, bool useDepthEqual )
 
 	if( path == COLOR_PATH )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 	}
 
 	if( useDepthEqual )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZFUNC, D3DCMP_LESSEQUAL ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_ZFUNC, D3DCMP_LESSEQUAL ) ) ;
 	}
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
@@ -1441,8 +1441,8 @@ GrassMap::DrawCell( const GrassCell& cell, const r3dCamera& Cam, int X, int Z )
 			r3dSetFiltering( R3D_BILINEAR, D3DVERTEXTEXTURESAMPLER0 );
 			r3dRenderer->SetTex( cell.HeightTexture, D3DVERTEXTEXTURESAMPLER0 );
 
-			r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			d3dc._SetDecl( GrassChunk::VDecl );
 
@@ -1451,8 +1451,8 @@ GrassMap::DrawCell( const GrassCell& cell, const r3dCamera& Cam, int X, int Z )
 				r3dSetFiltering( R3D_BILINEAR, D3DVERTEXTEXTURESAMPLER1 );
 				r3dRenderer->SetTex( gce.MaskTexture, D3DVERTEXTEXTURESAMPLER1 );
 
-				r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-				r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+				r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+				r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 				r3dRenderer->SetVertexShader( MASKED_VERTEX_SHADER_ID );
 			}

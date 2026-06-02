@@ -539,10 +539,10 @@ void obj_Road::DrawRoad()
 	//r3dRenderer->SetMipMapBias(-2.0f);
 
 	//disable writing to MRT2 - depth
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE2, 0);
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE2, 0);
+	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
 
 	DWORD curStencilEnable = 0;
 	DWORD curStencilRef = 0;
@@ -560,12 +560,12 @@ void obj_Road::DrawRoad()
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILPASS, &curStencilPass));
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILZFAIL, &curStencilZFail));
 		//	Mark z-fail regions with stencil bit 3
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, TRUE));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILWRITEMASK, 4));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILREF, 4));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, TRUE));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILWRITEMASK, 4));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILREF, 4));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE));
 	}
 
 	mesh_->DrawMeshDeferred( r3dColor::white, R3D_MATF_ROAD );
@@ -575,10 +575,10 @@ void obj_Road::DrawRoad()
 
 	// enable writing to MRT
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
 	//r3dRenderer->SetMipMapBias(__WorldRenderBias);
 
 #if 0
@@ -605,10 +605,10 @@ void obj_Road::DrawRoad()
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILMASK, &curStencilMask));
 		
 		//	Now Render full screen quad and mark all road occlusions
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILMASK, 4));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILMASK, 4));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP));
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH);
  		r3dRenderer->SetPixelShader( VS_CLEAR_FLOAT_ID );
@@ -621,13 +621,13 @@ void obj_Road::DrawRoad()
 		r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
 
 		//	Restore stencil state
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, curStencilEnable));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILREF, curStencilRef));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, curStencilFunc));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, curStencilPass));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, curStencilZFail));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILWRITEMASK, curStencilWriteMask));
-		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILMASK, curStencilMask));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, curStencilEnable));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILREF, curStencilRef));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, curStencilFunc));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, curStencilPass));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, curStencilZFail));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILWRITEMASK, curStencilWriteMask));
+		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILMASK, curStencilMask));
 	}
 
 

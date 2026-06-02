@@ -82,13 +82,13 @@ PFX_Copy::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )	/*OVERRIDE*
 
 	if( mColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, mColorWriteMask ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, mColorWriteMask ) );
 	}
 
 	if( sts.SkyOnly )
 	{
 		SetupLightMaskStencilStates( SCM_UNLITAREA );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
 	}
 }
 
@@ -119,7 +119,7 @@ PFX_Copy::FinishImpl() /*OVERRIDE*/
 
 	if( sts.SkyOnly )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
 	}
 
 	mSettingsArr.Erase( 0 );

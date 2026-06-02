@@ -1,5 +1,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
+#include "r3dBuffer.h"
 
 #include "GameObj.h"
 #include "sceneBox.h"
@@ -875,7 +876,7 @@ void buildOBBox( r3dPoint3D* buffer, GameObject* object )
 }
 
 extern int	g_OcclusionQueryCounter;
-extern IDirect3DQuery9* g_pOcclusionQueries[1000];
+extern r3dD3DQuery* g_pOcclusionQueries[1000];
 
 void startConsequtiveOcclusionQueries()
 {
@@ -883,10 +884,10 @@ void startConsequtiveOcclusionQueries()
 
 	r3dRenderer->Flush();
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, 0);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, 0);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, 0);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, 0);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, 0);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, 0);
 
 	oqVertexBuffer->Set( 0 );
 	oqIndexBuffer->Set();
@@ -899,7 +900,7 @@ void startConsequtiveOcclusionQueries()
 
 	// temp, just do not render bbox that are inside of camera
 	r3dRenderer->SetCullMode( D3DCULL_CCW );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE );
 
 	D3DXMATRIX matWVP;
 	D3DXMatrixTranspose( &matWVP, &r3dRenderer->ViewProjMatrix );
@@ -913,12 +914,12 @@ void endConsequitiveOcclusionQueries()
 	DWORD enableAllColors =	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 							D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA;
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE );
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, enableAllColors );
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, enableAllColors );
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, enableAllColors );
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, enableAllColors );
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, enableAllColors );
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, enableAllColors );
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, enableAllColors );
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, enableAllColors );
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();	
 }

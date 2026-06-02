@@ -2066,8 +2066,8 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 
 			for( int ii = 0; ii < 6; ii ++ )
 			{
-				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+				r3dRenderer->SetSamplerState( ii, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+				r3dRenderer->SetSamplerState( ii, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 				r3dSetFiltering( R3D_BILINEAR, ii );
 			}
@@ -2095,12 +2095,12 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			r3dRenderer->SetTex( m_BounceNormalRT->Tex, 1 );
 			r3dRenderer->SetTex( m_NormalToSHTex, 2 );
 
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP ) );
 
 			r3dSetFiltering( R3D_POINT, 0 );
 			r3dSetFiltering( R3D_POINT, 1 );

@@ -241,6 +241,71 @@ static int r3dDX11Shader_StrIContains(const char* text, const char* find)
 	return 0;
 }
 
+static void r3dDX11Shader_DumpConvertedSource(
+	const char* sourceName,
+	const char* source,
+	unsigned int size
+)
+{
+	if(!source || !size)
+		return;
+
+	mkdir("DX11ConvertedShaders");
+
+	const char* baseName = sourceName && sourceName[0] ? sourceName : "memory";
+
+	for(const char* p = baseName; *p; ++p)
+	{
+		if(*p == '\\' || *p == '/')
+			baseName = p + 1;
+	}
+
+	char safeName[MAX_PATH];
+	size_t outPos = 0;
+
+	for(const char* p = baseName; *p && outPos + 1 < sizeof(safeName); ++p)
+	{
+		const char c = *p;
+		const int isSafe =
+			(c >= 'a' && c <= 'z') ||
+			(c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') ||
+			c == '_' ||
+			c == '-' ||
+			c == '.';
+
+		safeName[outPos++] = isSafe ? c : '_';
+	}
+
+	if(!outPos)
+	{
+		safeName[outPos++] = 'm';
+		safeName[outPos++] = 'e';
+		safeName[outPos++] = 'm';
+		safeName[outPos++] = 'o';
+		safeName[outPos++] = 'r';
+		safeName[outPos++] = 'y';
+	}
+
+	safeName[outPos] = 0;
+
+	char dumpPath[MAX_PATH];
+	_snprintf_s(
+		dumpPath,
+		sizeof(dumpPath),
+		_TRUNCATE,
+		"DX11ConvertedShaders\\%s.converted",
+		safeName
+	);
+
+	FILE* f = fopen(dumpPath, "wb");
+	if(!f)
+		return;
+
+	fwrite(source, 1, size, f);
+	fclose(f);
+}
+
 static int r3dDX11Shader_LineIsPreprocessor(const std::string& line)
 {
 	for(size_t i = 0; i < line.length(); ++i)
@@ -734,6 +799,23 @@ static void r3dDX11Shader_AddSamplerFunction(
 	functions.push_back(desc);
 }
 
+static void r3dDX11Shader_AddSamplerName(
+	std::vector<std::string>& samplerNames,
+	const std::string& name
+)
+{
+	if(name.empty())
+		return;
+
+	for(size_t i = 0; i < samplerNames.size(); ++i)
+	{
+		if(!_stricmp(samplerNames[i].c_str(), name.c_str()))
+			return;
+	}
+
+	samplerNames.push_back(name);
+}
+
 static void r3dDX11Shader_RegisterSamplerFunctionFromKeyword(
 	const std::string& line,
 	size_t keywordPos,
@@ -815,6 +897,46 @@ static void r3dDX11Shader_TrimString(std::string& text)
 
 	while(!text.empty() && r3dDX11Shader_IsWhite(text[text.length() - 1]))
 		text.erase(text.length() - 1, 1);
+}
+
+static std::string r3dDX11Shader_GetExpressionRootIdentifier(const std::string& expression)
+{
+	std::string text = expression;
+	r3dDX11Shader_TrimString(text);
+
+	if(text.empty())
+		return std::string();
+
+	const char first = text[0];
+
+	if(!((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_'))
+		return std::string();
+
+	size_t end = 1;
+
+	while(end < text.length() && r3dDX11Shader_IsIdentChar(text[end]))
+		++end;
+
+	return text.substr(0, end);
+}
+
+static int r3dDX11Shader_IsKnownSamplerExpression(
+	const std::string& expression,
+	const std::vector<std::string>& samplerNames
+)
+{
+	const std::string root = r3dDX11Shader_GetExpressionRootIdentifier(expression);
+
+	if(root.empty())
+		return 0;
+
+	for(size_t i = 0; i < samplerNames.size(); ++i)
+	{
+		if(!_stricmp(root.c_str(), samplerNames[i].c_str()))
+			return 1;
+	}
+
+	return 0;
 }
 
 static size_t r3dDX11Shader_FindTopLevelComma(const std::string& text, size_t start)
@@ -1157,7 +1279,8 @@ static int r3dDX11Shader_IsLikelyFunctionDeclaration(
 
 static void r3dDX11Shader_ConvertSamplerFunctionCallByName(
 	std::string& line,
-	const char* functionName
+	const char* functionName,
+	const std::vector<std::string>* requiredSamplerNames
 )
 {
 	if(!functionName || !functionName[0])
@@ -1225,6 +1348,12 @@ static void r3dDX11Shader_ConvertSamplerFunctionCallByName(
 			continue;
 		}
 
+		if(requiredSamplerNames && !r3dDX11Shader_IsKnownSamplerExpression(samplerArg, *requiredSamplerNames))
+		{
+			pos = closePos + 1;
+			continue;
+		}
+
 		const std::string textureExpression = r3dDX11Shader_TextureExpressionFromSamplerExpression(samplerArg);
 
 		std::string replacement;
@@ -1246,7 +1375,8 @@ static void r3dDX11Shader_ConvertSamplerFunctionCallByName(
 
 static void r3dDX11Shader_ConvertSamplerFunctionCalls(
 	std::string& line,
-	const std::vector<r3dDX11SamplerFunctionDesc>& samplerFunctions
+	const std::vector<r3dDX11SamplerFunctionDesc>& samplerFunctions,
+	const std::vector<std::string>& samplerNames
 )
 {
 	static const char* hardcodedSamplerFunctions[] =
@@ -1263,10 +1393,10 @@ static void r3dDX11Shader_ConvertSamplerFunctionCalls(
 	};
 
 	for(int i = 0; hardcodedSamplerFunctions[i]; ++i)
-		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, hardcodedSamplerFunctions[i]);
+		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, hardcodedSamplerFunctions[i], &samplerNames);
 
 	for(size_t i = 0; i < samplerFunctions.size(); ++i)
-		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, samplerFunctions[i].Name.c_str());
+		r3dDX11Shader_ConvertSamplerFunctionCallByName(line, samplerFunctions[i].Name.c_str(), NULL);
 }
 
 static std::string r3dDX11Shader_BuildCompatibilitySource(
@@ -1290,6 +1420,7 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 	int inPreprocessorContinuation = 0;
 
 	std::vector<r3dDX11SamplerFunctionDesc> samplerFunctions;
+	std::vector<std::string> samplerNames;
 
 	while(pos < source.length())
 	{
@@ -1338,6 +1469,7 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 
 		if(!isPreprocessorLine && r3dDX11Shader_ParseSamplerDeclaration(line, samplerType, samplerName, samplerArraySuffix, &samplerReg))
 		{
+			r3dDX11Shader_AddSamplerName(samplerNames, samplerName);
 			r3dDX11Shader_AppendConvertedSampler(out, samplerType, samplerName, samplerArraySuffix, samplerReg);
 		}
 		else
@@ -1346,7 +1478,7 @@ static std::string r3dDX11Shader_BuildCompatibilitySource(
 			{
 				r3dDX11Shader_RemoveConstantRegisterAnnotation(line);
 				r3dDX11Shader_ConvertSamplerFunctionParameters(line, samplerFunctions);
-				r3dDX11Shader_ConvertSamplerFunctionCalls(line, samplerFunctions);
+				r3dDX11Shader_ConvertSamplerFunctionCalls(line, samplerFunctions, samplerNames);
 				r3dDX11Shader_ConvertTextureFetches(line);
 
 				if(shaderType == R3D_DX11_SHADER_PIXEL)
@@ -1801,6 +1933,9 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 	const char* compileSource = compileSourceString.c_str();
 	const unsigned int compileSourceSize = (unsigned int)compileSourceString.length();
 
+	if(r3dDX11Shader_StrIContains(sourceName, "Decal_ps.hls"))
+		r3dDX11Shader_DumpConvertedSource(sourceName, compileSource, compileSourceSize);
+
 	UINT flags = 0;
 
 #if defined(D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY)
@@ -1838,6 +1973,8 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 
 	if(FAILED(hr))
 	{
+		r3dDX11Shader_DumpConvertedSource(sourceName, compileSource, compileSourceSize);
+
 		r3dDX11Shader_SetLastHRError(
 			"D3DCompile",
 			hr,

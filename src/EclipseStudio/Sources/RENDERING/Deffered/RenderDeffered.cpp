@@ -900,14 +900,14 @@ namespace
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSU, &PrevAddressU ) );
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSV, &PrevAddressV ) );
 
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 		}
 
 		~SetRestoreClampAddressMode()
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
+			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
 		}
 
 		DWORD PrevAddressU;
@@ -1400,8 +1400,8 @@ void RenderShadowMap(ShadowSlice& slice )
 
 		for( int i = 0, e = 8 ; i < e ; i ++ )
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
 			r3dSetFiltering( R3D_BILINEAR, i );
 		}
@@ -1464,21 +1464,21 @@ void RenderShadowMap(ShadowSlice& slice )
 				SetRestoreStates()
 				{
 					D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_SCISSORTESTENABLE, &prevValue) );
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
 					if( r_hardware_shadow_method->GetInt() != HW_SHADOW_METHOD_R32F )
 					{
-						D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) );
+						D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) );
 					}
 				}
 
 				~SetRestoreStates()
 				{
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, prevValue ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, prevValue ) );
 
 					if( r_hardware_shadow_method->GetInt() != HW_SHADOW_METHOD_R32F )
 					{
-						D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED		|
+						D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED		|
 																								D3DCOLORWRITEENABLE_GREEN	| 
 																								D3DCOLORWRITEENABLE_BLUE	|
 																								D3DCOLORWRITEENABLE_ALPHA
@@ -1496,7 +1496,7 @@ void RenderShadowMap(ShadowSlice& slice )
 				ClearFloatSurface( D3DXVECTOR4( 33.f, 0.f, 0.f, 0.f ) );
 
 			r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+			r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 			LightVec = D3DXVECTOR4(lightSource.X,lightSource.Y,lightSource.Z, 0);
 			r3dRenderer->SetPixelShaderConstantF( 20, (float *)&LightVec,	1 );
@@ -1673,8 +1673,8 @@ void RenderTransparentShadowMap()
 		
 		for( int i = 0, e = 8 ; i < e ; i ++ )
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
-			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
 			r3dSetFiltering( R3D_BILINEAR, i );
 		}
@@ -1725,12 +1725,12 @@ void RenderTransparentShadowMap()
 				SetRestoreStates()
 				{
 					D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_SCISSORTESTENABLE, &prevValue) );
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 				}
 
 				~SetRestoreStates()
 				{
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, prevValue ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, prevValue ) );
 				}
 
 				DWORD  prevValue;
@@ -1744,7 +1744,7 @@ void RenderTransparentShadowMap()
 				ClearFloatSurface( D3DXVECTOR4( 33.f, 1.f, 0.f, 0.f ) );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_MIN );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+			r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 			r3dRenderer->SetDefaultCullMode( D3DCULL_CCW );
 			r3dRenderer->RestoreCullMode() ;
@@ -1965,7 +1965,7 @@ void BlurShadowMap( r3dScreenBuffer* ShadowBuffer, r3dScreenBuffer* TempBuffer, 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 
 #if 0
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 #endif
 
 	TempBuffer->Activate();
@@ -2048,9 +2048,9 @@ void BlurShadowMap( r3dScreenBuffer* ShadowBuffer, r3dScreenBuffer* TempBuffer, 
 	ShadowBuffer->Deactivate();
 
 #if 0
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED		| 
-																			D3DCOLORWRITEENABLE_GREEN	| 
-																			D3DCOLORWRITEENABLE_BLUE	| 
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED		|
+																			D3DCOLORWRITEENABLE_GREEN	|
+																			D3DCOLORWRITEENABLE_BLUE	|
 																			D3DCOLORWRITEENABLE_ALPHA ) );
 #endif
 
@@ -2067,8 +2067,8 @@ void RenderShadowMap( const r3dCamera& lightCam )
 
 	r3dSetFiltering( R3D_BILINEAR, 0 );
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetCamera( lightCam );
 		
@@ -2084,7 +2084,7 @@ void RenderShadowMap( const r3dCamera& lightCam )
 	D3D_V( r3dRenderer->SetPixelShaderConstantF( SHADOWC_PIXELDIAMETER - 1, Const, 2 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 	r3dRenderer->SetVertexShader( VS_SMDEPTHPASS_PROJ_ID );
 	r3dRenderer->SetPixelShader( PS_SMDEPTHPATH_NORMAL_OFFSET_ID );
@@ -2486,10 +2486,10 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 
 			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;	
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) ) ;
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) ) ;				
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) ) ;
 
 			r3dDrawFullScreenQuad( false ) ;
 		}
@@ -2502,16 +2502,16 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) ) ;
 
 			if( b > 0.0f )
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;	
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;
 			}
 			else
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_REVSUBTRACT ) ) ;	
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_REVSUBTRACT ) ) ;
 			}
 
 			r3dDrawFullScreenQuad( false ) ;
@@ -2522,10 +2522,10 @@ r3dDefferedRenderer::Finalize() /*OVERRIDE*/
 			float colr[ 4 ] = { 1.0f, 1.0f, 1.0f, 1.0f } ;
 			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR ) ) ;
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;	
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) ) ;
 
 			r3dDrawFullScreenQuad( false ) ;
 		}
@@ -4039,33 +4039,33 @@ void CalculateSplitDistances();
 
 void SetupLightMaskStencilStates( StencilCheckMode scm )
 {
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, true )			);
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_KEEP )	);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, true )			);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_KEEP )	);
 
 	if( scm == SCM_GRASS )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF, 2 )				);
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILREF, 2 )				);
 	}
 	else
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF, 1 )				);
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILREF, 1 )				);
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF )		);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF )		);
 
 	switch( scm )
 	{
 	case SCM_LITAREA:
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_LESSEQUAL ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_LESSEQUAL ) );
 		break ;
 
 	case SCM_UNLITAREA:
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_GREATER ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_GREATER ) );
 		break ;
 
 	case SCM_SSAO:
 	case SCM_GRASS:
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_EQUAL ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_EQUAL ) );
 		break ;
 	}
 
@@ -4073,12 +4073,12 @@ void SetupLightMaskStencilStates( StencilCheckMode scm )
 
 void SetupMaskWriteStencilStates( int Ref )
 {
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_ALWAYS );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF, Ref );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILWRITEMASK, 0xFFFFFFFF );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_ALWAYS );
+	r3dRenderer->SetRenderState( D3DRS_STENCILREF, Ref );
+	r3dRenderer->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF );
+	r3dRenderer->SetRenderState( D3DRS_STENCILWRITEMASK, 0xFFFFFFFF );
 }
 
 #ifndef FINAL_BUILD
@@ -4196,12 +4196,12 @@ void RenderEditorPreview()
 
 		r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::black );
 
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, true);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILREF, 1);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
+		r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, true);
+		r3dRenderer->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+		r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+		r3dRenderer->SetRenderState(D3DRS_STENCILREF, 1);
+		r3dRenderer->SetRenderState(D3DRS_STENCILMASK, 0xFFFFFFFF);
+		r3dRenderer->SetRenderState(D3DRS_STENCILWRITEMASK, 0xFFFFFFFF);
 		r3dRenderer->SetPixelShader();
 
 		r3dRenderer->SetCamera ( gCam );
@@ -4209,7 +4209,7 @@ void RenderEditorPreview()
 		r3dRenderer->SetMaterial(NULL);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+		r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 		r3dRenderer->SetVertexShader(VS_FILLGBUFFER_ID);
 		FillbufferShaderKey key;
@@ -4240,7 +4240,7 @@ void RenderEditorPreview()
 
 		gBuffer_Color->Deactivate();
 
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
+		r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
 
 		ScreenBuffer->Activate();
 		r3dRenderer->StartRender(0);
@@ -4250,8 +4250,8 @@ void RenderEditorPreview()
 
 		for (int i=0;i<8;i++)
 		{
-			r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 		}
 
 		r3dRenderer->SetTex(gBuffer_Color->Tex);
@@ -4552,8 +4552,8 @@ void Render_Deffered_Sunlight( bool ambient_only )
 			{
 				r3dRenderer->SetTex( TransparentShadowMap->Tex, 10 ) ;
 				r3dSetFiltering( R3D_POINT, 10 ) ;
-				D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 10, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-				D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 10, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+				D3D_V( r3dRenderer->SetSamplerState( 10, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+				D3D_V( r3dRenderer->SetSamplerState( 10, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
 				D3DXMATRIX shmat ;
 
@@ -4597,9 +4597,9 @@ void Render_Deffered_Sunlight( bool ambient_only )
 					r3dSetFiltering( R3D_BILINEAR, sidx ) ;
 
 					// people say oldgen cards are lucrative to wrap volumes efficiently
-					r3dRenderer->pd3ddev->SetSamplerState( sidx, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-					r3dRenderer->pd3ddev->SetSamplerState( sidx, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-					r3dRenderer->pd3ddev->SetSamplerState( sidx, D3DSAMP_ADDRESSW,   D3DTADDRESS_CLAMP );
+					r3dRenderer->SetSamplerState( sidx, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+					r3dRenderer->SetSamplerState( sidx, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+					r3dRenderer->SetSamplerState( sidx, D3DSAMP_ADDRESSW,   D3DTADDRESS_CLAMP );
 				}
 
 				const ProbeMaster::Settings& sts = g_pProbeMaster->GetSettings() ;
@@ -4659,14 +4659,14 @@ void Render_Deffered_Sunlight( bool ambient_only )
 
 	r3dRenderer->SetVertexShader("VS_DS_DIRLIGHT");
 
-	r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex( g_EnvmapProbes.GetClosestTexture( gCam ), 8 );
 	r3dSetFiltering( R3D_BILINEAR, 8 ) ;
 
-	r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	if(gCloudShadow)
 	{
@@ -4676,9 +4676,9 @@ void Render_Deffered_Sunlight( bool ambient_only )
 	/*unsigned int R[] = {0,1,2,3};
 	for(unsigned int i=0; i<sizeof(R)/sizeof(R[0]); i++)
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( R[i], D3DSAMP_MAGFILTER,   D3DTEXF_POINT );
-		r3dRenderer->pd3ddev->SetSamplerState( R[i], D3DSAMP_MINFILTER,   D3DTEXF_POINT );
-		r3dRenderer->pd3ddev->SetSamplerState( R[i], D3DSAMP_MIPFILTER,   D3DTEXF_LINEAR );
+		r3dRenderer->SetSamplerState( R[i], D3DSAMP_MAGFILTER,   D3DTEXF_POINT );
+		r3dRenderer->SetSamplerState( R[i], D3DSAMP_MINFILTER,   D3DTEXF_POINT );
+		r3dRenderer->SetSamplerState( R[i], D3DSAMP_MIPFILTER,   D3DTEXF_LINEAR );
 	}*/
 
 	r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));
@@ -4693,14 +4693,14 @@ struct SetRestoreRender2DStates
 		D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_STENCILENABLE, &PrevStencil ) );
 		D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_SCISSORTESTENABLE, &PrevScissor ) );
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 	}
 
 	~SetRestoreRender2DStates()
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevStencil ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevStencil ) );
 	}
 
 	DWORD PrevStencil;
@@ -4850,7 +4850,7 @@ void BlurPosLightShadow( r3dLight* l, const D3DXMATRIX& lightMtx, const D3DXMATR
 	rect.y1 = R3D_MAX( long( ( smYN - smSizeY ) * TempShadowBuffer->Height ) - 16l, 0l );
 	rect.y2 = R3D_MIN( long( smYN * TempShadowBuffer->Height ) + 16l, (long)TempShadowBuffer->Height );
 
-	D3D_V( r3dRenderer->pd3ddev->Clear( 1, &rect, D3DCLEAR_TARGET, 0xffffffff, 0.f, 0 ) );
+	r3dRenderer->Clear( 1, &rect, D3DCLEAR_TARGET, 0xffffffff, 0.f, 0 );
 
 	D3DXVECTOR4 vsConsts[] =
 	{
@@ -4990,7 +4990,7 @@ void RenderParaboloidShadowmap( r3dLight* l, DesiredLightState& desiredLightStat
 	{
 		r3dRenderer->SetFrustumType( R3D_FRUSTUM_PARABOLOID ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 
 		SharedShadowMap->Activate();
 
@@ -5004,9 +5004,9 @@ void RenderParaboloidShadowmap( r3dLight* l, DesiredLightState& desiredLightStat
 		SharedShadowMap->Deactivate( 0 ) ;
 		
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | 
-																				D3DCOLORWRITEENABLE_GREEN | 
-																				D3DCOLORWRITEENABLE_BLUE | 
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED |
+																				D3DCOLORWRITEENABLE_GREEN |
+																				D3DCOLORWRITEENABLE_BLUE |
 																				D3DCOLORWRITEENABLE_ALPHA ) );
 	}
 
@@ -5030,7 +5030,7 @@ void RenderCubemapShadowmap( r3dLight* l, DesiredLightState& desiredLightState, 
 
 	if( !l->bFrozenShadowDepth )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 
 		for( int i = 0, e = r3dScreenBuffer::FACE_COUNT; i < e; i ++ )
 		{
@@ -5044,9 +5044,9 @@ void RenderCubemapShadowmap( r3dLight* l, DesiredLightState& desiredLightState, 
 		r3dRenderer->SetCamera( gCam );
 		
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | 
-																				D3DCOLORWRITEENABLE_GREEN | 
-																				D3DCOLORWRITEENABLE_BLUE | 
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED |
+																				D3DCOLORWRITEENABLE_GREEN |
+																				D3DCOLORWRITEENABLE_BLUE |
 																				D3DCOLORWRITEENABLE_ALPHA ) );
 	}
 
@@ -5427,8 +5427,8 @@ void Render_Deffered_Pointlights()
 			r3dRenderer->SetTex( gBuffer_Aux->Tex			, 3 );
 
 			r3dSetFiltering( R3D_POINT, 0 );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			r3dDrawGeoSpheresStart();
 		}
@@ -5612,8 +5612,8 @@ void Render_Deffered_Planelights()
 			r3dRenderer->SetTex( gBuffer_Aux->Tex			, 3 );
 
 			r3dSetFiltering( R3D_POINT, 0 );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			r3dDrawChamferBoxStart();
 		}
@@ -5774,8 +5774,8 @@ void Render_Deffered_Tubelights()
 			r3dRenderer->SetTex( gBuffer_Aux->Tex			, 3 );
 
 			r3dSetFiltering( R3D_POINT, 0 );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			r3dDrawGeoSpheresStart();
 		}
@@ -5997,7 +5997,7 @@ void Render_Deffered_Spotlights()
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 
 				r3dRenderer->SetZRange( R3D_ZRANGE_WHOLE ) ;
 				RenderShadowMap( lightCam );
@@ -6016,9 +6016,9 @@ void Render_Deffered_Spotlights()
 
 			r3dRenderer->SetCamera( gCam );
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | 
-																					D3DCOLORWRITEENABLE_GREEN | 
-																					D3DCOLORWRITEENABLE_BLUE | 
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED |
+																					D3DCOLORWRITEENABLE_GREEN |
+																					D3DCOLORWRITEENABLE_BLUE |
 																					D3DCOLORWRITEENABLE_ALPHA ) );
 
 			if( do_shadow_blur )
@@ -6054,8 +6054,8 @@ void Render_Deffered_Spotlights()
 			r3dRenderer->SetTex( gBuffer_Aux->Tex		, 3 );
 
 			r3dSetFiltering( R3D_POINT, 0 );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			r3dDrawConesStart();
 		}
@@ -6245,7 +6245,7 @@ void Render_Deffered_Volume_Lights()
 	float camPadding = GetCamPadding();
 	DWORD prevStencil = 0;
 	r3dRenderer->pd3ddev->GetRenderState( D3DRS_STENCILENABLE, &prevStencil );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE );
 
 	// VS constants
 	{
@@ -6273,8 +6273,8 @@ void Render_Deffered_Volume_Lights()
 	r3dRenderer->SetTex( gBuffer_Aux->Tex			, 3 );
 
 	r3dSetFiltering( R3D_POINT, 0 );
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 	
 	float DepthZ = r3dRenderer->FarClip * 0.9375f;
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ADD | R3D_BLEND_NZ);
@@ -6301,7 +6301,7 @@ void Render_Deffered_Volume_Lights()
 		r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(0, 0, 0));
 	} // FOR EACH LIGHT
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, prevStencil );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, prevStencil );
 
 	r3dRenderer->RestoreCullMode();
 
@@ -6443,9 +6443,9 @@ void DrawTansparentObjects()
 	{
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 		r3dSetFiltering( R3D_BILINEAR );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE,       	0);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
+		r3dRenderer->SetRenderState(D3DRS_ZENABLE,       	0);
+		r3dRenderer->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
+		r3dRenderer->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
 	}
 
 	//r3dDrawBox2D(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(0,0,0,0), gBuffer_Particles->Tex);
@@ -6581,11 +6581,11 @@ void r3dDefferedRenderer::Render()
 	{
 		gBuffer_Color->Activate( 0 );
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) );
 		SetupMaskWriteStencilStates( 2 );
 		DrawGrass( GrassMap::DEPTH_PATH, false );
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
-														D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
+		D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
+														D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
 														D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 		gBuffer_Color->Deactivate( 0 );
 	}
@@ -6640,7 +6640,7 @@ void r3dDefferedRenderer::Render()
 		}
 		else
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
 		}
 
 		RenderSSAOEffect();
@@ -6670,7 +6670,7 @@ void r3dDefferedRenderer::Render()
 
 		if( !r_half_scale_ssao->GetInt() && r_ssao_stencil_cut->GetBool() )
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 		}
 	}
 
@@ -6712,7 +6712,7 @@ void r3dDefferedRenderer::Render()
 		g_pDecalChief->Draw();
 	}
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE );
 
 	//------------------------------------------------------------------------
 
@@ -6821,7 +6821,7 @@ void r3dDefferedRenderer::Render()
 
 	r3dRenderer->SetZRange( R3D_ZRANGE_WORLD ) ;
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
+	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
 	r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, 0x00000000, 1.0f, 0 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA|R3D_BLEND_NZ);
@@ -6846,8 +6846,8 @@ void r3dDefferedRenderer::Render()
 
 	for (int i=0;i<8;i++)
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 	}
 
 	r3dRenderer->SetTex(gBuffer_Color->Tex);
@@ -6891,7 +6891,7 @@ void r3dDefferedRenderer::Render()
 
 	SetupLightMaskStencilStates( SCM_LITAREA );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) );
 
 	// rest of lights may not render where the sky is
 
@@ -6936,7 +6936,7 @@ void r3dDefferedRenderer::Render()
 
 	GameWorld().ResetObjFlags();
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
+	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
 
 	r3dRenderer->SetTex(BlurBuffer->Tex,4);
 
@@ -6953,8 +6953,8 @@ void r3dDefferedRenderer::Render()
 
 	for (int i=0;i<8;i++)
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 	}
 
 	GameWorld().Draw( rsDrawComposite1 );  // SFX
@@ -7058,9 +7058,9 @@ void r3dDefferedRenderer::Render()
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 		r3dSetFiltering( R3D_BILINEAR );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE,       	0);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
+		r3dRenderer->SetRenderState(D3DRS_ZENABLE,       	0);
+		r3dRenderer->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
+		r3dRenderer->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
 
 		r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(255,255,255), gBuffer_Particles->Tex, -1.0f);
 
@@ -7493,8 +7493,8 @@ void r3dDefferedRenderer::PostProcess()
 
 	for (int i=0;i<8;i++)
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 	}
 
 	r3dRenderer->SetPixelShader();
@@ -7633,14 +7633,14 @@ void UpdateD3DAntiCheat()
 
 			} gSetResetViewport( vx, vy, vw, vh ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->Clear( 1, &clearRect, D3DCLEAR_ZBUFFER, 0, CLEAR_VAL, 0 ) ) ;
+			r3dRenderer->Clear( 1, &clearRect, D3DCLEAR_ZBUFFER, 0, CLEAR_VAL, 0 ) ;
 
 			D3D_V( AntiCheatQuery->Issue( D3DISSUE_BEGIN ) );
 
 #if 0
 			if( r_debug_helper->GetInt() )
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
 			}
 #endif
 			ra[ rsFillGBuffer ][ 0 ].DrawFunc( &ra[ rsFillGBuffer ][ 0 ], cam );
@@ -7648,7 +7648,7 @@ void UpdateD3DAntiCheat()
 #if 0
 			if( r_debug_helper->GetInt() )
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
 			}
 #endif
 
@@ -7736,14 +7736,14 @@ void UpdateD3DAntiCheat()
 					D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_SCISSORTESTENABLE, &PrevScissor ) );
 					D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_STENCILENABLE, &PrevStencil ) );
 
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 				}
 
 				~SetRestoreStates()
 				{
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
-					D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
+					D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
 				}
 
 				DWORD PrevScissor ;
@@ -8165,16 +8165,16 @@ void ApplyTemporalSSAOFilters( r3dScreenBuffer* ssaoRT )
 		extern int __RenderSSAOOnScreen ;
 		if( r_ssao_temporal_showmask->GetInt() && __RenderSSAOOnScreen )
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN ) ) ;
 			CopySurface( TempScreenBuffer, gBuffer_Aux ) ;
 		}
 		else
 		{
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) ) ;
 			CopySurface( CurrentSSAOBuffer, gBuffer_Aux ) ;
 		}
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, 
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,
 															D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
 															D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA
 															) ) ;

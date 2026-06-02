@@ -3619,8 +3619,8 @@ r3dTerrain2::DrawOrthographicTerrain( const r3dCamera& Cam, bool UseZ ) /*OVERRI
 	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 );
 
 	// need white alpha or else our d3dxsave/d3dxload bezzle produces enterily black dxt1...
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
+	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
 													D3DCOLORWRITEENABLE_BLUE ) );
 
 
@@ -3639,8 +3639,8 @@ r3dTerrain2::DrawOrthographicTerrain( const r3dCamera& Cam, bool UseZ ) /*OVERRI
 
 	EndTileRendering() ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
+	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
 													D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
 	RemoveAllocatedTiles() ;
@@ -6607,8 +6607,8 @@ r3dTerrain2::StartTileUpdating()
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 
 	//------------------------------------------------------------------------
 	// sampler sColor                 : register ( s11 );
@@ -6630,8 +6630,8 @@ r3dTerrain2::StartTileUpdating()
 
 	for( int i = 0, e = 8 ; i < e; i ++ )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
 
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 	}
@@ -6644,16 +6644,16 @@ r3dTerrain2::StartTileUpdating()
 
 	for( int i = 8, e = 13 ; i < e; i ++ )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 	}
 
 	//------------------------------------------------------------------------
 	// setup vertex textures
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
 	r3dRenderer->SetTex( m_NormalTex, D3DVERTEXTEXTURESAMPLER0 ) ;
 	r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 ) ;
@@ -6887,14 +6887,14 @@ r3dTerrain2::UpdateTileInAtlas( const AllocatedTile* tile )
 				r3dRenderer->SetTex( m_BaseLayer.DiffuseTex, 0 ) ;
 				r3dRenderer->SetTex( m_BaseLayer.NormalTex, 1 ) ;
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE ) ) ;
 			}
 			else
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCALPHA ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCALPHA ) ) ;
 			}
 		}
 
@@ -6946,10 +6946,10 @@ r3dTerrain2::UpdateTileInAtlas( const AllocatedTile* tile )
 
 		r3dRenderer->SetPixelShader( id ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) ) ;
 
 		r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 		r3dRenderer->Stats.AddNumTerrainTris( 2 );
@@ -6965,7 +6965,7 @@ r3dTerrain2::StopTileUpdating()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 	StopUsingTileGeom() ;
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 	r3dRenderer->RestoreCullMode() ;
 
 	FlushAtlasRTs() ;
@@ -7008,7 +7008,7 @@ r3dTerrain2::StartTileRoadUpdating()
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 #endif
 }
 
@@ -7101,7 +7101,7 @@ r3dTerrain2::StopTileRoadUpdating()
 	r3dRenderer->RestoreCullMode() ;
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 
 	r3dRenderer->SetVertexShader() ;
 	r3dRenderer->SetPixelShader() ;
@@ -7121,12 +7121,12 @@ r3dTerrain2::StartMipChainsTileRendering()
 	{
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) ) ;
 
 		float bias = float( -11.0f ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&bias ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&bias ) ) ;
 
 	}
 
@@ -7163,8 +7163,8 @@ r3dTerrain2::RenderTileMipChain( const AllocatedTile* tile )
 		r3dRenderer->SetTex( atlasDiffuse->Tex, 0 ) ;
 		r3dRenderer->SetTex( atlasNormal->Tex, 1 ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
 
 		r3dTL::TFixedArray< float4, 2 > vsConst ;
 
@@ -7246,10 +7246,10 @@ r3dTerrain2::StopMipChainsTileRendering()
 	{
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MAXMIPLEVEL, 0 ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MAXMIPLEVEL, 0 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
 	}
 
 	r3dRenderer->SetVertexDecl( R3D_MESH_VERTEX::getDecl() ) ;
@@ -7270,8 +7270,8 @@ r3dTerrain2::SetupTileRenderingVertexStates()
 		r3dRenderer->SetTex( m_HeightTex, D3DVERTEXTEXTURESAMPLER0 ) ;
 
 		r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 	}
 #endif
 }
@@ -7289,11 +7289,11 @@ r3dTerrain2::StartTileRendering()
 	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 0 ) ;
 	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 1 ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW ) ;
 
@@ -7334,7 +7334,7 @@ r3dTerrain2::StartTileRendering()
 #ifndef FINAL_BUILD
 	if( r_terra_wire->GetInt() )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE , D3DFILL_WIREFRAME ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_FILLMODE , D3DFILL_WIREFRAME ) ) ;
 	}
 #endif
 #endif
@@ -7571,15 +7571,15 @@ r3dTerrain2::EndTileRendering()
 #ifndef FINAL_BUILD
 	if( r_terra_wire->GetInt() )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE , D3DFILL_SOLID ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_FILLMODE , D3DFILL_SOLID ) ) ;
 	}
 #endif
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
 
 	// restore default max anisotropy
 	r3dSetDefaultMaxAnisotropy() ;

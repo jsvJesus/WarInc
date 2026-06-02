@@ -72,18 +72,18 @@ PFX_StencilToMask::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ 
 	// contrary to what some may think, this sets main zbuffer
 	r3dRenderer->SetDSS( dest->ZBuf.Get() ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, true )			);
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_KEEP )	);
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF, 1 )					);
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF )		);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, true )			);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_KEEP )	);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILREF, 1 )					);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF )		);
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_LESSEQUAL )	);
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_LESSEQUAL )	);
 
 	const Settings& sts = mSettings[ 0 ] ;
 
 	if( sts.ColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) );
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask ) );
 	}
 
 	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &sts.Value.x, 1 ) );
@@ -95,7 +95,7 @@ PFX_StencilToMask::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ 
 void
 PFX_StencilToMask::FinishImpl() /*OVERRIDE*/
 {
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	const Settings& sts = mSettings[ 0 ];
 

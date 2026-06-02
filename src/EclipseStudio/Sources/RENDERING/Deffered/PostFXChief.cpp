@@ -323,9 +323,9 @@ PostFXChief::BindBufferTexture( RTType type, int stage )
 void
 PostFXChief::SetDefaultTexAddressMode( int stage )
 {
-	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
 }
 
 //------------------------------------------------------------------------
@@ -379,7 +379,7 @@ template void PostFXChief::SetDefaultTexFilteringTillN< PostFXChief::NUM_SAMPLER
 void
 PostFXChief::SetDefaultColorWriteMask()
 {
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, DEFAULT_COLOR_WRITE_MASK ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, DEFAULT_COLOR_WRITE_MASK ) );
 }
 
 //------------------------------------------------------------------------

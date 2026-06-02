@@ -270,7 +270,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 
 			D3D_V( r3dRenderer->pd3ddev->GetRenderState( D3DRS_SCISSORTESTENABLE, & prevScissorEnable ) ) ;
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 
 			r3dRenderer->SetCullMode( D3DCULL_NONE ) ;
 			
@@ -278,7 +278,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 
 		~PerfEventsAndStates()	
 		{	
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, prevScissorEnable ) ) ;
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, prevScissorEnable ) ) ;
 
 			r3dRenderer->RestoreCullMode() ;
 
@@ -294,8 +294,8 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 	r3dRenderer->SetVertexShader( "VS_POSTFX_DEFAULT" );
 	r3dRenderer->SetPixelShader( "PS_FSCOPY" );
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
 
 	// copy 0 mip
 	{
@@ -320,15 +320,15 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 		const r3dScreenBuffer::Dims& prevDims = cube->MipDims[ i - 1 ] ;
 		const r3dScreenBuffer::Dims& dims = cube->MipDims[ i ] ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, 0 ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, 0 ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
 
 		temp1->Activate() ;
 
 		r3dRenderer->SetTex( temp0->Tex ) ;
 
 		r3dSetFiltering( R3D_BILINEAR, 0 ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) ) ;
 
 		// float4 		g_vTexcTransform	: register ( c36 );
 		float vsConst[ 4 ] = { prevDims.Width / temp0->Width , prevDims.Height / temp0->Height, 1.0f / temp0->Width, 1.0f / temp0->Height } ;
@@ -359,7 +359,7 @@ void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* t
 		R3D_SWAP( temp0, temp1 ) ;
 	}
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
 	// to override our mip filter hack
 	r3dSetFiltering( R3D_POINT, 0 ) ;
 

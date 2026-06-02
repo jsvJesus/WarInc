@@ -6,6 +6,7 @@
 #define SCENEBOX_MAXOBJECTS 25
 
 class GameObject;
+class r3dD3DQuery;
 class SceneBox : public r3dTreeNode<SceneBox>
 {
 public:
@@ -42,7 +43,7 @@ public:
 	r3dVector  GetHalfSize() const { return m_HalfSize; }
 
 	//temp, test
-	LPDIRECT3DQUERY9 query;
+	r3dD3DQuery* query;
 	bool visible;
 	int lastVisited;
 	int lastRendered;

@@ -501,17 +501,17 @@ void r3dSetFiltering( r3dFilter Filter, int Stage )
  {
   for (int i=0;i<8;i++)
   {
-   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MAGFILTER, FMagMode );
-   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MINFILTER, FMode );
-   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MIPFILTER, MipFMode );
+   r3dRenderer->SetSamplerState(i, D3DSAMP_MAGFILTER, FMagMode );
+   r3dRenderer->SetSamplerState(i, D3DSAMP_MINFILTER, FMode );
+   r3dRenderer->SetSamplerState(i, D3DSAMP_MIPFILTER, MipFMode );
 
   }
  }
  else
   {
-   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MAGFILTER, FMagMode );
-   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MINFILTER, FMode );
-   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MIPFILTER, MipFMode );
+   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MAGFILTER, FMagMode );
+   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MINFILTER, FMode );
+   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MIPFILTER, MipFMode );
   }
 }
 
@@ -519,23 +519,23 @@ void r3dSetMaxAnisotropy( int value, int stage )
 {
 	value = R3D_MIN( value, (int)r3dRenderer->d3dCaps.MaxAnisotropy ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MAXANISOTROPY, value ) );
+	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MAXANISOTROPY, value ) );
 }
 
 void r3dSetAnisotropy( int value, int stage )
 {
 	r3dSetMaxAnisotropy( value, stage ) ;
 	
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MAGFILTER,D3DTEXF_LINEAR ) ) ;
-	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MAGFILTER,D3DTEXF_LINEAR ) ) ;
+	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR ) ) ;
 
 	if( value > 1 )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC ) ) ;
 	}
 	else
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_LINEAR ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_LINEAR ) ) ;
 	}
 }
 
@@ -765,7 +765,7 @@ void r3dDrawNormQuad(r3dCamera &Cam, const r3dPoint3D& Pos, const r3dPoint3D& No
 void r3dSetWireframe(int bOn)
 {
   r3dRenderer->Flush();
-  r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, bOn ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
+  r3dRenderer->SetRenderState(D3DRS_FILLMODE, bOn ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
 }
 
 int r3dGetPitchHeight( int count, D3DFORMAT fmt )

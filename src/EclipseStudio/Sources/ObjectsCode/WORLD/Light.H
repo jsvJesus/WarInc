@@ -4,6 +4,8 @@
 
 #include "building.h"
 
+class r3dD3DQuery;
+
 class obj_LampBulb : public obj_Building
 {
 	DECLARE_CLASS(obj_LampBulb, obj_Building)
@@ -21,7 +23,7 @@ class obj_LampBulb : public obj_Building
 	float		FadeVal;
 
 	r3dBoundBox	LightBBox;
- IDirect3DQuery9* 	Query;
+ r3dD3DQuery* 	Query;
 	int		VisiblePixels;
 	
 

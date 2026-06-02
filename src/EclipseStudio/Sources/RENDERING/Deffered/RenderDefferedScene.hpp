@@ -170,7 +170,7 @@ void RenderDeferredSkydome()
 
 void ClearMRTUsingShaders()
 {
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 
 	SetMRTClearShaders( false );
 
@@ -260,7 +260,7 @@ void RenderDeferredScene1()
 			rect.y2 = int( gBuffer_Aux->Height / 2 ) + 1 ;
 
 			gBuffer_Aux->Activate( 0 ) ;
-			D3D_V( r3dRenderer->pd3ddev->Clear( 1, &rect, D3DCLEAR_TARGET, 0x00ff7f00, 0.f, 0 ) ) ;
+			r3dRenderer->Clear( 1, &rect, D3DCLEAR_TARGET, 0x00ff7f00, 0.f, 0 ) ;
 			gBuffer_Aux->Deactivate() ;
 		}
 	}
@@ -348,12 +348,12 @@ void RenderDeferredScene1()
 
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW | R3D_BLEND_PUSH ) ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) ) ;
+		D3D_V( r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, FALSE ) ) ;
 
 		GameWorld().Draw( rsDepthPrepass ) ;
 
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | 
+		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED |
 																		D3DCOLORWRITEENABLE_GREEN |
 																		D3DCOLORWRITEENABLE_BLUE |
 																		D3DCOLORWRITEENABLE_ALPHA	) ;
@@ -393,8 +393,8 @@ void RenderDeferredScene1()
 
 	r3dRenderer->SetCamera ( gCam );
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
-	// r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF, 1);
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	// r3dRenderer->SetRenderState( D3DRS_ALPHAREF, 1);
 
 	DeactivatePrimaryDepth();
 
@@ -406,7 +406,7 @@ void RenderDeferredScene1()
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 	if ( Terrain1 && r_terrain->GetBool() 
 		&& !( Terrain2 && r_terrain2->GetInt() )
@@ -460,8 +460,8 @@ void RenderDeferredScene1()
 
 	//	r3dRenderer->SetTex( g_EnvmapProbes.GetClosestTexture( gCam ), 5 );
 
-	//	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	//	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	//	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	//	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 
 	D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
@@ -474,8 +474,8 @@ void RenderDeferredScene1()
 
 	for( int i = 0; i < 6; i ++ )
 	{
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 		r3dSetFiltering( R3D_ANISOTROPIC, i );
 	}
@@ -526,7 +526,7 @@ void RenderDeferredScene1()
 	gBuffer_Color->Deactivate();
 	gBuffer_Aux->Deactivate();
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	r3dRenderer->EndRender();
 

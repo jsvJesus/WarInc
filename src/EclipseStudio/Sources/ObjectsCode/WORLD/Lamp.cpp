@@ -1073,7 +1073,7 @@ obj_LightHelper::DoDraw()
 
 				r3dDrawGeoSpheresStart();
 
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );						
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1083,7 +1083,7 @@ obj_LightHelper::DoDraw()
 				r3dSetFwdColorShaders( r3dColor( 0xff, 0x33, 0x33, 0xff ) );
 				r3dDrawGeoSphere();	
 
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawGeoSpheresEnd();						
 			}
@@ -1098,7 +1098,7 @@ obj_LightHelper::DoDraw()
 
 				r3dDrawGeoSpheresStart();
 
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );						
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1108,7 +1108,7 @@ obj_LightHelper::DoDraw()
 				r3dSetFwdColorShaders( r3dColor( 0xff, 0x33, 0x33, 0xff ) );
 				r3dDrawGeoSphere();	
 
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawGeoSpheresEnd();
 
@@ -1154,7 +1154,7 @@ obj_LightHelper::DoDraw()
 				r3dDrawChamferBoxStart();
 
 				r3dRenderer->SetCullMode( D3DCULL_NONE );
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1165,7 +1165,7 @@ obj_LightHelper::DoDraw()
 				r3dDrawChamferBox();
 
 				r3dRenderer->RestoreCullMode();
-				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawChamferBoxEnd();
 			}

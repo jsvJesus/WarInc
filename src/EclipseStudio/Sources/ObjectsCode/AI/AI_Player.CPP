@@ -5902,7 +5902,7 @@ struct PlayerRenderable : Renderable
 					r3dRenderer->SetCamera( gCam ) ;
 					if( r_particles_quality->GetInt() > 3 )
 					{
-						D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
+						D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
 					}
 				}
 			}
@@ -5973,8 +5973,8 @@ struct PlayerRenderable : Renderable
 
 			r3dRenderer->SetPixelShader( PS_TRANSPARENT_AURA_ID ) ;
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
+			r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 		}
 		else
 		{
@@ -6019,8 +6019,8 @@ struct PlayerRenderable : Renderable
 
 				r3dRenderer->SetTex( gPlayer_CamoTexture, 9 ) ;
 
-				r3dRenderer->pd3ddev->SetSamplerState(9, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-				r3dRenderer->pd3ddev->SetSamplerState(9, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+				r3dRenderer->SetSamplerState(9, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+				r3dRenderer->SetSamplerState(9, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 			}
 
@@ -6086,12 +6086,12 @@ struct PlayerRenderable : Renderable
 
 				r3dRenderer->SetPixelShader( PS_DEPTH_ID ) ;
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE,  TRUE ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE,  TRUE ) );
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) );
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_MIN ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_MIN ) );
 
 				This->Parent->uberEquip_->Draw( This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix, draw_weapon, CUberEquip::DT_DEPTH, This->FirstPerson ? true : false );
 
@@ -6100,7 +6100,7 @@ struct PlayerRenderable : Renderable
 				r3dTransparentSetDistort( 1 ) ;
 				SetParticleDepth();
 
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) );
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) );
 			}
 
 			{
@@ -6128,14 +6128,14 @@ struct PlayerRenderable : Renderable
 			}
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
+			D3D_V( r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
+			D3D_V( r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
 
 			r3dTransparentSetDistort( 1 ) ;
 
 			if( This->FirstPerson && r_particles_quality->GetInt() > 3 )
 			{
-				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
+				D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
 			}
 
 		}

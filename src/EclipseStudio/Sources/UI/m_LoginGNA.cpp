@@ -226,11 +226,11 @@ int CLoginGNAMenu::Update()
 		newVp.Height = r3dRenderer->d3dpp.BackBufferHeight;
 		DWORD oldScissor = 0;
 		r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissor);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 		r3dRenderer->SetViewport( (float)newVp.X, (float)newVp.Y, (float)newVp.Width, (float)newVp.Height );
 		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
 		r3dRenderer->SetViewport( (float)oldVp.X, (float)oldVp.Y, (float)oldVp.Width, (float)oldVp.Height );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
 
 		gfxMovie.UpdateAndDraw();
 

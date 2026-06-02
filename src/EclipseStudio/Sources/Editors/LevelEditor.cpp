@@ -2586,8 +2586,8 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 			r3dRenderer->RestoreCullMode();
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
 		}
 
 		IDirect3DSurface9*	PrevRTs[ 4 ];
@@ -2618,7 +2618,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetDSS( depth ) ;
 
-	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.F, 0 ) );
+	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.F, 0 );
 
 	D3DVIEWPORT9 viewport;
 
@@ -2634,9 +2634,9 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	r3dPoint3D worldOrigin = GameWorld().m_MinimapOrigin;
 	r3dPoint3D worldSize = GameWorld().m_MinimapSize;
@@ -2709,10 +2709,10 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	for( int i = 0; i < 8; i ++ )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, dbias ) );
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, dbias ) );
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
 	}
 
 	GameWorld().Draw( rsFillGBuffer );
@@ -6026,11 +6026,11 @@ void Editor_Level :: ProcessTerrain()
 
 							sprintf( sStatStr, "%s texture\n%s\n%dx%d", g_iTerrainNormalMapEditMode ? "Normal" : "Diffuse", tex->getFileLoc().FileName + toAdd, tex->GetWidth(), tex->GetHeight() );
 
-							D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+							D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
 							imgui_Static ( 370, fStatisticYStart, sStatStr, 360, false, fStatisticHeight );
 
-							D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+							D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
 
 							if (imgui_Button(SliderX+10+2+110+106,SliderY+42+2, 60, 20, "EDIT", 0))
 							{
@@ -6211,9 +6211,9 @@ Editor_Level::ProcessTerrain2_Settings( float SliderX, float SliderY )
 		r_texture_quality->GetInt() < 3
 		)
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 		imgui_Static( r3dRenderer->ScreenW2 - 350, r3dRenderer->ScreenH2, "Please set Terrain Quality and Texture Quality to 3 in Game Options to modify Terrain Settings",700, false, 22, true ) ;
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 		return SliderY ;
 	}
 #endif
@@ -7128,11 +7128,11 @@ Editor_Level::ProcessTerrain2_Paint( float SliderX, float SliderY, int editMode 
 
 			sprintf( sStatStr, "%s texture\n%s\n%dx%d", g_iTerrainNormalMapEditMode ? "Normal" : "Diffuse", tex->getFileLoc().FileName + toAdd, tex->GetWidth(), tex->GetHeight() );
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
 			imgui_Static ( 370, fStatisticYStart, sStatStr, 360, false, fStatisticHeight );
 
-			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
 
 			if (imgui_Button(SliderX+10+2+110+106,SliderY+42+2, 60, 20, "EDIT", 0))
 			{
@@ -10374,14 +10374,14 @@ void ProcessWaterEditor ()
 
 		if(bBrushVisible && Keyboard->IsPressed(kbsLeftControl))
 		{
-			//r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+			//r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 			if ( g_iWaterEditFollowTerrainMode )
 				r3dDrawUniformCircle3DT(vBrushPos, g_fWaterPlaneBrushRadius, gCam, g_fWaterPlaneHeightOnTerrain, r3dColor::red);
 			else
 				//r3dDrawUniformCircle3D(vBrushPos, g_fWaterPlaneBrushRadius, gCam, r3dColor::red );
 				PushWaterBrush(vBrushPos, g_fWaterPlaneBrushRadius);
 			//PushBoundingSphere(vBrushPos, g_fWaterPlaneBrushRadius);
-			//r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+			//r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 		}
 
 		if(bCanEditWaterPlane && Keyboard->IsPressed(kbsLeftControl) && (Mouse->IsPressed(r3dMouse::mLeftButton)) && !imgui_IsCursorOver2d() && !imgui2_IsCursorOver2d())
@@ -14419,7 +14419,7 @@ void Editor_Level::ProcessAssets()
 
 						m_pPreviewBuffer->zType = r3dScreenBuffer::Z_SYSTEM;
 						m_pPreviewBuffer->Activate();
-						r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
+						r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
 						r3dRenderer->SetVertexShader( r3dRenderer->AddVertexShaderFromFile( "FORVARD_VS", "forward_vs.hls" ) );
 						r3dRenderer->SetPixelShader( r3dRenderer->AddPixelShaderFromFile( "FORVARD_PS", "forward_ps.hls" ) );
 						mesh.DrawMeshSimple( 1 );
@@ -14487,8 +14487,8 @@ void Editor_Level::ProcessAssets()
 				r3dRenderer->pd3ddev->GetSamplerState( 0, D3DSAMP_ADDRESSU, &dwOldStateU);
 				r3dRenderer->pd3ddev->GetSamplerState( 0, D3DSAMP_ADDRESSV, &dwOldStateV);
 
-				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
-				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
+				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
+				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
 				
 				float fSize;
 				if ( bDragPreview )
@@ -14497,8 +14497,8 @@ void Editor_Level::ProcessAssets()
 					fSize = g_EditorPreviewSize;
 				r3dDrawBox2D( fX, fY, fSize, fSize, r3dColor( 255, 255, 255 ), pTex, TC );
 				
-				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, dwOldStateU );
-				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, dwOldStateV );
+				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, dwOldStateU );
+				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, dwOldStateV );
 
 				if ( !bDragPreview )
 				{
@@ -14628,7 +14628,7 @@ void Editor_Level::ProcessAssets()
 				DepthBuffer->Deactivate();
 
 				m_pPreviewBuffer->Activate();
-				r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
+				r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
 				pPartSys->Draw( camera, false );
 				m_pPreviewBuffer->Deactivate();
 

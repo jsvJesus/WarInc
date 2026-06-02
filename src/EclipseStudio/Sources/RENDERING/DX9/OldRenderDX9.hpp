@@ -172,9 +172,9 @@ void RenderDX9Scene(int FullDraw = 1)
 	r3dRenderer->SetVertexShader("VS_SMDEPTHPASS");
 	r3dRenderer->SetPixelShader("PS_SMDEPTHPASS");
 
-//	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAFUNC, 	D3DCMP_GREATEREQUAL);
-//	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
-//	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF, 100);
+//	r3dRenderer->SetRenderState( D3DRS_ALPHAFUNC, 	D3DCMP_GREATEREQUAL);
+//	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
+//	r3dRenderer->SetRenderState( D3DRS_ALPHAREF, 100);
 
     
     if (Terrain)
@@ -201,7 +201,7 @@ void RenderDX9Scene(int FullDraw = 1)
 
 	r3dRenderer->EndRender();
 	ShadowBuffer->Deactivate();
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
  }
 
@@ -252,8 +252,8 @@ void RenderDX9Scene(int FullDraw = 1)
  r3dRenderer->SetMaterial(NULL);
  r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF, 1);
+ r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
+ r3dRenderer->SetRenderState( D3DRS_ALPHAREF, 1);
 
 //
  //
@@ -279,8 +279,8 @@ void RenderDX9Scene(int FullDraw = 1)
    SetupSMTransform(ShadowCam, RealD, RealD);	
 
    r3dRenderer->SetTexture(ShadowBuffer->Tex,7);
-   r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-   r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+   r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+   r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
    Terrain->Draw(gCam);
  }
@@ -288,16 +288,16 @@ void RenderDX9Scene(int FullDraw = 1)
  r3dRenderer->SetMaterial(NULL);
  r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF, 1);
+ r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, TRUE );
+ r3dRenderer->SetRenderState( D3DRS_ALPHAREF, 1);
 	
 	SunL->SetShaderConstants(gCam);
 
   		SetupSMTransform(ShadowCam, RealD, RealD);	
 
 		r3dRenderer->SetTexture(ShadowBuffer->Tex,5);
-		r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 
 	GameWorld.Draw(gCam, OBJ_DRAW_USERDEFINED+102);
@@ -369,13 +369,13 @@ void RenderDX9Scene(int FullDraw = 1)
 
 			  if (TT1 && TT2)
                           {
-//                           r3dRenderer->pd3ddev->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
-//			   r3dRenderer->pd3ddev->SetRenderState( D3DRS_DEPTHBIAS, F2DW(ZBias) );
+//                           r3dRenderer->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
+//			   r3dRenderer->SetRenderState( D3DRS_DEPTHBIAS, F2DW(ZBias) );
 
 			   r3dShadow->RenderZFail();
 
-//		           r3dRenderer->pd3ddev->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
-//			   r3dRenderer->pd3ddev->SetRenderState( D3DRS_DEPTHBIAS, F2DW(0.0f) );
+//		           r3dRenderer->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
+//			   r3dRenderer->SetRenderState( D3DRS_DEPTHBIAS, F2DW(0.0f) );
                           }
 		break;
 
@@ -385,13 +385,13 @@ void RenderDX9Scene(int FullDraw = 1)
 
 			  if (TT1 && TT2)
                           {
-                           r3dRenderer->pd3ddev->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
-			   r3dRenderer->pd3ddev->SetRenderState( D3DRS_DEPTHBIAS, F2DW(ZBias) );
+                           r3dRenderer->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
+			   r3dRenderer->SetRenderState( D3DRS_DEPTHBIAS, F2DW(ZBias) );
 
 			   r3dShadow->RenderZPass();
 
-		           r3dRenderer->pd3ddev->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
-			   r3dRenderer->pd3ddev->SetRenderState( D3DRS_DEPTHBIAS, F2DW(0.0f) );
+		           r3dRenderer->SetRenderState( D3DRS_SLOPESCALEDEPTHBIAS, F2DW(0.0f));
+			   r3dRenderer->SetRenderState( D3DRS_DEPTHBIAS, F2DW(0.0f) );
 			  }
 		break;
 
@@ -459,20 +459,20 @@ void RenderDX9Scene(int FullDraw = 1)
 			D3DPERF_SetMarker(0xff0000ff, L"if light cast shadows render shadows - shadow volumes used here");
   
 			r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC);
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 0x00000000 );
+			r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0x00000000 );
 
 			// Enable stenciling
 			// Enable write to Stencil
 			// Set stencil fun - always
-			r3dRenderer->pd3ddev->Clear( 0L, NULL, D3DCLEAR_STENCIL, 0x0, 1.0f, 0L );
+			r3dRenderer->Clear( 0L, NULL, D3DCLEAR_STENCIL, 0x0, 1.0f, 0L );
 
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE,   	TRUE );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC,     	D3DCMP_ALWAYS );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF,      	0x1 );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILMASK,     	0xffffffff );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILWRITEMASK,	0xffffffff );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFAIL,  	D3DSTENCILOP_KEEP );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILPASS,  	D3DSTENCILOP_KEEP );
+			r3dRenderer->SetRenderState( D3DRS_STENCILENABLE,   	TRUE );
+			r3dRenderer->SetRenderState( D3DRS_STENCILFUNC,     	D3DCMP_ALWAYS );
+			r3dRenderer->SetRenderState( D3DRS_STENCILREF,      	0x1 );
+			r3dRenderer->SetRenderState( D3DRS_STENCILMASK,     	0xffffffff );
+			r3dRenderer->SetRenderState( D3DRS_STENCILWRITEMASK,	0xffffffff );
+			r3dRenderer->SetRenderState( D3DRS_STENCILFAIL,  	D3DSTENCILOP_KEEP );
+			r3dRenderer->SetRenderState( D3DRS_STENCILPASS,  	D3DSTENCILOP_KEEP );
 
 			extern FLOAT g_fExt; // = 300.0f; // Absolute extrusion distance
 
@@ -480,19 +480,19 @@ void RenderDX9Scene(int FullDraw = 1)
 			r3dSetFiltering(0);
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA); // | R3D_BLEND_ZC);
 
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
-		//    r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_BLUE);
+			r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
+		//    r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_BLUE);
 
-			r3dRenderer->pd3ddev->SetRenderState(D3DRS_CULLMODE,       	D3DCULL_CCW);
-		//        r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE,        	D3DZB_TRUE);
-		//        r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE,   	FALSE);
+			r3dRenderer->SetRenderState(D3DRS_CULLMODE,       	D3DCULL_CCW);
+		//        r3dRenderer->SetRenderState(D3DRS_ZENABLE,        	D3DZB_TRUE);
+		//        r3dRenderer->SetRenderState(D3DRS_ZWRITEENABLE,   	FALSE);
 
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILFUNC,  	D3DCMP_EQUAL );
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILPASS,  	D3DSTENCILOP_KEEP );
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILFAIL,  	D3DSTENCILOP_KEEP );
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILZFAIL, 	D3DSTENCILOP_KEEP );
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILMASK,  	0xFFFFFFFF );
-			r3dRenderer->pd3ddev->SetRenderState ( D3DRS_STENCILREF,	0x0 );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILFUNC,  	D3DCMP_EQUAL );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILPASS,  	D3DSTENCILOP_KEEP );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILFAIL,  	D3DSTENCILOP_KEEP );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILZFAIL, 	D3DSTENCILOP_KEEP );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILMASK,  	0xFFFFFFFF );
+			r3dRenderer->SetRenderState ( D3DRS_STENCILREF,	0x0 );
 
 		} // IF light cast shadows
 
@@ -501,7 +501,7 @@ void RenderDX9Scene(int FullDraw = 1)
   
 		r3dDrawBox2D(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(255,255,255));
 
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE,   	FALSE );
+		r3dRenderer->SetRenderState( D3DRS_STENCILENABLE,   	FALSE );
 
 		r3dSetFiltering(1);
 
@@ -536,9 +536,9 @@ void RenderDX9Scene(int FullDraw = 1)
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ADD | R3D_BLEND_ZC);
 
-//  r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, 1);
-//  r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	TRUE );
-//  r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAFUNC, 	D3DCMP_GREATEREQUAL);
+//  r3dRenderer->SetRenderState(D3DRS_ALPHAREF, 1);
+//  r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	TRUE );
+//  r3dRenderer->SetRenderState( D3DRS_ALPHAFUNC, 	D3DCMP_GREATEREQUAL);
 
 	l->SetShaderConstants(gCam);
 
@@ -600,14 +600,14 @@ void RenderDX9Scene(int FullDraw = 1)
 
 	if (HV_RenderShadows)
 		if (l->bCastShadows)
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE,  FALSE );
+			r3dRenderer->SetRenderState( D3DRS_STENCILENABLE,  FALSE );
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 	r3dRenderer->EndRender();
 	r3d__SkipPresent = 0;
@@ -624,8 +624,8 @@ void RenderDX9Scene(int FullDraw = 1)
  r3dRenderer->StartRender(0);
  r3dRenderer->SetCamera ( gCam);
 
-// r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, 1);
-// r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	TRUE );
+// r3dRenderer->SetRenderState(D3DRS_ALPHAREF, 1);
+// r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	TRUE );
 
  r3dRenderer->SetFog(1);
 

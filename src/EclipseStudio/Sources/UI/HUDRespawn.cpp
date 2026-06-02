@@ -405,12 +405,12 @@ void HUDRespawn::Draw()
 				r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 			}
 
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, true );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_ALWAYS );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILREF, 1 );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF );
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILWRITEMASK, 0xFFFFFFFF );
+			r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, true );
+			r3dRenderer->SetRenderState( D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE );
+			r3dRenderer->SetRenderState( D3DRS_STENCILFUNC, D3DCMP_ALWAYS );
+			r3dRenderer->SetRenderState( D3DRS_STENCILREF, 1 );
+			r3dRenderer->SetRenderState( D3DRS_STENCILMASK, 0xFFFFFFFF );
+			r3dRenderer->SetRenderState( D3DRS_STENCILWRITEMASK, 0xFFFFFFFF );
 
 			r3dRenderer->SetVertexShader(VS_FILLGBUFFER_ID);
 			FillbufferShaderKey key;
@@ -423,8 +423,8 @@ void HUDRespawn::Draw()
 			r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 			for( int i = 0; i < 6; i ++ )
 			{
-				r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-				r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+				r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+				r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 				r3dSetFiltering( R3D_ANISOTROPIC, i );
 			}
@@ -444,7 +444,7 @@ void HUDRespawn::Draw()
 			gBuffer_Depth->Deactivate();
 			gBuffer_Normal->Deactivate();
 			gBuffer_Color->Deactivate();
-			r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE );
+			r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE );
 
 		}
 		{
@@ -458,8 +458,8 @@ void HUDRespawn::Draw()
 			r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA);
 			for (int i=0;i<8;i++)
 			{
-				r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-				r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+				r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+				r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 			}
 			r3dRenderer->SetTex(gBuffer_Color->Tex);
 			r3dRenderer->SetTex(gBuffer_Normal->Tex,1);
@@ -558,10 +558,10 @@ void HUDRespawn::Draw()
 				maxX, maxY,
 				minX, maxY};
 
-			// 		r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-			// 		r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_BORDER );
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_BORDER );
+			// 		r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+			// 		r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_BORDER );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_BORDER );
 			uint32_t numPasses = (r3dRenderer->GetPresentEye() == R3D_STEREO_EYE_MONO ? 1 : 2);
 			for (uint32_t i = 0; i < numPasses; ++i)
 			{
@@ -574,7 +574,7 @@ void HUDRespawn::Draw()
 			r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 		}
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, false )			);
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, false )			);
 
 		m_RespawnWorld.EndFrame();		
 	}

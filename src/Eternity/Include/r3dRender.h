@@ -19,6 +19,7 @@
 #endif
 
 class r3dMaterial;
+class r3dD3DQuery;
 
 struct R3D_SCREEN_VERTEX;
 struct R3D_DEBUG_VERTEX;
@@ -680,6 +681,8 @@ public:
 	bool		IsRenderTargetFormatAvailable(D3DFORMAT fmt);
 
 	void		SetMipMapBias(float bias, int stage=-1);
+	HRESULT		SetRenderState(D3DRENDERSTATETYPE state, DWORD value);
+	HRESULT		SetSamplerState(DWORD stage, D3DSAMPLERSTATETYPE type, DWORD value);
 
 	r3dColorFormat*	GetColorFormatData(D3DFORMAT fmt);
 	r3dTexture*	AllocateTexture();
@@ -774,7 +777,7 @@ public:
 
 	void MarkEssentialD3DCommand();
 	void IssuePendingQuery();
-	void SetPendingQuery( IDirect3DQuery9* query );
+	void SetPendingQuery( r3dD3DQuery* query );
 	void ResetQueryCounters();
 	void UpdateShaderProfiles();
 
@@ -789,7 +792,7 @@ private:
 
 	void AquireMainRT();
 
-	IDirect3DQuery9*	PendingQuery ;
+	r3dD3DQuery*	PendingQuery ;
 	IDirect3DSurface9*	MainRT ;
 	IDirect3DSurface9*	MainDSS ;
 	D3DFORMAT			MainDSSFormat ;
@@ -1254,7 +1257,7 @@ public:
 	static void CreateIndexBuffer( UINT Length,DWORD Usage,D3DFORMAT Format,D3DPOOL Pool, r3dD3DIndexBufferTunnel* IndexBufferTunnel );
 	static void CreateRenderTarget( UINT Width,UINT Height,D3DFORMAT Format,D3DMULTISAMPLE_TYPE MultiSample,DWORD MultisampleQuality,BOOL Lockable,r3dD3DSurfaceTunnel* SurfaceTunnel );
 	static void CreateDepthStencilSurface( UINT Width,UINT Height,D3DFORMAT Format,D3DMULTISAMPLE_TYPE MultiSample,DWORD MultisampleQuality,BOOL Discard, r3dD3DSurfaceTunnel* SurfaceTunnel );
-	static void CreateQuery( D3DQUERYTYPE Type,IDirect3DQuery9** ppQuery) ;
+	static void CreateQuery( D3DQUERYTYPE Type,r3dD3DQuery** ppQuery) ;
 	static void CreateVertexDeclaration( const D3DVERTEXELEMENT9* pVertexElements, IDirect3DVertexDeclaration9** ppDecl );
 
 	static void D3DXCreateTextureFromFileInMemoryEx( LPCVOID pSrcData, UINT SrcDataSize, UINT Width, UINT Height, UINT MipLevels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, DWORD Filter, DWORD MipFilter, D3DCOLOR ColorKey, D3DXIMAGE_INFO* pSrcInfo, PALETTEENTRY* pPalette, r3dD3DTextureTunnel* TextureTunnel, const char* DEBUG_NAME, bool async = false );

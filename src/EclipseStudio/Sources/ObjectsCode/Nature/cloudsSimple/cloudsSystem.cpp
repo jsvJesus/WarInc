@@ -1002,9 +1002,9 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 
 	for (unsigned int i = 0; i < 2; ++i)
 	{
-		r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-		r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-		r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 	}
 
 	DWORD alphaTest;
@@ -1023,12 +1023,12 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
+	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
+	r3dRenderer->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+	r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
 
 
 
@@ -1051,8 +1051,8 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 	//if any clouds needs to be rendered into the main camera's view
 	if(curPoint > 0)
 	{
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE, TRUE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ZENABLE, TRUE);
+		r3dRenderer->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
 
  		r3dRenderer->SetPixelShader(psId);
  		r3dRenderer->SetVertexShader(vsId);
@@ -1142,7 +1142,7 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 		
 		//render offscreen surface with clouds into the main rendertarget
 		for(int i=0; i<2; i++)	r3dRenderer->SetRT(i, prevRT[i]);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ZENABLE, FALSE);
 		d3dc._SetDecl( vrtDeclQuad );
 		r3dRenderer->pd3ddev->SetStreamSourceFreq( 0, 1 );
 		r3dRenderer->pd3ddev->SetStreamSourceFreq( 1, 1 );
@@ -1178,7 +1178,7 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 /*
 	if(0)
 	{
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ZENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ZENABLE, FALSE);
 
  		r3dRenderer->SetPixelShader(psShadId);
  		r3dRenderer->SetVertexShader(vsShadId);
@@ -1264,12 +1264,12 @@ void CloudSystem::render(float dt, r3dTexture* cloudRefTex, r3dTexture* cloudPos
 
 	r3dRenderer->RestoreCullMode();
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, alphaTest);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, alphaBlend);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, srcBlend);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, dstBlend);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOP, blendOp);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOPALPHA, blendOpAlpha);
+	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, alphaTest);
+	r3dRenderer->SetRenderState(D3DRS_ALPHABLENDENABLE, alphaBlend);
+	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, srcBlend);
+	r3dRenderer->SetRenderState(D3DRS_DESTBLEND, dstBlend);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOP, blendOp);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOPALPHA, blendOpAlpha);
 }
 
 

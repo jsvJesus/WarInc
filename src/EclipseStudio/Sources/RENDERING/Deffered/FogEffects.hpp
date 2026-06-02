@@ -34,8 +34,8 @@ void SetVolumeFogParams()
 		D3DXVECTOR4 AerialDensity_Distance(aerialDensity, aerialDistance,  r3dGameLevel::Environment.Aerial_MipBias, 0);
 		r3dRenderer->SetPixelShaderConstantF(  FOGC_CONST0, (float *)&AerialDensity_Distance,  1 );
 
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
-		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
 		r3dSetFiltering( R3D_BILINEAR, 7 ) ;
 
@@ -83,9 +83,9 @@ void DrawVolumeFogEffect()
 
 	/*
 	r3dRenderer->pd3ddev->SetTexture(5, gNoiseTexture2->AsTexVolume());
-	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSW,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSW,   D3DTADDRESS_WRAP );
 	*/
 
 	float DepthZ = r3dRenderer->FarClip * 0.9375f;
@@ -95,8 +95,8 @@ void DrawVolumeFogEffect()
 		};
 	r3dRenderer->SetPixelShaderConstantF( 10, (float *)vsConsts, sizeof vsConsts / sizeof vsConsts[ 0 ] );	
 
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	SetVolumeFogParams();
 
@@ -124,8 +124,8 @@ void DrawVolumeFogEffect()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(NULL);
 	r3dRenderer->SetMaterial(NULL);

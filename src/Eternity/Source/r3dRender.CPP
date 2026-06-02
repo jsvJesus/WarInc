@@ -22,6 +22,7 @@
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
 #include "r3dDX11RenderTarget.h"
+#include "r3dDX11State.h"
 #include "r3dDX11Texture.h"
 #endif
 
@@ -42,6 +43,7 @@
 #include "../SF/Console/Config.h"
 
 #include "r3dDeviceQueue.h"
+#include "r3dBuffer.h"
 #ifndef WO_SERVER
 #include "r3dDX11.h"
 #endif
@@ -101,6 +103,12 @@ void r3dFrameQueryRelease();
 static void r3dDX11_UnregisterSurfaceMirror(IDirect3DSurface9* surface)
 {
 	g_r3dDX11RenderTargets.UnregisterSurface(surface);
+}
+
+static void r3dDX11_SetSamplerStateMirror(DWORD stage, D3DSAMPLERSTATETYPE type, DWORD value)
+{
+	if(g_r3dDX11.IsInitialized())
+		g_r3dDX11State.SetSamplerState((int)stage, (int)type, (unsigned int)value);
 }
 #endif
 
@@ -221,20 +229,28 @@ void r3dGPUStats::AddOtherBufferDXMem( int val )
 	AddVMem( val ) ;
 }
 
+HRESULT r3dRenderLayer::SetSamplerState(DWORD Stage, D3DSAMPLERSTATETYPE Type, DWORD Value)
+{
+#ifndef WO_SERVER
+	r3dDX11_SetSamplerStateMirror(Stage, Type, Value);
+#endif
+	return pd3ddev->SetSamplerState(Stage, Type, Value);
+}
+
 void r3dRenderLayer::SetMipMapBias(float Bias, int Stage)
 {
 	if (Stage != -1)
-		pd3ddev->SetSamplerState(Stage, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(Stage, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
 	else
 	{
-		pd3ddev->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(1, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(2, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(3, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(4, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(5, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(6, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		pd3ddev->SetSamplerState(7, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(1, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(2, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(3, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(4, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(5, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(6, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		SetSamplerState(7, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
 	}
 }
 
@@ -2242,9 +2258,9 @@ static void d3dSetDefaultStates()
 
 	for (int i=0;i<8;i++)
 	{
-		pd3ddev->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-		pd3ddev->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-		pd3ddev->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+		r3dRenderer->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
 		CurrentTexID[i] = -999;
 	}
@@ -2657,11 +2673,11 @@ extern	void	fog_UpdateVS(int bVShaderActive)
 		_bVSActive = bVShaderActive;
 
 	if(_bVSActive) {
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_NONE);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_LINEAR);
+		r3dRenderer->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_NONE);
+		r3dRenderer->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_LINEAR);
 	} else {
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_LINEAR);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_NONE);
+		r3dRenderer->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_LINEAR);
+		r3dRenderer->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_NONE);
 	}
 
 }
@@ -3031,9 +3047,9 @@ void r3dRenderLayer::DeregisterResource(r3dIResource* res)
 }
 
 static int eventCounter = 0;
-static IDirect3DQuery9* pQueryEvent[3] = {0};
+static r3dD3DQuery* pQueryEvent[3] = {0};
 
-IDirect3DQuery9*	g_pOcclusionQueries[1000] = {0};
+r3dD3DQuery*	g_pOcclusionQueries[1000] = {0};
 int					g_OcclusionQueryCounter = 0;
 
 void r3dFrameQueryCreate()
@@ -4042,6 +4058,12 @@ static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)
 #endif
 }
 
+HRESULT r3dRenderLayer::SetRenderState(D3DRENDERSTATETYPE State, DWORD Value)
+{
+	r3dDX11_SetRenderStateMirror(State, Value);
+	return pd3ddev->SetRenderState(State, Value);
+}
+
 void r3dRenderLayer::SetRenderingMode(int Mode)
 {
 	if(Mode & R3D_BLEND_POP) 
@@ -4229,6 +4251,10 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 {
 	if ( StageID >= D3DVERTEXTEXTURESAMPLER0 ) 
 	{
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized())
+			g_r3dDX11State.BindTexture(StageID, Tex);
+#endif
 		if(Tex)
 			D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
 		return;
@@ -4582,7 +4608,7 @@ void r3dRenderLayer::IssuePendingQuery()
 }
 
 void
-r3dRenderLayer::SetPendingQuery( IDirect3DQuery9* query )
+r3dRenderLayer::SetPendingQuery( r3dD3DQuery* query )
 {
 	IssuePendingQuery();
 
@@ -4830,10 +4856,10 @@ void ClearBackBufferFringes()
 
 	if( needClear )
 	{
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE );
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE );
 		r3dRenderer->SetViewport( 0.f, 0.f, (float)r3dRenderer->d3dpp.BackBufferWidth, (float)r3dRenderer->d3dpp.BackBufferHeight );
-		D3D_V( r3dRenderer->pd3ddev->Clear( R3D_ARRAYSIZE(rects), rects, D3DCLEAR_TARGET, 0, 1.f, 0 ) );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE );	
+		r3dRenderer->Clear( R3D_ARRAYSIZE(rects), rects, D3DCLEAR_TARGET, 0, 1.f, 0 );
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE );
 	}
 }
 
@@ -5485,7 +5511,7 @@ ProcessCustomDeviceQueueItem( DoCreateDepthStencil, &params ) ;
 struct CreateQueryParams
 {
 	D3DQUERYTYPE Type;
-	IDirect3DQuery9** ppQuery;
+	r3dD3DQuery** ppQuery;
 };
 
 static void DoCreateQuery(void* params)
@@ -5495,13 +5521,11 @@ static void DoCreateQuery(void* params)
 	if(pms->ppQuery)
 		*pms->ppQuery = NULL;
 
-	if(r3dRenderer && r3dRenderer->pd3ddev)
-	{
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery(pms->Type, pms->ppQuery) );
-	}
+	if(pms->ppQuery)
+		*pms->ppQuery = r3dD3DQuery::CreateClass(pms->Type);
 }
 
-void r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE Type, IDirect3DQuery9** ppQuery)
+void r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE Type, r3dD3DQuery** ppQuery)
 {
 	CreateQueryParams params;
 

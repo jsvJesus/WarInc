@@ -28,13 +28,19 @@ static bool r3dTexture_DX11LinkEnabled()
 	if(!g_r3dDX11.IsInitialized())
 		return false;
 
+	if(strstr(__r3dCmdLine, "-nodx11linktex"))
+		return false;
+
+	if(strstr(__r3dCmdLine, "/nodx11linktex"))
+		return false;
+
 	if(strstr(__r3dCmdLine, "-dx11linktex"))
 		return true;
 
 	if(strstr(__r3dCmdLine, "/dx11linktex"))
 		return true;
 
-	return false;
+	return true;
 }
 
 static bool r3dTexture_IsDDSMemory(const void* data, uint32_t dataSize)
@@ -44,6 +50,15 @@ static bool r3dTexture_IsDDSMemory(const void* data, uint32_t dataSize)
 
 	const unsigned int magic = *(const unsigned int*)data;
 	return magic == 0x20534444;
+}
+
+static bool r3dTexture_IsDDSFileName(const char* fileName)
+{
+	if(!fileName || !fileName[0])
+		return false;
+
+	const char* ext = strrchr(fileName, '.');
+	return ext && !stricmp(ext, ".dds");
 }
 
 static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void* data, uint32_t dataSize, const char* debugName)
@@ -78,6 +93,34 @@ static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void
 	*slot = tex;
 
 	r3dOutToLog("r3dTexture DX11: linked SRV '%s'\n", debugName ? debugName : "");
+}
+
+static void r3dTexture_CreateDX11FromDDSFile(r3dDX11Texture** slot, const char* fileName)
+{
+	if(!slot || *slot)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(!r3dTexture_IsDDSFileName(fileName))
+		return;
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+
+	if(!tex->LoadDDSFromFile(fileName))
+	{
+		delete tex;
+		r3dOutToLog("r3dTexture DX11: failed to lazy-create SRV for '%s'\n", fileName ? fileName : "");
+		return;
+	}
+
+	*slot = tex;
+
+	r3dOutToLog("r3dTexture DX11: lazy linked SRV '%s'\n", fileName ? fileName : "");
 }
 
 static void r3dTexture_CreateDX11RenderTargetMirror(
@@ -950,6 +993,9 @@ r3dDX11Texture* r3dTexture::GetDX11Texture()
 
 	if(m_iNumTextures == 1)
 	{
+		if(!m_DX11TexArray[0] && !(Flags & fCreated))
+			r3dTexture_CreateDX11FromDDSFile(&m_DX11TexArray[0], Location.FileName);
+
 		return m_DX11TexArray[0];
 	}
 	else if(m_iNumTextures > 1)

@@ -109,16 +109,16 @@ void CloseMLAA()
 
 static void SetAddressMode( int nStage )
 {
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSW, D3DTADDRESS_BORDER );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSW, D3DTADDRESS_BORDER );
 }
 
 static void RestoreAddressMode( int nStage )
 {
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( nStage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( nStage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
 }
 
 //------------------------------------------------------------

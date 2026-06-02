@@ -63,7 +63,7 @@ PFX_Fill::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*src*/ )	/*O
 
 	if( sts.ColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		
-		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask );
+		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, sts.ColorWriteMask );
 	}
 }
 

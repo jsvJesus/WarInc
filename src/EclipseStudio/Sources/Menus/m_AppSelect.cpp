@@ -28,15 +28,15 @@ extern bool g_bExit;
 
 void ClearFullScreen_Menu()
 {
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	r3dRenderer->SetViewport(
 		0.f,
 		0.f,
 		(float)r3dRenderer->d3dpp.BackBufferWidth,
 		(float)r3dRenderer->d3dpp.BackBufferHeight
 	);
-	D3D_V(r3dRenderer->pd3ddev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.f, 0));
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+	r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.f, 0);
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 }
 
 struct StudioMenuButton
@@ -412,7 +412,7 @@ int Menu_AppSelect::DoModal()
 			);
 		}
 
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
 		mDrawEnd();

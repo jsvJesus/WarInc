@@ -1505,17 +1505,11 @@ void r3dDrawNElements(int NumElements, int StartIdx, int EndIdx, int StartE)
 
  for (int i=0;i<NumR;i++)
  {
-  r3dRenderer->pd3ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,  0,StartIdx, EndIdx, StartE + i*Dec*3, Dec);
-
-  r3dRenderer->Stats.NumTrianglesRendered += Dec;
-  r3dRenderer->Stats.NumDraws++;
+  r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,  0,StartIdx, EndIdx, StartE + i*Dec*3, Dec);
  }
 
  
- r3dRenderer->pd3ddev->DrawIndexedPrimitive( D3DPT_TRIANGLELIST,  0,StartIdx, EndIdx, StartE + NumR*Dec*3, Less );
-
- r3dRenderer->Stats.NumTrianglesRendered += Less;
- r3dRenderer->Stats.NumDraws++;
+ r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,  0,StartIdx, EndIdx, StartE + NumR*Dec*3, Less );
 }
 
 
@@ -1626,7 +1620,7 @@ void r3dMesh::DrawDX8()
  BuildWorldMatrix();
 
 // r3dRenderer->pd3ddev->SetIndices( g_IB );
- r3dRenderer->pd3ddev->SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
+ d3dc._SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
 
  int CurrentShaderID = -1;
 
@@ -1669,8 +1663,8 @@ void r3dMesh::DrawDX8()
   }
 
   if (MatChunks[i].Mat->AlphaRef)
-    r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, (unsigned long)MatChunks[i].Mat->AlphaRef);
-//  r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, 200);
+    r3dRenderer->SetRenderState(D3DRS_ALPHAREF, (unsigned long)MatChunks[i].Mat->AlphaRef);
+//  r3dRenderer->SetRenderState(D3DRS_ALPHAREF, 200);
 
 //  r3dRenderer->pd3ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,  0, 0, NumFaces*3, 0,NumFaces);
 
@@ -1684,7 +1678,7 @@ void r3dMesh::DrawDX8()
   r3dRenderer->Stats.NumDraws++;
 
   if (MatChunks[i].Mat->AlphaRef)
-    r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, 1);
+    r3dRenderer->SetRenderState(D3DRS_ALPHAREF, 1);
  }
 
  D3DXMATRIX 	mWorld;
@@ -1808,7 +1802,7 @@ void r3dMesh::DrawLightPass()
  BuildWorldMatrix();
 
 // r3dRenderer->pd3ddev->SetIndices( g_IB );
- r3dRenderer->pd3ddev->SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
+ d3dc._SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
 
  if (LightmapTex && r3dRenderer->LightTypeDX8==4) r3dRenderer->SetTexture(LightmapTex,3);
 
@@ -1825,14 +1819,9 @@ void r3dMesh::DrawLightPass()
     (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
 */
 
-  r3dRenderer->pd3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 
+  r3dRenderer->Draw(D3DPT_TRIANGLELIST,
     MatChunks[i].StartIndex, 
     (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
-
-  r3dRenderer->Stats.NumTrianglesRendered += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-  r3dRenderer->Stats.AverageStripLength += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-  r3dRenderer->Stats.AverageStripLength /= 2;
-  r3dRenderer->Stats.NumDraws++;
 
   MatChunks[i].Mat->End();
  }
@@ -1903,7 +1892,7 @@ void r3dMesh::Draw()
  BuildWorldMatrix();
 
 // r3dRenderer->pd3ddev->SetIndices( g_IB);
- r3dRenderer->pd3ddev->SetStreamSource( 0, g_pVB, 0,sizeof(R3D_WORLD_VERTEX) );
+ d3dc._SetStreamSource( 0, g_pVB, 0,sizeof(R3D_WORLD_VERTEX) );
 
  for(int i=0;i<NumMatChunks;i++)
  {
@@ -1924,8 +1913,8 @@ void r3dMesh::Draw()
 
  if(bDynaLightsRecalc)
  {
-  r3dRenderer->pd3ddev->SetRenderState(D3DRS_LIGHTING, FALSE );
-  r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORVERTEX, 1);
+  r3dRenderer->SetRenderState(D3DRS_LIGHTING, FALSE );
+  r3dRenderer->SetRenderState(D3DRS_COLORVERTEX, 1);
 
   for(int i = 0; i < 32; i++)
           r3dRenderer->pd3ddev->LightEnable(i, 0 );
@@ -1951,7 +1940,7 @@ void r3dMesh::DrawSimple(int bTextured, int bUseVertexColor)
  BuildWorldMatrix();
 
 // r3dRenderer->pd3ddev->SetIndices( g_IB );
- r3dRenderer->pd3ddev->SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
+ d3dc._SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
 
  if (bTextured ) {
 
@@ -1962,38 +1951,27 @@ void r3dMesh::DrawSimple(int bTextured, int bUseVertexColor)
    else
       r3dRenderer->SetTexture( __r3dShadeTexture[2]);
 
-//   r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF, (unsigned long)MatChunks[i].Mat->AlphaRef);
+//   r3dRenderer->SetRenderState(D3DRS_ALPHAREF, (unsigned long)MatChunks[i].Mat->AlphaRef);
 
 //   r3dOutToLog("%s\t\t%d\t%d\t%f\n", MatChunks[i].Mat->Name, MatChunks[i].StartIndex, MatChunks[i].EndIndex, float((MatChunks[i].EndIndex-MatChunks[i].StartIndex))/3.0f);
   
 //   r3dDrawNElements ((MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3, MatChunks[i].StartIndex, MatChunks[i].EndIndex-MatChunks[i].StartIndex, MatChunks[i].StartIndex);
 
    if (VBMode)
-    r3dRenderer->pd3ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,  0,
+    r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,  0,
       0, NumVertices, MatChunks[i].StartIndex, (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
    else
-    r3dRenderer->pd3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 
+    r3dRenderer->Draw(D3DPT_TRIANGLELIST,
       MatChunks[i].StartIndex, 
       (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
-
-
-   r3dRenderer->Stats.NumTrianglesRendered += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-   r3dRenderer->Stats.AverageStripLength += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-   r3dRenderer->Stats.AverageStripLength /= 2;
-   r3dRenderer->Stats.NumDraws++;
   }
  }
  else
  {
    if (VBMode)
-    r3dRenderer->pd3ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,  0, 0, NumVertices, 0,NumFaces);
+    r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,  0, 0, NumVertices, 0,NumFaces);
    else
-    r3dRenderer->pd3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 0, NumFaces);
-
-   r3dRenderer->Stats.NumTrianglesRendered += NumFaces;
-   r3dRenderer->Stats.AverageStripLength += NumFaces;
-   r3dRenderer->Stats.AverageStripLength /= 2;
-   r3dRenderer->Stats.NumDraws++;
+    r3dRenderer->Draw(D3DPT_TRIANGLELIST, 0, NumFaces);
  }
 
 
@@ -2015,7 +1993,7 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
  BuildWorldMatrix();
 
 // r3dRenderer->pd3ddev->SetIndices( g_IB );
- r3dRenderer->pd3ddev->SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
+ d3dc._SetStreamSource( 0, g_pVB, 0, sizeof(R3D_WORLD_VERTEX) );
 
  int bDynaLightsRecalc = 0;
 
@@ -2023,7 +2001,7 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
 //          r3dRenderer->pd3ddev->LightEnable( i, 0 );
 
 
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_AMBIENT, r3dRenderer->AmbientColor.GetPacked());
+ r3dRenderer->SetRenderState( D3DRS_AMBIENT, r3dRenderer->AmbientColor.GetPacked());
 /*
  if(DynaLights && bLights)
  {
@@ -2048,8 +2026,8 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
 
  if (bLights)
  {
-  r3dRenderer->pd3ddev->SetRenderState( D3DRS_LIGHTING, TRUE );
-  r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORVERTEX, 0);
+  r3dRenderer->SetRenderState( D3DRS_LIGHTING, TRUE );
+  r3dRenderer->SetRenderState(D3DRS_COLORVERTEX, 0);
  }
 
  if(bDynaLightsRecalc)
@@ -2107,14 +2085,9 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
     (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
 */
 
-  r3dRenderer->pd3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 
+  r3dRenderer->Draw(D3DPT_TRIANGLELIST,
     MatChunks[i].StartIndex, 
     (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3);
-
-   r3dRenderer->Stats.NumTrianglesRendered += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-   r3dRenderer->Stats.AverageStripLength += (MatChunks[i].EndIndex-MatChunks[i].StartIndex)/3;
-   r3dRenderer->Stats.AverageStripLength /= 2;
-   r3dRenderer->Stats.NumDraws++;
   }
  }
  else
@@ -2130,12 +2103,7 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
 
 //  r3dRenderer->pd3ddev->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,  0, 0, NumFaces*3, 0,NumFaces);
 
-  r3dRenderer->pd3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 0, NumFaces);
-
-  r3dRenderer->Stats.NumTrianglesRendered += NumFaces;
-  r3dRenderer->Stats.AverageStripLength += NumFaces;
-  r3dRenderer->Stats.AverageStripLength /= 2;
-  r3dRenderer->Stats.NumDraws++;
+  r3dRenderer->Draw(D3DPT_TRIANGLELIST, 0, NumFaces);
  }
 
 /*
@@ -2143,11 +2111,11 @@ void r3dMesh::DrawLightmap(int bTextured, int bLights, r3dColor TintColor)
  DynaLights = NULL;
  if(bDynaLightsRecalc)
  {
-  r3dRenderer->pd3ddev->SetRenderState( D3DRS_LIGHTING, FALSE );
-  r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORVERTEX, 1);
+  r3dRenderer->SetRenderState( D3DRS_LIGHTING, FALSE );
+  r3dRenderer->SetRenderState(D3DRS_COLORVERTEX, 1);
  }
 
- r3dRenderer->pd3ddev->SetRenderState( D3DRS_AMBIENT, r3dRenderer->AmbientColor.GetPacked() );
+ r3dRenderer->SetRenderState( D3DRS_AMBIENT, r3dRenderer->AmbientColor.GetPacked() );
 */
 
  r3dRenderer->pd3ddev->SetTextureStageState( 1, D3DTSS_TEXCOORDINDEX, 1);

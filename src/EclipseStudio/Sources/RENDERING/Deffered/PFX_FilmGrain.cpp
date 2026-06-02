@@ -77,8 +77,8 @@ PFX_FilmGrain::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*
 {
 	r3dSetFiltering( R3D_POINT, PostFXChief::FREE_TEX_STAGE_START );
 
-	r3dRenderer->pd3ddev->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex( mNoiseTexture, PostFXChief::FREE_TEX_STAGE_START + 0 );
 

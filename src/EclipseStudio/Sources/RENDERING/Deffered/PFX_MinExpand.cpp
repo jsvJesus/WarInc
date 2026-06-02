@@ -51,7 +51,7 @@ PFX_MinExpand::PrepareImpl( r3dScreenBuffer* /*dest*/, r3dScreenBuffer* src )	/*
 
 	r3dSetFiltering( R3D_POINT, 0 );
 
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 }
 
 //------------------------------------------------------------------------
@@ -61,6 +61,6 @@ void
 PFX_MinExpand::FinishImpl() /*OVERRIDE*/
 {
 	r3dSetFiltering( g_pPostFXChief->GetZeroTexStageFilter() );
-	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 }
 

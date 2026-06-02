@@ -152,8 +152,8 @@ void CameraHUD :: Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -225,8 +225,8 @@ void CameraHUD :: Draw()
 		imgui_Static( 5, r3dRenderer->ScreenH-235, exp_val ) ;
 	}
 
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
 }
 
 /*virtual*/

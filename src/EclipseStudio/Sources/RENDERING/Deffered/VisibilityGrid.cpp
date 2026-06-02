@@ -1,6 +1,7 @@
 #include "r3dPCH.h"
 #ifndef FINAL_BUILD
 #include "r3d.h"
+#include "r3dBuffer.h"
 
 #include "GameLevel.h"
 
@@ -435,7 +436,7 @@ VisibiltyGrid::Calculate()
 #ifdef FINAL_BUILD
 	return;
 #else
-	typedef r3dTL::TArray< IDirect3DQuery9* > Queries ;
+	typedef r3dTL::TArray< r3dD3DQuery* > Queries ;
 	typedef r3dTL::TArray< float > FloatArray ;
 	typedef r3dTL::TArray< int > IntArray ;
 

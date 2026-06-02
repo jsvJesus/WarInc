@@ -42,6 +42,13 @@
 #define R3D_DDSPF_LUMINANCE   0x00020000
 
 #define R3D_DDSCAPS2_CUBEMAP  0x00000200
+#define R3D_DDSCAPS2_CUBEMAP_POSITIVEX 0x00000400
+#define R3D_DDSCAPS2_CUBEMAP_NEGATIVEX 0x00000800
+#define R3D_DDSCAPS2_CUBEMAP_POSITIVEY 0x00001000
+#define R3D_DDSCAPS2_CUBEMAP_NEGATIVEY 0x00002000
+#define R3D_DDSCAPS2_CUBEMAP_POSITIVEZ 0x00004000
+#define R3D_DDSCAPS2_CUBEMAP_NEGATIVEZ 0x00008000
+#define R3D_DDSCAPS2_CUBEMAP_ALLFACES  0x0000FC00
 
 #pragma pack(push, 1)
 
@@ -776,15 +783,17 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 		return false;
 	}
 
-	if(header->caps2 & R3D_DDSCAPS2_CUBEMAP)
-	{
-		r3dOutToLog("DX11Texture: cubemap DDS is not supported yet '%s'\n", debugName ? debugName : "");
-		return false;
-	}
-
 	int offset = sizeof(unsigned int) + sizeof(r3dDDS_HEADER);
 
 	DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN;
+	bool isCube = (header->caps2 & R3D_DDSCAPS2_CUBEMAP) != 0;
+	int arraySize = isCube ? 6 : 1;
+
+	if(isCube && (header->caps2 & R3D_DDSCAPS2_CUBEMAP_ALLFACES) != R3D_DDSCAPS2_CUBEMAP_ALLFACES)
+	{
+		r3dOutToLog("DX11Texture: incomplete cubemap DDS is not supported '%s'\n", debugName ? debugName : "");
+		return false;
+	}
 
 	if((header->ddspf.flags & R3D_DDSPF_FOURCC) && header->ddspf.fourCC == R3D_DDS_FOURCC_DX10)
 	{
@@ -795,10 +804,17 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 		}
 
 		const r3dDDS_HEADER_DXT10* dx10 = (const r3dDDS_HEADER_DXT10*)(bytes + offset);
+		const bool dx10Cube = (dx10->miscFlag & D3D11_RESOURCE_MISC_TEXTURECUBE) != 0;
 
-		if(dx10->arraySize != 1)
+		if(!dx10Cube && dx10->arraySize != 1)
 		{
 			r3dOutToLog("DX11Texture: DDS array textures are not supported yet '%s'\n", debugName ? debugName : "");
+			return false;
+		}
+
+		if(dx10Cube && dx10->arraySize != 1)
+		{
+			r3dOutToLog("DX11Texture: DDS cubemap arrays are not supported yet '%s'\n", debugName ? debugName : "");
 			return false;
 		}
 
@@ -809,6 +825,8 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 		}
 
 		dxgiFormat = (DXGI_FORMAT)dx10->dxgiFormat;
+		isCube = dx10Cube;
+		arraySize = isCube ? 6 : 1;
 		offset += sizeof(r3dDDS_HEADER_DXT10);
 	}
 	else
@@ -832,50 +850,82 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 		return false;
 	}
 
+	if(isCube && width != height)
+	{
+		r3dOutToLog("DX11Texture: cubemap DDS is not square %dx%d '%s'\n", width, height, debugName ? debugName : "");
+		return false;
+	}
+
 	if(mipCount <= 0)
 		mipCount = 1;
 
 	if(mipCount > 32)
 		mipCount = 32;
 
-	D3D11_SUBRESOURCE_DATA initData[32];
+	D3D11_SUBRESOURCE_DATA initData[6 * 32];
 	ZeroMemory(initData, sizeof(initData));
 
-	int mipWidth = width;
-	int mipHeight = height;
 	int createdMips = 0;
 
-	for(int mip = 0; mip < mipCount; ++mip)
+	for(int face = 0; face < arraySize; ++face)
 	{
-		int numBytes = 0;
-		int rowBytes = 0;
+		int mipWidth = width;
+		int mipHeight = height;
+		int faceMips = 0;
 
-		if(!r3dDX11Texture_GetSurfaceInfo(mipWidth, mipHeight, dxgiFormat, &numBytes, &rowBytes))
+		for(int mip = 0; mip < mipCount; ++mip)
 		{
-			r3dOutToLog("DX11Texture: failed to calculate DDS pitch '%s'\n", debugName ? debugName : "");
-			return false;
-		}
+			int numBytes = 0;
+			int rowBytes = 0;
 
-		if(offset + numBytes > dataSize)
-		{
-			if(mip == 0)
+			if(!r3dDX11Texture_GetSurfaceInfo(mipWidth, mipHeight, dxgiFormat, &numBytes, &rowBytes))
 			{
-				r3dOutToLog("DX11Texture: DDS data is truncated '%s'\n", debugName ? debugName : "");
+				r3dOutToLog("DX11Texture: failed to calculate DDS pitch '%s'\n", debugName ? debugName : "");
 				return false;
 			}
 
-			break;
+			if(offset + numBytes > dataSize)
+			{
+				if(face == 0 && mip == 0)
+				{
+					r3dOutToLog("DX11Texture: DDS data is truncated '%s'\n", debugName ? debugName : "");
+					return false;
+				}
+
+				break;
+			}
+
+			initData[face * 32 + mip].pSysMem = bytes + offset;
+			initData[face * 32 + mip].SysMemPitch = rowBytes;
+			initData[face * 32 + mip].SysMemSlicePitch = numBytes;
+
+			offset += numBytes;
+			faceMips++;
+
+			mipWidth = R3D_MAX(1, mipWidth / 2);
+			mipHeight = R3D_MAX(1, mipHeight / 2);
 		}
 
-		initData[mip].pSysMem = bytes + offset;
-		initData[mip].SysMemPitch = rowBytes;
-		initData[mip].SysMemSlicePitch = numBytes;
+		if(face == 0)
+		{
+			createdMips = faceMips;
+		}
+		else if(faceMips < createdMips)
+		{
+			r3dOutToLog("DX11Texture: cubemap DDS face %d is truncated '%s'\n", face, debugName ? debugName : "");
+			return false;
+		}
+	}
 
-		offset += numBytes;
-		createdMips++;
+	D3D11_SUBRESOURCE_DATA compactInitData[6 * 32];
+	ZeroMemory(compactInitData, sizeof(compactInitData));
 
-		mipWidth = R3D_MAX(1, mipWidth / 2);
-		mipHeight = R3D_MAX(1, mipHeight / 2);
+	for(int face = 0; face < arraySize; ++face)
+	{
+		for(int mip = 0; mip < createdMips; ++mip)
+		{
+			compactInitData[face * createdMips + mip] = initData[face * 32 + mip];
+		}
 	}
 
 	if(createdMips <= 0)
@@ -898,16 +948,16 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 	desc.Width = width;
 	desc.Height = height;
 	desc.MipLevels = createdMips;
-	desc.ArraySize = 1;
+	desc.ArraySize = arraySize;
 	desc.Format = dxgiFormat;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
+	desc.MiscFlags = isCube ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
 
-	HRESULT hr = device->CreateTexture2D(&desc, initData, &Texture);
+	HRESULT hr = device->CreateTexture2D(&desc, compactInitData, &Texture);
 
 	if(FAILED(hr))
 	{
@@ -922,9 +972,19 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
 
 	srvDesc.Format = desc.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = createdMips;
+
+	if(isCube)
+	{
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+		srvDesc.TextureCube.MostDetailedMip = 0;
+		srvDesc.TextureCube.MipLevels = createdMips;
+	}
+	else
+	{
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = createdMips;
+	}
 
 	hr = device->CreateShaderResourceView(Texture, &srvDesc, &SRV);
 
@@ -941,9 +1001,11 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 	Height = height;
 	MipCount = createdMips;
 	Format = (R3D_DX11_FORMAT)dxgiFormat;
+	IsCube = isCube;
 
 	r3dOutToLog(
-		"DX11Texture: loaded DDS '%s' %dx%d mips=%d format=%d\n",
+		"DX11Texture: loaded %sDDS '%s' %dx%d mips=%d format=%d\n",
+		isCube ? "cube " : "",
 		debugName ? debugName : "",
 		Width,
 		Height,

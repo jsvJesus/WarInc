@@ -53,26 +53,26 @@ void r3dDrawBlurQuad(float x, float y, float w, float h, float Tap[8], float Pow
 	V[3] = V[1];
 	V[5] = V[2];
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 
 	D3D_V( d3dc._SetVertexShader(0) );
 	r3dDrawTriangleList(V, _countof(V));
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 }
 
 void r3dBlurBuffer(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex, int BlurPower)
@@ -152,8 +152,8 @@ void r3dBlurBufferG(r3dScreenBuffer *SourceTex1, r3dScreenBuffer *SourceTex, r3d
 
 	int CurBB = 1;
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 
 	r3dRenderer->StartRenderSimple(0);
 	// r3dRenderer->SetMaterial(NULL);
@@ -219,8 +219,8 @@ void r3dBlurBufferG(r3dScreenBuffer *SourceTex1, r3dScreenBuffer *SourceTex, r3d
 
 	Buffer[1 - CurBB]->Deactivate();
 
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 	r3dRenderer->EndRenderSimple();
 }
@@ -428,7 +428,7 @@ void r3dBlurDOFBuffer(r3dScreenBuffer *DepthBuffer, r3dScreenBuffer *TempTex1, r
 	// TempTex2->Tex->SaveBMP ("Blur2.tga");
 
 	r3dRenderer->SetPixelShader("PS_BLURNEAR2");
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_GREEN);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_GREEN);
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
@@ -436,7 +436,7 @@ void r3dBlurDOFBuffer(r3dScreenBuffer *DepthBuffer, r3dScreenBuffer *TempTex1, r
 	r3dDrawBox2D(0,0,DepthBuffer->Tex->GetWidth(),DepthBuffer->Tex->GetHeight(), r3dColor(255,255,255), Buffer[1-CurBB]->Tex);
 	DepthBuffer->Deactivate();
 
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 0xffffffff);
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0xffffffff);
 
 
 	r3dRenderer->SetPixelShader();

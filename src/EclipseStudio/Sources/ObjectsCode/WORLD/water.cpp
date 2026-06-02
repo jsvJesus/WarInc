@@ -249,8 +249,8 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 	}
 
 	r3dRenderer->SetCullMode(D3DCULL_NONE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 	d3dc._SetDecl(pScreenDecl);
 	r3dRenderer->SetVertexShader("RIPPLES_VS");
 	D3DXVECTOR3 sq[] = {
@@ -260,15 +260,15 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		D3DXVECTOR3(-0.5f,  0.5f, 0.0f)
 	};
 
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 
-	/*r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	/*r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 	r3dRenderer->SetTex(HeightTexture, 1);*/
 
 
@@ -293,11 +293,11 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 			ripplesRT[curRipplesRT]->Activate();
 
 			r3dRenderer->SetTex(ripplesRT[prevRT]->Tex, 0);
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 			r3dRenderer->SetTex(RipplesTex, 1);
-			r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			if(r_water_quality->GetInt()==3)
 				if(nSplashes>0)	r3dRenderer->SetPixelShader("RIPPLESR_PS");
@@ -345,8 +345,8 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 				r3dRenderer->SetPixelShaderConstantF(  n, &drop.x,  1 );
 			}
 
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 			r3dRenderer->SetTex(rainRipplesRT[prevRT]->Tex, 0);
 			r3dRenderer->SetPixelShader("RAINRIPPLES_PS");
 
@@ -357,10 +357,10 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 
 	}
 
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAXANISOTROPY, 16 );
 
 	if(dss)
 	{
@@ -666,46 +666,46 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	r3dRenderer->SetTex(SkyDome->cubemap->Tex, 7);
 
 	r3dRenderer->SetTex(DepthBuffer->Tex, 2);
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 	
 	r3dRenderer->SetTex(gWaterRefractionBuffer->Tex, 3);
-	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( 3, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->SetSamplerState( 3, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 
 	r3dRenderer->SetTex(TempShadowBuffer->Tex,5);
 
 	r3dRenderer->SetTex(ColorTexture, 6);
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( 6, D3DSAMP_MAXANISOTROPY, 16 );
 
 	if(RIPPLES_TEXTURE_SIZE > 0.0f && curRipplesRT!=-1)
 	{
 		//r3dRenderer->SetTex(rainRipplesRT[curRipplesRT]->Tex, 8);
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MAXANISOTROPY, 16 );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->SetSamplerState( 8, D3DSAMP_MAXANISOTROPY, 16 );
 
 		r3dRenderer->SetTex(ripplesRT[curRipplesRT]->Tex, 9);
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MAXANISOTROPY, 16 );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->SetSamplerState( 9, D3DSAMP_MAXANISOTROPY, 16 );
 	}
 }
 
@@ -856,21 +856,21 @@ float WaterBase::SetNormalTextures(unsigned int t0, unsigned int t1, float fps) 
 	int texIdx = int(frame) % 25;
 
 	r3dRenderer->SetTex(WaterColor[texIdx], t0);
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( t0, D3DSAMP_MAXANISOTROPY, 16 );
 	texIdx++;
 	if(texIdx==25)	texIdx = 0;
 	r3dRenderer->SetTex(WaterColor[texIdx], t1);
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->SetSamplerState( t1, D3DSAMP_MAXANISOTROPY, 16 );
 
 	return frame - int(frame);
 }
@@ -950,7 +950,7 @@ float WaterBase::DrawPropertyEditorWater(float scrx, float scry, float scrw, flo
 	static int showBounds = 0 ;
 	if( showBounds )
 	{
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 
 		D3DXVECTOR4 pointNear( gCam.x + gCam.vPointTo.x * farTileFadeStart, lastWaterLevel, gCam.z + gCam.vPointTo.z * farTileFadeStart, 1 ) ;
 
@@ -972,7 +972,7 @@ float WaterBase::DrawPropertyEditorWater(float scrx, float scry, float scrw, flo
 
 		r3dRenderer->Flush() ;
 
-		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 	}
 
 	float starty = scry;
