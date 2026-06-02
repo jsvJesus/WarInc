@@ -377,7 +377,7 @@ int Menu_AppSelect::DoModal()
 
 	bool noesisReady = false;
 
-	if(gNoesisGUI)
+	if(gNoesisGUI) //ebana vrot
 	{
 		if(g_r3dDX11.IsInitialized())
 		{
