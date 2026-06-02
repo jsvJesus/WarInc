@@ -92,49 +92,21 @@ static int RenderAppSelectDX11()
 
 static int RenderAppSelectDX9Message()
 {
-	r3dStartFrame();
+	static bool MessageShown = false;
 
-	ClearFullScreen_Menu();
-
-	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
-	r3dSetFiltering(R3D_BILINEAR);
-	r3dRenderer->SetMipMapBias(-6.0f, -1);
-
-	CD3DFont* font = NULL;
-
+	if(!MessageShown)
 	{
-		r3dIntegrityGuardian ig;
-		font = new CD3DFont(ig, "Verdana", 18, D3DFONT_BOLD);
-	}
+		MessageShown = true;
 
-	if(font && SUCCEEDED(font->CreateSystemFont()))
-	{
-		font->PrintF(
-			r3dRenderer->ScreenW * 0.5f - 315.0f,
-			r3dRenderer->ScreenH * 0.5f - 35.0f,
-			r3dColor(255, 180, 80),
-			"Scaleform DX11 AppSelect requires -dx11"
-		);
-
-		font->PrintF(
-			r3dRenderer->ScreenW * 0.5f - 145.0f,
-			r3dRenderer->ScreenH * 0.5f + 10.0f,
-			r3dColor(180, 220, 255),
-			"Press ESC to exit"
+		MessageBoxA(
+			win::hWnd,
+			"Scaleform DX11 AppSelect requires -dx11.\n\nRun Studio with -dx11 argument.",
+			"WarInc DX11 Frontend",
+			MB_OK | MB_ICONWARNING
 		);
 	}
 
-	SAFE_DELETE(font);
-
-	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
-
-	r3dEndFrame();
-
-	if((GetAsyncKeyState(VK_ESCAPE) & 1) != 0)
-		return R3D_SF_DX11_APPSELECT_EXIT;
-
-	return R3D_SF_DX11_APPSELECT_NONE;
+	return R3D_SF_DX11_APPSELECT_EXIT;
 }
 
 int Menu_AppSelect::DoModal()
@@ -150,19 +122,14 @@ int Menu_AppSelect::DoModal()
 	{
 		r3dOutToLog("AppSelect: DX9 mode detected, Scaleform DX11 frontend disabled\n");
 
-		while(1)
-		{
-			if(g_bExit)
-				return 0;
+		MessageBoxA(
+			win::hWnd,
+			"Scaleform DX11 AppSelect requires -dx11.\n\nRun Studio with -dx11 argument.",
+			"WarInc DX11 Frontend",
+			MB_OK | MB_ICONWARNING
+		);
 
-			mUpdate();
-
-			int command = RenderAppSelectDX9Message();
-			int result = AppSelectCommandToResult(command);
-
-			if(result != -1)
-				return result;
-		}
+		return Menu_AppSelect::bQuit;
 	}
 
 	if(!r3dScaleformGfxDX11Create())

@@ -327,7 +327,7 @@ APIScaleformGfxDX11::APIScaleformGfxDX11()
 {
 	Created = false;
 	MsgProcRegistered = false;
-	SystemStarted = false;
+	SystemStarted = true;
 
 	Width = 0;
 	Height = 0;
@@ -360,9 +360,6 @@ bool APIScaleformGfxDX11::Create()
 		r3dOutToLog("SF11: Create failed, DX11 device/context is NULL\n");
 		return false;
 	}
-
-	Scaleform::GFx::System::Init();
-	SystemStarted = true;
 
 	RendererHAL = *new Scaleform::Render::D3D1x::HAL();
 
@@ -801,11 +798,22 @@ bool r3dScaleformGfxDX11Create()
 	if(gScaleformDX11)
 		return true;
 
+	Scaleform::GFx::System::Init();
+
 	gScaleformDX11 = new APIScaleformGfxDX11();
 
 	if(!gScaleformDX11->Create())
 	{
-		SAFE_DELETE(gScaleformDX11);
+		if(gScaleformDX11)
+		{
+			gScaleformDX11->Destroy();
+			SAFE_DELETE(gScaleformDX11);
+		}
+		else
+		{
+			Scaleform::GFx::System::Destroy();
+		}
+
 		return false;
 	}
 
