@@ -326,6 +326,40 @@ static int ProcessAppSelectNoesisCommands()
 	return -1;
 }
 
+static int RenderAppSelectDX11(bool noesisReady)
+{
+	if(!g_r3dDX11.IsInitialized())
+		return -1;
+
+	g_r3dDX11.BeginFrame(0.0f, 0.0f, 0.0f, 1.0f);
+
+	if(noesisReady && gNoesisGUI && gNoesisGUI->IsLoaded())
+	{
+		gNoesisGUI->SetSize(g_r3dDX11.GetWidth(), g_r3dDX11.GetHeight());
+
+		gNoesisGUI->SetD3D11BackBuffer(
+			g_r3dDX11.GetBackBufferRTV(),
+			g_r3dDX11.GetDepthStencilView(),
+			g_r3dDX11.GetWidth(),
+			g_r3dDX11.GetHeight()
+		);
+
+		gNoesisGUI->Update(r3dGetTime());
+		gNoesisGUI->Render();
+
+		g_r3dDX11State.InvalidateCache();
+		g_r3dDX11Geometry.InvalidateCache();
+	}
+	else
+	{
+		g_r3dDX11.DrawDebugTriangle();
+	}
+
+	g_r3dDX11.EndFrame(true);
+
+	return -1;
+}
+
 static void AppSelectUnloadNoesis(bool noesisReady)
 {
 	if(noesisReady && gNoesisGUI)
@@ -386,6 +420,12 @@ int Menu_AppSelect::DoModal()
 		{
 			AppSelectUnloadNoesis(noesisReady);
 			return noesisResult;
+		}
+
+		if(g_r3dDX11.IsInitialized())
+		{
+			RenderAppSelectDX11(noesisReady);
+			continue;
 		}
 
 		r3dStartFrame();
