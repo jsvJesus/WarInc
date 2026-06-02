@@ -1203,16 +1203,29 @@ bool r3dDX11State::ApplyBlendState()
 	desc.AlphaToCoverageEnable = FALSE;
 	desc.IndependentBlendEnable = TRUE;
 
-	for(int i = 0; i < 4; ++i)
+	for(int i = 0; i < 8; ++i)
 	{
+		const unsigned int colorMask =
+			i < 4 ?
+			ColorWriteMask[i] :
+			(
+				D3DCOLORWRITEENABLE_RED |
+				D3DCOLORWRITEENABLE_GREEN |
+				D3DCOLORWRITEENABLE_BLUE |
+				D3DCOLORWRITEENABLE_ALPHA
+			);
+
 		desc.RenderTarget[i].BlendEnable = AlphaBlendEnable ? TRUE : FALSE;
+
 		desc.RenderTarget[i].SrcBlend = r3dDX11State_ToBlend(SrcBlend);
 		desc.RenderTarget[i].DestBlend = r3dDX11State_ToBlend(DestBlend);
 		desc.RenderTarget[i].BlendOp = r3dDX11State_ToBlendOp(BlendOp);
+
 		desc.RenderTarget[i].SrcBlendAlpha = r3dDX11State_ToBlend(SrcBlend);
 		desc.RenderTarget[i].DestBlendAlpha = r3dDX11State_ToBlend(DestBlend);
 		desc.RenderTarget[i].BlendOpAlpha = r3dDX11State_ToBlendOp(BlendOpAlpha);
-		desc.RenderTarget[i].RenderTargetWriteMask = r3dDX11State_ToColorWriteMask(ColorWriteMask[i]);
+
+		desc.RenderTarget[i].RenderTargetWriteMask = r3dDX11State_ToColorWriteMask(colorMask);
 	}
 
 	ID3D11BlendState* newState = NULL;
@@ -1459,6 +1472,15 @@ bool r3dDX11State::SetRenderState(int state, unsigned int value)
 		if(!r3dDX11State_SetIntIfChanged(ScissorEnable, value ? 1 : 0) && RasterizerState)
 			return true;
 		return ApplyRasterizerState();
+
+	case D3DRS_ALPHATESTENABLE:
+		return true;
+
+	case D3DRS_ALPHAREF:
+		return true;
+
+	case D3DRS_ALPHAFUNC:
+		return true;
 
 	default:
 		return false;
