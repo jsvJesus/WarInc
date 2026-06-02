@@ -1683,6 +1683,37 @@ bool r3dDX11Shader::CompilePixelFromMemory(
 	);
 }
 
+static const D3D_SHADER_MACRO* r3dDX11Shader_BuildD3DMacros(
+	const r3dDX11ShaderMacro* macros,
+	std::vector<D3D_SHADER_MACRO>& outMacros
+)
+{
+	outMacros.clear();
+
+	if(!macros)
+		return NULL;
+
+	for(unsigned int i = 0; macros[i].Name; ++i)
+	{
+		D3D_SHADER_MACRO macro;
+		macro.Name = macros[i].Name;
+
+		if(macros[i].Definition && macros[i].Definition[0])
+			macro.Definition = macros[i].Definition;
+		else
+			macro.Definition = "1";
+
+		outMacros.push_back(macro);
+	}
+
+	D3D_SHADER_MACRO endMacro;
+	endMacro.Name = NULL;
+	endMacro.Definition = NULL;
+	outMacros.push_back(endMacro);
+
+	return &outMacros[0];
+}
+
 bool r3dDX11Shader::CompileFromMemoryInternal(
 	int shaderType,
 	const char* sourceName,
@@ -1747,6 +1778,9 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 
 	r3dDX11ShaderIncludeHandler includeHandler(sourceName, shaderType);
 
+	std::vector<D3D_SHADER_MACRO> dxMacros;
+	const D3D_SHADER_MACRO* compileMacros = r3dDX11Shader_BuildD3DMacros(macros, dxMacros);
+
 	ID3D10Blob* shaderBlob = NULL;
 	ID3D10Blob* errors = NULL;
 
@@ -1754,7 +1788,7 @@ bool r3dDX11Shader::CompileFromMemoryInternal(
 		compileSource,
 		compileSourceSize,
 		sourceName ? sourceName : "memory",
-		(const D3D_SHADER_MACRO*)macros,
+		compileMacros,
 		&includeHandler,
 		entryPoint,
 		dx11Profile,
