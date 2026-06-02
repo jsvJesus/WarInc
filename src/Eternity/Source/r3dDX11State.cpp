@@ -280,6 +280,28 @@ static bool r3dDX11State_SetFloatIfChanged(float& state, float value)
 	return true;
 }
 
+static void r3dDX11State_HashBytes(unsigned int& hash, const void* data, size_t size)
+{
+	const unsigned char* bytes = (const unsigned char*)data;
+
+	for(size_t i = 0; i < size; ++i)
+	{
+		hash ^= bytes[i];
+		hash *= 16777619u;
+	}
+}
+
+template<typename T>
+static void r3dDX11State_HashValue(unsigned int& hash, const T& value)
+{
+	r3dDX11State_HashBytes(hash, &value, sizeof(value));
+}
+
+static unsigned int r3dDX11State_FinishHash(unsigned int hash)
+{
+	return hash ? hash : 1u;
+}
+
 r3dDX11State g_r3dDX11State;
 
 r3dDX11State::r3dDX11State()
@@ -309,6 +331,7 @@ r3dDX11State::r3dDX11State()
 	BlendState = NULL;
 	RasterizerState = NULL;
 
+	ResetStateObjectCaches();
 	ResetSamplerStateCache();
 	ResetRenderStateCache();
 }
@@ -358,9 +381,12 @@ void r3dDX11State::Shutdown()
 
 	ReleaseSamplers();
 	ReleaseCustomSamplers();
-	r3dDX11State_Release(RasterizerState);
-	r3dDX11State_Release(BlendState);
-	r3dDX11State_Release(DepthState);
+
+	DepthState = NULL;
+	BlendState = NULL;
+	RasterizerState = NULL;
+
+	ReleaseStateObjectCaches();
 
 	Initialized = false;
 	ResetSamplerStateCache();
@@ -464,13 +490,51 @@ void r3dDX11State::ReleaseCustomSamplers()
 {
 	for(int i = 0; i < 16; ++i)
 	{
-		r3dDX11State_Release(CustomSamplers[i]);
+		CustomSamplers[i] = NULL;
 	}
 
 	for(int i = 0; i < 4; ++i)
 	{
-		r3dDX11State_Release(CustomVSSamplers[i]);
+		CustomVSSamplers[i] = NULL;
 	}
+}
+
+void r3dDX11State::ResetStateObjectCaches()
+{
+	DepthStateCacheCount = 0;
+	BlendStateCacheCount = 0;
+	RasterizerStateCacheCount = 0;
+	SamplerStateCacheCount = 0;
+
+	ZeroMemory(DepthStateCache, sizeof(DepthStateCache));
+	ZeroMemory(BlendStateCache, sizeof(BlendStateCache));
+	ZeroMemory(RasterizerStateCache, sizeof(RasterizerStateCache));
+	ZeroMemory(SamplerStateCache, sizeof(SamplerStateCache));
+}
+
+void r3dDX11State::ReleaseStateObjectCaches()
+{
+	for(int i = 0; i < DepthStateCacheCount; ++i)
+	{
+		r3dDX11State_Release(DepthStateCache[i].State);
+	}
+
+	for(int i = 0; i < BlendStateCacheCount; ++i)
+	{
+		r3dDX11State_Release(BlendStateCache[i].State);
+	}
+
+	for(int i = 0; i < RasterizerStateCacheCount; ++i)
+	{
+		r3dDX11State_Release(RasterizerStateCache[i].State);
+	}
+
+	for(int i = 0; i < SamplerStateCacheCount; ++i)
+	{
+		r3dDX11State_Release(SamplerStateCache[i].State);
+	}
+
+	ResetStateObjectCaches();
 }
 
 bool r3dDX11State::BindTexture(int slot, r3dTexture* texture)
@@ -607,7 +671,7 @@ bool r3dDX11State::SetSampler(int slot, r3dDX11SamplerMode mode)
 	context->PSSetSamplers(slot, 1, &sampler);
 
 	BoundSampler[slot] = sampler;
-	r3dDX11State_Release(CustomSamplers[slot]);
+	CustomSamplers[slot] = NULL;
 
 	if(mode == R3D_DX11_SAMPLER_LINEAR_WRAP || mode == R3D_DX11_SAMPLER_LINEAR_CLAMP)
 	{
@@ -790,6 +854,68 @@ bool r3dDX11State::ApplySamplerState(int slot)
 	if(!device || !context)
 		return false;
 
+	const unsigned int finalMaxAnisotropy = maxAnisotropy[targetSlot] ? maxAnisotropy[targetSlot] : 1;
+
+	unsigned int hash = 2166136261u;
+	r3dDX11State_HashValue(hash, minFilter[targetSlot]);
+	r3dDX11State_HashValue(hash, magFilter[targetSlot]);
+	r3dDX11State_HashValue(hash, mipFilter[targetSlot]);
+	r3dDX11State_HashValue(hash, addressU[targetSlot]);
+	r3dDX11State_HashValue(hash, addressV[targetSlot]);
+	r3dDX11State_HashValue(hash, addressW[targetSlot]);
+	r3dDX11State_HashValue(hash, mipLODBias[targetSlot]);
+	r3dDX11State_HashValue(hash, finalMaxAnisotropy);
+	r3dDX11State_HashValue(hash, borderColor[targetSlot]);
+	r3dDX11State_HashValue(hash, maxMipLevel[targetSlot]);
+	hash = r3dDX11State_FinishHash(hash);
+
+	for(int i = 0; i < SamplerStateCacheCount; ++i)
+	{
+		SamplerStateCacheEntry& entry = SamplerStateCache[i];
+
+		if(entry.Hash != hash)
+			continue;
+
+		if(entry.MinFilter != minFilter[targetSlot])
+			continue;
+		if(entry.MagFilter != magFilter[targetSlot])
+			continue;
+		if(entry.MipFilter != mipFilter[targetSlot])
+			continue;
+		if(entry.AddressU != addressU[targetSlot])
+			continue;
+		if(entry.AddressV != addressV[targetSlot])
+			continue;
+		if(entry.AddressW != addressW[targetSlot])
+			continue;
+		if(entry.MipLODBias != mipLODBias[targetSlot])
+			continue;
+		if(entry.MaxAnisotropy != finalMaxAnisotropy)
+			continue;
+		if(entry.BorderColor != borderColor[targetSlot])
+			continue;
+		if(entry.MaxMipLevel != maxMipLevel[targetSlot])
+			continue;
+
+		ID3D11SamplerState* cachedSampler = entry.State;
+
+		if(vsSlot >= 0)
+			context->VSSetSamplers(vsSlot, 1, &cachedSampler);
+		else
+			context->PSSetSamplers(slot, 1, &cachedSampler);
+
+		boundSamplers[targetSlot] = cachedSampler;
+		customSamplers[targetSlot] = cachedSampler;
+
+		return true;
+	}
+
+	if(SamplerStateCacheCount >= SamplerStateCacheMax)
+	{
+		r3dOutToLog("DX11State: SamplerState cache is full\n");
+		return false;
+	}
+
 	D3D11_SAMPLER_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 
@@ -798,11 +924,16 @@ bool r3dDX11State::ApplySamplerState(int slot)
 	desc.AddressV = r3dDX11State_ToAddressMode(addressV[targetSlot]);
 	desc.AddressW = r3dDX11State_ToAddressMode(addressW[targetSlot]);
 	desc.MipLODBias = mipLODBias[targetSlot];
-	desc.MaxAnisotropy = maxAnisotropy[targetSlot] ? maxAnisotropy[targetSlot] : 1;
+	desc.MaxAnisotropy = finalMaxAnisotropy;
+
+	if(desc.MaxAnisotropy > 16)
+		desc.MaxAnisotropy = 16;
+
 	desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
 	r3dDX11State_DecodeBorderColor(borderColor[targetSlot], desc.BorderColor);
 	desc.MinLOD = (FLOAT)maxMipLevel[targetSlot];
 	desc.MaxLOD = mipFilter[targetSlot] == D3DTEXF_NONE ? 0.0f : D3D11_FLOAT32_MAX;
+
 	if(desc.MaxLOD < desc.MinLOD)
 		desc.MaxLOD = desc.MinLOD;
 
@@ -817,7 +948,19 @@ bool r3dDX11State::ApplySamplerState(int slot)
 		return false;
 	}
 
-	ID3D11SamplerState* oldSampler = customSamplers[targetSlot];
+	SamplerStateCacheEntry& entry = SamplerStateCache[SamplerStateCacheCount++];
+	entry.Hash = hash;
+	entry.MinFilter = minFilter[targetSlot];
+	entry.MagFilter = magFilter[targetSlot];
+	entry.MipFilter = mipFilter[targetSlot];
+	entry.AddressU = addressU[targetSlot];
+	entry.AddressV = addressV[targetSlot];
+	entry.AddressW = addressW[targetSlot];
+	entry.MipLODBias = mipLODBias[targetSlot];
+	entry.MaxAnisotropy = finalMaxAnisotropy;
+	entry.BorderColor = borderColor[targetSlot];
+	entry.MaxMipLevel = maxMipLevel[targetSlot];
+	entry.State = newSampler;
 
 	if(vsSlot >= 0)
 		context->VSSetSamplers(vsSlot, 1, &newSampler);
@@ -826,7 +969,6 @@ bool r3dDX11State::ApplySamplerState(int slot)
 
 	boundSamplers[targetSlot] = newSampler;
 	customSamplers[targetSlot] = newSampler;
-	r3dDX11State_Release(oldSampler);
 
 	return true;
 }
@@ -880,6 +1022,59 @@ bool r3dDX11State::ApplyDepthState()
 	if(!device || !context)
 		return false;
 
+	unsigned int hash = 2166136261u;
+	r3dDX11State_HashValue(hash, DepthEnable);
+	r3dDX11State_HashValue(hash, DepthWriteEnable);
+	r3dDX11State_HashValue(hash, DepthFunc);
+	r3dDX11State_HashValue(hash, StencilEnable);
+	r3dDX11State_HashValue(hash, StencilFunc);
+	r3dDX11State_HashValue(hash, StencilFailOp);
+	r3dDX11State_HashValue(hash, StencilZFailOp);
+	r3dDX11State_HashValue(hash, StencilPassOp);
+	r3dDX11State_HashValue(hash, StencilReadMask);
+	r3dDX11State_HashValue(hash, StencilWriteMask);
+	hash = r3dDX11State_FinishHash(hash);
+
+	for(int i = 0; i < DepthStateCacheCount; ++i)
+	{
+		DepthStateCacheEntry& entry = DepthStateCache[i];
+
+		if(entry.Hash != hash)
+			continue;
+
+		if(entry.DepthEnable != DepthEnable)
+			continue;
+		if(entry.DepthWriteEnable != DepthWriteEnable)
+			continue;
+		if(entry.DepthFunc != DepthFunc)
+			continue;
+		if(entry.StencilEnable != StencilEnable)
+			continue;
+		if(entry.StencilFunc != StencilFunc)
+			continue;
+		if(entry.StencilFailOp != StencilFailOp)
+			continue;
+		if(entry.StencilZFailOp != StencilZFailOp)
+			continue;
+		if(entry.StencilPassOp != StencilPassOp)
+			continue;
+		if(entry.StencilReadMask != StencilReadMask)
+			continue;
+		if(entry.StencilWriteMask != StencilWriteMask)
+			continue;
+
+		context->OMSetDepthStencilState(entry.State, StencilRef);
+		DepthState = entry.State;
+
+		return true;
+	}
+
+	if(DepthStateCacheCount >= DepthStateCacheMax)
+	{
+		r3dOutToLog("DX11State: DepthStencilState cache is full\n");
+		return false;
+	}
+
 	D3D11_DEPTH_STENCIL_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 
@@ -906,8 +1101,21 @@ bool r3dDX11State::ApplyDepthState()
 		return false;
 	}
 
+	DepthStateCacheEntry& entry = DepthStateCache[DepthStateCacheCount++];
+	entry.Hash = hash;
+	entry.DepthEnable = DepthEnable;
+	entry.DepthWriteEnable = DepthWriteEnable;
+	entry.DepthFunc = DepthFunc;
+	entry.StencilEnable = StencilEnable;
+	entry.StencilFunc = StencilFunc;
+	entry.StencilFailOp = StencilFailOp;
+	entry.StencilZFailOp = StencilZFailOp;
+	entry.StencilPassOp = StencilPassOp;
+	entry.StencilReadMask = StencilReadMask;
+	entry.StencilWriteMask = StencilWriteMask;
+	entry.State = newState;
+
 	context->OMSetDepthStencilState(newState, StencilRef);
-	r3dDX11State_Release(DepthState);
 	DepthState = newState;
 
 	return true;
@@ -929,6 +1137,65 @@ bool r3dDX11State::ApplyBlendState()
 
 	if(!device || !context)
 		return false;
+
+	unsigned int hash = 2166136261u;
+	r3dDX11State_HashValue(hash, AlphaBlendEnable);
+	r3dDX11State_HashValue(hash, SrcBlend);
+	r3dDX11State_HashValue(hash, DestBlend);
+	r3dDX11State_HashValue(hash, BlendOp);
+	r3dDX11State_HashValue(hash, BlendOpAlpha);
+
+	for(int i = 0; i < 4; ++i)
+	{
+		r3dDX11State_HashValue(hash, ColorWriteMask[i]);
+	}
+
+	hash = r3dDX11State_FinishHash(hash);
+
+	for(int i = 0; i < BlendStateCacheCount; ++i)
+	{
+		BlendStateCacheEntry& entry = BlendStateCache[i];
+
+		if(entry.Hash != hash)
+			continue;
+
+		if(entry.AlphaBlendEnable != AlphaBlendEnable)
+			continue;
+		if(entry.SrcBlend != SrcBlend)
+			continue;
+		if(entry.DestBlend != DestBlend)
+			continue;
+		if(entry.BlendOp != BlendOp)
+			continue;
+		if(entry.BlendOpAlpha != BlendOpAlpha)
+			continue;
+
+		bool colorMaskMatch = true;
+
+		for(int rt = 0; rt < 4; ++rt)
+		{
+			if(entry.ColorWriteMask[rt] != ColorWriteMask[rt])
+			{
+				colorMaskMatch = false;
+				break;
+			}
+		}
+
+		if(!colorMaskMatch)
+			continue;
+
+		float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		context->OMSetBlendState(entry.State, blendFactor, 0xffffffff);
+		BlendState = entry.State;
+
+		return true;
+	}
+
+	if(BlendStateCacheCount >= BlendStateCacheMax)
+	{
+		r3dOutToLog("DX11State: BlendState cache is full\n");
+		return false;
+	}
 
 	D3D11_BLEND_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
@@ -959,9 +1226,23 @@ bool r3dDX11State::ApplyBlendState()
 		return false;
 	}
 
+	BlendStateCacheEntry& entry = BlendStateCache[BlendStateCacheCount++];
+	entry.Hash = hash;
+	entry.AlphaBlendEnable = AlphaBlendEnable;
+	entry.SrcBlend = SrcBlend;
+	entry.DestBlend = DestBlend;
+	entry.BlendOp = BlendOp;
+	entry.BlendOpAlpha = BlendOpAlpha;
+
+	for(int i = 0; i < 4; ++i)
+	{
+		entry.ColorWriteMask[i] = ColorWriteMask[i];
+	}
+
+	entry.State = newState;
+
 	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->OMSetBlendState(newState, blendFactor, 0xffffffff);
-	r3dDX11State_Release(BlendState);
 	BlendState = newState;
 
 	return true;
@@ -983,6 +1264,38 @@ bool r3dDX11State::ApplyRasterizerState()
 
 	if(!device || !context)
 		return false;
+
+	unsigned int hash = 2166136261u;
+	r3dDX11State_HashValue(hash, CullMode);
+	r3dDX11State_HashValue(hash, FillMode);
+	r3dDX11State_HashValue(hash, ScissorEnable);
+	hash = r3dDX11State_FinishHash(hash);
+
+	for(int i = 0; i < RasterizerStateCacheCount; ++i)
+	{
+		RasterizerStateCacheEntry& entry = RasterizerStateCache[i];
+
+		if(entry.Hash != hash)
+			continue;
+
+		if(entry.CullMode != CullMode)
+			continue;
+		if(entry.FillMode != FillMode)
+			continue;
+		if(entry.ScissorEnable != ScissorEnable)
+			continue;
+
+		context->RSSetState(entry.State);
+		RasterizerState = entry.State;
+
+		return true;
+	}
+
+	if(RasterizerStateCacheCount >= RasterizerStateCacheMax)
+	{
+		r3dOutToLog("DX11State: RasterizerState cache is full\n");
+		return false;
+	}
 
 	D3D11_RASTERIZER_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
@@ -1009,8 +1322,14 @@ bool r3dDX11State::ApplyRasterizerState()
 		return false;
 	}
 
+	RasterizerStateCacheEntry& entry = RasterizerStateCache[RasterizerStateCacheCount++];
+	entry.Hash = hash;
+	entry.CullMode = CullMode;
+	entry.FillMode = FillMode;
+	entry.ScissorEnable = ScissorEnable;
+	entry.State = newState;
+
 	context->RSSetState(newState);
-	r3dDX11State_Release(RasterizerState);
 	RasterizerState = newState;
 
 	return true;
@@ -1159,6 +1478,10 @@ void r3dDX11State::InvalidateCache()
 		BoundVSSRV[i] = NULL;
 		BoundVSSampler[i] = NULL;
 	}
+
+	DepthState = NULL;
+	BlendState = NULL;
+	RasterizerState = NULL;
 }
 
 #endif
