@@ -1,13 +1,8 @@
 #pragma once
 // interface to the Scaleform GFX flash player
-
+#include "r3dDX11ScaleformBridge.h"
 
 namespace Scaleform {
-	namespace GFx {
-		class MovieDef;
-		class Movie;
-		class Value;
-	}
 	namespace Render
 	{
 		namespace D3D9
@@ -16,6 +11,7 @@ namespace Scaleform {
 		}
 	}
 }
+
 #ifdef FINAL_BUILD
 #define SF_BUILD_SHIPPING 1
 #endif

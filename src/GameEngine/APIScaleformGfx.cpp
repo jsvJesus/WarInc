@@ -2,6 +2,7 @@
 #include "r3d.h"
 
 #include "APIScaleformGfx.h"
+#include "r3dDX11ScaleformBridge.h"
 
 #undef SetStreamSourceFreq
 
@@ -21,6 +22,16 @@
 
 // libs
 #include "WarIncScaleformLink.h"
+
+static IDirect3DDevice9* r3dGetScaleformDevice9()
+{
+	IDirect3DDevice9Ex* dx11BridgeDevice = r3dGetScaleformD3D9Device();
+
+	if(dx11BridgeDevice)
+		return dx11BridgeDevice;
+
+	return r3dRenderer->pd3ddev;
+}
 
 void r3dAddUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
@@ -184,177 +195,6 @@ class r3dGFxExternalInterface : public Scaleform::GFx::ExternalInterface
 public:
 	virtual	void Callback(Scaleform::GFx::Movie* pmovie, const char* methodName, const Scaleform::GFx::Value* args, unsigned argCount);
 };
-
-//class r3dGFxImageCreator : public Scaleform::GFx::ImageCreator
-//{
-//public:
-//	virtual Scaleform::Render::Image*  LoadProtocolImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url);
-//	virtual Scaleform::Render::Image*  LoadImageFile(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url);
-//	virtual Scaleform::Render::Image*  LoadExportedImage(const Scaleform::GFx::ImageCreateExportInfo& info, const Scaleform::String& url);
-//	//virtual Scaleform::Render::Image*  CreateImage(const Scaleform::GFx::ImageCreateInfo& info, Scaleform::Render::ImageSource* source);
-//
-//private:
-//	Scaleform::Render::Image* LoadTextureFromFile(r3dFile* src_file); // this fn will close the file!
-//};
-//
-//Scaleform::Render::Image* r3dGFxImageCreator::LoadTextureFromFile(r3dFile* src_file)
-//{
-//	r3d_assert(src_file);
-//
-//	D3DXIMAGE_INFO pInfo;
-//	ZeroMemory(&pInfo, sizeof (pInfo));
-//
-//	uint32_t fileSize = src_file->size;
-//	BYTE* imgData = new BYTE[fileSize+1];
-//	fread(imgData, fileSize, 1, src_file);
-//	fclose(src_file);
-//
-//	HRESULT hr;
-//	hr = D3DXGetImageInfoFromFileInMemory(imgData, fileSize, &pInfo);
-//
-//	Scaleform::Render::ImageFormat gfxFormat = Scaleform::Render::ImageFormat::Image_None;
-//	switch(pInfo.Format) 
-//	{
-//	case D3DFMT_X8R8G8B8: 
-//	case D3DFMT_R8G8B8:   
-//	case D3DFMT_A8R8G8B8: 
-//		// load them as 32bit argb
-//		pInfo.Format = D3DFMT_A8R8G8B8;
-//		gfxFormat    = Scaleform::Render::ImageFormat::Image_R8G8B8A8; 
-//		break;
-//	case D3DFMT_DXT1:     gfxFormat = Scaleform::Render::ImageFormat::Image_DXT1;      break;
-//	case D3DFMT_DXT3:	  gfxFormat = Scaleform::Render::ImageFormat::Image_DXT3;      break;
-//	case D3DFMT_DXT5:	  gfxFormat = Scaleform::Render::ImageFormat::Image_DXT5;      break;
-//	default: 
-//		r3dError("Scaleform: image load callback - texture %s have unsupported format %d for scaleform\n", fname, pInfo.Format);
-//		break;
-//	}
-//
-//	if(gfxFormat == Scaleform::Render::ImageFormat::Image_None) {
-//		delete[] imgData;
-//		return NULL;
-//	}
-//
-//	r3dOutToLog("GFX load tex '%s', width=%d\n", fname, pInfo.Width);
-//
-//	IDirect3DTexture9* pTex = NULL;
-//	hr = D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, imgData, fileSize, pInfo.Width, pInfo.Height, 1, 0, pInfo.Format, D3DPOOL_SYSTEMMEM,
-//		D3DX_DEFAULT, D3DX_DEFAULT, 0x00000000, /*&pInfo*/NULL, NULL, &pTex);
-//
-//	delete[] imgData;
-//
-//	if(hr != D3D_OK) {
-//		r3dOutToLog("img:// callback - can't create texture\n");
-//	}
-//
-//	Scaleform::Render::RawImage* pimage = new Scaleform::Render::RawImage::Create(gfxFormat, pInfo.MipLevels, Scaleform::Render::ImageSize(pInfo.Width, pInfo.Height), 0); 
-//	Scaleform::Render::ImageData* imageData = NULL;
-//	pimage->GetImageData(imageData);
-//	r3d_assert(imageData);
-//
-//	// lock the d3d texture, and copy image data to scaleform class.
-//	// please note, that by some reasons lr.lPitch is invalid for DXT compressed textures. so, we'll using pimage->DataSize instead
-//	D3DLOCKED_RECT lr;
-//	hr = pTex->LockRect(0, &lr, NULL, 0);
-//	Scaleform::Render::ImagePlane& imgPlane = imageData->GetPlaneRef();
-//	r3d_assert(imgPlane.pData);
-//	memcpy(imgPlane.pData, lr.pBits, imgPlane.DataSize); 
-//
-//	// by some weird reason scaleform using abgr, regardless of what it format saying
-//	/*if(pInfo.Format == D3DFMT_A8R8G8B8) 
-//	{
-//		DWORD* bits = (DWORD*)pimage->pData;
-//		for(unsigned int i=0; i<pimage->DataSize/4; i++) {
-//			int a = (bits[i] >> 24) & 0xff;
-//			int r = (bits[i] >> 16) & 0xff;
-//			int g = (bits[i] >> 8 ) & 0xff;
-//			int b = (bits[i]      ) & 0xff;
-//			bits[i] = (a<<24) | (b<<16) | (g<<8) | (r);
-//		}
-//	}*/
-//
-//	pTex->UnlockRect(0);
-//	pTex->Release();
-//
-//	return pimage;
-//}
-//
-//Scaleform::Render::Image* r3dGFxImageCreator::LoadImageFile(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
-//{
-//	R3D_ENSURE_MAIN_THREAD();
-//
-//	r3dOutToLog("GFx::LoadImageFile: requested %s\n", url.ToCStr());
-//
-//	char fname[MAX_PATH];
-//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr());
-//	const char* abs_fname = detect_gfx_absolute_path(fname);
-//	r3dFile* imgf = r3d_open(abs_fname, "rb");
-//	if(!imgf)
-//	{
-//		abs_fname = detect_gfx_absolute_path(url.ToCStr());
-//		imgf = r3d_open(abs_fname, "rb");
-//	}
-//
-//	if(!imgf) {
-//		r3dOutToLog("GFx::LoadImageFile: can't open %s\n", fname);
-//		return NULL;
-//	}
-//
-//	return this::LoadTextureFromFile(imgf);
-//} 
-//
-//Scaleform::Render::Image* r3dGFxImageCreator::LoadProtocolImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
-//{
-//	R3D_ENSURE_MAIN_THREAD();
-//
-//	r3dOutToLog("GFx::LoadImageFile: requested %s\n", url.ToCStr());
-//
-//	if(strnicmp(url.ToCStr(), "img://", 6) != NULL)
-//		return NULL;
-//
-//	char fname[MAX_PATH];
-//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr() + 6);
-//	const char* abs_fname = detect_gfx_absolute_path(fname);
-//	r3dFile* imgf = r3d_open(abs_fname, "rb");
-//	if(!imgf)
-//	{
-//		abs_fname = detect_gfx_absolute_path(url.ToCStr() + 6);
-//		imgf = r3d_open(abs_fname, "rb");
-//	}
-//
-//	if(!imgf) {
-//		r3dOutToLog("GFx::LoadProtocolImage: can't open %s\n", fname);
-//		return NULL;
-//	}
-//
-//	return this::LoadTextureFromFile(imgf);
-//} 
-//
-//Scaleform::Render::Image* r3dGFxImageCreator::LoadExportedImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
-//{
-//	R3D_ENSURE_MAIN_THREAD();
-//
-//	r3dOutToLog("GFx::LoadExportedImage: requested %s\n", url.ToCStr());
-//
-//	char fname[MAX_PATH];
-//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr());
-//	const char* abs_fname = detect_gfx_absolute_path(fname);
-//	r3dFile* imgf = r3d_open(abs_fname, "rb");
-//	if(!imgf)
-//	{
-//		abs_fname = detect_gfx_absolute_path(url.ToCStr());
-//		imgf = r3d_open(abs_fname, "rb");
-//	}
-//
-//	if(!imgf) {
-//		r3dOutToLog("GFx::LoadExportedImage: can't open %s\n", fname);
-//		return NULL;
-//	}
-//
-//	return this::LoadTextureFromFile(imgf);
-//} 
-
-
 
 // user event handler
 class r3dGFxUserEventHandler : public Scaleform::GFx::UserEventHandler
@@ -676,7 +516,7 @@ void APIScaleformGfx::D3DCreateResource()
 	RendererHAL->RestoreAfterReset();
 
 	// create state block
-	D3D_V( r3dRenderer->pd3ddev->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
+	D3D_V( r3dGetScaleformD3D9Device()->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 }
 
 void APIScaleformGfx::D3DReleaseResource()
@@ -750,9 +590,9 @@ bool APIScaleformGfx::Create()
 	}
 
 	// create state block
-	D3D_V( r3dRenderer->pd3ddev->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
+	D3D_V( r3dGetScaleformD3D9Device()->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 
-	Scaleform::Render::D3D9::HALInitParams initParams(r3dRenderer->pd3ddev, r3dRenderer->d3dpp, Scaleform::Render::D3D9::HALConfig_NoSceneCalls);
+	Scaleform::Render::D3D9::HALInitParams initParams(r3dGetScaleformDevice9(), r3dRenderer->d3dpp, Scaleform::Render::D3D9::HALConfig_NoSceneCalls);
 	RendererHAL->InitHAL(initParams);	
 
 	//D3DCreateResource();
@@ -1040,6 +880,13 @@ int g_ScaleFormUpdateAndDrawCount ;
 
 void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
+	bool useDX11ScaleformBridge = false;
+
+	if(!skipDraw && g_r3dDX11ScaleformBridge.IsReady())
+	{
+		useDX11ScaleformBridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
+	}
+	
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
 
 	if(!pMovie)
@@ -1227,6 +1074,12 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 	}
 
 	gAPIScaleformGfx->pCurMovie = NULL;
+
+	if(useDX11ScaleformBridge)
+	{
+		g_r3dDX11ScaleformBridge.EndScaleformRender();
+		g_r3dDX11ScaleformBridge.DrawDX11();
+	}
 
 #ifndef FINAL_BUILD
 	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart;
