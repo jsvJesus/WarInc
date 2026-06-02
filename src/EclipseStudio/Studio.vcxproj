@@ -95,7 +95,6 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>
         C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;
-        .\..\External\imgui;
         .\..\External\PhysX_3.4\Include;
         .\..\External\PhysX_3.4\Include\common;
         .\..\External\PhysX_3.4\Include\geometry;
@@ -212,7 +211,6 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <AdditionalIncludeDirectories>
-        .\..\External\imgui;
         .\..\External\PhysX_3.4\Include;
         .\..\External\PhysX_3.4\Include\common;
         .\..\External\PhysX_3.4\Include\geometry;
