@@ -3,6 +3,15 @@
 
 #include "ui/r3dMenu.h"
 
+// Command binding structure shared with RmlUiBackend
+struct AppSelectCommandBinding
+{
+	const char* ElementId;
+	const char* Label;
+	int Result;
+	int HotKey;
+};
+
 class Menu_AppSelect : public MenuLayer
 {
 public:

@@ -23,6 +23,7 @@
 #include <vector>
 
 struct ID3D11Buffer;
+class r3dDX11Shader;
 
 class r3dDX11LegacyGeometryBridge
 {
@@ -44,6 +45,8 @@ public:
 	);
 
 	bool SetIndices(IDirect3DIndexBuffer9* indexBuffer);
+
+	bool PrepareLegacyDraw(IDirect3DVertexDeclaration9* vertexDeclaration);
 
 	void LegacyDrawPrimitive(
 		D3DPRIMITIVETYPE primitiveType,
@@ -125,12 +128,17 @@ private:
 
 	bool UploadVertexBuffer(VertexBufferEntry* entry);
 	bool UploadIndexBuffer(IndexBufferEntry* entry, D3DFORMAT* outFormat);
+	bool CreateFixedFunction2DResources();
+	bool ApplyFixedFunction2D(IDirect3DVertexDeclaration9* vertexDeclaration);
 
 private:
 	bool Initialized;
 
 	std::vector<VertexBufferEntry> VertexBuffers;
 	std::vector<IndexBufferEntry> IndexBuffers;
+
+	r3dDX11Shader* FixedFunction2DShader;
+	ID3D11Buffer* FixedFunction2DConstants;
 };
 
 extern r3dDX11LegacyGeometryBridge g_r3dDX11LegacyGeometryBridge;

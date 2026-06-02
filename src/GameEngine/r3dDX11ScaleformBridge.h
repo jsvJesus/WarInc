@@ -29,8 +29,11 @@ private:
     bool CreateD3D9(HWND hWnd);
     bool CreateSharedTarget(int width, int height);
     bool CreateDX11DrawResources();
+    bool CopyD3D9TargetToDX11();
+
     void DestroySharedTarget();
     void DestroyDX11DrawResources();
+
     void FlushD3D9();
 
 private:
@@ -39,19 +42,25 @@ private:
     int m_width;
     int m_height;
 
+    bool m_sceneBegun;
+
     IDirect3D9Ex* m_d3d9;
     IDirect3DDevice9Ex* m_device9;
 
     IDirect3DTexture9* m_sharedTexture9;
     IDirect3DSurface9* m_sharedSurface9;
+    IDirect3DSurface9* m_readbackSurface9;
+
     IDirect3DSurface9* m_oldSurface9;
     IDirect3DSurface9* m_oldDepth9;
+
     HANDLE m_sharedHandle;
 
     IDirect3DQuery9* m_flushQuery9;
 
     ID3D11Device* m_device11;
     ID3D11DeviceContext* m_context11;
+
     ID3D11Texture2D* m_sharedTexture11;
     ID3D11ShaderResourceView* m_sharedSRV11;
 

@@ -13,6 +13,7 @@
 #ifndef WO_SERVER
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
+#include "r3dDX11LegacyGeometryBridge.h"
 #include "r3dDX11State.h"
 #include "r3dDX11ConstantBuffer.h"
 #include "r3dDX11RenderTarget.h"
@@ -818,8 +819,11 @@ void r3dRenderLayer::DrawIndexed( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UI
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized())
 	{
-		g_r3dDX11Geometry.DrawIndexedPrimitive(
-			r3dDX11_ConvertD3D9PrimitiveType((int)Type),
+		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
+
+		g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitive(
+			Type,
 			BaseVertexIndex,
 			MinVertexIndex,
 			NumVertices,
@@ -856,13 +860,16 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized())
 	{
-		g_r3dDX11Geometry.DrawIndexedPrimitiveUP(
-			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
+
+		g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitiveUP(
+			PrimitiveType,
 			MinVertexIndex,
 			NumVertices,
 			PrimitiveCount,
 			pIndexData,
-			r3dDX11_ConvertD3D9IndexFormat((int)IndexDataFormat),
+			IndexDataFormat,
 			pVertexStreamZeroData,
 			VertexStreamZeroStride
 		);
@@ -888,8 +895,11 @@ void r3dRenderLayer::Draw( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UIN
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized())
 	{
-		g_r3dDX11Geometry.DrawPrimitive(
-			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
+
+		g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitive(
+			PrimitiveType,
 			StartVertex,
 			PrimitiveCount
 		);
@@ -919,8 +929,11 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized())
 	{
-		g_r3dDX11Geometry.DrawPrimitiveUP(
-			r3dDX11_ConvertD3D9PrimitiveType((int)PrimitiveType),
+		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
+
+		g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitiveUP(
+			PrimitiveType,
 			PrimitiveCount,
 			pVertexStreamZeroData,
 			VertexStreamZeroStride

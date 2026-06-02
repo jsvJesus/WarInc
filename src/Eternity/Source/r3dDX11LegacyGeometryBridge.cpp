@@ -24,7 +24,11 @@
 #include "r3d.h"
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
+#include "r3dDX11InputLayout.h"
 #include "r3dDX11LegacyGeometryBridge.h"
+#include "r3dDX11Shader.h"
+#include "r3dD3DCache.h"
+#include "VShader.h"
 
 #ifdef Draw
 #undef Draw
@@ -74,6 +78,61 @@
 #undef IASetIndexBuffer
 #endif
 
+#ifdef VSSetConstantBuffers
+#undef VSSetConstantBuffers
+#endif
+
+#ifdef PSSetConstantBuffers
+#undef PSSetConstantBuffers
+#endif
+
+extern int CurrentTexID[16];
+
+struct r3dDX11Legacy2DConstants
+{
+	float ScreenToClipX;
+	float ScreenToClipY;
+	float UseTexture;
+	float Padding;
+};
+
+static const char r3dDX11Legacy2DShaderSource[] =
+	"cbuffer Legacy2DConstants : register(b15)\r\n"
+	"{\r\n"
+	"	float4 Legacy2DParams;\r\n"
+	"};\r\n"
+	"Texture2D LegacyTexture0 : register(t0);\r\n"
+	"SamplerState LegacySampler0 : register(s0);\r\n"
+	"struct VSIn\r\n"
+	"{\r\n"
+	"	float4 Position : POSITION0;\r\n"
+	"	float4 Color0 : COLOR0;\r\n"
+	"	float4 Color1 : COLOR1;\r\n"
+	"	float2 Tex0 : TEXCOORD0;\r\n"
+	"	float2 Tex1 : TEXCOORD1;\r\n"
+	"	float2 Tex2 : TEXCOORD2;\r\n"
+	"	float2 Tex3 : TEXCOORD3;\r\n"
+	"};\r\n"
+	"struct VSOut\r\n"
+	"{\r\n"
+	"	float4 Position : SV_Position;\r\n"
+	"	float4 Color0 : COLOR0;\r\n"
+	"	float2 Tex0 : TEXCOORD0;\r\n"
+	"};\r\n"
+	"VSOut vs_main(VSIn input)\r\n"
+	"{\r\n"
+	"	VSOut output;\r\n"
+	"	output.Position = float4(input.Position.x * Legacy2DParams.x - 1.0f, 1.0f - input.Position.y * Legacy2DParams.y, input.Position.z, 1.0f);\r\n"
+	"	output.Color0 = input.Color0;\r\n"
+	"	output.Tex0 = input.Tex0;\r\n"
+	"	return output;\r\n"
+	"}\r\n"
+	"float4 ps_main(VSOut input) : SV_Target0\r\n"
+	"{\r\n"
+	"	float4 texColor = Legacy2DParams.z > 0.5f ? LegacyTexture0.Sample(LegacySampler0, input.Tex0) : float4(1.0f, 1.0f, 1.0f, 1.0f);\r\n"
+	"	return texColor * input.Color0;\r\n"
+	"}\r\n";
+
 template<typename T>
 static void r3dDX11LegacyGeometryBridge_Release(T*& ptr)
 {
@@ -121,6 +180,8 @@ r3dDX11LegacyGeometryBridge::IndexBufferEntry::IndexBufferEntry()
 r3dDX11LegacyGeometryBridge::r3dDX11LegacyGeometryBridge()
 {
 	Initialized = false;
+	FixedFunction2DShader = NULL;
+	FixedFunction2DConstants = NULL;
 }
 
 r3dDX11LegacyGeometryBridge::~r3dDX11LegacyGeometryBridge()
@@ -146,6 +207,9 @@ bool r3dDX11LegacyGeometryBridge::Init()
 
 	Initialized = true;
 
+	if(!CreateFixedFunction2DResources())
+		r3dOutToLog("DX11LegacyGeometryBridge: fixed-function 2D shader is unavailable\n");
+
 	r3dOutToLog("DX11LegacyGeometryBridge: initialized\n");
 
 	return true;
@@ -153,6 +217,14 @@ bool r3dDX11LegacyGeometryBridge::Init()
 
 void r3dDX11LegacyGeometryBridge::Shutdown()
 {
+	if(FixedFunction2DShader)
+	{
+		delete FixedFunction2DShader;
+		FixedFunction2DShader = NULL;
+	}
+
+	r3dDX11LegacyGeometryBridge_Release(FixedFunction2DConstants);
+
 	for(size_t i = 0; i < VertexBuffers.size(); ++i)
 	{
 		ReleaseVertexBuffer(VertexBuffers[i]);
@@ -178,6 +250,124 @@ void r3dDX11LegacyGeometryBridge::InvalidateCache()
 {
 	if(g_r3dDX11Geometry.IsInitialized())
 		g_r3dDX11Geometry.InvalidateCache();
+}
+
+bool r3dDX11LegacyGeometryBridge::CreateFixedFunction2DResources()
+{
+	if(!Initialized)
+		return false;
+
+	ID3D11Device* device = g_r3dDX11.GetDevice();
+	if(!device)
+		return false;
+
+	if(!FixedFunction2DShader)
+		FixedFunction2DShader = new r3dDX11Shader();
+
+	if(!FixedFunction2DShader->CompileVertexFromMemory(
+		"DX11LegacyFixedFunction2D_vs",
+		r3dDX11Legacy2DShaderSource,
+		sizeof(r3dDX11Legacy2DShaderSource) - 1,
+		"vs_main",
+		"vs_4_0"
+	))
+	{
+		return false;
+	}
+
+	if(!FixedFunction2DShader->CompilePixelFromMemory(
+		"DX11LegacyFixedFunction2D_ps",
+		r3dDX11Legacy2DShaderSource,
+		sizeof(r3dDX11Legacy2DShaderSource) - 1,
+		"ps_main",
+		"ps_4_0"
+	))
+	{
+		return false;
+	}
+
+	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.ByteWidth = sizeof(r3dDX11Legacy2DConstants);
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	desc.StructureByteStride = 0;
+
+	HRESULT hr = device->CreateBuffer(&desc, NULL, &FixedFunction2DConstants);
+	if(FAILED(hr))
+	{
+		r3dDX11LegacyGeometryBridge_LogHR("CreateBuffer FixedFunction2DConstants", hr);
+		return false;
+	}
+
+	return true;
+}
+
+bool r3dDX11LegacyGeometryBridge::ApplyFixedFunction2D(IDirect3DVertexDeclaration9* vertexDeclaration)
+{
+	if(!Initialized || !FixedFunction2DShader || !FixedFunction2DConstants || !vertexDeclaration)
+		return false;
+
+	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+	if(!context)
+		return false;
+
+	D3DVERTEXELEMENT9 elements[64];
+	ZeroMemory(elements, sizeof(elements));
+
+	UINT elementCount = sizeof(elements) / sizeof(elements[0]);
+	HRESULT hr = vertexDeclaration->GetDeclaration(elements, &elementCount);
+	if(FAILED(hr))
+	{
+		r3dDX11LegacyGeometryBridge_LogHR("IDirect3DVertexDeclaration9::GetDeclaration", hr);
+		return false;
+	}
+
+	FixedFunction2DShader->SetActive();
+
+	if(!g_r3dDX11InputLayouts.Set(elements, FixedFunction2DShader))
+		return false;
+
+	const float width = g_r3dDX11.GetWidth() > 0 ? (float)g_r3dDX11.GetWidth() : 1.0f;
+	const float height = g_r3dDX11.GetHeight() > 0 ? (float)g_r3dDX11.GetHeight() : 1.0f;
+
+	r3dDX11Legacy2DConstants constants;
+	constants.ScreenToClipX = 2.0f / width;
+	constants.ScreenToClipY = 2.0f / height;
+	constants.UseTexture = CurrentTexID[0] >= 0 ? 1.0f : 0.0f;
+	constants.Padding = 0.0f;
+
+	context->UpdateSubresource(FixedFunction2DConstants, 0, NULL, &constants, 0, 0);
+
+	ID3D11Buffer* buffers[1] = { FixedFunction2DConstants };
+	context->VSSetConstantBuffers(15, 1, buffers);
+	context->PSSetConstantBuffers(15, 1, buffers);
+
+	return true;
+}
+
+bool r3dDX11LegacyGeometryBridge::PrepareLegacyDraw(IDirect3DVertexDeclaration9* vertexDeclaration)
+{
+	if(!Initialized)
+		return false;
+
+	if(!vertexDeclaration)
+		vertexDeclaration = d3dc.pDecl;
+
+	if(!vertexDeclaration)
+		return false;
+
+	if(r3dRenderer && (r3dRenderer->GetCurrentVertexShaderIdx() >= 0 || r3dRenderer->GetCurrentPixelShaderIdx() >= 0))
+	{
+		if(r3dRenderer->GetCurrentVertexShaderIdx() >= 0)
+			r3dDX11_ApplyCurrentVertexShaderInputLayout(vertexDeclaration);
+
+		return true;
+	}
+
+	return ApplyFixedFunction2D(vertexDeclaration);
 }
 
 void r3dDX11LegacyGeometryBridge::ReleaseVertexBuffer(VertexBufferEntry& entry)

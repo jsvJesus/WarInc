@@ -14,7 +14,6 @@
 #include "fmod/soundsys.h"
 
 #include "APIScaleformGFX.h"
-#include "APIScaleformGfxDX11.h"
 #include "GameCommon.h"
 #include "GameLevel.h"
 
@@ -245,12 +244,19 @@ void InitRender(int bUseSet = 0)
 
 	if(g_r3dDX11.IsInitialized())
 	{
-		r3dScaleformGfxDX11Create();
+		if(!g_r3dDX11ScaleformBridge.Init(
+			win::hWnd,
+			g_r3dDX11.GetDevice(),
+			g_r3dDX11.GetContext(),
+			g_r3dDX11.GetWidth(),
+			g_r3dDX11.GetHeight()
+		))
+		{
+			r3dOutToLog("DX11 Scaleform bridge init failed; falling back to native D3D9 UI device\n");
+		}
 	}
-	else
-	{
-		r3dScaleformGfxCreate();
-	}
+
+	r3dScaleformGfxCreate();
 
 #if ENABLE_WEB_BROWSER
 	g_pBrowserManager = new EternityWebBrowser();
@@ -299,9 +305,8 @@ void CloseRender()
 	DestroyApexUserRenderer();
 #endif
 
-	r3dScaleformGfxDX11Destroy();
-
 	r3dScaleformGfxDestroy();
+	g_r3dDX11ScaleformBridge.Shutdown();
 
 	r3dCloseMaterials();
 

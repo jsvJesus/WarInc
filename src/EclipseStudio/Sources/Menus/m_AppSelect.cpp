@@ -2,17 +2,138 @@
 #include "r3d.h"
 
 #include "GameCommon.h"
+#include "UI/UIimEdit.h"
+#include "UI/RmlUiBackend.h"
 
 #include "m_AppSelect.h"
-#include "APIScaleformGfxDX11.h"
 
-#include "r3dDX11.h"
-#include "r3dDX11State.h"
-#include "r3dDX11Geometry.h"
+#include "r3dDX11ScaleformBridge.h"
 
-#include <windows.h>
+extern int AppSelectMode;
+void ClearFullScreen_Menu();
 
-int AppSelectMode = 100;
+namespace
+{
+	const int APPSELECT_WAITING_FOR_COMMAND = 100;
+
+	const AppSelectCommandBinding g_AppSelectCommands[] =
+	{
+		{ "play",      "Play Game",        Menu_AppSelect::bStartGamePublic,      kbs1 },
+		{ "level",     "Level Editor",     Menu_AppSelect::bStartLevelEditor,     kbs2 },
+		{ "particle",  "Particle Editor",  Menu_AppSelect::bStartParticleEditor,  kbs3 },
+		{ "physics",   "Physics Editor",   Menu_AppSelect::bStartPhysicsEditor,   kbs4 },
+		{ "character", "Character Editor", Menu_AppSelect::bStartCharacterEditor, kbs5 },
+		{ "exit",      "Exit",             Menu_AppSelect::bQuit,                 kbs6 },
+	};
+
+	const char* g_AppSelectRml =
+		"<rml>"
+		"<head>"
+		"<title>WarInc Studio</title>"
+		"<style>"
+		"body { width: 100%; height: 100%; margin: 0px; font-family: Arial; color: #eef3f8; }"
+		"#root { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; }"
+		"#panel { position: absolute; width: 430px; height: 366px; left: 50%; top: 50%; margin-left: -215px; margin-top: -183px; padding: 26px 32px; background-color: rgba(12, 15, 20, 218); border: 1px #8fa3b8; }"
+		"#title { font-size: 34px; color: #ffffff; margin-bottom: 4px; }"
+		"#subtitle { font-size: 15px; color: #aeb8c5; margin-bottom: 22px; }"
+		".button { display: block; height: 34px; margin-bottom: 9px; padding: 8px 14px 0px 14px; font-size: 17px; color: #f4f7fb; background-color: rgba(47, 57, 70, 235); border: 1px #728092; }"
+		".button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }"
+		".button:active { background-color: rgba(97, 116, 141, 255); }"
+		".hotkey { float: right; color: #a9b4c2; }"
+		"#footer { margin-top: 12px; font-size: 12px; color: #788493; }"
+		"</style>"
+		"</head>"
+		"<body>"
+		"<div id='root'>"
+		"<div id='panel'>"
+		"<div id='title'>WarInc Studio</div>"
+		"<div id='subtitle'>Editor launcher</div>"
+		"<div id='play' class='button'>Play Game <span class='hotkey'>1</span></div>"
+		"<div id='level' class='button'>Level Editor <span class='hotkey'>2</span></div>"
+		"<div id='particle' class='button'>Particle Editor <span class='hotkey'>3</span></div>"
+		"<div id='physics' class='button'>Physics Editor <span class='hotkey'>4</span></div>"
+		"<div id='character' class='button'>Character Editor <span class='hotkey'>5</span></div>"
+		"<div id='exit' class='button'>Exit <span class='hotkey'>6</span></div>"
+		"<div id='footer'>DX11 game renderer / RmlUi editor menu</div>"
+		"</div>"
+		"</div>"
+		"</body>"
+		"</rml>";
+
+	class AppSelectEventListener : public Rocket::Core::EventListener
+	{
+	public:
+		AppSelectEventListener()
+		: m_result(APPSELECT_WAITING_FOR_COMMAND)
+		{
+		}
+
+		void SetResult(int result)
+		{
+			m_result = result;
+		}
+
+		virtual void ProcessEvent(Rocket::Core::Event& event)
+		{
+			AppSelectMode = m_result;
+		}
+
+	private:
+		int m_result;
+	};
+
+	Rocket::Core::ElementDocument* LoadAppSelectDocument(AppSelectEventListener* listeners)
+	{
+		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromMemory(g_AppSelectRml);
+		if(!document)
+		{
+			r3dOutToLog("RmlUi AppSelect: LoadDocumentFromMemory failed\n");
+			return NULL;
+		}
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_AppSelectCommands); ++i)
+		{
+			listeners[i].SetResult(g_AppSelectCommands[i].Result);
+
+			Rocket::Core::Element* element = document->GetElementById(g_AppSelectCommands[i].ElementId);
+			if(element)
+				element->AddEventListener("click", &listeners[i]);
+			else
+				r3dOutToLog("RmlUi AppSelect: element '%s' is missing\n", g_AppSelectCommands[i].ElementId);
+		}
+
+		document->Show();
+		r3dOutToLog("RmlUi AppSelect: document loaded and shown\n");
+		return document;
+	}
+
+	r3dTexture* LoadAppSelectBackground()
+	{
+		if(!r3dFileExists("Data/Menu/Background.dds"))
+			return NULL;
+
+		return r3dRenderer->LoadTexture("Data/Menu/Background.dds");
+	}
+
+	void DrawAppSelectBackground(r3dTexture* backgroundTexture)
+	{
+		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
+		ClearFullScreen_Menu();
+
+		float x = 0.0f;
+		float y = 0.0f;
+		float w = 0.0f;
+		float h = 0.0f;
+		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
+
+		if(backgroundTexture)
+			r3dDrawBox2D(x, y, w, h, r3dColor24::white, backgroundTexture);
+		else
+			r3dDrawBox2D(x, y, w, h, r3dColor(12, 14, 18));
+	}
+}
+
+int AppSelectMode = APPSELECT_WAITING_FOR_COMMAND;
 
 Menu_AppSelect::Menu_AppSelect()
 {
@@ -30,12 +151,9 @@ extern bool g_bExit;
 
 void ClearFullScreen_Menu()
 {
-	if(g_r3dDX11.IsInitialized())
-		return;
-
 	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 
-	r3dRenderer->SetViewport(
+	r3dRenderer->DoSetViewport(
 		0.0f,
 		0.0f,
 		(float)r3dRenderer->d3dpp.BackBufferWidth,
@@ -47,127 +165,113 @@ void ClearFullScreen_Menu()
 	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 }
 
-static int AppSelectCommandToResult(int command)
-{
-	switch(command)
-	{
-	case R3D_SF_DX11_APPSELECT_PLAY_GAME:
-		return Menu_AppSelect::bStartGamePublic;
-
-	case R3D_SF_DX11_APPSELECT_LEVEL_EDITOR:
-		return Menu_AppSelect::bStartLevelEditor;
-
-	case R3D_SF_DX11_APPSELECT_PARTICLE_EDITOR:
-		return Menu_AppSelect::bStartParticleEditor;
-
-	case R3D_SF_DX11_APPSELECT_PHYSICS_EDITOR:
-		return Menu_AppSelect::bStartPhysicsEditor;
-
-	case R3D_SF_DX11_APPSELECT_CHARACTER_EDITOR:
-		return Menu_AppSelect::bStartCharacterEditor;
-
-	case R3D_SF_DX11_APPSELECT_EXIT:
-		return Menu_AppSelect::bQuit;
-	}
-
-	return -1;
-}
-
-static int RenderAppSelectDX11()
-{
-	if(!g_r3dDX11.IsInitialized())
-		return R3D_SF_DX11_APPSELECT_NONE;
-
-	g_r3dDX11.BeginFrame(0.0f, 0.0f, 0.0f, 1.0f);
-
-	int command = r3dScaleformGfxDX11RenderAppSelect();
-
-	g_r3dDX11State.InvalidateCache();
-	g_r3dDX11Geometry.InvalidateCache();
-
-	g_r3dDX11.EndFrame(true);
-
-	return command;
-}
-
-static int RenderAppSelectDX9Message()
-{
-	static bool MessageShown = false;
-
-	if(!MessageShown)
-	{
-		MessageShown = true;
-
-		MessageBoxA(
-			win::hWnd,
-			"Scaleform DX11 AppSelect requires -dx11.\n\nRun Studio with -dx11 argument.",
-			"WarInc DX11 Frontend",
-			MB_OK | MB_ICONWARNING
-		);
-	}
-
-	return R3D_SF_DX11_APPSELECT_EXIT;
-}
-
 int Menu_AppSelect::DoModal()
 {
-	AppSelectMode = 100;
+	AppSelectMode = APPSELECT_WAITING_FOR_COMMAND;
 	released_id = -1;
 
 	Desktop().SetViewSize(r3dRenderer->ScreenW, r3dRenderer->ScreenH);
+	r3dMouse::Show(true);
 
-	r3dMouse::Show();
-
-	if(!g_r3dDX11.IsInitialized())
+	if(!RmlUiBackend::Initialize())
 	{
-		r3dOutToLog("AppSelect: DX9 mode detected, Scaleform DX11 frontend disabled\n");
-
-		MessageBoxA(
-			win::hWnd,
-			"Scaleform DX11 AppSelect requires -dx11.\n\nRun Studio with -dx11 argument.",
-			"WarInc DX11 Frontend",
-			MB_OK | MB_ICONWARNING
-		);
-
-		return Menu_AppSelect::bQuit;
+		r3dOutToLog("RmlUi AppSelect: backend initialization failed, falling back\n");
+		return Menu_AppSelect::bStartGamePublic;
 	}
 
-	if(!r3dScaleformGfxDX11Create())
+	Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+	if(!ctx)
 	{
-		r3dOutToLog("AppSelect: Scaleform DX11 create failed\n");
-		return Menu_AppSelect::bQuit;
+		r3dOutToLog("RmlUi AppSelect: no context, falling back\n");
+		return Menu_AppSelect::bStartGamePublic;
 	}
 
-	if(!r3dScaleformGfxDX11LoadAppSelect("data/menu/AppSelect.gfx"))
+	AppSelectEventListener listeners[R3D_ARRAYSIZE(g_AppSelectCommands)];
+	Rocket::Core::ElementDocument* document = LoadAppSelectDocument(listeners);
+
+	if(!document)
 	{
-		r3dOutToLog("AppSelect: data/menu/AppSelect.gfx failed\n");
-		return Menu_AppSelect::bQuit;
+		return Menu_AppSelect::bStartGamePublic;
 	}
 
-	r3dOutToLog("AppSelect: Scaleform DX11 UI enabled\n");
+	r3dTexture* backgroundTexture = LoadAppSelectBackground();
+	bool firstRmlFrameLogged = false;
 
-	while(1)
+	while(AppSelectMode == APPSELECT_WAITING_FOR_COMMAND)
 	{
 		if(g_bExit)
 		{
-			r3dScaleformGfxDX11UnloadAppSelect();
-			return 0;
+			AppSelectMode = Menu_AppSelect::bQuit;
+			break;
 		}
+
+		r3dProcessWindowMessages();
+		r3dMouse::Show(true);
 
 		mUpdate();
 
-		int command = RenderAppSelectDX11();
-		int result = AppSelectCommandToResult(command);
+		RmlUiBackend::ProcessMouse();
 
-		if(result != -1)
+		ctx->SetDimensions(Rocket::Core::Vector2i((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH));
+		ctx->Update();
+
+		int hotkeyResult = RmlUiBackend::ProcessHotkeys(g_AppSelectCommands, R3D_ARRAYSIZE(g_AppSelectCommands));
+		if(!hotkeyResult)
+			hotkeyResult = RmlUiBackend::ProcessEscapeKey();
+
+		if(hotkeyResult)
 		{
-			r3dOutToLog("AppSelect: Scaleform DX11 command=%d result=%d\n", command, result);
-
-			r3dScaleformGfxDX11UnloadAppSelect();
-			return result;
+			AppSelectMode = hotkeyResult;
+			break;
 		}
+
+		r3dStartFrame();
+
+		if(r3dRenderer->DeviceAvailable)
+		{
+			r3dRenderer->StartRender(1);
+			r3dRenderer->StartFrame();
+
+			DrawAppSelectBackground(backgroundTexture);
+
+			RmlUiBackend::BeginFrame();
+			{
+				IDirect3DDevice9* rmlDevice = NULL;
+
+				if(g_r3dDX11ScaleformBridge.IsReady())
+					rmlDevice = r3dGetScaleformD3D9Device();
+				else
+					rmlDevice = r3dRenderer->pd3ddev;
+
+				if(rmlDevice && ctx)
+				{
+					ctx->Render();
+
+					if(!firstRmlFrameLogged)
+					{
+						r3dOutToLog("RmlUi AppSelect: first frame rendered through RmlUiBackend\n");
+						firstRmlFrameLogged = true;
+					}
+				}
+			}
+			RmlUiBackend::EndFrame();
+
+			r3dRenderer->Flush();
+			r3dRenderer->EndFrame();
+		}
+
+		r3dRenderer->EndRender(true);
+		r3dEndFrame();
 	}
 
-	r3dScaleformGfxDX11UnloadAppSelect();
-	return 0;
+	if(document)
+	{
+		document->Close();
+		document->RemoveReference();
+	}
+
+	// NOTE: RmlUiBackend is a shared singleton — Shutdown() is called
+	// at application exit, not here.
+
+	return AppSelectMode;
 }

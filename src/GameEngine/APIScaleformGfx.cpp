@@ -33,6 +33,42 @@ static IDirect3DDevice9* r3dGetScaleformDevice9()
 	return r3dRenderer->pd3ddev;
 }
 
+#ifdef GetRenderTarget
+#define R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
+#undef GetRenderTarget
+#endif
+
+#ifdef GetDepthStencilSurface
+#define R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
+#undef GetDepthStencilSurface
+#endif
+
+static HRESULT r3dScaleformDeviceGetRenderTarget(IDirect3DDevice9* device, DWORD index, IDirect3DSurface9** surface)
+{
+	if(!device)
+		return E_POINTER;
+
+	return device->GetRenderTarget(index, surface);
+}
+
+static HRESULT r3dScaleformDeviceGetDepthStencilSurface(IDirect3DDevice9* device, IDirect3DSurface9** surface)
+{
+	if(!device)
+		return E_POINTER;
+
+	return device->GetDepthStencilSurface(surface);
+}
+
+#ifdef R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
+#define GetRenderTarget DIRECT_CALLS_OF_GET_RENDER_TARGET_FUNCTION_NOT_ALLOWED_USE_REDRENDERLAYER_GETRT
+#undef R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
+#endif
+
+#ifdef R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
+#define GetDepthStencilSurface DIRECT_CALLS_OF_GET_DEPTH_STENCIL_SURFACE_FUNCTION_NOT_ALLOWED_USE_REDRENDERLAYER_GETDSS
+#undef R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
+#endif
+
 void r3dAddUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
 	int mem = r3dGetTextureSizeInVideoMemory(w, h, d, mips, fmt);
@@ -45,6 +81,14 @@ void r3dRemoveUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
 	int mem = -r3dGetTextureSizeInVideoMemory(w, h, d, mips, fmt);
 	r3dRenderer->Stats.AddUITexMem(mem);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+static bool r3dScaleformBridgeDrawDisabled()
+{
+	return strstr(__r3dCmdLine, "-noScaleformBridgeDraw") != NULL ||
+		strstr(__r3dCmdLine, "/noScaleformBridgeDraw") != NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -516,7 +560,9 @@ void APIScaleformGfx::D3DCreateResource()
 	RendererHAL->RestoreAfterReset();
 
 	// create state block
-	D3D_V( r3dGetScaleformD3D9Device()->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
+	IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
+	r3d_assert(scaleformDevice);
+	D3D_V( scaleformDevice->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 }
 
 void APIScaleformGfx::D3DReleaseResource()
@@ -590,7 +636,9 @@ bool APIScaleformGfx::Create()
 	}
 
 	// create state block
-	D3D_V( r3dGetScaleformD3D9Device()->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
+	IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
+	r3d_assert(scaleformDevice);
+	D3D_V( scaleformDevice->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 
 	Scaleform::Render::D3D9::HALInitParams initParams(r3dGetScaleformDevice9(), r3dRenderer->d3dpp, Scaleform::Render::D3D9::HALConfig_NoSceneCalls);
 	RendererHAL->InitHAL(initParams);	
@@ -882,10 +930,8 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
 	bool useDX11ScaleformBridge = false;
 
-	if(!skipDraw && g_r3dDX11ScaleformBridge.IsReady())
-	{
-		useDX11ScaleformBridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
-	}
+	if(!skipDraw && g_r3dDX11ScaleformBridge.IsReady() && r3dScaleformBridgeDrawDisabled())
+		skipDraw = true;
 	
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
 
@@ -955,6 +1001,9 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 	if(!skipDraw)
 	{
+		if(g_r3dDX11ScaleformBridge.IsReady())
+			useDX11ScaleformBridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
+
 		if(gAPIScaleformGfx->pStateBlock)
 			gAPIScaleformGfx->pStateBlock->Capture();
 
@@ -963,8 +1012,22 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 		LPDIRECT3DSURFACE9 pRT = NULL;
 		LPDIRECT3DSURFACE9 pSS = NULL;
 
-		r3dRenderer->GetRT(0, &pRT);
-		r3dRenderer->GetDSS(&pSS);
+		if(useDX11ScaleformBridge)
+		{
+			IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
+			if(scaleformDevice)
+			{
+				r3dScaleformDeviceGetRenderTarget(scaleformDevice, 0, &pRT);
+
+				if(FAILED(r3dScaleformDeviceGetDepthStencilSurface(scaleformDevice, &pSS)))
+					pSS = NULL;
+			}
+		}
+		else
+		{
+			r3dRenderer->GetRT(0, &pRT);
+			r3dRenderer->GetDSS(&pSS);
+		}
 
 		if(!pRT)
 		{
@@ -972,6 +1035,9 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 				gAPIScaleformGfx->pStateBlock->Apply();
 
 			SAFE_RELEASE(pSS);
+
+			if(useDX11ScaleformBridge)
+				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
@@ -987,6 +1053,9 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 			if(gAPIScaleformGfx->pStateBlock)
 				gAPIScaleformGfx->pStateBlock->Apply();
+
+			if(useDX11ScaleformBridge)
+				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
@@ -1021,6 +1090,9 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 			if(gAPIScaleformGfx->pStateBlock)
 				gAPIScaleformGfx->pStateBlock->Apply();
+
+			if(useDX11ScaleformBridge)
+				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
