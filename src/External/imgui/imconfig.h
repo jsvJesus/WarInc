@@ -14,6 +14,17 @@
 
 #pragma once
 
+#ifndef WARINC_IMGUI_VS2013_FIXES
+#define WARINC_IMGUI_VS2013_FIXES
+
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef constexpr
+#define constexpr
+#endif
+#endif
+
+#endif
+
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)

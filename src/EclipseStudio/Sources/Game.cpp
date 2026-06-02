@@ -46,7 +46,6 @@
 
 #include "Editors/LevelEditor.h"
 #include "Editors/ObjectManipulator3d.h"
-#include "APINoesisGUI.h"
 
 #include "RENDERING\Deffered\VisibilityGrid.h"
 #include "rendering/Probes/ProbeMaster.h"
@@ -653,8 +652,9 @@ void SyncLightingAndSSAO()
 	}
 }
 
-static void ProcessNoesisEditorCommands();
-static void RenderNoesisEditorDebug();
+static void UpdateEditorUILayer();
+static void ProcessEditorUICommands();
+static void RenderEditorUIDebug();
 void GameStateGameLoop()
 {
 
@@ -892,7 +892,7 @@ void GameStateGameLoop()
 
 			R3DPROFILE_START("SysInfo Render");
 			DrawSysInfo();
-			RenderNoesisEditorDebug();
+			RenderEditorUIDebug();
 			R3DPROFILE_END("SysInfo Render");
 		}
 		R3DPROFILE_END("HudGui Render");
@@ -1113,159 +1113,16 @@ void UpdateAutoProfile()
 
 static void SpawnTestVehicle();
 
-static void ProcessNoesisEditorCommand(const char* command, const char* value)
+static void UpdateEditorUILayer()
 {
-	if(!command || !command[0])
-		return;
-
-	r3dOutToLog("NoesisEditorCommand execute: %s value=%s\n", command, value ? value : "");
-
-	if(strcmp(command, "BtnSaveMap") == 0)
-	{
-		LevelEditor.SaveLevel(r3dGameLevel::GetHomeDir(), true, false);
-		r3dOutToLog("NoesisEditorCommand: map saved to %s\n", r3dGameLevel::GetHomeDir());
-		return;
-	}
-
-	if(strcmp(command, "BtnSaveGlobal") == 0)
-	{
-		LevelEditor.SaveLevel(r3dGameLevel::GetHomeDir(), true, false);
-		r3dOutToLog("NoesisEditorCommand: global save requested, current level saved to %s\n", r3dGameLevel::GetHomeDir());
-		return;
-	}
-
-	if(strcmp(command, "BtnSettings") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_SETTINGS;
-		return;
-	}
-
-	if(strcmp(command, "BtnTerrain") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_TERRAIN;
-		return;
-	}
-
-	if(strcmp(command, "BtnObjects") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_OBJECTS;
-		return;
-	}
-
-	if(strcmp(command, "BtnMaterials") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_MATERIALS;
-		return;
-	}
-
-	if(strcmp(command, "BtnEnvironment") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_ENVIRONMENT;
-		return;
-	}
-
-	if(strcmp(command, "BtnCollections") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_COLLECTION;
-		return;
-	}
-
-	if(strcmp(command, "BtnDecorators") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_DECORATORS;
-		return;
-	}
-
-	if(strcmp(command, "BtnRoads") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_ROADS;
-		return;
-	}
-
-	if(strcmp(command, "BtnGameplay") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_GAMEPLAY;
-		return;
-	}
-
-	if(strcmp(command, "BtnPostFX") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_POSTFX;
-		return;
-	}
-
-	if(strcmp(command, "BtnColorCorrection") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_COLORGRADING;
-		return;
-	}
-
-	if(strcmp(command, "BtnCamera") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_SETTINGS;
-		return;
-	}
-
-	if(strcmp(command, "BtnMap") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_SETTINGS;
-		return;
-	}
-
-	if(strcmp(command, "BtnShadows") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_SETTINGS;
-		return;
-	}
-
-	if(strcmp(command, "BtnMisc") == 0)
-	{
-		LevelEditor.MainToolIdx = Editor_Level::EDITMODE_SETTINGS;
-		return;
-	}
 }
 
-static void ProcessNoesisEditorCommands()
+static void ProcessEditorUICommands()
 {
-	char command[128];
-	char value[256];
-
-	while(r3dNoesisPopEditorCommand(command, sizeof(command), value, sizeof(value)))
-	{
-		ProcessNoesisEditorCommand(command, value);
-	}
 }
 
-static void UpdateNoesisEditorUI()
+static void RenderEditorUIDebug()
 {
-	if(!gNoesisGUI)
-		return;
-
-	if(!gNoesisGUI->IsLoaded())
-		return;
-
-	gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-	gNoesisGUI->Update(r3dGetTime());
-}
-
-static void RenderNoesisEditorDebug()
-{
-#ifndef FINAL_BUILD
-	if(!gNoesisGUI)
-		return;
-
-	const char* lastCommand = r3dNoesisGetLastEditorCommand();
-
-	Font_Label->PrintF(
-		10,
-		95,
-		r3dColor(0, 255, 0),
-		"NOESIS UI: init=%d loaded=%d last_cmd=%s",
-		gNoesisGUI->IsInitialized() ? 1 : 0,
-		gNoesisGUI->IsLoaded() ? 1 : 0,
-		lastCommand && lastCommand[0] ? lastCommand : "none"
-	);
-#endif
 }
 
 void PlayEditor()
@@ -1304,13 +1161,13 @@ void PlayEditor()
 
 		InputUpdate();
 
-		UpdateNoesisEditorUI();
+		UpdateEditorUILayer();
 
 		g_Manipulator3d.Update();
 
 		GameFrameStart();
 
-		ProcessNoesisEditorCommands();
+		ProcessEditorUICommands();
 
 		extern bool g_bStartedAsParticleEditor;
 		if ( !( g_bStartedAsParticleEditor && CurHUDID == 3 ) )

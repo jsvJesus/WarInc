@@ -14,7 +14,7 @@
 #include "fmod/soundsys.h"
 
 #include "APIScaleformGFX.h"
-#include "APINoesisGUI.h"
+#include "APIImGui.h"
 #include "GameCommon.h"
 #include "GameLevel.h"
 
@@ -245,20 +245,10 @@ void InitRender(int bUseSet = 0)
 
 	r3dScaleformGfxCreate();
 
-	r3dNoesisGUICreate();
-
-	if(gNoesisGUI)
+	if(g_r3dDX11.IsInitialized())
 	{
-		gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-
-		if(g_bEditMode)
-		{
-			gNoesisGUI->LoadXaml("Editor/LevelEditor.xaml");
-		}
-		else
-		{
-			gNoesisGUI->LoadXaml("TestNoesis.xaml");
-		}
+		r3dImGuiCreate();
+		r3dImGuiResetDX11();
 	}
 
 #if ENABLE_WEB_BROWSER
@@ -308,7 +298,7 @@ void CloseRender()
 	DestroyApexUserRenderer();
 #endif
 
-	r3dNoesisGUIDestroy();
+	r3dImGuiDestroy();
 
 	r3dScaleformGfxDestroy();
 
