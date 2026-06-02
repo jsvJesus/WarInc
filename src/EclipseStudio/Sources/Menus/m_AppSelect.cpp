@@ -401,6 +401,17 @@ int Menu_AppSelect::DoModal()
 		if(noesisReady && gNoesisGUI && gNoesisGUI->IsLoaded())
 		{
 			gNoesisGUI->SetSize((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+
+			if(g_r3dDX11.IsInitialized())
+			{
+				gNoesisGUI->SetD3D11BackBuffer(
+					g_r3dDX11.GetBackBufferRTV(),
+					g_r3dDX11.GetDepthStencilView(),
+					g_r3dDX11.GetWidth(),
+					g_r3dDX11.GetHeight()
+				);
+			}
+
 			gNoesisGUI->Update(r3dGetTime());
 			gNoesisGUI->Render();
 

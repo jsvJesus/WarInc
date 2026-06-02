@@ -69,6 +69,10 @@ static Noesis::Ptr<WarNoesisD3D9RenderDevice> gD3D9RenderDevice;
 static ID3D11Device* gD3D11Device = NULL;
 static ID3D11DeviceContext* gD3D11Context = NULL;
 static Noesis::Ptr<Noesis::RenderDevice> gD3D11RenderDevice;
+static ID3D11RenderTargetView* gD3D11BackBufferRTV = NULL;
+static ID3D11DepthStencilView* gD3D11DepthStencilView = NULL;
+static int gD3D11BackBufferWidth = 0;
+static int gD3D11BackBufferHeight = 0;
 
 static int gRendererInitialized = 0;
 static int gRendererBackend = 0;
@@ -251,6 +255,52 @@ static void EnsureWarNoesisRenderContext()
 	}
 
 	BridgeLog("WarNoesisBridge: RenderContext deferred until D3D device is set");
+}
+
+static void ClearWarNoesisD3D11BackBuffer()
+{
+	if(gD3D11BackBufferRTV)
+	{
+		gD3D11BackBufferRTV->Release();
+		gD3D11BackBufferRTV = NULL;
+	}
+
+	if(gD3D11DepthStencilView)
+	{
+		gD3D11DepthStencilView->Release();
+		gD3D11DepthStencilView = NULL;
+	}
+
+	gD3D11BackBufferWidth = 0;
+	gD3D11BackBufferHeight = 0;
+}
+
+static void BindWarNoesisD3D11BackBuffer()
+{
+	if(!gD3D11Context)
+		return;
+
+	if(!gD3D11BackBufferRTV)
+		return;
+
+	if(gD3D11BackBufferWidth <= 0 || gD3D11BackBufferHeight <= 0)
+		return;
+
+	gD3D11Context->OMSetRenderTargets(
+		1,
+		&gD3D11BackBufferRTV,
+		gD3D11DepthStencilView
+	);
+
+	D3D11_VIEWPORT viewport;
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	viewport.Width = (FLOAT)gD3D11BackBufferWidth;
+	viewport.Height = (FLOAT)gD3D11BackBufferHeight;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	gD3D11Context->RSSetViewports(1, &viewport);
 }
 
 static int EnsureNoesisRenderer()
@@ -684,6 +734,8 @@ WAR_NOESIS_API void __cdecl WarNoesis_Shutdown()
 	gD3D11RenderDevice.Reset();
 	gD3D9RenderDevice.Reset();
 
+	ClearWarNoesisD3D11BackBuffer();
+
 	if(gD3D11Context)
 	{
 		gD3D11Context->Release();
@@ -739,6 +791,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
 	if(newDevice)
 	{
 		gD3D11RenderDevice.Reset();
+		ClearWarNoesisD3D11BackBuffer();
 
 		if(gD3D11Context)
 		{
@@ -826,6 +879,58 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11Device(void* device, void* context
 
 	if(gD3D11Device && gD3D11Context)
 		EnsureWarNoesisRenderContext();
+
+	if(!gD3D11Device || !gD3D11Context)
+		ClearWarNoesisD3D11BackBuffer();
+}
+
+WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11BackBuffer(void* renderTargetView, void* depthStencilView, int width, int height)
+{
+	ID3D11RenderTargetView* newRTV = (ID3D11RenderTargetView*)renderTargetView;
+	ID3D11DepthStencilView* newDSV = (ID3D11DepthStencilView*)depthStencilView;
+
+	if(newRTV == gD3D11BackBufferRTV &&
+		newDSV == gD3D11DepthStencilView &&
+		width == gD3D11BackBufferWidth &&
+		height == gD3D11BackBufferHeight)
+	{
+		return;
+	}
+
+	if(newRTV)
+		newRTV->AddRef();
+
+	if(newDSV)
+		newDSV->AddRef();
+
+	if(gD3D11BackBufferRTV)
+		gD3D11BackBufferRTV->Release();
+
+	if(gD3D11DepthStencilView)
+		gD3D11DepthStencilView->Release();
+
+	gD3D11BackBufferRTV = newRTV;
+	gD3D11DepthStencilView = newDSV;
+	gD3D11BackBufferWidth = width;
+	gD3D11BackBufferHeight = height;
+
+	if(gD3D11BackBufferRTV)
+	{
+		char buffer[256];
+		_snprintf(
+			buffer,
+			sizeof(buffer) - 1,
+			"WarNoesisBridge: D3D11 backbuffer set %dx%d",
+			gD3D11BackBufferWidth,
+			gD3D11BackBufferHeight
+		);
+		buffer[sizeof(buffer) - 1] = 0;
+		BridgeLog(buffer);
+	}
+	else
+	{
+		BridgeLog("WarNoesisBridge: D3D11 backbuffer cleared");
+	}
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
@@ -945,9 +1050,31 @@ WAR_NOESIS_API void __cdecl WarNoesis_Render()
 	if(!renderer)
 		return;
 
+	if(gRendererBackend == 11)
+		BindWarNoesisD3D11BackBuffer();
+
 	renderer->UpdateRenderTree();
 	renderer->RenderOffscreen();
+
+	if(gRendererBackend == 11)
+		BindWarNoesisD3D11BackBuffer();
+
 	renderer->Render();
+
+	if(gRendererBackend == 11 && gD3D11Context)
+	{
+		ID3D11ShaderResourceView* nullSRV[16];
+		ID3D11SamplerState* nullSamplers[16];
+
+		for(int i = 0; i < 16; ++i)
+		{
+			nullSRV[i] = NULL;
+			nullSamplers[i] = NULL;
+		}
+
+		gD3D11Context->PSSetShaderResources(0, 16, nullSRV);
+		gD3D11Context->PSSetSamplers(0, 16, nullSamplers);
+	}
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_IsLoaded()

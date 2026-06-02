@@ -40,6 +40,7 @@ public:
 
 	void SetD3D9Device(void* device);
 	void SetD3D11Device(void* device, void* context);
+	void SetD3D11BackBuffer(void* renderTargetView, void* depthStencilView, int width, int height);
 
 private:
 	void* DllHandle;
@@ -59,6 +60,7 @@ private:
 	typedef void (__cdecl* FN_WarNoesis_SetLogCallback)(FN_WarNoesisLogCallback callback);
 	typedef void (__cdecl* FN_WarNoesis_SetD3D9Device)(void* device);
 	typedef void (__cdecl* FN_WarNoesis_SetD3D11Device)(void* device, void* context);
+	typedef void (__cdecl* FN_WarNoesis_SetD3D11BackBuffer)(void* renderTargetView, void* depthStencilView, int width, int height);
 
 	typedef int (__cdecl* FN_WarNoesis_MouseMove)(int x, int y);
 	typedef int (__cdecl* FN_WarNoesis_MouseButtonDown)(int x, int y, int button);
@@ -80,6 +82,7 @@ private:
 	FN_WarNoesis_SetLogCallback FnSetLogCallback;
 	FN_WarNoesis_SetD3D9Device FnSetD3D9Device;
 	FN_WarNoesis_SetD3D11Device FnSetD3D11Device;
+	FN_WarNoesis_SetD3D11BackBuffer FnSetD3D11BackBuffer;
 
 	FN_WarNoesis_MouseMove FnMouseMove;
 	FN_WarNoesis_MouseButtonDown FnMouseButtonDown;
