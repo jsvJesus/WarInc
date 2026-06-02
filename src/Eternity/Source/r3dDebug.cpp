@@ -16,6 +16,18 @@ bool CreateWorkPath(char* dest);
 
 static char g_LastCrashDumpPath[MAX_PATH * 2] = {0};
 
+static volatile LONG g_r3dNormalExit = 0;
+
+void r3dDebugMarkNormalExit()
+{
+    InterlockedExchange(&g_r3dNormalExit, 1);
+}
+
+bool r3dDebugIsNormalExit()
+{
+    return InterlockedCompareExchange(&g_r3dNormalExit, 0, 0) != 0;
+}
+
 static void r3dSafeLog(const char* fmt, ...)
 {
     char buffer[4096] = {0};
@@ -156,6 +168,18 @@ static bool r3dWriteMiniDump(EXCEPTION_POINTERS* exceptionPointers)
 
 static LONG WINAPI r3dUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionPointers)
 {
+    if(r3dDebugIsNormalExit())
+    {
+        r3dSafeLog("\n");
+        r3dSafeLog("============================================================\n");
+        r3dSafeLog("WarInc: ignored exception during normal shutdown.\n");
+        r3dSafeLog("============================================================\n");
+
+        r3dCloseLogFile();
+
+        return EXCEPTION_EXECUTE_HANDLER;
+    }
+
     r3dSafeLog("\n");
     r3dSafeLog("============================================================\n");
     r3dSafeLog("WarInc crash detected.\n");
@@ -167,7 +191,7 @@ static LONG WINAPI r3dUnhandledExceptionFilter(EXCEPTION_POINTERS* exceptionPoin
 
     char message[4096] = {0};
 
-    if (dumpCreated)
+    if(dumpCreated)
     {
         sprintf_s(
             message,

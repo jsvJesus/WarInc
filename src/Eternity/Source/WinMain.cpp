@@ -255,18 +255,18 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   //r3dOutToLog("uMsg %x\n", uMsg);
   switch(uMsg) 
   {
-    case WM_CLOSE:
-    {
-      r3dOutToLog("alt-f4 pressed\n");
-      r3dOutToLog("...terminating application\n");
+  case WM_CLOSE:
+      {
+          r3dOutToLog("alt-f4 pressed\n");
+          r3dOutToLog("...terminating application\n");
 
-      ClipCursor(NULL);
-      
-      //HRESULT res = TerminateProcess(r3d_CurrentProcess, 0);
+          ClipCursor(NULL);
 
-	  g_bExit = true;
-      return 0;
-    }
+          r3dDebugMarkNormalExit();
+
+          g_bExit = true;
+          return 0;
+      }
     
     case WM_CONTEXTMENU:
       // disable context menu
@@ -452,9 +452,9 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       break;
     }
 
-    case WM_DESTROY:
-      //PostQuitMessage (0);
-		g_bExit = true;
+  case WM_DESTROY:
+      r3dDebugMarkNormalExit();
+      g_bExit = true;
       break;
   }
 
@@ -586,20 +586,22 @@ void EnableCrashingOnCrashes()
 
 static void startupFunc(DWORD in)
 {
-//  in = in;
-  
-	// ptumik: disabled. causing weird exception inside of chromium due to RPC cancel.
-	//EnableCrashingOnCrashes();
+    //  in = in;
 
-  game::PreInit();  
+    // ptumik: disabled. causing weird exception inside of chromium due to RPC cancel.
+    //EnableCrashingOnCrashes();
 
-  win::Init();
+    game::PreInit();
 
-  game::Init();
+    win::Init();
 
-  game::MainLoop();
+    game::Init();
 
-  game::Shutdown();
+    game::MainLoop();
+
+    r3dDebugMarkNormalExit();
+
+    game::Shutdown();
 }
 
 //

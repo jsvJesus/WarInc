@@ -7,7 +7,11 @@ void		r3dDebugRemoveAllDumps();
 const char*	r3dDebugGetComputerName();*/
 
 typedef	void	(*threadEntry_fn)(DWORD data);
+
 void		r3dThreadEntryHelper(threadEntry_fn fn, DWORD in);
+
+void		r3dDebugMarkNormalExit();
+bool		r3dDebugIsNormalExit();
 
 class r3dThreadAutoInstallCrashHelper
 {
