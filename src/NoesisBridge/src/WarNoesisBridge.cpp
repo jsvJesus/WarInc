@@ -220,6 +220,39 @@ static void RegisterWarNoesisAppComponents()
 	BridgeLog("WarNoesisBridge: NoesisApp shaders and interactivity registered");
 }
 
+static void ResetWarNoesisRenderContext()
+{
+	gRenderContext.Reset();
+}
+
+static void EnsureWarNoesisRenderContext()
+{
+	if(gRenderContext)
+		return;
+
+	if(gD3D11Device && gD3D11Context)
+	{
+		gRenderContext = NoesisApp::RenderContext::Create("WarNoesisD3D11");
+
+		if(gRenderContext)
+			BridgeLog("WarNoesisBridge: WarNoesisD3D11 RenderContext created");
+
+		return;
+	}
+
+	if(gD3D9Device)
+	{
+		gRenderContext = NoesisApp::RenderContext::Create("WarNoesisD3D9");
+
+		if(gRenderContext)
+			BridgeLog("WarNoesisBridge: WarNoesisD3D9 RenderContext created");
+
+		return;
+	}
+
+	BridgeLog("WarNoesisBridge: RenderContext deferred until D3D device is set");
+}
+
 static int EnsureNoesisRenderer()
 {
 	if(!gLoaded || !gView)
@@ -604,19 +637,8 @@ WAR_NOESIS_API int __cdecl WarNoesis_Init(const char* rootPath)
 	Noesis::RegisterComponent<Noesis::EnumConverter<NoesisApp::MediaState> >();
 	RegisterWarNoesisAppComponents();
 
-	gRenderContext = NoesisApp::RenderContext::Create("WarNoesisD3D11");
-
-	if(gRenderContext)
-	{
-		BridgeLog("WarNoesisBridge: WarNoesisD3D11 RenderContext created");
-	}
-	else
-	{
-		gRenderContext = NoesisApp::RenderContext::Create("WarNoesisD3D9");
-
-		if(gRenderContext)
-			BridgeLog("WarNoesisBridge: WarNoesisD3D9 RenderContext created");
-	}
+	ResetWarNoesisRenderContext();
+	BridgeLog("WarNoesisBridge: RenderContext creation deferred");
 
 	WarNoesisMediaPlayer_Init(gRootPath);
 
@@ -712,6 +734,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
 	gRendererBackend = 0;
 
 	gD3D9RenderDevice.Reset();
+	ResetWarNoesisRenderContext();
 
 	if(newDevice)
 	{
@@ -739,6 +762,9 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D9Device(void* device)
 	gD3D9Device = newDevice;
 
 	BridgeLog(gD3D9Device ? "WarNoesisBridge: D3D9 device set" : "WarNoesisBridge: D3D9 device cleared");
+
+	if(gD3D9Device)
+		EnsureWarNoesisRenderContext();
 }
 
 WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11Device(void* device, void* context)
@@ -761,6 +787,7 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11Device(void* device, void* context
 	gRendererBackend = 0;
 
 	gD3D11RenderDevice.Reset();
+	ResetWarNoesisRenderContext();
 
 	if(newDevice && newContext)
 	{
@@ -796,6 +823,9 @@ WAR_NOESIS_API void __cdecl WarNoesis_SetD3D11Device(void* device, void* context
 	{
 		BridgeLog("WarNoesisBridge: D3D11 device/context cleared");
 	}
+
+	if(gD3D11Device && gD3D11Context)
+		EnsureWarNoesisRenderContext();
 }
 
 WAR_NOESIS_API int __cdecl WarNoesis_LoadXamlFile(const char* filename)
