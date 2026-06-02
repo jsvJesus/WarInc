@@ -269,6 +269,9 @@ bool r3dDX11LegacyGeometryBridge::EnsureBuffer(
 	if(!buffer || !capacityBytes || requiredBytes == 0)
 		return false;
 
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11LegacyGeometryBridge::EnsureBuffer"))
+		return false;
+
 	if(*buffer && *capacityBytes >= requiredBytes)
 		return true;
 
@@ -296,7 +299,9 @@ bool r3dDX11LegacyGeometryBridge::EnsureBuffer(
 
 	if(FAILED(hr))
 	{
-		r3dDX11LegacyGeometryBridge_LogHR("CreateBuffer", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11LegacyGeometryBridge::CreateBuffer", hr))
+			r3dDX11LegacyGeometryBridge_LogHR("CreateBuffer", hr);
+		
 		return false;
 	}
 
@@ -315,6 +320,9 @@ bool r3dDX11LegacyGeometryBridge::UploadBuffer(
 	if(!buffer || !data || bytes == 0)
 		return false;
 
+	if(g_r3dDX11.IsDeviceLost())
+		return false;
+
 	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
 
 	if(!context)
@@ -327,7 +335,9 @@ bool r3dDX11LegacyGeometryBridge::UploadBuffer(
 
 	if(FAILED(hr))
 	{
-		r3dDX11LegacyGeometryBridge_LogHR(debugName ? debugName : "Map", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved(debugName ? debugName : "DX11LegacyGeometryBridge::Map", hr))
+			r3dDX11LegacyGeometryBridge_LogHR(debugName ? debugName : "Map", hr);
+		
 		return false;
 	}
 

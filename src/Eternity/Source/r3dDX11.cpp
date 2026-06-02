@@ -93,6 +93,33 @@ static void r3dDX11_LogBlob(ID3DBlob* blob)
 	}
 }
 
+static const char* r3dDX11_HRName(HRESULT hr)
+{
+	switch(hr)
+	{
+	case S_OK:
+		return "S_OK";
+
+	case DXGI_ERROR_DEVICE_REMOVED:
+		return "DXGI_ERROR_DEVICE_REMOVED";
+
+	case DXGI_ERROR_DEVICE_RESET:
+		return "DXGI_ERROR_DEVICE_RESET";
+
+	case DXGI_ERROR_DEVICE_HUNG:
+		return "DXGI_ERROR_DEVICE_HUNG";
+
+	case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
+		return "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
+
+	case DXGI_ERROR_INVALID_CALL:
+		return "DXGI_ERROR_INVALID_CALL";
+
+	default:
+		return "UNKNOWN";
+	}
+}
+
 r3dDX11Renderer g_r3dDX11;
 
 r3dDX11Renderer::r3dDX11Renderer()
@@ -125,6 +152,10 @@ r3dDX11Renderer::r3dDX11Renderer()
 	DebugTexVB = NULL;
 	DebugTexSampler = NULL;
 	DebugTexture = NULL;
+
+	DeviceLost = false;
+	DeviceLostReason = S_OK;
+	DeviceLostLogged = false;
 }
 
 r3dDX11Renderer::~r3dDX11Renderer()
@@ -152,6 +183,10 @@ bool r3dDX11Renderer::Init(HWND hwnd, int width, int height, bool windowed)
 	Width = width;
 	Height = height;
 	Windowed = windowed;
+
+	DeviceLost = false;
+	DeviceLostReason = S_OK;
+	DeviceLostLogged = false;
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
@@ -321,10 +356,17 @@ void r3dDX11Renderer::Shutdown()
 	Height = 0;
 	Windowed = true;
 	FeatureLevel = 0;
+
+	DeviceLost = false;
+	DeviceLostReason = S_OK;
+	DeviceLostLogged = false;
 }
 
 bool r3dDX11Renderer::CreateBackBuffer()
 {
+	if(!CanCreateDeviceResources("CreateBackBuffer"))
+		return false;
+
 	if(!Device || !Context || !SwapChain)
 		return false;
 
@@ -338,7 +380,9 @@ bool r3dDX11Renderer::CreateBackBuffer()
 
 	if(FAILED(hr))
 	{
-		r3dDX11_LogHR("SwapChain->GetBuffer", hr);
+		if(!CheckDeviceRemoved("SwapChain->GetBuffer", hr))
+			r3dDX11_LogHR("SwapChain->GetBuffer", hr);
+
 		return false;
 	}
 
@@ -347,7 +391,10 @@ bool r3dDX11Renderer::CreateBackBuffer()
 
 	if(FAILED(hr))
 	{
-		r3dDX11_LogHR("CreateRenderTargetView", hr);
+		if(!CheckDeviceRemoved("CreateRenderTargetView", hr))
+			r3dDX11_LogHR("CreateRenderTargetView", hr);
+
+		ReleaseBackBuffer();
 		return false;
 	}
 
@@ -369,14 +416,20 @@ bool r3dDX11Renderer::CreateBackBuffer()
 	hr = Device->CreateTexture2D(&depthDesc, NULL, &DepthStencilTexture);
 	if(FAILED(hr))
 	{
-		r3dDX11_LogHR("CreateTexture2D DepthStencil", hr);
+		if(!CheckDeviceRemoved("CreateTexture2D DepthStencil", hr))
+			r3dDX11_LogHR("CreateTexture2D DepthStencil", hr);
+
+		ReleaseBackBuffer();
 		return false;
 	}
 
 	hr = Device->CreateDepthStencilView(DepthStencilTexture, NULL, &DepthStencilView);
 	if(FAILED(hr))
 	{
-		r3dDX11_LogHR("CreateDepthStencilView", hr);
+		if(!CheckDeviceRemoved("CreateDepthStencilView", hr))
+			r3dDX11_LogHR("CreateDepthStencilView", hr);
+
+		ReleaseBackBuffer();
 		return false;
 	}
 
@@ -406,6 +459,9 @@ void r3dDX11Renderer::ReleaseBackBuffer()
 
 bool r3dDX11Renderer::Resize(int width, int height)
 {
+	if(IsDeviceLost())
+		return false;
+
 	if(!IsInitialized())
 		return false;
 
@@ -419,7 +475,10 @@ bool r3dDX11Renderer::Resize(int width, int height)
 	Height = height;
 
 	g_r3dDX11RenderTargets.ClearCurrentTargets();
-	Context->OMSetRenderTargets(0, NULL, NULL);
+
+	if(Context)
+		Context->OMSetRenderTargets(0, NULL, NULL);
+
 	ReleaseBackBuffer();
 
 	HRESULT hr = SwapChain->ResizeBuffers(
@@ -432,7 +491,9 @@ bool r3dDX11Renderer::Resize(int width, int height)
 
 	if(FAILED(hr))
 	{
-		r3dDX11_LogHR("SwapChain->ResizeBuffers", hr);
+		if(!CheckDeviceRemoved("SwapChain->ResizeBuffers", hr))
+			r3dDX11_LogHR("SwapChain->ResizeBuffers", hr);
+
 		return false;
 	}
 
@@ -445,7 +506,13 @@ bool r3dDX11Renderer::Resize(int width, int height)
 
 void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)
 {
+	if(IsDeviceLost())
+		return;
+
 	if(!IsInitialized())
+		return;
+
+	if(!BackBufferRTV || !DepthStencilView)
 		return;
 
 	float clearColor[4];
@@ -461,14 +528,21 @@ void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)
 
 void r3dDX11Renderer::EndFrame(bool present)
 {
+	if(IsDeviceLost())
+		return;
+
 	if(!IsInitialized())
 		return;
 
 	if(present)
 	{
 		HRESULT hr = SwapChain->Present(VSync ? 1 : 0, 0);
+
 		if(FAILED(hr))
 		{
+			if(CheckDeviceRemoved("SwapChain->Present", hr))
+				return;
+
 			r3dDX11_LogHR("SwapChain->Present", hr);
 		}
 	}
@@ -1059,21 +1133,171 @@ void r3dDX11Renderer::SetDebugTexturedQuad(bool enabled)
 
 bool r3dDX11Renderer::IsInitialized() const
 {
-	return Device && Context && SwapChain;
+	return Device && Context && SwapChain && !DeviceLost;
+}
+
+bool r3dDX11Renderer::IsDeviceLost() const
+{
+	return DeviceLost;
+}
+
+HRESULT r3dDX11Renderer::GetDeviceRemovedReason() const
+{
+	if(Device)
+	{
+		HRESULT reason = Device->GetDeviceRemovedReason();
+
+		if(FAILED(reason))
+			return reason;
+	}
+
+	return DeviceLostReason;
+}
+
+void r3dDX11Renderer::MarkDeviceLost(HRESULT hr, const char* where)
+{
+	HRESULT removedReason = hr;
+
+	if(Device)
+	{
+		HRESULT realReason = Device->GetDeviceRemovedReason();
+
+		if(FAILED(realReason))
+			removedReason = realReason;
+	}
+
+	DeviceLost = true;
+	DeviceLostReason = removedReason;
+
+	if(!DeviceLostLogged)
+	{
+		DeviceLostLogged = true;
+
+		r3dOutToLog(
+			"DX11: DEVICE LOST at %s, HRESULT=0x%08X(%s), RemovedReason=0x%08X(%s)\n",
+			where ? where : "unknown",
+			(unsigned int)hr,
+			r3dDX11_HRName(hr),
+			(unsigned int)removedReason,
+			r3dDX11_HRName(removedReason)
+		);
+	}
+
+	if(Context)
+	{
+		Context->ClearState();
+		Context->Flush();
+	}
+}
+
+bool r3dDX11Renderer::CheckDeviceRemoved(const char* where, HRESULT hr)
+{
+	if(DeviceLost)
+		return true;
+
+	if(SUCCEEDED(hr))
+	{
+		if(Device)
+		{
+			HRESULT reason = Device->GetDeviceRemovedReason();
+
+			if(FAILED(reason))
+			{
+				MarkDeviceLost(reason, where);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	if(hr == DXGI_ERROR_DEVICE_REMOVED ||
+		hr == DXGI_ERROR_DEVICE_RESET ||
+		hr == DXGI_ERROR_DEVICE_HUNG ||
+		hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+	{
+		MarkDeviceLost(hr, where);
+		return true;
+	}
+
+	if(Device)
+	{
+		HRESULT reason = Device->GetDeviceRemovedReason();
+
+		if(FAILED(reason))
+		{
+			MarkDeviceLost(reason, where);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool r3dDX11Renderer::CanCreateDeviceResources(const char* where)
+{
+	if(DeviceLost)
+		return false;
+
+	if(!Device)
+		return false;
+
+	HRESULT reason = Device->GetDeviceRemovedReason();
+
+	if(FAILED(reason))
+	{
+		MarkDeviceLost(reason, where);
+		return false;
+	}
+
+	return true;
+}
+
+bool r3dDX11Renderer::RecreateDevice()
+{
+	if(!HWnd)
+		return false;
+
+	HWND hwnd = HWnd;
+	int width = Width;
+	int height = Height;
+	bool windowed = Windowed;
+	bool vsync = VSync;
+
+	if(width <= 0)
+		width = 1280;
+
+	if(height <= 0)
+		height = 720;
+
+	Shutdown();
+
+	VSync = vsync;
+
+	return Init(hwnd, width, height, windowed);
 }
 
 ID3D11Device* r3dDX11Renderer::GetDevice() const
 {
+	if(DeviceLost)
+		return NULL;
+
 	return Device;
 }
 
 ID3D11DeviceContext* r3dDX11Renderer::GetContext() const
 {
+	if(DeviceLost)
+		return NULL;
+
 	return Context;
 }
 
 IDXGISwapChain* r3dDX11Renderer::GetSwapChain() const
 {
+	if(DeviceLost)
+		return NULL;
+
 	return SwapChain;
 }
 

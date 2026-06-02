@@ -369,6 +369,9 @@ bool r3dDX11Texture::Create2D(int width, int height, R3D_DX11_FORMAT format, con
 		return false;
 	}
 
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11Texture"))
+		return false;
+
 	if(width <= 0 || height <= 0)
 	{
 		r3dOutToLog("DX11Texture: Create2D failed, bad size %dx%d\n", width, height);
@@ -421,7 +424,9 @@ bool r3dDX11Texture::Create2D(int width, int height, R3D_DX11_FORMAT format, con
 
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateTexture2D", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D", hr))
+			r3dDX11Texture_LogHR("CreateTexture2D", hr);
+		
 		Destroy();
 		return false;
 	}
@@ -460,6 +465,9 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	if(!g_r3dDX11.IsInitialized())
 		return false;
 
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11Texture"))
+		return false;
+
 	if(width <= 0 || height <= 0 || format == 0)
 		return false;
 
@@ -486,7 +494,9 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateTexture2D RenderTarget", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D RenderTarget", hr))
+			r3dDX11Texture_LogHR("CreateTexture2D RenderTarget", hr);
+		
 		Destroy();
 		return false;
 	}
@@ -523,7 +533,9 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 		hr = device->CreateRenderTargetView(Texture, &rtvDesc, &RTVs[mip]);
 		if(FAILED(hr))
 		{
-			r3dDX11Texture_LogHR("CreateRenderTargetView Texture2D", hr);
+			if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateRenderTargetView", hr))
+				r3dDX11Texture_LogHR("CreateRenderTargetView Texture2D", hr);
+			
 			Destroy();
 			return false;
 		}
@@ -543,6 +555,9 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	Destroy();
 
 	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11Texture"))
 		return false;
 
 	if(edgeLength <= 0 || format == 0)
@@ -572,7 +587,9 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateTexture2D RenderTargetCube", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D RenderTargetCube", hr))
+			r3dDX11Texture_LogHR("CreateTexture2D RenderTargetCube", hr);
+		
 		Destroy();
 		return false;
 	}
@@ -725,6 +742,9 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 		r3dOutToLog("DX11Texture: LoadDDSFromMemory failed, DX11 renderer is not initialized\n");
 		return false;
 	}
+
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11Texture"))
+		return false;
 
 	if(!data || dataSize <= 0)
 	{
@@ -891,7 +911,9 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateTexture2D DDS", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D DDS", hr))
+			r3dDX11Texture_LogHR("CreateTexture2D DDS", hr);
+		
 		Destroy();
 		return false;
 	}
@@ -908,7 +930,9 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateShaderResourceView DDS", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateShaderResourceView", hr))
+			r3dDX11Texture_LogHR("CreateShaderResourceView", hr);
+		
 		Destroy();
 		return false;
 	}

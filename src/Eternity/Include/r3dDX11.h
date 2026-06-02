@@ -3,6 +3,10 @@
 
 #ifndef WO_SERVER
 
+#ifndef _WINDOWS_
+#include <windows.h>
+#endif
+
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct IDXGISwapChain;
@@ -23,72 +27,83 @@ typedef int R3D_DX11_FEATURE_LEVEL;
 class r3dDX11Renderer
 {
 public:
-    r3dDX11Renderer();
-    ~r3dDX11Renderer();
+	r3dDX11Renderer();
+	~r3dDX11Renderer();
 
-    bool Init(HWND hwnd, int width, int height, bool windowed);
-    void Shutdown();
+	bool Init(HWND hwnd, int width, int height, bool windowed);
+	void Shutdown();
 
-    bool Resize(int width, int height);
+	bool Resize(int width, int height);
+	bool RecreateDevice();
 
-    void BeginFrame(float r, float g, float b, float a);
-    void DrawDebugTexturedQuad();
-    void SetDebugTexturedQuad(bool enabled);
-    void DrawDebugTriangle();
-    void EndFrame(bool present);
+	void BeginFrame(float r, float g, float b, float a);
+	void DrawDebugTexturedQuad();
+	void SetDebugTexturedQuad(bool enabled);
+	void DrawDebugTriangle();
+	void EndFrame(bool present);
 
-    void SetVSync(bool enabled);
-    void SetDebugTriangle(bool enabled);
+	void SetVSync(bool enabled);
+	void SetDebugTriangle(bool enabled);
 
-    bool IsInitialized() const;
+	bool IsInitialized() const;
+	bool IsDeviceLost() const;
 
-    ID3D11Device* GetDevice() const;
-    ID3D11DeviceContext* GetContext() const;
-    IDXGISwapChain* GetSwapChain() const;
-    ID3D11RenderTargetView* GetBackBufferRTV() const;
-    ID3D11DepthStencilView* GetDepthStencilView() const;
+	HRESULT GetDeviceRemovedReason() const;
+	void MarkDeviceLost(HRESULT hr, const char* where);
+	bool CheckDeviceRemoved(const char* where, HRESULT hr);
+	bool CanCreateDeviceResources(const char* where);
 
-    int GetWidth() const;
-    int GetHeight() const;
-    R3D_DX11_FEATURE_LEVEL GetFeatureLevel() const;
+	ID3D11Device* GetDevice() const;
+	ID3D11DeviceContext* GetContext() const;
+	IDXGISwapChain* GetSwapChain() const;
+	ID3D11RenderTargetView* GetBackBufferRTV() const;
+	ID3D11DepthStencilView* GetDepthStencilView() const;
+
+	int GetWidth() const;
+	int GetHeight() const;
+	R3D_DX11_FEATURE_LEVEL GetFeatureLevel() const;
 
 private:
-    bool CreateBackBuffer();
-    void ReleaseBackBuffer();
-    bool CreateDebugTexturedQuad();
-    void ReleaseDebugTexturedQuad();
-    bool CreateDebugTriangle();
-    void ReleaseDebugTriangle();
+	bool CreateBackBuffer();
+	void ReleaseBackBuffer();
+	bool CreateDebugTexturedQuad();
+	void ReleaseDebugTexturedQuad();
+	bool CreateDebugTriangle();
+	void ReleaseDebugTriangle();
 
-    HWND HWnd;
-    int Width;
-    int Height;
-    bool Windowed;
-    bool VSync;
-    bool DebugTriangleEnabled;
-    bool DebugTexturedQuadEnabled;
+	HWND HWnd;
+	int Width;
+	int Height;
+	bool Windowed;
+	bool VSync;
+	bool DebugTriangleEnabled;
+	bool DebugTexturedQuadEnabled;
 
-    ID3D11VertexShader* DebugTexVS;
-    ID3D11PixelShader* DebugTexPS;
-    ID3D11InputLayout* DebugTexInputLayout;
-    ID3D11Buffer* DebugTexVB;
-    ID3D11SamplerState* DebugTexSampler;
-    r3dDX11Texture* DebugTexture;
+	bool DeviceLost;
+	HRESULT DeviceLostReason;
+	bool DeviceLostLogged;
 
-    R3D_DX11_FEATURE_LEVEL FeatureLevel;
+	ID3D11VertexShader* DebugTexVS;
+	ID3D11PixelShader* DebugTexPS;
+	ID3D11InputLayout* DebugTexInputLayout;
+	ID3D11Buffer* DebugTexVB;
+	ID3D11SamplerState* DebugTexSampler;
+	r3dDX11Texture* DebugTexture;
 
-    ID3D11Device* Device;
-    ID3D11DeviceContext* Context;
-    IDXGISwapChain* SwapChain;
+	R3D_DX11_FEATURE_LEVEL FeatureLevel;
 
-    ID3D11RenderTargetView* BackBufferRTV;
-    ID3D11Texture2D* DepthStencilTexture;
-    ID3D11DepthStencilView* DepthStencilView;
+	ID3D11Device* Device;
+	ID3D11DeviceContext* Context;
+	IDXGISwapChain* SwapChain;
 
-    ID3D11VertexShader* DebugVS;
-    ID3D11PixelShader* DebugPS;
-    ID3D11InputLayout* DebugInputLayout;
-    ID3D11Buffer* DebugVB;
+	ID3D11RenderTargetView* BackBufferRTV;
+	ID3D11Texture2D* DepthStencilTexture;
+	ID3D11DepthStencilView* DepthStencilView;
+
+	ID3D11VertexShader* DebugVS;
+	ID3D11PixelShader* DebugPS;
+	ID3D11InputLayout* DebugInputLayout;
+	ID3D11Buffer* DebugVB;
 };
 
 extern r3dDX11Renderer g_r3dDX11;

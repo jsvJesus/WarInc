@@ -254,6 +254,9 @@ bool r3dDX11State::CreateSamplers()
 {
 	ID3D11Device* device = g_r3dDX11.GetDevice();
 
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::CreateSamplers"))
+		return false;
+
 	if(!device)
 	{
 		r3dOutToLog("DX11State: CreateSamplers failed, device is NULL\n");
@@ -362,6 +365,9 @@ bool r3dDX11State::SetSRV(int slot, ID3D11ShaderResourceView* srv)
 	if(!Initialized)
 		return false;
 
+	if(g_r3dDX11.IsDeviceLost())
+		return false;
+
 	if(slot < 0 || slot >= 16)
 		return false;
 
@@ -414,6 +420,9 @@ void r3dDX11State::ClearTextures()
 bool r3dDX11State::SetSampler(int slot, r3dDX11SamplerMode mode)
 {
 	if(!Initialized)
+		return false;
+
+	if(g_r3dDX11.IsDeviceLost())
 		return false;
 
 	if(slot < 0 || slot >= 16)
@@ -479,6 +488,9 @@ bool r3dDX11State::ApplyDepthState()
 	if(!Initialized)
 		return false;
 
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyDepthState"))
+		return false;
+
 	ID3D11Device* device = g_r3dDX11.GetDevice();
 	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
 
@@ -505,7 +517,9 @@ bool r3dDX11State::ApplyDepthState()
 
 	if(FAILED(hr))
 	{
-		r3dDX11State_LogHR("CreateDepthStencilState", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11State::CreateDepthStencilState", hr))
+			r3dDX11State_LogHR("CreateDepthStencilState", hr);
+
 		return false;
 	}
 
@@ -519,6 +533,9 @@ bool r3dDX11State::ApplyDepthState()
 bool r3dDX11State::ApplyBlendState()
 {
 	if(!Initialized)
+		return false;
+
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyBlendState"))
 		return false;
 
 	ID3D11Device* device = g_r3dDX11.GetDevice();
@@ -550,7 +567,9 @@ bool r3dDX11State::ApplyBlendState()
 
 	if(FAILED(hr))
 	{
-		r3dDX11State_LogHR("CreateBlendState", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11State::CreateBlendState", hr))
+			r3dDX11State_LogHR("CreateBlendState", hr);
+
 		return false;
 	}
 
@@ -565,6 +584,9 @@ bool r3dDX11State::ApplyBlendState()
 bool r3dDX11State::ApplyRasterizerState()
 {
 	if(!Initialized)
+		return false;
+
+	if(!g_r3dDX11.CanCreateDeviceResources("DX11State::ApplyRasterizerState"))
 		return false;
 
 	ID3D11Device* device = g_r3dDX11.GetDevice();
@@ -592,7 +614,9 @@ bool r3dDX11State::ApplyRasterizerState()
 
 	if(FAILED(hr))
 	{
-		r3dDX11State_LogHR("CreateRasterizerState", hr);
+		if(!g_r3dDX11.CheckDeviceRemoved("DX11State::CreateRasterizerState", hr))
+			r3dDX11State_LogHR("CreateRasterizerState", hr);
+
 		return false;
 	}
 
@@ -606,6 +630,9 @@ bool r3dDX11State::ApplyRasterizerState()
 bool r3dDX11State::SetRenderState(int state, unsigned int value)
 {
 	if(!Initialized)
+		return false;
+
+	if(g_r3dDX11.IsDeviceLost())
 		return false;
 
 	switch(state)
