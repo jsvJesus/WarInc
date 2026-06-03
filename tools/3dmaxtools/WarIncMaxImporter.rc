@@ -1,0 +1,14 @@
+#include "resource.h"
+#include "afxres.h"
+
+IDD_WARINC_PANEL DIALOGEX 0, 0, 230, 150
+STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON "1. Set Game Root", IDC_SET_ROOT, 10, 10, 210, 22
+    PUSHBUTTON "2. Import SCO Model", IDC_IMPORT_SCO, 10, 38, 210, 22
+    PUSHBUTTON "3. Import SKL Skeleton", IDC_IMPORT_SKL, 10, 66, 210, 22
+    PUSHBUTTON "4. Apply WGT To Selected Mesh", IDC_APPLY_WGT, 10, 94, 210, 22
+    PUSHBUTTON "5. Import ANM Animation", IDC_IMPORT_ANM, 10, 122, 210, 22
+    LTEXT "", IDC_STATUS_TEXT, 10, 145, 210, 10
+END

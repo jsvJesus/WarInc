@@ -36,6 +36,7 @@
 #include "Menus\m_Main.h"
 
 #include "UI\m_LoadingScreen.h"
+#include "UI\RmlUiBackend.h"
 #include "UI\m_Login.h"
 #include "UI\FrontendShared.h"
 #include "UI\m_EndRound.h"
@@ -307,6 +308,8 @@ void CloseRender()
 
 	r3dScaleformGfxDestroy();
 	g_r3dDX11ScaleformBridge.Shutdown();
+
+	RmlUiBackend::Shutdown();
 
 	r3dCloseMaterials();
 

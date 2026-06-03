@@ -36,9 +36,9 @@ namespace
 		"#panel { position: absolute; width: 430px; height: 366px; left: 50%; top: 50%; margin-left: -215px; margin-top: -183px; padding: 26px 32px; background-color: rgba(12, 15, 20, 218); border: 1px #8fa3b8; }"
 		"#title { font-size: 34px; color: #ffffff; margin-bottom: 4px; }"
 		"#subtitle { font-size: 15px; color: #aeb8c5; margin-bottom: 22px; }"
-		".button { display: block; height: 34px; margin-bottom: 9px; padding: 8px 14px 0px 14px; font-size: 17px; color: #f4f7fb; background-color: rgba(47, 57, 70, 235); border: 1px #728092; }"
-		".button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }"
-		".button:active { background-color: rgba(97, 116, 141, 255); }"
+		".button { display: block; height: 34px; margin-bottom: 9px; padding: 8px 14px 0px 14px; font-size: 17px; color: #f4f7fb; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }"
+		".button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; cursor: pointer; }"
+		".button:active { background-color: rgba(97, 116, 141, 255); cursor: pointer; }"
 		".hotkey { float: right; color: #a9b4c2; }"
 		"#footer { margin-top: 12px; font-size: 12px; color: #788493; }"
 		"</style>"
@@ -48,12 +48,12 @@ namespace
 		"<div id='panel'>"
 		"<div id='title'>WarInc Studio</div>"
 		"<div id='subtitle'>Editor launcher</div>"
-		"<div id='play' class='button'>Play Game <span class='hotkey'>1</span></div>"
-		"<div id='level' class='button'>Level Editor <span class='hotkey'>2</span></div>"
-		"<div id='particle' class='button'>Particle Editor <span class='hotkey'>3</span></div>"
-		"<div id='physics' class='button'>Physics Editor <span class='hotkey'>4</span></div>"
-		"<div id='character' class='button'>Character Editor <span class='hotkey'>5</span></div>"
-		"<div id='exit' class='button'>Exit <span class='hotkey'>6</span></div>"
+		"<button id='play' class='button' onclick='dummy'>Play Game <span class='hotkey'>1</span></button>"
+		"<button id='level' class='button' onclick='dummy'>Level Editor <span class='hotkey'>2</span></button>"
+		"<button id='particle' class='button' onclick='dummy'>Particle Editor <span class='hotkey'>3</span></button>"
+		"<button id='physics' class='button' onclick='dummy'>Physics Editor <span class='hotkey'>4</span></button>"
+		"<button id='character' class='button' onclick='dummy'>Character Editor <span class='hotkey'>5</span></button>"
+		"<button id='exit' class='button' onclick='dummy'>Exit <span class='hotkey'>6</span></button>"
 		"<div id='footer'>DX11 game renderer / RmlUi editor menu</div>"
 		"</div>"
 		"</div>"
@@ -208,9 +208,9 @@ int Menu_AppSelect::DoModal()
 		r3dProcessWindowMessages();
 		r3dMouse::Show(true);
 
-		mUpdate();
-
 		RmlUiBackend::ProcessMouse();
+
+		mUpdate();
 
 		ctx->SetDimensions(Rocket::Core::Vector2i((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH));
 		ctx->Update();
@@ -235,26 +235,21 @@ int Menu_AppSelect::DoModal()
 			DrawAppSelectBackground(backgroundTexture);
 
 			RmlUiBackend::BeginFrame();
+			if(ctx)
 			{
-				IDirect3DDevice9* rmlDevice = NULL;
+				ctx->Render();
 
-				if(g_r3dDX11ScaleformBridge.IsReady())
-					rmlDevice = r3dGetScaleformD3D9Device();
-				else
-					rmlDevice = r3dRenderer->pd3ddev;
-
-				if(rmlDevice && ctx)
+				if(!firstRmlFrameLogged)
 				{
-					ctx->Render();
-
-					if(!firstRmlFrameLogged)
-					{
-						r3dOutToLog("RmlUi AppSelect: first frame rendered through RmlUiBackend\n");
-						firstRmlFrameLogged = true;
-					}
+					r3dOutToLog("RmlUi AppSelect: first frame rendered through RmlUiBackend\n");
+					firstRmlFrameLogged = true;
 				}
 			}
 			RmlUiBackend::EndFrame();
+
+			// Restore engine rendering state after RmlUi D3D9 rendering
+			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
+			r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 
 			r3dRenderer->Flush();
 			r3dRenderer->EndFrame();
