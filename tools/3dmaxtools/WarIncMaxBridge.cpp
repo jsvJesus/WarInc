@@ -1,5 +1,24 @@
 #include "WarIncMaxBridge.h"
 
+static void WI_SetNodeName(INode* node, const std::string& name)
+{
+    if(!node)
+        return;
+
+    char tmp[256];
+    memset(tmp, 0, sizeof(tmp));
+
+    if(name.empty())
+        strcpy(tmp, "WarIncNode");
+    else
+    {
+        strncpy(tmp, name.c_str(), sizeof(tmp) - 1);
+        tmp[sizeof(tmp) - 1] = 0;
+    }
+
+    node->SetName(tmp);
+}
+
 static Point3 WI_P3(const WI_Vec3& v)
 {
     return Point3(v.x, v.y, v.z);
@@ -80,7 +99,10 @@ static Mtl* WI_CreateMultiMaterial(WI_ProjectIndex& index, const WI_Mesh& mesh)
         return fallback;
     }
 
-    MultiMtl* mm = NewDefaultMultiMtl();
+    MultiMtl* mm = (MultiMtl*)CreateInstance(MATERIAL_CLASS_ID, Class_ID(MULTI_CLASS_ID, 0));
+    if(!mm)
+        return NewDefaultStdMat();
+
     mm->SetNumSubMtls(n);
     mm->SetName(mesh.name.c_str());
 
@@ -102,8 +124,8 @@ static Mtl* WI_CreateMultiMaterial(WI_ProjectIndex& index, const WI_Mesh& mesh)
             sub = fallback;
         }
 
-        mm->SetSubMtl(i, sub);
-        mm->SetSubMtlAndName(i, sub, name.c_str());
+        MSTR subName((char*)name.c_str());
+        mm->SetSubMtlAndName(i, sub, subName);
     }
 
     return mm;
@@ -114,10 +136,10 @@ static int WI_MaterialId(const WI_Mesh& mesh, const std::string& name)
     for(size_t i = 0; i < mesh.materialOrder.size(); ++i)
     {
         if(_stricmp(mesh.materialOrder[i].c_str(), name.c_str()) == 0)
-            return (int)i + 1;
+            return (int)i;
     }
 
-    return 1;
+    return 0;
 }
 
 bool WI_MaxImportSCO(Interface* ip, WI_MaxState& st, const std::string& fileName, std::string& error)
@@ -183,7 +205,7 @@ bool WI_MaxImportSCO(Interface* ip, WI_MaxState& st, const std::string& fileName
         return false;
     }
 
-    node->SetName(mesh.name.empty() ? WI_BaseNameNoExt(fileName).c_str() : mesh.name.c_str());
+    WI_SetNodeName(node, mesh.name.empty() ? WI_BaseNameNoExt(fileName) : mesh.name);
 
     Matrix3 tm(TRUE);
     tm.SetTrans(Point3(mesh.pivot.x, mesh.pivot.y, mesh.pivot.z));
@@ -222,7 +244,11 @@ bool WI_MaxImportSKL(Interface* ip, WI_MaxState& st, const std::string& fileName
             return false;
         }
 
-        dummy->SetBox(Box3(Point3(-1.5f, -1.5f, -1.5f), Point3(1.5f, 1.5f, 1.5f)));
+        Box3 dummyBox;
+        dummyBox.Init();
+        dummyBox += Point3(-1.5f, -1.5f, -1.5f);
+        dummyBox += Point3(1.5f, 1.5f, 1.5f);
+        dummy->SetBox(dummyBox);
 
         INode* node = ip->CreateObjectNode(dummy);
         if(!node)
@@ -231,7 +257,7 @@ bool WI_MaxImportSKL(Interface* ip, WI_MaxState& st, const std::string& fileName
             return false;
         }
 
-        node->SetName(skel.bones[i].name.c_str());
+        WI_SetNodeName(node, skel.bones[i].name);
 
         Matrix3 tm = WI_Matrix3(skel.bones[i].absPlacement);
         node->SetNodeTM(0, tm);
@@ -243,7 +269,13 @@ bool WI_MaxImportSKL(Interface* ip, WI_MaxState& st, const std::string& fileName
     {
         int parent = skel.bones[i].parentId;
         if(parent >= 0 && parent < (int)st.boneNodes.size())
-            st.boneNodes[parent]->AttachChild(st.boneNodes[i], 1);
+            st.boneNodes[parent]->AttachChild(st.boneNodes[i], 0);
+    }
+
+    for(size_t i = 0; i < skel.bones.size(); ++i)
+    {
+        Matrix3 tm = WI_Matrix3(skel.bones[i].absPlacement);
+        st.boneNodes[i]->SetNodeTM(0, tm);
     }
 
     st.skeleton = skel;
@@ -304,14 +336,27 @@ bool WI_MaxApplyWGT(Interface* ip, WI_MaxState& st, const std::string& fileName,
     if(!WI_LoadWGT(fileName, wgt, error))
         return false;
 
-    ObjectState os = node->EvalWorldState(ip->GetTime());
-    if(!os.obj || !os.obj->IsSubClassOf(triObjectClassID))
+    Object* obj = node->GetObjectRef();
+    if(!obj)
     {
-        error = "selected node is not editable mesh/triobject";
+        error = "selected node has no object";
         return false;
     }
 
-    TriObject* tri = (TriObject*)os.obj;
+    ObjectState os = node->EvalWorldState(ip->GetTime());
+    if(!os.obj || !os.obj->CanConvertToType(triObjectClassID))
+    {
+        error = "selected node can't convert to TriObject";
+        return false;
+    }
+
+    TriObject* tri = (TriObject*)os.obj->ConvertToType(ip->GetTime(), triObjectClassID);
+    if(!tri)
+    {
+        error = "selected node TriObject conversion failed";
+        return false;
+    }
+
     int numVerts = tri->GetMesh().getNumVerts();
 
     if((int)wgt.vertexCount != numVerts)

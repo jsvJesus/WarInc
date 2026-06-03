@@ -3,9 +3,13 @@
 #include "WarIncFormats.h"
 
 #include <max.h>
+#include <iparamb2.h>
 #include <iskin.h>
 #include <stdmat.h>
-#include <iparamb2.h>
+#include <modstack.h>
+#include <simpobj.h>
+#include <dummy.h>
+#include <istdplug.h>
 
 struct WI_MaxState
 {

@@ -1,6 +1,22 @@
-#include <max.h>
+#define _CRT_SECURE_NO_WARNINGS
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
+
+#ifndef _WIN32_IE
+#define _WIN32_IE 0x0501
+#endif
+
 #include <windows.h>
 #include <commdlg.h>
+#include <shlobj.h>
+#include <objbase.h>
+
+#include <max.h>
+#include <utilapi.h>
+
+#include <string>
 
 #include "resource.h"
 #include "WarIncMaxBridge.h"
@@ -50,7 +66,7 @@ static std::string PickFolder(HWND parent)
     SHGetPathFromIDListA(pidl, fileName);
 
     IMalloc* pMalloc = 0;
-    if(SHGetMalloc(&pMalloc) == NOERROR)
+    if(SHGetMalloc(&pMalloc) == NOERROR && pMalloc)
     {
         pMalloc->Free(pidl);
         pMalloc->Release();
@@ -78,20 +94,23 @@ public:
         hPanel = 0;
     }
 
-    void BeginEditParams(Interface* ip_, IUtil* iu_)
+    virtual void BeginEditParams(Interface* ip_, IUtil* iu_)
     {
         ip = ip_;
         iu = iu_;
+
         hPanel = ip->AddRollupPage(
             g_hInstance,
-            MAKEINTRESOURCE(IDD_WARINC_PANEL),
+            (DLGTEMPLATE*)MAKEINTRESOURCEA(IDD_WARINC_PANEL),
             DialogProc,
-            "WarInc Asset Importer",
+            (char*)"WarInc Asset Importer",
+            0,
+            0,
             0
         );
     }
 
-    void EndEditParams(Interface* ip_, IUtil* iu_)
+    virtual void EndEditParams(Interface* ip_, IUtil* iu_)
     {
         if(hPanel)
         {
@@ -103,7 +122,8 @@ public:
         iu = 0;
     }
 
-    void DeleteThis() {}
+    virtual void SelectionSetChanged(Interface* ip_, IUtil* iu_) {}
+    virtual void DeleteThis() {}
 
     static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
@@ -196,14 +216,45 @@ static WarIncUtility g_Utility;
 class WarIncClassDesc : public ClassDesc2
 {
 public:
-    int IsPublic() { return TRUE; }
-    void* Create(BOOL loading = FALSE) { return &g_Utility; }
-    const TCHAR* ClassName() { return _T("WarInc Asset Importer"); }
-    SClass_ID SuperClassID() { return UTILITY_CLASS_ID; }
-    Class_ID ClassID() { return WARINC_IMPORTER_CLASS_ID; }
-    const TCHAR* Category() { return _T("WarInc"); }
-    const TCHAR* InternalName() { return _T("WarIncAssetImporter"); }
-    HINSTANCE HInstance() { return g_hInstance; }
+    virtual int IsPublic()
+    {
+        return TRUE;
+    }
+
+    virtual void* Create(BOOL loading = FALSE)
+    {
+        return &g_Utility;
+    }
+
+    virtual const char* ClassName()
+    {
+        return "WarInc Asset Importer";
+    }
+
+    virtual SClass_ID SuperClassID()
+    {
+        return UTILITY_CLASS_ID;
+    }
+
+    virtual Class_ID ClassID()
+    {
+        return WARINC_IMPORTER_CLASS_ID;
+    }
+
+    virtual const char* Category()
+    {
+        return "WarInc";
+    }
+
+    virtual const char* InternalName()
+    {
+        return "WarIncAssetImporter";
+    }
+
+    virtual HINSTANCE HInstance()
+    {
+        return g_hInstance;
+    }
 };
 
 static WarIncClassDesc g_ClassDesc;
@@ -219,9 +270,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
     return TRUE;
 }
 
-extern "C" __declspec(dllexport) const TCHAR* LibDescription()
+extern "C" __declspec(dllexport) const char* LibDescription()
 {
-    return _T("WarInc 3ds Max 2012 Asset Importer");
+    return "WarInc 3ds Max 2012 Asset Importer";
 }
 
 extern "C" __declspec(dllexport) int LibNumberClasses()

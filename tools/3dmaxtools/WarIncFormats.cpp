@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "WarIncFormats.h"
 
 #include <stdio.h>
@@ -6,13 +8,14 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <ctype.h>
 
 static unsigned int WI_Tag(const char* s)
 {
-    return ((unsigned int)(unsigned char)s[0] << 24) |
-           ((unsigned int)(unsigned char)s[1] << 16) |
-           ((unsigned int)(unsigned char)s[2] << 8) |
-           ((unsigned int)(unsigned char)s[3]);
+    return ((unsigned int)(unsigned char)s[0]) |
+           ((unsigned int)(unsigned char)s[1] << 8) |
+           ((unsigned int)(unsigned char)s[2] << 16) |
+           ((unsigned int)(unsigned char)s[3] << 24);
 }
 
 static std::string WI_Trim(const std::string& s)
@@ -707,15 +710,15 @@ bool WI_LoadSKL(const std::string& fileName, WI_Skeleton& outSkeleton, std::stri
 
         outSkeleton.bones[i].name = name;
 
-        unsigned int parent = 0;
-        if(!r.U32(parent))
+        int parent = -1;
+        if(!r.I32(parent))
         {
             r.Close();
             error = "bad bone parent";
             return false;
         }
 
-        outSkeleton.bones[i].parentId = (int)parent;
+        outSkeleton.bones[i].parentId = parent;
 
         if(!r.F32(outSkeleton.bones[i].length))
         {
