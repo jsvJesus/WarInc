@@ -19,7 +19,7 @@ SamplerState ShadowMap : register(s5);
 TextureCube EnvCubeMap_Texture : register(t8);
 SamplerState EnvCubeMap : register(s8);
 Texture2D TransparentShadowMap_Texture : register(t10);
-SamplerState TransparentShadowMap : register(t10);
+SamplerState TransparentShadowMap : register(s10);
 Texture3D LightProbe0_Texture : register(t11);
 SamplerState LightProbe0 : register(s11);
 Texture3D LightProbe1_Texture : register(t12);

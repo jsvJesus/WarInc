@@ -121,7 +121,7 @@ float4 PBR_CalcLighting(in PBR_LightParams p)
 // PBR + cubemap reflection
 float4 PBR_CalcLightingWithRefl(
 	in PBR_LightParams p,
-	in sampler EnvCube,
+	in samplerCUBE EnvCube,
 	in float maxMip)
 {
 	float3 diffuse, specular;
