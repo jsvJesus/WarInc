@@ -17,7 +17,7 @@ float4 g_vDirs[NUM_DIRS/2+(NUM_DIRS%2)]	: register(c5);
 
 float2 mirror( float2 vDir, float2 vPlane )
 {
-	return vDir - 2.h * vPlane * dot(vPlane,vDir);
+	return vDir - 2. * vPlane * dot(vPlane,vDir);
 }
 
 void RetrieveDepth( float2 fTexc, out float fDepth, out float fRCPDepth )
@@ -191,7 +191,7 @@ float4 main( in float4 vTexc_RndTexc : TEXCOORD0 ) : COLOR0
 
 	float2 vRotSample = tex2Dlod( smpRandRot, float4(vRndTexc, 0, 0 ) ).xy;
 
-	vRotSample = 2.h * vRotSample - 1.h;
+	vRotSample = 2. * vRotSample - 1.;
 
 	[unroll]
     for (int i = 0; i < NUM_DIRS; i++)

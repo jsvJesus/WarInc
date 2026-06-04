@@ -1553,13 +1553,10 @@ void game::MainLoop()
 	g_bEditMode = true;
 	g_bStartedAsParticleEditor = false;
 
-	const bool useD3D9EditorPresent =
-		m_ret == Menu_AppSelect::bStartLevelEditor ||
-		m_ret == Menu_AppSelect::bStartParticleEditor ||
-		m_ret == Menu_AppSelect::bStartPhysicsEditor ||
-		m_ret == Menu_AppSelect::bStartCharacterEditor;
+	// Editors now use DX11 present with UI on D3D9 via r3dDX11ScaleformBridge
+	const bool useD3D9EditorPresent = false;
 	r3dRenderer->SetUseD3D9Present(useD3D9EditorPresent);
-	r3dOutToLog("Renderer present mode: %s\n", useD3D9EditorPresent ? "D3D9 editor/UI" : "DX11 game");
+	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI on D3D9 via bridge\n");
 #else
 	r3dRenderer->SetUseD3D9Present(false);
 #endif
