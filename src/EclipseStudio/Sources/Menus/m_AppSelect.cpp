@@ -39,7 +39,7 @@ namespace
 		".button { display: block; height: 34px; margin-bottom: 9px; padding: 8px 14px 0px 14px; font-size: 17px; color: #f4f7fb; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }"
 		".button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; cursor: pointer; }"
 		".button:active { background-color: rgba(97, 116, 141, 255); cursor: pointer; }"
-		".hotkey { float: right; color: #a9b4c2; }"
+		".hotkey { float: lfet; color: #a9b4c2; }"
 		"#footer { margin-top: 12px; font-size: 12px; color: #788493; }"
 		"</style>"
 		"</head>"
@@ -233,6 +233,7 @@ int Menu_AppSelect::DoModal()
 			r3dRenderer->StartFrame();
 
 			DrawAppSelectBackground(backgroundTexture);
+			r3dRenderer->Flush();
 
 			RmlUiBackend::BeginFrame();
 			if(ctx)
@@ -251,7 +252,6 @@ int Menu_AppSelect::DoModal()
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 			r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 
-			r3dRenderer->Flush();
 			r3dRenderer->EndFrame();
 		}
 

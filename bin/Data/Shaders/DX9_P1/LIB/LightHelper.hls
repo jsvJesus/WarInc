@@ -1,7 +1,11 @@
 
 
- half4 fresnelReflectance ( half Dot, half4 CSpec ) {
-           return CSpec+(1.h-CSpec)*pow(1.h-Dot,5.h)*CSpec;
+#ifdef R3D_DX11
+#include "Lib/DX11_Compat.hlsli"
+#endif
+
+ float4 fresnelReflectance ( float Dot, float4 CSpec ) {
+           return CSpec+(1.0-CSpec)*pow(1.0-Dot,5.0)*CSpec;
 
     }
 
@@ -27,25 +31,25 @@ struct light_Params
 	float3 vLight;		// Direction TO THE  light source
 	float3 vNormal;		// Normal
 	float3 vEyeVec;		
-	half4  vLightColor;
-	half   vDistanceAttn;	// distance attenuation
-	half  vPower;
+	float4  vLightColor;
+	float   vDistanceAttn;	// distance attenuation
+	float  vPower;
 };
 
 
-half4 light_CalcSpecular(light_Params Param)
+float4 light_CalcSpecular(light_Params Param)
 {
-  half3 vhalf = normalize(Param.vEyeVec + Param.vLight);
+  float3 vhalf = normalize(Param.vEyeVec + Param.vLight);
 
-  half ViewDot = dot(Param.vNormal.rgb, vhalf);
+  float ViewDot = dot(Param.vNormal.rgb, vhalf);
 
-  half Power = pow(2.0h, 1.0h+Param.vPower*10.0h);
+  float Power = pow(2.0, 1.0+Param.vPower*10.0);
 
-  half SpecularPower = pow(ViewDot, Power );
+  float SpecularPower = pow(ViewDot, Power );
 
-  half EnergyConservation = (Power+2.h)/(2.h*3.1415926h);
+  float EnergyConservation = (Power+2.0)/(2.0*3.1415926);
 
-  half Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.01f;
+  float Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.01f;
   Dim = saturate(Dim);
 
   float base = 1.0f - dot(Param.vEyeVec,normalize(vhalf));//Param.vNormal.rgb);//vhalf);
@@ -60,9 +64,9 @@ half4 light_CalcSpecular(light_Params Param)
 
 
 
-half4 light_CalcDiffuse(light_Params Param)
+float4 light_CalcDiffuse(light_Params Param)
 {
-	half Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.0f;
+	float Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.0f;
 //	float Dim = 0.5f + 0.5f*(dot(normalize(Param.vLight), Param.vNormal.rgb));
 	Dim = saturate(Dim);
 

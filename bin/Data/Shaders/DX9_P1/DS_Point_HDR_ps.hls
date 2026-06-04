@@ -1,4 +1,25 @@
 //
+
+#ifdef R3D_DX11
+#include "Lib/DX11_Compat.hlsli"
+
+Texture2D AlbedoTex_Texture : register(t0);
+SamplerState AlbedoTex : register(s0);
+Texture2D NormalTex_Texture : register(t1);
+SamplerState NormalTex : register(s1);
+Texture2D DepthTex_Texture : register(t2);
+SamplerState DepthTex : register(s2);
+Texture2D AuxData_Texture : register(t3);
+SamplerState AuxData : register(s3);
+TextureCube ShadowMap_Texture : register(t4);
+SamplerState ShadowMap : register(s4);
+TextureCube ProjTex_Texture : register(t6);
+SamplerState ProjTex : register(s6);
+TextureCube EnvCubeMap_Texture : register(t8);
+SamplerState EnvCubeMap : register(s8);
+
+#else
+
 sampler AlbedoTex 	: register (s0);
 sampler NormalTex 	: register (s1);
 sampler DepthTex 	: register (s2);
@@ -8,6 +29,8 @@ sampler ShadowMap	: register (s4);
 sampler ProjTex		: register (s6);
 
 sampler EnvCubeMap 	: register (s8);
+
+#endif // R3D_DX11
 
 #ifndef DIFFUSE_ONLY
 #define DIFFUSE_ONLY 0
@@ -187,7 +210,11 @@ float GetParaboloidShadow( float3 WPos )
 float4 main(float4 PPos 	: TEXCOORD0, 
 			float3 WPos		: TEXCOORD1,
 			float2 SPos		: TEXCOORD2
+#ifdef R3D_DX11
+	) : SV_Target
+#else
 	) : COLOR
+#endif
 {
  float invFadeDistance = vLightDistanceParams.x;
  float startFadeMulInvFadeDistance = vLightDistanceParams.y;
@@ -221,7 +248,7 @@ float4 main(float4 PPos 	: TEXCOORD0,
 #ifdef USE_PROJ_MAP
  half3 projMult = texCUBE( ProjTex, mul( -(half3)VN, (half3x3)mLightMtx ) ).rgb;
 #else
- half3 projMult = 1.0h;
+ float3 projMult = 1.0;
 #endif
 
 float3 ViewVec = normalize(Cam - RealPos.xyz);

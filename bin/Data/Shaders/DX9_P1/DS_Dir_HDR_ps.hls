@@ -1,5 +1,36 @@
 //
 
+#ifdef R3D_DX11
+#include "Lib/DX11_Compat.hlsli"
+
+// DX11 texture + sampler pairs (macro tex2D(X,uv) -> X_Texture.Sample(X,uv))
+Texture2D AlbedoTex_Texture : register(t0);
+SamplerState AlbedoTex : register(s0);
+Texture2D NormalTex_Texture : register(t1);
+SamplerState NormalTex : register(s1);
+Texture2D DepthTex_Texture : register(t2);
+SamplerState DepthTex : register(s2);
+Texture2D AuxData_Texture : register(t3);
+SamplerState AuxData : register(s3);
+Texture2D SSAOSampler_Texture : register(t4);
+SamplerState SSAOSampler : register(s4);
+Texture2D ShadowMap_Texture : register(t5);
+SamplerState ShadowMap : register(s5);
+TextureCube EnvCubeMap_Texture : register(t8);
+SamplerState EnvCubeMap : register(s8);
+Texture2D TransparentShadowMap_Texture : register(t10);
+SamplerState TransparentShadowMap : register(t10);
+Texture3D LightProbe0_Texture : register(t11);
+SamplerState LightProbe0 : register(s11);
+Texture3D LightProbe1_Texture : register(t12);
+SamplerState LightProbe1 : register(s12);
+Texture3D LightProbe2_Texture : register(t13);
+SamplerState LightProbe2 : register(s13);
+Texture3D LightProbe3_Texture : register(t14);
+SamplerState LightProbe3 : register(s14);
+
+#else
+
 #ifndef LIGHT_PROBES
 #define LIGHT_PROBES 0
 #endif
@@ -25,6 +56,12 @@ sampler3D LightProbe0 : register( s11 ) ;
 sampler3D LightProbe1 : register( s12 ) ;
 sampler3D LightProbe2 : register( s13 ) ;
 sampler3D LightProbe3 : register( s14 ) ;
+
+#endif // R3D_DX11
+
+#ifndef LIGHT_PROBES
+#define LIGHT_PROBES 0
+#endif
 
 float4   vCamPos  		: register(c0);
 float4	 Color 			: register(c1);
@@ -98,7 +135,11 @@ float3      vSkyDirect3 : register( c48 );
 float4 main(float4 uv1_uv2 : TEXCOORD0, 
 			float3 WPos : TEXCOORD1,
 			float2 SPos : TEXCOORD2
+#ifdef R3D_DX11
+			) : SV_Target
+#else
 			) : COLOR
+#endif
 {
 
 	float2 uv1 	= uv1_uv2.xy;
@@ -234,7 +275,7 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 	DLight.vNormal 		= Normal.rgb;
 	DLight.vEyeVec		= ViewVec;
 	DLight.vLightColor 	= linearColor;
-	DLight.vDistanceAttn 	= 1.0h;
+	DLight.vDistanceAttn 	= 1.0;
 	DLight.vPower 		= SpecularPOW;
 
 	half4 DiffuseColor 	= light_CalcDiffuse(DLight);

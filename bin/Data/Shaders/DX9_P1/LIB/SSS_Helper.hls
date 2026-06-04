@@ -1,8 +1,12 @@
 //
 
-half4 SSS_CalculateSSS(float Thickness, float ViewDot, float LightDot, float SM, half4 TexCol, half4 linearColor)
+#ifdef R3D_DX11
+#include "Lib/DX11_Compat.hlsli"
+#endif
+
+float4 SSS_CalculateSSS(float Thickness, float ViewDot, float LightDot, float SM, float4 TexCol, float4 linearColor)
 {
-	half4 AddVal = half4(0,0,0,0);
+	float4 AddVal = float4(0,0,0,0);
 
 	if(LightDot<0.0f)//apply SSS
 	{

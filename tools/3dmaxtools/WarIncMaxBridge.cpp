@@ -361,6 +361,9 @@ bool WI_MaxApplyWGT(Interface* ip, WI_MaxState& st, const std::string& fileName,
 
     if((int)wgt.vertexCount != numVerts)
     {
+        if(tri != os.obj)
+            tri->DeleteThis();
+
         error = "wgt vertex count mismatch";
         return false;
     }
@@ -415,6 +418,9 @@ bool WI_MaxApplyWGT(Interface* ip, WI_MaxState& st, const std::string& fileName,
     st.weights = wgt;
     st.meshNode = node;
     st.hasWeights = true;
+
+    if(tri != os.obj)
+        tri->DeleteThis();
 
     ip->RedrawViews(ip->GetTime());
     return true;

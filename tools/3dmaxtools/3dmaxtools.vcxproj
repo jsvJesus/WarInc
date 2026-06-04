@@ -83,6 +83,7 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetExt>.dlu</TargetExt>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -141,23 +142,21 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;_MBCS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>Z:\WarInc\src\Tools\Plugins\3DSMAX\MaxSDK\include;Z:\WarInc\src\Tools\Plugins\3DSMAX\MaxSDK\include\CS</AdditionalIncludeDirectories>
+      <ConformanceMode>false</ConformanceMode>
+      <AdditionalIncludeDirectories>Z:\WarInc\src\Tools\Plugins\3DSMAX_2011\MaxSDK\include;Z:\WarInc\src\Tools\Plugins\3DSMAX_2011\MaxSDK\include\CS;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>Z:\WarInc\src\Tools\Plugins\3DSMAX\MaxSDK\lib;Z:\WarInc\src\Tools\Plugins\3DSMAX_2011\MaxSDK\x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>;shell32.lib;ole32.lib;comdlg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Z:\WarInc\src\Tools\Plugins\3DSMAX_2011\MaxSDK\x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>core.lib;maxutil.lib;geom.lib;mesh.lib;gfx.lib;paramblk2.lib;bmm.lib;shell32.lib;ole32.lib;comdlg32.lib;comctl32.lib;kernel32.lib;user32.lib;gdi32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="WarIncFormats.cpp" />
     <ClCompile Include="WarIncMaxBridge.cpp" />
     <ClCompile Include="WarIncMaxImporter.cpp" />

@@ -1680,7 +1680,12 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	int	isWindowed;
 	int	DepthMode;
 
-	RenderPath = RenderPath; //UNUSED
+	const bool cmdLineDX11 = strstr(__r3dCmdLine, "-dx11") || strstr(__r3dCmdLine, "/dx11");
+	const bool cmdLineDX9 = strstr(__r3dCmdLine, "-dx9") || strstr(__r3dCmdLine, "/dx9");
+	bool useDX11 = (RenderPath == R3D_RENDER_PATH_DX11) || cmdLineDX11;
+
+	if(cmdLineDX9)
+		useDX11 = false;
 
 	// RTBuffer = NULL;
 
@@ -1748,7 +1753,13 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	//	Modify mode for stereo
 	FindCompatibleNVidiaStereoDisplayMode(mi.szDevice, mode, allModes);
 
-	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d)\n", mode.Width, mode.Height, BPP, Flags, mode.RefreshRate);
+	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d,renderPath=%s)\n",
+		mode.Width,
+		mode.Height,
+		BPP,
+		Flags,
+		mode.RefreshRate,
+		useDX11 ? "DX11" : "DX9");
 
 	// Set up the structure used to create the D3DDevice. Since we are now
 	ZeroMemory( &d3dpp, sizeof(d3dpp) );
@@ -2034,7 +2045,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	r_3d_vision_direct->SetChangeCallback( &StereoChangeCallback );
 
 #ifndef WO_SERVER
-	if(strstr(__r3dCmdLine, "-dx11") || strstr(__r3dCmdLine, "/dx11"))
+	if(useDX11)
 	{
 		const bool dx11Windowed = isWindowed ? true : false;
 
@@ -2052,8 +2063,13 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 		}
 		else
 		{
-			r3dOutToLog("DX11: renderer layer failed, DX9 fallback active\n");
+			r3dOutToLog("DX11: renderer layer failed, requested DX11 cannot continue\n");
+			return FALSE;
 		}
+	}
+	else
+	{
+		r3dOutToLog("DX11: renderer layer disabled, running legacy DX9 path\n");
 	}
 #endif
 	
@@ -2135,6 +2151,7 @@ static	int		ZBuffer_Mode     = D3DZB_TRUE; //D3DZB_USEW; //
 r3dRenderLayer::r3dRenderLayer()
 : ActiveStereoEye( R3D_STEREO_EYE_MONO )
 , PresentEye( R3D_STEREO_EYE_MONO )
+, UseD3D9Present(false)
 {
 	bInited = 0;
 	pfnGetVertColor    = NULL;
@@ -3995,13 +4012,24 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 	gRenderFrameCounter++; // end of frame
 
 	HRESULT hr = D3DERR_DEVICELOST ;
+	bool dx11Active = false;
+	bool presentWithD3D9 = true;
 
-	if( r3dRenderer->DeviceAvailable )
+#ifndef WO_SERVER
+	dx11Active = g_r3dDX11.IsInitialized();
+	presentWithD3D9 = !dx11Active || GetUseD3D9Present();
+#endif
+
+	if( r3dRenderer->DeviceAvailable && presentWithD3D9 )
 	{
 		R3DPROFILE_START("r3dRenderLayer::EndRender:Present");
 		SetEye(PresentEye);
 		hr = pd3ddev->Present(NULL, NULL, NULL, NULL);
 		R3DPROFILE_END("r3dRenderLayer::EndRender:Present");
+	}
+	else
+	{
+		hr = D3D_OK;
 	}
 
 	ProcessDeviceQueue(r3dGetTime(), 0.033f);
@@ -4031,7 +4059,7 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 	}
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
+	if(dx11Active && !GetUseD3D9Present())
 	{
 		g_r3dDX11.DrawDebugTriangle();
 		g_r3dDX11.DrawDebugTexturedQuad();
@@ -4252,7 +4280,7 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	if ( StageID >= D3DVERTEXTEXTURESAMPLER0 ) 
 	{
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized())
+		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 			g_r3dDX11State.BindTexture(StageID, Tex);
 #endif
 		if(Tex)
@@ -4268,7 +4296,7 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 		if (CurrentTexID[StageID] == -1) return;
 		CurrentTexID[StageID] = -1;
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized())
+		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 			g_r3dDX11State.ClearTexture(StageID);
 #endif
 		D3D_V( pd3ddev->SetTexture(StageID, NULL) );
@@ -4281,7 +4309,7 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 		Stats.AddNumTextureChanges( 1 );
 		CurrentTexID[StageID] = Tex->GetID();
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized())
+		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 			g_r3dDX11State.BindTexture(StageID, Tex);
 #endif
 		D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );

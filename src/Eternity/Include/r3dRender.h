@@ -579,6 +579,7 @@ private:
 
 	volatile bool					deviceLost_;
 	bool							allowShaderLoading_;
+	bool							UseD3D9Present;
 
 	r3dZRange						ZRange ;
 
@@ -601,6 +602,8 @@ public:
 	void    FlushTextures();
 
 #define R3DSetMode_Windowed	(1<<2)
+#define R3D_RENDER_PATH_DX9		0
+#define R3D_RENDER_PATH_DX11	1
 	bool    AdjustWindowSize( int xRes, int yRes, int BPP, int isWindowed, D3DDISPLAYMODE& result );
 	int		InitStereo() ;
 	void	SetEye( StereoEyeEnum eye ) ;
@@ -634,6 +637,8 @@ public:
 	void		EndRender( bool present = false );
 	void		StartFrame();
 	void		EndFrame();
+	void		SetUseD3D9Present(bool enabled) { UseD3D9Present = enabled; }
+	bool		GetUseD3D9Present() const { return UseD3D9Present; }
 	void		SetBackBufferViewport();
 	void		GetBackBufferViewport( float* x, float* y, float* width, float* height );
 	void		StartRenderSimple(int bClear = 1);
@@ -817,7 +822,7 @@ void r3dRenderLayer::DrawIndexed( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UI
 #endif
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
@@ -858,7 +863,7 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 	ZeroIndexCache();
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
@@ -893,7 +898,7 @@ void r3dRenderLayer::Draw( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UIN
 #endif
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
@@ -927,7 +932,7 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 	ZeroZeroStreamCache();
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);

@@ -158,18 +158,20 @@ void InitRender(int bUseSet = 0)
 		writeGameOptionsFile();
 	}
 
-	r3dOutToLog("Setting mode:  %dx%dx%d Flags=%d\n", r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags);
+	const int RenderPath = R3D_RENDER_PATH_DX11;
+
+	r3dOutToLog("Setting mode:  %dx%dx%d Flags=%d RenderPath=DX11\n", r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags);
 
 	r3dRenderer->InitStereo() ;
 
-	if( !r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, 0 /*R3D_PATH_DX9*/) )
+	if( !r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, RenderPath) )
 	{
 		bool failed = true ;
 		if( ! ( Flags & R3DSetMode_Windowed ) )
 		{
 			r3dOutToLog("SetMode failed, trying to set windowed flag and trying again\n");
 			Flags |= R3DSetMode_Windowed;
-			if( r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, 0 /*R3D_PATH_DX9*/) )
+			if( r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, RenderPath) )
 			{
 				failed = false ;
 			}
@@ -306,10 +308,9 @@ void CloseRender()
 	DestroyApexUserRenderer();
 #endif
 
+	RmlUiBackend::Shutdown();
 	r3dScaleformGfxDestroy();
 	g_r3dDX11ScaleformBridge.Shutdown();
-
-	RmlUiBackend::Shutdown();
 
 	r3dCloseMaterials();
 
@@ -1551,6 +1552,16 @@ void game::MainLoop()
 	// all choises is editors by default
 	g_bEditMode = true;
 	g_bStartedAsParticleEditor = false;
+
+	const bool useD3D9EditorPresent =
+		m_ret == Menu_AppSelect::bStartLevelEditor ||
+		m_ret == Menu_AppSelect::bStartParticleEditor ||
+		m_ret == Menu_AppSelect::bStartPhysicsEditor ||
+		m_ret == Menu_AppSelect::bStartCharacterEditor;
+	r3dRenderer->SetUseD3D9Present(useD3D9EditorPresent);
+	r3dOutToLog("Renderer present mode: %s\n", useD3D9EditorPresent ? "D3D9 editor/UI" : "DX11 game");
+#else
+	r3dRenderer->SetUseD3D9Present(false);
 #endif
 
 	void InitGrass();

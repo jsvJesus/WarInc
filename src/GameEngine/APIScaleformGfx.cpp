@@ -25,12 +25,20 @@
 
 static IDirect3DDevice9* r3dGetScaleformDevice9()
 {
+	if(r3dRenderer && r3dRenderer->GetUseD3D9Present())
+		return r3dRenderer->pd3ddev;
+
 	IDirect3DDevice9Ex* dx11BridgeDevice = r3dGetScaleformD3D9Device();
 
 	if(dx11BridgeDevice)
 		return dx11BridgeDevice;
 
 	return r3dRenderer->pd3ddev;
+}
+
+static bool r3dScaleformShouldUseDX11Bridge()
+{
+	return r3dRenderer && !r3dRenderer->GetUseD3D9Present() && g_r3dDX11ScaleformBridge.IsReady();
 }
 
 #ifdef GetRenderTarget
@@ -930,7 +938,7 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
 	bool useDX11ScaleformBridge = false;
 
-	if(!skipDraw && g_r3dDX11ScaleformBridge.IsReady() && r3dScaleformBridgeDrawDisabled())
+	if(!skipDraw && r3dScaleformShouldUseDX11Bridge() && r3dScaleformBridgeDrawDisabled())
 		skipDraw = true;
 	
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
@@ -1001,7 +1009,7 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 	if(!skipDraw)
 	{
-		if(g_r3dDX11ScaleformBridge.IsReady())
+		if(r3dScaleformShouldUseDX11Bridge())
 			useDX11ScaleformBridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
 
 		if(gAPIScaleformGfx->pStateBlock)
