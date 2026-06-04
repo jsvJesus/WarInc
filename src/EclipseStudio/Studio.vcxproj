@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -43,7 +43,8 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings"></ImportGroup>
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
@@ -116,6 +117,7 @@
         ..\External\RmlUi\Include;
         ..\External\ChilKat\Include;
         ..\External\SteamWorks;
+        ..\External\HBAOPlus\include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;STATIC_LIB;WIN32;NDEBUG;_WINDOWS;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -138,9 +140,9 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>RocketCoreWarInc.lib;FreeTypeWarInc.lib;PhysX3_x64.lib;PhysX3Common_x64.lib;PhysX3Cooking_x64.lib;PhysX3CharacterKinematic_x64.lib;PhysX3Extensions.lib;PxFoundation_x64.lib;PxPvdSDK_x64.lib;PsFastXml_x64.lib;PxTask_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;libcurl.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RocketCoreWarInc.lib;FreeTypeWarInc.lib;PhysX3_x64.lib;PhysX3Common_x64.lib;PhysX3Cooking_x64.lib;PhysX3CharacterKinematic_x64.lib;PhysX3Extensions.lib;PxFoundation_x64.lib;PxPvdSDK_x64.lib;PsFastXml_x64.lib;PxTask_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;libcurl.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;GFSDK_SSAO_D3D11.win64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;..\External\HBAOPlus\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -165,7 +167,9 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\RmlUi\Include;..\External\ChilKat\Include;..\External\SteamWorks;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\..\External\PhysX_3.4\Include;.\..\External\PhysX_3.4\Include\common;.\..\External\PhysX_3.4\Include\geometry;.\..\External\PhysX_3.4\Include\extensions;.\..\External\PhysX_3.4\Include\characterkinematic;.\..\External\PhysX_3.4\Include\cooking;.\..\External\PhysX_3.4\Include\pvd;.\..\External\PxShared\include;.\..\External\PxShared\include\foundation;.\..\External\PxShared\include\pvd;.\..\External\PxShared\include\task;.\..\External;.\..\External\dxsdk\Include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\RmlUi\Include;..\External\ChilKat\Include;..\External\SteamWorks;
+        ..\External\HBAOPlus\include;
+        %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;STATIC_LIB;WIN32;_DEBUG;_WINDOWS;WIN64;_WIN64;WARINC_X64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -182,9 +186,9 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>RocketCoreWarInc.lib;FreeTypeWarInc.lib;PhysX3DEBUG_x64.lib;PhysX3CommonDEBUG_x64.lib;PhysX3CookingDEBUG_x64.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x64.lib;PxPvdSDKDEBUG_x64.lib;PsFastXmlDEBUG_x64.lib;PxTaskDEBUG_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RocketCoreWarInc.lib;FreeTypeWarInc.lib;PhysX3DEBUG_x64.lib;PhysX3CommonDEBUG_x64.lib;PhysX3CookingDEBUG_x64.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PhysX3ExtensionsDEBUG.lib;PxFoundationDEBUG_x64.lib;PxPvdSDKDEBUG_x64.lib;PsFastXmlDEBUG_x64.lib;PxTaskDEBUG_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9d.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;GFSDK_SSAO_D3D11.win64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio_d_x64.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/curl/curl_build_x64_vs2013/lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External/Scaleform/Lib;../External/curl/curl_build_x64_vs2013/lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;..\External\HBAOPlus\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ManifestFile>$(IntDir)$(TargetFileName)_d.intermediate.manifest</ManifestFile>
       <IgnoreSpecificDefaultLibraries>libcmt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -233,6 +237,7 @@
         ..\External\RmlUi\Include;
         ..\External\ChilKat\Include;
         ..\External\SteamWorks;
+        ..\External\HBAOPlus\include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WARINC_PHYSX_34=1;APEX_ENABLED=0;VEHICLES_ENABLED=0;STATIC_LIB;WIN32;WIN64;WARINC_X64=1;NDEBUG;_WINDOWS;FINAL_BUILD;_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -288,7 +293,7 @@
         Shlwapi.lib;
         odbc32.lib;
         odbccp32.lib;
-        wbemuuid.lib;
+        wbemuuid.lib;GFSDK_SSAO_D3D11.win64.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>
       <OutputFile>$(ProjectDir)..\..\bin\WarInc_x64.exe</OutputFile>
@@ -306,7 +311,7 @@
         ..\External\fmod;
         ..\External\curl\curl_build_x64_vs2013\lib;
         ..\External\Scaleform\3rdParty\jpeg-8d\Lib\x64\Msvc10\Release
-        ..\External\VMProtect;
+        ..\External\VMProtect;..\External\HBAOPlus\lib;
         %(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -511,7 +516,7 @@
     <ClCompile Include="Sources\SteamHelper.cpp" />
     <ClCompile Include="Sources\ThirdParty\JpegTurboAlias.cpp" />
     <ClCompile Include="Sources\UIFilters\NightVisionController.cpp" />
-        <ClCompile Include="Sources\UI\FrontEndNew.cpp" />
+    <ClCompile Include="Sources\UI\FrontEndNew.cpp" />
     <ClCompile Include="Sources\UI\FrontEndShared.cpp" />
     <ClCompile Include="Sources\UI\RmlUiBackend.cpp">
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</RuntimeTypeInfo>
@@ -730,7 +735,7 @@
     <ClInclude Include="Sources\resource.h" />
     <ClInclude Include="Sources\SteamHelper.h" />
     <ClInclude Include="Sources\UIFilters\NightVisionController.h" />
-        <ClInclude Include="Sources\UI\FrontEndNew.h" />
+    <ClInclude Include="Sources\UI\FrontEndNew.h" />
     <ClInclude Include="Sources\UI\FrontEndShared.h" />
     <ClInclude Include="Sources\UI\RmlUiBackend.h" />
     <ClInclude Include="Sources\UI\HUDCameraDrone.h" />
@@ -854,5 +859,6 @@
     <Folder Include="..\..\backend\WarInc.Api\obj\Debug\net9.0\staticwebassets\" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets"></ImportGroup>
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
 </Project>

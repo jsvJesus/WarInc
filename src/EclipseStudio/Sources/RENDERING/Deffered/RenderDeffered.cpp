@@ -2903,12 +2903,6 @@ void r3dInitShaders()
 		r3dRenderer->AddPixelShaderFromFile( "PS_SSAO_REF", "SSAO_REF_PS.hls" );
 	}
 
-	// HBAO+ shaders
-	{
-		r3dRenderer->AddVertexShaderFromFile( "VS_HBAO_PLUS", "hbao_plus_vs.hls" );
-		r3dRenderer->AddPixelShaderFromFile( "PS_HBAO_PLUS", "hbao_plus_ps.hls" );
-	}
-
 	r3dRenderer->AddPixelShaderFromFile( "PS_MIN_EXPAND", "MinExpand_ps.hls" );
 
 	r3dRenderer->AddPixelShaderFromFile( "PS_SSAO_COMPOSITE", "ssao_composite_ps.hls" );
