@@ -73,3 +73,83 @@ float4 light_CalcDiffuse(light_Params Param)
 	return Dim * Param.vDistanceAttn * Param.vLightColor;
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// PBR Lighting (GGX + Smith + Fresnel)
+// Enabled via #define PBR_ENABLED 1 before including this file
+// ═══════════════════════════════════════════════════════════════
+
+#ifdef PBR_ENABLED
+#include "Lib/PBR_Helper.hlsli"
+
+#ifndef PBR_AMBIENT_SPECULAR
+#define PBR_AMBIENT_SPECULAR 0
+#endif
+
+struct PBR_LightParams
+{
+	float3 N;            // normalized surface normal
+	float3 V;            // normalized view direction (towards camera)
+	float3 L;            // normalized light direction (towards light)
+	float3 baseColor;    // linear-space base color
+	float  metalness;    // 0 = dielectric, 1 = metal
+	float  roughness;    // 0 = smooth, 1 = rough
+	float3 lightColor;   // linear-space light color
+	float  attenuation;  // distance attenuation (0..1)
+	float  NdotL;        // pre-computed saturate(dot(N,L))
+};
+
+float4 PBR_CalcLighting(in PBR_LightParams p)
+{
+	float3 diffuse, specular;
+	PBR_Params brdf;
+	brdf.N = p.N;
+	brdf.V = p.V;
+	brdf.L = p.L;
+	brdf.baseColor = p.baseColor;
+	brdf.metalness = p.metalness;
+	brdf.roughness = p.roughness;
+	brdf.lightColor = p.lightColor;
+	brdf.NdotL = p.NdotL;
+
+	PBR_Evaluate(brdf, diffuse, specular);
+
+	float3 result = (diffuse + specular) * p.attenuation;
+	return float4(result, 0.0);
+}
+
+// PBR + cubemap reflection
+float4 PBR_CalcLightingWithRefl(
+	in PBR_LightParams p,
+	in sampler EnvCube,
+	in float maxMip)
+{
+	float3 diffuse, specular;
+	PBR_Params brdf;
+	brdf.N = p.N;
+	brdf.V = p.V;
+	brdf.L = p.L;
+	brdf.baseColor = p.baseColor;
+	brdf.metalness = p.metalness;
+	brdf.roughness = p.roughness;
+	brdf.lightColor = p.lightColor;
+	brdf.NdotL = p.NdotL;
+
+	PBR_Evaluate(brdf, diffuse, specular);
+
+	float3 iblDiff = PBR_IBL_Diffuse(p.N, p.baseColor, p.metalness, EnvCube);
+	float3 iblSpec = PBR_IBL_Specular(p.N, p.V, p.baseColor, p.metalness, p.roughness, EnvCube, maxMip);
+
+	float3 result = (diffuse + specular) * p.attenuation;
+
+#if PBR_AMBIENT_SPECULAR
+	result += iblDiff * 0.3 + iblSpec;
+#else
+	result += iblDiff * 0.15;
+#endif
+
+	return float4(result, 0.0);
+}
+
+#endif // PBR_ENABLED
+

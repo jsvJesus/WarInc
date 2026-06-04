@@ -41,6 +41,9 @@ sampler EnvCubeMap 	: register (s8);
 #include "Lib\SSS_Helper.hls"
 #include "System\Paraboloid.hls"
 
+#define PBR_ENABLED 1
+#define PBR_AMBIENT_SPECULAR 1
+
 
 #ifndef SSS_ON
 #define SSS_ON 0
@@ -295,6 +298,51 @@ half Thickness = 1-auxData.b ;
  float4 linearColor = Color;
 
 
+	// Shadow calculation (shared by both paths)
+	float ShadowK = 1.0;
+
+#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
+	ShadowK = GetCubemapShadow( V, VN );
+#elif SHADOW_MODE == SHADOW_MODE_PARABOLOID
+	ShadowK = GetParaboloidShadow( RealPos );
+#elif SHADOW_MODE == SHADOW_MODE_SSM
+	ShadowK = tex2Dproj( ShadowMap, PPos );
+#endif
+
+
+#ifdef PBR_ENABLED
+
+	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
+	float metalness = MetalnessMap;
+	float3 baseColor = TexCol.rgb;
+
+	float3 N = Normal.rgb;
+	float3 V = ViewVec;
+	float3 L = VN;
+	float NdotL = saturate(dot(N, L));
+
+	PBR_LightParams pbr;
+	pbr.N = N;
+	pbr.V = V;
+	pbr.L = L;
+	pbr.baseColor = baseColor;
+	pbr.metalness = metalness;
+	pbr.roughness = roughness;
+	pbr.lightColor = linearColor.rgb;
+	pbr.attenuation = AttnDist;
+	pbr.NdotL = NdotL;
+
+	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+
+	float4 FinalColor;
+	FinalColor.rgb = (PBRColor.rgb + AddVal.rgb) * ShadowK;
+	FinalColor.rgb = lerp(FinalColor.rgb, float3(0,0,0), SelfIllum);
+	FinalColor.a = 0;
+
+	return FinalColor;
+
+#else // legacy Blinn-Phong
+
 	light_Params  DLight;
 
 	DLight.vLight 		= VN;
@@ -324,23 +372,11 @@ half Thickness = 1-auxData.b ;
 
 
 
- float ShadowK = 1.0;
-
-
-#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
- ShadowK = GetCubemapShadow( V, VN );
-#elif SHADOW_MODE == SHADOW_MODE_PARABOLOID
- ShadowK = GetParaboloidShadow( RealPos );
-#elif SHADOW_MODE == SHADOW_MODE_SSM
- ShadowK = tex2Dproj( ShadowMap, PPos );
-#endif
-
-
- float4 FinalColor;
+	float4 FinalColor;
 
 #if DIFFUSE_ONLY
- FinalColor.rgb = DiffuseColor* TexCol;
- FinalColor.rgb = lerp (FinalColor.rgb, float3(0,0,0),MetalnessMap); 
+	FinalColor.rgb = DiffuseColor* TexCol;
+	FinalColor.rgb = lerp (FinalColor.rgb, float3(0,0,0),MetalnessMap); 
 #else
 
 	float4 FinalDiffuse = DiffuseColor;
@@ -355,7 +391,9 @@ half Thickness = 1-auxData.b ;
 #endif
 
 
- FinalColor.a = 0;
+	FinalColor.a = 0;
 
- return FinalColor * ShadowK;
+	return FinalColor * ShadowK;
+
+#endif // PBR_ENABLED
 }

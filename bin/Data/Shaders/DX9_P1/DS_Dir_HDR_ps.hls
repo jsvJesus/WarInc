@@ -120,6 +120,9 @@ float3      vSkyDirect3 : register( c48 );
 #include "Lib\LightHelper.hls"
 #include "Lib\SSS_Helper.hls"
 
+#define PBR_ENABLED 1
+#define PBR_AMBIENT_SPECULAR 1
+
 #ifndef SSS_ON
 #define SSS_ON 0
 #endif
@@ -268,6 +271,44 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 
 
 
+#ifdef PBR_ENABLED
+
+	// ── PBR Lighting (GGX + Smith + Fresnel) ─────────────────
+
+	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
+	float metalness = MetalnessMap;
+	float3 baseColor = TexCol.rgb;
+
+	float3 N = Normal.rgb;
+	float3 V = ViewVec;
+	float3 L = -vLight;
+	float NdotL = saturate(dot(N, L));
+
+	PBR_LightParams pbr;
+	pbr.N = N;
+	pbr.V = V;
+	pbr.L = L;
+	pbr.baseColor = baseColor;
+	pbr.metalness = metalness;
+	pbr.roughness = roughness;
+	pbr.lightColor = linearColor.rgb;
+	pbr.attenuation = SM;
+	pbr.NdotL = NdotL;
+
+	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+
+	// Ambient
+	float SkydomeAccess = saturate((dot(float3(0,1,0), N) + 1.0) / 2.0);
+	float3 ambient = linearAmbient.rgb * max(0.0, SkydomeAccess) + Backlight.rgb;
+
+	// Compose final
+	float4 FinalColor;
+	FinalColor.rgb = (ambient * pow(FinalAO, 2.2) + PBRColor.rgb) + AddVal.rgb;
+	FinalColor.rgb = lerp(FinalColor.rgb, TexCol.rgb * 16.0, SelfIllum);
+	FinalColor.rgb = max(FinalColor.rgb, 0.0);
+	FinalColor.a = 1;
+
+#else // !PBR_ENABLED — legacy Blinn-Phong
 
 	light_Params  DLight;
 
@@ -374,6 +415,8 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 
     FinalColor.rgb      = lerp(MatColor_Matte+AddVal, MatColor_Metal, MetalnessMap);
     FinalColor.rgb      = lerp (FinalColor.rgb, TexCol.rgb*16.0f, SelfIllum );
+
+#endif // PBR_ENABLED
 
 //    FinalColor.rgb = dot( TexCol.rgb, float3( 0.3h, 0.59h, 0.11h ) );
 //    FinalColor.rgb = pow(dot(TexCol.rgb, float3(0.2125, 0.7154, 0.0721))*2,2);
