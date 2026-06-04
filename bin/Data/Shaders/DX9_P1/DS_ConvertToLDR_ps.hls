@@ -10,6 +10,8 @@ float4      vExposure_InvGamma  : register(c3);
 
 #include "Lib\Tonemapping.hls"
 
+#define ACES_TONEMAP 1
+
 float4 main(float4 uv1_uv2 : TEXCOORD0 ) : COLOR
 {
 
@@ -21,8 +23,16 @@ float4 main(float4 uv1_uv2 : TEXCOORD0 ) : COLOR
 	float ExposureBias = vFilmToneEF_EB_WL.z ;
 
 	float Col = tex2D( sExposure, float2( 0.5, 0.5 ) ) ;
-	
-	TexCol.rgb = TM_ApplyFilmToneNew(TexCol.rgb, pow(2,ExposureBias+Col) );
+
+	float exposure = pow(2, ExposureBias + Col);
+
+#if ACES_TONEMAP
+	// ACES Filmic Tonemapping — modern standard
+	TexCol.rgb = TM_ApplyACES(TexCol.rgb, exposure);
+#else
+	// Legacy: Uncharted 2 Filmic
+	TexCol.rgb = TM_ApplyFilmToneNew(TexCol.rgb, exposure);
+#endif
 
 
 //	TexCol = PS_Reinhard02( TexCol, Lum ,ExposureBias) ;

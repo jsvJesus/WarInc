@@ -3285,6 +3285,43 @@ void RepositionAllObjectsOnTerrain()
 void MatrixGetYawPitchRoll ( const D3DXMATRIX & mat, float & fYaw, float & fPitch, float & fRoll );
 
 //--------------------------------------------------------------------------------------------------------
+
+static void PlaceObjectBBoxBottomOnPoint(GameObject* obj, const r3dPoint3D& targetPos)
+{
+	if (!obj)
+		return;
+
+	r3dPoint3D pos = targetPos;
+
+	obj->SetPosition(pos);
+
+	r3dBoundBox bbox = obj->GetBBoxWorld();
+
+	float bottomY = bbox.Org.y;
+	float deltaY = targetPos.y - bottomY;
+
+	if (fabsf(deltaY) > 0.0001f)
+	{
+		pos.y += deltaY;
+		obj->SetPosition(pos);
+	}
+
+	obj->OnPickerMoved();
+}
+
+static void PlaceObjectOnTerrainPoint(GameObject* obj, const r3dPoint3D& targetPos)
+{
+	if (!obj)
+		return;
+
+	r3dPoint3D pos = targetPos;
+
+	if (Terrain)
+		pos.y = Terrain->GetHeight(pos);
+
+	PlaceObjectBBoxBottomOnPoint(obj, pos);
+}
+
 void LandscapeCorrect( GameObject& object, const r3dPoint3D& vTargetPos )
 {
 	if(!Terrain)
@@ -7970,6 +8007,43 @@ r3dSkeleton* GetDefaultSkeleton( const char* MeshName )
 
 int ObjectEditMove = 1;
 
+static r3dPoint3D GetEditorPlacementPoint()
+{
+	r3dPoint3D pos = UI_TargetPos;
+
+	if (Terrain)
+	{
+		pos = UI_TerraTargetPos;
+		pos.y = Terrain->GetHeight(pos);
+	}
+
+	return pos;
+}
+
+static void PlaceObjectBBoxOnPoint(GameObject* obj, const r3dPoint3D& targetPos)
+{
+	if (!obj)
+		return;
+
+	obj->SetPosition(targetPos);
+
+	r3dBoundBox bbox = obj->GetBBoxWorld();
+
+	r3dPoint3D pos = obj->GetPosition();
+	pos.y += targetPos.y - bbox.Org.y;
+
+	obj->SetPosition(pos);
+	obj->OnPickerMoved();
+}
+
+static void PlaceObjectOnEditorGround(GameObject* obj)
+{
+	if (!obj)
+		return;
+
+	PlaceObjectBBoxOnPoint(obj, GetEditorPlacementPoint());
+}
+
 void Editor_Level :: ProcessObjects()
 {
 	static char CategoryName[64] = "";
@@ -8116,30 +8190,34 @@ void Editor_Level :: ProcessObjects()
 				if (*ClassName == 0)
 					break;
 
-				if (!EditObject )
+				if (!EditObject)
 				{
-					if(classNameID==0)
-						EditObject = srv_CreateGameObject(ClassName, Str, UI_TargetPos);
+					r3dPoint3D SpawnPos = GetEditorPlacementPoint();
+
+					if (classNameID == 0)
+						EditObject = srv_CreateGameObject(ClassName, Str, SpawnPos);
 					else
-						EditObject = srv_CreateGameObject(ClassNames[classNameID].c_str(), Str, UI_TargetPos);
+						EditObject = srv_CreateGameObject(ClassNames[classNameID].c_str(), Str, SpawnPos);
+
 					ModifyShadowsFlagForTransparentObject(EditObject);
 				}
 
-				if (EditObject )
+				if (EditObject)
 				{
-					EditObject->SetObjFlags(OBJFLAG_SkipCastRay);
-					if (!_objRotate) 
+					EditObject->ObjFlags |= OBJFLAG_SkipCastRay;
+
+					if (!_objRotate)
 					{
-						if(EditObject->ObjTypeFlags & OBJTYPE_Particle)
+						if (EditObject->ObjTypeFlags & OBJTYPE_Particle)
 						{
-							EditObject->m_isSerializable = true; // if partilce placed in editor - then save it by default
-							((obj_ParticleSystem*)EditObject)->bKeepAlive = true; // and keep it alive
-							EditObject->SetPosition(UI_TargetPos);
+							EditObject->m_isSerializable = true;
+							((obj_ParticleSystem*)EditObject)->bKeepAlive = true;
+							EditObject->SetPosition(GetEditorPlacementPoint());
 						}
 						else
 						{
 							if (ObjectEditMove)
-								LandscapeCorrect( *EditObject, UI_TargetPos );
+								PlaceObjectOnEditorGround(EditObject);
 							else
 								EditObject->SetPosition(UI_TargetPos);
 						}
@@ -8170,7 +8248,7 @@ void Editor_Level :: ProcessObjects()
 				{
 					if(r3dGetTime() - _LastTimeBrush > 0.1)
 					{
-						EditObject->ObjFlags = 0;//OBJFLAG_SkipCastRay;
+						EditObject->ObjFlags &= ~OBJFLAG_SkipCastRay;
 						_LastTimeBrush = r3dGetTime();
 
 						UndoEntityAddDel * pUndo = ( UndoEntityAddDel * ) g_pUndoHistory->CreateUndoItem( UA_ENT_ADDDEL );
@@ -8447,7 +8525,11 @@ void Editor_Level :: ProcessGroups()
 						GameObject * pObj = pCurGroup->m_dObjects[i]->Clone ();
 						if ( pObj )
 						{
-							pObj->SetPosition ( UI_TargetPos );
+							if (ObjectEditMove)
+								PlaceObjectOnEditorGround(pObj);
+							else
+								pObj->SetPosition(UI_TargetPos);
+							
 							pObj->bPersistent = 1;
 							g_Manipulator3d.PickerAddToPicked ( pObj );
 						}

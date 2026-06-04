@@ -196,6 +196,35 @@ void InitSSAO ()
 
 	}
 
+	// HBAO+ defaults
+	{
+		SSAOSettings& sts = g_SSAOSettings[ SSM_HBAO_PLUS ];
+
+		sts.Radius			= 1.5f;
+		sts.DepthRange			= 0.5f;
+		sts.Brightness			= 1.0f;
+		sts.Contrast			= 1.0f;
+
+		sts.BlurDepthSensitivity	= 25.0f;
+		sts.BlurStrength		= 1.0f;
+		sts.RadiusExpandStart		= 0.f;
+		sts.RadiusExpandCoef		= 0.f;
+
+		sts.TemporalTolerance		= 4.0f;
+		sts.TemporalHistoryDepth	= 8.0f;
+
+		sts.DetailPathEnable		= 0;
+		sts.DetailRadius		= 0.0f;
+		sts.DetailDepthRange		= 0.0f;
+		sts.DetailStrength		= 0.0f;
+		sts.DetailRadiusExpandStart	= 0.f;
+		sts.DetailRadiusExpandCoef	= 0.f;
+		sts.DetailFadeOut		= 0.f;
+
+		sts.BlurTapCount		= 5;
+		sts.BlurPassCount		= 1;
+	}
+
 	// NORMAL constraints
 	{
 		SSAOConstraints& constr = g_SSAOConstraints[ SSM_REF ];
@@ -257,6 +286,27 @@ void InitSSAO ()
 		constr.MinDetailRadiusExpandStart	= 0.0f,		constr.MaxDetailRadiusExpandStart	= 200.0f;
 		constr.MinDetailRadiusExpandCoef	= 0.0f,		constr.MaxDetailRadiusExpandCoef	= 0.28f;
 		constr.MinDetailFadeOut				= 0.0f,		constr.MaxDetailFadeOut				= 32.0f;
+	}
+
+	// HBAO+ constraints
+	{
+		SSAOConstraints& constr = g_SSAOConstraints[ SSM_HBAO_PLUS ];
+
+		constr.MinRadius			= 0.1f;	constr.MaxRadius			= 3.0f;
+		constr.MinDepthRange			= 0.05f;	constr.MaxDepthRange			= 2.0f;
+		constr.MinBrightness			= 0.0f;	constr.MaxBrightness			= 2.0f;
+		constr.MinContrast			= 0.0f;	constr.MaxContrast			= 2.0f;
+		constr.MinBlurDepthSensitivity		= 0.0f;	constr.MaxBlurDepthSensitivity		= 50.0f;
+		constr.MinBlurStrength			= 0.0f;	constr.MaxBlurStrength			= 1.0f;
+		constr.MinRadiusExpandStart		= 0.0f;	constr.MaxRadiusExpandStart		= 200.f;
+		constr.MinRadiusExpandCoef		= 0.0f;	constr.MaxRadiusExpandCoef		= 0.07f;
+
+		constr.MinDetailStrength		= 0.0f;	constr.MaxDetailStrength		= 0.0f;
+		constr.MinDetailRadius			= 0.0f;	constr.MaxDetailRadius			= 0.0f;
+		constr.MinDetailDepthRange		= 0.0f;	constr.MaxDetailDepthRange		= 0.0f;
+		constr.MinDetailRadiusExpandStart	= 0.0f;	constr.MaxDetailRadiusExpandStart	= 0.0f;
+		constr.MinDetailRadiusExpandCoef	= 0.0f;	constr.MaxDetailRadiusExpandCoef	= 0.0f;
+		constr.MinDetailFadeOut			= 0.0f;	constr.MaxDetailFadeOut			= 0.0f;
 	}
 
 }
@@ -689,6 +739,111 @@ void RenderSSAOEffect( bool lightWeight )
 }
 
 
+// ═══════════════════════════════════════════════════════════════
+// HBAO+ — Horizon-Based Ambient Occlusion Plus
+// 8 directions × 6 steps, normal-aware horizon integration
+// ═══════════════════════════════════════════════════════════════
+
+void RenderHBAOPlusEffect()
+{
+	if ( !r_ssao->GetBool() ) 
+		return;
+
+	PostFX_UpdateResources();
+
+	r3dSetRestoreFSQuadVDecl setRestoreVDECL; (void)setRestoreVDECL;
+
+	r3dRenderer->SetVertexShader("VS_HBAO_PLUS");
+	r3dRenderer->SetPixelShader("PS_HBAO_PLUS");
+
+	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
+
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+
+	float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
+
+	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, r3dRenderer->ScreenW * 0.25f * noiseScaleK, r3dRenderer->ScreenH * 0.25f * noiseScaleK );
+	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+
+	// Projection setup
+	float fNear = -r3dRenderer->ProjMatrix._43/(r3dRenderer->ProjMatrix._33);
+	float fFar = fNear / ( 1.0f - 1.0f/(r3dRenderer->ProjMatrix._33) );
+
+	const SSAOSettings& sts = g_SSAOSettings[ SSM_HBAO_PLUS ];
+
+	// c0: radius, aspect, sqr_radius, ---
+	D3DXVECTOR4 pconst0 = D3DXVECTOR4(
+		sts.Radius,
+		r3dRenderer->ScreenW / r3dRenderer->ScreenH,
+		sts.Radius * sts.Radius / (fFar * fFar),
+		1.0f / fFar
+	);
+
+	// c1: resolution, inv_resolution
+	D3DXVECTOR4 pconst1 = D3DXVECTOR4(
+		(float)r3dRenderer->ScreenW,
+		(float)r3dRenderer->ScreenH,
+		1.0f / r3dRenderer->ScreenW,
+		1.0f / r3dRenderer->ScreenH
+	);
+
+	// c2: zNear, zFar, angleBias, ---
+	D3DXVECTOR4 pconst2 = D3DXVECTOR4( fNear, fFar, 0.01f, 0.0f );
+
+	// c3: projScaleX, projScaleY, invProjScaleX, invProjScaleY
+	float projScaleX = r3dRenderer->ProjMatrix._11 / fFar;
+	float projScaleY = r3dRenderer->ProjMatrix._22 / fFar;
+	D3DXVECTOR4 pconst3 = D3DXVECTOR4( projScaleX, projScaleY, 1.0f / projScaleX, 1.0f / projScaleY );
+
+	// c4: brightness, contrast, depthRange/radius (coef0), 128/radius (coef1)
+	D3DXVECTOR4 pconst4 = D3DXVECTOR4( sts.Brightness, sts.Contrast, sts.DepthRange, 128.0f / sts.Radius );
+
+	r3dRenderer->SetPixelShaderConstantF(  0, (float *)&pconst0,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  1, (float *)&pconst1,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  2, (float *)&pconst2,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  3, (float *)&pconst3,  1 );
+	r3dRenderer->SetPixelShaderConstantF(  4, (float *)&pconst4,  1 );
+
+	// Upload 8 direction vectors (c5-c8)
+	float alpha = 2.0f * R3D_PI / 8;
+	D3DXVECTOR4 dirs[4];
+	for( int i = 0; i < 4; i ++ )
+	{
+		float a0 = alpha * (i * 2);
+		float a1 = alpha * (i * 2 + 1);
+		dirs[i] = D3DXVECTOR4( cosf(a0), sinf(a0), cosf(a1), sinf(a1) );
+	}
+	r3dRenderer->SetPixelShaderConstantF(  5, (float*)dirs, 4 );
+
+	r3dSetFiltering( R3D_POINT, 0 );
+	r3dSetFiltering( R3D_POINT, 1 );
+	r3dSetFiltering( R3D_POINT, 2 );
+
+	r3dRenderer->SetMipMapBias( -6, 2 );
+
+	extern r3dScreenBuffer* gBuffer_Normal;
+
+	r3dRenderer->SetTex( DepthBuffer->Tex, 0 );
+	r3dRenderer->SetTex( gBuffer_Normal->Tex, 1 );
+	r3dRenderer->SetTex( SSAO_RotTex2D, 2 );
+
+	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED );
+
+	r3dDrawFullScreenQuad(!!r_half_scale_ssao->GetInt());
+
+	r3dRenderer->SetMipMapBias(0, 2);
+
+	r3dRenderer->SetVertexShader();
+	r3dRenderer->SetPixelShader();
+	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0xffffffff);
+}
+
+
 void RenderSSAOEffect ()
 {
 	if ( !r_ssao->GetBool() )
@@ -717,6 +872,9 @@ void RenderSSAOEffect ()
 		break;
 	case SSM_HQ:
 		RenderSSAOEffect( false );
+		break;
+	case SSM_HBAO_PLUS:
+		RenderHBAOPlusEffect();
 		break;
 	}
 

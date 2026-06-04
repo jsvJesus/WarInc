@@ -814,36 +814,39 @@ ObjectManipulator3d::ControlElement_e ObjectManipulator3d::Picker_PickElement ( 
 
 bool ObjectManipulator3d::Picker_IsPick ( GameObject * pObj, POINT ptCursor ) const
 {
-	r3d_assert ( pObj );
+	r3d_assert(pObj);
 
-	if ( m_sTypeFilter.c_str() && m_sTypeFilter.c_str()[0] )
+	if (m_sTypeFilter.c_str() && m_sTypeFilter.c_str()[0])
 	{
-		if ( ( pObj->Class->Name != m_sTypeFilter.c_str () ) )
+		if (pObj->Class->Name != m_sTypeFilter.c_str())
 			return false;
 	}
 
-	r3dRay tRay = Picker_GetClickRay( ptCursor );
+	if (pObj->ObjFlags & OBJFLAG_Removed)
+		return false;
 
-	D3DXMATRIX mView = r3dRenderer->ViewMatrix;
-	D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
+	r3dRay tRay = Picker_GetClickRay(ptCursor);
 
-	r3dPoint3D vCameraOrigin = r3dPoint3D ( - mView._41, - mView._42, - mView._43 );
-
-	extern gobjid_t	UI_TargetObjID;
+	extern gobjid_t UI_TargetObjID;
 	GameObject* TargetObj = GameWorld().GetObject(UI_TargetObjID);
- 
-	if (TargetObj && pObj == TargetObj ) 
+
+	if (TargetObj && pObj == TargetObj)
 		return true;
 
-	return false;
-   /*
-	 if (TargetObj && pObj == TargetObj ) 
-		return true;
-	
-	if ( !pObj->BBox.ContainsPoint( vCameraOrigin ) )
-		return !!tRay.IsIntersect( pObj->BBox );
-	else
-		return false;*/
+	D3DXMATRIX mInvView = r3dRenderer->InvViewMatrix;
+
+	r3dPoint3D vCameraOrigin;
+	vCameraOrigin.x = mInvView._41;
+	vCameraOrigin.y = mInvView._42;
+	vCameraOrigin.z = mInvView._43;
+
+	r3dBoundBox bbox = pObj->GetBBoxWorld();
+	bbox.Grow(0.25f);
+
+	if (bbox.ContainsPoint(vCameraOrigin))
+		return false;
+
+	return !!tRay.IsIntersect(bbox);
 }
 
 void ObjectManipulator3d::Picker_DrawPicked ( GameObject * pObj, ControlElement_e eElement, bool bLocal ) const
@@ -1256,8 +1259,31 @@ r3dVector ObjectManipulator3d::Picker_Move ( GameObject * pObj, POINT PickPoint,
 		vObjPos += vDeltaPos;
 	}
 
-	pObj->SetPosition ( vObjPos );
-	pObj->OnPickerMoved ();
+	if (!m_bAttachMode && ObjectEditMove)
+	{
+		extern r3dPoint3D UI_TerraTargetPos;
+		extern r3dPoint3D UI_TargetPos;
+
+		r3dPoint3D targetPos = Terrain ? UI_TerraTargetPos : UI_TargetPos;
+
+		if (Terrain)
+			targetPos.y = Terrain->GetHeight(targetPos);
+
+		pObj->SetPosition(targetPos);
+
+		r3dBoundBox bbox = pObj->GetBBoxWorld();
+
+		r3dPoint3D fixedPos = pObj->GetPosition();
+		fixedPos.y += targetPos.y - bbox.Org.y;
+
+		pObj->SetPosition(fixedPos);
+	}
+	else
+	{
+		pObj->SetPosition(vObjPos);
+	}
+
+	pObj->OnPickerMoved();
 
 	return vDeltaPos;
 }

@@ -184,6 +184,7 @@ enum SSAOMethod
 	SSM_REF,
 	SSM_DEFAULT,
 	SSM_HQ,
+	SSM_HBAO_PLUS,
 	SSM_COUNT
 };
 
