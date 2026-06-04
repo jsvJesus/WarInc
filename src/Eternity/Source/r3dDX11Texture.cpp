@@ -20,6 +20,8 @@
 #include <d3d11.h>
 #pragma warning(pop)
 
+#include <vector>
+
 #include "r3d.h"
 #include "r3dDX11Texture.h"
 
@@ -215,6 +217,141 @@ static int r3dDX11Texture_BitsPerPixel(DXGI_FORMAT format)
 
 	default:
 		return 0;
+	}
+}
+
+enum r3dDX11LegacyDDSExpandMode
+{
+	R3D_DX11_DDS_EXPAND_NONE = 0,
+	R3D_DX11_DDS_EXPAND_A8L8,
+	R3D_DX11_DDS_EXPAND_A4R4G4B4,
+	R3D_DX11_DDS_EXPAND_X1R5G5B5
+};
+
+static unsigned char r3dDX11Texture_Expand5To8(unsigned int v)
+{
+	return (unsigned char)((v << 3) | (v >> 2));
+}
+
+static unsigned char r3dDX11Texture_Expand4To8(unsigned int v)
+{
+	return (unsigned char)((v << 4) | v);
+}
+
+static r3dDX11LegacyDDSExpandMode r3dDX11Texture_GetLegacyExpandMode(const r3dDDS_PIXELFORMAT& ddpf)
+{
+	if((ddpf.flags & R3D_DDSPF_LUMINANCE) && (ddpf.flags & R3D_DDSPF_ALPHAPIXELS))
+	{
+		if(ddpf.rgbBitCount == 16)
+			return R3D_DX11_DDS_EXPAND_A8L8;
+	}
+
+	if(ddpf.flags & R3D_DDSPF_RGB)
+	{
+		if(ddpf.rgbBitCount == 16)
+		{
+			if(r3dDX11Texture_IsBitMask(ddpf, 0x00000f00, 0x000000f0, 0x0000000f, 0x0000f000))
+				return R3D_DX11_DDS_EXPAND_A4R4G4B4;
+
+			if(r3dDX11Texture_IsBitMask(ddpf, 0x00007c00, 0x000003e0, 0x0000001f, 0x00000000))
+				return R3D_DX11_DDS_EXPAND_X1R5G5B5;
+		}
+	}
+
+	return R3D_DX11_DDS_EXPAND_NONE;
+}
+
+static bool r3dDX11Texture_GetLegacyExpandSurfaceInfo(
+	r3dDX11LegacyDDSExpandMode mode,
+	int width,
+	int height,
+	int* outNumBytes,
+	int* outRowBytes
+)
+{
+	if(width <= 0)
+		width = 1;
+
+	if(height <= 0)
+		height = 1;
+
+	switch(mode)
+	{
+	case R3D_DX11_DDS_EXPAND_A8L8:
+	case R3D_DX11_DDS_EXPAND_A4R4G4B4:
+	case R3D_DX11_DDS_EXPAND_X1R5G5B5:
+		*outRowBytes = width * 2;
+		*outNumBytes = (*outRowBytes) * height;
+		return true;
+
+	default:
+		*outRowBytes = 0;
+		*outNumBytes = 0;
+		return false;
+	}
+}
+
+static void r3dDX11Texture_ExpandLegacyToRGBA8(
+	r3dDX11LegacyDDSExpandMode mode,
+	const unsigned char* src,
+	int width,
+	int height,
+	int srcPitch,
+	unsigned char* dst,
+	int dstPitch
+)
+{
+	for(int y = 0; y < height; ++y)
+	{
+		const unsigned char* srcRow = src + y * srcPitch;
+		unsigned char* dstRow = dst + y * dstPitch;
+
+		for(int x = 0; x < width; ++x)
+		{
+			const unsigned short v = ((const unsigned short*)srcRow)[x];
+
+			unsigned char r = 255;
+			unsigned char g = 255;
+			unsigned char b = 255;
+			unsigned char a = 255;
+
+			switch(mode)
+			{
+			case R3D_DX11_DDS_EXPAND_A8L8:
+				{
+					unsigned char l = (unsigned char)(v & 0x00ff);
+					a = (unsigned char)((v >> 8) & 0x00ff);
+
+					r = l;
+					g = l;
+					b = l;
+				}
+				break;
+
+			case R3D_DX11_DDS_EXPAND_A4R4G4B4:
+				{
+					b = r3dDX11Texture_Expand4To8((v >> 0) & 0x0f);
+					g = r3dDX11Texture_Expand4To8((v >> 4) & 0x0f);
+					r = r3dDX11Texture_Expand4To8((v >> 8) & 0x0f);
+					a = r3dDX11Texture_Expand4To8((v >> 12) & 0x0f);
+				}
+				break;
+
+			case R3D_DX11_DDS_EXPAND_X1R5G5B5:
+				{
+					b = r3dDX11Texture_Expand5To8((v >> 0) & 0x1f);
+					g = r3dDX11Texture_Expand5To8((v >> 5) & 0x1f);
+					r = r3dDX11Texture_Expand5To8((v >> 10) & 0x1f);
+					a = 255;
+				}
+				break;
+			}
+
+			dstRow[x * 4 + 0] = r;
+			dstRow[x * 4 + 1] = g;
+			dstRow[x * 4 + 2] = b;
+			dstRow[x * 4 + 3] = a;
+		}
 	}
 }
 
@@ -786,6 +923,8 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 	int offset = sizeof(unsigned int) + sizeof(r3dDDS_HEADER);
 
 	DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN;
+	r3dDX11LegacyDDSExpandMode expandMode = R3D_DX11_DDS_EXPAND_NONE;
+
 	bool isCube = (header->caps2 & R3D_DDSCAPS2_CUBEMAP) != 0;
 	int arraySize = isCube ? 6 : 1;
 
@@ -831,7 +970,12 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 	}
 	else
 	{
-		dxgiFormat = r3dDX11Texture_GetDXGIFormat(header->ddspf);
+		expandMode = r3dDX11Texture_GetLegacyExpandMode(header->ddspf);
+
+		if(expandMode != R3D_DX11_DDS_EXPAND_NONE)
+			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		else
+			dxgiFormat = r3dDX11Texture_GetDXGIFormat(header->ddspf);
 	}
 
 	if(dxgiFormat == DXGI_FORMAT_UNKNOWN)
@@ -867,6 +1011,36 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 
 	int createdMips = 0;
 
+	std::vector<unsigned char> expandedPixels;
+	int expandedOffset = 0;
+
+	if(expandMode != R3D_DX11_DDS_EXPAND_NONE)
+	{
+		int totalExpandedBytes = 0;
+
+		for(int face = 0; face < arraySize; ++face)
+		{
+			int mipWidth = width;
+			int mipHeight = height;
+
+			for(int mip = 0; mip < mipCount; ++mip)
+			{
+				totalExpandedBytes += R3D_MAX(1, mipWidth) * R3D_MAX(1, mipHeight) * 4;
+
+				mipWidth = R3D_MAX(1, mipWidth / 2);
+				mipHeight = R3D_MAX(1, mipHeight / 2);
+			}
+		}
+
+		if(totalExpandedBytes <= 0)
+		{
+			r3dOutToLog("DX11Texture: failed to allocate expanded DDS buffer '%s'\n", debugName ? debugName : "");
+			return false;
+		}
+
+		expandedPixels.resize(totalExpandedBytes);
+	}
+
 	for(int face = 0; face < arraySize; ++face)
 	{
 		int mipWidth = width;
@@ -878,10 +1052,21 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 			int numBytes = 0;
 			int rowBytes = 0;
 
-			if(!r3dDX11Texture_GetSurfaceInfo(mipWidth, mipHeight, dxgiFormat, &numBytes, &rowBytes))
+			if(expandMode != R3D_DX11_DDS_EXPAND_NONE)
 			{
-				r3dOutToLog("DX11Texture: failed to calculate DDS pitch '%s'\n", debugName ? debugName : "");
-				return false;
+				if(!r3dDX11Texture_GetLegacyExpandSurfaceInfo(expandMode, mipWidth, mipHeight, &numBytes, &rowBytes))
+				{
+					r3dOutToLog("DX11Texture: failed to calculate legacy DDS pitch '%s'\n", debugName ? debugName : "");
+					return false;
+				}
+			}
+			else
+			{
+				if(!r3dDX11Texture_GetSurfaceInfo(mipWidth, mipHeight, dxgiFormat, &numBytes, &rowBytes))
+				{
+					r3dOutToLog("DX11Texture: failed to calculate DDS pitch '%s'\n", debugName ? debugName : "");
+					return false;
+				}
 			}
 
 			if(offset + numBytes > dataSize)
@@ -895,9 +1080,41 @@ bool r3dDX11Texture::LoadDDSFromMemory(const void* data, int dataSize, const cha
 				break;
 			}
 
-			initData[face * 32 + mip].pSysMem = bytes + offset;
-			initData[face * 32 + mip].SysMemPitch = rowBytes;
-			initData[face * 32 + mip].SysMemSlicePitch = numBytes;
+			if(expandMode != R3D_DX11_DDS_EXPAND_NONE)
+			{
+				const int dstPitch = mipWidth * 4;
+				const int dstBytes = dstPitch * mipHeight;
+
+				if(expandedOffset + dstBytes > (int)expandedPixels.size())
+				{
+					r3dOutToLog("DX11Texture: expanded DDS buffer overflow '%s'\n", debugName ? debugName : "");
+					return false;
+				}
+
+				unsigned char* dst = &expandedPixels[expandedOffset];
+
+				r3dDX11Texture_ExpandLegacyToRGBA8(
+					expandMode,
+					bytes + offset,
+					mipWidth,
+					mipHeight,
+					rowBytes,
+					dst,
+					dstPitch
+				);
+
+				initData[face * 32 + mip].pSysMem = dst;
+				initData[face * 32 + mip].SysMemPitch = dstPitch;
+				initData[face * 32 + mip].SysMemSlicePitch = dstBytes;
+
+				expandedOffset += dstBytes;
+			}
+			else
+			{
+				initData[face * 32 + mip].pSysMem = bytes + offset;
+				initData[face * 32 + mip].SysMemPitch = rowBytes;
+				initData[face * 32 + mip].SysMemSlicePitch = numBytes;
+			}
 
 			offset += numBytes;
 			faceMips++;

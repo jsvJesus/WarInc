@@ -86,7 +86,20 @@ static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void
 	if(!tex->LoadDDSFromMemory(data, (int)dataSize, debugName))
 	{
 		delete tex;
+		tex = NULL;
+
 		r3dOutToLog("r3dTexture DX11: failed to create SRV for '%s'\n", debugName ? debugName : "");
+
+		r3dDX11Texture* fallback = new r3dDX11Texture();
+
+		if(fallback->LoadDDSFromFile("Data\\Shaders\\Texture\\Missing.dds"))
+		{
+			*slot = fallback;
+			r3dOutToLog("r3dTexture DX11: using fallback SRV for '%s'\n", debugName ? debugName : "");
+			return;
+		}
+
+		delete fallback;
 		return;
 	}
 
