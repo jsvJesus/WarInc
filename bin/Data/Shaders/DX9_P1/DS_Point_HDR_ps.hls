@@ -41,8 +41,12 @@ sampler EnvCubeMap 	: register (s8);
 #include "Lib\SSS_Helper.hls"
 #include "System\Paraboloid.hls"
 
-#define PBR_ENABLED 1
-#define PBR_AMBIENT_SPECULAR 1
+#ifndef PBR_ENABLED
+#define PBR_ENABLED 0
+#endif
+#ifndef PBR_AMBIENT_SPECULAR
+#define PBR_AMBIENT_SPECULAR 0
+#endif
 
 
 #ifndef SSS_ON
@@ -310,7 +314,7 @@ half Thickness = 1-auxData.b ;
 #endif
 
 
-#ifdef PBR_ENABLED
+	if (g_FeatureSwitches.x > 0.5)
 
 	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
 	float metalness = MetalnessMap;
@@ -341,7 +345,7 @@ half Thickness = 1-auxData.b ;
 
 	return FinalColor;
 
-#else // legacy Blinn-Phong
+	else // legacy Blinn-Phong
 
 	light_Params  DLight;
 
@@ -395,5 +399,5 @@ half Thickness = 1-auxData.b ;
 
 	return FinalColor * ShadowK;
 
-#endif // PBR_ENABLED
+}
 }

@@ -23,5 +23,8 @@ float4     vParaboloidParams    : register(c17);
 
 float4     vBacklightColor      : register(c30);
 
+// Runtime feature switches
+float4     g_FeatureSwitches    : register( c31 );  // x=PBR, y=ACES, z=SSS
+
 // not used - for SSS_Helper to compile
 float4 vAmbientColor ;

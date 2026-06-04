@@ -380,7 +380,9 @@ bool HBAOPlusWrapper::RenderAOToScreenBuffer(
         for (int x = 0; x < outW; x++)
         {
             // Write only R channel (AO value), preserve GBA
-            dst[x * 4 + 0] = src[x * 4 + 0];  // R = AO
+            unsigned char ao = src[x * 4 + 0];
+
+            dst[x * 4 + 2] = ao;
             // G, B, A remain unchanged (motion blur + reflectivity)
         }
     }

@@ -307,7 +307,24 @@ REG_VAR( r_out_of_vmem_encountered	, 0			, VF_SAVE );
 REG_VAR( r_max_texture_dim		, 0			, 0 );
 
 REG_VAR_C( r_half_scale_ssao		, 0		, 0	, 1, VF_CONSTRAINT );
-REG_VAR_C( r_ssao_method			, 1		, 1 , 2, VF_CONSTRAINT );
+REG_VAR_C( r_ssao_method			, 3		, 1	, 4, VF_CONSTRAINT ); // 1=HSAO, 2=HQ, 3=HBAO+
+
+// HBAO+ parameters
+REG_VAR( r_hbao_radius			, 1.5f		, 0 );
+REG_VAR( r_hbao_bias			, 0.1f		, 0 );
+REG_VAR( r_hbao_power			, 2.0f		, 0 );
+REG_VAR( r_hbao_blur_sharpness		, 16.0f		, 0 );
+
+// PBR toggle
+REG_VAR_C( r_pbr_enabled		, 1		, 0	, 1, VF_CONSTRAINT );
+
+// ACES tonemapping toggle
+REG_VAR_C( r_aces_tonemap		, 1		, 0	, 1, VF_CONSTRAINT );
+
+// SSS debug
+REG_VAR( r_sss_distortion		, 0.0f		, 0 );
+REG_VAR( r_sss_power			, 0.0f		, 0 );
+REG_VAR( r_sss_scale			, 0.0f		, 0 );
 
 REG_VAR( r_max_mesh_lod,			0,				0 );
 REG_VAR( r_shared_sm_size,			512,			0 );

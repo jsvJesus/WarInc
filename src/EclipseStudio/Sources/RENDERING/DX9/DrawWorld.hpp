@@ -753,24 +753,28 @@ void RenderHBAOPlusEffect()
 {
 	if (!r_ssao->GetBool())
 		return;
-	if (!g_r3dDX11.IsInitialized())
-		return;
 
-	// HBAO+ has its own built-in blur — disable the legacy SSAO blur
+	if (!g_r3dDX11.IsInitialized())
+	{
+		r3dOutToLog("HBAO+: DX11 is not initialized, falling back to HSAO\n");
+		RenderSSAOEffect(true);
+		return;
+	}
+
 	extern int __SSAOBlurEnable;
 	int prevBlur = __SSAOBlurEnable;
 	__SSAOBlurEnable = 0;
 
-	// One-time init
 	if (!g_HBAOPlus.IsInitialized())
 	{
 		ID3D11Device* device = g_r3dDX11.GetDevice();
 		ID3D11DeviceContext* ctx = g_r3dDX11.GetContext();
 		ID3D11DepthStencilView* depthDSV = g_r3dDX11.GetDepthStencilView();
 
-		if (!depthDSV)
+		if (!device || !ctx || !depthDSV)
 		{
-			r3dOutToLog("HBAO+: no depth DSV, falling back to HSAO\n");
+			r3dOutToLog("HBAO+: no DX11 device/context/depth DSV, falling back to HSAO\n");
+			__SSAOBlurEnable = prevBlur;
 			RenderSSAOEffect(true);
 			return;
 		}
@@ -778,33 +782,40 @@ void RenderHBAOPlusEffect()
 		if (!g_HBAOPlus.Init(device, ctx, depthDSV, r3dRenderer->ScreenW, r3dRenderer->ScreenH))
 		{
 			r3dOutToLog("HBAO+: init failed, falling back to HSAO\n");
+			__SSAOBlurEnable = prevBlur;
 			RenderSSAOEffect(true);
 			return;
 		}
 
-		// Apply default HBAO+ parameters
-		GFSDK_SSAO_Parameters& p = g_HBAOPlus.GetParameters();
-		const SSAOSettings& sts = g_SSAOSettings[SSM_HBAO_PLUS];
-		p.Radius = sts.Radius;
-		p.Bias = 0.1f;
-		p.PowerExponent = sts.Contrast * 2.0f;
-		p.SmallScaleAO = sts.Brightness;
-		p.LargeScaleAO = sts.Brightness;
-		p.Blur.Enable = true;
-		p.Blur.Radius = GFSDK_SSAO_BLUR_RADIUS_4;
-		p.Blur.Sharpness = 16.0f;
-
-		r3dOutToLog("HBAO+: initialized %dx%d radius=%.1f bias=%.2f power=%.1f\n",
-			r3dRenderer->ScreenW, r3dRenderer->ScreenH, sts.Radius, 0.1f, sts.Contrast * 2.0f);
+		r3dOutToLog("HBAO+: initialized and selected\n");
 	}
 
-	// Render native HBAO+ to gBuffer_Aux (R channel)
-	g_HBAOPlus.RenderAOToScreenBuffer(
-		r3dRenderer->ProjMatrix,
-		1.0f,   // metersToViewSpaceUnits
-		gBuffer_Aux);
+	GFSDK_SSAO_Parameters& p = g_HBAOPlus.GetParameters();
 
-	// Restore blur flag for other SSAO methods
+	p.Radius = r_hbao_radius->GetFloat();
+	p.Bias = r_hbao_bias->GetFloat();
+	p.PowerExponent = r_hbao_power->GetFloat();
+	p.SmallScaleAO = 1.0f;
+	p.LargeScaleAO = 1.0f;
+	p.Blur.Enable = true;
+	p.Blur.Radius = GFSDK_SSAO_BLUR_RADIUS_4;
+	p.Blur.Sharpness = r_hbao_blur_sharpness->GetFloat();
+
+	if (!g_HBAOPlus.RenderAOToScreenBuffer(r3dRenderer->ProjMatrix, 1.0f, gBuffer_Aux))
+	{
+		r3dOutToLog("HBAO+: RenderAOToScreenBuffer failed, falling back to HSAO\n");
+		__SSAOBlurEnable = prevBlur;
+		RenderSSAOEffect(true);
+		return;
+	}
+
+	static bool hbaoFrameLogged = false;
+	if (!hbaoFrameLogged)
+	{
+		r3dOutToLog("HBAO+: frame rendered to gBuffer_Aux\n");
+		hbaoFrameLogged = true;
+	}
+
 	__SSAOBlurEnable = prevBlur;
 }
 

@@ -310,29 +310,49 @@ const char* SSAOMethodToString( SSAOMethod method )
 	{
 	case SSM_REF:
 		return "REF";
+
 	case SSM_DEFAULT:
 		return "DEFAULT";
+
 	case SSM_HQ:
 		return "HQ";
+
+	case SSM_HBAO_PLUS:
+		return "HBAO_PLUS";
+
 	default:
-		return "";
+		return "DEFAULT";
 	}
 }
 
 SSAOMethod StringToSSAOMethod( const char* szName )
 {
-	if ( ! strcmp( szName, "NORMAL" ) || 
-		 ! strcmp( szName, "REF" ) )
+	if ( !strcmp( szName, "NORMAL" ) ||
+		 !strcmp( szName, "REF" ) )
+	{
 		return SSM_REF;
-	else if (	! strcmp( szName, "ALT_LW" ) ||
-				! strcmp( szName, "DEFAULT" ) ||
-				! strcmp( szName, "HSAO" ) )
-		return SSM_DEFAULT;
-	else if (	! strcmp( szName, "ALT" ) || 
-				! strcmp( szName, "HQ" ) )
-		return SSM_HQ;
+	}
 
-	assert( false );
+	if ( !strcmp( szName, "ALT_LW" ) ||
+		 !strcmp( szName, "DEFAULT" ) ||
+		 !strcmp( szName, "HSAO" ) )
+	{
+		return SSM_DEFAULT;
+	}
+
+	if ( !strcmp( szName, "ALT" ) ||
+		 !strcmp( szName, "HQ" ) )
+	{
+		return SSM_HQ;
+	}
+
+	if ( !strcmp( szName, "HBAO" ) ||
+		 !strcmp( szName, "HBAO_PLUS" ) ||
+		 !strcmp( szName, "HBAO+" ) )
+	{
+		return SSM_HBAO_PLUS;
+	}
+
 	return SSM_DEFAULT;
 }
 

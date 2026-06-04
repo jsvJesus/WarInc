@@ -8246,24 +8246,36 @@ void Editor_Level :: ProcessObjects()
 
 				if (imgui_lbr)
 				{
-					if(r3dGetTime() - _LastTimeBrush > 0.1)
+					if(r3dGetTime() - _LastTimeBrush > 0.1f)
 					{
-						EditObject->ObjFlags &= ~OBJFLAG_SkipCastRay;
-						_LastTimeBrush = r3dGetTime();
+						GameObject* PlacedObject = EditObject;
 
-						UndoEntityAddDel * pUndo = ( UndoEntityAddDel * ) g_pUndoHistory->CreateUndoItem( UA_ENT_ADDDEL );
-						assert( pUndo );
-						if ( pUndo )
+						if (PlacedObject)
 						{
-							EntAddDel_t st;
+							PlacedObject->ObjFlags &= ~OBJFLAG_SkipCastRay;
+							PlacedObject->OnPickerMoved();
 
-							st.bDelete = false;
-							st.pEnt = EditObject;
+							_LastTimeBrush = r3dGetTime();
 
-							pUndo->Create( st );
+							UndoEntityAddDel * pUndo = ( UndoEntityAddDel * ) g_pUndoHistory->CreateUndoItem( UA_ENT_ADDDEL );
+							assert( pUndo );
+
+							if ( pUndo )
+							{
+								EntAddDel_t st;
+
+								st.bDelete = false;
+								st.pEnt = PlacedObject;
+
+								pUndo->Create( st );
+							}
+
+							g_Manipulator3d.PickerResetPicked();
+							g_Manipulator3d.PickerAddToPicked(PlacedObject);
+
+							EditObject = NULL;
+							ObjectEditMode = 1;
 						}
-
-						EditObject = NULL;
 					}
 				}
 			}
@@ -12694,10 +12706,11 @@ void	Editor_Level :: ProcessPost_Lighting()
 
 		ssaoNames.push_back( "DEFAULT" );
 		ssaoNames.push_back( "HQ" );
+		ssaoNames.push_back( "HBAO+" );
 
 		static float fOffset = 0.f ;
 
-		const int SSAO_LIST_HEIGHT = 60;
+		const int SSAO_LIST_HEIGHT = 80;
 
 		if ( imgui_DrawList(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, SSAO_LIST_HEIGHT, ssaoNames, &fOffset, &newSSAOMethod ) )
 		{
@@ -12831,6 +12844,65 @@ void	Editor_Level :: ProcessPost_Lighting()
 			r_ssao_temporal_filter->SetInt( 0 ) ;
 		}
 #endif
+	}
+
+	// ── HBAO+ parameters (when HBAO+ method selected) ──────────
+	if( r_ssao_method->GetInt() == SSM_HBAO_PLUS )
+	{
+		SliderY += imgui_Static( SliderX, SliderY, "HBAO+ Parameters" );
+
+		float hbaoRadius = r_hbao_radius->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Radius", &hbaoRadius, 0.1f, 3.0f, "%-02.2f", 1 );
+		r_hbao_radius->SetFloat( hbaoRadius );
+
+		float hbaoBias = r_hbao_bias->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Bias", &hbaoBias, 0.0f, 0.5f, "%-02.3f", 1 );
+		r_hbao_bias->SetFloat( hbaoBias );
+
+		float hbaoPower = r_hbao_power->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Power", &hbaoPower, 1.0f, 8.0f, "%-02.2f", 1 );
+		r_hbao_power->SetFloat( hbaoPower );
+
+		float hbaoBlurSharp = r_hbao_blur_sharpness->GetFloat();
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Blur Sharpness", &hbaoBlurSharp, 0.0f, 32.0f, "%-02.1f", 1 );
+		r_hbao_blur_sharpness->SetFloat( hbaoBlurSharp );
+	}
+
+	// ── SSS (Subsurface Scattering) ────────────────────────────
+	{
+		SliderY += imgui_Static( SliderX, SliderY, "Subsurface Scattering" );
+
+		int sssOn = r_sss->GetBool() ? 1 : 0;
+		SliderY += imgui_Checkbox( SliderX, SliderY, "SSS Enable", &sssOn, 1 );
+		r_sss->SetBool( sssOn != 0 );
+
+		if( r_sss->GetBool() )
+		{
+			float sssDist = r_sss_distortion->GetFloat();
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Distortion", &sssDist, 0.0f, 1.0f, "%-02.2f", 1 );
+			r_sss_distortion->SetFloat( sssDist );
+
+			float sssPower = r_sss_power->GetFloat();
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Power", &sssPower, 0.0f, 5.0f, "%-02.2f", 1 );
+			r_sss_power->SetFloat( sssPower );
+
+			float sssScale = r_sss_scale->GetFloat();
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Scale", &sssScale, 0.0f, 5.0f, "%-02.2f", 1 );
+			r_sss_scale->SetFloat( sssScale );
+		}
+	}
+
+	// ── PBR / ACES toggles ─────────────────────────────────────
+	{
+		SliderY += imgui_Static( SliderX, SliderY, "Rendering Features" );
+
+		int pbrOn = r_pbr_enabled->GetBool() ? 1 : 0;
+		SliderY += imgui_Checkbox( SliderX, SliderY, "PBR (GGX/Smith/Fresnel)", &pbrOn, 1 );
+		r_pbr_enabled->SetBool( pbrOn != 0 );
+
+		int acesOn = r_aces_tonemap->GetBool() ? 1 : 0;
+		SliderY += imgui_Checkbox( SliderX, SliderY, "ACES Tonemapping", &acesOn, 1 );
+		r_aces_tonemap->SetBool( acesOn != 0 );
 	}
 
 }

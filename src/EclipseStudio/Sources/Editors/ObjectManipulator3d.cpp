@@ -2514,8 +2514,16 @@ bool ObjectManipulator3d::MouseMove ( POINT pt, int delta )
 
 	if ( ( m_ePickState == PICK_UNSELECTED || m_ePickState == PICK_SELECTED ) && !m_bLocked )
 	{
-		if ( ! m_bAttachMode && m_bLeftBtnDown && !( abs ( m_tSelectionStartPt.x - m_tSelectionEndPt.y ) < m_fSelectionRectTreshold && abs ( m_tSelectionStartPt.y - m_tSelectionEndPt.y ) < m_fSelectionRectTreshold ) )
-			m_bSelectionRectShow = true;
+		if ( !m_bAttachMode && m_bLeftBtnDown )
+		{
+			int dx = abs( m_tSelectionStartPt.x - m_tSelectionEndPt.x );
+			int dy = abs( m_tSelectionStartPt.y - m_tSelectionEndPt.y );
+
+			if ( dx >= m_fSelectionRectTreshold || dy >= m_fSelectionRectTreshold )
+			{
+				m_bSelectionRectShow = true;
+			}
+		}
 	}
 
 	switch ( m_ePickState )

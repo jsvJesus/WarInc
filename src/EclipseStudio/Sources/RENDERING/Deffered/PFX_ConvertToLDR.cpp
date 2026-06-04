@@ -46,6 +46,10 @@ PFX_ConvertToLDR::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* src )	/*O
 	void SetupFilmToneConstants( int reg );
 	SetupFilmToneConstants( 0 ) ;
 
+	// Feature switches: y=ACES tonemapping
+	float featureSwitches[4] = { 0, r_aces_tonemap->GetBool() ? 1.0f : 0.0f, 0, 0 };
+	r3dRenderer->SetPixelShaderConstantF( 49, featureSwitches, 1 );
+
 	r3dSetFiltering( R3D_POINT, PostFXChief::FREE_TEX_STAGE_START ) ;
 	r3dRenderer->SetTex( g_pPostFXChief->GetBuffer( ( r_last_exposure_source->GetInt() ? PostFXChief::RTT_SCENE_EXPOSURE0 : PostFXChief::RTT_SCENE_EXPOSURE1 ) )->Tex, PostFXChief::FREE_TEX_STAGE_START ) ;
 
