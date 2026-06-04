@@ -120,15 +120,16 @@ float4      g_FeatureSwitches  : register( c49 );  // x=PBR, y=ACES, z=SSS
 
 // END OF LIGHTPROBE CONSTANTS
 
-#include "Lib\LightHelper.hls"
-#include "Lib\SSS_Helper.hls"
-
 #ifndef PBR_ENABLED
-#define PBR_ENABLED 0
+#define PBR_ENABLED 1
 #endif
+
 #ifndef PBR_AMBIENT_SPECULAR
 #define PBR_AMBIENT_SPECULAR 0
 #endif
+
+#include "Lib\LightHelper.hls"
+#include "Lib\SSS_Helper.hls"
 
 #ifndef SSS_ON
 #define SSS_ON 0
@@ -278,8 +279,8 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 
 
 
-	if (g_FeatureSwitches.x > 0.5)
-
+if (g_FeatureSwitches.x > 0.5)
+{
 	// ── PBR Lighting (GGX + Smith + Fresnel) ─────────────────
 
 	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
@@ -302,7 +303,11 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 	pbr.attenuation = SM;
 	pbr.NdotL = NdotL;
 
-	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+	#ifdef R3D_DX11
+    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap_Texture, EnvCubeMap, 7.0);
+    #else
+    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+    #endif
 
 	// Ambient
 	float SkydomeAccess = saturate((dot(float3(0,1,0), N) + 1.0) / 2.0);
@@ -314,9 +319,9 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 	FinalColor.rgb = lerp(FinalColor.rgb, TexCol.rgb * 16.0, SelfIllum);
 	FinalColor.rgb = max(FinalColor.rgb, 0.0);
 	FinalColor.a = 1;
-
-	else // legacy Blinn-Phong
-
+}
+else // legacy Blinn-Phong
+{
 	light_Params  DLight;
 
 	DLight.vLight 		= -vLight;

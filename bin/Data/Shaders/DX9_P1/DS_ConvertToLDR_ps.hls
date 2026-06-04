@@ -1,45 +1,53 @@
 //
 
-sampler sScreen	: register (s0);
-sampler sExposure : register( s4 ) ;
+#ifdef R3D_DX11
+#include "Lib/DX11_Compat.hlsli"
 
-float4      vFilmToneABCD       : register(c0);
-float4      vFilmToneEF_EB_WL   : register(c1);
-float4      vFilmToneEXPADJ     : register(c2);
-float4      vExposure_InvGamma  : register(c3);
+Texture2D sScreen_Texture : register(t0);
+SamplerState sScreen : register(s0);
+
+Texture2D sExposure_Texture : register(t4);
+SamplerState sExposure : register(s4);
+#else
+sampler sScreen	: register (s0);
+sampler sExposure : register( s4 );
+#endif
+
+float4 vFilmToneABCD       : register(c0);
+float4 vFilmToneEF_EB_WL   : register(c1);
+float4 vFilmToneEXPADJ     : register(c2);
+float4 vExposure_InvGamma  : register(c3);
+
+float4 g_FeatureSwitches   : register(c49);
 
 #include "Lib\Tonemapping.hls"
 
-float4 main(float4 uv1_uv2 : TEXCOORD0 ) : COLOR
+float4 main(float4 uv1_uv2 : TEXCOORD0)
+#ifdef R3D_DX11
+	: SV_Target
+#else
+	: COLOR
+#endif
 {
+	float2 uv1 = uv1_uv2.xy;
 
-	float2 uv1 	= uv1_uv2.xy;
-	float2 uv2 	= uv1_uv2.zw;
+	float4 TexCol = tex2D(sScreen, uv1);
 
-	float4 TexCol = tex2D( sScreen, uv1 ) ;
+	float ExposureBias = vFilmToneEF_EB_WL.z;
+	float Col = tex2D(sExposure, float2(0.5f, 0.5f)).r;
 
-	float ExposureBias = vFilmToneEF_EB_WL.z ;
+	float exposure = pow(2.0f, ExposureBias + Col);
 
-	float Col = tex2D( sExposure, float2( 0.5, 0.5 ) ) ;
-
-	float exposure = pow(2, ExposureBias + Col);
-
-	// Runtime ACES/Filmic toggle via g_FeatureSwitches.y
-	float4 g_FeatureSwitches : register( c49 );
-
-	if (g_FeatureSwitches.y > 0.5)
+	if (g_FeatureSwitches.y > 0.5f)
+	{
 		TexCol.rgb = TM_ApplyACES(TexCol.rgb, exposure);
+	}
 	else
+	{
 		TexCol.rgb = TM_ApplyFilmToneNew(TexCol.rgb, exposure);
+	}
 
+	TexCol.rgb = pow(max(TexCol.rgb, 0.0f), vExposure_InvGamma.y);
 
-//	TexCol = PS_Reinhard02( TexCol, Lum ,ExposureBias) ;
-
-//	TexCol.rgb = Col;
-
-// Final before blitting to screen - btw should we do color correctiob here ????
-	TexCol.rgb = pow( TexCol.rgb, vExposure_InvGamma.y ) ;
-	
 	return TexCol;
 }
-

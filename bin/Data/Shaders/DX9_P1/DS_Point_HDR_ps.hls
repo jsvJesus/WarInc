@@ -1,5 +1,21 @@
 //
 
+#define SHADOW_MODE_NONE 0
+#define SHADOW_MODE_NORMAL 1
+#define SHADOW_MODE_NORMAL_PCF 2
+#define SHADOW_MODE_SSM 3
+#define SHADOW_MODE_PARABOLOID 4
+
+#ifndef SHADOW_MODE
+#define SHADOW_MODE SHADOW_MODE_NONE
+#endif
+
+#if SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
+#define PCF 1
+#else
+#define PCF 0
+#endif
+
 #ifdef R3D_DX11
 #include "Lib/DX11_Compat.hlsli"
 
@@ -11,7 +27,13 @@ Texture2D DepthTex_Texture : register(t2);
 SamplerState DepthTex : register(s2);
 Texture2D AuxData_Texture : register(t3);
 SamplerState AuxData : register(s3);
+
+#if SHADOW_MODE == SHADOW_MODE_PARABOLOID || SHADOW_MODE == SHADOW_MODE_SSM
+Texture2D ShadowMap_Texture : register(t4);
+#else
 TextureCube ShadowMap_Texture : register(t4);
+#endif
+
 SamplerState ShadowMap : register(s4);
 TextureCube ProjTex_Texture : register(t6);
 SamplerState ProjTex : register(s6);
@@ -36,39 +58,25 @@ sampler EnvCubeMap 	: register (s8);
 #define DIFFUSE_ONLY 0
 #endif
 
+#ifndef PBR_ENABLED
+#define PBR_ENABLED 1
+#endif
+
+#ifndef PBR_AMBIENT_SPECULAR
+#define PBR_AMBIENT_SPECULAR 0
+#endif
+
 #include "DS_Point_IO_ps.hls"
 #include "Lib\LightHelper.hls"
 #include "Lib\SSS_Helper.hls"
 #include "System\Paraboloid.hls"
-
-#ifndef PBR_ENABLED
-#define PBR_ENABLED 0
-#endif
-#ifndef PBR_AMBIENT_SPECULAR
-#define PBR_AMBIENT_SPECULAR 0
-#endif
 
 
 #ifndef SSS_ON
 #define SSS_ON 0
 #endif
 
-#define SHADOW_MODE_NONE 0
-#define SHADOW_MODE_NORMAL 1
-#define SHADOW_MODE_NORMAL_PCF 2
-#define SHADOW_MODE_SSM 3
-#define SHADOW_MODE_PARABOLOID 4
-
-#ifndef SHADOW_MODE
-#define SHADOW_MODE SHADOW_MODE_NONE
-#endif
-
-#if SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
-#define PCF 1
-#else
-#define PCF 0
-#endif
-
+#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
 float GetCubemapShadow( float3 V, float3 VN )
 {
  float ShadowK;
@@ -185,7 +193,9 @@ float GetCubemapShadow( float3 V, float3 VN )
 #endif
  return ShadowK;
 }
+#endif
 
+#if SHADOW_MODE == SHADOW_MODE_PARABOLOID
 float GetParaboloidShadow( float3 WPos )
 {
 	float3 LPos = mul( float4( WPos, 1 ), vLightViewMtx );
@@ -213,6 +223,7 @@ float GetParaboloidShadow( float3 WPos )
 	
 	return smDepth < abs( PPos.z ) - 0.0005 ? 0 : 1 ;
 }
+#endif
 
 float4 main(float4 PPos 	: TEXCOORD0, 
 			float3 WPos		: TEXCOORD1,
@@ -314,7 +325,8 @@ half Thickness = 1-auxData.b ;
 #endif
 
 
-	if (g_FeatureSwitches.x > 0.5)
+if (g_FeatureSwitches.x > 0.5)
+{
 
 	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
 	float metalness = MetalnessMap;
@@ -336,7 +348,11 @@ half Thickness = 1-auxData.b ;
 	pbr.attenuation = AttnDist;
 	pbr.NdotL = NdotL;
 
-	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+	#ifdef R3D_DX11
+    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap_Texture, EnvCubeMap, 7.0);
+    #else
+    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
+    #endif
 
 	float4 FinalColor;
 	FinalColor.rgb = (PBRColor.rgb + AddVal.rgb) * ShadowK;
@@ -345,7 +361,9 @@ half Thickness = 1-auxData.b ;
 
 	return FinalColor;
 
-	else // legacy Blinn-Phong
+} 
+else // legacy Blinn-Phong
+{
 
 	light_Params  DLight;
 
