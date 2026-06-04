@@ -94,33 +94,78 @@ typedef bool (*Win32MsgProc_fn)(UINT uMsg, WPARAM wParam, LPARAM lParam);
 //////////////////////////////////////////////////////////////////////////
 
 /// Get 3D world ray from 2D mouse click coords.
-r3dRay Picker_GetClickRay ( POINT ptCursor )
+r3dRay Picker_GetClickRay( POINT ptCursor )
 {
-	float fWndWidth = r3dRenderer->ScreenW;
-	float fWndHeight = r3dRenderer->ScreenH;
+	D3DVIEWPORT9 vp;
+	memset( &vp, 0, sizeof( vp ) );
 
-	//Application_c::Get().WindowSize( iWndWidth, iWndHeight );
+	vp.X = 0;
+	vp.Y = 0;
+	vp.Width = (DWORD)r3dRenderer->ScreenW;
+	vp.Height = (DWORD)r3dRenderer->ScreenH;
+	vp.MinZ = 0.0f;
+	vp.MaxZ = 1.0f;
 
-	D3DXMATRIX mView = r3dRenderer->ViewMatrix;
-	D3DXMATRIX mInvView = r3dRenderer->InvViewMatrix;
-	D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
+	D3DXMATRIX mWorld;
+	D3DXMatrixIdentity( &mWorld );
 
-	// Compute the vector of the pick ray in screen space
-	r3dVector v;
-	v.x =  ( ( ( 2.0f * ptCursor.x ) / fWndWidth  ) - 1.f ) / mProj._11;
-	v.y = -( ( ( 2.0f * ptCursor.y ) / fWndHeight ) - 1.f ) / mProj._22;
-	v.z =  1.0f;
+	D3DXVECTOR3 vScreenNear;
+	D3DXVECTOR3 vScreenFar;
+	D3DXVECTOR3 vNear;
+	D3DXVECTOR3 vFar;
 
-	// Transform the screen space pick ray into 3D space
-	r3dVector vPickRayDir;
-	r3dVector vPickRayOrig;
+	vScreenNear.x = (float)ptCursor.x;
+	vScreenNear.y = (float)ptCursor.y;
+	vScreenNear.z = 0.0f;
 
-	D3DXVec3TransformNormal ( vPickRayDir.d3dx(), v.d3dx(), &mInvView );
-	vPickRayOrig.x = mInvView._41;
-	vPickRayOrig.y = mInvView._42;
-	vPickRayOrig.z = mInvView._43;
+	vScreenFar.x = (float)ptCursor.x;
+	vScreenFar.y = (float)ptCursor.y;
+	vScreenFar.z = 1.0f;
 
-	return r3dRay ( vPickRayOrig, vPickRayDir );
+	D3DXVec3Unproject(
+		&vNear,
+		&vScreenNear,
+		&vp,
+		&r3dRenderer->ProjMatrix,
+		&r3dRenderer->ViewMatrix,
+		&mWorld
+	);
+
+	D3DXVec3Unproject(
+		&vFar,
+		&vScreenFar,
+		&vp,
+		&r3dRenderer->ProjMatrix,
+		&r3dRenderer->ViewMatrix,
+		&mWorld
+	);
+
+	r3dPoint3D rayOrig;
+	r3dPoint3D rayDir;
+
+	rayOrig.x = vNear.x;
+	rayOrig.y = vNear.y;
+	rayOrig.z = vNear.z;
+
+	rayDir.x = vFar.x - vNear.x;
+	rayDir.y = vFar.y - vNear.y;
+	rayDir.z = vFar.z - vNear.z;
+
+	if( rayDir.LengthSq() > 0.000001f )
+	{
+		rayDir.Normalize();
+	}
+	else
+	{
+		rayOrig.x = r3dRenderer->InvViewMatrix._41;
+		rayOrig.y = r3dRenderer->InvViewMatrix._42;
+		rayOrig.z = r3dRenderer->InvViewMatrix._43;
+
+		rayDir = gCam.vPointTo;
+		rayDir.Normalize();
+	}
+
+	return r3dRay( rayOrig, rayDir );
 }
 
 static r3dPoint2D ConvertPt ( POINT const & pt )

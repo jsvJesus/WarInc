@@ -54,6 +54,8 @@ private:
     bool m_initialized;
     int m_width;
     int m_height;
+    int m_tempWidth;
+    int m_tempHeight;
 
     GFSDK_SSAO_Context_D3D11* m_aoContext;
     GFSDK_SSAO_Parameters m_params;

@@ -142,7 +142,7 @@
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>RocketCoreWarInc.lib;FreeTypeWarInc.lib;PhysX3_x64.lib;PhysX3Common_x64.lib;PhysX3Cooking_x64.lib;PhysX3CharacterKinematic_x64.lib;PhysX3Extensions.lib;PxFoundation_x64.lib;PxPvdSDK_x64.lib;PsFastXml_x64.lib;PxTask_x64.lib;dbghelp.lib;winmm.lib;ws2_32.lib;strsafe.lib;d3dx9.lib;d3d9.lib;dinput8.lib;dxguid.lib;xinput.lib;iphlpapi.lib;fmodex64_vc.lib;fmod_event64.lib;fmod_event_net64.lib;libjpeg.lib;libcurl.lib;rpcrt4.lib;dnsapi.lib;crypt32.lib;Shlwapi.lib;odbc32.lib;odbccp32.lib;wbemuuid.lib;GFSDK_SSAO_D3D11.win64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(SolutionDir)\..\..\bin\Studio.exe</OutputFile>
-      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;..\External\HBAOPlus\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\..\External\RmlUi\Lib\x64\$(Configuration);C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x64;.\..\External\Scaleform\Lib\x64\Msvc10\Release;.\..\External\Win64;.\..\External\Scaleform\3rdParty\libpng-1.5.13\Lib\x64\Msvc10\Release;.\..\External\PhysX_3.4\Lib\vc12win64;.\..\External\PhysX_3.4\bin\vc12win64;.\..\External\PxShared\lib\vc12win64;C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x64;../External/dbghelp/lib;../External/fmod;../External\curl\curl_build_x64_vs2013\lib;../External/Scaleform/3rdParty/jpeg-8d/Lib/x64/Msvc10/Release;../External/VMProtect;../External/HBAOPlus/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -329,6 +329,7 @@
     <ClCompile Include="r3dPCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Sources\RENDERING\Deffered\HBAOPlusWrapper.cpp" />
     <ClCompile Include="Sources\Backend\HttpDownload.cpp" />
     <ClCompile Include="Sources\Backend\WarIncAuthClient.cpp" />
     <ClCompile Include="Sources\Backend\WarIncBackendConfig.cpp" />

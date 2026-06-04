@@ -18,6 +18,8 @@ HBAOPlusWrapper::HBAOPlusWrapper()
     : m_initialized(false)
     , m_width(0)
     , m_height(0)
+    , m_tempWidth(0)
+    , m_tempHeight(0)
     , m_aoContext(NULL)
     , m_depthSRV(NULL)
     , m_tempAOTexture(NULL)
@@ -34,25 +36,36 @@ HBAOPlusWrapper::~HBAOPlusWrapper()
 
 void HBAOPlusWrapper::SetDefaultParameters()
 {
-    memset(&m_params, 0, sizeof(m_params));
+    memset( &m_params, 0, sizeof( m_params ) );
 
     m_params.Radius = 1.5f;
     m_params.Bias = 0.1f;
-    m_params.PowerExponent = 2.0f;
     m_params.SmallScaleAO = 1.0f;
     m_params.LargeScaleAO = 1.0f;
-    m_params.ForegroundAO.Multiplier = 1.0f;
-    m_params.ForegroundAO.Enable = true;
-    m_params.BackgroundAO.Multiplier = 1.0f;
-    m_params.BackgroundAO.Enable = true;
+    m_params.PowerExponent = 2.0f;
+
+    m_params.ForegroundAO.Enable = false;
+    m_params.ForegroundAO.ForegroundViewDepth = 0.0f;
+
+    m_params.BackgroundAO.Enable = false;
+    m_params.BackgroundAO.BackgroundViewDepth = 0.0f;
+
+    m_params.StepCount = GFSDK_SSAO_STEP_COUNT_4;
+    m_params.DepthStorage = GFSDK_SSAO_FP16_VIEW_DEPTHS;
+    m_params.DepthClampMode = GFSDK_SSAO_CLAMP_TO_EDGE;
+
+    m_params.DepthThreshold.Enable = false;
+    m_params.DepthThreshold.MaxViewDepth = 0.0f;
+    m_params.DepthThreshold.Sharpness = 100.0f;
 
     m_params.Blur.Enable = true;
     m_params.Blur.Radius = GFSDK_SSAO_BLUR_RADIUS_4;
     m_params.Blur.Sharpness = 16.0f;
     m_params.Blur.SharpnessProfile.Enable = false;
+    m_params.Blur.SharpnessProfile.ForegroundSharpnessScale = 4.0f;
+    m_params.Blur.SharpnessProfile.ForegroundViewDepth = 0.0f;
+    m_params.Blur.SharpnessProfile.BackgroundViewDepth = 1.0f;
 
-    m_params.DepthStorage = GFSDK_SSAO_FP32_VIEW_DEPTHS;
-    m_params.DepthThreshold = 0.0f;
     m_params.EnableDualLayerAO = false;
 }
 
@@ -73,6 +86,8 @@ bool HBAOPlusWrapper::Init(ID3D11Device* device, ID3D11DeviceContext* ctx, ID3D1
 
     m_width = width;
     m_height = height;
+    m_tempWidth = width;
+    m_tempHeight = height;
 
     // 1. Create depth SRV from depth DSV
     if (!CreateDepthSRV(device, depthDSV))
@@ -293,26 +308,85 @@ bool HBAOPlusWrapper::RenderAOToScreenBuffer(
     if (!ctx)
         return false;
 
-    // Render HBAO+ to temp RTV
-    if (!RenderAO(ctx, projMatrix, metersToViewSpaceUnits, m_tempAORTV, m_width, m_height))
+    int outW = (int)outputBuffer->Width;
+    int outH = (int)outputBuffer->Height;
+
+    // Resize temp RTVs if output buffer dimensions changed (e.g. half-scale SSAO)
+    if (outW != m_tempWidth || outH != m_tempHeight)
+    {
+        // Release old temp RTVs
+        if (m_tempAORTV) { m_tempAORTV->Release(); m_tempAORTV = NULL; }
+        if (m_tempAOTexture) { m_tempAOTexture->Release(); m_tempAOTexture = NULL; }
+        if (m_readbackTexture) { m_readbackTexture->Release(); m_readbackTexture = NULL; }
+
+        ID3D11Device* device = g_r3dDX11.GetDevice();
+        if (!CreateTempRTV(device, outW, outH))
+        {
+            r3dOutToLog("HBAO+: failed to resize temp RTVs to %dx%d\n", outW, outH);
+            return false;
+        }
+        m_tempWidth = outW;
+        m_tempHeight = outH;
+    }
+
+    // 1. Render HBAO+ to temp D3D11 RTV (R8G8B8A8, R=ao, GBA=unused)
+    // Use temp RTV as output target
+    if (!RenderAO(ctx, projMatrix, metersToViewSpaceUnits, m_tempAORTV, outW, outH))
         return false;
 
-    // Copy from temp RTV to readback staging texture
+    // 2. Copy D3D11 RTV → staging texture (CPU readable)
     ctx->CopyResource(m_readbackTexture, m_tempAOTexture);
 
-    // CPU readback to get AO data
+    // 3. Map staging texture to read AO pixels
     D3D11_MAPPED_SUBRESOURCE mapped;
     HRESULT hr = ctx->Map(m_readbackTexture, 0, D3D11_MAP_READ, 0, &mapped);
     if (FAILED(hr))
     {
-        r3dOutToLog("HBAO+: Map for readback failed hr=0x%08X\n", (unsigned int)hr);
+        r3dOutToLog("HBAO+: D3D11 Map for readback failed hr=0x%08X\n", (unsigned int)hr);
         return false;
     }
 
-    // Upload AO to r3dScreenBuffer (R8G8B8A8 → writes R channel = AO)
-    // r3dScreenBuffer uses D3D9, so we need to write through the D3D9 device
-    // or use r3dTexture update mechanism
-    // For now, just log success
+    const unsigned char* srcRow = (const unsigned char*)mapped.pData;
+    unsigned int srcPitch = mapped.RowPitch;
+
+    // 4. Lock D3D9 surface of gBuffer_Aux to write R channel
+    IDirect3DSurface9* d3d9Surf = outputBuffer->GetTex2DSurface();
+    if (!d3d9Surf)
+    {
+        ctx->Unmap(m_readbackTexture, 0);
+        r3dOutToLog("HBAO+: GetTex2DSurface() returned NULL\n");
+        return false;
+    }
+
+    D3DLOCKED_RECT locked;
+    hr = d3d9Surf->LockRect(&locked, NULL, 0);
+    if (FAILED(hr))
+    {
+        ctx->Unmap(m_readbackTexture, 0);
+        r3dOutToLog("HBAO+: D3D9 LockRect failed hr=0x%08X\n", (unsigned int)hr);
+        return false;
+    }
+
+    // 5. Copy AO (R channel) from D3D11 staging → D3D9 surface
+    // Both are R8G8B8A8_UNORM: 4 bytes per pixel
+    unsigned char* dstRow = (unsigned char*)locked.pBits;
+    unsigned int dstPitch = locked.Pitch;
+
+    for (int y = 0; y < outH; y++)
+    {
+        const unsigned char* src = srcRow + y * srcPitch;
+        unsigned char* dst = dstRow + y * dstPitch;
+
+        for (int x = 0; x < outW; x++)
+        {
+            // Write only R channel (AO value), preserve GBA
+            dst[x * 4 + 0] = src[x * 4 + 0];  // R = AO
+            // G, B, A remain unchanged (motion blur + reflectivity)
+        }
+    }
+
+    // 6. Cleanup
+    d3d9Surf->UnlockRect();
     ctx->Unmap(m_readbackTexture, 0);
 
     return true;
