@@ -44,7 +44,7 @@ int LoadingScreen::Update()
 	r3dMouse::Show();
 	r3dStartFrame();
 
-	if( r3dRenderer->DeviceAvailable )
+	if(r3dRenderer->DeviceAvailable)
 	{
 		r3dRenderer->StartRender(1);
 		r3dRenderer->StartFrame();
@@ -53,37 +53,54 @@ int LoadingScreen::Update()
 
 		ClearFullScreen_Menu();
 
-		// for now just draw a static picture in background, later on will be a video
 		r3d_assert(m_pBackgroundTex);
 
-		float x, y, w, h;
-		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
-		D3DVIEWPORT9 oldVp, newVp;
+		float x = 0.0f;
+		float y = 0.0f;
+		float w = 0.0f;
+		float h = 0.0f;
 
+		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
+
+		D3DVIEWPORT9 oldVp;
 		r3dRenderer->DoGetViewport(&oldVp);
-		newVp = oldVp;
-		newVp.X = 0;
-		newVp.Y = 0;
-		newVp.Width = r3dRenderer->d3dpp.BackBufferWidth;
-		newVp.Height = r3dRenderer->d3dpp.BackBufferHeight;
-		r3dRenderer->SetViewport( (float)newVp.X, (float)newVp.Y, (float)newVp.Width, (float)newVp.Height );
-		DWORD oldScissor = 0;
-		r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissor);
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+		r3dRenderer->DoSetViewport(
+			0.0f,
+			0.0f,
+			(float)r3dRenderer->d3dpp.BackBufferWidth,
+			(float)r3dRenderer->d3dpp.BackBufferHeight
+		);
+
 		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
-		r3dRenderer->SetViewport( (float)oldVp.X, (float)oldVp.Y, (float)oldVp.Width, (float)oldVp.Height );
-		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
+
+		r3dRenderer->Flush();
+
+		r3dRenderer->DoSetViewport(
+			(float)oldVp.X,
+			(float)oldVp.Y,
+			(float)oldVp.Width,
+			(float)oldVp.Height
+		);
+
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 
 		if(!m_RenderingDisabled)
 		{
 			gfxMovie.UpdateAndDraw();
 		}
 
-		r3dRenderer->Flush();  
+		r3dRenderer->Flush();
+
+		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
+
 		r3dRenderer->EndFrame();
 	}
 
-	r3dRenderer->EndRender( true );
+	r3dRenderer->EndRender(true);
 	r3dEndFrame();
 
 	return 0;

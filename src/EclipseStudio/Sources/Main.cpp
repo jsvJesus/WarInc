@@ -36,7 +36,6 @@
 #include "Menus\m_Main.h"
 
 #include "UI\m_LoadingScreen.h"
-#include "UI\RmlUiBackend.h"
 #include "UI\m_Login.h"
 #include "UI\FrontendShared.h"
 #include "UI\m_EndRound.h"
@@ -262,8 +261,7 @@ void CloseRender()
 #if APEX_ENABLED
 	DestroyApexUserRenderer();
 #endif
-
-	RmlUiBackend::Shutdown();
+	
 	r3dScaleformGfxDestroy();
 
 	r3dCloseMaterials();
@@ -1528,7 +1526,7 @@ void game::MainLoop()
 		r3dOutToLog("Showing DX11 pre-init loading screen...\n");
 		StartLoadingScreen();
 		SetLoadingTexture("Data\\Menu\\ConnectScreen.dds");
-		UpdateLoadingScreenOnce();
+		//pdateLoadingScreenOnce();
 		preInitLoadingScreen = true;
 	}
 
