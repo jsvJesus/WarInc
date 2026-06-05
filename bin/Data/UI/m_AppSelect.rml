@@ -1,0 +1,36 @@
+<rml>
+<head>
+<title>WarInc Studio</title>
+<link type="text/rcss" href="Data/UI/Assets/css/warinc_common.rcss" />
+</head>
+
+<body>
+<div id="root" class="wi-root">
+    <div class="wi-backdrop"></div>
+    <div class="wi-top-strip"></div>
+    <div class="wi-bottom-strip"></div>
+    <div class="wi-left-strip"></div>
+    <div class="wi-right-strip"></div>
+
+    <div id="appselect_panel" class="wi-panel wi-panel-appselect">
+        <div id="appselect_panel_inner" class="wi-panel-inner wi-panel-appselect-inner">
+            <div class="wi-accent-line wi-appselect-line"></div>
+
+            <div id="appselect_title">WARINC STUDIO</div>
+            <div id="appselect_subtitle">TACTICAL DEVELOPMENT FRONTEND</div>
+
+            <div id="appselect_buttons">
+                <button id="play" class="appselect-button" onclick="dummy">PLAY GAME</button>
+                <button id="level" class="appselect-button" onclick="dummy">LEVEL EDITOR</button>
+                <button id="particle" class="appselect-button" onclick="dummy">PARTICLE EDITOR</button>
+                <button id="physics" class="appselect-button" onclick="dummy">PHYSICS EDITOR</button>
+                <button id="character" class="appselect-button" onclick="dummy">CHARACTER EDITOR</button>
+                <button id="exit" class="appselect-button exit" onclick="dummy">EXIT</button>
+            </div>
+
+            <div id="appselect_footer">DX11 GAME RENDERER / RMLUI EDITOR MENU</div>
+        </div>
+    </div>
+</div>
+</body>
+</rml>

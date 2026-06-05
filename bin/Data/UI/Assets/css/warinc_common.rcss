@@ -1,0 +1,722 @@
+body
+{
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    font-family: Arial;
+    color: #e8e2d2;
+    background-color: rgba(3, 5, 5, 210);
+}
+
+button
+{
+    font-family: Arial;
+}
+
+/* ========================================================= */
+/* COMMON WARINC SCREEN BASE */
+/* ========================================================= */
+
+.wi-root
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+.wi-backdrop
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(5, 8, 8, 180);
+}
+
+.wi-top-strip
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 34px;
+    background-color: rgba(183, 111, 34, 75);
+}
+
+.wi-bottom-strip
+{
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+    width: 100%;
+    height: 40px;
+    background-color: rgba(32, 41, 30, 150);
+}
+
+.wi-left-strip
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 8px;
+    height: 100%;
+    background-color: rgba(140, 77, 28, 210);
+}
+
+.wi-right-strip
+{
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 8px;
+    height: 100%;
+    background-color: rgba(53, 69, 47, 210);
+}
+
+.wi-panel
+{
+    position: absolute;
+    padding: 0px;
+    background-color: rgba(13, 16, 15, 238);
+    border: 1px #5b604e;
+}
+
+.wi-panel-inner
+{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    background-color: rgba(18, 21, 19, 238);
+    border: 1px #1f251f;
+}
+
+.wi-accent-line
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    height: 4px;
+    background-color: rgba(170, 92, 28, 255);
+}
+
+.wi-header
+{
+    position: absolute;
+    border-bottom: 1px #394032;
+}
+
+.wi-title
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    font-size: 34px;
+    color: #f3ead6;
+    text-align: left;
+}
+
+.wi-subtitle
+{
+    position: absolute;
+    left: 2px;
+    top: 44px;
+    font-size: 12px;
+    color: #9a947f;
+    text-align: left;
+}
+
+.wi-badge
+{
+    position: absolute;
+    right: 0px;
+    top: 4px;
+    padding-top: 13px;
+    text-align: center;
+    font-size: 13px;
+    color: #f4d08c;
+    background-color: rgba(32, 38, 31, 240);
+    border: 1px #705028;
+}
+
+.wi-footer
+{
+    position: absolute;
+    right: 26px;
+    bottom: 26px;
+    width: 260px;
+    height: 20px;
+    font-size: 12px;
+    color: #9b6b39;
+    text-align: right;
+}
+
+.wi-status
+{
+    position: absolute;
+    left: 26px;
+    bottom: 26px;
+    width: 500px;
+    height: 20px;
+    font-size: 12px;
+    color: #908a78;
+}
+
+/* ========================================================= */
+/* COMMON BUTTONS */
+/* ========================================================= */
+
+.wi-button
+{
+    display: block;
+    text-align: center;
+    font-size: 14px;
+    color: #d4cbb8;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.wi-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.wi-button:active
+{
+    color: #ffffff;
+    background-color: rgba(117, 65, 25, 255);
+    border-color: #d49a50;
+}
+
+.wi-button-primary
+{
+    display: block;
+    text-align: center;
+    font-size: 15px;
+    color: #ffffff;
+    background-color: rgba(132, 71, 25, 255);
+    border: 1px #e0a358;
+}
+
+.wi-button-primary:hover
+{
+    background-color: rgba(160, 87, 31, 255);
+    border-color: #ffd28b;
+}
+
+.wi-button-danger
+{
+    display: block;
+    text-align: center;
+    font-size: 14px;
+    color: #f3d6c9;
+    background-color: rgba(70, 28, 20, 245);
+    border: 1px #8d4935;
+}
+
+.wi-button-danger:hover
+{
+    color: #ffffff;
+    background-color: rgba(105, 40, 25, 255);
+    border-color: #dd805b;
+}
+
+/* ========================================================= */
+/* MAIN MENU */
+/* ========================================================= */
+
+.wi-panel-main
+{
+    width: 840px;
+    height: 560px;
+    left: 50%;
+    top: 50%;
+    margin-left: -420px;
+    margin-top: -280px;
+}
+
+.wi-panel-main-inner
+{
+    width: 818px;
+    height: 538px;
+}
+
+.wi-main-line
+{
+    width: 818px;
+}
+
+.wi-main-header
+{
+    left: 26px;
+    top: 22px;
+    width: 766px;
+    height: 82px;
+}
+
+.wi-main-title
+{
+    width: 530px;
+    height: 42px;
+}
+
+.wi-main-subtitle
+{
+    width: 530px;
+    height: 20px;
+}
+
+.wi-main-badge
+{
+    width: 196px;
+    height: 47px;
+}
+
+#tabs
+{
+    position: absolute;
+    left: 26px;
+    top: 120px;
+    width: 766px;
+    height: 46px;
+}
+
+.tab-button
+{
+    display: inline-block;
+    width: 238px;
+    height: 31px;
+    margin-right: 12px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #c8c1af;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.tab-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.tab-button.active
+{
+    color: #ffffff;
+    background-color: rgba(117, 65, 25, 255);
+    border-color: #d49a50;
+}
+
+#content
+{
+    position: absolute;
+    left: 26px;
+    top: 180px;
+    width: 766px;
+    height: 296px;
+    background-color: rgba(7, 10, 9, 155);
+    border: 1px #2e352c;
+}
+
+.map-list
+{
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    width: 560px;
+    height: 270px;
+    background-color: rgba(4, 6, 6, 205);
+    border: 1px #333b31;
+    overflow: auto;
+}
+
+.map-row
+{
+    display: block;
+    width: 526px;
+    height: 28px;
+    margin: 6px 7px 0px 7px;
+    padding: 9px 9px 0px 9px;
+    text-align: left;
+    font-size: 14px;
+    color: #d9d1bd;
+    background-color: rgba(27, 33, 29, 235);
+    border: 1px #414938;
+}
+
+.map-row:hover
+{
+    color: #fff4d8;
+    background-color: rgba(50, 58, 44, 245);
+    border-color: #aa6a2e;
+}
+
+.map-row.selected
+{
+    color: #ffffff;
+    background-color: rgba(116, 62, 23, 255);
+    border-color: #e0a358;
+}
+
+.empty
+{
+    margin: 16px;
+    font-size: 14px;
+    color: #88836f;
+}
+
+#side
+{
+    position: absolute;
+    left: 588px;
+    top: 12px;
+    width: 166px;
+    height: 270px;
+}
+
+.primary-button
+{
+    display: block;
+    width: 164px;
+    height: 36px;
+    margin-bottom: 10px;
+    padding-top: 11px;
+    text-align: center;
+    font-size: 15px;
+    color: #ffffff;
+    background-color: rgba(132, 71, 25, 255);
+    border: 1px #e0a358;
+}
+
+.primary-button:hover
+{
+    background-color: rgba(160, 87, 31, 255);
+    border-color: #ffd28b;
+}
+
+.side-button
+{
+    display: block;
+    width: 164px;
+    height: 31px;
+    margin-bottom: 10px;
+    padding-top: 9px;
+    text-align: center;
+    font-size: 14px;
+    color: #d4cbb8;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.side-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.create-block
+{
+    position: absolute;
+    left: 86px;
+    top: 18px;
+    width: 594px;
+    height: 250px;
+}
+
+.field-title
+{
+    font-size: 12px;
+    color: #a49d86;
+    margin-bottom: 5px;
+}
+
+.text-input
+{
+    display: block;
+    width: 570px;
+    height: 33px;
+    margin-bottom: 13px;
+    padding: 10px 10px 0px 10px;
+    text-align: left;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: rgba(4, 6, 6, 215);
+    border: 1px #3d4639;
+}
+
+.text-input.active
+{
+    border-color: #d49145;
+    background-color: rgba(18, 22, 18, 245);
+}
+
+.option-button
+{
+    display: block;
+    width: 590px;
+    height: 31px;
+    margin-bottom: 8px;
+    padding-top: 9px;
+    text-align: left;
+    font-size: 14px;
+    color: #d4cbb8;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.option-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.setting-row
+{
+    height: 39px;
+    margin-bottom: 5px;
+}
+
+.setting-label
+{
+    display: inline-block;
+    width: 220px;
+    height: 29px;
+    padding-top: 10px;
+    font-size: 14px;
+    color: #c8c0aa;
+}
+
+.setting-value
+{
+    display: inline-block;
+    width: 194px;
+    height: 29px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #ffffff;
+    background-color: rgba(4, 6, 6, 205);
+    border: 1px #3d4639;
+}
+
+.small-button
+{
+    display: inline-block;
+    width: 42px;
+    height: 29px;
+    margin-right: 6px;
+    margin-left: 6px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #ffffff;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.small-button:hover
+{
+    background-color: rgba(117, 65, 25, 255);
+    border-color: #d49a50;
+}
+
+/* ========================================================= */
+/* APP SELECT */
+/* ========================================================= */
+
+.wi-panel-appselect
+{
+    width: 500px;
+    height: 430px;
+    left: 50%;
+    top: 50%;
+    margin-left: -250px;
+    margin-top: -215px;
+}
+
+.wi-panel-appselect-inner
+{
+    width: 478px;
+    height: 408px;
+}
+
+.wi-appselect-line
+{
+    width: 478px;
+}
+
+#appselect_title
+{
+    position: absolute;
+    left: 26px;
+    top: 30px;
+    width: 426px;
+    height: 42px;
+    font-size: 34px;
+    color: #f3ead6;
+    text-align: center;
+}
+
+#appselect_subtitle
+{
+    position: absolute;
+    left: 26px;
+    top: 73px;
+    width: 426px;
+    height: 18px;
+    font-size: 12px;
+    color: #9a947f;
+    text-align: center;
+}
+
+#appselect_buttons
+{
+    position: absolute;
+    left: 42px;
+    top: 118px;
+    width: 394px;
+    height: 244px;
+}
+
+.appselect-button
+{
+    display: block;
+    width: 370px;
+    height: 31px;
+    margin-bottom: 9px;
+    padding: 10px 12px 0px 12px;
+    text-align: center;
+    font-size: 16px;
+    color: #e2dac7;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.appselect-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(116, 62, 23, 255);
+    border-color: #d49a50;
+}
+
+.appselect-button:active
+{
+    color: #ffffff;
+    background-color: rgba(160, 87, 31, 255);
+    border-color: #ffd28b;
+}
+
+.appselect-button.exit
+{
+    color: #e7c9be;
+    background-color: rgba(55, 26, 21, 245);
+    border: 1px #744035;
+}
+
+.appselect-button.exit:hover
+{
+    color: #ffffff;
+    background-color: rgba(96, 38, 27, 255);
+    border-color: #d17b5b;
+}
+
+#appselect_footer
+{
+    position: absolute;
+    left: 26px;
+    bottom: 24px;
+    width: 426px;
+    height: 18px;
+    font-size: 12px;
+    color: #9b6b39;
+    text-align: center;
+}
+
+/* ========================================================= */
+/* LOADING SCREEN */
+/* ========================================================= */
+
+.wi-loading-panel
+{
+    position: absolute;
+    left: 50%;
+    bottom: 96px;
+    width: 760px;
+    height: 126px;
+    margin-left: -380px;
+    background-color: rgba(13, 16, 15, 230);
+    border: 1px #5b604e;
+}
+
+.wi-loading-line
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 760px;
+    height: 4px;
+    background-color: rgba(170, 92, 28, 255);
+}
+
+#loading_title
+{
+    position: absolute;
+    left: 24px;
+    top: 22px;
+    width: 480px;
+    height: 28px;
+    font-size: 24px;
+    color: #f3ead6;
+}
+
+#loading_status
+{
+    position: absolute;
+    left: 24px;
+    top: 56px;
+    width: 500px;
+    height: 18px;
+    font-size: 13px;
+    color: #9a947f;
+}
+
+#loading_percent
+{
+    position: absolute;
+    right: 24px;
+    top: 30px;
+    width: 120px;
+    height: 34px;
+    font-size: 30px;
+    color: #f4d08c;
+    text-align: right;
+}
+
+#loading_bar
+{
+    position: absolute;
+    left: 24px;
+    bottom: 24px;
+    width: 712px;
+    height: 16px;
+    background-color: rgba(4, 6, 6, 225);
+    border: 1px #3d4639;
+}
+
+#loading_bar_fill
+{
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: 1px;
+    height: 14px;
+    background-color: rgba(170, 92, 28, 255);
+}
