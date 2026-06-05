@@ -275,7 +275,7 @@ namespace
 	static std::vector<std::string> g_EditorLevels;
 	static std::string g_MainStatus = "Select map or create new level.";
 
-	const char* g_MainTemplatePath = "Data\\UI\\Editor\\m_Main.rml";
+	const char* g_MainTemplatePath = "Data\\UI\\m_Main.rml";
 	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
 
 	class MainMenuEventListener : public Rocket::Core::EventListener

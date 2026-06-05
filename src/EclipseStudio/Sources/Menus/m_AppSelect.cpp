@@ -27,7 +27,7 @@ namespace
 		{ "exit",      "Exit",             Menu_AppSelect::bQuit,                 kbs6 },
 	};
 
-	const char* g_AppSelectTemplatePath = "Data\\UI\\Editor\\m_AppSelect.rml";
+	const char* g_AppSelectTemplatePath = "Data\\UI\\m_AppSelect.rml";
 	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
 
 	class AppSelectEventListener : public Rocket::Core::EventListener
