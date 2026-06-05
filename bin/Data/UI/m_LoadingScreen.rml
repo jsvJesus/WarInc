@@ -5,22 +5,29 @@
 </head>
 
 <body>
-<div id="root" class="wi-root">
-    <div class="wi-backdrop"></div>
-    <div class="wi-top-strip"></div>
-    <div class="wi-bottom-strip"></div>
-    <div class="wi-left-strip"></div>
-    <div class="wi-right-strip"></div>
+<div id="root">
+    <div id="backdrop"></div>
+    <div id="noise_a"></div>
+    <div id="noise_b"></div>
+    <div id="left_strip"></div>
+    <div id="right_strip"></div>
 
-    <div id="loading_panel" class="wi-loading-panel">
-        <div class="wi-loading-line"></div>
+    <div id="shade"></div>
 
-        <div id="loading_title">LOADING OPERATION</div>
-        <div id="loading_status">Preparing tactical environment...</div>
-        <div id="loading_percent">0%</div>
+    <div id="content" class="loading-content">
+        <div id="map_name">Loading</div>
+        <div id="map_desc"></div>
+        <div id="map_mode"></div>
 
-        <div id="loading_bar">
-            <div id="loading_bar_fill"></div>
+        <div id="tip_box">
+            <div id="tip_caption"></div>
+            <div id="tip_text"></div>
+        </div>
+
+        <div id="progress_text">0%</div>
+
+        <div id="progress_track">
+            <div id="progress_bar"></div>
         </div>
     </div>
 </div>

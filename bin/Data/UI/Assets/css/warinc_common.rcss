@@ -14,10 +14,10 @@ button
 }
 
 /* ========================================================= */
-/* COMMON WARINC SCREEN BASE */
+/* COMMON WARINC STYLE */
 /* ========================================================= */
 
-.wi-root
+#root
 {
     position: absolute;
     left: 0px;
@@ -26,7 +26,7 @@ button
     height: 100%;
 }
 
-.wi-backdrop
+#backdrop
 {
     position: absolute;
     left: 0px;
@@ -36,27 +36,27 @@ button
     background-color: rgba(5, 8, 8, 180);
 }
 
-.wi-top-strip
+#noise_a
 {
     position: absolute;
     left: 0px;
     top: 0px;
     width: 100%;
-    height: 34px;
-    background-color: rgba(183, 111, 34, 75);
+    height: 32px;
+    background-color: rgba(183, 111, 34, 85);
 }
 
-.wi-bottom-strip
+#noise_b
 {
     position: absolute;
     left: 0px;
     bottom: 0px;
     width: 100%;
-    height: 40px;
+    height: 38px;
     background-color: rgba(32, 41, 30, 150);
 }
 
-.wi-left-strip
+#left_strip
 {
     position: absolute;
     left: 0px;
@@ -66,7 +66,7 @@ button
     background-color: rgba(140, 77, 28, 210);
 }
 
-.wi-right-strip
+#right_strip
 {
     position: absolute;
     right: 0px;
@@ -76,204 +76,92 @@ button
     background-color: rgba(53, 69, 47, 210);
 }
 
-.wi-panel
-{
-    position: absolute;
-    padding: 0px;
-    background-color: rgba(13, 16, 15, 238);
-    border: 1px #5b604e;
-}
-
-.wi-panel-inner
-{
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    background-color: rgba(18, 21, 19, 238);
-    border: 1px #1f251f;
-}
-
-.wi-accent-line
-{
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    height: 4px;
-    background-color: rgba(170, 92, 28, 255);
-}
-
-.wi-header
-{
-    position: absolute;
-    border-bottom: 1px #394032;
-}
-
-.wi-title
-{
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    font-size: 34px;
-    color: #f3ead6;
-    text-align: left;
-}
-
-.wi-subtitle
-{
-    position: absolute;
-    left: 2px;
-    top: 44px;
-    font-size: 12px;
-    color: #9a947f;
-    text-align: left;
-}
-
-.wi-badge
-{
-    position: absolute;
-    right: 0px;
-    top: 4px;
-    padding-top: 13px;
-    text-align: center;
-    font-size: 13px;
-    color: #f4d08c;
-    background-color: rgba(32, 38, 31, 240);
-    border: 1px #705028;
-}
-
-.wi-footer
-{
-    position: absolute;
-    right: 26px;
-    bottom: 26px;
-    width: 260px;
-    height: 20px;
-    font-size: 12px;
-    color: #9b6b39;
-    text-align: right;
-}
-
-.wi-status
-{
-    position: absolute;
-    left: 26px;
-    bottom: 26px;
-    width: 500px;
-    height: 20px;
-    font-size: 12px;
-    color: #908a78;
-}
-
-/* ========================================================= */
-/* COMMON BUTTONS */
-/* ========================================================= */
-
-.wi-button
-{
-    display: block;
-    text-align: center;
-    font-size: 14px;
-    color: #d4cbb8;
-    background-color: rgba(33, 39, 34, 245);
-    border: 1px #454b3d;
-}
-
-.wi-button:hover
-{
-    color: #fff1d0;
-    background-color: rgba(55, 62, 49, 255);
-    border-color: #a0672d;
-}
-
-.wi-button:active
-{
-    color: #ffffff;
-    background-color: rgba(117, 65, 25, 255);
-    border-color: #d49a50;
-}
-
-.wi-button-primary
-{
-    display: block;
-    text-align: center;
-    font-size: 15px;
-    color: #ffffff;
-    background-color: rgba(132, 71, 25, 255);
-    border: 1px #e0a358;
-}
-
-.wi-button-primary:hover
-{
-    background-color: rgba(160, 87, 31, 255);
-    border-color: #ffd28b;
-}
-
-.wi-button-danger
-{
-    display: block;
-    text-align: center;
-    font-size: 14px;
-    color: #f3d6c9;
-    background-color: rgba(70, 28, 20, 245);
-    border: 1px #8d4935;
-}
-
-.wi-button-danger:hover
-{
-    color: #ffffff;
-    background-color: rgba(105, 40, 25, 255);
-    border-color: #dd805b;
-}
-
 /* ========================================================= */
 /* MAIN MENU */
 /* ========================================================= */
 
-.wi-panel-main
+#panel
 {
+    position: absolute;
     width: 840px;
     height: 560px;
     left: 50%;
     top: 50%;
     margin-left: -420px;
     margin-top: -280px;
+    padding: 0px;
+    background-color: rgba(13, 16, 15, 238);
+    border: 1px #5b604e;
 }
 
-.wi-panel-main-inner
+#panel_inner
 {
+    position: absolute;
+    left: 10px;
+    top: 10px;
     width: 818px;
     height: 538px;
+    background-color: rgba(18, 21, 19, 238);
+    border: 1px #1f251f;
 }
 
-.wi-main-line
+#top_line
 {
+    position: absolute;
+    left: 0px;
+    top: 0px;
     width: 818px;
+    height: 4px;
+    background-color: rgba(170, 92, 28, 255);
 }
 
-.wi-main-header
+#header
 {
+    position: absolute;
     left: 26px;
     top: 22px;
     width: 766px;
     height: 82px;
+    border-bottom: 1px #394032;
 }
 
-.wi-main-title
+#title
 {
+    position: absolute;
+    left: 0px;
+    top: 0px;
     width: 530px;
     height: 42px;
+    font-size: 34px;
+    color: #f3ead6;
+    text-align: left;
 }
 
-.wi-main-subtitle
+#subtitle
 {
+    position: absolute;
+    left: 2px;
+    top: 44px;
     width: 530px;
     height: 20px;
+    font-size: 12px;
+    color: #9a947f;
+    text-align: left;
 }
 
-.wi-main-badge
+#header_badge
 {
+    position: absolute;
+    right: 0px;
+    top: 4px;
     width: 196px;
     height: 47px;
+    padding-top: 13px;
+    text-align: center;
+    font-size: 13px;
+    color: #f4d08c;
+    background-color: rgba(32, 38, 31, 240);
+    border: 1px #705028;
 }
 
 #tabs
@@ -528,113 +416,106 @@ button
     border-color: #d49a50;
 }
 
+#status
+{
+    position: absolute;
+    left: 26px;
+    bottom: 26px;
+    width: 500px;
+    height: 20px;
+    font-size: 12px;
+    color: #908a78;
+}
+
+#footer
+{
+    position: absolute;
+    right: 26px;
+    bottom: 26px;
+    width: 240px;
+    height: 20px;
+    font-size: 12px;
+    color: #9b6b39;
+    text-align: right;
+}
+
 /* ========================================================= */
 /* APP SELECT */
 /* ========================================================= */
 
-.wi-panel-appselect
+.app-panel
 {
-    width: 500px;
-    height: 430px;
+    position: absolute;
+    width: 430px;
+    height: 366px;
     left: 50%;
     top: 50%;
-    margin-left: -250px;
-    margin-top: -215px;
+    margin-left: -215px;
+    margin-top: -183px;
+    padding: 26px 32px;
+    background-color: rgba(12, 15, 14, 230);
+    border: 1px #5b604e;
 }
 
-.wi-panel-appselect-inner
+.app-title
 {
-    width: 478px;
-    height: 408px;
-}
-
-.wi-appselect-line
-{
-    width: 478px;
-}
-
-#appselect_title
-{
-    position: absolute;
-    left: 26px;
-    top: 30px;
-    width: 426px;
-    height: 42px;
     font-size: 34px;
     color: #f3ead6;
+    margin-bottom: 4px;
     text-align: center;
 }
 
-#appselect_subtitle
+.app-subtitle
 {
-    position: absolute;
-    left: 26px;
-    top: 73px;
-    width: 426px;
-    height: 18px;
     font-size: 12px;
     color: #9a947f;
+    margin-bottom: 18px;
     text-align: center;
 }
 
-#appselect_buttons
-{
-    position: absolute;
-    left: 42px;
-    top: 118px;
-    width: 394px;
-    height: 244px;
-}
-
-.appselect-button
+.app-button
 {
     display: block;
-    width: 370px;
-    height: 31px;
-    margin-bottom: 9px;
-    padding: 10px 12px 0px 12px;
+    height: 34px;
     text-align: center;
-    font-size: 16px;
+    margin-bottom: 9px;
+    padding: 8px 14px 0px 14px;
+    font-size: 17px;
     color: #e2dac7;
     background-color: rgba(33, 39, 34, 245);
     border: 1px #454b3d;
 }
 
-.appselect-button:hover
+.app-button:hover
 {
     color: #fff1d0;
     background-color: rgba(116, 62, 23, 255);
     border-color: #d49a50;
 }
 
-.appselect-button:active
+.app-button:active
 {
     color: #ffffff;
     background-color: rgba(160, 87, 31, 255);
-    border-color: #ffd28b;
 }
 
-.appselect-button.exit
+.app-exit
 {
     color: #e7c9be;
     background-color: rgba(55, 26, 21, 245);
     border: 1px #744035;
 }
 
-.appselect-button.exit:hover
+.app-exit:hover
 {
     color: #ffffff;
     background-color: rgba(96, 38, 27, 255);
     border-color: #d17b5b;
 }
 
-#appselect_footer
+.app-footer
 {
-    position: absolute;
-    left: 26px;
-    bottom: 24px;
-    width: 426px;
-    height: 18px;
+    margin-top: 12px;
     font-size: 12px;
     color: #9b6b39;
     text-align: center;
@@ -644,79 +525,113 @@ button
 /* LOADING SCREEN */
 /* ========================================================= */
 
-.wi-loading-panel
+#shade
 {
     position: absolute;
-    left: 50%;
-    bottom: 96px;
-    width: 760px;
-    height: 126px;
-    margin-left: -380px;
-    background-color: rgba(13, 16, 15, 230);
-    border: 1px #5b604e;
+    left: 0px;
+    bottom: 0px;
+    width: 100%;
+    height: 210px;
+    background-color: rgba(5, 7, 7, 190);
 }
 
-.wi-loading-line
+.loading-content
+{
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 42px;
+    height: 144px;
+}
+
+#map_name
 {
     position: absolute;
     left: 0px;
     top: 0px;
-    width: 760px;
-    height: 4px;
-    background-color: rgba(170, 92, 28, 255);
-}
-
-#loading_title
-{
-    position: absolute;
-    left: 24px;
-    top: 22px;
-    width: 480px;
-    height: 28px;
-    font-size: 24px;
+    width: 720px;
+    height: 42px;
+    font-size: 34px;
     color: #f3ead6;
 }
 
-#loading_status
+#map_desc
 {
     position: absolute;
-    left: 24px;
-    top: 56px;
-    width: 500px;
-    height: 18px;
-    font-size: 13px;
-    color: #9a947f;
+    left: 0px;
+    top: 48px;
+    width: 850px;
+    height: 32px;
+    font-size: 15px;
+    color: #c8c0aa;
 }
 
-#loading_percent
+#map_mode
 {
     position: absolute;
-    right: 24px;
-    top: 30px;
-    width: 120px;
-    height: 34px;
-    font-size: 30px;
-    color: #f4d08c;
+    left: 0px;
+    top: 84px;
+    width: 420px;
+    height: 24px;
+    font-size: 14px;
+    color: #9b6b39;
+}
+
+#tip_box
+{
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 580px;
+    height: 96px;
+}
+
+#tip_caption
+{
+    width: 100%;
+    height: 24px;
+    font-size: 13px;
+    color: #9b6b39;
     text-align: right;
 }
 
-#loading_bar
+#tip_text
 {
-    position: absolute;
-    left: 24px;
-    bottom: 24px;
-    width: 712px;
-    height: 16px;
-    background-color: rgba(4, 6, 6, 225);
-    border: 1px #3d4639;
+    width: 100%;
+    height: 68px;
+    font-size: 15px;
+    color: #e8e2d2;
+    text-align: right;
 }
 
-#loading_bar_fill
+#progress_text
 {
     position: absolute;
-    left: 1px;
-    top: 1px;
-    width: 1px;
+    left: 0px;
+    bottom: 25px;
+    width: 120px;
+    height: 20px;
+    font-size: 13px;
+    color: #f4d08c;
+}
+
+#progress_track
+{
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    height: 14px;
+    background-color: rgba(18, 23, 20, 230);
+    border: 1px #5b604e;
+}
+
+#progress_bar
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 0%;
     height: 14px;
     background-color: rgba(170, 92, 28, 255);
 }

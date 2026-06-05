@@ -5,21 +5,21 @@
 </head>
 
 <body>
-<div id="root" class="wi-root">
-    <div class="wi-backdrop"></div>
-    <div class="wi-top-strip"></div>
-    <div class="wi-bottom-strip"></div>
-    <div class="wi-left-strip"></div>
-    <div class="wi-right-strip"></div>
+<div id="root">
+    <div id="backdrop"></div>
+    <div id="noise_a"></div>
+    <div id="noise_b"></div>
+    <div id="left_strip"></div>
+    <div id="right_strip"></div>
 
-    <div id="panel" class="wi-panel wi-panel-main">
-        <div id="panel_inner" class="wi-panel-inner wi-panel-main-inner">
-            <div class="wi-accent-line wi-main-line"></div>
+    <div id="panel">
+        <div id="panel_inner">
+            <div id="top_line"></div>
 
-            <div id="header" class="wi-header wi-main-header">
-                <div id="title" class="wi-title wi-main-title">WARINC COMMAND</div>
-                <div id="subtitle" class="wi-subtitle wi-main-subtitle">LEVEL CONTROL / TACTICAL EDITOR INTERFACE</div>
-                <div id="header_badge" class="wi-badge wi-main-badge">DX11 NATIVE<br />RMLUI FRONTEND</div>
+            <div id="header">
+                <div id="title">WARINC COMMAND</div>
+                <div id="subtitle">LEVEL CONTROL / TACTICAL EDITOR INTERFACE</div>
+                <div id="header_badge">DX11 NATIVE<br />RMLUI FRONTEND</div>
             </div>
 
             <div id="tabs">
@@ -29,8 +29,8 @@
             </div>
 
             <div id="content">{{content}}</div>
-            <div id="status" class="wi-status">{{status}}</div>
-            <div id="footer" class="wi-footer">WARINC / DX11 / RMLUI</div>
+            <div id="status">{{status}}</div>
+            <div id="footer">WARINC / DX11 / RMLUI</div>
         </div>
     </div>
 </div>
