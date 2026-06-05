@@ -218,6 +218,9 @@ int Menu_Main::DoModal()
 
 		ClearFullScreen_Menu();
 
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 		r3dSetFiltering(R3D_POINT);
 

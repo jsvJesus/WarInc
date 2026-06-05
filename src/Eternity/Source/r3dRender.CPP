@@ -4098,13 +4098,6 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 
 		if(s_dx11NativeEndRenderPresentCalls <= 120 || (s_dx11NativeEndRenderPresentCalls % 60) == 0)
 		{
-			r3dOutToLog(
-				"DX11 DBG EndRender native present path: frame=%d present=%d dx11Active=%d deviceAvailable=%d\n",
-				gRenderFrameCounter,
-				present ? 1 : 0,
-				dx11Active ? 1 : 0,
-				DeviceAvailable ? 1 : 0
-			);
 		}
 #endif
 

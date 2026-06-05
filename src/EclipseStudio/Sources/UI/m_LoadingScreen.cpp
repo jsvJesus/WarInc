@@ -64,6 +64,8 @@ int LoadingScreen::Update()
 			r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
 		}
 
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		
 		if(!m_RenderingDisabled)
 		{
 			gfxMovie.UpdateAndDraw();
