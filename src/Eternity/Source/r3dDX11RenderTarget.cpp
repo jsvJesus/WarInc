@@ -391,6 +391,22 @@ void r3dDX11RenderTargetBridge::Apply()
 	}
 }
 
+static DXGI_FORMAT r3dDX11RT_GetCompatibleRenderTargetFormat(DXGI_FORMAT format)
+{
+	switch(format)
+	{
+	case DXGI_FORMAT_B5G6R5_UNORM:
+	case DXGI_FORMAT_B5G5R5A1_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+	case DXGI_FORMAT_B8G8R8X8_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+	default:
+		return format;
+	}
+}
+
 bool r3dDX11RenderTargetBridge::CreateRenderTargetMirror(
 	r3dD3DSurfaceTunnel* surface,
 	unsigned int width,
@@ -409,9 +425,11 @@ bool r3dDX11RenderTargetBridge::CreateRenderTargetMirror(
 		return true;
 	}
 
-	DXGI_FORMAT format = (DXGI_FORMAT)r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
-	if(format == DXGI_FORMAT_UNKNOWN)
+	DXGI_FORMAT requestedFormat = (DXGI_FORMAT)r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
+	if(requestedFormat == DXGI_FORMAT_UNKNOWN)
 		return false;
+
+	DXGI_FORMAT format = r3dDX11RT_GetCompatibleRenderTargetFormat(requestedFormat);
 
 	ID3D11Device* device = g_r3dDX11.GetDevice();
 	if(!device)
@@ -448,6 +466,19 @@ bool r3dDX11RenderTargetBridge::CreateRenderTargetMirror(
 	}
 
 	surface->SetDX11RenderTargetMirror(texture, rtv, width, height);
+
+	if(requestedFormat != format)
+	{
+		r3dOutToLog(
+			"DX11 RT: RenderTargetMirror format remapped d3d=%d requested=%d actual=%d size=%ux%u\n",
+			d3dFormat,
+			(int)requestedFormat,
+			(int)format,
+			width,
+			height
+		);
+	}
+
 	return true;
 }
 

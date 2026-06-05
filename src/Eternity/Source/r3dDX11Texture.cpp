@@ -602,6 +602,22 @@ bool r3dDX11Texture::Create2D(int width, int height, R3D_DX11_FORMAT format, con
 	return true;
 }
 
+static DXGI_FORMAT r3dDX11Texture_GetCompatibleRenderTargetFormat(DXGI_FORMAT format)
+{
+	switch(format)
+	{
+	case DXGI_FORMAT_B5G6R5_UNORM:
+	case DXGI_FORMAT_B5G5R5A1_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+	case DXGI_FORMAT_B8G8R8X8_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+	default:
+		return format;
+	}
+}
+
 bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT format, int mipCount)
 {
 	Destroy();
@@ -622,6 +638,9 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	if(!device)
 		return false;
 
+	DXGI_FORMAT requestedFormat = (DXGI_FORMAT)format;
+	DXGI_FORMAT actualFormat = r3dDX11Texture_GetCompatibleRenderTargetFormat(requestedFormat);
+
 	D3D11_TEXTURE2D_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 
@@ -629,18 +648,30 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	desc.Height = height;
 	desc.MipLevels = mipCount;
 	desc.ArraySize = 1;
-	desc.Format = (DXGI_FORMAT)format;
+	desc.Format = actualFormat;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
 
 	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
 	if(FAILED(hr))
 	{
 		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D RenderTarget", hr))
-			r3dDX11Texture_LogHR("CreateTexture2D RenderTarget", hr);
-		
+		{
+			r3dOutToLog(
+				"DX11Texture: CreateTexture2D RenderTarget failed requested=%d actual=%d size=%dx%d mips=%d HRESULT=0x%08X\n",
+				(int)requestedFormat,
+				(int)actualFormat,
+				width,
+				height,
+				mipCount,
+				(unsigned int)hr
+			);
+		}
+
 		Destroy();
 		return false;
 	}
@@ -656,7 +687,13 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	hr = device->CreateShaderResourceView(Texture, &srvDesc, &SRV);
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateShaderResourceView RenderTarget", hr);
+		r3dOutToLog(
+			"DX11Texture: CreateShaderResourceView RenderTarget failed requested=%d actual=%d HRESULT=0x%08X\n",
+			(int)requestedFormat,
+			(int)actualFormat,
+			(unsigned int)hr
+		);
+
 		Destroy();
 		return false;
 	}
@@ -678,8 +715,16 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 		if(FAILED(hr))
 		{
 			if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateRenderTargetView", hr))
-				r3dDX11Texture_LogHR("CreateRenderTargetView Texture2D", hr);
-			
+			{
+				r3dOutToLog(
+					"DX11Texture: CreateRenderTargetView Texture2D failed requested=%d actual=%d mip=%d HRESULT=0x%08X\n",
+					(int)requestedFormat,
+					(int)actualFormat,
+					mip,
+					(unsigned int)hr
+				);
+			}
+
 			Destroy();
 			return false;
 		}
@@ -688,8 +733,20 @@ bool r3dDX11Texture::CreateRenderTarget2D(int width, int height, R3D_DX11_FORMAT
 	Width = width;
 	Height = height;
 	MipCount = mipCount;
-	Format = format;
+	Format = (R3D_DX11_FORMAT)actualFormat;
 	IsCube = false;
+
+	if(requestedFormat != actualFormat)
+	{
+		r3dOutToLog(
+			"DX11Texture: RenderTarget format remapped requested=%d actual=%d size=%dx%d mips=%d\n",
+			(int)requestedFormat,
+			(int)actualFormat,
+			width,
+			height,
+			mipCount
+		);
+	}
 
 	return true;
 }
@@ -714,6 +771,9 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	if(!device)
 		return false;
 
+	DXGI_FORMAT requestedFormat = (DXGI_FORMAT)format;
+	DXGI_FORMAT actualFormat = r3dDX11Texture_GetCompatibleRenderTargetFormat(requestedFormat);
+
 	D3D11_TEXTURE2D_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 
@@ -721,19 +781,29 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	desc.Height = edgeLength;
 	desc.MipLevels = mipCount;
 	desc.ArraySize = 6;
-	desc.Format = (DXGI_FORMAT)format;
+	desc.Format = actualFormat;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
 	HRESULT hr = device->CreateTexture2D(&desc, NULL, &Texture);
 	if(FAILED(hr))
 	{
 		if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateTexture2D RenderTargetCube", hr))
-			r3dDX11Texture_LogHR("CreateTexture2D RenderTargetCube", hr);
-		
+		{
+			r3dOutToLog(
+				"DX11Texture: CreateTexture2D RenderTargetCube failed requested=%d actual=%d size=%d mips=%d HRESULT=0x%08X\n",
+				(int)requestedFormat,
+				(int)actualFormat,
+				edgeLength,
+				mipCount,
+				(unsigned int)hr
+			);
+		}
+
 		Destroy();
 		return false;
 	}
@@ -749,7 +819,13 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	hr = device->CreateShaderResourceView(Texture, &srvDesc, &SRV);
 	if(FAILED(hr))
 	{
-		r3dDX11Texture_LogHR("CreateShaderResourceView RenderTargetCube", hr);
+		r3dOutToLog(
+			"DX11Texture: CreateShaderResourceView RenderTargetCube failed requested=%d actual=%d HRESULT=0x%08X\n",
+			(int)requestedFormat,
+			(int)actualFormat,
+			(unsigned int)hr
+		);
+
 		Destroy();
 		return false;
 	}
@@ -772,10 +848,22 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 			rtvDesc.Texture2DArray.ArraySize = 1;
 
 			const int index = face * mipCount + mip;
+
 			hr = device->CreateRenderTargetView(Texture, &rtvDesc, &RTVs[index]);
 			if(FAILED(hr))
 			{
-				r3dDX11Texture_LogHR("CreateRenderTargetView TextureCube", hr);
+				if(!g_r3dDX11.CheckDeviceRemoved("DX11Texture::CreateRenderTargetView Cube", hr))
+				{
+					r3dOutToLog(
+						"DX11Texture: CreateRenderTargetView Cube failed requested=%d actual=%d face=%d mip=%d HRESULT=0x%08X\n",
+						(int)requestedFormat,
+						(int)actualFormat,
+						face,
+						mip,
+						(unsigned int)hr
+					);
+				}
+
 				Destroy();
 				return false;
 			}
@@ -785,8 +873,19 @@ bool r3dDX11Texture::CreateRenderTargetCube(int edgeLength, R3D_DX11_FORMAT form
 	Width = edgeLength;
 	Height = edgeLength;
 	MipCount = mipCount;
-	Format = format;
+	Format = (R3D_DX11_FORMAT)actualFormat;
 	IsCube = true;
+
+	if(requestedFormat != actualFormat)
+	{
+		r3dOutToLog(
+			"DX11Texture: RenderTargetCube format remapped requested=%d actual=%d size=%d mips=%d\n",
+			(int)requestedFormat,
+			(int)actualFormat,
+			edgeLength,
+			mipCount
+		);
+	}
 
 	return true;
 }
