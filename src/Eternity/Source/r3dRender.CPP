@@ -5224,20 +5224,50 @@ struct CreateTextureParamsAutoDownScale
 	D3DFORMAT Format ;
 	D3DPOOL Pool ;
 	r3dD3DTextureTunnel* TextureTunnel ;
-#ifndef WO_SERVER
-	r3dDX11Texture** OutDX11RT ;
-#endif
 };
 
 static void DoCreateTextureADS( void* params )
 {
 	CreateTextureParamsAutoDownScale* pms = (CreateTextureParamsAutoDownScale*) params ;
 
-	IDirect3DTexture9* tex ;
-
 	int W = *pms->Width ;
 	int H = *pms->Height ;
 	int L = *pms->Levels ;
+
+#ifndef WO_SERVER
+	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
+	{
+		for( ; ; )
+		{
+			if(pms->TextureTunnel->CreateDX11RenderTarget2D((UINT)W, (UINT)H, (UINT)L, pms->Format))
+				break;
+
+			W /= 2 ;
+			H /= 2 ;
+
+			if( L > 1 )
+				L -- ;
+
+			if( !W || !H )
+			{
+				r3dError(
+					"DX11 native CreateTextureADS RenderTarget failed: reached zero texture dimensions. Original size was: %dx%d fmt=%d\n",
+					*pms->Width,
+					*pms->Height,
+					(int)pms->Format
+				);
+			}
+		}
+
+		*pms->Width		= W ;
+		*pms->Height	= H ;
+		*pms->Levels	= L ;
+
+		return;
+	}
+#endif
+
+	IDirect3DTexture9* tex ;
 
 	for( ; ; )
 	{
@@ -5271,35 +5301,9 @@ static void DoCreateTextureADS( void* params )
 	pms->TextureTunnel->Set( tex ) ;
 }
 
-
-/*static*/
 void
 r3dDeviceTunnel::CreateTextureAutoDownScale( UINT* Width, UINT* Height, UINT* Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, r3dD3DTextureTunnel* TextureTunnel  )
 {
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present() && (Usage & D3DUSAGE_RENDERTARGET))
-	{
-		TextureTunnel->Set( NULL );
-
-		R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)Format);
-		if(dx11Format != 0)
-		{
-			r3dDX11Texture* rt = new r3dDX11Texture();
-			if(rt->CreateRenderTarget2D((int)*Width, (int)*Height, dx11Format, (int)(*Levels > 0 ? *Levels : 1)))
-			{
-				TextureTunnel->SetDX11RT(rt);
-				r3dOutToLog("DX11: native CreateTextureADS render target %dx%d fmt=%d mips=%d\n",
-					(int)*Width, (int)*Height, (int)Format, (int)(*Levels > 0 ? *Levels : 1));
-				return;
-			}
-			delete rt;
-		}
-		r3dError("DoCreateTextureADS: DX11 native render target creation failed %dx%d fmt=%d\n",
-			(int)*Width, (int)*Height, (int)Format);
-		return;
-	}
-#endif
-
 	CreateTextureParamsAutoDownScale parms ;
 
 	parms.Width			= Width ;
@@ -5308,13 +5312,9 @@ r3dDeviceTunnel::CreateTextureAutoDownScale( UINT* Width, UINT* Height, UINT* Le
 	parms.Usage			= Usage ;
 	parms.Format		= Format ;
 	parms.Pool			= Pool ;
-	parms.TextureTunnel  = TextureTunnel ;
-#ifndef WO_SERVER
-	parms.OutDX11RT		= NULL ;
-#endif
+	parms.TextureTunnel  = TextureTunnel ;	
 
 	ProcessCustomDeviceQueueItem( DoCreateTextureADS, &parms ) ;
-	
 }
 
 //------------------------------------------------------------------------
@@ -5328,9 +5328,6 @@ struct CreateTextureParams
 	D3DFORMAT Format ;
 	D3DPOOL Pool ;
 	r3dD3DTextureTunnel* TextureTunnel ;
-#ifndef WO_SERVER
-	r3dDX11Texture** OutDX11RT ;
-#endif
 };
 
 const char* PoolToString( D3DPOOL pool )
@@ -5356,36 +5353,20 @@ static void DoCreateTexture( void* params )
 	CreateTextureParams* pms = (CreateTextureParams*) params ;
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present() && (pms->Usage & D3DUSAGE_RENDERTARGET))
+	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
 	{
-		pms->TextureTunnel->Set( NULL );
-
-		R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)pms->Format);
-		if(dx11Format == 0)
+		if(!pms->TextureTunnel->CreateDX11RenderTarget2D(pms->Width, pms->Height, pms->Levels, pms->Format))
 		{
-			r3dError("DoCreateTexture: DX11 native render target - unsupported format %d\n", (int)pms->Format);
+			r3dError(
+				"DX11 native CreateTexture RenderTarget failed: %ux%u mips=%u fmt=%d usage=0x%X pool=%s\n",
+				(unsigned int)pms->Width,
+				(unsigned int)pms->Height,
+				(unsigned int)pms->Levels,
+				(int)pms->Format,
+				(unsigned int)pms->Usage,
+				PoolToString(pms->Pool)
+			);
 		}
-
-		r3dDX11Texture* rt = new r3dDX11Texture();
-		if(!rt->CreateRenderTarget2D(
-			(int)pms->Width,
-			(int)pms->Height,
-			dx11Format,
-			(int)(pms->Levels > 0 ? pms->Levels : 1)
-		))
-		{
-			delete rt;
-			r3dError("DoCreateTexture: DX11 native CreateRenderTarget2D failed %dx%d fmt=%d\n",
-				(int)pms->Width, (int)pms->Height, (int)pms->Format);
-		}
-
-		pms->TextureTunnel->SetDX11RT(rt);
-
-		if(pms->OutDX11RT)
-			*pms->OutDX11RT = rt;
-
-		r3dOutToLog("DX11: native CreateTexture render target %dx%d fmt=%d mips=%d\n",
-			(int)pms->Width, (int)pms->Height, (int)pms->Format, (int)(pms->Levels > 0 ? pms->Levels : 1));
 
 		return;
 	}
@@ -5435,9 +5416,6 @@ r3dDeviceTunnel::CreateTexture( UINT Width, UINT Height, UINT Levels, DWORD Usag
 	parms.Format		= Format ;
 	parms.Pool			= Pool ;
 	parms.TextureTunnel  = TextureTunnel ;
-#ifndef WO_SERVER
-	parms.OutDX11RT		= NULL ;
-#endif
 
 	ProcessCustomDeviceQueueItem( DoCreateTexture, &parms ) ;
 }
@@ -5493,9 +5471,6 @@ struct CreateCubeTextureParams
 	D3DFORMAT Format ;
 	D3DPOOL Pool ;
 	r3dD3DTextureTunnel* TextureTunnel ;
-#ifndef WO_SERVER
-	r3dDX11Texture** OutDX11RT ;
-#endif
 };
 
 static void DoCreateCubeTexture( void* params )
@@ -5503,35 +5478,20 @@ static void DoCreateCubeTexture( void* params )
 	CreateCubeTextureParams* pms = (CreateCubeTextureParams*) params ;
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present() && (pms->Usage & D3DUSAGE_RENDERTARGET))
+	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
 	{
-		pms->TextureTunnel->Set( NULL );
-
-		R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)pms->Format);
-		if(dx11Format == 0)
+		if(!pms->TextureTunnel->CreateDX11RenderTargetCube(pms->EdgeLength, pms->Levels, pms->Format))
 		{
-			r3dError("DoCreateCubeTexture: DX11 native render target - unsupported format %d\n", (int)pms->Format);
+			r3dError(
+				"DX11 native CreateCubeTexture RenderTarget failed: %ux%u mips=%u fmt=%d usage=0x%X pool=%s\n",
+				(unsigned int)pms->EdgeLength,
+				(unsigned int)pms->EdgeLength,
+				(unsigned int)pms->Levels,
+				(int)pms->Format,
+				(unsigned int)pms->Usage,
+				PoolToString(pms->Pool)
+			);
 		}
-
-		r3dDX11Texture* rt = new r3dDX11Texture();
-		if(!rt->CreateRenderTargetCube(
-			(int)pms->EdgeLength,
-			dx11Format,
-			(int)(pms->Levels > 0 ? pms->Levels : 1)
-		))
-		{
-			delete rt;
-			r3dError("DoCreateCubeTexture: DX11 native CreateRenderTargetCube failed edge=%d fmt=%d\n",
-				(int)pms->EdgeLength, (int)pms->Format);
-		}
-
-		pms->TextureTunnel->SetDX11RT(rt);
-
-		if(pms->OutDX11RT)
-			*pms->OutDX11RT = rt;
-
-		r3dOutToLog("DX11: native CreateCubeTexture render target edge=%d fmt=%d mips=%d\n",
-			(int)pms->EdgeLength, (int)pms->Format, (int)(pms->Levels > 0 ? pms->Levels : 1));
 
 		return;
 	}
@@ -5554,9 +5514,6 @@ void r3dDeviceTunnel::CreateCubeTexture( UINT EdgeLength,UINT Levels,DWORD Usage
 	parms.Format		= Format ;
 	parms.Pool			= Pool ;
 	parms.TextureTunnel  = TextureTunnel ;
-#ifndef WO_SERVER
-	parms.OutDX11RT		= NULL ;
-#endif
 
 	ProcessCustomDeviceQueueItem( DoCreateCubeTexture, &parms )  ;
 }
@@ -6167,47 +6124,286 @@ void r3dDeviceTunnel::SetD3DResourcePrivateData( r3dD3DSurfaceTunnel* tunnel, co
 
 #ifndef WO_SERVER
 
-void r3dD3DTextureTunnel::SetDX11RT(r3dDX11Texture* rt)
+static int r3dDX11TextureTunnel_CalcMipCount(UINT width, UINT height)
 {
-	if(m_DX11RT && m_DX11RT != rt)
+	int mipCount = 1;
+
+	while(width > 1 || height > 1)
 	{
-		delete m_DX11RT;
+		width = R3D_MAX<UINT>(1, width / 2);
+		height = R3D_MAX<UINT>(1, height / 2);
+		++mipCount;
 	}
-	m_DX11RT = rt;
+
+	return mipCount;
 }
 
-r3dDX11Texture* r3dD3DTextureTunnel::GetDX11RT() const
+static DXGI_FORMAT r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat(DXGI_FORMAT format)
 {
-	return m_DX11RT;
-}
+	switch(format)
+	{
+	case DXGI_FORMAT_B5G6R5_UNORM:
+	case DXGI_FORMAT_B5G5R5A1_UNORM:
+	case DXGI_FORMAT_B8G8R8X8_UNORM:
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-bool r3dD3DTextureTunnel::HasDX11RT() const
-{
-	return m_DX11RT != NULL;
+	default:
+		return format;
+	}
 }
 
 #endif
 
-int r3dD3DTextureTunnel::ReleaseAndReset()
+r3dD3DTextureTunnel::r3dD3DTextureTunnel()
+#ifndef WO_SERVER
+: mDX11Texture(NULL)
+, mDX11NativeRenderTarget(false)
+, mDX11NativeCube(false)
+, mDX11Width(0)
+, mDX11Height(0)
+, mDX11Levels(0)
+, mDX11Format(D3DFMT_UNKNOWN)
+#endif
 {
-	int refCount = 0;
+}
+
+void r3dD3DTextureTunnel::Set(IDirect3DBaseTexture9* res)
+{
+	R3D_ENSURE_MAIN_THREAD();
+
+	mRes = res;
 
 #ifndef WO_SERVER
-	if(m_DX11RT)
+	if(res)
+		ClearDX11NativeNoRelease();
+#endif
+}
+
+int r3dD3DTextureTunnel::Valid() const
+{
+#ifndef WO_SERVER
+	return mRes != NULL || HasDX11Texture();
+#else
+	return mRes != NULL;
+#endif
+}
+
+#ifndef WO_SERVER
+
+void r3dD3DTextureTunnel::ClearDX11NativeNoRelease()
+{
+	mDX11Texture = NULL;
+	mDX11NativeRenderTarget = false;
+	mDX11NativeCube = false;
+	mDX11Width = 0;
+	mDX11Height = 0;
+	mDX11Levels = 0;
+	mDX11Format = D3DFMT_UNKNOWN;
+}
+
+#endif
+
+static void DoTextureTunnelReleaseAndReset(void* param)
+{
+	r3dD3DTextureTunnel* tunnel = (r3dD3DTextureTunnel*)param;
+	tunnel->ReleaseAndReset();
+}
+
+void r3dD3DTextureTunnel::ReleaseAndReset()
+{
+	if(!R3D_IS_MAIN_THREAD())
 	{
-		delete m_DX11RT;
-		m_DX11RT = NULL;
+		ProcessCustomDeviceQueueItem(DoTextureTunnelReleaseAndReset, this);
+		return;
+	}
+
+#ifndef WO_SERVER
+	if(mDX11Texture)
+	{
+		delete mDX11Texture;
+		ClearDX11NativeNoRelease();
 	}
 #endif
 
 	if(mRes)
 	{
-		refCount = mRes->Release();
+		mRes->Release();
 		mRes = NULL;
 	}
-
-	return refCount;
 }
+
+#ifndef WO_SERVER
+
+bool r3dD3DTextureTunnel::CreateDX11RenderTarget2D(UINT Width, UINT Height, UINT Levels, D3DFORMAT Format)
+{
+	R3D_ENSURE_MAIN_THREAD();
+
+	ReleaseAndReset();
+
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)Format);
+	if(dx11Format == 0)
+		return false;
+
+	DXGI_FORMAT compatibleFormat = r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat((DXGI_FORMAT)dx11Format);
+
+	UINT mipCount = Levels;
+	if(mipCount == 0)
+		mipCount = (UINT)r3dDX11TextureTunnel_CalcMipCount(Width, Height);
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+
+	if(!tex->CreateRenderTarget2D((int)Width, (int)Height, (R3D_DX11_FORMAT)compatibleFormat, (int)mipCount))
+	{
+		delete tex;
+		return false;
+	}
+
+	mDX11Texture = tex;
+	mDX11NativeRenderTarget = true;
+	mDX11NativeCube = false;
+	mDX11Width = Width;
+	mDX11Height = Height;
+	mDX11Levels = mipCount;
+	mDX11Format = Format;
+
+	r3dOutToLog(
+		"DX11 native CreateTexture RenderTarget: %ux%u mips=%u fmt=%d\n",
+		(unsigned int)Width,
+		(unsigned int)Height,
+		(unsigned int)mipCount,
+		(int)Format
+	);
+
+	return true;
+}
+
+bool r3dD3DTextureTunnel::CreateDX11RenderTargetCube(UINT EdgeLength, UINT Levels, D3DFORMAT Format)
+{
+	R3D_ENSURE_MAIN_THREAD();
+
+	ReleaseAndReset();
+
+	if(!g_r3dDX11.IsInitialized())
+		return false;
+
+	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)Format);
+	if(dx11Format == 0)
+		return false;
+
+	DXGI_FORMAT compatibleFormat = r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat((DXGI_FORMAT)dx11Format);
+
+	UINT mipCount = Levels;
+	if(mipCount == 0)
+		mipCount = (UINT)r3dDX11TextureTunnel_CalcMipCount(EdgeLength, EdgeLength);
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+
+	if(!tex->CreateRenderTargetCube((int)EdgeLength, (R3D_DX11_FORMAT)compatibleFormat, (int)mipCount))
+	{
+		delete tex;
+		return false;
+	}
+
+	mDX11Texture = tex;
+	mDX11NativeRenderTarget = true;
+	mDX11NativeCube = true;
+	mDX11Width = EdgeLength;
+	mDX11Height = EdgeLength;
+	mDX11Levels = mipCount;
+	mDX11Format = Format;
+
+	r3dOutToLog(
+		"DX11 native CreateCubeTexture RenderTarget: %ux%u mips=%u fmt=%d\n",
+		(unsigned int)EdgeLength,
+		(unsigned int)EdgeLength,
+		(unsigned int)mipCount,
+		(int)Format
+	);
+
+	return true;
+}
+
+bool r3dD3DTextureTunnel::HasDX11Texture() const
+{
+	return mDX11Texture && mDX11Texture->IsValid();
+}
+
+bool r3dD3DTextureTunnel::IsDX11NativeRenderTarget() const
+{
+	return mDX11NativeRenderTarget && HasDX11Texture();
+}
+
+bool r3dD3DTextureTunnel::IsDX11NativeCube() const
+{
+	return mDX11NativeCube;
+}
+
+r3dDX11Texture* r3dD3DTextureTunnel::GetDX11Texture() const
+{
+	return mDX11Texture;
+}
+
+ID3D11ShaderResourceView* r3dD3DTextureTunnel::GetDX11SRV() const
+{
+	if(!HasDX11Texture())
+		return NULL;
+
+	return mDX11Texture->GetSRV();
+}
+
+int r3dD3DTextureTunnel::GetDX11Width() const
+{
+	return (int)mDX11Width;
+}
+
+int r3dD3DTextureTunnel::GetDX11Height() const
+{
+	return (int)mDX11Height;
+}
+
+int r3dD3DTextureTunnel::GetDX11MipCount() const
+{
+	return (int)mDX11Levels;
+}
+
+D3DFORMAT r3dD3DTextureTunnel::GetDX11Format() const
+{
+	return mDX11Format;
+}
+
+bool r3dD3DTextureTunnel::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip) const
+{
+	if(!surface || !IsDX11NativeRenderTarget())
+		return false;
+
+	ID3D11Texture2D* texture = NULL;
+	ID3D11RenderTargetView* rtv = NULL;
+
+	if(!mDX11Texture->AddRefRenderTargetMirror(face, mip, &texture, &rtv))
+		return false;
+
+	const unsigned int mipWidth = (unsigned int)R3D_MAX(1, (int)mDX11Width >> mip);
+	const unsigned int mipHeight = (unsigned int)R3D_MAX(1, (int)mDX11Height >> mip);
+
+	surface->SetFormat(mDX11Format);
+	surface->SetDX11RenderTargetMirror(texture, rtv, mipWidth, mipHeight);
+
+	r3dOutToLog(
+		"DX11 render target texture registered: face=%d mip=%d size=%ux%u fmt=%d\n",
+		face,
+		mip,
+		mipWidth,
+		mipHeight,
+		(int)mDX11Format
+	);
+
+	return true;
+}
+
+#endif
 
 //------------------------------------------------------------------------
 
@@ -6280,22 +6476,32 @@ static void DoGetLevelCount( void* ptr )
 	GetLevelCountParams* params = static_cast< GetLevelCountParams* >( ptr ) ;
 
 #ifndef WO_SERVER
-	if(params->Caller->HasDX11RT())
+	if(params->Caller->IsDX11NativeRenderTarget())
 	{
-		params->Result = params->Caller->GetDX11RT()->GetMipCount();
+		params->Result = params->Caller->GetDX11MipCount();
 		return;
 	}
 #endif
 
-	params->Result = params->Caller->AsBaseTex()->GetLevelCount() ;
+	IDirect3DBaseTexture9* base = params->Caller->AsBaseTex();
+	params->Result = base ? base->GetLevelCount() : 0;
 }
 
 int
 r3dD3DTextureTunnel::GetLevelCount() const
 {
+#ifndef WO_SERVER
+	if(IsDX11NativeRenderTarget())
+		return GetDX11MipCount();
+#endif
+
+	if(!AsBaseTex())
+		return 0;
+
 	GetLevelCountParams params ;
 
 	params.Caller = this ;
+	params.Result = 0;
 
 	ProcessCustomDeviceQueueItem( DoGetLevelCount, &params ) ;
 
@@ -6315,30 +6521,38 @@ static void DoGetLevelDesc2D( void* ptr )
 {
 	GetLevelDescParams* params = static_cast< GetLevelDescParams* >( ptr ) ;
 
-#ifndef WO_SERVER
-	if(params->Caller->HasDX11RT())
-	{
-		r3dDX11Texture* rt = params->Caller->GetDX11RT();
-		if(!params->oDesc)
-			return;
+	if(!params->oDesc)
+		return;
 
-		params->oDesc->Format	= (D3DFORMAT)(int)rt->GetFormat();
-		params->oDesc->Type		= D3DRTYPE_SURFACE;
+#ifndef WO_SERVER
+	if(params->Caller->IsDX11NativeRenderTarget())
+	{
+		int mipLevel = params->Level;
+		if(mipLevel < 0)
+			mipLevel = 0;
+
+		ZeroMemory(params->oDesc, sizeof(*params->oDesc));
+
+		params->oDesc->Format	= params->Caller->GetDX11Format();
+		params->oDesc->Type		= D3DRTYPE_TEXTURE;
 		params->oDesc->Usage	= D3DUSAGE_RENDERTARGET;
 		params->oDesc->Pool		= D3DPOOL_DEFAULT;
 		params->oDesc->MultiSampleType		= D3DMULTISAMPLE_NONE;
 		params->oDesc->MultiSampleQuality	= 0;
+		params->oDesc->Width	= (UINT)R3D_MAX(1, params->Caller->GetDX11Width() >> mipLevel);
+		params->oDesc->Height	= (UINT)R3D_MAX(1, params->Caller->GetDX11Height() >> mipLevel);
 
-		int mipLevel = params->Level;
-		if(mipLevel < 0) mipLevel = 0;
-
-		params->oDesc->Width	= (UINT)R3D_MAX(1, rt->GetWidth() >> mipLevel);
-		params->oDesc->Height	= (UINT)R3D_MAX(1, rt->GetHeight() >> mipLevel);
 		return;
 	}
 #endif
 
 	IDirect3DBaseTexture9* baseTex = params->Caller->AsBaseTex() ;
+
+	if(!baseTex)
+	{
+		ZeroMemory(params->oDesc, sizeof(*params->oDesc));
+		return;
+	}
 
 	switch( baseTex->GetType() )
 	{
@@ -6356,6 +6570,37 @@ static void DoGetLevelDesc2D( void* ptr )
 void
 r3dD3DTextureTunnel::GetLevelDesc2D( int level, D3DSURFACE_DESC* oDesc ) const
 {
+	if(!oDesc)
+		return;
+
+#ifndef WO_SERVER
+	if(IsDX11NativeRenderTarget())
+	{
+		int mipLevel = level;
+		if(mipLevel < 0)
+			mipLevel = 0;
+
+		ZeroMemory(oDesc, sizeof(*oDesc));
+
+		oDesc->Format	= GetDX11Format();
+		oDesc->Type		= D3DRTYPE_TEXTURE;
+		oDesc->Usage	= D3DUSAGE_RENDERTARGET;
+		oDesc->Pool		= D3DPOOL_DEFAULT;
+		oDesc->MultiSampleType		= D3DMULTISAMPLE_NONE;
+		oDesc->MultiSampleQuality	= 0;
+		oDesc->Width	= (UINT)R3D_MAX(1, GetDX11Width() >> mipLevel);
+		oDesc->Height	= (UINT)R3D_MAX(1, GetDX11Height() >> mipLevel);
+
+		return;
+	}
+#endif
+
+	if(!AsBaseTex())
+	{
+		ZeroMemory(oDesc, sizeof(*oDesc));
+		return;
+	}
+
 	GetLevelDescParams params ;
 
 	params.Caller = this ;

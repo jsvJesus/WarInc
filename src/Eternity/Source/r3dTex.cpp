@@ -1465,8 +1465,6 @@ void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int a
 #ifndef WO_SERVER
 	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
 	m_DX11TexArray[0] = NULL;
-
-	m_TexArray[0].m_DX11RT = NULL;
 #endif
 
 	if( isRenderTarget )
@@ -1529,8 +1527,6 @@ void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps
 #ifndef WO_SERVER
 	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
 	m_DX11TexArray[0] = NULL;
-
-	m_TexArray[0].m_DX11RT = NULL;
 #endif
 
 	if( isRenderTarget )
