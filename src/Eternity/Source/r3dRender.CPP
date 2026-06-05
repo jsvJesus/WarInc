@@ -4125,10 +4125,46 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 #ifndef WO_SERVER
 	if(dx11Active && !GetUseD3D9Present())
 	{
+#ifndef FINAL_BUILD
+		static unsigned int s_dx11NativeEndRenderPresentCalls = 0;
+		++s_dx11NativeEndRenderPresentCalls;
+
+		if(s_dx11NativeEndRenderPresentCalls <= 120 || (s_dx11NativeEndRenderPresentCalls % 60) == 0)
+		{
+			r3dOutToLog(
+				"DX11 DBG EndRender native present path: frame=%d present=%d dx11Active=%d useD3D9Present=%d deviceAvailable=%d\n",
+				gRenderFrameCounter,
+				present ? 1 : 0,
+				dx11Active ? 1 : 0,
+				GetUseD3D9Present() ? 1 : 0,
+				DeviceAvailable ? 1 : 0
+			);
+		}
+#endif
+
 		g_r3dDX11.DrawDebugTriangle();
 		g_r3dDX11.DrawDebugTexturedQuad();
 		g_r3dDX11.EndFrame(present);
 	}
+#ifndef FINAL_BUILD
+	else
+	{
+		static unsigned int s_dx11NativeEndRenderSkippedCalls = 0;
+		++s_dx11NativeEndRenderSkippedCalls;
+
+		if(s_dx11NativeEndRenderSkippedCalls <= 120 || (s_dx11NativeEndRenderSkippedCalls % 60) == 0)
+		{
+			r3dOutToLog(
+				"DX11 DBG EndRender skipped DX11 present: frame=%d present=%d dx11Active=%d useD3D9Present=%d deviceAvailable=%d\n",
+				gRenderFrameCounter,
+				present ? 1 : 0,
+				dx11Active ? 1 : 0,
+				GetUseD3D9Present() ? 1 : 0,
+				DeviceAvailable ? 1 : 0
+			);
+		}
+	}
+#endif
 #endif
 }
 
