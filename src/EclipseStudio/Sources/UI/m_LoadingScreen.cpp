@@ -53,39 +53,16 @@ int LoadingScreen::Update()
 
 		ClearFullScreen_Menu();
 
-		r3d_assert(m_pBackgroundTex);
+		if(m_pBackgroundTex)
+		{
+			float x = 0.0f;
+			float y = 0.0f;
+			float w = 0.0f;
+			float h = 0.0f;
 
-		float x = 0.0f;
-		float y = 0.0f;
-		float w = 0.0f;
-		float h = 0.0f;
-
-		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
-
-		D3DVIEWPORT9 oldVp;
-		r3dRenderer->DoGetViewport(&oldVp);
-
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-
-		r3dRenderer->DoSetViewport(
-			0.0f,
-			0.0f,
-			(float)r3dRenderer->d3dpp.BackBufferWidth,
-			(float)r3dRenderer->d3dpp.BackBufferHeight
-		);
-
-		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
-
-		r3dRenderer->Flush();
-
-		r3dRenderer->DoSetViewport(
-			(float)oldVp.X,
-			(float)oldVp.Y,
-			(float)oldVp.Width,
-			(float)oldVp.Height
-		);
-
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+			r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
+			r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
+		}
 
 		if(!m_RenderingDisabled)
 		{

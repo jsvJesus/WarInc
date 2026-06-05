@@ -7,8 +7,6 @@
 #include "..\UI\UIMenu.h"
 
 #include "r3dDX11.h"
-#include "r3dDX11Geometry.h"
-#include "r3dDX11State.h"
 
 int AppSelectMode = 100;
 
@@ -37,9 +35,6 @@ namespace
 
 			r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 			r3dRenderer->DoSetViewport(0.0f, 0.0f, width, height);
-
-			g_r3dDX11State.InvalidateCache();
-			g_r3dDX11Geometry.InvalidateCache();
 		}
 #endif
 	}
@@ -76,7 +71,6 @@ void ClearFullScreen_Menu()
 	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	r3dRenderer->DoSetViewport(0.0f, 0.0f, width, height);
 	r3dRenderer->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
-	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 }
 
 int Menu_AppSelect::DoModal()

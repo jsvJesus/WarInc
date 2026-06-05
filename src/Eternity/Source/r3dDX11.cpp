@@ -539,21 +539,6 @@ void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)
 
 	Context->ClearRenderTargetView(BackBufferRTV, clearColor);
 	Context->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-#ifndef FINAL_BUILD
-	static int s_logCount = 0;
-	if(s_logCount < 16)
-	{
-		r3dOutToLog(
-			"DX11 DBG: BeginFrame once, clear backbuffer RTV=%p DSS=%p size=%dx%d\n",
-			BackBufferRTV,
-			DepthStencilView,
-			Width,
-			Height
-		);
-		++s_logCount;
-	}
-#endif
 }
 
 void r3dDX11Renderer::EndFrame(bool present)
@@ -564,42 +549,9 @@ void r3dDX11Renderer::EndFrame(bool present)
 	if(!IsInitialized())
 		return;
 
-	static unsigned int s_dx11EndFrameCalls = 0;
-	static unsigned int s_dx11PresentCalls = 0;
-
-	++s_dx11EndFrameCalls;
-
 	if(present)
 	{
-		++s_dx11PresentCalls;
-
-#ifndef FINAL_BUILD
-		if(s_dx11PresentCalls <= 120 || (s_dx11PresentCalls % 60) == 0)
-		{
-			r3dOutToLog(
-				"DX11 DBG PRESENT BEFORE: endFrameCalls=%u presentCalls=%u swapchain=%p backbufferRTV=%p\n",
-				s_dx11EndFrameCalls,
-				s_dx11PresentCalls,
-				SwapChain,
-				BackBufferRTV
-			);
-		}
-#endif
-
 		HRESULT hr = SwapChain->Present(VSync ? 1 : 0, 0);
-
-#ifndef FINAL_BUILD
-		if(s_dx11PresentCalls <= 120 || (s_dx11PresentCalls % 60) == 0 || FAILED(hr))
-		{
-			r3dOutToLog(
-				"DX11 DBG PRESENT AFTER: hr=0x%08X vsync=%d endFrameCalls=%u presentCalls=%u\n",
-				(unsigned int)hr,
-				VSync ? 1 : 0,
-				s_dx11EndFrameCalls,
-				s_dx11PresentCalls
-			);
-		}
-#endif
 
 		if(FAILED(hr))
 		{
@@ -609,19 +561,6 @@ void r3dDX11Renderer::EndFrame(bool present)
 			r3dDX11_LogHR("SwapChain->Present", hr);
 		}
 	}
-#ifndef FINAL_BUILD
-	else
-	{
-		if(s_dx11EndFrameCalls <= 120 || (s_dx11EndFrameCalls % 60) == 0)
-		{
-			r3dOutToLog(
-				"DX11 DBG EndFrame without present: endFrameCalls=%u presentCalls=%u\n",
-				s_dx11EndFrameCalls,
-				s_dx11PresentCalls
-			);
-		}
-	}
-#endif
 }
 
 bool r3dDX11Renderer::CreateDebugTriangle()

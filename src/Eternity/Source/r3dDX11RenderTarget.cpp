@@ -149,12 +149,41 @@ void r3dDX11RenderTargetBridge::ResetToBackBuffer()
 	if(!Initialized || !g_r3dDX11.IsInitialized())
 		return;
 
+	ID3D11RenderTargetView* backBufferRTV = g_r3dDX11.GetBackBufferRTV();
+	ID3D11DepthStencilView* backBufferDSV = g_r3dDX11.GetDepthStencilView();
+
+	unsigned int width = (unsigned int)g_r3dDX11.GetWidth();
+	unsigned int height = (unsigned int)g_r3dDX11.GetHeight();
+
+	bool alreadyBackBuffer = true;
+
+	if(CurrentRTV[0] != backBufferRTV)
+		alreadyBackBuffer = false;
+
+	for(int i = 1; i < R3D_DX11_MAX_RENDER_TARGETS; ++i)
+	{
+		if(CurrentRTV[i])
+		{
+			alreadyBackBuffer = false;
+			break;
+		}
+	}
+
+	if(CurrentDSV != backBufferDSV)
+		alreadyBackBuffer = false;
+
+	if(CurrentWidth != width || CurrentHeight != height)
+		alreadyBackBuffer = false;
+
+	if(alreadyBackBuffer)
+		return;
+
 	ClearCurrentTargets();
 
-	CurrentRTV[0] = g_r3dDX11.GetBackBufferRTV();
-	CurrentDSV = g_r3dDX11.GetDepthStencilView();
-	CurrentWidth = (unsigned int)g_r3dDX11.GetWidth();
-	CurrentHeight = (unsigned int)g_r3dDX11.GetHeight();
+	CurrentRTV[0] = backBufferRTV;
+	CurrentDSV = backBufferDSV;
+	CurrentWidth = width;
+	CurrentHeight = height;
 
 	Apply();
 }
