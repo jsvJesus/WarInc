@@ -472,6 +472,41 @@ static void SetupSurfacePointers( void* params )
 {
 	r3dScreenBuffer* sbuf = (r3dScreenBuffer*) params ;
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
+	{
+		if(sbuf->bCubemap)
+		{
+			int mipCount = sbuf->Tex ? sbuf->Tex->GetNumMipmaps() : sbuf->ActualNumMipLevels;
+			for( int i = 0; i < r3dScreenBuffer::FACE_COUNT; i ++ )
+			{
+				for( int m = 0; m < mipCount; m ++ )
+				{
+					sbuf->Surfs[ i ][ m ].Set( NULL );
+					sbuf->Surfs[ i ][ m ].SetFormat( sbuf->BufferFormat );
+
+					if(sbuf->Tex)
+						sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ i ][ m ], i, m);
+				}
+			}
+		}
+		else
+		{
+			int mipCount = sbuf->Tex ? sbuf->Tex->GetNumMipmaps() : sbuf->ActualNumMipLevels;
+			for( int m = 0; m < mipCount; m ++ )
+			{
+				sbuf->Surfs[ 0 ][ m ].Set( NULL );
+				sbuf->Surfs[ 0 ][ m ].SetFormat( sbuf->BufferFormat );
+
+				if(sbuf->Tex)
+					sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ 0 ][ m ], 0, m);
+			}
+		}
+
+		return;
+	}
+#endif
+
 	IDirect3DSurface9* surf ;
 
 	if( sbuf->bCubemap )
@@ -634,7 +669,7 @@ void r3dScreenBuffer::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if( Surfs[ 0 ][ 0 ].Get() )
+	if( Surfs[ 0 ][ 0 ].Valid() )
 	{
 		r3dRenderer->DeleteTexture(Tex, true);
 		Tex		= NULL ;
@@ -643,7 +678,7 @@ void r3dScreenBuffer::D3DReleaseResource()
 		r3dRenderer->Stats.AddRenderTargetMem ( -UsedMemory ) ;
 		UsedMemory = 0 ;
 
-		if ( OurZBuf.Get() && zType == Z_OWN )
+		if ( OurZBuf.Valid() && zType == Z_OWN )
 		{
 			OurZBuf.ReleaseAndReset();
 		}
@@ -691,11 +726,13 @@ void r3dScreenBuffer::SetMRT(int RTID, int bSet)
 
 bool r3dScreenBuffer::IsNull() const
 {
-	return BufferFormat == D3DFMT_UNKNOWN || !Surfs[ 0 ][ 0 ].Get() ;
+	return BufferFormat == D3DFMT_UNKNOWN || !Surfs[ 0 ][ 0 ].Valid() ;
 }
 
 IDirect3DSurface9* r3dScreenBuffer::GetTex2DSurface()
 {
+	if( !Surfs[ FACE_PX ][ 0 ].Valid() )
+		return NULL;
 	return Surfs[ FACE_PX ][ 0 ].Get();
 }
 
@@ -707,7 +744,20 @@ int r3dScreenBuffer::GetShadowZBufSize()
 int r3dScreenBuffer::GetNumMipLevels() const
 {
 	if(!Tex) return 0;
-	return Tex->AsTex2D()->GetLevelCount();
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
+	{
+		r3dDX11Texture* dx11Tex = Tex->GetDX11Texture();
+		if(dx11Tex && dx11Tex->IsValid())
+			return dx11Tex->GetMipCount();
+		return ActualNumMipLevels;
+	}
+#endif
+
+	IDirect3DTexture9* tex2D = Tex->AsTex2D();
+	if(!tex2D) return ActualNumMipLevels;
+	return tex2D->GetLevelCount();
 }
 
 void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/)

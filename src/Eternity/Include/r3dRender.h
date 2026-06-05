@@ -22,6 +22,9 @@
 class r3dMaterial;
 class r3dD3DQuery;
 class r3dD3DSurfaceTunnel;
+#ifndef WO_SERVER
+class r3dDX11Texture;
+#endif
 
 struct R3D_SCREEN_VERTEX;
 struct R3D_DEBUG_VERTEX;
@@ -1323,6 +1326,14 @@ public:
 class r3dD3DTextureTunnel : public r3dD3DResourceTunnelT< IDirect3DBaseTexture9 >
 {
 public:
+	r3dD3DTextureTunnel()
+	: Parent()
+#ifndef WO_SERVER
+	, m_DX11RT( NULL )
+#endif
+	{
+	}
+
 	IDirect3DBaseTexture9*		AsBaseTex() const ;
 	IDirect3DTexture9*			AsTex2D() const ;
 	IDirect3DCubeTexture9*		AsTexCube() const ;
@@ -1333,6 +1344,28 @@ public:
 
 	void LockRect( UINT Level, D3DLOCKED_RECT *pLockedRect, const RECT *pRect, DWORD Flags );
 	void UnlockRect( UINT Level );
+
+#ifndef WO_SERVER
+	void			SetDX11RT(r3dDX11Texture* rt);
+	r3dDX11Texture*	GetDX11RT() const;
+	bool			HasDX11RT() const;
+#endif
+
+	int ReleaseAndReset();
+
+	R3D_FORCEINLINE
+	int Valid() const
+	{
+#ifndef WO_SERVER
+		return mRes != NULL || m_DX11RT != NULL;
+#else
+		return mRes != NULL;
+#endif
+	}
+
+#ifndef WO_SERVER
+	r3dDX11Texture* m_DX11RT;
+#endif
 };
 
 class r3dD3DSurfaceTunnel : r3dD3DResourceTunnelT< IDirect3DSurface9 >
