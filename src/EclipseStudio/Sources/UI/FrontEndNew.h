@@ -35,8 +35,8 @@ private:
 	r3dScaleformMovie gfxBuyPackMovie;
 	bool		showBuyPackMovie;
 
-	Scaleform::Render::D3D9::Texture* RTScaleformTexture;
-	Scaleform::Render::D3D9::Texture* RTWelcomeBackScaleformTexture;
+	Scaleform::Render::Texture* RTScaleformTexture;
+	Scaleform::Render::Texture* RTWelcomeBackScaleformTexture;
 	bool		needReInitScaleformTexture;
 
 	static FrontendUI*		This_;

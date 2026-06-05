@@ -31,6 +31,7 @@
 #include "../ObjectsCode/Gameplay/UIWeaponModel.h"
 #include "GameLevel.h"
 #include "Scaleform/Src/Render/D3D9/D3D9_Texture.h"
+#include "r3dDX11Texture.h"
 #include "../../Eternity/Source/r3dEternityWebBrowser.h"
 
 #include "m_LoadingScreen.h"
@@ -74,6 +75,25 @@ extern void ClearFullScreen_Menu();
 
 extern int RUS_CLIENT;
 extern int MASSIVE_CLIENT;
+
+static bool FrontendScaleformUsesDX11()
+{
+	return r3dRenderer && !r3dRenderer->GetUseD3D9Present();
+}
+
+static ID3D11Texture2D* GetFrontendDX11Texture(r3dTexture* texture)
+{
+	if(!texture)
+		return NULL;
+
+	r3dDX11Texture* dx11Texture = texture->GetDX11Texture();
+	return dx11Texture ? dx11Texture->GetTexture2D() : NULL;
+}
+
+static ID3D11Texture2D* GetFrontendDX11Texture(r3dScreenBuffer* buffer)
+{
+	return buffer ? GetFrontendDX11Texture(buffer->Tex) : NULL;
+}
 
 const static char* monthNames[12] = {
 	"January",
@@ -6068,10 +6088,52 @@ bool FrontendUI::Initialize()
 
 void FrontendUI::bindRTsToScaleForm()
 {
-	RTScaleformTexture = gfxMovie.BoundRTToImage("merc_rendertarget", Scaleform_RenderToTextureRT->AsTex2D(), (int)Scaleform_RenderToTextureRT->Width, (int)Scaleform_RenderToTextureRT->Height);
+	SAFE_RELEASE(RTScaleformTexture);
+
+	if(Scaleform_RenderToTextureRT)
+	{
+		if(FrontendScaleformUsesDX11())
+		{
+			RTScaleformTexture = gfxMovie.BoundRTToImageDX11(
+				"merc_rendertarget",
+				GetFrontendDX11Texture(Scaleform_RenderToTextureRT),
+				(int)Scaleform_RenderToTextureRT->Width,
+				(int)Scaleform_RenderToTextureRT->Height);
+		}
+		else
+		{
+			RTScaleformTexture = gfxMovie.BoundRTToImage(
+				"merc_rendertarget",
+				Scaleform_RenderToTextureRT->AsTex2D(),
+				(int)Scaleform_RenderToTextureRT->Width,
+				(int)Scaleform_RenderToTextureRT->Height);
+		}
+	}
+
 #if ENABLE_WEB_BROWSER
 	g_pBrowserManager->SetSize(1231, 525);
-	RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImage("wb_rendertarget", g_pBrowserManager->GetWindow()->AsTex2D(), 1231, 525);
+	SAFE_RELEASE(RTWelcomeBackScaleformTexture);
+
+	r3dTexture* browserTexture = g_pBrowserManager->GetWindow();
+	if(browserTexture)
+	{
+		if(FrontendScaleformUsesDX11())
+		{
+			RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImageDX11(
+				"wb_rendertarget",
+				GetFrontendDX11Texture(browserTexture),
+				1231,
+				525);
+		}
+		else
+		{
+			RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImage(
+				"wb_rendertarget",
+				browserTexture->AsTex2D(),
+				1231,
+				525);
+		}
+	}
 #endif
 }
 
@@ -7646,13 +7708,7 @@ int FrontendUI::Update()
 
 	if(needReInitScaleformTexture)
 	{
-		if (RTScaleformTexture && Scaleform_RenderToTextureRT)
-			RTScaleformTexture->Initialize(Scaleform_RenderToTextureRT->AsTex2D());
-#if ENABLE_WEB_BROWSER
-		if(RTWelcomeBackScaleformTexture && g_pBrowserManager->GetWindow())
-			RTWelcomeBackScaleformTexture->Initialize(g_pBrowserManager->GetWindow()->AsTex2D());
-
-#endif
+		bindRTsToScaleForm();
 		needReInitScaleformTexture = false;
 	}
 

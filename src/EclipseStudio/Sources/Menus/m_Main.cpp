@@ -10,8 +10,6 @@
 #include "GameLevel.h"
 #include "TrueNature2/Terrain2.h"
 
-#include "r3dDX11ScaleformBridge.h"
-
 #include <windows.h>
 #include <vector>
 #include <string>

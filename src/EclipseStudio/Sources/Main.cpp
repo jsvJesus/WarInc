@@ -265,7 +265,6 @@ void CloseRender()
 
 	RmlUiBackend::Shutdown();
 	r3dScaleformGfxDestroy();
-	g_r3dDX11ScaleformBridge.Shutdown();
 
 	r3dCloseMaterials();
 

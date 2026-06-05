@@ -4277,10 +4277,16 @@ void r3dRenderLayer::SetMaterial(r3dMaterial *Mat)
 
 void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 {
+#ifndef WO_SERVER
+	const bool useDX11Native = g_r3dDX11.IsInitialized() && !GetUseD3D9Present();
+#else
+	const bool useDX11Native = false;
+#endif
+
 	if ( StageID >= D3DVERTEXTEXTURESAMPLER0 ) 
 	{
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+		if(useDX11Native)
 			g_r3dDX11State.BindTexture(StageID, Tex);
 #endif
 		if(Tex)
@@ -4289,16 +4295,22 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	}
 
 	if(Tex && Tex->GetID() == CurrentTexID[StageID])
+	{
+#ifndef WO_SERVER
+		if(useDX11Native)
+			g_r3dDX11State.BindTexture(StageID, Tex);
+#endif
 		return;
+	}
 
 	if(Tex == NULL)
 	{
-		if (CurrentTexID[StageID] == -1) return;
-		CurrentTexID[StageID] = -1;
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+		if(useDX11Native)
 			g_r3dDX11State.ClearTexture(StageID);
 #endif
+		if (CurrentTexID[StageID] == -1) return;
+		CurrentTexID[StageID] = -1;
 		D3D_V( pd3ddev->SetTexture(StageID, NULL) );
 		Stats.AddNumTextureChanges( 1 );
 		return;
@@ -4309,7 +4321,7 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 		Stats.AddNumTextureChanges( 1 );
 		CurrentTexID[StageID] = Tex->GetID();
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+		if(useDX11Native)
 			g_r3dDX11State.BindTexture(StageID, Tex);
 #endif
 		D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );

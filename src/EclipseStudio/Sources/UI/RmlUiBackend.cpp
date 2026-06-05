@@ -8,7 +8,6 @@
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
 #include "r3dDX11State.h"
-#include "r3dDX11ScaleformBridge.h"
 
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -50,7 +49,6 @@ void ClearFullScreen_Menu();
 //  Globals
 // -----------------------------------------------------------------------
 const DWORD RMLUI_D3D9_FVF = D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1;
-static bool g_RmlUiFrameUsingDX11Bridge = false;
 
 bool RmlUiBackend::s_initialized = false;
 RmlUiSystemInterface*   RmlUiBackend::s_system  = NULL;
@@ -988,13 +986,7 @@ namespace
 		if(r3dRenderer && r3dRenderer->GetUseD3D9Present())
 			return r3dRenderer->pd3ddev;
 
-		if(g_r3dDX11ScaleformBridge.IsReady())
-			return r3dGetScaleformD3D9Device();
-
-		if(!r3dRenderer)
-			return NULL;
-
-		return r3dRenderer->pd3ddev;
+		return NULL;
 	}
 
 	bool LoadDefaultFont()
@@ -1141,8 +1133,6 @@ Rocket::Core::ElementDocument* RmlUiBackend::LoadDocumentFromFile(const char* fi
 
 void RmlUiBackend::BeginFrame()
 {
-	g_RmlUiFrameUsingDX11Bridge = false;
-
 	if(!s_initialized || !s_render || !r3dRenderer)
 		return;
 
@@ -1157,9 +1147,6 @@ void RmlUiBackend::BeginFrame()
 	if(!device)
 		return;
 
-	if(!r3dRenderer->GetUseD3D9Present() && g_r3dDX11ScaleformBridge.IsReady())
-		g_RmlUiFrameUsingDX11Bridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
-
 	s_render->SetDevice(device, (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 	s_render->PrepareState();
 }
@@ -1168,13 +1155,6 @@ void RmlUiBackend::EndFrame()
 {
 	if(s_render)
 		s_render->RestoreState();
-
-	if(g_RmlUiFrameUsingDX11Bridge)
-	{
-		g_r3dDX11ScaleformBridge.EndScaleformRender();
-		g_r3dDX11ScaleformBridge.DrawDX11();
-		g_RmlUiFrameUsingDX11Bridge = false;
-	}
 }
 
 void RmlUiBackend::ProcessMouse()

@@ -2,7 +2,6 @@
 #include "r3d.h"
 
 #include "APIScaleformGfx.h"
-#include "r3dDX11ScaleformBridge.h"
 #include "r3dDX11.h"
 #include "r3dDX11Geometry.h"
 #include "r3dDX11State.h"
@@ -34,13 +33,8 @@
 
 static IDirect3DDevice9* r3dGetScaleformDevice9()
 {
-	if(r3dRenderer && r3dRenderer->GetUseD3D9Present())
-		return r3dRenderer->pd3ddev;
-
-	IDirect3DDevice9Ex* dx11BridgeDevice = r3dGetScaleformD3D9Device();
-
-	if(dx11BridgeDevice)
-		return dx11BridgeDevice;
+	if(!r3dRenderer)
+		return NULL;
 
 	return r3dRenderer->pd3ddev;
 }
@@ -54,50 +48,6 @@ static bool r3dScaleformShouldUseNativeDX11()
 		g_r3dDX11.GetContext();
 }
 
-static bool r3dScaleformShouldUseDX11Bridge()
-{
-	return !r3dScaleformShouldUseNativeDX11() &&
-		r3dRenderer &&
-		!r3dRenderer->GetUseD3D9Present() &&
-		g_r3dDX11ScaleformBridge.IsReady();
-}
-
-#ifdef GetRenderTarget
-#define R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
-#undef GetRenderTarget
-#endif
-
-#ifdef GetDepthStencilSurface
-#define R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
-#undef GetDepthStencilSurface
-#endif
-
-static HRESULT r3dScaleformDeviceGetRenderTarget(IDirect3DDevice9* device, DWORD index, IDirect3DSurface9** surface)
-{
-	if(!device)
-		return E_POINTER;
-
-	return device->GetRenderTarget(index, surface);
-}
-
-static HRESULT r3dScaleformDeviceGetDepthStencilSurface(IDirect3DDevice9* device, IDirect3DSurface9** surface)
-{
-	if(!device)
-		return E_POINTER;
-
-	return device->GetDepthStencilSurface(surface);
-}
-
-#ifdef R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
-#define GetRenderTarget DIRECT_CALLS_OF_GET_RENDER_TARGET_FUNCTION_NOT_ALLOWED_USE_REDRENDERLAYER_GETRT
-#undef R3D_SCALEFORM_RESTORE_GET_RENDER_TARGET
-#endif
-
-#ifdef R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
-#define GetDepthStencilSurface DIRECT_CALLS_OF_GET_DEPTH_STENCIL_SURFACE_FUNCTION_NOT_ALLOWED_USE_REDRENDERLAYER_GETDSS
-#undef R3D_SCALEFORM_RESTORE_GET_DEPTH_STENCIL_SURFACE
-#endif
-
 void r3dAddUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
 	int mem = r3dGetTextureSizeInVideoMemory(w, h, d, mips, fmt);
@@ -110,14 +60,6 @@ void r3dRemoveUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
 	int mem = -r3dGetTextureSizeInVideoMemory(w, h, d, mips, fmt);
 	r3dRenderer->Stats.AddUITexMem(mem);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-static bool r3dScaleformBridgeDrawDisabled()
-{
-	return strstr(__r3dCmdLine, "-noScaleformBridgeDraw") != NULL ||
-		strstr(__r3dCmdLine, "/noScaleformBridgeDraw") != NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -973,38 +915,89 @@ void UpdateImageTextureMatrix(const Scaleform::Render::ImageSize &origSize, cons
 	pti->SetMatrix(origMat);
 }
 
-Scaleform::Render::D3D9::Texture* r3dScaleformMovie::BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight)
+static Scaleform::GFx::ImageResource* r3dScaleformGetImageResource(Scaleform::GFx::MovieDef* movieDef, const char* resName)
 {
-	if(gAPIScaleformGfx && gAPIScaleformGfx->UseDX11HAL)
+	if(!movieDef || !resName)
+		return NULL;
+
+	Scaleform::GFx::Resource* pres = movieDef->GetResource(resName);
+	if (pres && pres->GetResourceType() == Scaleform::GFx::Resource::RT_Image)
+		return (Scaleform::GFx::ImageResource*)pres;
+
+	return NULL;
+}
+
+static Scaleform::Render::Texture* r3dScaleformSetImageTexture(
+	Scaleform::GFx::ImageResource* pimageRes,
+	Scaleform::Render::Texture* pHWTexture,
+	int RTWidth,
+	int RTHeight)
+{
+	if(!pimageRes || !pHWTexture)
+		return NULL;
+
+	Scaleform::Render::ImageBase* pimageOrig = pimageRes->GetImage();
+	if(!pimageOrig)
 	{
-		r3dOutToLog("GFx DX11: BoundRTToImage('%s') skipped, D3D9 texture binding is not available on native DX11 HAL\n", resName ? resName : "");
+		pHWTexture->Release();
 		return NULL;
 	}
 
-	Scaleform::GFx::Resource*      pres = pMovieDef->GetResource(resName);
-	Scaleform::GFx::ImageResource* pimageRes = 0;
-	if (pres && pres->GetResourceType() == Scaleform::GFx::Resource::RT_Image)
-		pimageRes = (Scaleform::GFx::ImageResource*)pres;
+	Scaleform::Ptr<Scaleform::Render::TextureImage> pti =
+		*new Scaleform::Render::TextureImage(pHWTexture->GetImageFormat(), pHWTexture->GetSize(), 0, pHWTexture);
 
-
-	Scaleform::Render::D3D9::Texture* pHWTexture = NULL;
-
-	if (pimageRes)
-	{
-		Scaleform::Render::ImageBase* pimageOrig = pimageRes->GetImage();
-		if (pimageOrig)
-		{
-			Scaleform::Render::D3D9::TextureManager* pmanager = (Scaleform::Render::D3D9::TextureManager*)gAPIScaleformGfx->RendererHAL9->GetTextureManager();
-			pHWTexture = (Scaleform::Render::D3D9::Texture*)pmanager->CreateTexture( pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
-
-			Scaleform::Ptr<Scaleform::Render::TextureImage> pti = * new Scaleform::Render::TextureImage(Scaleform::Render::Image_R8G8B8, pHWTexture->GetSize(), 0, pHWTexture);
-
-			UpdateImageTextureMatrix(pimageOrig->GetSize(), Scaleform::Render::ImageSize(RTWidth, RTHeight), pti);
-			pimageRes->SetImage(pti);
-		}
-	}
+	UpdateImageTextureMatrix(pimageOrig->GetSize(), Scaleform::Render::ImageSize(RTWidth, RTHeight), pti);
+	pimageRes->SetImage(pti);
 
 	return pHWTexture;
+}
+
+Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight)
+{
+	if(!gAPIScaleformGfx || gAPIScaleformGfx->UseDX11HAL || !pRenderTarget)
+		return NULL;
+
+	Scaleform::GFx::ImageResource* pimageRes = r3dScaleformGetImageResource(pMovieDef, resName);
+	if(!pimageRes)
+		return NULL;
+
+	Scaleform::Render::D3D9::TextureManager* pmanager =
+		(Scaleform::Render::D3D9::TextureManager*)gAPIScaleformGfx->RendererHAL9->GetTextureManager();
+
+	if(!pmanager)
+		return NULL;
+
+	Scaleform::Render::Texture* pHWTexture =
+		pmanager->CreateTexture(pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
+
+	return r3dScaleformSetImageTexture(pimageRes, pHWTexture, RTWidth, RTHeight);
+}
+
+Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight)
+{
+	if(!gAPIScaleformGfx || !gAPIScaleformGfx->UseDX11HAL || !pRenderTarget)
+		return NULL;
+
+	Scaleform::GFx::ImageResource* pimageRes = r3dScaleformGetImageResource(pMovieDef, resName);
+	if(!pimageRes)
+		return NULL;
+
+	Scaleform::Render::D3D1x::TextureManager* pmanager =
+		(Scaleform::Render::D3D1x::TextureManager*)gAPIScaleformGfx->RendererHAL11->GetTextureManager();
+
+	if(!pmanager)
+		return NULL;
+
+	Scaleform::Render::Texture* pHWTexture =
+		pmanager->CreateTexture(pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
+
+	if(pHWTexture)
+	{
+		r3dOutToLog("GFx DX11: BoundRTToImage('%s') attached %dx%d DX11 texture\n",
+			resName ? resName : "", RTWidth, RTHeight);
+	}
+
+	return r3dScaleformSetImageTexture(pimageRes, pHWTexture, RTWidth, RTHeight);
 }
 
 void r3dScaleformMovie::UpdateTextureMatrices(const char* resName, int RTWidth, int RTHeight)
@@ -1032,11 +1025,6 @@ int g_ScaleFormUpdateAndDrawCount ;
 
 void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
-	bool useDX11ScaleformBridge = false;
-
-	if(!skipDraw && r3dScaleformShouldUseDX11Bridge() && r3dScaleformBridgeDrawDisabled())
-		skipDraw = true;
-	
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
 
 	if(!pMovie)
@@ -1187,9 +1175,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 	if(!skipDraw)
 	{
-		if(r3dScaleformShouldUseDX11Bridge())
-			useDX11ScaleformBridge = g_r3dDX11ScaleformBridge.BeginScaleformRender();
-
 		if(gAPIScaleformGfx->pStateBlock)
 			gAPIScaleformGfx->pStateBlock->Capture();
 
@@ -1198,22 +1183,8 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 		LPDIRECT3DSURFACE9 pRT = NULL;
 		LPDIRECT3DSURFACE9 pSS = NULL;
 
-		if(useDX11ScaleformBridge)
-		{
-			IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
-			if(scaleformDevice)
-			{
-				r3dScaleformDeviceGetRenderTarget(scaleformDevice, 0, &pRT);
-
-				if(FAILED(r3dScaleformDeviceGetDepthStencilSurface(scaleformDevice, &pSS)))
-					pSS = NULL;
-			}
-		}
-		else
-		{
-			r3dRenderer->GetRT(0, &pRT);
-			r3dRenderer->GetDSS(&pSS);
-		}
+		r3dRenderer->GetRT(0, &pRT);
+		r3dRenderer->GetDSS(&pSS);
 
 		if(!pRT)
 		{
@@ -1221,9 +1192,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 				gAPIScaleformGfx->pStateBlock->Apply();
 
 			SAFE_RELEASE(pSS);
-
-			if(useDX11ScaleformBridge)
-				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
@@ -1239,9 +1207,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 			if(gAPIScaleformGfx->pStateBlock)
 				gAPIScaleformGfx->pStateBlock->Apply();
-
-			if(useDX11ScaleformBridge)
-				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
@@ -1276,9 +1241,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 
 			if(gAPIScaleformGfx->pStateBlock)
 				gAPIScaleformGfx->pStateBlock->Apply();
-
-			if(useDX11ScaleformBridge)
-				g_r3dDX11ScaleformBridge.EndScaleformRender();
 
 			gAPIScaleformGfx->pCurMovie = NULL;
 			return;
@@ -1332,12 +1294,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 	}
 
 	gAPIScaleformGfx->pCurMovie = NULL;
-
-	if(useDX11ScaleformBridge)
-	{
-		g_r3dDX11ScaleformBridge.EndScaleformRender();
-		g_r3dDX11ScaleformBridge.DrawDX11();
-	}
 
 #ifndef FINAL_BUILD
 	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart;

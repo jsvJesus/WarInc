@@ -61,6 +61,29 @@ static bool r3dTexture_IsDDSFileName(const char* fileName)
 	return ext && !stricmp(ext, ".dds");
 }
 
+static void r3dTexture_CreateDX11Fallback(r3dDX11Texture** slot, const char* debugName)
+{
+	if(!slot || *slot)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	r3dDX11Texture* fallback = new r3dDX11Texture();
+
+	if(fallback->LoadDDSFromFile("Data\\Shaders\\Texture\\Missing.dds"))
+	{
+		*slot = fallback;
+		r3dOutToLog("r3dTexture DX11: using fallback SRV for '%s'\n", debugName ? debugName : "");
+		return;
+	}
+
+	delete fallback;
+}
+
 static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void* data, uint32_t dataSize, const char* debugName)
 {
 	if(!slot)
@@ -90,22 +113,288 @@ static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void
 
 		r3dOutToLog("r3dTexture DX11: failed to create SRV for '%s'\n", debugName ? debugName : "");
 
-		r3dDX11Texture* fallback = new r3dDX11Texture();
-
-		if(fallback->LoadDDSFromFile("Data\\Shaders\\Texture\\Missing.dds"))
-		{
-			*slot = fallback;
-			r3dOutToLog("r3dTexture DX11: using fallback SRV for '%s'\n", debugName ? debugName : "");
-			return;
-		}
-
-		delete fallback;
+		r3dTexture_CreateDX11Fallback(slot, debugName);
 		return;
 	}
 
 	*slot = tex;
 
 	r3dOutToLog("r3dTexture DX11: linked SRV '%s'\n", debugName ? debugName : "");
+}
+
+static void r3dTexture_CreateDX11FromImageMemory(
+	r3dDX11Texture** slot,
+	const void* data,
+	uint32_t dataSize,
+	const char* debugName,
+	int width,
+	int height
+)
+{
+	if(!slot || !data || !dataSize)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(width <= 0 || height <= 0)
+		return;
+
+	if(r3dTexture_IsDDSMemory(data, dataSize))
+	{
+		r3dTexture_CreateDX11FromDDSMemory(slot, data, dataSize, debugName);
+		return;
+	}
+
+	if(*slot)
+	{
+		delete *slot;
+		*slot = NULL;
+	}
+
+	IDirect3DDevice9* device = NULL;
+	if(r3dRenderer)
+		device = r3dRenderer->pd3ddev;
+
+	if(!device)
+		return;
+
+	IDirect3DTexture9* stagingTex = NULL;
+	HRESULT hr = D3DXCreateTextureFromFileInMemoryEx(
+		device,
+		data,
+		dataSize,
+		width,
+		height,
+		1,
+		0,
+		D3DFMT_A8R8G8B8,
+		D3DPOOL_SYSTEMMEM,
+		D3DX_FILTER_LINEAR,
+		D3DX_FILTER_LINEAR,
+		0x00000000,
+		NULL,
+		NULL,
+		&stagingTex
+	);
+
+	if(FAILED(hr) || !stagingTex)
+	{
+		r3dOutToLog("r3dTexture DX11: failed to decode image SRV for '%s', HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	D3DLOCKED_RECT locked;
+	hr = stagingTex->LockRect(0, &locked, NULL, D3DLOCK_READONLY);
+	if(FAILED(hr))
+	{
+		r3dOutToLog("r3dTexture DX11: failed to lock image SRV for '%s', HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
+		stagingTex->Release();
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(D3DFMT_A8R8G8B8);
+
+	const bool created = tex->Create2D(width, height, dx11Format, locked.pBits, locked.Pitch);
+
+	stagingTex->UnlockRect(0);
+	stagingTex->Release();
+
+	if(!created)
+	{
+		delete tex;
+		r3dOutToLog("r3dTexture DX11: failed to create image SRV for '%s'\n", debugName ? debugName : "");
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	*slot = tex;
+
+	r3dOutToLog("r3dTexture DX11: linked image SRV '%s'\n", debugName ? debugName : "");
+}
+
+static void r3dTexture_CreateDX11FromImageFile(r3dDX11Texture** slot, const char* fileName)
+{
+	if(!slot || *slot)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(!fileName || !fileName[0])
+	{
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+		return;
+	}
+
+	r3dFile* ff = r3d_open(fileName, "rb");
+	if(!ff)
+	{
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+		return;
+	}
+
+	const int fileSize = ff->size;
+	if(fileSize <= 0)
+	{
+		fclose(ff);
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+		return;
+	}
+
+	void* fileData = malloc(fileSize);
+	if(!fileData)
+	{
+		fclose(ff);
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+		return;
+	}
+
+	fread(fileData, 1, fileSize, ff);
+	fclose(ff);
+
+	D3DXIMAGE_INFO info;
+	ZeroMemory(&info, sizeof(info));
+	HRESULT hr = D3DXGetImageInfoFromFileInMemory(fileData, fileSize, &info);
+	if(FAILED(hr) || info.Width <= 0 || info.Height <= 0 || info.ResourceType != D3DRTYPE_TEXTURE)
+	{
+		r3dOutToLog("r3dTexture DX11: failed to read image info for '%s', HRESULT=0x%08X\n", fileName, (unsigned int)hr);
+		free(fileData);
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+		return;
+	}
+
+	r3dTexture_CreateDX11FromImageMemory(slot, fileData, fileSize, fileName, info.Width, info.Height);
+
+	free(fileData);
+
+	if(!*slot)
+		r3dTexture_CreateDX11Fallback(slot, fileName);
+}
+
+static bool r3dTexture_CanCreateDX11SRVFormat(D3DFORMAT d3dFormat)
+{
+	switch(d3dFormat)
+	{
+	case D3DFMT_D16:
+	case D3DFMT_D24X8:
+	case D3DFMT_D24S8:
+		return false;
+
+	default:
+		return r3dDX11_ConvertLegacyD3DFormat(d3dFormat) != 0;
+	}
+}
+
+static void r3dTexture_CreateDX11Blank(
+	r3dDX11Texture** slot,
+	int width,
+	int height,
+	D3DFORMAT d3dFormat,
+	const char* debugName
+)
+{
+	if(!slot || *slot)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(width <= 0 || height <= 0 || !r3dTexture_CanCreateDX11SRVFormat(d3dFormat))
+	{
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
+
+	if(!tex->Create2D(width, height, dx11Format, NULL, 0))
+	{
+		delete tex;
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	*slot = tex;
+
+	r3dOutToLog("r3dTexture DX11: linked blank SRV '%s'\n", debugName ? debugName : "");
+}
+
+static void r3dTexture_CreateDX11FromD3D9Texture(
+	r3dDX11Texture** slot,
+	r3dD3DTextureTunnel* source,
+	int width,
+	int height,
+	D3DFORMAT d3dFormat,
+	const char* debugName
+)
+{
+	if(!slot || !source)
+		return;
+
+	if(!r3dTexture_DX11LinkEnabled())
+		return;
+
+	if(!R3D_IS_MAIN_THREAD())
+		return;
+
+	if(width <= 0 || height <= 0 || !r3dTexture_CanCreateDX11SRVFormat(d3dFormat))
+	{
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	if(*slot)
+	{
+		delete *slot;
+		*slot = NULL;
+	}
+
+	IDirect3DTexture9* sourceTex = source->AsTex2D();
+	if(!sourceTex)
+	{
+		r3dTexture_CreateDX11Blank(slot, width, height, d3dFormat, debugName);
+		return;
+	}
+
+	D3DLOCKED_RECT locked;
+	HRESULT hr = sourceTex->LockRect(0, &locked, NULL, D3DLOCK_READONLY);
+	if(FAILED(hr))
+	{
+		r3dOutToLog("r3dTexture DX11: creating blank SRV for '%s', D3D9 lock failed HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
+		r3dTexture_CreateDX11Blank(slot, width, height, d3dFormat, debugName);
+		return;
+	}
+
+	r3dDX11Texture* tex = new r3dDX11Texture();
+	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
+	const bool created = tex->Create2D(width, height, dx11Format, locked.pBits, locked.Pitch);
+
+	sourceTex->UnlockRect(0);
+
+	if(!created)
+	{
+		delete tex;
+		r3dTexture_CreateDX11Fallback(slot, debugName);
+		return;
+	}
+
+	*slot = tex;
+
+	r3dOutToLog("r3dTexture DX11: linked D3D9 copy SRV '%s'\n", debugName ? debugName : "");
 }
 
 static void r3dTexture_CreateDX11FromDDSFile(r3dDX11Texture** slot, const char* fileName)
@@ -128,6 +417,7 @@ static void r3dTexture_CreateDX11FromDDSFile(r3dDX11Texture** slot, const char* 
 	{
 		delete tex;
 		r3dOutToLog("r3dTexture DX11: failed to lazy-create SRV for '%s'\n", fileName ? fileName : "");
+		r3dTexture_CreateDX11Fallback(slot, fileName);
 		return;
 	}
 
@@ -690,12 +980,26 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 #ifndef WO_SERVER
 	if(m_DX11TexArray && index >= 0 && index < m_iNumTextures)
 	{
-		r3dTexture_CreateDX11FromDDSMemory(
-			&m_DX11TexArray[index],
-			FileInMemoryData,
-			FileInMemorySize,
-			DEBUG_NAME
-		);
+		if(bCubemap || TgD > 1)
+		{
+			r3dTexture_CreateDX11FromDDSMemory(
+				&m_DX11TexArray[index],
+				FileInMemoryData,
+				FileInMemorySize,
+				DEBUG_NAME
+			);
+		}
+		else
+		{
+			r3dTexture_CreateDX11FromImageMemory(
+				&m_DX11TexArray[index],
+				FileInMemoryData,
+				FileInMemorySize,
+				DEBUG_NAME,
+				TgW,
+				TgH
+			);
+		}
 	}
 #endif
 
@@ -1006,8 +1310,39 @@ r3dDX11Texture* r3dTexture::GetDX11Texture()
 
 	if(m_iNumTextures == 1)
 	{
+		if(!m_DX11TexArray[0] && (Flags & fCreated))
+		{
+			if(Flags & fRenderTarget)
+			{
+				r3dTexture_CreateDX11RenderTargetMirror(
+					&m_DX11TexArray[0],
+					Width,
+					Height,
+					TexFormat,
+					NumMipMaps,
+					bCubemap
+				);
+			}
+			else if(!bCubemap && Depth <= 1)
+			{
+				r3dTexture_CreateDX11FromD3D9Texture(
+					&m_DX11TexArray[0],
+					&m_TexArray[0],
+					Width,
+					Height,
+					TexFormat,
+					Location.FileName
+				);
+			}
+		}
+
 		if(!m_DX11TexArray[0] && !(Flags & fCreated))
-			r3dTexture_CreateDX11FromDDSFile(&m_DX11TexArray[0], Location.FileName);
+		{
+			if(r3dTexture_IsDDSFileName(Location.FileName))
+				r3dTexture_CreateDX11FromDDSFile(&m_DX11TexArray[0], Location.FileName);
+			else
+				r3dTexture_CreateDX11FromImageFile(&m_DX11TexArray[0], Location.FileName);
+		}
 
 		return m_DX11TexArray[0];
 	}
@@ -1127,6 +1462,20 @@ void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int a
 	}
 	else
 	{
+#ifndef WO_SERVER
+		if(ZSize <= 1)
+		{
+			r3dTexture_CreateDX11FromD3D9Texture(
+				&m_DX11TexArray[0],
+				&m_TexArray[0],
+				XSize,
+				YSize,
+				TexFmt,
+				Location.FileName
+			);
+		}
+#endif
+
 		int size = GetTextureSizeInVideoMemory() ;
 
 		UpdateTextureStats( size ) ;

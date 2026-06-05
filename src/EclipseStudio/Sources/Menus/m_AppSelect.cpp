@@ -7,8 +7,6 @@
 
 #include "m_AppSelect.h"
 
-#include "r3dDX11ScaleformBridge.h"
-
 extern int AppSelectMode;
 void ClearFullScreen_Menu();
 
@@ -72,6 +70,7 @@ namespace
 
 		virtual void ProcessEvent(Rocket::Core::Event& event)
 		{
+			r3dOutToLog("RmlUi AppSelect: selected mode %d\n", m_result);
 			AppSelectMode = m_result;
 		}
 
