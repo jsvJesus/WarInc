@@ -17,6 +17,15 @@
 #include "GameCommon.h"
 #include "GameLevel.h"
 #include "UI/UIimEdit2.h"
+#include "UI/RmlUiBackend.h"
+
+#ifndef SetViewport
+#define SetViewport DoSetViewport
+#endif
+
+#ifndef SetStreamSourceFreq
+#define SetStreamSourceFreq DoSetStreamSourceFreq
+#endif
 
 #include "r3dProfilerRender.h"
 
@@ -156,6 +165,238 @@ void ProbePaint() ;
 
 static void ProbeDropCallback() ;
 static void ProbeSelectCallback( PickerSelectType pst, int left, int right, int top, int bottom ) ;
+
+extern void RestoreDX11MenuBackBuffer(const char* where);
+
+namespace
+{
+	struct LevelEditorRmlCommand
+	{
+		const char* ElementId;
+		const char* Label;
+		int Mode;
+	};
+
+	const LevelEditorRmlCommand g_LevelEditorRmlCommands[] =
+	{
+		{ "le-settings",      "Settings",         Editor_Level::EDITMODE_SETTINGS },
+		{ "le-terrain",       "Terrain",          Editor_Level::EDITMODE_TERRAIN },
+		{ "le-objects",       "Objects",          Editor_Level::EDITMODE_OBJECTS },
+		{ "le-materials",     "Materials",        Editor_Level::EDITMODE_MATERIALS },
+		{ "le-environment",   "Environment",      Editor_Level::EDITMODE_ENVIRONMENT },
+		{ "le-collections",   "Collections",      Editor_Level::EDITMODE_COLLECTION },
+		{ "le-decorators",    "Decorators",       Editor_Level::EDITMODE_DECORATORS },
+		{ "le-roads",         "Roads",            Editor_Level::EDITMODE_ROADS },
+		{ "le-gameplay",      "Gameplay",         Editor_Level::EDITMODE_GAMEPLAY },
+		{ "le-postfx",        "Post FX",          Editor_Level::EDITMODE_POSTFX },
+		{ "le-colorgrading",  "Color Correction", Editor_Level::EDITMODE_COLORGRADING },
+	};
+
+	const char* g_LevelEditorRmlPath = "Data/UI/m_LevelEditor.rml";
+
+	Rocket::Core::ElementDocument* g_LevelEditorRmlDocument = NULL;
+	bool g_LevelEditorRmlLoadTried = false;
+	bool g_LevelEditorRmlFirstFrameLogged = false;
+
+	void LevelEditorRml_SetActive(int mode);
+
+	class LevelEditorRmlListener : public Rocket::Core::EventListener
+	{
+	public:
+		LevelEditorRmlListener()
+		: m_editor(NULL)
+		, m_mode(Editor_Level::EDITMODE_SETTINGS)
+		{
+		}
+
+		void Init(Editor_Level* editor, int mode)
+		{
+			m_editor = editor;
+			m_mode = mode;
+		}
+
+		virtual void ProcessEvent(Rocket::Core::Event& event)
+		{
+			(void)event;
+
+			if(!m_editor)
+				return;
+
+			m_editor->MainToolIdx = m_mode;
+			LevelEditorRml_SetActive(m_mode);
+		}
+
+	private:
+		Editor_Level* m_editor;
+		int m_mode;
+	};
+
+	LevelEditorRmlListener g_LevelEditorRmlListeners[R3D_ARRAYSIZE(g_LevelEditorRmlCommands)];
+
+	bool LevelEditorRml_IsReady()
+	{
+		return g_LevelEditorRmlDocument != NULL;
+	}
+
+	void LevelEditorRml_SetActive(int mode)
+	{
+		if(!g_LevelEditorRmlDocument)
+			return;
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_LevelEditorRmlCommands); ++i)
+		{
+			Rocket::Core::Element* element = g_LevelEditorRmlDocument->GetElementById(g_LevelEditorRmlCommands[i].ElementId);
+
+			if(element)
+				element->SetClass("is-active", g_LevelEditorRmlCommands[i].Mode == mode);
+		}
+	}
+
+	void LevelEditorRml_SyncFromEditor(Editor_Level* editor)
+	{
+		if(!editor)
+			return;
+
+		LevelEditorRml_SetActive(editor->MainToolIdx);
+	}
+
+	bool LevelEditorRml_Load(Editor_Level* editor)
+	{
+		if(g_LevelEditorRmlDocument)
+			return true;
+
+		g_LevelEditorRmlLoadTried = true;
+
+		if(!RmlUiBackend::Initialize())
+		{
+			r3dOutToLog("RmlUi LevelEditor: backend initialization failed\n");
+			return false;
+		}
+
+		Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+
+		if(!ctx)
+		{
+			r3dOutToLog("RmlUi LevelEditor: no context\n");
+			return false;
+		}
+
+		g_LevelEditorRmlDocument = RmlUiBackend::LoadDocumentFromFile(g_LevelEditorRmlPath);
+
+		if(!g_LevelEditorRmlDocument)
+		{
+			r3dOutToLog("RmlUi LevelEditor: LoadDocumentFromFile failed: %s\n", g_LevelEditorRmlPath);
+			return false;
+		}
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_LevelEditorRmlCommands); ++i)
+		{
+			g_LevelEditorRmlListeners[i].Init(editor, g_LevelEditorRmlCommands[i].Mode);
+
+			Rocket::Core::Element* element = g_LevelEditorRmlDocument->GetElementById(g_LevelEditorRmlCommands[i].ElementId);
+
+			if(element)
+			{
+				element->AddEventListener("click", &g_LevelEditorRmlListeners[i]);
+			}
+			else
+			{
+				r3dOutToLog("RmlUi LevelEditor: element '%s' is missing\n", g_LevelEditorRmlCommands[i].ElementId);
+			}
+		}
+
+		g_LevelEditorRmlDocument->Show();
+
+		LevelEditorRml_SyncFromEditor(editor);
+
+		r3dOutToLog("RmlUi LevelEditor: document loaded and shown: %s\n", g_LevelEditorRmlPath);
+
+		return true;
+	}
+
+	void LevelEditorRml_Unload()
+	{
+		if(!g_LevelEditorRmlDocument)
+		{
+			g_LevelEditorRmlLoadTried = false;
+			return;
+		}
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_LevelEditorRmlCommands); ++i)
+		{
+			Rocket::Core::Element* element = g_LevelEditorRmlDocument->GetElementById(g_LevelEditorRmlCommands[i].ElementId);
+
+			if(element)
+				element->RemoveEventListener("click", &g_LevelEditorRmlListeners[i]);
+		}
+
+		g_LevelEditorRmlDocument->Close();
+		g_LevelEditorRmlDocument->RemoveReference();
+		g_LevelEditorRmlDocument = NULL;
+
+		g_LevelEditorRmlLoadTried = false;
+		g_LevelEditorRmlFirstFrameLogged = false;
+
+		Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+
+		if(ctx)
+			ctx->Update();
+
+		r3dOutToLog("RmlUi LevelEditor: document closed\n");
+	}
+
+	void LevelEditorRml_Tick(Editor_Level* editor)
+	{
+		if(!editor)
+			return;
+
+		if(!g_LevelEditorRmlDocument)
+		{
+			if(!g_LevelEditorRmlLoadTried)
+				LevelEditorRml_Load(editor);
+
+			return;
+		}
+
+		Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+
+		if(!ctx)
+			return;
+
+		RmlUiBackend::ProcessMouse();
+
+		ctx->SetDimensions(Rocket::Core::Vector2i((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH));
+		ctx->Update();
+
+		LevelEditorRml_SyncFromEditor(editor);
+	}
+
+	void LevelEditorRml_Render()
+	{
+		if(!g_LevelEditorRmlDocument)
+			return;
+
+		Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+
+		if(!ctx)
+			return;
+
+		RmlUiBackend::BeginFrame();
+		ctx->Render();
+		RmlUiBackend::EndFrame();
+
+		if(!g_LevelEditorRmlFirstFrameLogged)
+		{
+			r3dOutToLog("RmlUi LevelEditor: first frame rendered\n");
+			g_LevelEditorRmlFirstFrameLogged = true;
+		}
+
+		RestoreDX11MenuBackBuffer("LevelEditor");
+
+		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+	}
+}
 
 template <bool Write>
 void SerializeBloom( pugi::xml_node node, PFX_ExtractBloom::Settings* settings, int* BlurPasses, BlurTaps* BlurTaps )
@@ -3930,9 +4171,14 @@ void Editor_Level :: Process(bool enable)
 	imgui_Update();
 	imgui2_Update();
 
+	LevelEditorRml_Tick(this);
+
 	const static char* list[11] = { "Settings", "Terrain", "Objects", "Materials", "Environment", "Collections", "Decorators", "Roads", "Gameplay", "Post FX", "Color Correction" };
 
-	imgui_Toolbar(5, 5, r3dRenderer->ScreenW-10, 35, &MainToolIdx, Editor_Level::EDITMODE_SETTINGS, list, sizeof list / sizeof list[ 0 ], false );
+	if(!LevelEditorRml_IsReady())
+	{
+		imgui_Toolbar(5, 5, r3dRenderer->ScreenW-10, 35, &MainToolIdx, Editor_Level::EDITMODE_SETTINGS, list, sizeof list / sizeof list[ 0 ], false );
+	}
 
 	if( g_RoadEditingSwtichedOffTerrain2RoadBaking && MainToolIdx != EDITMODE_ROADS && Terrain2 )
 	{
@@ -4303,11 +4549,9 @@ void Editor_Level :: Process(bool enable)
 	win::input_Flush();
 	g_pDesktopManager->Draw();
 
+	LevelEditorRml_Render();
+
 }
-
-
-
-
 
 void Editor_Level :: ProcessSettings()
 {
@@ -16437,11 +16681,15 @@ void Editor_Level::Init()
 	ScopeTest_BlurMask		= r3dRenderer->LoadTexture( "Data/Weapons/Scopes/FrameMask_ACOG.dds" ) ;
 
 	g_pTerrain2Editor = new Terrain2Editor ;
+
+	LevelEditorRml_Load(this);
 }
 
 //--------------------------------------------------------------------------------------------------------
 void Editor_Level::Release()
 {
+	LevelEditorRml_Unload();
+
 	g_bEditMode = false;
 	SaveSettings( r3dGameLevel::GetHomeDir() );
 
