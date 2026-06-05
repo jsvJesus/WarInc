@@ -1045,12 +1045,53 @@ r3dRenderLayer::SetRT( int slot, IDirect3DSurface9* surf )
 		if(g_r3dDX11.IsInitialized())
 		{
 			const bool applied = g_r3dDX11RenderTargets.SetRenderTarget(slot, surf);
-			r3d_assert(applied || !surf);
 
 			RTs[ slot ] = surf;
 
 			if(!GetUseD3D9Present())
+			{
+				if(!applied && surf)
+				{
+					static int s_warnCountRT = 0;
+
+					if(s_warnCountRT < 32)
+					{
+						D3DSURFACE_DESC desc;
+						ZeroMemory(&desc, sizeof(desc));
+
+						if(SUCCEEDED(surf->GetDesc(&desc)))
+						{
+							r3dOutToLog(
+								"DX11: SetRT skipped unregistered D3D9 surface slot=%d surf=%p size=%ux%u fmt=%u usage=0x%X pool=%u\n",
+								slot,
+								surf,
+								(unsigned int)desc.Width,
+								(unsigned int)desc.Height,
+								(unsigned int)desc.Format,
+								(unsigned int)desc.Usage,
+								(unsigned int)desc.Pool
+							);
+						}
+						else
+						{
+							r3dOutToLog(
+								"DX11: SetRT skipped unregistered D3D9 surface slot=%d surf=%p\n",
+								slot,
+								surf
+							);
+						}
+
+						++s_warnCountRT;
+					}
+
+					if(slot == 0)
+						g_r3dDX11RenderTargets.ResetToBackBuffer();
+					else
+						g_r3dDX11RenderTargets.SetRenderTarget(slot, NULL);
+				}
+
 				return;
+			}
 		}
 #endif
 
@@ -1069,12 +1110,48 @@ r3dRenderLayer::SetDSS( IDirect3DSurface9* dss )
 		if(g_r3dDX11.IsInitialized())
 		{
 			const bool applied = g_r3dDX11RenderTargets.SetDepthStencil(dss);
-			r3d_assert(applied || !dss);
 
 			DSS = dss;
 
 			if(!GetUseD3D9Present())
+			{
+				if(!applied && dss)
+				{
+					static int s_warnCountDSS = 0;
+
+					if(s_warnCountDSS < 32)
+					{
+						D3DSURFACE_DESC desc;
+						ZeroMemory(&desc, sizeof(desc));
+
+						if(SUCCEEDED(dss->GetDesc(&desc)))
+						{
+							r3dOutToLog(
+								"DX11: SetDSS skipped unregistered D3D9 surface dss=%p size=%ux%u fmt=%u usage=0x%X pool=%u\n",
+								dss,
+								(unsigned int)desc.Width,
+								(unsigned int)desc.Height,
+								(unsigned int)desc.Format,
+								(unsigned int)desc.Usage,
+								(unsigned int)desc.Pool
+							);
+						}
+						else
+						{
+							r3dOutToLog(
+								"DX11: SetDSS skipped unregistered D3D9 surface dss=%p\n",
+								dss
+							);
+						}
+
+						++s_warnCountDSS;
+					}
+
+					g_r3dDX11RenderTargets.ResetToBackBuffer();
+				}
+
 				return;
+			}
 		}
 #endif
 

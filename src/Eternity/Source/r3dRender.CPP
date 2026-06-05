@@ -2072,9 +2072,22 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 			);
 
 			g_r3dDX11.SetDebugTexturedQuad(
-		strstr(__r3dCmdLine, "-dx11tex") || strstr(__r3dCmdLine, "/dx11tex")
+				strstr(__r3dCmdLine, "-dx11tex") || strstr(__r3dCmdLine, "/dx11tex")
 			);
 
+			// Важно:
+			// MainRT/MainDSS были созданы раньше, когда DX11 bridge еще не был initialized.
+			// Нужно пере-захватить backbuffer/depth после DX11 Init, чтобы RegisterRenderTarget/RegisterDepthStencil
+			// получили реальные DX11 RTV/DSV mirror.
+			AquireMainRT();
+
+			RTs[0] = NULL;
+			SetRT(0, MainRT);
+
+			DSS = NULL;
+			SetDSS(MainDSS);
+
+			r3dOutToLog("DX11: main RT/DSS registered after DX11 init\n");
 			r3dOutToLog("DX11: renderer layer started %dx%d windowed=%d\n", mode.Width, mode.Height, dx11Windowed ? 1 : 0);
 		}
 		else
@@ -4037,8 +4050,6 @@ void r3dRenderLayer::Flush()
 	vtxArray3D->Flush();
 	vtxArray3D_Lines->Flush();
 }
-
-
 
 void Show_Copyright();
 
