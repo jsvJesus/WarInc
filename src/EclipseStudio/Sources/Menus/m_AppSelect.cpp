@@ -55,10 +55,11 @@ namespace
 
 	Rocket::Core::ElementDocument* LoadAppSelectDocument(AppSelectEventListener* listeners)
 	{
-		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromFile(g_AppSelectTemplatePath);
+		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromFile("Data/UI/m_AppSelect.rml");
+
 		if(!document)
 		{
-			r3dOutToLog("RmlUi AppSelect: failed to load template '%s'\n", g_AppSelectTemplatePath);
+			r3dOutToLog("RmlUi AppSelect: LoadDocumentFromFile failed: Data/UI/m_AppSelect.rml\n");
 			return NULL;
 		}
 
@@ -67,6 +68,7 @@ namespace
 			listeners[i].SetResult(g_AppSelectCommands[i].Result);
 
 			Rocket::Core::Element* element = document->GetElementById(g_AppSelectCommands[i].ElementId);
+
 			if(element)
 				element->AddEventListener("click", &listeners[i]);
 			else
@@ -74,7 +76,9 @@ namespace
 		}
 
 		document->Show();
-		r3dOutToLog("RmlUi AppSelect: document loaded and shown\n");
+
+		r3dOutToLog("RmlUi AppSelect: document loaded from file and shown\n");
+
 		return document;
 	}
 
