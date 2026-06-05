@@ -5,6 +5,10 @@
 #include "r3dProfilerRender.h"
 #include "r3dBudgeter.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#endif
+
 #include "r3dBackgroundTaskDispatcher.h"
 
 #include "r3dDebug.h"
@@ -655,6 +659,47 @@ void SyncLightingAndSSAO()
 static void UpdateEditorUILayer();
 static void ProcessEditorUICommands();
 static void RenderEditorUIDebug();
+#ifndef WO_SERVER
+static void ForceDX11BackBufferForEditorUI(const char* where)
+{
+	if(!r3dRenderer)
+		return;
+
+	if(!g_r3dDX11.IsInitialized())
+		return;
+
+	if(r3dRenderer->GetUseD3D9Present())
+		return;
+
+	g_r3dDX11.ResetBackBufferTarget();
+
+	const float w = (float)g_r3dDX11.GetWidth();
+	const float h = (float)g_r3dDX11.GetHeight();
+
+	r3dRenderer->ScreenW = w;
+	r3dRenderer->ScreenH = h;
+	r3dRenderer->ScreenW2 = w * 0.5f;
+	r3dRenderer->ScreenH2 = h * 0.5f;
+
+	r3dRenderer->AllowNullViewport = 0;
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+	r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
+
+#ifndef FINAL_BUILD
+	static int s_logCount = 0;
+	if(s_logCount < 64)
+	{
+		r3dOutToLog(
+			"DX11 DBG: Force backbuffer for editor UI at %s, size=%.0fx%.0f\n",
+			where ? where : "unknown",
+			w,
+			h
+		);
+		++s_logCount;
+	}
+#endif
+}
+#endif
 void GameStateGameLoop()
 {
 
@@ -822,6 +867,10 @@ void GameStateGameLoop()
 
 		R3DPROFILE_END("Post processing");
 
+#ifndef WO_SERVER
+		ForceDX11BackBufferForEditorUI("after PostProcess");
+#endif
+
 		//Font_Label->PrintF(10, 500, r3dColor(255,255,255), "WorldObjects %d", GameWorld().GetNumObjects());
 		r3dSetFiltering( R3D_POINT );
 
@@ -912,6 +961,11 @@ void GameStateGameLoop()
 		R3DPROFILE_END("debug stuff");
 
 		R3DPROFILE_START("Finalize");
+
+#ifndef WO_SERVER
+		ForceDX11BackBufferForEditorUI("before Finalize");
+#endif
+
 		r3dRenderer->StartRender( 0 );
 		CurRenderPipeline->Finalize();
 

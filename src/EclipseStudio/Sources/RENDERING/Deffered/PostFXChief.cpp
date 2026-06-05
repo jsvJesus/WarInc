@@ -708,18 +708,32 @@ PostFXChief::PrepareBackBufferRender()
 	{
 		g_r3dDX11.ResetBackBufferTarget();
 
+		const float w = (float)g_r3dDX11.GetWidth();
+		const float h = (float)g_r3dDX11.GetHeight();
+
+		r3dRenderer->ScreenW = w;
+		r3dRenderer->ScreenH = h;
+		r3dRenderer->ScreenW2 = w * 0.5f;
+		r3dRenderer->ScreenH2 = h * 0.5f;
+
+		r3dRenderer->AllowNullViewport = 0;
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
+
 #ifndef FINAL_BUILD
 		static int s_logCount = 0;
-		if(s_logCount < 32)
+		if(s_logCount < 64)
 		{
 			r3dOutToLog(
-				"DX11 DBG: PostFX final output -> backbuffer %dx%d\n",
-				g_r3dDX11.GetWidth(),
-				g_r3dDX11.GetHeight()
+				"DX11 DBG: PostFX final output -> backbuffer %.0fx%.0f\n",
+				w,
+				h
 			);
 			++s_logCount;
 		}
 #endif
+
+		return;
 	}
 #endif
 

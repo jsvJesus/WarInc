@@ -30,19 +30,12 @@ LoadingScreen::~LoadingScreen()
 
 static bool UseDX11LoadingScreenWithoutScaleform()
 {
-	return r3dRenderer && !r3dRenderer->GetUseD3D9Present();
+	return false;
 }
 
 bool LoadingScreen::Load()
 {
-	if(UseDX11LoadingScreenWithoutScaleform())
-	{
-		SetRenderingDisabled(true);
-		_MenuCode = 1;
-		r3dOutToLog("LoadingScreen: Scaleform disabled on DX11 present\n");
-		return true;
-	}
-
+	SetRenderingDisabled(false);
 	return UIMenu::Load();
 }
 
