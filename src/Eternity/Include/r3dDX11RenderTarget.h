@@ -46,9 +46,22 @@ public:
 	);
 
 	void UnregisterSurface(IDirect3DSurface9* surface);
-
 	bool SetRenderTarget(int slot, IDirect3DSurface9* surface);
 	bool SetDepthStencil(IDirect3DSurface9* surface);
+	
+	bool SetRenderTargetDX11(
+		int slot,
+		ID3D11RenderTargetView* rtv,
+		unsigned int width,
+		unsigned int height
+	);
+	
+	bool SetDepthStencilDX11(
+		ID3D11DepthStencilView* dsv,
+		unsigned int width,
+		unsigned int height
+	);
+	
 	bool Clear(
 		unsigned int rectCount,
 		const D3DRECT* rects,

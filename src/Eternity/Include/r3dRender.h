@@ -21,6 +21,7 @@
 
 class r3dMaterial;
 class r3dD3DQuery;
+class r3dD3DSurfaceTunnel;
 
 struct R3D_SCREEN_VERTEX;
 struct R3D_DEBUG_VERTEX;
@@ -709,6 +710,9 @@ public:
 	void		GetRT( int slot, IDirect3DSurface9** oRT ) const ;
 	void		GetDSS( IDirect3DSurface9** dss ) const ;
 
+	void SetRTTunnel(int slot, r3dD3DSurfaceTunnel* surf);
+	void SetDSSTunnel(r3dD3DSurfaceTunnel* dss);
+
 	void		SetFog(int fogEnabled);
 
 	void		StretchRect( class r3dScreenBuffer* source, class r3dScreenBuffer* target, int filter = 0 );
@@ -1352,6 +1356,22 @@ public:
 		return mFormat ;
 	}
 
+	R3D_FORCEINLINE
+void SetFormat(D3DFORMAT format)
+	{
+		mFormat = format;
+	}
+
+	R3D_FORCEINLINE
+	int Valid() const
+	{
+#ifndef WO_SERVER
+		return mRes != NULL || mDX11RTV != NULL || mDX11DSV != NULL;
+#else
+		return mRes != NULL;
+#endif
+	}
+
 	void Set( IDirect3DSurface9* resource );
 	int ReleaseAndReset();
 
@@ -1374,10 +1394,12 @@ public:
 
 	R3D_FORCEINLINE ID3D11RenderTargetView* GetDX11RTV() const { return mDX11RTV; }
 	R3D_FORCEINLINE ID3D11DepthStencilView* GetDX11DSV() const { return mDX11DSV; }
+
+	R3D_FORCEINLINE unsigned int GetDX11Width() const { return mDX11Width; }
+	R3D_FORCEINLINE unsigned int GetDX11Height() const { return mDX11Height; }
 #endif
 
 	using Parent::Get;
-	using Parent::Valid;
 	using Parent::operator ->;
 
 	friend class r3dDeviceTunnel;

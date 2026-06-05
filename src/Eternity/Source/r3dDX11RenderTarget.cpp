@@ -307,6 +307,52 @@ bool r3dDX11RenderTargetBridge::SetDepthStencil(IDirect3DSurface9* surface)
 	return true;
 }
 
+bool r3dDX11RenderTargetBridge::SetRenderTargetDX11(
+	int slot,
+	ID3D11RenderTargetView* rtv,
+	unsigned int width,
+	unsigned int height
+)
+{
+	if(!Initialized || !g_r3dDX11.IsInitialized())
+		return false;
+
+	if(slot < 0 || slot >= R3D_DX11_MAX_RENDER_TARGETS)
+		return false;
+
+	CurrentRTV[slot] = rtv;
+
+	if(slot == 0)
+	{
+		CurrentWidth = width;
+		CurrentHeight = height;
+	}
+
+	Apply();
+	return true;
+}
+
+bool r3dDX11RenderTargetBridge::SetDepthStencilDX11(
+	ID3D11DepthStencilView* dsv,
+	unsigned int width,
+	unsigned int height
+)
+{
+	if(!Initialized || !g_r3dDX11.IsInitialized())
+		return false;
+
+	CurrentDSV = dsv;
+
+	if(CurrentWidth == 0 || CurrentHeight == 0)
+	{
+		CurrentWidth = width;
+		CurrentHeight = height;
+	}
+
+	Apply();
+	return true;
+}
+
 bool r3dDX11RenderTargetBridge::Clear(
 	unsigned int rectCount,
 	const D3DRECT* rects,

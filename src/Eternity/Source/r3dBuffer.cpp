@@ -672,21 +672,19 @@ void r3dScreenBuffer::D3DReleaseResource()
 	return;
 }
 
-
-
 void r3dScreenBuffer::SetMRT(int RTID, int bSet)
 {
 	if (!Tex) return;
 
 	if (!bSet)
 	{
-		r3dRenderer->SetRT(RTID, NULL);
+		r3dRenderer->SetRTTunnel(RTID, NULL);
 		return;
 	}
 
 	BufferID	= RTID;
 
-	r3dRenderer->SetRT( RTID, Surfs[ FACE_PX ][ 0 ].Get() );
+	r3dRenderer->SetRTTunnel( RTID, &Surfs[ FACE_PX ][ 0 ] );
 
 	return;
 }
@@ -717,17 +715,19 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 	r3d_assert( Mip < ActualNumMipLevels || !ActualNumMipLevels ) ;
 
 	BufferID	= RTID;
-	r3dD3DSurfaceTunnel s(Surfs[ Face ][ Mip ]);
-	if (s.Get())
+
+	r3dD3DSurfaceTunnel* s = &Surfs[ Face ][ Mip ];
+
+	if (s->Valid())
 	{
 		r3d_assert( bCubemap || Face == FACE_PX );
 
-		r3dRenderer->SetRT( RTID, s.Get() );
+		r3dRenderer->SetRTTunnel( RTID, s );
 	}
 
 	if ( zType == Z_SYSTEM  )
 	{
-		r3dRenderer->SetDSS(ZBuf.Get());
+		r3dRenderer->SetDSSTunnel(&ZBuf);
 	}
 	else
 	{
@@ -735,17 +735,17 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 		{
 			if ( zType == Z_OWN )
 			{
-				r3dRenderer->SetDSS(OurZBuf.Get());
+				r3dRenderer->SetDSSTunnel(&OurZBuf);
 			}
 			else
-			if( zType == Z_SHADOW )
-			{
-				r3dRenderer->SetDSS(ShadowZBuf.Get());
-			}
-			else
-			{
-				r3dRenderer->SetDSS(NULL);
-			}
+				if( zType == Z_SHADOW )
+				{
+					r3dRenderer->SetDSSTunnel(&ShadowZBuf);
+				}
+				else
+				{
+					r3dRenderer->SetDSSTunnel(NULL);
+				}
 		}
 	}
 
@@ -764,22 +764,18 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 		r3dRenderer->ScreenW2      = r3dRenderer->ScreenW / 2 ;
 		r3dRenderer->ScreenH2      = r3dRenderer->ScreenH / 2 ;
 
-		if( s.Get() )
+		if( s->Valid() )
 		{
 			r3dRenderer->SetViewport(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH);
 		}
 	}
-
 }
-
 
 void r3dScreenBuffer::Deactivate(int bReset)
 {
 	if (BufferID)
 	{
-		r3dRenderer->SetRT(BufferID, NULL);
-
-		//  r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, 0x00000000 );
+		r3dRenderer->SetRTTunnel(BufferID, NULL);
 
 		return;
 	}
@@ -787,10 +783,10 @@ void r3dScreenBuffer::Deactivate(int bReset)
 	r3d_assert( ActivateGuard == 1 ) ;
 	ActivateGuard -- ;
 
-	if (bReset && BBuf.Get())
+	if (bReset && BBuf.Valid())
 	{
-		r3dRenderer->SetRT(0, BBuf.Get());
-		r3dRenderer->SetDSS(ZBuf.Get());
+		r3dRenderer->SetRTTunnel(0, &BBuf);
+		r3dRenderer->SetDSSTunnel(&ZBuf);
 	}
 
 	r3dRenderer->ScreenW  = OldW;
@@ -799,13 +795,7 @@ void r3dScreenBuffer::Deactivate(int bReset)
 	r3dRenderer->ScreenH2 = r3dRenderer->ScreenH / 2;
 
 	r3dRenderer->SetViewport(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH);
-
-	//  if (bUseSystemZ)
-	//    r3dRenderer->pd3ddev->StretchRect(r3dRenderer->RTBuffer, NULL, surf1, NULL, D3DTEXF_NONE);
-
 }
-
-
 
 r3dD3DBuffer::r3dD3DBuffer(type_e type, int size, int stride, LPDIRECT3DVERTEXDECLARATION9 decl, const r3dIntegrityGuardian& ig /*= r3dIntegrityGuardian()*/)
 : r3dIResource( ig )

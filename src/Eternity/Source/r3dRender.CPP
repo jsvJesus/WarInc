@@ -5563,9 +5563,54 @@ static void DoCreateRenderTarget( void* params )
 {
 	CreateRenderTargetParams* pms = (CreateRenderTargetParams*) params ;
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
+	{
+		pms->SurfaceTunnel->ReleaseAndReset();
+		pms->SurfaceTunnel->SetFormat(pms->Format);
+
+		if(!g_r3dDX11RenderTargets.CreateRenderTargetMirror(
+			pms->SurfaceTunnel,
+			pms->Width,
+			pms->Height,
+			pms->Format,
+			pms->MultiSample,
+			pms->MultisampleQuality
+		))
+		{
+			r3dError(
+				"DX11 native CreateRenderTarget failed: %ux%u fmt=%d ms=%d quality=%u\n",
+				pms->Width,
+				pms->Height,
+				(int)pms->Format,
+				(int)pms->MultiSample,
+				(unsigned int)pms->MultisampleQuality
+			);
+		}
+
+		r3dOutToLog(
+			"DX11 native CreateRenderTarget: %ux%u fmt=%d\n",
+			pms->Width,
+			pms->Height,
+			(int)pms->Format
+		);
+
+		return;
+	}
+#endif
+
 	IDirect3DSurface9* surf ;
 
-	D3D_V( r3dRenderer->pd3ddev->CreateRenderTarget( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Lockable, &surf, 0 ) );
+	D3D_V( r3dRenderer->pd3ddev->CreateRenderTarget(
+		pms->Width,
+		pms->Height,
+		pms->Format,
+		pms->MultiSample,
+		pms->MultisampleQuality,
+		pms->Lockable,
+		&surf,
+		0
+	) );
 
 	pms->SurfaceTunnel->Set( surf ) ;
 
@@ -5582,7 +5627,7 @@ static void DoCreateRenderTarget( void* params )
 		);
 	}
 #endif
-};
+}
 
 void r3dDeviceTunnel::CreateRenderTarget( UINT Width,UINT Height,D3DFORMAT Format,D3DMULTISAMPLE_TYPE MultiSample,DWORD MultisampleQuality,BOOL Lockable,r3dD3DSurfaceTunnel* SurfaceTunnel )
 {
@@ -5616,9 +5661,54 @@ static void DoCreateDepthStencil( void * params )
 {
 	CreateDepthStencilParams* pms = ( CreateDepthStencilParams* ) params ;
 
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
+	{
+		pms->SurfaceTunnel->ReleaseAndReset();
+		pms->SurfaceTunnel->SetFormat(pms->Format);
+
+		if(!g_r3dDX11RenderTargets.CreateDepthStencilMirror(
+			pms->SurfaceTunnel,
+			pms->Width,
+			pms->Height,
+			pms->Format,
+			pms->MultiSample,
+			pms->MultisampleQuality
+		))
+		{
+			r3dError(
+				"DX11 native CreateDepthStencilSurface failed: %ux%u fmt=%d ms=%d quality=%u\n",
+				pms->Width,
+				pms->Height,
+				(int)pms->Format,
+				(int)pms->MultiSample,
+				(unsigned int)pms->MultisampleQuality
+			);
+		}
+
+		r3dOutToLog(
+			"DX11 native CreateDepthStencilSurface: %ux%u fmt=%d\n",
+			pms->Width,
+			pms->Height,
+			(int)pms->Format
+		);
+
+		return;
+	}
+#endif
+
 	IDirect3DSurface9* surf ;
 
-	D3D_V( r3dRenderer->pd3ddev->CreateDepthStencilSurface( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Discard, &surf, 0 ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->CreateDepthStencilSurface(
+		pms->Width,
+		pms->Height,
+		pms->Format,
+		pms->MultiSample,
+		pms->MultisampleQuality,
+		pms->Discard,
+		&surf,
+		0
+	) ) ;
 
 	pms->SurfaceTunnel->Set( surf );
 
@@ -5951,6 +6041,12 @@ void r3dDeviceTunnel::SetD3DResourcePrivateData( r3dD3DResourceTunnel* tunnel, c
 
 void r3dDeviceTunnel::SetD3DResourcePrivateData( r3dD3DSurfaceTunnel* tunnel, const char* data )
 {
+	if(!tunnel)
+		return;
+
+	if(!tunnel->Get())
+		return;
+
 	SetD3DResourcePrivateData( static_cast<r3dD3DResourceTunnel*>(tunnel), data ) ;
 }
 
@@ -6180,18 +6276,95 @@ r3dD3DSurfaceTunnel::ReleaseAndReset()
 
 	int refCount = 0 ;
 
-	if( mRes )
-	{
 #ifndef WO_SERVER
-		ReleaseDX11Mirror();
+	ReleaseDX11Mirror();
 #endif
 
+	if( mRes )
+	{
 		refCount = mRes->Release() ;
 		Parent::Set( 0 ) ;
-		mFormat = D3DFMT_UNKNOWN ;
 	}
 
+	mFormat = D3DFMT_UNKNOWN ;
+
 	return refCount ;
+}
+
+void r3dRenderLayer::SetRTTunnel(int slot, r3dD3DSurfaceTunnel* surf)
+{
+	r3d_assert(slot >= 0 && slot < MAX_RENDER_TARGETS);
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+	{
+		if(!surf || !surf->Valid())
+		{
+			RTs[slot] = NULL;
+
+			if(slot == 0)
+				g_r3dDX11RenderTargets.ResetToBackBuffer();
+			else
+				g_r3dDX11RenderTargets.SetRenderTargetDX11(slot, NULL, 0, 0);
+
+			return;
+		}
+
+		ID3D11RenderTargetView* rtv = surf->GetDX11RTV();
+
+		if(rtv)
+		{
+			g_r3dDX11RenderTargets.SetRenderTargetDX11(
+				slot,
+				rtv,
+				surf->GetDX11Width(),
+				surf->GetDX11Height()
+			);
+
+			RTs[slot] = surf->Get();
+			return;
+		}
+
+		SetRT(slot, surf->Get());
+		return;
+	}
+#endif
+
+	SetRT(slot, surf ? surf->Get() : NULL);
+}
+
+void r3dRenderLayer::SetDSSTunnel(r3dD3DSurfaceTunnel* dss)
+{
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+	{
+		if(!dss || !dss->Valid())
+		{
+			DSS = NULL;
+			g_r3dDX11RenderTargets.SetDepthStencilDX11(NULL, 0, 0);
+			return;
+		}
+
+		ID3D11DepthStencilView* dsv = dss->GetDX11DSV();
+
+		if(dsv)
+		{
+			g_r3dDX11RenderTargets.SetDepthStencilDX11(
+				dsv,
+				dss->GetDX11Width(),
+				dss->GetDX11Height()
+			);
+
+			DSS = dss->Get();
+			return;
+		}
+
+		SetDSS(dss->Get());
+		return;
+	}
+#endif
+
+	SetDSS(dss ? dss->Get() : NULL);
 }
 
 void r3dEnableWatchDog( float TimeOut )
