@@ -49,6 +49,32 @@ namespace
 {
 	int DEFUALT_RMODE = R3D_BLEND_NOALPHA | R3D_BLEND_NZ;
 
+#ifndef WO_SERVER
+	static bool IsDX11NativePresentPath()
+	{
+		return r3dRenderer &&
+			g_r3dDX11.IsInitialized() &&
+			!r3dRenderer->GetUseD3D9Present();
+	}
+
+	static RECT GetDX11BackBufferRect()
+	{
+		RECT rect;
+		rect.left = 0;
+		rect.top = 0;
+		rect.right = 0;
+		rect.bottom = 0;
+
+		if(IsDX11NativePresentPath())
+		{
+			rect.right = g_r3dDX11.GetWidth();
+			rect.bottom = g_r3dDX11.GetHeight();
+		}
+
+		return rect;
+	}
+#endif
+
 	enum
 	{
 		DEF_STAGE_SOURCE,
@@ -242,6 +268,22 @@ PostFXChief::Execute( bool toBackBuffer, bool resetTargets )
 	SetDefaultColorWriteMask();
 
 	bool canPatch = true ;
+
+#ifndef WO_SERVER
+	if(IsDX11NativePresentPath())
+	{
+		canPatch = false;
+
+#ifndef FINAL_BUILD
+		static int s_logCount = 0;
+		if(s_logCount < 8)
+		{
+			r3dOutToLog("DX11 DBG: PostFXChief patch-to-backbuffer disabled for native DX11\n");
+			++s_logCount;
+		}
+#endif
+	}
+#endif
 
 #ifndef FINAL_BUILD
 	// some grab screens need last image, which may be in fact
@@ -534,6 +576,14 @@ PostFXChief::CopyOutput()
 
 	RECT rect = { 0, 0, 0, 0 } ;
 
+#ifndef WO_SERVER
+	if(IsDX11NativePresentPath())
+	{
+		rect = GetDX11BackBufferRect();
+		sts.ForceFiltering = true;
+	}
+#endif
+
 #ifndef FINAL_BUILD
 	if( r_internal_width->GetInt() || r_internal_height->GetInt() )
 	{
@@ -547,6 +597,13 @@ PostFXChief::CopyOutput()
 	gPFX_Copy.PushSettings( sts );
 
 	DoDrawFX( &gPFX_Copy, src, dest, rect );
+
+#ifndef WO_SERVER
+	if(IsDX11NativePresentPath())
+	{
+		PrepareBackBufferRender();
+	}
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -769,7 +826,26 @@ PostFXChief::DrawLastFX( const Action& act )
 
 	PrepareBackBufferRender();
 
-	DoDrawFX( PFX, src, dest, act.DrawFX.TargetViewport );
+	RECT rect = act.DrawFX.TargetViewport;
+
+#ifndef WO_SERVER
+	if(IsDX11NativePresentPath())
+	{
+		if(rect.left == rect.right && rect.right == 0)
+		{
+			rect = GetDX11BackBufferRect();
+		}
+	}
+#endif
+
+	DoDrawFX( PFX, src, dest, rect );
+
+#ifndef WO_SERVER
+	if(IsDX11NativePresentPath())
+	{
+		PrepareBackBufferRender();
+	}
+#endif
 }
 
 //------------------------------------------------------------------------
