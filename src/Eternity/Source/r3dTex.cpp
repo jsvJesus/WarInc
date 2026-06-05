@@ -1327,6 +1327,9 @@ r3dDX11Texture* r3dTexture::GetDX11Texture()
 	if(!m_Loaded)
 		return NULL;
 
+	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].HasDX11Texture())
+		return m_TexArray[0].GetDX11Texture();
+
 	if(!m_DX11TexArray)
 		return NULL;
 
@@ -1336,6 +1339,9 @@ r3dDX11Texture* r3dTexture::GetDX11Texture()
 		{
 			if(Flags & fRenderTarget)
 			{
+				if(m_TexArray && m_TexArray[0].HasDX11Texture())
+					return m_TexArray[0].GetDX11Texture();
+
 				r3dTexture_CreateDX11RenderTargetMirror(
 					&m_DX11TexArray[0],
 					Width,
@@ -1388,6 +1394,9 @@ r3dDX11Texture* r3dTexture::GetDX11Texture()
 
 ID3D11ShaderResourceView* r3dTexture::GetDX11SRV()
 {
+	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].HasDX11Texture())
+		return m_TexArray[0].GetDX11SRV();
+
 	r3dDX11Texture* tex = GetDX11Texture();
 
 	if(!tex)
@@ -1409,6 +1418,9 @@ void r3dTexture::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, i
 	if(!surface || !(Flags & fRenderTarget))
 		return;
 
+	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].RegisterDX11RenderTargetSurface(surface, face, mip))
+		return;
+
 	r3dDX11Texture* tex = GetDX11Texture();
 	if(!tex)
 		return;
@@ -1422,6 +1434,7 @@ void r3dTexture::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, i
 	const unsigned int mipWidth = (unsigned int)R3D_MAX(1, Width >> mip);
 	const unsigned int mipHeight = (unsigned int)R3D_MAX(1, Height >> mip);
 
+	surface->SetFormat(TexFormat);
 	surface->SetDX11RenderTargetMirror(texture, rtv, mipWidth, mipHeight);
 }
 
@@ -1472,14 +1485,17 @@ void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int a
 		Flags |= fRenderTarget ;
 
 #ifndef WO_SERVER
-		r3dTexture_CreateDX11RenderTargetMirror(
-			&m_DX11TexArray[0],
-			XSize,
-			YSize,
-			TexFmt,
-			aNumMipMaps,
-			false
-		);
+		if(!m_TexArray[0].HasDX11Texture())
+		{
+			r3dTexture_CreateDX11RenderTargetMirror(
+				&m_DX11TexArray[0],
+				XSize,
+				YSize,
+				TexFmt,
+				aNumMipMaps,
+				false
+			);
+		}
 #endif
 	}
 	else
@@ -1534,14 +1550,17 @@ void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps
 		Flags |= fRenderTarget ;
 
 #ifndef WO_SERVER
-		r3dTexture_CreateDX11RenderTargetMirror(
-			&m_DX11TexArray[0],
-			EdgeLength,
-			EdgeLength,
-			TexFmt,
-			aNumMipMaps,
-			true
-		);
+		if(!m_TexArray[0].HasDX11Texture())
+		{
+			r3dTexture_CreateDX11RenderTargetMirror(
+				&m_DX11TexArray[0],
+				EdgeLength,
+				EdgeLength,
+				TexFmt,
+				aNumMipMaps,
+				true
+			);
+		}
 #endif
 	}
 	else
