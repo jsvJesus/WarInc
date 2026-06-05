@@ -743,20 +743,34 @@ int r3dScreenBuffer::GetShadowZBufSize()
 
 int r3dScreenBuffer::GetNumMipLevels() const
 {
-	if(!Tex) return 0;
+	if(!Tex)
+		return 0;
 
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
 	{
-		r3dDX11Texture* dx11Tex = Tex->GetDX11Texture();
-		if(dx11Tex && dx11Tex->IsValid())
-			return dx11Tex->GetMipCount();
-		return ActualNumMipLevels;
+		int mips = Tex->GetNumMipmaps();
+
+		if(mips > 0)
+			return mips;
+
+		if(ActualNumMipLevels > 0)
+			return ActualNumMipLevels;
+
+		return 1;
 	}
 #endif
 
 	IDirect3DTexture9* tex2D = Tex->AsTex2D();
-	if(!tex2D) return ActualNumMipLevels;
+
+	if(!tex2D)
+	{
+		if(ActualNumMipLevels > 0)
+			return ActualNumMipLevels;
+
+		return Tex->GetNumMipmaps();
+	}
+
 	return tex2D->GetLevelCount();
 }
 

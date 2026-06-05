@@ -505,6 +505,28 @@ r3dTexture::r3dTexture()
 	ID	        = r3dLastTextureID++;
 }
 
+bool r3dTexture::IsValid()
+{
+	if(IsMissing())
+		return false;
+
+	if(!m_TexArray || m_iNumTextures <= 0)
+		return false;
+
+	if(m_TexArray[0].Valid())
+		return true;
+
+#ifndef WO_SERVER
+	if(m_DX11TexArray && m_DX11TexArray[0] && m_DX11TexArray[0]->IsValid())
+		return true;
+
+	if(m_TexArray[0].HasDX11Texture())
+		return true;
+#endif
+
+	return false;
+}
+
 void r3dTexture::Unload()
 {
 	if( ( m_Loaded || Flags&fCreated ) && !( Flags & fRenderTarget ) )

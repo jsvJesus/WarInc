@@ -43,13 +43,7 @@ public:
 	int			CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetTexFormat, int NumMipMaps, int SystemMem = 0 );
 	int			CreateCubemap( int EdgeLength, D3DFORMAT TargetTexFormat, int NumMipMaps );	
 
-	bool		IsValid() { 
-#ifndef WO_SERVER
-		return m_TexArray && ((m_TexArray[0].Valid() != NULL) || (m_DX11TexArray && m_DX11TexArray[0] && m_DX11TexArray[0]->IsValid())) && !IsMissing(); 
-#else
-		return m_TexArray && (m_TexArray[0].Valid() != NULL) && !IsMissing(); 
-#endif
-	}
+	bool		IsValid();
 	bool		IsMissing() const { return Missing; }
 
 	void		Unload();
@@ -61,11 +55,36 @@ public:
 
 	int			GetTextureSizeInVideoMemory();
 
-	R3D_FORCEINLINE r3dD3DTextureTunnel GetD3DTunnel() const { r3d_assert(m_TexArray[0].Valid() || (m_DX11TexArray && m_DX11TexArray[0] && m_DX11TexArray[0]->IsValid())); return m_TexArray[0] ; };
-	R3D_FORCEINLINE IDirect3DTexture9* AsTex2D() const { if(!m_TexArray[0].Valid() && (!m_DX11TexArray || !m_DX11TexArray[0] || !m_DX11TexArray[0]->IsValid())) return NULL; return m_TexArray[0].AsTex2D(); }
-	R3D_FORCEINLINE IDirect3DCubeTexture9* AsTexCUBE() const { if(!m_TexArray[0].Valid() && (!m_DX11TexArray || !m_DX11TexArray[0] || !m_DX11TexArray[0]->IsValid())) return NULL; return m_TexArray[0].AsTexCube() ; }
-	R3D_FORCEINLINE IDirect3DVolumeTexture9* AsTexVolume() const { if(!m_TexArray[0].Valid() && (!m_DX11TexArray || !m_DX11TexArray[0] || !m_DX11TexArray[0]->IsValid())) return NULL; return m_TexArray[0].AsTexVolume(); }
+	R3D_FORCEINLINE r3dD3DTextureTunnel GetD3DTunnel() const
+	{
+		r3d_assert(m_TexArray);
+		return m_TexArray[0];
+	}
+	
+	R3D_FORCEINLINE IDirect3DTexture9* AsTex2D() const
+	{
+		if(!m_TexArray || !m_TexArray[0].Get())
+			return NULL;
 
+		return m_TexArray[0].AsTex2D();
+	}
+	
+	R3D_FORCEINLINE IDirect3DCubeTexture9* AsTexCUBE() const
+	{
+		if(!m_TexArray || !m_TexArray[0].Get())
+			return NULL;
+
+		return m_TexArray[0].AsTexCube();
+	}
+	
+	R3D_FORCEINLINE IDirect3DVolumeTexture9* AsTexVolume() const
+	{
+		if(!m_TexArray || !m_TexArray[0].Get())
+			return NULL;
+
+		return m_TexArray[0].AsTexVolume();
+	}
+	
 #ifndef WO_SERVER
 	r3dDX11Texture* GetDX11Texture();
 	ID3D11ShaderResourceView* GetDX11SRV();

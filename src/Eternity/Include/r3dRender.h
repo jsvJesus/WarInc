@@ -1326,18 +1326,17 @@ public:
 class r3dD3DTextureTunnel : public r3dD3DResourceTunnelT< IDirect3DBaseTexture9 >
 {
 public:
-	r3dD3DTextureTunnel()
-	: Parent()
-#ifndef WO_SERVER
-	, m_DX11RT( NULL )
-#endif
-	{
-	}
+	r3dD3DTextureTunnel();
+
+	void Set(IDirect3DBaseTexture9* res);
+	void ReleaseAndReset();
+
+	int Valid() const;
 
 	IDirect3DBaseTexture9*		AsBaseTex() const ;
 	IDirect3DTexture9*			AsTex2D() const ;
 	IDirect3DCubeTexture9*		AsTexCube() const ;
-	IDirect3DVolumeTexture9*	AsTexVolume() const ;
+	IDirect3DVolumeTexture9*		AsTexVolume() const ;
 
 	int							GetLevelCount() const ;
 	void						GetLevelDesc2D( int level, D3DSURFACE_DESC* oDesc ) const ;
@@ -1346,25 +1345,35 @@ public:
 	void UnlockRect( UINT Level );
 
 #ifndef WO_SERVER
-	void			SetDX11RT(r3dDX11Texture* rt);
-	r3dDX11Texture*	GetDX11RT() const;
-	bool			HasDX11RT() const;
+	bool						CreateDX11RenderTarget2D(UINT Width, UINT Height, UINT Levels, D3DFORMAT Format);
+	bool						CreateDX11RenderTargetCube(UINT EdgeLength, UINT Levels, D3DFORMAT Format);
+
+	bool						HasDX11Texture() const;
+	bool						IsDX11NativeRenderTarget() const;
+	bool						IsDX11NativeCube() const;
+
+	r3dDX11Texture*				GetDX11Texture() const;
+	ID3D11ShaderResourceView*	GetDX11SRV() const;
+
+	int							GetDX11Width() const;
+	int							GetDX11Height() const;
+	int							GetDX11MipCount() const;
+	D3DFORMAT					GetDX11Format() const;
+
+	bool						RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip) const;
 #endif
 
-	int ReleaseAndReset();
-
-	R3D_FORCEINLINE
-	int Valid() const
-	{
+private:
 #ifndef WO_SERVER
-		return mRes != NULL || m_DX11RT != NULL;
-#else
-		return mRes != NULL;
-#endif
-	}
+	void						ClearDX11NativeNoRelease();
 
-#ifndef WO_SERVER
-	r3dDX11Texture* m_DX11RT;
+	r3dDX11Texture*				mDX11Texture;
+	bool						mDX11NativeRenderTarget;
+	bool						mDX11NativeCube;
+	UINT						mDX11Width;
+	UINT						mDX11Height;
+	UINT						mDX11Levels;
+	D3DFORMAT					mDX11Format;
 #endif
 };
 
