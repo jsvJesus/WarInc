@@ -44,7 +44,7 @@ LoadingScreen::~LoadingScreen()
 namespace
 {
 	const char* g_LoadingTemplatePath = "Data\\UI\\m_LoadingScreen.rml";
-	const char* g_LoadingDefaultBackgroundPath = "Data\\UI\\Assets\\ConnectScreen.dds";
+	const char* g_LoadingDefaultBackgroundPath = "Data\\UI\\Assets\\Background.png";
 
 	std::string LoadingEscapeRml(const char* text)
 	{
@@ -245,15 +245,55 @@ int LoadingScreen::Update()
 }
 
 //------------------------------------------------------------------------
+
 void LoadingScreen::SetLoadingTexture(const char* ImagePath)
 {
 	R3D_ENSURE_MAIN_THREAD();
 
 	if(m_pBackgroundTex)
+	{
 		r3dRenderer->DeleteTexture(m_pBackgroundTex);
+		m_pBackgroundTex = NULL;
+	}
+
+	if(!ImagePath || !ImagePath[0])
+	{
+		r3dOutToLog("RmlUi LoadingScreen: empty background path\n");
+		return;
+	}
+
+	r3dOutToLog("RmlUi LoadingScreen: checking background '%s'\n", ImagePath);
+
+	if(!r3dFileExists(ImagePath))
+	{
+		r3dOutToLog("RmlUi LoadingScreen: background file not found: '%s'\n", ImagePath);
+		return;
+	}
+
 	m_pBackgroundTex = r3dRenderer->LoadTexture(ImagePath);
+
 	if(!m_pBackgroundTex)
-		r3dOutToLog("RmlUi LoadingScreen: failed to load background '%s'\n", ImagePath ? ImagePath : "");
+	{
+		r3dOutToLog("RmlUi LoadingScreen: LoadTexture failed: '%s'\n", ImagePath);
+		return;
+	}
+
+	if(!m_pBackgroundTex->IsValid())
+	{
+		r3dOutToLog("RmlUi LoadingScreen: texture is invalid: '%s'\n", ImagePath);
+		r3dRenderer->DeleteTexture(m_pBackgroundTex);
+		m_pBackgroundTex = NULL;
+		return;
+	}
+
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && !m_pBackgroundTex->HasDX11Texture())
+	{
+		r3dOutToLog("RmlUi LoadingScreen: texture has no DX11 texture/SRV: '%s'\n", ImagePath);
+	}
+#endif
+
+	r3dOutToLog("RmlUi LoadingScreen: background loaded OK: '%s'\n", ImagePath);
 }
 
 void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const wchar_t* Message, int mapType, const wchar_t* tip_of_the_day )

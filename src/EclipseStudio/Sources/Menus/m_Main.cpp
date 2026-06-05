@@ -276,7 +276,7 @@ namespace
 	static std::string g_MainStatus = "Select map or create new level.";
 
 	const char* g_MainTemplatePath = "Data\\UI\\m_Main.rml";
-	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
+	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.png";
 
 	class MainMenuEventListener : public Rocket::Core::EventListener
 	{

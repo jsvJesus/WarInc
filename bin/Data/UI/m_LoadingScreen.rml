@@ -12,12 +12,14 @@
     <div id="left_strip"></div>
     <div id="right_strip"></div>
 
-    <div id="shade"></div>
+    <div id="loading_panel">
+        <div id="loading_top_line"></div>
 
-    <div id="content" class="loading-content">
-        <div id="map_name">Loading</div>
-        <div id="map_desc"></div>
-        <div id="map_mode"></div>
+        <div id="loading_left">
+            <div id="map_name">Loading</div>
+            <div id="map_desc"></div>
+            <div id="map_mode"></div>
+        </div>
 
         <div id="tip_box">
             <div id="tip_caption"></div>

@@ -28,7 +28,7 @@ namespace
 	};
 
 	const char* g_AppSelectTemplatePath = "Data\\UI\\m_AppSelect.rml";
-	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
+	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.png";
 
 	class AppSelectEventListener : public Rocket::Core::EventListener
 	{
@@ -105,10 +105,38 @@ namespace
 
 	r3dTexture* LoadAppSelectBackground()
 	{
-		if(!r3dFileExists(g_EditorBackgroundPath))
-			return NULL;
+		r3dOutToLog("RmlUi AppSelect: checking background '%s'\n", g_EditorBackgroundPath);
 
-		return r3dRenderer->LoadTexture(g_EditorBackgroundPath);
+		if(!r3dFileExists(g_EditorBackgroundPath))
+		{
+			r3dOutToLog("RmlUi AppSelect: background file not found: '%s'\n", g_EditorBackgroundPath);
+			return NULL;
+		}
+
+		r3dTexture* texture = r3dRenderer->LoadTexture(g_EditorBackgroundPath);
+
+		if(!texture)
+		{
+			r3dOutToLog("RmlUi AppSelect: LoadTexture failed: '%s'\n", g_EditorBackgroundPath);
+			return NULL;
+		}
+
+		if(!texture->IsValid())
+		{
+			r3dOutToLog("RmlUi AppSelect: texture is invalid: '%s'\n", g_EditorBackgroundPath);
+			r3dRenderer->DeleteTexture(texture);
+			return NULL;
+		}
+
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized() && !texture->HasDX11Texture())
+		{
+			r3dOutToLog("RmlUi AppSelect: texture has no DX11 texture/SRV: '%s'\n", g_EditorBackgroundPath);
+		}
+#endif
+
+		r3dOutToLog("RmlUi AppSelect: background loaded OK: '%s'\n", g_EditorBackgroundPath);
+		return texture;
 	}
 
 	void DrawAppSelectBackground(r3dTexture* backgroundTexture)
