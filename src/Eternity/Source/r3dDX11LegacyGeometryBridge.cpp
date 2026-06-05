@@ -348,6 +348,25 @@ bool r3dDX11LegacyGeometryBridge::ApplyFixedFunction2D(IDirect3DVertexDeclaratio
 	return true;
 }
 
+static bool r3dDX11LegacyGeometryBridge_IsScreen2DDecl(IDirect3DVertexDeclaration9* vertexDeclaration)
+{
+	if(!vertexDeclaration)
+		return false;
+
+	D3DVERTEXELEMENT9 elements[64];
+	ZeroMemory(elements, sizeof(elements));
+
+	UINT elementCount = sizeof(elements) / sizeof(elements[0]);
+
+	if(FAILED(vertexDeclaration->GetDeclaration(elements, &elementCount)))
+		return false;
+
+	if(elementCount <= 0)
+		return false;
+
+	return elements[0].Usage == D3DDECLUSAGE_POSITIONT;
+}
+
 bool r3dDX11LegacyGeometryBridge::PrepareLegacyDraw(IDirect3DVertexDeclaration9* vertexDeclaration)
 {
 	if(!Initialized)
@@ -359,15 +378,31 @@ bool r3dDX11LegacyGeometryBridge::PrepareLegacyDraw(IDirect3DVertexDeclaration9*
 	if(!vertexDeclaration)
 		return false;
 
+	const bool screen2DDecl = r3dDX11LegacyGeometryBridge_IsScreen2DDecl(vertexDeclaration);
+	const bool fixedPipelineRequested = d3dc.pVS == NULL && d3dc.pPS == NULL;
+
+	if(fixedPipelineRequested && screen2DDecl)
+	{
+		return ApplyFixedFunction2D(vertexDeclaration);
+	}
+
 	if(r3dRenderer && (r3dRenderer->GetCurrentVertexShaderIdx() >= 0 || r3dRenderer->GetCurrentPixelShaderIdx() >= 0))
 	{
 		if(r3dRenderer->GetCurrentVertexShaderIdx() >= 0)
-			r3dDX11_ApplyCurrentVertexShaderInputLayout(vertexDeclaration);
+		{
+			if(!r3dDX11_ApplyCurrentVertexShaderInputLayout(vertexDeclaration))
+				return false;
+		}
 
 		return true;
 	}
 
-	return ApplyFixedFunction2D(vertexDeclaration);
+	if(screen2DDecl)
+	{
+		return ApplyFixedFunction2D(vertexDeclaration);
+	}
+
+	return false;
 }
 
 void r3dDX11LegacyGeometryBridge::ReleaseVertexBuffer(VertexBufferEntry& entry)

@@ -2990,6 +2990,7 @@ void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 
 
 	D3D_V( d3dc._SetVertexShader(0) );
+	D3D_V( d3dc._SetPixelShader(0) );
 	d3dc._SetDecl(R3D_DEBUG_VERTEX::getDecl());
 
 	ResetViewport();

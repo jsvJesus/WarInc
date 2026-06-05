@@ -826,16 +826,17 @@ void r3dRenderLayer::DrawIndexed( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UI
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 		{
-			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
-
-			g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitive(
-				Type,
-				BaseVertexIndex,
-				MinVertexIndex,
-				NumVertices,
-				startIndex,
-				primCount
-			);
+			if(g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL))
+			{
+				g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitive(
+					Type,
+					BaseVertexIndex,
+					MinVertexIndex,
+					NumVertices,
+					startIndex,
+					primCount
+				);
+			}
 		}
 
 		return;
@@ -869,18 +870,19 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 		{
-			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
-
-			g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitiveUP(
-				PrimitiveType,
-				MinVertexIndex,
-				NumVertices,
-				PrimitiveCount,
-				pIndexData,
-				IndexDataFormat,
-				pVertexStreamZeroData,
-				VertexStreamZeroStride
-			);
+			if(g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL))
+			{
+				g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitiveUP(
+					PrimitiveType,
+					MinVertexIndex,
+					NumVertices,
+					PrimitiveCount,
+					pIndexData,
+					IndexDataFormat,
+					pVertexStreamZeroData,
+					VertexStreamZeroStride
+				);
+			}
 		}
 
 		return;
@@ -908,13 +910,14 @@ void r3dRenderLayer::Draw( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UIN
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 		{
-			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
-
-			g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitive(
-				PrimitiveType,
-				StartVertex,
-				PrimitiveCount
-			);
+			if(g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL))
+			{
+				g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitive(
+					PrimitiveType,
+					StartVertex,
+					PrimitiveCount
+				);
+			}
 		}
 
 		return;
@@ -945,14 +948,15 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
 		{
-			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
-
-			g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitiveUP(
-				PrimitiveType,
-				PrimitiveCount,
-				pVertexStreamZeroData,
-				VertexStreamZeroStride
-			);
+			if(g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL))
+			{
+				g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitiveUP(
+					PrimitiveType,
+					PrimitiveCount,
+					pVertexStreamZeroData,
+					VertexStreamZeroStride
+				);
+			}
 		}
 
 		return;

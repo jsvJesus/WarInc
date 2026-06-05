@@ -90,6 +90,14 @@ int LoadingScreen::Update()
 		DWORD oldScissor = 0;
 		r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissor);
 		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized() && !r3dRenderer->GetUseD3D9Present())
+		{
+			d3dc._SetVertexShader(NULL);
+			d3dc._SetPixelShader(NULL);
+			d3dc._SetDecl(R3D_SCREEN_VERTEX::getDecl());
+		}
+#endif
 		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
 		r3dRenderer->SetViewport( (float)oldVp.X, (float)oldVp.Y, (float)oldVp.Width, (float)oldVp.Height );
 		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
