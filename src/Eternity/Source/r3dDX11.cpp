@@ -504,6 +504,20 @@ bool r3dDX11Renderer::Resize(int width, int height)
 	return true;
 }
 
+void r3dDX11Renderer::ResetBackBufferTarget()
+{
+	if(IsDeviceLost())
+		return;
+
+	if(!IsInitialized())
+		return;
+
+	if(!Context || !BackBufferRTV)
+		return;
+
+	g_r3dDX11RenderTargets.ResetToBackBuffer();
+}
+
 void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)
 {
 	if(IsDeviceLost())
@@ -515,15 +529,31 @@ void r3dDX11Renderer::BeginFrame(float r, float g, float b, float a)
 	if(!BackBufferRTV || !DepthStencilView)
 		return;
 
+	ResetBackBufferTarget();
+
 	float clearColor[4];
 	clearColor[0] = r;
 	clearColor[1] = g;
 	clearColor[2] = b;
 	clearColor[3] = a;
 
-	Context->OMSetRenderTargets(1, &BackBufferRTV, DepthStencilView);
 	Context->ClearRenderTargetView(BackBufferRTV, clearColor);
 	Context->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+#ifndef FINAL_BUILD
+	static int s_logCount = 0;
+	if(s_logCount < 16)
+	{
+		r3dOutToLog(
+			"DX11 DBG: BeginFrame once, clear backbuffer RTV=%p DSS=%p size=%dx%d\n",
+			BackBufferRTV,
+			DepthStencilView,
+			Width,
+			Height
+		);
+		++s_logCount;
+	}
+#endif
 }
 
 void r3dDX11Renderer::EndFrame(bool present)
@@ -537,6 +567,19 @@ void r3dDX11Renderer::EndFrame(bool present)
 	if(present)
 	{
 		HRESULT hr = SwapChain->Present(VSync ? 1 : 0, 0);
+
+#ifndef FINAL_BUILD
+		static int s_logCount = 0;
+		if(s_logCount < 32 || FAILED(hr))
+		{
+			r3dOutToLog(
+				"DX11 DBG: Present hr=0x%08X vsync=%d\n",
+				(unsigned int)hr,
+				VSync ? 1 : 0
+			);
+			++s_logCount;
+		}
+#endif
 
 		if(FAILED(hr))
 		{

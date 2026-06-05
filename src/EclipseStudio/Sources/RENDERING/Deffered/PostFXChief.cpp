@@ -7,6 +7,10 @@
 
 #include "PostFXChief.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#endif
+
 extern r3dScreenBuffer* AvgSceneLuminanceBuffer ;
 extern r3dScreenBuffer* SceneExposure0 ;
 extern r3dScreenBuffer* SceneExposure1 ;
@@ -697,6 +701,28 @@ PostFXChief::DoClear( const Action& act )
 void
 PostFXChief::PrepareBackBufferRender()
 {
+#ifndef WO_SERVER
+	if(r3dRenderer &&
+		g_r3dDX11.IsInitialized() &&
+		!r3dRenderer->GetUseD3D9Present())
+	{
+		g_r3dDX11.ResetBackBufferTarget();
+
+#ifndef FINAL_BUILD
+		static int s_logCount = 0;
+		if(s_logCount < 32)
+		{
+			r3dOutToLog(
+				"DX11 DBG: PostFX final output -> backbuffer %dx%d\n",
+				g_r3dDX11.GetWidth(),
+				g_r3dDX11.GetHeight()
+			);
+			++s_logCount;
+		}
+#endif
+	}
+#endif
+
 	r3dRenderer->SetBackBufferViewport();
 }
 

@@ -2962,22 +2962,12 @@ void r3dRenderLayer::SetBackBufferViewport()
 
 void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 {
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		if(clearToWhite)
-			g_r3dDX11.BeginFrame(1.0f, 1.0f, 1.0f, 1.0f);
-		else
-			g_r3dDX11.BeginFrame(0.015f, 0.017f, 0.022f, 1.0f);
-	}
-#endif
-	
-	static int ClearFlag = D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL;
+	static int ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL;
 	static int _FlagSet = 0;
 
-	if ( !_FlagSet)
+	if(!_FlagSet)
 	{
-		if (CurrentBPP == 16 )
+		if(CurrentBPP == 16)
 			ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER;
 		else
 			ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL;
@@ -2985,30 +2975,33 @@ void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 		_FlagSet = 1;
 	}
 
-	if (bClear)
-		Clear(0, NULL, ClearFlag, clearToWhite?D3DCOLOR_ARGB(255,255,255,255):Fog.Color.GetPacked(), 1.0f, 0);
+	if(bClear)
+	{
+		Clear(
+			0,
+			NULL,
+			ClearFlag,
+			clearToWhite ? D3DCOLOR_ARGB(255, 255, 255, 255) : Fog.Color.GetPacked(),
+			1.0f,
+			0
+		);
+	}
 
-
-	D3D_V( d3dc._SetVertexShader(0) );
-	D3D_V( d3dc._SetPixelShader(0) );
+	D3D_V(d3dc._SetVertexShader(0));
+	D3D_V(d3dc._SetPixelShader(0));
 	d3dc._SetDecl(R3D_DEBUG_VERTEX::getDecl());
 
 	ResetViewport();
 
 	CurrentRenderingMode = R3D_BLEND_NONE;
-	CurrentMaterialID    = -999;
+	CurrentMaterialID = -999;
 
-	RModeStackTop        = 0;
+	RModeStackTop = 0;
 
 	SetTex(NULL);
 	SetMaterial(NULL);
-	SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
-
-	//  pd3ddev->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, 1);
-
+	SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW);
 }
-
-
 
 void r3dRenderLayer::StartRenderSimple(int bClear)
 {

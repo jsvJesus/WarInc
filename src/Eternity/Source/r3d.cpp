@@ -1,6 +1,10 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#endif
+
 #include "r3dBackgroundTaskDispatcher.h"
 
 #include <intrin.h>
@@ -902,14 +906,24 @@ void r3dStartFrame()
 	if(r3dRenderer && r3dRenderer->DeviceAvailable)
 		r3dRenderer->ResetQueryCounters();
 
-  _r3d_StartFrameTime = r3dGetTime();
-
-#if !DISABLE_PROFILER
-  if(r3dProfiler::Instance())
-	  r3dProfiler::Instance()->StartFrame();
+#ifndef WO_SERVER
+	if(r3dRenderer &&
+		r3dRenderer->DeviceAvailable &&
+		g_r3dDX11.IsInitialized() &&
+		!r3dRenderer->GetUseD3D9Present())
+	{
+		g_r3dDX11.BeginFrame(0.015f, 0.017f, 0.022f, 1.0f);
+	}
 #endif
 
-  r3dMaterial::ResetMaterialFilter();
+	_r3d_StartFrameTime = r3dGetTime();
+
+#if !DISABLE_PROFILER
+	if(r3dProfiler::Instance())
+		r3dProfiler::Instance()->StartFrame();
+#endif
+
+	r3dMaterial::ResetMaterialFilter();
 }
 
 static double FPSSum = 0;

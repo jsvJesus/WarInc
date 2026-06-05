@@ -37,6 +37,7 @@ public:
 	bool RecreateDevice();
 
 	void BeginFrame(float r, float g, float b, float a);
+	void ResetBackBufferTarget();
 	void DrawDebugTexturedQuad();
 	void SetDebugTexturedQuad(bool enabled);
 	void DrawDebugTriangle();
