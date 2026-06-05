@@ -214,20 +214,6 @@ void InitRender(int bUseSet = 0)
 		Font_Editor->CreateSystemFont();
 	}
 
-	if(g_r3dDX11.IsInitialized())
-	{
-		if(!g_r3dDX11ScaleformBridge.Init(
-			win::hWnd,
-			g_r3dDX11.GetDevice(),
-			g_r3dDX11.GetContext(),
-			g_r3dDX11.GetWidth(),
-			g_r3dDX11.GetHeight()
-		))
-		{
-			r3dOutToLog("DX11 Scaleform bridge init failed; falling back to native D3D9 UI device\n");
-		}
-	}
-
 	r3dScaleformGfxCreate();
 
 #if ENABLE_WEB_BROWSER
@@ -1515,7 +1501,7 @@ void game::MainLoop()
 	g_bStartedAsParticleEditor = false;
 
 	r3dRenderer->SetUseD3D9Present(false);
-	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI through DX11 bridge\n");
+	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI native DX11\n");
 #else
 	r3dRenderer->SetUseD3D9Present(false);
 #endif
