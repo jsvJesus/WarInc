@@ -88,7 +88,7 @@ R3D_FORCEINLINE void IDirect3D9Cache::_SetStreamSource( UINT idx, IDirect3DVerte
 		VBStrides[ idx ] = stride ;
 
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized() && (!r3dRenderer || !r3dRenderer->GetUseD3D9Present()))
 		{
 			if(g_r3dDX11LegacyGeometryBridge.SetStreamSource(idx, buff, offset, stride))
 				return;
@@ -109,7 +109,7 @@ R3D_FORCEINLINE void IDirect3D9Cache::_SetIndices( IDirect3DIndexBuffer9* ibuff 
 		pIB = ibuff;
 
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized() && (!r3dRenderer || !r3dRenderer->GetUseD3D9Present()))
 		{
 			if(g_r3dDX11LegacyGeometryBridge.SetIndices(ibuff))
 				return;

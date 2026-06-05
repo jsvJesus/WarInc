@@ -28,6 +28,26 @@ LoadingScreen::~LoadingScreen()
 
 //------------------------------------------------------------------------
 
+static bool UseDX11LoadingScreenWithoutScaleform()
+{
+	return r3dRenderer && !r3dRenderer->GetUseD3D9Present();
+}
+
+bool LoadingScreen::Load()
+{
+	if(UseDX11LoadingScreenWithoutScaleform())
+	{
+		SetRenderingDisabled(true);
+		_MenuCode = 1;
+		r3dOutToLog("LoadingScreen: Scaleform disabled on DX11 present\n");
+		return true;
+	}
+
+	return UIMenu::Load();
+}
+
+//------------------------------------------------------------------------
+
 bool LoadingScreen::Initialize()
 {
 //	char EulaText[70000] = "";
@@ -104,8 +124,10 @@ void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const w
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(!m_RenderingDisabled)
-		SetLoadingTexture(ImagePath);
+	SetLoadingTexture(ImagePath);
+
+	if(m_RenderingDisabled)
+		return;
 
 	if(g_num_matches_played->GetInt() == 1 && g_num_game_executed2->GetInt()==1) // first time launch of the game, show keyboard schematic
 	{
@@ -154,6 +176,10 @@ void
 LoadingScreen::SetProgress( float progress )
 {
 	R3D_ENSURE_MAIN_THREAD();
+
+	if(m_RenderingDisabled)
+		return;
+
 	gfxMovie.SetVariable("_global.LoadedPercent", progress*100);
 }
 
@@ -183,6 +209,12 @@ void StopLoadingScreen()
 	delete gLoadingScreen;
 
 	gLoadingScreen = NULL;
+}
+
+void UpdateLoadingScreenOnce()
+{
+	if(gLoadingScreen)
+		gLoadingScreen->Update();
 }
 
 void SetLoadingTexture(const char* ImagePath)

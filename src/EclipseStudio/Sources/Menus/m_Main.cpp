@@ -788,10 +788,37 @@ namespace
 
 	static r3dTexture* MainLoadBackground()
 	{
-		if(!r3dFileExists("Data/Menu/Background.dds"))
-			return NULL;
+		const char* bgPath = "Data/Menu/Background.dds";
 
-		return r3dRenderer->LoadTexture("Data/Menu/Background.dds");
+		if(!r3dFileExists(bgPath))
+		{
+			r3dOutToLog("RmlUi Main: background file not found: %s\n", bgPath);
+			return NULL;
+		}
+
+		r3dTexture* tex = r3dRenderer->LoadTexture(bgPath);
+
+		if(!tex)
+		{
+			r3dOutToLog("RmlUi Main: LoadTexture returned NULL for %s\n", bgPath);
+			return NULL;
+		}
+
+		if(!tex->IsValid())
+		{
+			r3dOutToLog("RmlUi Main: background texture is invalid: %s\n", bgPath);
+			return NULL;
+		}
+
+#ifndef WO_SERVER
+		if(g_r3dDX11.IsInitialized() && !tex->HasDX11Texture())
+		{
+			r3dOutToLog("RmlUi Main: background has no DX11 SRV: %s\n", bgPath);
+		}
+#endif
+
+		r3dOutToLog("RmlUi Main: background loaded: %s\n", bgPath);
+		return tex;
 	}
 
 	static void MainDrawBackground(r3dTexture* backgroundTexture)

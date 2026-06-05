@@ -3,12 +3,21 @@
 
 #include "APIScaleformGfx.h"
 #include "r3dDX11ScaleformBridge.h"
+#include "r3dDX11.h"
+#include "r3dDX11Geometry.h"
+#include "r3dDX11State.h"
 
 #undef SetStreamSourceFreq
+
+#ifndef SF_D3D_VERSION
+#define SF_D3D_VERSION 11
+#endif
 
 #include "GFx_Kernel.h"
 #include "GFx_Renderer_D3D9.h"
 #include "Render/D3D9/D3D9_HAL.h"
+#include "GFx_Renderer_D3D1x.h"
+#include "Render/D3D1x/D3D1x_HAL.h"
 #include "GFx_FontProvider_Win32.h"
 
 // See r3dRender.h

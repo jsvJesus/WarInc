@@ -187,43 +187,12 @@ void InitRender(int bUseSet = 0)
 
 	ShowWindow(win::hWnd, TRUE);
 
-	r3dInitShaders();
-
-	r3dInitMaterials();
-
 	r3d_assert(g_pJobChief == 0);
 	g_pJobChief = new JobChief();
 	g_pJobChief->Init();
 
 	g_pBackgroundTaskDispatcher = new r3dBackgroundTaskDispatcher();
 	g_pBackgroundTaskDispatcher->Init() ;
-
-	g_EnvmapProbes.Init();
-	r3d_assert(g_pDecalChief == 0);
-	g_pDecalChief = new DecalChief();
-	g_pDecalChief->Init();
-	gWeatherPuddleManager.Init();
-	// should follow g_DecalChief
-	r3d_assert(g_pMaterialTypes == 0);
-	g_pMaterialTypes = new MaterialTypes();
-	g_pMaterialTypes->Load();
-
-#if R3D_ALLOW_LIGHT_PROBES
-	g_pProbeMaster = new ProbeMaster ;
-	g_pProbeMaster->Init() ;
-#endif
-
-	r3dRenderer->StartRender();
-	r3dRenderer->EndRender( true );
-
-	r3dUtilInit();
-	InitOcclusionQuerySystem();
-
-	gFlashbangVisualController.Init();
-
-#ifndef FINAL_BUILD
-	InitObjCategories();
-#endif
 
 	if ( d_mouse_window_lock->GetBool() )
 	{
@@ -1492,19 +1461,11 @@ void game::MainLoop()
 
 	InitRender(1);
 
-	CurRenderPipeline = new r3dDefferedRenderer;
-	CurRenderPipeline->Init();
-
 	SetFocus(win::hWnd);
 
 	r3dMenuInit();
 
-	r3dParticleSystemInit();
-
 	InitDesktopSystem();
-
-	InitPostFX();
-	InitPointLightsRendererV2();
 
 	g_pWind = new r3dWind ;
 
@@ -1553,13 +1514,60 @@ void game::MainLoop()
 	g_bEditMode = true;
 	g_bStartedAsParticleEditor = false;
 
-	// Editors now use DX11 present with UI on D3D9 via r3dDX11ScaleformBridge
-	const bool useD3D9EditorPresent = false;
-	r3dRenderer->SetUseD3D9Present(useD3D9EditorPresent);
-	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI on D3D9 via bridge\n");
+	r3dRenderer->SetUseD3D9Present(false);
+	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI through DX11 bridge\n");
 #else
 	r3dRenderer->SetUseD3D9Present(false);
 #endif
+
+	if(m_ret == Menu_AppSelect::bQuit)
+		return;
+
+	bool preInitLoadingScreen = false;
+	if(r3dRenderer && !r3dRenderer->GetUseD3D9Present())
+	{
+		r3dOutToLog("Showing DX11 pre-init loading screen...\n");
+		StartLoadingScreen();
+		SetLoadingTexture("Data\\Menu\\ConnectScreen.dds");
+		UpdateLoadingScreenOnce();
+		preInitLoadingScreen = true;
+	}
+
+	r3dOutToLog("Initializing gameplay renderer after AppSelect...\n");
+	r3dInitShaders();
+	r3dInitMaterials();
+
+	g_EnvmapProbes.Init();
+	r3d_assert(g_pDecalChief == 0);
+	g_pDecalChief = new DecalChief();
+	g_pDecalChief->Init();
+	gWeatherPuddleManager.Init();
+	// should follow g_DecalChief
+	r3d_assert(g_pMaterialTypes == 0);
+	g_pMaterialTypes = new MaterialTypes();
+	g_pMaterialTypes->Load();
+
+#if R3D_ALLOW_LIGHT_PROBES
+	g_pProbeMaster = new ProbeMaster ;
+	g_pProbeMaster->Init() ;
+#endif
+
+	r3dUtilInit();
+	InitOcclusionQuerySystem();
+
+	gFlashbangVisualController.Init();
+
+#ifndef FINAL_BUILD
+	InitObjCategories();
+#endif
+
+	CurRenderPipeline = new r3dDefferedRenderer;
+	CurRenderPipeline->Init();
+
+	r3dParticleSystemInit();
+
+	InitPostFX();
+	InitPointLightsRendererV2();
 
 	void InitGrass();
 	InitGrass();
@@ -1567,6 +1575,9 @@ void game::MainLoop()
 	g_pHUDCameraEffects = new HUDCameraEffects ;
 
 	gWeaponArmory.Init();
+
+	if(preInitLoadingScreen)
+		StopLoadingScreen();
 
 	// for editors, do not lock mouse. when we start game, in ExecuteNetworkGame we will set that var to true
 	d_mouse_window_lock->SetBool(false);

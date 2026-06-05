@@ -16,6 +16,7 @@ public:
 	virtual ~LoadingScreen();
 
 	virtual bool Initialize() OVERRIDE;
+	virtual bool Load() OVERRIDE;
 	virtual int Update() OVERRIDE;
 
 	void SetLoadingTexture(const char* ImagePath);
@@ -28,6 +29,7 @@ public:
 void StartLoadingScreen( );
 void DisableLoadingRendering( );
 void StopLoadingScreen( );
+void UpdateLoadingScreenOnce();
 void SetLoadingTexture(const char* ImagePath);
 void SetLoadingProgress( float progress );
 void AdvanceLoadingProgress( float add );

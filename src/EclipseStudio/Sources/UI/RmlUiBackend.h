@@ -18,6 +18,10 @@
 #include <d3d9.h>
 #include <vector>
 
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct RmlUiRenderInterfaceDX11;
+
 #ifdef SetViewport
 #undef SetViewport
 #endif
@@ -62,9 +66,14 @@ class RmlUiRenderInterface : public Rocket::Core::RenderInterface
 {
 public:
 	RmlUiRenderInterface();
+	virtual ~RmlUiRenderInterface();
 
 	void SetDevice(IDirect3DDevice9* device, int width, int height);
+	void SetDX11Device(ID3D11Device* device, ID3D11DeviceContext* context, int width, int height);
+	IDirect3DDevice9* GetDevice() const { return m_device; }
+	bool UsesDX11() const;
 	void PrepareState();
+	void RestoreState();
 
 	// Rocket::Core::RenderInterface
 	virtual void RenderGeometry(Rocket::Core::Vertex* vertices, int num_vertices, int* indices, int num_indices, Rocket::Core::TextureHandle texture, const Rocket::Core::Vector2f& translation);
@@ -78,6 +87,7 @@ private:
 	int m_width;
 	int m_height;
 	std::vector<RmlUiBackendVertex> m_vertices;
+	RmlUiRenderInterfaceDX11* m_dx11;
 };
 
 // Forward declaration - struct defined in m_AppSelect.h
@@ -137,4 +147,7 @@ private:
 	static RmlUiSystemInterface* s_system;
 	static RmlUiRenderInterface* s_render;
 	static Rocket::Core::Context* s_context;
+	static IDirect3DDevice9* s_device;
+	static ID3D11Device* s_dx11Device;
+	static bool s_usingDX11;
 };
