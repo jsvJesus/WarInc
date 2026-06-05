@@ -1,0 +1,465 @@
+<rml>
+<head>
+<title>WarInc Command Center</title>
+<style>
+body
+{
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    font-family: Arial;
+    color: #e8e2d2;
+    background-color: rgba(3, 5, 5, 210);
+}
+
+#root
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+#backdrop
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(5, 8, 8, 180);
+}
+
+#noise_a
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 32px;
+    background-color: rgba(183, 111, 34, 85);
+}
+
+#noise_b
+{
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+    width: 100%;
+    height: 38px;
+    background-color: rgba(32, 41, 30, 150);
+}
+
+#left_strip
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 8px;
+    height: 100%;
+    background-color: rgba(140, 77, 28, 210);
+}
+
+#right_strip
+{
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 8px;
+    height: 100%;
+    background-color: rgba(53, 69, 47, 210);
+}
+
+#panel
+{
+    position: absolute;
+    width: 840px;
+    height: 560px;
+    left: 50%;
+    top: 50%;
+    margin-left: -420px;
+    margin-top: -280px;
+    padding: 0px;
+    background-color: rgba(13, 16, 15, 238);
+    border: 1px #5b604e;
+}
+
+#panel_inner
+{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 818px;
+    height: 538px;
+    background-color: rgba(18, 21, 19, 238);
+    border: 1px #1f251f;
+}
+
+#top_line
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 818px;
+    height: 4px;
+    background-color: rgba(170, 92, 28, 255);
+}
+
+#header
+{
+    position: absolute;
+    left: 26px;
+    top: 22px;
+    width: 766px;
+    height: 82px;
+    border-bottom: 1px #394032;
+}
+
+#title
+{
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 530px;
+    height: 42px;
+    font-size: 34px;
+    color: #f3ead6;
+    text-align: left;
+}
+
+#subtitle
+{
+    position: absolute;
+    left: 2px;
+    top: 44px;
+    width: 530px;
+    height: 20px;
+    font-size: 12px;
+    color: #9a947f;
+    text-align: left;
+}
+
+#header_badge
+{
+    position: absolute;
+    right: 0px;
+    top: 4px;
+    width: 196px;
+    height: 47px;
+    padding-top: 13px;
+    text-align: center;
+    font-size: 13px;
+    color: #f4d08c;
+    background-color: rgba(32, 38, 31, 240);
+    border: 1px #705028;
+}
+
+#tabs
+{
+    position: absolute;
+    left: 26px;
+    top: 120px;
+    width: 766px;
+    height: 46px;
+}
+
+.tab-button
+{
+    display: inline-block;
+    width: 238px;
+    height: 31px;
+    margin-right: 12px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #c8c1af;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.tab-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.tab-button.active
+{
+    color: #ffffff;
+    background-color: rgba(117, 65, 25, 255);
+    border-color: #d49a50;
+}
+
+#content
+{
+    position: absolute;
+    left: 26px;
+    top: 180px;
+    width: 766px;
+    height: 296px;
+    background-color: rgba(7, 10, 9, 155);
+    border: 1px #2e352c;
+}
+
+.map-list
+{
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    width: 560px;
+    height: 270px;
+    background-color: rgba(4, 6, 6, 205);
+    border: 1px #333b31;
+    overflow: auto;
+}
+
+.map-row
+{
+    display: block;
+    width: 526px;
+    height: 28px;
+    margin: 6px 7px 0px 7px;
+    padding: 9px 9px 0px 9px;
+    text-align: left;
+    font-size: 14px;
+    color: #d9d1bd;
+    background-color: rgba(27, 33, 29, 235);
+    border: 1px #414938;
+}
+
+.map-row:hover
+{
+    color: #fff4d8;
+    background-color: rgba(50, 58, 44, 245);
+    border-color: #aa6a2e;
+}
+
+.map-row.selected
+{
+    color: #ffffff;
+    background-color: rgba(116, 62, 23, 255);
+    border-color: #e0a358;
+}
+
+.empty
+{
+    margin: 16px;
+    font-size: 14px;
+    color: #88836f;
+}
+
+#side
+{
+    position: absolute;
+    left: 588px;
+    top: 12px;
+    width: 166px;
+    height: 270px;
+}
+
+.primary-button
+{
+    display: block;
+    width: 164px;
+    height: 36px;
+    margin-bottom: 10px;
+    padding-top: 11px;
+    text-align: center;
+    font-size: 15px;
+    color: #ffffff;
+    background-color: rgba(132, 71, 25, 255);
+    border: 1px #e0a358;
+}
+
+.primary-button:hover
+{
+    background-color: rgba(160, 87, 31, 255);
+    border-color: #ffd28b;
+}
+
+.side-button
+{
+    display: block;
+    width: 164px;
+    height: 31px;
+    margin-bottom: 10px;
+    padding-top: 9px;
+    text-align: center;
+    font-size: 14px;
+    color: #d4cbb8;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.side-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.create-block
+{
+    position: absolute;
+    left: 86px;
+    top: 18px;
+    width: 594px;
+    height: 250px;
+}
+
+.field-title
+{
+    font-size: 12px;
+    color: #a49d86;
+    margin-bottom: 5px;
+}
+
+.text-input
+{
+    display: block;
+    width: 570px;
+    height: 33px;
+    margin-bottom: 13px;
+    padding: 10px 10px 0px 10px;
+    text-align: left;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: rgba(4, 6, 6, 215);
+    border: 1px #3d4639;
+}
+
+.text-input.active
+{
+    border-color: #d49145;
+    background-color: rgba(18, 22, 18, 245);
+}
+
+.option-button
+{
+    display: block;
+    width: 590px;
+    height: 31px;
+    margin-bottom: 8px;
+    padding-top: 9px;
+    text-align: left;
+    font-size: 14px;
+    color: #d4cbb8;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.option-button:hover
+{
+    color: #fff1d0;
+    background-color: rgba(55, 62, 49, 255);
+    border-color: #a0672d;
+}
+
+.setting-row
+{
+    height: 39px;
+    margin-bottom: 5px;
+}
+
+.setting-label
+{
+    display: inline-block;
+    width: 220px;
+    height: 29px;
+    padding-top: 10px;
+    font-size: 14px;
+    color: #c8c0aa;
+}
+
+.setting-value
+{
+    display: inline-block;
+    width: 194px;
+    height: 29px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #ffffff;
+    background-color: rgba(4, 6, 6, 205);
+    border: 1px #3d4639;
+}
+
+.small-button
+{
+    display: inline-block;
+    width: 42px;
+    height: 29px;
+    margin-right: 6px;
+    margin-left: 6px;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 14px;
+    color: #ffffff;
+    background-color: rgba(33, 39, 34, 245);
+    border: 1px #454b3d;
+}
+
+.small-button:hover
+{
+    background-color: rgba(117, 65, 25, 255);
+    border-color: #d49a50;
+}
+
+#status
+{
+    position: absolute;
+    left: 26px;
+    bottom: 26px;
+    width: 500px;
+    height: 20px;
+    font-size: 12px;
+    color: #908a78;
+}
+
+#footer
+{
+    position: absolute;
+    right: 26px;
+    bottom: 26px;
+    width: 240px;
+    height: 20px;
+    font-size: 12px;
+    color: #9b6b39;
+    text-align: right;
+}
+</style>
+</head>
+<body>
+<div id="root">
+    <div id="backdrop"></div>
+    <div id="noise_a"></div>
+    <div id="noise_b"></div>
+    <div id="left_strip"></div>
+    <div id="right_strip"></div>
+
+    <div id="panel">
+        <div id="panel_inner">
+            <div id="top_line"></div>
+
+            <div id="header">
+                <div id="title">WARINC COMMAND</div>
+                <div id="subtitle">LEVEL CONTROL / TACTICAL EDITOR INTERFACE</div>
+                <div id="header_badge">DX11 NATIVE<br />RMLUI FRONTEND</div>
+            </div>
+
+            <div id="tabs">
+                <button id="tab_live" class="{{tab_live_class}}" onclick="dummy">LIVE MAPS</button>
+                <button id="tab_editor" class="{{tab_editor_class}}" onclick="dummy">EDITOR MAPS</button>
+                <button id="tab_create" class="{{tab_create_class}}" onclick="dummy">CREATE MAP</button>
+            </div>
+
+            <div id="content">{{content}}</div>
+            <div id="status">{{status}}</div>
+            <div id="footer">WARINC / DX11 / RMLUI</div>
+        </div>
+    </div>
+</div>
+</body>
+</rml>
