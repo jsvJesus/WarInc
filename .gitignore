@@ -35,6 +35,27 @@ compile_commands.json
 **/x86/
 **/Win32/
 
+# Runtime RmlUI templates used by Eclipse Studio.
+!/bin/
+/bin/*
+!/bin/Data/
+/bin/Data/*
+!/bin/Data/UI/
+/bin/Data/UI/*
+!/bin/Data/UI/Assets/
+/bin/Data/UI/Assets/*
+!/bin/Data/UI/Editor/
+/bin/Data/UI/Editor/*
+!/bin/Data/UI/Editor/m_AppSelect/
+/bin/Data/UI/Editor/m_AppSelect/*
+!/bin/Data/UI/Editor/m_AppSelect/m_AppSelect.rml
+!/bin/Data/UI/Editor/m_Main/
+/bin/Data/UI/Editor/m_Main/*
+!/bin/Data/UI/Editor/m_Main/m_Main.rml
+!/bin/Data/UI/LoadingScreen/
+/bin/Data/UI/LoadingScreen/*
+!/bin/Data/UI/LoadingScreen/LoadingScreen.rml
+
 # MSVC object/intermediate files
 *.obj
 *.pch
@@ -70,6 +91,8 @@ compile_commands.json
 *.anm
 *.mat
 *.dds
+!/bin/Data/UI/Assets/Background.dds
+!/bin/Data/UI/Assets/ConnectScreen.dds
 *.phx
 *.mpx
 *.cpx

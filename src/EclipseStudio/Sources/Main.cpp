@@ -380,7 +380,21 @@ CHWInfo g_HardwareInfo;
 // This function called by engine before main app window created, before any IO initialized. 
 void game::PreInit()
 {
-	//@FOR STEAM- SetCurrentDirectory("Z:\\tsg\\WarOnline\\bin\\");
+	char exeDir[MAX_PATH];
+	DWORD exeDirLen = GetModuleFileNameA(NULL, exeDir, sizeof(exeDir));
+	if(exeDirLen > 0 && exeDirLen < sizeof(exeDir))
+	{
+		char* slash = strrchr(exeDir, '\\');
+		char* slash2 = strrchr(exeDir, '/');
+		if(slash2 && (!slash || slash2 > slash))
+			slash = slash2;
+
+		if(slash)
+		{
+			*slash = 0;
+			SetCurrentDirectoryA(exeDir);
+		}
+	}
 
 	u_srand(GetTickCount());
 

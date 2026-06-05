@@ -300,8 +300,8 @@ void CloudBlurShader::Blur(r3dTexture* pTex, const SSceneParamter& sceneParam)
 	SetShaderConstant(pTex, sceneParam );
 
 	r3dRenderer->SetTex(pTex, 0);
-	pDev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	pDev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
 	mesh.draw();
 }
@@ -450,12 +450,12 @@ void CloudPlaneShader::Draw(const SSceneParamter& sceneParam, r3dTexture* pDensi
 
 	// set textures
 	r3dRenderer->SetTex(pDensityMap, 0);
-	pDev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	pDev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
 	r3dRenderer->SetTex(pBlurredMap, 1);
-	pDev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	pDev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
 	mesh.draw();
 }

@@ -2,6 +2,7 @@
 #include "r3d.h"
 
 #include "m_LoadingScreen.h"
+#include "RmlUiBackend.h"
 #include "GameCode\UserProfile.h"
 
 #include "Multiplayer\MasterServerLogic.h"
@@ -10,17 +11,29 @@
 
 #include "r3dDeviceQueue.h"
 
+#include <string>
+
 LoadingScreen::LoadingScreen( const char * movieName ) 
 : UIMenu(movieName) 
 {
 	m_pBackgroundTex = 0;
 	m_RenderingDisabled = false;
+	m_RmlDocument = NULL;
+	m_Progress = 0.0f;
+	r3dscpy(m_MapName, "Loading");
+	r3dscpy(m_MapDesc, "Preparing renderer");
+	r3dscpy(m_MapMode, "");
+	r3dscpy(m_MapType, "");
+	r3dscpy(m_TipCaption, "DX11");
+	r3dscpy(m_TipText, "Loading game resources");
 }
 
 //------------------------------------------------------------------------
 
 LoadingScreen::~LoadingScreen()
 {
+	Unload();
+
 	if(m_pBackgroundTex)
 		r3dRenderer->DeleteTexture(m_pBackgroundTex);
 	m_pBackgroundTex = 0;
@@ -28,15 +41,57 @@ LoadingScreen::~LoadingScreen()
 
 //------------------------------------------------------------------------
 
-static bool UseDX11LoadingScreenWithoutScaleform()
+namespace
 {
-	return false;
+	const char* g_LoadingTemplatePath = "Data\\UI\\LoadingScreen\\LoadingScreen.rml";
+	const char* g_LoadingDefaultBackgroundPath = "Data\\UI\\Assets\\ConnectScreen.dds";
+
+	std::string LoadingEscapeRml(const char* text)
+	{
+		std::string out;
+		if(!text)
+			return out;
+
+		for(const char* c = text; *c; ++c)
+		{
+			switch(*c)
+			{
+			case '&': out += "&amp;"; break;
+			case '<': out += "&lt;"; break;
+			case '>': out += "&gt;"; break;
+			case '"': out += "&quot;"; break;
+			case '\'': out += "&apos;"; break;
+			default: out += *c; break;
+			}
+		}
+
+		return out;
+	}
+
+	const char* LoadingWideToUtf8(const wchar_t* text)
+	{
+		return text ? wideToUtf8(text) : "";
+	}
 }
 
 bool LoadingScreen::Load()
 {
 	SetRenderingDisabled(false);
-	return UIMenu::Load();
+
+	if(!m_pBackgroundTex && r3dFileExists(g_LoadingDefaultBackgroundPath))
+		SetLoadingTexture(g_LoadingDefaultBackgroundPath);
+
+	if(!CreateRmlDocument())
+		return false;
+
+	_MenuCode = 1;
+	return true;
+}
+
+bool LoadingScreen::Unload()
+{
+	CloseRmlDocument();
+	return true;
 }
 
 //------------------------------------------------------------------------
@@ -49,6 +104,90 @@ bool LoadingScreen::Initialize()
 }
 
 void ClearFullScreen_Menu();
+void RestoreDX11MenuBackBuffer(const char* where);
+
+bool LoadingScreen::CreateRmlDocument()
+{
+	if(m_RmlDocument)
+		return true;
+
+	if(!RmlUiBackend::Initialize())
+	{
+		r3dOutToLog("RmlUi LoadingScreen: backend initialization failed\n");
+		return false;
+	}
+
+	m_RmlDocument = RmlUiBackend::LoadDocumentFromFile(g_LoadingTemplatePath);
+	if(!m_RmlDocument)
+	{
+		r3dOutToLog("RmlUi LoadingScreen: failed to load template '%s'\n", g_LoadingTemplatePath);
+		return false;
+	}
+
+	m_RmlDocument->Show();
+	UpdateRmlData();
+	return true;
+}
+
+void LoadingScreen::CloseRmlDocument()
+{
+	if(m_RmlDocument)
+	{
+		m_RmlDocument->Close();
+		m_RmlDocument->RemoveReference();
+		m_RmlDocument = NULL;
+	}
+}
+
+void LoadingScreen::UpdateRmlData()
+{
+	if(!m_RmlDocument)
+		return;
+
+	Rocket::Core::Element* element = NULL;
+
+	element = m_RmlDocument->GetElementById("map_name");
+	if(element)
+		element->SetInnerRML(LoadingEscapeRml(m_MapName).c_str());
+
+	element = m_RmlDocument->GetElementById("map_desc");
+	if(element)
+		element->SetInnerRML(LoadingEscapeRml(m_MapDesc).c_str());
+
+	element = m_RmlDocument->GetElementById("map_mode");
+	if(element)
+	{
+		std::string mode = LoadingEscapeRml(m_MapMode);
+		if(m_MapType[0])
+		{
+			mode += " / ";
+			mode += LoadingEscapeRml(m_MapType);
+		}
+		element->SetInnerRML(mode.c_str());
+	}
+
+	element = m_RmlDocument->GetElementById("tip_caption");
+	if(element)
+		element->SetInnerRML(LoadingEscapeRml(m_TipCaption).c_str());
+
+	element = m_RmlDocument->GetElementById("tip_text");
+	if(element)
+		element->SetInnerRML(LoadingEscapeRml(m_TipText).c_str());
+
+	char progressText[64];
+	sprintf(progressText, "%d%%", (int)(m_Progress * 100.0f + 0.5f));
+
+	element = m_RmlDocument->GetElementById("progress_text");
+	if(element)
+		element->SetInnerRML(progressText);
+
+	char progressWidth[64];
+	sprintf(progressWidth, "%0.2f%%", R3D_MAX(0.0f, R3D_MIN(m_Progress, 1.0f)) * 100.0f);
+
+	element = m_RmlDocument->GetElementById("progress_bar");
+	if(element)
+		element->SetProperty("width", progressWidth);
+}
 
 int LoadingScreen::Update()
 {
@@ -64,43 +203,38 @@ int LoadingScreen::Update()
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 
+		RestoreDX11MenuBackBuffer("Loading before clear");
 		ClearFullScreen_Menu();
 
-		// for now just draw a static picture in background, later on will be a video
-		r3d_assert(m_pBackgroundTex);
+		RestoreDX11MenuBackBuffer("Loading before background");
 
 		float x, y, w, h;
 		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
-		D3DVIEWPORT9 oldVp, newVp;
 
-		r3dRenderer->DoGetViewport(&oldVp);
-		newVp = oldVp;
-		newVp.X = 0;
-		newVp.Y = 0;
-		newVp.Width = r3dRenderer->d3dpp.BackBufferWidth;
-		newVp.Height = r3dRenderer->d3dpp.BackBufferHeight;
-		r3dRenderer->SetViewport( (float)newVp.X, (float)newVp.Y, (float)newVp.Width, (float)newVp.Height );
-		DWORD oldScissor = 0;
-		r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissor);
 		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-#ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && !r3dRenderer->GetUseD3D9Present())
-		{
-			d3dc._SetVertexShader(NULL);
-			d3dc._SetPixelShader(NULL);
-			d3dc._SetDecl(R3D_SCREEN_VERTEX::getDecl());
-		}
-#endif
-		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
-		r3dRenderer->SetViewport( (float)oldVp.X, (float)oldVp.Y, (float)oldVp.Width, (float)oldVp.Height );
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
+		if(m_pBackgroundTex)
+			r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
+		else
+			r3dDrawBox2D(x, y, w, h, r3dColor(12, 14, 18));
 
-		if(!m_RenderingDisabled)
+		r3dRenderer->Flush();
+
+		if(!m_RenderingDisabled && m_RmlDocument)
 		{
-			gfxMovie.UpdateAndDraw();
+			Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+			if(ctx)
+			{
+				ctx->SetDimensions(Rocket::Core::Vector2i((int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH));
+				ctx->Update();
+
+				RmlUiBackend::BeginFrame();
+				ctx->Render();
+				RmlUiBackend::EndFrame();
+				RestoreDX11MenuBackBuffer("Loading after RmlUi");
+			}
 		}
 
-		r3dRenderer->Flush();  
+		r3dRenderer->Flush();
 		r3dRenderer->EndFrame();
 	}
 
@@ -118,7 +252,8 @@ void LoadingScreen::SetLoadingTexture(const char* ImagePath)
 	if(m_pBackgroundTex)
 		r3dRenderer->DeleteTexture(m_pBackgroundTex);
 	m_pBackgroundTex = r3dRenderer->LoadTexture(ImagePath);
-	r3d_assert(m_pBackgroundTex);
+	if(!m_pBackgroundTex)
+		r3dOutToLog("RmlUi LoadingScreen: failed to load background '%s'\n", ImagePath ? ImagePath : "");
 }
 
 void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const wchar_t* Message, int mapType, const wchar_t* tip_of_the_day )
@@ -127,23 +262,24 @@ void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const w
 
 	SetLoadingTexture(ImagePath);
 
-	if(m_RenderingDisabled)
-		return;
+	r3dscpy(m_MapName, LoadingWideToUtf8(Name));
+	r3dscpy(m_MapDesc, LoadingWideToUtf8(Message));
+	r3dscpy(m_MapMode, "");
+	r3dscpy(m_MapType, "");
+	r3dscpy(m_TipCaption, "");
+	r3dscpy(m_TipText, LoadingWideToUtf8(tip_of_the_day));
 
 	if(g_num_matches_played->GetInt() == 1 && g_num_game_executed2->GetInt()==1) // first time launch of the game, show keyboard schematic
 	{
-		gfxMovie.SetVariable("_root.Main._visible", false);
-		gfxMovie.SetVariable("_root.Main2._visible", true);
+		r3dscpy(m_TipCaption, "Controls");
+		if(!m_TipText[0])
+			r3dscpy(m_TipText, "Check movement, weapon, and interaction bindings before joining the match.");
 	}
 	else
 	{
-		gfxMovie.SetVariable("_root.Main._visible", true);
-		gfxMovie.SetVariable("_root.Main2._visible", false);
+		r3dscpy(m_TipCaption, LoadingWideToUtf8(gLangMngr.getString("TipOfTheDay")));
 	}
 
-
-	gfxMovie.SetVariable("_global.MapName", Name);
-	gfxMovie.SetVariable("_global.MapDesc", Message);
 	{
 		const wchar_t* gameMode=L""; const char* modeType="";
 		switch(mapType)
@@ -163,12 +299,11 @@ void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const w
 		default:
 			break;
 		}
-		gfxMovie.SetVariable("_global.MapModeName", gameMode);
-		gfxMovie.SetVariable("_global.MapModeType", modeType); //Conquest, DM, Siege
+		r3dscpy(m_MapMode, LoadingWideToUtf8(gameMode));
+		r3dscpy(m_MapType, modeType);
 	}
 
-	gfxMovie.SetVariable("_global.TipCaption", gLangMngr.getString("TipOfTheDay"));
-	gfxMovie.SetVariable("_global.TipText", tip_of_the_day?tip_of_the_day:L"");
+	UpdateRmlData();
 }
 
 //------------------------------------------------------------------------
@@ -178,10 +313,8 @@ LoadingScreen::SetProgress( float progress )
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(m_RenderingDisabled)
-		return;
-
-	gfxMovie.SetVariable("_global.LoadedPercent", progress*100);
+	m_Progress = R3D_MAX(0.0f, R3D_MIN(progress, 1.0f));
+	UpdateRmlData();
 }
 
 //------------------------------------------------------------------------
@@ -192,7 +325,7 @@ static LoadingScreen*	gLoadingScreen;
 void StartLoadingScreen()
 {
 	r3d_assert( !gLoadingScreen );
-	gLoadingScreen = new LoadingScreen( "Data\\Menu\\LoadingScreen.swf" );
+	gLoadingScreen = new LoadingScreen( "RmlUiLoadingScreen" );
 
 	gLoadingScreen->Load();
 	gLoadingScreen->Initialize();
@@ -322,7 +455,7 @@ int DoConnectScreen( volatile LONG* Loading, const wchar_t* Message, float TimeO
 {
 	r3d_assert( gLoadingScreen );
 
-	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, -1, NULL );
+	gLoadingScreen->SetData( g_LoadingDefaultBackgroundPath, gLangMngr.getString("Connecting"), Message, -1, NULL );
 
 	bool checkTimeOut = TimeOut != 0.f;
 
@@ -354,7 +487,7 @@ int DoConnectScreen( T* Logic, bool (T::*CheckFunc)(), const wchar_t* Message, f
 {
 	r3d_assert( gLoadingScreen );
 
-	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, -1, NULL );
+	gLoadingScreen->SetData( g_LoadingDefaultBackgroundPath, gLangMngr.getString("Connecting"), Message, -1, NULL );
 
 	bool checkTimeOut = TimeOut != 0.f;
 

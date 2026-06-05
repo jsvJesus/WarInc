@@ -73,6 +73,7 @@
     <OutDir>$(ProjectDir)..\..\bin\</OutDir>
     <IntDir>$(ProjectDir)..\..\obj\EclipseStudio\$(Configuration)_$(Platform)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>Studio</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Final|x64'">
     <OutDir>$(ProjectDir)..\..\bin\</OutDir>

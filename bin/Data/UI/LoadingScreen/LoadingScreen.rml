@@ -1,0 +1,38 @@
+<rml>
+    <head>
+    <title>WarInc Loading</title>
+    <style>
+        body { width: 100%; height: 100%; margin: 0px; font-family: Arial; color: #eef3f8; }
+        #root { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; }
+        #shade { position: absolute; left: 0px; bottom: 0px; width: 100%; height: 210px; background-color: rgba(5, 7, 10, 185); }
+        #content { position: absolute; left: 64px; right: 64px; bottom: 42px; height: 144px; }
+        #map_name { position: absolute; left: 0px; top: 0px; width: 720px; height: 42px; font-size: 34px; color: #ffffff; }
+        #map_desc { position: absolute; left: 0px; top: 48px; width: 850px; height: 32px; font-size: 15px; color: #c8d2de; }
+        #map_mode { position: absolute; left: 0px; top: 84px; width: 420px; height: 24px; font-size: 14px; color: #8fa3b8; }
+        #tip_box { position: absolute; right: 0px; top: 0px; width: 580px; height: 96px; }
+        #tip_caption { width: 100%; height: 24px; font-size: 13px; color: #8fa3b8; text-align: right; }
+        #tip_text { width: 100%; height: 68px; font-size: 15px; color: #eef3f8; text-align: right; }
+        #progress_text { position: absolute; left: 0px; bottom: 25px; width: 120px; height: 20px; font-size: 13px; color: #dce5ef; }
+        #progress_track { position: absolute; left: 0px; right: 0px; bottom: 0px; height: 14px; background-color: rgba(18, 23, 30, 230); border: 1px #64758a; }
+        #progress_bar { position: absolute; left: 0px; top: 0px; width: 0%; height: 14px; background-color: rgba(101, 171, 224, 255); }
+    </style>
+    </head>
+    <body>
+        <div id="root">
+            <div id="shade"></div>
+            <div id="content">
+                <div id="map_name">Loading</div>
+                <div id="map_desc"></div>
+                <div id="map_mode"></div>
+                <div id="tip_box">
+                    <div id="tip_caption"></div>
+                    <div id="tip_text"></div>
+                </div>
+                <div id="progress_text">0%</div>
+                <div id="progress_track">
+                    <div id="progress_bar"></div>
+                </div>
+            </div>
+        </div>
+    </body>
+</rml>

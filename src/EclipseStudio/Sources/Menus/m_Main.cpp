@@ -275,6 +275,9 @@ namespace
 	static std::vector<std::string> g_EditorLevels;
 	static std::string g_MainStatus = "Select map or create new level.";
 
+	const char* g_MainTemplatePath = "Data\\UI\\Editor\\m_Main.rml";
+	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
+
 	class MainMenuEventListener : public Rocket::Core::EventListener
 	{
 	public:
@@ -604,78 +607,39 @@ namespace
 		return out;
 	}
 
-	static std::string MainBuildRml()
+	static bool MainLoadTextFile(const char* filePath, std::string& out)
+	{
+		out.clear();
+
+		r3dFile* file = r3d_open(filePath, "rb");
+		if(!file)
+			return false;
+
+		if(file->size > 0)
+		{
+			out.resize(file->size);
+			fread(&out[0], 1, file->size, file);
+		}
+
+		fclose(file);
+		return true;
+	}
+
+	static void MainReplaceAll(std::string& text, const char* token, const std::string& value)
+	{
+		size_t pos = 0;
+		const size_t tokenLen = strlen(token);
+
+		while((pos = text.find(token, pos)) != std::string::npos)
+		{
+			text.replace(pos, tokenLen, value);
+			pos += value.size();
+		}
+	}
+
+	static std::string MainBuildContentPanel()
 	{
 		std::string out;
-
-		out += "<rml>";
-		out += "<head>";
-		out += "<title>WarInc Level Editor</title>";
-		out += "<style>";
-
-		out += "body { width: 100%; height: 100%; margin: 0px; font-family: Arial; color: #eef3f8; }";
-		out += "#root { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; }";
-		out += "#panel { position: absolute; width: 760px; height: 520px; left: 50%; top: 50%; margin-left: -380px; margin-top: -260px; padding: 24px 28px; background-color: rgba(12, 15, 20, 226); border: 1px #8fa3b8; }";
-		out += "#title { font-size: 34px; color: #ffffff; margin-bottom: 4px; text-align: center; }";
-		out += "#subtitle { font-size: 13px; color: #8f9aaa; margin-bottom: 16px; text-align: center; }";
-
-		out += "#tabs { height: 44px; margin-bottom: 14px; }";
-		out += ".tab-button { display: inline-block; width: 178px; height: 32px; margin-right: 8px; padding-top: 9px; text-align: center; font-size: 15px; color: #dce5ef; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }";
-		out += ".tab-button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }";
-		out += ".tab-button.active { color: #ffffff; background-color: rgba(86, 103, 126, 255); border-color: #d4dfeb; }";
-
-		out += "#content { position: absolute; left: 28px; top: 126px; width: 704px; height: 330px; }";
-		out += ".map-list { position: absolute; left: 0px; top: 0px; width: 520px; height: 328px; background-color: rgba(5, 7, 10, 160); border: 1px #495465; overflow: auto; }";
-		out += ".map-row { display: block; width: 494px; height: 26px; margin: 5px 6px 0px 6px; padding: 8px 8px 0px 8px; text-align: left; font-size: 14px; color: #dce5ef; background-color: rgba(35, 43, 54, 220); border: 1px #4f5d70; cursor: pointer; }";
-		out += ".map-row:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }";
-		out += ".map-row.selected { color: #ffffff; background-color: rgba(86, 103, 126, 255); border-color: #d4dfeb; }";
-		out += ".empty { margin: 16px; font-size: 14px; color: #7f8a99; }";
-
-		out += "#side { position: absolute; left: 542px; top: 0px; width: 162px; height: 328px; }";
-		out += ".primary-button { display: block; width: 160px; height: 34px; margin-bottom: 10px; padding-top: 9px; text-align: center; font-size: 15px; color: #ffffff; background-color: rgba(70, 88, 112, 245); border: 1px #d4dfeb; cursor: pointer; }";
-		out += ".primary-button:hover { background-color: rgba(97, 116, 141, 255); }";
-		out += ".side-button { display: block; width: 160px; height: 31px; margin-bottom: 10px; padding-top: 8px; text-align: center; font-size: 14px; color: #dce5ef; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }";
-		out += ".side-button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }";
-
-		out += ".create-block { position: absolute; left: 90px; top: 0px; width: 520px; height: 328px; }";
-		out += ".field-title { font-size: 12px; color: #8f9aaa; margin-bottom: 4px; }";
-		out += ".text-input { display: block; width: 498px; height: 31px; margin-bottom: 12px; padding: 9px 10px 0px 10px; text-align: left; font-size: 16px; color: #ffffff; background-color: rgba(5, 7, 10, 190); border: 1px #586577; cursor: pointer; }";
-		out += ".text-input.active { border-color: #d4dfeb; background-color: rgba(18, 25, 34, 230); }";
-		out += ".option-button { display: block; width: 518px; height: 31px; margin-bottom: 8px; padding-top: 8px; text-align: left; font-size: 14px; color: #dce5ef; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }";
-		out += ".option-button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }";
-		out += ".setting-row { height: 38px; margin-bottom: 4px; }";
-		out += ".setting-label { display: inline-block; width: 190px; height: 29px; padding-top: 9px; font-size: 14px; color: #c8d2de; }";
-		out += ".setting-value { display: inline-block; width: 190px; height: 29px; padding-top: 9px; text-align: center; font-size: 14px; color: #ffffff; background-color: rgba(5, 7, 10, 160); border: 1px #495465; }";
-		out += ".small-button { display: inline-block; width: 42px; height: 29px; margin-right: 6px; margin-left: 6px; padding-top: 9px; text-align: center; font-size: 14px; color: #ffffff; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }";
-		out += ".small-button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; }";
-
-		out += "#status { position: absolute; left: 28px; bottom: 24px; width: 500px; height: 20px; font-size: 12px; color: #788493; }";
-		out += "#footer { position: absolute; right: 28px; bottom: 24px; width: 200px; height: 20px; font-size: 12px; color: #788493; text-align: right; }";
-
-		out += "</style>";
-		out += "</head>";
-
-		out += "<body>";
-		out += "<div id='root'>";
-		out += "<div id='panel'>";
-		out += "<div id='title'>WarInc Level Editor</div>";
-		out += "<div id='subtitle'>RmlUi menu / editor launcher</div>";
-
-		out += "<div id='tabs'>";
-		out += "<button id='tab_live' class='tab-button";
-		if(g_MainTab == 0) out += " active";
-		out += "' onclick='dummy'>LIVE MAPS</button>";
-
-		out += "<button id='tab_editor' class='tab-button";
-		if(g_MainTab == 1) out += " active";
-		out += "' onclick='dummy'>EDITOR MAPS</button>";
-
-		out += "<button id='tab_create' class='tab-button";
-		if(g_MainTab == 2) out += " active";
-		out += "' onclick='dummy'>CREATE MAP</button>";
-		out += "</div>";
-
-		out += "<div id='content'>";
 
 		if(g_MainTab == 0)
 		{
@@ -706,18 +670,24 @@ namespace
 			out += MainBuildCreatePanel();
 		}
 
-		out += "</div>";
+		return out;
+	}
 
-		out += "<div id='status'>";
-		out += MainEscapeRml(g_MainStatus);
-		out += "</div>";
+	static std::string MainBuildRml()
+	{
+		std::string out;
 
-		out += "<div id='footer'>DX11 / RmlUi</div>";
+		if(!MainLoadTextFile(g_MainTemplatePath, out))
+		{
+			r3dOutToLog("RmlUi Main: failed to load template '%s'\n", g_MainTemplatePath);
+			return std::string();
+		}
 
-		out += "</div>";
-		out += "</div>";
-		out += "</body>";
-		out += "</rml>";
+		MainReplaceAll(out, "{{tab_live_class}}", g_MainTab == 0 ? "tab-button active" : "tab-button");
+		MainReplaceAll(out, "{{tab_editor_class}}", g_MainTab == 1 ? "tab-button active" : "tab-button");
+		MainReplaceAll(out, "{{tab_create_class}}", g_MainTab == 2 ? "tab-button active" : "tab-button");
+		MainReplaceAll(out, "{{content}}", MainBuildContentPanel());
+		MainReplaceAll(out, "{{status}}", MainEscapeRml(g_MainStatus));
 
 		return out;
 	}
@@ -734,12 +704,47 @@ namespace
 			element->AddEventListener("click", listener);
 	}
 
+	static void MainDetachEvent(Rocket::Core::ElementDocument* document, const char* id, MainMenuEventListener* listener)
+	{
+		if(!document || !id || !listener)
+			return;
+
+		Rocket::Core::Element* element = document->GetElementById(id);
+		if(element)
+			element->RemoveEventListener("click", listener);
+	}
+
+	static void MainDetachDocumentEvents(
+		Rocket::Core::ElementDocument* document,
+		MainMenuEventListener* staticListeners,
+		MainMenuEventListener* liveListeners,
+		MainMenuEventListener* editorListeners)
+	{
+		if(!document)
+			return;
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_MainStaticBindings); ++i)
+			MainDetachEvent(document, g_MainStaticBindings[i].ElementId, &staticListeners[i]);
+
+		for(int i = 0; i < MAIN_MAX_LEVEL_ROWS; ++i)
+		{
+			char id[64];
+			sprintf(id, "live_%d", i);
+			MainDetachEvent(document, id, &liveListeners[i]);
+
+			sprintf(id, "editor_%d", i);
+			MainDetachEvent(document, id, &editorListeners[i]);
+		}
+	}
+
 	static Rocket::Core::ElementDocument* MainLoadDocument(
 		MainMenuEventListener* staticListeners,
 		MainMenuEventListener* liveListeners,
 		MainMenuEventListener* editorListeners)
 	{
 		std::string rml = MainBuildRml();
+		if(rml.empty())
+			return NULL;
 
 		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromMemory(rml.c_str());
 		if(!document)
@@ -787,7 +792,7 @@ namespace
 
 	static r3dTexture* MainLoadBackground()
 	{
-		const char* bgPath = "Data/Menu/Background.dds";
+		const char* bgPath = g_EditorBackgroundPath;
 
 		if(!r3dFileExists(bgPath))
 		{
@@ -839,13 +844,23 @@ namespace
 			r3dDrawBox2D(x, y, w, h, r3dColor(12, 14, 18));
 	}
 
-	static void MainCloseDocument(Rocket::Core::ElementDocument*& document)
+	static void MainCloseDocument(
+		Rocket::Core::ElementDocument*& document,
+		MainMenuEventListener* staticListeners,
+		MainMenuEventListener* liveListeners,
+		MainMenuEventListener* editorListeners)
 	{
 		if(document)
 		{
+			MainDetachDocumentEvents(document, staticListeners, liveListeners, editorListeners);
+
 			document->Close();
 			document->RemoveReference();
 			document = NULL;
+
+			Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+			if(ctx)
+				ctx->Update();
 		}
 	}
 
@@ -1128,7 +1143,7 @@ int Menu_Main::DoModal()
 
 		if(reloadDocument && released_id == MAIN_WAITING_FOR_COMMAND)
 		{
-			MainCloseDocument(document);
+			MainCloseDocument(document, staticListeners, liveListeners, editorListeners);
 			document = MainLoadDocument(staticListeners, liveListeners, editorListeners);
 
 			if(!document)
@@ -1167,7 +1182,7 @@ int Menu_Main::DoModal()
 		r3dEndFrame();
 	}
 
-	MainCloseDocument(document);
+	MainCloseDocument(document, staticListeners, liveListeners, editorListeners);
 
 	return released_id == MAIN_WAITING_FOR_COMMAND ? 0 : released_id;
 }

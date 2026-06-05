@@ -27,36 +27,8 @@ namespace
 		{ "exit",      "Exit",             Menu_AppSelect::bQuit,                 kbs6 },
 	};
 
-	const char* g_AppSelectRml =
-		"<rml>"
-		"<head>"
-		"<title>WarInc Studio</title>"
-		"<style>"
-		"body { width: 100%; height: 100%; margin: 0px; font-family: Arial; color: #eef3f8; }"
-		"#root { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; }"
-		"#panel { position: absolute; width: 430px; height: 366px; left: 50%; top: 50%; margin-left: -215px; margin-top: -183px; padding: 26px 32px; background-color: rgba(12, 15, 20, 218); border: 1px #8fa3b8; }"
-		"#title { font-size: 34px; color: #ffffff; margin-bottom: 4px; text-align: center; }"
-		".button { display: block; height: 34px; text-align: center; margin-bottom: 9px; padding: 8px 14px 0px 14px; font-size: 17px; color: #f4f7fb; background-color: rgba(47, 57, 70, 235); border: 1px #728092; cursor: pointer; }"
-		".button:hover { background-color: rgba(74, 91, 113, 245); border-color: #d4dfeb; cursor: pointer; }"
-		".button:active { background-color: rgba(97, 116, 141, 255); cursor: pointer; }"
-		"#footer { margin-top: 12px; font-size: 12px; color: #788493; }"
-		"</style>"
-		"</head>"
-		"<body>"
-		"<div id='root'>"
-		"<div id='panel'>"
-		"<div id='title'>WarInc Studio</div>"
-		"<button id='play' class='button' onclick='dummy'>Play Game</button>"
-		"<button id='level' class='button' onclick='dummy'>Level Editor</button>"
-		"<button id='particle' class='button' onclick='dummy'>Particle Editor</button>"
-		"<button id='physics' class='button' onclick='dummy'>Physics Editor</button>"
-		"<button id='character' class='button' onclick='dummy'>Character Editor</button>"
-		"<button id='exit' class='button' onclick='dummy'>Exit</button>"
-		"<div id='footer'>DX11 game renderer / RmlUi editor menu</div>"
-		"</div>"
-		"</div>"
-		"</body>"
-		"</rml>";
+	const char* g_AppSelectTemplatePath = "Data\\UI\\Editor\\m_AppSelect.rml";
+	const char* g_EditorBackgroundPath = "Data\\UI\\Assets\\Background.dds";
 
 	class AppSelectEventListener : public Rocket::Core::EventListener
 	{
@@ -83,10 +55,10 @@ namespace
 
 	Rocket::Core::ElementDocument* LoadAppSelectDocument(AppSelectEventListener* listeners)
 	{
-		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromMemory(g_AppSelectRml);
+		Rocket::Core::ElementDocument* document = RmlUiBackend::LoadDocumentFromFile(g_AppSelectTemplatePath);
 		if(!document)
 		{
-			r3dOutToLog("RmlUi AppSelect: LoadDocumentFromMemory failed\n");
+			r3dOutToLog("RmlUi AppSelect: failed to load template '%s'\n", g_AppSelectTemplatePath);
 			return NULL;
 		}
 
@@ -106,12 +78,33 @@ namespace
 		return document;
 	}
 
+	void CloseAppSelectDocument(Rocket::Core::ElementDocument*& document, AppSelectEventListener* listeners)
+	{
+		if(!document)
+			return;
+
+		for(int i = 0; i < R3D_ARRAYSIZE(g_AppSelectCommands); ++i)
+		{
+			Rocket::Core::Element* element = document->GetElementById(g_AppSelectCommands[i].ElementId);
+			if(element)
+				element->RemoveEventListener("click", &listeners[i]);
+		}
+
+		document->Close();
+		document->RemoveReference();
+		document = NULL;
+
+		Rocket::Core::Context* ctx = RmlUiBackend::GetContext();
+		if(ctx)
+			ctx->Update();
+	}
+
 	r3dTexture* LoadAppSelectBackground()
 	{
-		if(!r3dFileExists("Data/Menu/Background.dds"))
+		if(!r3dFileExists(g_EditorBackgroundPath))
 			return NULL;
 
-		return r3dRenderer->LoadTexture("Data/Menu/Background.dds");
+		return r3dRenderer->LoadTexture(g_EditorBackgroundPath);
 	}
 
 	void DrawAppSelectBackground(r3dTexture* backgroundTexture)
@@ -284,11 +277,7 @@ int Menu_AppSelect::DoModal()
 		r3dEndFrame();
 	}
 
-	if(document)
-	{
-		document->Close();
-		document->RemoveReference();
-	}
+	CloseAppSelectDocument(document, listeners);
 
 	// NOTE: RmlUiBackend is a shared singleton — Shutdown() is called
 	// at application exit, not here.

@@ -11,6 +11,7 @@
 
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#include <string>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -953,10 +954,26 @@ Rocket::Core::ElementDocument* RmlUiBackend::LoadDocumentFromMemory(const Rocket
 
 Rocket::Core::ElementDocument* RmlUiBackend::LoadDocumentFromFile(const char* filePath)
 {
-	if(!s_context)
+	if(!s_context || !filePath || !filePath[0])
 		return NULL;
 
-	return s_context->LoadDocument(filePath);
+	r3dFile* file = r3d_open(filePath, "rb");
+	if(!file)
+	{
+		r3dOutToLog("RmlUi Backend: failed to open document '%s'\n", filePath);
+		return NULL;
+	}
+
+	std::string rml;
+	if(file->size > 0)
+	{
+		rml.resize(file->size);
+		fread(&rml[0], 1, file->size, file);
+	}
+
+	fclose(file);
+
+	return s_context->LoadDocumentFromMemory(rml.c_str());
 }
 
 void RmlUiBackend::BeginFrame()
