@@ -4,6 +4,9 @@
 #include "GameCommon.h"
 #include "UI/UIimEdit.h"
 #include "UI/RmlUiBackend.h"
+#include "r3dDX11.h"
+#include "r3dDX11Geometry.h"
+#include "r3dDX11State.h"
 
 #include "m_AppSelect.h"
 
@@ -161,6 +164,32 @@ void ClearFullScreen_Menu()
 	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 }
 
+void RestoreDX11MenuBackBuffer(const char* where)
+{
+	(void)where;
+
+#ifndef WO_SERVER
+	if(r3dRenderer && !r3dRenderer->GetUseD3D9Present() && g_r3dDX11.IsInitialized())
+	{
+		g_r3dDX11.ResetBackBufferTarget();
+
+		const float width = (float)R3D_MAX(g_r3dDX11.GetWidth(), 1);
+		const float height = (float)R3D_MAX(g_r3dDX11.GetHeight(), 1);
+
+		r3dRenderer->ScreenW = width;
+		r3dRenderer->ScreenH = height;
+		r3dRenderer->ScreenW2 = width * 0.5f;
+		r3dRenderer->ScreenH2 = height * 0.5f;
+		r3dRenderer->AllowNullViewport = 0;
+		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		r3dRenderer->DoSetViewport(0.0f, 0.0f, width, height);
+
+		g_r3dDX11State.InvalidateCache();
+		g_r3dDX11Geometry.InvalidateCache();
+	}
+#endif
+}
+
 int Menu_AppSelect::DoModal()
 {
 	AppSelectMode = APPSELECT_WAITING_FOR_COMMAND;
@@ -244,7 +273,7 @@ int Menu_AppSelect::DoModal()
 			}
 			RmlUiBackend::EndFrame();
 
-			// Restore engine rendering state after RmlUi D3D9 rendering
+			RestoreDX11MenuBackBuffer("AppSelect");
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 			r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 

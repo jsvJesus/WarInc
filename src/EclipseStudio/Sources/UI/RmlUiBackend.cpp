@@ -48,13 +48,10 @@ void ClearFullScreen_Menu();
 // -----------------------------------------------------------------------
 //  Globals
 // -----------------------------------------------------------------------
-const DWORD RMLUI_D3D9_FVF = D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1;
-
 bool RmlUiBackend::s_initialized = false;
 RmlUiSystemInterface*   RmlUiBackend::s_system  = NULL;
 RmlUiRenderInterface*   RmlUiBackend::s_render  = NULL;
 Rocket::Core::Context*  RmlUiBackend::s_context = NULL;
-IDirect3DDevice9*       RmlUiBackend::s_device  = NULL;
 ID3D11Device*           RmlUiBackend::s_dx11Device = NULL;
 bool                    RmlUiBackend::s_usingDX11 = false;
 
@@ -720,8 +717,7 @@ struct RmlUiRenderInterfaceDX11
 //  RmlUiRenderInterface
 // =======================================================================
 RmlUiRenderInterface::RmlUiRenderInterface()
-: m_device(NULL)
-, m_width(0)
+: m_width(0)
 , m_height(0)
 , m_dx11(new RmlUiRenderInterfaceDX11())
 {
@@ -733,18 +729,8 @@ RmlUiRenderInterface::~RmlUiRenderInterface()
 	m_dx11 = NULL;
 }
 
-void RmlUiRenderInterface::SetDevice(IDirect3DDevice9* device, int width, int height)
-{
-	m_device = device;
-	m_width  = width;
-	m_height = height;
-	if(m_dx11)
-		m_dx11->SetDevice(NULL, NULL, width, height);
-}
-
 void RmlUiRenderInterface::SetDX11Device(ID3D11Device* device, ID3D11DeviceContext* context, int width, int height)
 {
-	m_device = NULL;
 	m_width  = width;
 	m_height = height;
 	if(m_dx11)
@@ -758,52 +744,8 @@ bool RmlUiRenderInterface::UsesDX11() const
 
 void RmlUiRenderInterface::PrepareState()
 {
-	if(UsesDX11())
-	{
+	if(m_dx11)
 		m_dx11->Prepare();
-		return;
-	}
-
-	if(!m_device)
-		return;
-
-	D3DVIEWPORT9 vp;
-	vp.X      = 0;
-	vp.Y      = 0;
-	vp.Width  = (DWORD)R3D_MAX(m_width, 1);
-	vp.Height = (DWORD)R3D_MAX(m_height, 1);
-	vp.MinZ   = 0.0f;
-	vp.MaxZ   = 1.0f;
-
-	m_device->SetViewport(&vp);
-	m_device->SetFVF(RMLUI_D3D9_FVF);
-	m_device->SetVertexShader(NULL);
-	m_device->SetPixelShader(NULL);
-
-	m_device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	m_device->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA);
-	m_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	m_device->SetRenderState(D3DRS_ALPHATESTENABLE,  FALSE);
-	m_device->SetRenderState(D3DRS_CULLMODE,  D3DCULL_NONE);
-	m_device->SetRenderState(D3DRS_LIGHTING,  FALSE);
-	m_device->SetRenderState(D3DRS_ZENABLE,   FALSE);
-	m_device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-	m_device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-
-	m_device->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
-	m_device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-	m_device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-	m_device->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_MODULATE);
-	m_device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-	m_device->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-	m_device->SetTextureStageState(1, D3DTSS_COLOROP,   D3DTOP_DISABLE);
-	m_device->SetTextureStageState(1, D3DTSS_ALPHAOP,   D3DTOP_DISABLE);
-
-	m_device->SetSamplerState(0, D3DSAMP_ADDRESSU,  D3DTADDRESS_CLAMP);
-	m_device->SetSamplerState(0, D3DSAMP_ADDRESSV,  D3DTADDRESS_CLAMP);
-	m_device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-	m_device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-	m_device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
 }
 
 void RmlUiRenderInterface::RestoreState()
@@ -820,42 +762,8 @@ void RmlUiRenderInterface::RenderGeometry(
 	Rocket::Core::TextureHandle texture,
 	const Rocket::Core::Vector2f& translation)
 {
-	if(UsesDX11())
-	{
+	if(m_dx11)
 		m_dx11->RenderGeometry(vertices, num_vertices, indices, num_indices, texture, translation);
-		return;
-	}
-
-	if(!m_device || !vertices || !indices || num_vertices <= 0 || num_indices <= 0)
-		return;
-
-	m_vertices.resize(num_vertices);
-
-	for(int i = 0; i < num_vertices; ++i)
-	{
-		const Rocket::Core::Vertex& src = vertices[i];
-		RmlUiBackendVertex& dst = m_vertices[i];
-
-		dst.x     = src.position.x + translation.x;
-		dst.y     = src.position.y + translation.y;
-		dst.z     = 0.0f;
-		dst.rhw   = 1.0f;
-		dst.color = D3DCOLOR_ARGB(src.colour.alpha, src.colour.red, src.colour.green, src.colour.blue);
-		dst.u     = src.tex_coord.x;
-		dst.v     = src.tex_coord.y;
-	}
-
-	m_device->SetTexture(0, reinterpret_cast<IDirect3DTexture9*>(texture));
-	m_device->SetFVF(RMLUI_D3D9_FVF);
-	m_device->DrawIndexedPrimitiveUP(
-		D3DPT_TRIANGLELIST,
-		0,
-		num_vertices,
-		num_indices / 3,
-		indices,
-		D3DFMT_INDEX32,
-		&m_vertices[0],
-		sizeof(RmlUiBackendVertex));
 }
 
 void RmlUiRenderInterface::EnableScissorRegion(bool enable)
@@ -865,9 +773,6 @@ void RmlUiRenderInterface::EnableScissorRegion(bool enable)
 		m_dx11->Context->RSSetState(enable ? m_dx11->RasterScissorState : m_dx11->RasterState);
 		return;
 	}
-
-	if(m_device)
-		m_device->SetRenderState(D3DRS_SCISSORTESTENABLE, enable ? TRUE : FALSE);
 }
 
 void RmlUiRenderInterface::SetScissorRegion(int x, int y, int width, int height)
@@ -882,17 +787,6 @@ void RmlUiRenderInterface::SetScissorRegion(int x, int y, int width, int height)
 		m_dx11->Context->RSSetScissorRects(1, &rect);
 		return;
 	}
-
-	if(!m_device)
-		return;
-
-	RECT rect;
-	rect.left   = x;
-	rect.top    = y;
-	rect.right  = x + width;
-	rect.bottom = y + height;
-
-	m_device->SetScissorRect(&rect);
 }
 
 bool RmlUiRenderInterface::GenerateTexture(
@@ -903,54 +797,7 @@ bool RmlUiRenderInterface::GenerateTexture(
 	if(UsesDX11())
 		return m_dx11->GenerateTexture(texture_handle, source, source_dimensions);
 
-	if(!m_device || !source || source_dimensions.x <= 0 || source_dimensions.y <= 0)
-		return false;
-
-	IDirect3DTexture9* texture = NULL;
-	HRESULT hr = m_device->CreateTexture(
-		source_dimensions.x,
-		source_dimensions.y,
-		1,
-		D3DUSAGE_DYNAMIC,
-		D3DFMT_A8R8G8B8,
-		D3DPOOL_DEFAULT,
-		&texture,
-		NULL);
-
-	if(FAILED(hr) || !texture)
-	{
-		r3dOutToLog("RmlUi: CreateTexture failed hr=0x%08x\n", hr);
-		return false;
-	}
-
-	D3DLOCKED_RECT locked;
-	ZeroMemory(&locked, sizeof(locked));
-
-	hr = texture->LockRect(0, &locked, NULL, D3DLOCK_DISCARD);
-	if(FAILED(hr))
-	{
-		texture->Release();
-		r3dOutToLog("RmlUi: font texture LockRect failed hr=0x%08x\n", hr);
-		return false;
-	}
-
-	for(int y = 0; y < source_dimensions.y; ++y)
-	{
-		unsigned char* dst = static_cast<unsigned char*>(locked.pBits) + locked.Pitch * y;
-		const unsigned char* src = source + source_dimensions.x * y * 4;
-
-		for(int x = 0; x < source_dimensions.x; ++x)
-		{
-			dst[x * 4 + 0] = src[x * 4 + 2];
-			dst[x * 4 + 1] = src[x * 4 + 1];
-			dst[x * 4 + 2] = src[x * 4 + 0];
-			dst[x * 4 + 3] = src[x * 4 + 3];
-		}
-	}
-
-	texture->UnlockRect(0);
-	texture_handle = reinterpret_cast<Rocket::Core::TextureHandle>(texture);
-	return true;
+	return false;
 }
 
 void RmlUiRenderInterface::ReleaseTexture(Rocket::Core::TextureHandle texture)
@@ -960,11 +807,6 @@ void RmlUiRenderInterface::ReleaseTexture(Rocket::Core::TextureHandle texture)
 		m_dx11->ReleaseTexture(texture);
 		return;
 	}
-
-	IDirect3DTexture9* d3d_texture = reinterpret_cast<IDirect3DTexture9*>(texture);
-
-	if(d3d_texture)
-		d3d_texture->Release();
 }
 
 // =======================================================================
@@ -979,14 +821,6 @@ namespace
 			g_r3dDX11.IsInitialized() &&
 			g_r3dDX11.GetDevice() &&
 			g_r3dDX11.GetContext();
-	}
-
-	IDirect3DDevice9* GetRmlD3D9Device()
-	{
-		if(r3dRenderer && r3dRenderer->GetUseD3D9Present())
-			return r3dRenderer->pd3ddev;
-
-		return NULL;
 	}
 
 	bool LoadDefaultFont()
@@ -1022,17 +856,16 @@ bool RmlUiBackend::Initialize()
 	const bool useDX11 = UseNativeDX11Rml();
 	ID3D11Device* dx11Device = useDX11 ? g_r3dDX11.GetDevice() : NULL;
 	ID3D11DeviceContext* dx11Context = useDX11 ? g_r3dDX11.GetContext() : NULL;
-	IDirect3DDevice9* device = useDX11 ? NULL : GetRmlD3D9Device();
 
-	if(!useDX11 && !device)
+	if(!useDX11)
 	{
-		r3dOutToLog("RmlUi Backend: no D3D9 device available\n");
+		r3dOutToLog("RmlUi Backend: DX11 device/context is required\n");
 		return false;
 	}
 
 	if(s_initialized)
 	{
-		if(s_usingDX11 == useDX11 && ((useDX11 && s_dx11Device == dx11Device) || (!useDX11 && s_device == device)))
+		if(s_usingDX11 && s_dx11Device == dx11Device)
 			return true;
 
 		r3dOutToLog("RmlUi Backend: render device changed, recreating backend\n");
@@ -1042,12 +875,8 @@ bool RmlUiBackend::Initialize()
 	s_system = new RmlUiSystemInterface();
 	s_render = new RmlUiRenderInterface();
 
-	if(useDX11)
-		s_render->SetDX11Device(dx11Device, dx11Context, (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-	else
-		s_render->SetDevice(device, (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+	s_render->SetDX11Device(dx11Device, dx11Context, (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 
-	s_device = device;
 	s_dx11Device = dx11Device;
 	s_usingDX11 = useDX11;
 
@@ -1078,7 +907,7 @@ bool RmlUiBackend::Initialize()
 	}
 
 	r3dOutToLog("RmlUi Backend: initialized (%dx%d, %s)\n",
-		(int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH, useDX11 ? "DX11" : "D3D9");
+		(int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH, "DX11");
 	return true;
 }
 
@@ -1098,7 +927,6 @@ void RmlUiBackend::Shutdown()
 
 	delete s_system;  s_system  = NULL;
 	delete s_render;  s_render  = NULL;
-	s_device = NULL;
 	s_dx11Device = NULL;
 	s_usingDX11 = false;
 
@@ -1136,18 +964,14 @@ void RmlUiBackend::BeginFrame()
 	if(!s_initialized || !s_render || !r3dRenderer)
 		return;
 
-	if(UseNativeDX11Rml())
+	if(!UseNativeDX11Rml())
 	{
-		s_render->SetDX11Device(g_r3dDX11.GetDevice(), g_r3dDX11.GetContext(), (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
-		s_render->PrepareState();
+		r3dOutToLog("RmlUi Backend: skipping frame, DX11 device/context is unavailable\n");
 		return;
 	}
 
-	IDirect3DDevice9* device = GetRmlD3D9Device();
-	if(!device)
-		return;
-
-	s_render->SetDevice(device, (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
+	g_r3dDX11.ResetBackBufferTarget();
+	s_render->SetDX11Device(g_r3dDX11.GetDevice(), g_r3dDX11.GetContext(), (int)r3dRenderer->ScreenW, (int)r3dRenderer->ScreenH);
 	s_render->PrepareState();
 }
 

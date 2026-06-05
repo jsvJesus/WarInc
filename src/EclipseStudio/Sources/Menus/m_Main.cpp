@@ -201,6 +201,7 @@ bool CreateNewLevel()
 
 
 void ClearFullScreen_Menu();
+void RestoreDX11MenuBackBuffer(const char* where);
 extern bool g_bExit;
 
 namespace
@@ -1155,6 +1156,7 @@ int Menu_Main::DoModal()
 
 			RmlUiBackend::EndFrame();
 
+			RestoreDX11MenuBackBuffer("Main");
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 			r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
 

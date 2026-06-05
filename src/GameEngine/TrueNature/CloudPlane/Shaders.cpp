@@ -15,7 +15,6 @@ void RenderDensityShader::Create()
 
 void RenderDensityShader::Begin(CloudGrid* pCloud, const SSceneParamter& sceneParam)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
 	SetShaders();
 
 	// world to projection transform 
@@ -111,10 +110,8 @@ void RenderShadowShader::Update(const SBoundingBox* pGround, const SBoundingBox*
 
 // Setup shaders and shader constants.
 
-void RenderShadowShader::Begin(CloudGrid* pCloud, const SSceneParamter& sceneParam, LPDIRECT3DTEXTURE9 cloudTex)
+void RenderShadowShader::Begin(CloudGrid* pCloud, const SSceneParamter& sceneParam)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	SetShaders();
 
 	// world to projection transform 
@@ -186,8 +183,6 @@ void CloudBlurMesh::destroy()
 
 void CloudBlurMesh::draw()
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	d3dc._SetDecl( decl );
 	d3dc._SetStreamSource( 0, vb.Get(), 0, sizeof(S_VERTEX) );
 
@@ -216,8 +211,6 @@ void CloudBlurShader::Create()
 
 void CloudBlurShader::SetShaderConstant(r3dTexture* pTex, const SSceneParamter& sceneParam)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	// offset parameter to sample center of texels.
 	D3DXVECTOR2 vv( 0.5f / (float)pTex->GetWidth(), 0.5f / (float)pTex->GetHeight() );
 	r3dRenderer->SetVertexShaderConstantF(4, (float*)&vv, 1);
@@ -303,8 +296,6 @@ void CloudBlurShader::SetShaderConstant(r3dTexture* pTex, const SSceneParamter& 
 //  Blur the indicated texture pTex 
 void CloudBlurShader::Blur(r3dTexture* pTex, const SSceneParamter& sceneParam)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	SetShaders();
 	SetShaderConstant(pTex, sceneParam );
 
@@ -405,8 +396,6 @@ void CloudPlaneMesh::destroy()
 
 void CloudPlaneMesh::draw()
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	d3dc._SetIndices( ib.Get() );
 	d3dc._SetStreamSource( 0, vb.Get(), 0, sizeof(S_VERTEX) );
 	d3dc._SetDecl( decl );
@@ -445,8 +434,6 @@ void CloudPlaneShader::CreateShaders()
 
 void CloudPlaneShader::Draw(const SSceneParamter& sceneParam, r3dTexture* pDensityMap, r3dTexture* pBlurredMap)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	//SetShaders();
 	if(r_decoration_quality->GetInt()==1)
 	{
@@ -477,8 +464,6 @@ void CloudPlaneShader::Draw(const SSceneParamter& sceneParam, r3dTexture* pDensi
 
 void CloudPlaneShader::SetShaderConstant(const SSceneParamter& sceneParam)
 {
-	LPDIRECT3DDEVICE9 pDev = r3dRenderer->pd3ddev;
-
 	D3DXMATRIX mC2W;
 	D3DXMatrixInverse( &mC2W, NULL, &sceneParam.viewProj );
 	D3DXMatrixTranspose(&mC2W, &mC2W);

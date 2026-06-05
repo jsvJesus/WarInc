@@ -1696,12 +1696,12 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	int	isWindowed;
 	int	DepthMode;
 
-	const bool cmdLineDX11 = strstr(__r3dCmdLine, "-dx11") || strstr(__r3dCmdLine, "/dx11");
+	(void)RenderPath;
 	const bool cmdLineDX9 = strstr(__r3dCmdLine, "-dx9") || strstr(__r3dCmdLine, "/dx9");
-	bool useDX11 = (RenderPath == R3D_RENDER_PATH_DX11) || cmdLineDX11;
+	bool useDX11 = true;
 
 	if(cmdLineDX9)
-		useDX11 = false;
+		r3dOutToLog("DX11: ignoring -dx9 command line switch; DX11 renderer is required\n");
 
 	// RTBuffer = NULL;
 
@@ -2095,10 +2095,6 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 			r3dOutToLog("DX11: renderer layer failed, requested DX11 cannot continue\n");
 			return FALSE;
 		}
-	}
-	else
-	{
-		r3dOutToLog("DX11: renderer layer disabled, running legacy DX9 path\n");
 	}
 #endif
 	
@@ -4075,42 +4071,13 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 
 	gRenderFrameCounter++; // end of frame
 
-	HRESULT hr = D3DERR_DEVICELOST ;
 	bool dx11Active = false;
-	bool presentWithD3D9 = true;
 
 #ifndef WO_SERVER
 	dx11Active = g_r3dDX11.IsInitialized();
-	presentWithD3D9 = !dx11Active || GetUseD3D9Present();
 #endif
 
-	if( r3dRenderer->DeviceAvailable && presentWithD3D9 )
-	{
-		R3DPROFILE_START("r3dRenderLayer::EndRender:Present");
-		SetEye(PresentEye);
-		hr = pd3ddev->Present(NULL, NULL, NULL, NULL);
-		R3DPROFILE_END("r3dRenderLayer::EndRender:Present");
-	}
-	else
-	{
-		hr = D3D_OK;
-	}
-
 	ProcessDeviceQueue(r3dGetTime(), 0.033f);
-
-	if(hr == D3DERR_DEVICELOST ) {
-
-		if( !deviceLost_ )
-		{
-			r3dOutToLog("r3d: device is lost\n");
-			deviceLost_ = true;
-		}
-
-		TryToRestoreDevice();
-
-		// this is important - do not wait for token
-		return;
-	}
 
 	r3dFrameQueryCreate();
 	if(SupportsEventQueries && pQueryEvent[eventCounter])
@@ -4132,11 +4099,10 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 		if(s_dx11NativeEndRenderPresentCalls <= 120 || (s_dx11NativeEndRenderPresentCalls % 60) == 0)
 		{
 			r3dOutToLog(
-				"DX11 DBG EndRender native present path: frame=%d present=%d dx11Active=%d useD3D9Present=%d deviceAvailable=%d\n",
+				"DX11 DBG EndRender native present path: frame=%d present=%d dx11Active=%d deviceAvailable=%d\n",
 				gRenderFrameCounter,
 				present ? 1 : 0,
 				dx11Active ? 1 : 0,
-				GetUseD3D9Present() ? 1 : 0,
 				DeviceAvailable ? 1 : 0
 			);
 		}
@@ -4159,8 +4125,6 @@ void r3dRenderLayer::EndRenderSimple( bool present )
 		return;
 	}
 #endif
-
-	pd3ddev->Present( NULL, NULL, NULL, NULL );
 }
 
 static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)

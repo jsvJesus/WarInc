@@ -606,7 +606,6 @@ public:
 	void    FlushTextures();
 
 #define R3DSetMode_Windowed	(1<<2)
-#define R3D_RENDER_PATH_DX9		0
 #define R3D_RENDER_PATH_DX11	1
 	bool    AdjustWindowSize( int xRes, int yRes, int BPP, int isWindowed, D3DDISPLAYMODE& result );
 	int		InitStereo() ;
@@ -641,7 +640,7 @@ public:
 	void		EndRender( bool present = false );
 	void		StartFrame();
 	void		EndFrame();
-	void		SetUseD3D9Present(bool enabled) { UseD3D9Present = enabled; }
+	void		SetUseD3D9Present(bool enabled) { (void)enabled; UseD3D9Present = false; }
 	bool		GetUseD3D9Present() const { return UseD3D9Present; }
 	void		SetBackBufferViewport();
 	void		GetBackBufferViewport( float* x, float* y, float* width, float* height );

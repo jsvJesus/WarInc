@@ -213,18 +213,6 @@
     <ClCompile Include="APIScaleformGfx.cpp">
       <Filter>Scaleform</Filter>
     </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp">
-      <Filter>Scaleform</Filter>
-    </ClCompile>
     <ClCompile Include="TrueNature2\Terrain2.cpp">
       <Filter>TrueNature2</Filter>
     </ClCompile>
@@ -240,8 +228,6 @@
     <ClCompile Include="CamouflageDataManager.cpp" />
     <ClCompile Include="DebugHelpers.cpp" />
     <ClCompile Include="r3dPCH.cpp" />
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderBinary.cpp" />
-    <ClCompile Include="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderDescs.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fmod\SoundSys.h">

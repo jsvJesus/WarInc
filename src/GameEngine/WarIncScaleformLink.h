@@ -10,8 +10,6 @@
 
 #pragma comment(lib, "..\\External\\Scaleform\\Lib\\x64\\Msvc10\\Release\\libgfx.lib")
 #pragma comment(lib, "..\\External\\Scaleform\\Lib\\x64\\Msvc10\\Release\\libgfx_as2.lib")
-#pragma comment(lib, "..\\External\\Scaleform\\Lib\\x64\\Msvc10\\Release\\libgfxplatform_d3d9.lib")
-#pragma comment(lib, "..\\External\\Scaleform\\Lib\\x64\\Msvc10\\Release\\libgfxrender_d3d9.lib")
 #pragma comment(lib, "..\\External\\Scaleform\\Lib\\x64\\Msvc10\\Release\\libgfxexpat.lib")
 
 #pragma comment(lib, "..\\External\\Scaleform\\3rdParty\\zlib-1.2.7\\Lib\\x64\\Msvc10\\Release\\zlib.lib")
@@ -38,8 +36,6 @@
 
 #endif
 
-#pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "imm32.lib")

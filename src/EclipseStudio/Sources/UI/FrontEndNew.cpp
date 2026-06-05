@@ -30,7 +30,6 @@
 #include "../ObjectsCode/ai/AI_PlayerAnim.h"
 #include "../ObjectsCode/Gameplay/UIWeaponModel.h"
 #include "GameLevel.h"
-#include "Scaleform/Src/Render/D3D9/D3D9_Texture.h"
 #include "r3dDX11Texture.h"
 #include "../../Eternity/Source/r3dEternityWebBrowser.h"
 
@@ -75,11 +74,6 @@ extern void ClearFullScreen_Menu();
 
 extern int RUS_CLIENT;
 extern int MASSIVE_CLIENT;
-
-static bool FrontendScaleformUsesDX11()
-{
-	return r3dRenderer && !r3dRenderer->GetUseD3D9Present();
-}
 
 static ID3D11Texture2D* GetFrontendDX11Texture(r3dTexture* texture)
 {
@@ -6092,22 +6086,11 @@ void FrontendUI::bindRTsToScaleForm()
 
 	if(Scaleform_RenderToTextureRT)
 	{
-		if(FrontendScaleformUsesDX11())
-		{
-			RTScaleformTexture = gfxMovie.BoundRTToImageDX11(
-				"merc_rendertarget",
-				GetFrontendDX11Texture(Scaleform_RenderToTextureRT),
-				(int)Scaleform_RenderToTextureRT->Width,
-				(int)Scaleform_RenderToTextureRT->Height);
-		}
-		else
-		{
-			RTScaleformTexture = gfxMovie.BoundRTToImage(
-				"merc_rendertarget",
-				Scaleform_RenderToTextureRT->AsTex2D(),
-				(int)Scaleform_RenderToTextureRT->Width,
-				(int)Scaleform_RenderToTextureRT->Height);
-		}
+		RTScaleformTexture = gfxMovie.BoundRTToImageDX11(
+			"merc_rendertarget",
+			GetFrontendDX11Texture(Scaleform_RenderToTextureRT),
+			(int)Scaleform_RenderToTextureRT->Width,
+			(int)Scaleform_RenderToTextureRT->Height);
 	}
 
 #if ENABLE_WEB_BROWSER
@@ -6117,22 +6100,11 @@ void FrontendUI::bindRTsToScaleForm()
 	r3dTexture* browserTexture = g_pBrowserManager->GetWindow();
 	if(browserTexture)
 	{
-		if(FrontendScaleformUsesDX11())
-		{
-			RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImageDX11(
-				"wb_rendertarget",
-				GetFrontendDX11Texture(browserTexture),
-				1231,
-				525);
-		}
-		else
-		{
-			RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImage(
-				"wb_rendertarget",
-				browserTexture->AsTex2D(),
-				1231,
-				525);
-		}
+		RTWelcomeBackScaleformTexture = gfxMovie.BoundRTToImageDX11(
+			"wb_rendertarget",
+			GetFrontendDX11Texture(browserTexture),
+			1231,
+			525);
 	}
 #endif
 }

@@ -22,7 +22,6 @@ public :
 	void SetCloudCover(float fCloudCover);
 	float GetCurrentCloudCover() const;
 	const D3DXMATRIX* GetWorld2ShadowMatrix() const;
-	//LPDIRECT3DTEXTURE9 GetShadowMap();
 
 protected :
 	void SetRenderTarget(r3dScreenBuffer* screenBuf);
@@ -31,7 +30,6 @@ protected :
 	// render targets
 	r3dScreenBuffer*    m_pBlurredMap;
 	r3dScreenBuffer*	m_pDensityMap;
-//	LPDIRECT3DTEXTURE9     m_pShadowMap;         // shadow map
 
 	CloudGrid             m_grid;               // cloud grid
 	RenderDensityShader   m_densityShader;      // shader to render density 

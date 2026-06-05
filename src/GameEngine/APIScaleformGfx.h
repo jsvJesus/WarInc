@@ -7,10 +7,6 @@ namespace Scaleform {
 	namespace Render
 	{
 		class Texture;
-		namespace D3D9
-		{
-			class Texture;
-		}
 	}
 }
 
@@ -119,7 +115,6 @@ public:
 
 	void		UpdateAndDraw(bool skipDraw=false);
 
-	Scaleform::Render::Texture*				BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight);
 	Scaleform::Render::Texture*				BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight);
 	void		UpdateTextureMatrices(const char* resName, int RTWidth, int RTHeight);
 

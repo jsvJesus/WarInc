@@ -13,8 +13,6 @@
 #endif
 
 #include "GFx_Kernel.h"
-#include "GFx_Renderer_D3D9.h"
-#include "Render/D3D9/D3D9_HAL.h"
 #include "GFx_Renderer_D3D1x.h"
 #include "Render/D3D1x/D3D1x_HAL.h"
 #include "GFx_FontProvider_Win32.h"
@@ -30,14 +28,6 @@
 
 // libs
 #include "WarIncScaleformLink.h"
-
-static IDirect3DDevice9* r3dGetScaleformDevice9()
-{
-	if(!r3dRenderer)
-		return NULL;
-
-	return r3dRenderer->pd3ddev;
-}
 
 static bool r3dScaleformShouldUseNativeDX11()
 {
@@ -258,11 +248,9 @@ class APIScaleformGfx : public r3dIResource
 	friend void r3dScaleformReset();
 public:
 	Scaleform::GFx::Loader loader;
-	Scaleform::Ptr<Scaleform::Render::D3D9::HAL>  RendererHAL9;
 	Scaleform::Ptr<Scaleform::Render::D3D1x::HAL> RendererHAL11;
 	Scaleform::Ptr<Scaleform::Render::Renderer2D>  Renderer;
 
-	LPDIRECT3DSTATEBLOCK9   pStateBlock;
 	r3dScaleformMovie*		pCurMovie;		// movie currently being processed
 	r3dScaleformMovie*		pKbdCaptureMovie;	// movie to receive keyboard input
 	bool					UseDX11HAL;
@@ -516,7 +504,6 @@ bool r3dScaleformGfxWinProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 APIScaleformGfx::APIScaleformGfx( const r3dIntegrityGuardian& ig ) : 
 r3dIResource( ig ),
-pStateBlock(NULL),
 pCurMovie(NULL),
 pKbdCaptureMovie(NULL),
 UseDX11HAL(false)
@@ -525,49 +512,27 @@ UseDX11HAL(false)
 
 APIScaleformGfx::~APIScaleformGfx()
 {
-	r3d_assert(pStateBlock == NULL);
 }
 
 void APIScaleformGfx::D3DCreateResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(UseDX11HAL)
-	{
-		if(RendererHAL11)
-			RendererHAL11->RestoreAfterReset();
-		return;
-	}
-
-	if(RendererHAL9)
-		RendererHAL9->RestoreAfterReset();
-
-	// create state block
-	IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
-	r3d_assert(scaleformDevice);
-	D3D_V( scaleformDevice->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
+	if(RendererHAL11)
+		RendererHAL11->RestoreAfterReset();
 }
 
 void APIScaleformGfx::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	SAFE_RELEASE(pStateBlock);
-
-	if(UseDX11HAL)
-	{
-		if(RendererHAL11)
-			RendererHAL11->PrepareForReset();
-		return;
-	}
-
-	if(RendererHAL9)
-		RendererHAL9->PrepareForReset();
+	if(RendererHAL11)
+		RendererHAL11->PrepareForReset();
 }
 
 Scaleform::Render::HAL* APIScaleformGfx::GetHAL() const
 {
-	return UseDX11HAL ? (Scaleform::Render::HAL*)RendererHAL11.GetPtr() : (Scaleform::Render::HAL*)RendererHAL9.GetPtr();
+	return (Scaleform::Render::HAL*)RendererHAL11.GetPtr();
 }
 
 bool APIScaleformGfx::Create()
@@ -625,54 +590,38 @@ bool APIScaleformGfx::Create()
 
 	UseDX11HAL = r3dScaleformShouldUseNativeDX11();
 
-	if(UseDX11HAL)
+	if(!UseDX11HAL)
 	{
-		RendererHAL11 = *new Scaleform::Render::D3D1x::HAL();
-
-		if(!RendererHAL11)
-		{
-			r3dError("GFx: Failed to create D3D1x HAL\n");
-			return false;
-		}
-
-		Scaleform::Render::D3D1x::HALInitParams initParams(
-			g_r3dDX11.GetDevice(),
-			g_r3dDX11.GetContext()
-		);
-
-		if(!RendererHAL11->InitHAL(initParams))
-		{
-			r3dError("GFx: D3D1x HAL InitHAL failed\n");
-			return false;
-		}
-
-		if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL11.GetPtr())))
-		{
-			r3dError("GFx: Failed to create DX11 Renderer2D\n");
-			return false;
-		}
-
-		r3dOutToLog("GFx: initialized native DX11 renderer\n");
+		r3dError("GFx: native DX11 renderer is required\n");
+		return false;
 	}
-	else
+
+	RendererHAL11 = *new Scaleform::Render::D3D1x::HAL();
+
+	if(!RendererHAL11)
 	{
-		RendererHAL9 = new Scaleform::Render::D3D9::HAL();
-		if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL9.GetPtr())))
-		{
-			r3dError("GFx: Failed to create Renderer2D\n");
-			return false;
-		}
-
-		// create state block
-		IDirect3DDevice9* scaleformDevice = r3dGetScaleformDevice9();
-		r3d_assert(scaleformDevice);
-		D3D_V( scaleformDevice->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
-
-		Scaleform::Render::D3D9::HALInitParams initParams(r3dGetScaleformDevice9(), r3dRenderer->d3dpp, Scaleform::Render::D3D9::HALConfig_NoSceneCalls);
-		RendererHAL9->InitHAL(initParams);	
-
-		r3dOutToLog("GFx: initialized D3D9 renderer\n");
+		r3dError("GFx: Failed to create D3D1x HAL\n");
+		return false;
 	}
+
+	Scaleform::Render::D3D1x::HALInitParams initParams(
+		g_r3dDX11.GetDevice(),
+		g_r3dDX11.GetContext()
+	);
+
+	if(!RendererHAL11->InitHAL(initParams))
+	{
+		r3dError("GFx: D3D1x HAL InitHAL failed\n");
+		return false;
+	}
+
+	if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL11.GetPtr())))
+	{
+		r3dError("GFx: Failed to create DX11 Renderer2D\n");
+		return false;
+	}
+
+	r3dOutToLog("GFx: initialized native DX11 renderer\n");
 
 	//D3DCreateResource();
 
@@ -738,19 +687,14 @@ void APIScaleformGfx::Destroy()
 #endif //SF_AMP_SERVER
 #endif // FINAL_BUILD
 	
-	SAFE_RELEASE(pStateBlock);
 	//D3DReleaseResource();
 
 	// release it here, because of static ptr
 	if(RendererHAL11)
 		RendererHAL11->ShutdownHAL();
 
-	if(RendererHAL9)
-		RendererHAL9->ShutdownHAL();
-
 	Renderer = NULL;
 	RendererHAL11 = NULL;
-	RendererHAL9 = NULL;
 	UseDX11HAL = false;
 
 	void UnregisterMsgProc (Win32MsgProc_fn);
@@ -805,8 +749,7 @@ bool r3dScaleformMovie::Load(const char* fname, bool set_keyboard_focus)
 
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::Load");
 	r3d_assert(gAPIScaleformGfx);
-	if(!gAPIScaleformGfx->UseDX11HAL)
-		r3d_assert(gAPIScaleformGfx->pStateBlock);
+	r3d_assert(gAPIScaleformGfx->UseDX11HAL);
 
 	Unload();
 
@@ -952,27 +895,6 @@ static Scaleform::Render::Texture* r3dScaleformSetImageTexture(
 	return pHWTexture;
 }
 
-Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight)
-{
-	if(!gAPIScaleformGfx || gAPIScaleformGfx->UseDX11HAL || !pRenderTarget)
-		return NULL;
-
-	Scaleform::GFx::ImageResource* pimageRes = r3dScaleformGetImageResource(pMovieDef, resName);
-	if(!pimageRes)
-		return NULL;
-
-	Scaleform::Render::D3D9::TextureManager* pmanager =
-		(Scaleform::Render::D3D9::TextureManager*)gAPIScaleformGfx->RendererHAL9->GetTextureManager();
-
-	if(!pmanager)
-		return NULL;
-
-	Scaleform::Render::Texture* pHWTexture =
-		pmanager->CreateTexture(pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
-
-	return r3dScaleformSetImageTexture(pimageRes, pHWTexture, RTWidth, RTHeight);
-}
-
 Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight)
 {
 	if(!gAPIScaleformGfx || !gAPIScaleformGfx->UseDX11HAL || !pRenderTarget)
@@ -993,7 +915,7 @@ Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImageDX11(const char* re
 
 	if(pHWTexture)
 	{
-		r3dOutToLog("GFx DX11: BoundRTToImage('%s') attached %dx%d DX11 texture\n",
+		r3dOutToLog("GFx DX11: BoundRTToImageDX11('%s') attached %dx%d DX11 texture\n",
 			resName ? resName : "", RTWidth, RTHeight);
 	}
 
@@ -1171,126 +1093,6 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 #endif
 
 		return;
-	}
-
-	if(!skipDraw)
-	{
-		if(gAPIScaleformGfx->pStateBlock)
-			gAPIScaleformGfx->pStateBlock->Capture();
-
-		r3dRenderer->Flush();
-
-		LPDIRECT3DSURFACE9 pRT = NULL;
-		LPDIRECT3DSURFACE9 pSS = NULL;
-
-		r3dRenderer->GetRT(0, &pRT);
-		r3dRenderer->GetDSS(&pSS);
-
-		if(!pRT)
-		{
-			if(gAPIScaleformGfx->pStateBlock)
-				gAPIScaleformGfx->pStateBlock->Apply();
-
-			SAFE_RELEASE(pSS);
-
-			gAPIScaleformGfx->pCurMovie = NULL;
-			return;
-		}
-
-		D3DSURFACE_DESC rtDesc;
-		ZeroMemory(&rtDesc, sizeof(rtDesc));
-
-		if(FAILED(pRT->GetDesc(&rtDesc)) || rtDesc.Width == 0 || rtDesc.Height == 0)
-		{
-			SAFE_RELEASE(pRT);
-			SAFE_RELEASE(pSS);
-
-			if(gAPIScaleformGfx->pStateBlock)
-				gAPIScaleformGfx->pStateBlock->Apply();
-
-			gAPIScaleformGfx->pCurMovie = NULL;
-			return;
-		}
-
-		static Scaleform::Render::RenderTarget* gfxRT = NULL;
-		static Scaleform::Render::DepthStencilBuffer* gfxDSB = NULL;
-		static UINT gfxRTWidth = 0;
-		static UINT gfxRTHeight = 0;
-
-		if(!gfxRT || !gfxDSB || gfxRTWidth != rtDesc.Width || gfxRTHeight != rtDesc.Height)
-		{
-			gfxRTWidth = rtDesc.Width;
-			gfxRTHeight = rtDesc.Height;
-
-			gfxRT = new Scaleform::Render::RenderTarget(
-				NULL,
-				Scaleform::Render::RBuffer_User,
-				Scaleform::Render::ImageSize(gfxRTWidth, gfxRTHeight)
-			);
-
-			gfxDSB = new Scaleform::Render::DepthStencilBuffer(
-				NULL,
-				Scaleform::Render::ImageSize(gfxRTWidth, gfxRTHeight)
-			);
-		}
-
-		if(!gfxRT || !gfxDSB)
-		{
-			SAFE_RELEASE(pRT);
-			SAFE_RELEASE(pSS);
-
-			if(gAPIScaleformGfx->pStateBlock)
-				gAPIScaleformGfx->pStateBlock->Apply();
-
-			gAPIScaleformGfx->pCurMovie = NULL;
-			return;
-		}
-
-		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, pRT, gfxDSB, pSS);
-
-		//Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL9->GetDefaultRenderTarget();
-
-		uint32_t numPasses = (r3dRenderer->GetPresentEye() == R3D_STEREO_EYE_MONO ? 1 : 2);
-
-		for(UINT i = 0; i < numPasses; ++i)
-		{
-			if(!gAPIScaleformGfx->RendererHAL9->SetRenderTarget(gfxRT, 1))
-				continue;
-
-			if(numPasses > 1)
-				r3dRenderer->SetEye(i == 0 ? R3D_STEREO_EYE_LEFT : R3D_STEREO_EYE_RIGHT);
-
-			gAPIScaleformGfx->Renderer->BeginFrame();
-
-			if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
-				gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
-
-			gAPIScaleformGfx->Renderer->EndFrame();
-
-			// DO NOT restore Scaleform default render target here.
-			// In WarInc after Scaleform 4.2 migration default RT can point to stale D3D surface.
-			// We render directly into current r3d render target through gfxRT.
-			/*if(defRT)
-				gAPIScaleformGfx->RendererHAL9->SetRenderTarget(defRT, 1);
-			else
-			{
-				r3dRenderer->SetRT(0, pRT);
-
-				if(pSS)
-					r3dRenderer->SetDSS(pSS);
-			}*/
-		}
-
-		if(numPasses > 1)
-			r3dRenderer->SetEye(R3D_STEREO_EYE_MONO);
-
-		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, NULL, gfxDSB, NULL);
-
-		SAFE_RELEASE(pRT);
-		SAFE_RELEASE(pSS);
-
-		if(gAPIScaleformGfx->pStateBlock)
-			gAPIScaleformGfx->pStateBlock->Apply();
 	}
 
 	gAPIScaleformGfx->pCurMovie = NULL;

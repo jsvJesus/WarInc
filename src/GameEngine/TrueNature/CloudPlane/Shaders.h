@@ -35,7 +35,7 @@ class RenderShadowShader : public Shader
 public :
 	void Create();
 	void Update(const SBoundingBox* pGround, const SBoundingBox* pCloud, const SSceneParamter& sceneParam);
-	void Begin(CloudGrid* pCloud, const SSceneParamter& sceneParam, LPDIRECT3DTEXTURE9 cloudTex);
+	void Begin(CloudGrid* pCloud, const SSceneParamter& sceneParam);
 
 	inline const D3DXMATRIX* GetW2ShadowMapMatrix() const;
 protected :

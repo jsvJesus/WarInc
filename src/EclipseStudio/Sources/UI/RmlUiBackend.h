@@ -15,9 +15,6 @@
 #include <Rocket/Core/RenderInterface.h>
 #include <Rocket/Core/SystemInterface.h>
 
-#include <d3d9.h>
-#include <vector>
-
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct RmlUiRenderInterfaceDX11;
@@ -34,21 +31,6 @@ struct RmlUiRenderInterfaceDX11;
 #undef DrawIndexedPrimitiveUP
 #endif
 
-#ifdef D3DRS_CULLMODE
-#undef D3DRS_CULLMODE
-#endif
-
-struct RmlUiBackendVertex
-{
-	float x;
-	float y;
-	float z;
-	float rhw;
-	DWORD color;
-	float u;
-	float v;
-};
-
 // -----------------------------------------------------------------------
 //  RmlUi System Interface  -  wraps r3dGetTime() and r3dOutToLog()
 // -----------------------------------------------------------------------
@@ -60,7 +42,7 @@ public:
 };
 
 // -----------------------------------------------------------------------
-//  RmlUi Render Interface  -  D3D9 immediate-mode rendering
+//  RmlUi Render Interface  -  native DX11 rendering
 // -----------------------------------------------------------------------
 class RmlUiRenderInterface : public Rocket::Core::RenderInterface
 {
@@ -68,9 +50,7 @@ public:
 	RmlUiRenderInterface();
 	virtual ~RmlUiRenderInterface();
 
-	void SetDevice(IDirect3DDevice9* device, int width, int height);
 	void SetDX11Device(ID3D11Device* device, ID3D11DeviceContext* context, int width, int height);
-	IDirect3DDevice9* GetDevice() const { return m_device; }
 	bool UsesDX11() const;
 	void PrepareState();
 	void RestoreState();
@@ -83,10 +63,8 @@ public:
 	virtual void ReleaseTexture(Rocket::Core::TextureHandle texture);
 
 private:
-	IDirect3DDevice9* m_device;
 	int m_width;
 	int m_height;
-	std::vector<RmlUiBackendVertex> m_vertices;
 	RmlUiRenderInterfaceDX11* m_dx11;
 };
 
@@ -147,7 +125,6 @@ private:
 	static RmlUiSystemInterface* s_system;
 	static RmlUiRenderInterface* s_render;
 	static Rocket::Core::Context* s_context;
-	static IDirect3DDevice9* s_device;
 	static ID3D11Device* s_dx11Device;
 	static bool s_usingDX11;
 };
