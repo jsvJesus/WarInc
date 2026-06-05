@@ -825,16 +825,20 @@ void r3dRenderLayer::DrawIndexed( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UI
 	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		{
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
 
-		g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitive(
-			Type,
-			BaseVertexIndex,
-			MinVertexIndex,
-			NumVertices,
-			startIndex,
-			primCount
-		);
+			g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitive(
+				Type,
+				BaseVertexIndex,
+				MinVertexIndex,
+				NumVertices,
+				startIndex,
+				primCount
+			);
+		}
+
+		return;
 	}
 #endif
 
@@ -854,11 +858,9 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 	Stats.AddAverageStripLength ( PrimitiveCount );
 #endif
 
-	// UP effectivly zeroes 0 stream ( others not? - find out )
 	void ZeroZeroStreamCache();
 	ZeroZeroStreamCache();
 
-	// IndexedUP effectively zeroes indices
 	void ZeroIndexCache();
 	ZeroIndexCache();
 
@@ -866,18 +868,22 @@ void r3dRenderLayer::DrawIndexedUP( D3DPRIMITIVETYPE PrimitiveType, UINT MinVert
 	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		{
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
 
-		g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitiveUP(
-			PrimitiveType,
-			MinVertexIndex,
-			NumVertices,
-			PrimitiveCount,
-			pIndexData,
-			IndexDataFormat,
-			pVertexStreamZeroData,
-			VertexStreamZeroStride
-		);
+			g_r3dDX11LegacyGeometryBridge.LegacyDrawIndexedPrimitiveUP(
+				PrimitiveType,
+				MinVertexIndex,
+				NumVertices,
+				PrimitiveCount,
+				pIndexData,
+				IndexDataFormat,
+				pVertexStreamZeroData,
+				VertexStreamZeroStride
+			);
+		}
+
+		return;
 	}
 #endif
 
@@ -901,13 +907,17 @@ void r3dRenderLayer::Draw( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UIN
 	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		{
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
 
-		g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitive(
-			PrimitiveType,
-			StartVertex,
-			PrimitiveCount
-		);
+			g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitive(
+				PrimitiveType,
+				StartVertex,
+				PrimitiveCount
+			);
+		}
+
+		return;
 	}
 #endif
 
@@ -927,7 +937,6 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 	Stats.AddAverageStripLength	( PrimitiveCount );
 #endif
 
-	// UP effectivly zeroes 0 stream ( others not? - find out )
 	void ZeroZeroStreamCache();
 	ZeroZeroStreamCache();
 
@@ -935,14 +944,18 @@ void r3dRenderLayer::DrawUP ( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCoun
 	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
 	{
 		if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+		{
 			g_r3dDX11LegacyGeometryBridge.PrepareLegacyDraw(NULL);
 
-		g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitiveUP(
-			PrimitiveType,
-			PrimitiveCount,
-			pVertexStreamZeroData,
-			VertexStreamZeroStride
-		);
+			g_r3dDX11LegacyGeometryBridge.LegacyDrawPrimitiveUP(
+				PrimitiveType,
+				PrimitiveCount,
+				pVertexStreamZeroData,
+				VertexStreamZeroStride
+			);
+		}
+
+		return;
 	}
 #endif
 
@@ -960,6 +973,9 @@ HRESULT r3dRenderLayer::SetVertexShaderConstantF(UINT startRegister, const float
 			data,
 			vector4fCount
 		);
+
+		if(!GetUseD3D9Present())
+			return S_OK;
 	}
 #endif
 
@@ -977,6 +993,9 @@ HRESULT r3dRenderLayer::SetPixelShaderConstantF(UINT startRegister, const float*
 			data,
 			vector4fCount
 		);
+
+		if(!GetUseD3D9Present())
+			return S_OK;
 	}
 #endif
 
@@ -990,7 +1009,15 @@ void r3dRenderLayer::SetCullMode( D3DCULL CullMode )
 	{
 #ifndef WO_SERVER
 		if(g_r3dDX11.IsInitialized())
+		{
 			g_r3dDX11State.SetRenderState(D3DRS_CULLMODE, CullMode);
+
+			if(!GetUseD3D9Present())
+			{
+				CurrentCullMode = CullMode;
+				return;
+			}
+		}
 #endif
 
 		D3D_V( pd3ddev->SetRenderState( D3DRS_CULLMODE, CullMode ) );
@@ -1010,14 +1037,21 @@ r3dRenderLayer::SetRT( int slot, IDirect3DSurface9* surf )
 {
 	r3d_assert( slot >= 0 && slot < MAX_RENDER_TARGETS );
 
-	// otherwise you get d3d error
 	r3d_assert( slot || surf );
 
 	if( surf != RTs[ slot ] )
 	{
 #ifndef WO_SERVER
 		if(g_r3dDX11.IsInitialized())
-			g_r3dDX11RenderTargets.SetRenderTarget(slot, surf);
+		{
+			const bool applied = g_r3dDX11RenderTargets.SetRenderTarget(slot, surf);
+			r3d_assert(applied || !surf);
+
+			RTs[ slot ] = surf;
+
+			if(!GetUseD3D9Present())
+				return;
+		}
 #endif
 
 		RTs[ slot ] = surf ;	
@@ -1033,7 +1067,15 @@ r3dRenderLayer::SetDSS( IDirect3DSurface9* dss )
 	{
 #ifndef WO_SERVER
 		if(g_r3dDX11.IsInitialized())
-			g_r3dDX11RenderTargets.SetDepthStencil(dss);
+		{
+			const bool applied = g_r3dDX11RenderTargets.SetDepthStencil(dss);
+			r3d_assert(applied || !dss);
+
+			DSS = dss;
+
+			if(!GetUseD3D9Present())
+				return;
+		}
 #endif
 
 		D3D_V( pd3ddev->SetDepthStencilSurface( dss ) );
@@ -1066,8 +1108,15 @@ r3dRenderLayer::GetDSS( IDirect3DSurface9** dss ) const
 }
 
 R3D_FORCEINLINE
-void r3dRenderLayer::DoSetStreamSourceFreq( UINT streamNumber,UINT setting )
+void r3dRenderLayer::DoSetStreamSourceFreq( UINT streamNumber, UINT setting )
 {
+#ifndef WO_SERVER
+	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
+	{
+		return;
+	}
+#endif
+
 	D3D_V( pd3ddev->SetStreamSourceFreq( streamNumber, setting ) ) ;
 }
 

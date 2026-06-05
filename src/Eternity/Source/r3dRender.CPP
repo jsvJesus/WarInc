@@ -110,6 +110,18 @@ static void r3dDX11_SetSamplerStateMirror(DWORD stage, D3DSAMPLERSTATETYPE type,
 	if(g_r3dDX11.IsInitialized())
 		g_r3dDX11State.SetSamplerState((int)stage, (int)type, (unsigned int)value);
 }
+
+static bool r3dDX11_IsNativeRendering()
+{
+	return g_r3dDX11.IsInitialized() &&
+		r3dRenderer &&
+		!r3dRenderer->GetUseD3D9Present();
+}
+#else
+static bool r3dDX11_IsNativeRendering()
+{
+	return false;
+}
 #endif
 
 void r3dGPUStats::Reset()
@@ -233,7 +245,11 @@ HRESULT r3dRenderLayer::SetSamplerState(DWORD Stage, D3DSAMPLERSTATETYPE Type, D
 {
 #ifndef WO_SERVER
 	r3dDX11_SetSamplerStateMirror(Stage, Type, Value);
+
+	if(r3dDX11_IsNativeRendering())
+		return D3D_OK;
 #endif
+
 	return pd3ddev->SetSamplerState(Stage, Type, Value);
 }
 
@@ -2560,6 +2576,44 @@ void r3dRenderLayer::SetViewportInternal ( const D3DVIEWPORT9* viewport )
 	ViewMinZ = viewport->MinZ ;
 	ViewMaxZ = viewport->MaxZ ;
 
+#ifndef WO_SERVER
+	if(r3dDX11_IsNativeRendering())
+	{
+		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+		if(context)
+		{
+			D3D11_VIEWPORT vp;
+			ZeroMemory(&vp, sizeof(vp));
+
+#ifndef FINAL_BUILD
+			if( AllowNullViewport && r_null_viewport->GetInt() )
+			{
+				vp.TopLeftX = 0.0f;
+				vp.TopLeftY = 0.0f;
+				vp.Width = 1.0f;
+				vp.Height = 1.0f;
+				vp.MinDepth = 0.0f;
+				vp.MaxDepth = 1.0f;
+			}
+			else
+#endif
+			{
+				vp.TopLeftX = (float)viewport->X;
+				vp.TopLeftY = (float)viewport->Y;
+				vp.Width = (float)viewport->Width;
+				vp.Height = (float)viewport->Height;
+				vp.MinDepth = viewport->MinZ;
+				vp.MaxDepth = viewport->MaxZ;
+			}
+
+			context->RSSetViewports(1, &vp);
+		}
+
+		return;
+	}
+#endif
+
 #ifndef FINAL_BUILD
 	if( AllowNullViewport && r_null_viewport->GetInt() )
 	{
@@ -2572,9 +2626,9 @@ void r3dRenderLayer::SetViewportInternal ( const D3DVIEWPORT9* viewport )
 
 #undef SetViewport
 		D3D_V( pd3ddev->SetViewport( &vp ) );
-		return ;
 #define SetViewport DoSetViewport	
 
+		return ;
 	}
 	else
 	{
@@ -2720,42 +2774,57 @@ void r3dRenderLayer::SetFog(int fogEnabled)
 }
 
 void
-r3dRenderLayer::StretchRect( r3dScreenBuffer* Source, r3dScreenBuffer* Target, int Filter /*= 0*/ )
+r3dRenderLayer::StretchRect( r3dScreenBuffer* Source, r3dScreenBuffer* Target, int Filter )
 {
-	// if this fails, IMPLEMENT ME
 	Source->AsTex2D() ;
 	Target->AsTex2D();
 
 #ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && !Filter && Source->Tex && Target->Tex)
+	if(r3dDX11_IsNativeRendering())
 	{
-		r3dDX11Texture* srcDX11 = Source->Tex->GetDX11Texture();
-		r3dDX11Texture* dstDX11 = Target->Tex->GetDX11Texture();
+		bool copied = false;
 
-		ID3D11Texture2D* srcTexture = srcDX11 ? srcDX11->GetTexture2D() : NULL;
-		ID3D11Texture2D* dstTexture = dstDX11 ? dstDX11->GetTexture2D() : NULL;
-
-		if(srcTexture && dstTexture && srcTexture != dstTexture)
+		if(!Filter && Source && Target && Source->Tex && Target->Tex)
 		{
-			D3D11_TEXTURE2D_DESC srcDesc;
-			D3D11_TEXTURE2D_DESC dstDesc;
+			r3dDX11Texture* srcDX11 = Source->Tex->GetDX11Texture();
+			r3dDX11Texture* dstDX11 = Target->Tex->GetDX11Texture();
 
-			srcTexture->GetDesc(&srcDesc);
-			dstTexture->GetDesc(&dstDesc);
+			ID3D11Texture2D* srcTexture = srcDX11 ? srcDX11->GetTexture2D() : NULL;
+			ID3D11Texture2D* dstTexture = dstDX11 ? dstDX11->GetTexture2D() : NULL;
 
-			if(
-				srcDesc.Width == dstDesc.Width &&
-				srcDesc.Height == dstDesc.Height &&
-				srcDesc.Format == dstDesc.Format &&
-				srcDesc.SampleDesc.Count == dstDesc.SampleDesc.Count &&
-				srcDesc.SampleDesc.Quality == dstDesc.SampleDesc.Quality
-				)
+			if(srcTexture && dstTexture && srcTexture != dstTexture)
 			{
-				ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-				if(context)
-					context->CopyResource(dstTexture, srcTexture);
+				D3D11_TEXTURE2D_DESC srcDesc;
+				D3D11_TEXTURE2D_DESC dstDesc;
+
+				srcTexture->GetDesc(&srcDesc);
+				dstTexture->GetDesc(&dstDesc);
+
+				if(
+					srcDesc.Width == dstDesc.Width &&
+					srcDesc.Height == dstDesc.Height &&
+					srcDesc.Format == dstDesc.Format &&
+					srcDesc.SampleDesc.Count == dstDesc.SampleDesc.Count &&
+					srcDesc.SampleDesc.Quality == dstDesc.SampleDesc.Quality
+					)
+				{
+					ID3D11DeviceContext* context = g_r3dDX11.GetContext();
+
+					if(context)
+					{
+						context->CopyResource(dstTexture, srcTexture);
+						copied = true;
+					}
+				}
 			}
 		}
+
+		if(!copied)
+		{
+			r3dOutToLog("DX11: StretchRect skipped, unsupported source/target/filter\n");
+		}
+
+		return;
 	}
 #endif
 
@@ -2767,7 +2836,7 @@ void r3dRenderLayer::Clear(DWORD count, const D3DRECT* rects, DWORD flags, D3DCO
 #ifndef WO_SERVER
 	if(g_r3dDX11.IsInitialized())
 	{
-		g_r3dDX11RenderTargets.Clear(
+		const bool cleared = g_r3dDX11RenderTargets.Clear(
 			count,
 			rects,
 			flags,
@@ -2775,6 +2844,12 @@ void r3dRenderLayer::Clear(DWORD count, const D3DRECT* rects, DWORD flags, D3DCO
 			z,
 			stencil
 		);
+
+		if(r3dDX11_IsNativeRendering())
+		{
+			r3d_assert(cleared);
+			return;
+		}
 	}
 #endif
 
@@ -2789,10 +2864,7 @@ void r3dRenderLayer :: ResetStats()
 	Stats.Reset();
 }
 
-
-
 bool g_bStartFrame = false;
-
 void r3dRenderLayer::StartFrame()
 {
 	if( DeviceAvailable )
@@ -2808,32 +2880,15 @@ void r3dRenderLayer::StartFrame()
 
 		ResetTextureCache();
 
-		pd3ddev->BeginScene();
+#ifndef WO_SERVER
+		if(!r3dDX11_IsNativeRendering())
+#endif
+		{
+			pd3ddev->BeginScene();
+		}
 
 		PresentEye = R3D_STEREO_EYE_MONO;
 		SetEye( R3D_STEREO_EYE_MONO ) ;
-
-#ifndef WO_SERVER 
-/*
-		if( NVApiStereoHandle )
-		{
-			float separation, convergence ;
-
-			NvAPI_Status status ;
-
-			status = NvAPI_Stereo_GetSeparation( NVApiStereoHandle, &separation ) ;
-			if( status != NVAPI_OK )
-				r3dOutToLog( R3D_NVAPI "NvAPI_Stereo_GetSeparation failed!" ) ;
-
-			status = NvAPI_Stereo_GetConvergence( NVApiStereoHandle, &convergence ) ;
-			if( status != NVAPI_OK )
-				r3dOutToLog( R3D_NVAPI "NvAPI_Stereo_GetConvergence failed!" ) ;
-
- 			r_3d_stereo_separation->SetFloat( separation ) ;
- 			r_3d_stereo_convergance->SetFloat( convergence ) ;
-		}
-*/
-#endif
 	}
 
 	g_bStartFrame = true;
@@ -2845,7 +2900,12 @@ void r3dRenderLayer::EndFrame()
 	{
 		IssuePendingQuery();
 
-		D3D_V( pd3ddev->EndScene() );
+#ifndef WO_SERVER
+		if(!r3dDX11_IsNativeRendering())
+#endif
+		{
+			D3D_V( pd3ddev->EndScene() );
+		}
 	}
 
 	g_bStartFrame = false;
@@ -2854,7 +2914,6 @@ void r3dRenderLayer::EndFrame()
 	{
 		if( IsDeviceLost() )
 		{
-			// this can hold stuff, so reset it by ourselves
 			r3dResetWatchDog();
 		}
 		else
@@ -4068,11 +4127,20 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 #endif
 }
 
-void r3dRenderLayer::EndRenderSimple( bool present /*= false*/ )
+void r3dRenderLayer::EndRenderSimple( bool present )
 {
-	// Present the backbuffer contents to the display
-	if( present )
-		pd3ddev->Present( NULL, NULL, NULL, NULL );
+	if( !present )
+		return;
+
+#ifndef WO_SERVER
+	if(r3dDX11_IsNativeRendering())
+	{
+		g_r3dDX11.EndFrame(true);
+		return;
+	}
+#endif
+
+	pd3ddev->Present( NULL, NULL, NULL, NULL );
 }
 
 static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)
@@ -4089,6 +4157,12 @@ static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)
 HRESULT r3dRenderLayer::SetRenderState(D3DRENDERSTATETYPE State, DWORD Value)
 {
 	r3dDX11_SetRenderStateMirror(State, Value);
+
+#ifndef WO_SERVER
+	if(r3dDX11_IsNativeRendering())
+		return D3D_OK;
+#endif
+
 	return pd3ddev->SetRenderState(State, Value);
 }
 
@@ -4111,11 +4185,18 @@ void r3dRenderLayer::SetRenderingMode(int Mode)
 	CurrentRenderingMode = Mode;
 	Stats.AddNumModesChanges( 1 );
 
+#ifndef WO_SERVER
+	const bool dx11NativeRendering = r3dDX11_IsNativeRendering();
+#else
+	const bool dx11NativeRendering = false;
+#endif
+
 #define R3D_SET_RENDER_STATE(state, value) \
-	do { \
-		r3dDX11_SetRenderStateMirror((state), (DWORD)(value)); \
-		pd3ddev->SetRenderState((state), (value)); \
-	} while(0)
+do { \
+r3dDX11_SetRenderStateMirror((state), (DWORD)(value)); \
+if(!dx11NativeRendering) \
+pd3ddev->SetRenderState((state), (value)); \
+} while(0)
 
 	// Z Buffer Control
 	if(Mode & R3D_BLEND_ZC)
@@ -4269,16 +4350,14 @@ void r3dRenderLayer::SetMaterial(r3dMaterial *Mat)
 	pd3ddev->SetRenderState(D3DRS_ALPHAREF, (unsigned long)Mat->AlphaRef);
 }
 
-
 #ifdef SetTexture
 #undef SetTexture
 #endif
 
-
 void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 {
 #ifndef WO_SERVER
-	const bool useDX11Native = g_r3dDX11.IsInitialized() && !GetUseD3D9Present();
+	const bool useDX11Native = r3dDX11_IsNativeRendering();
 #else
 	const bool useDX11Native = false;
 #endif
@@ -4287,10 +4366,15 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 #ifndef WO_SERVER
 		if(useDX11Native)
+		{
 			g_r3dDX11State.BindTexture(StageID, Tex);
+			return;
+		}
 #endif
+
 		if(Tex)
 			D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
+
 		return;
 	}
 
@@ -4307,8 +4391,14 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 #ifndef WO_SERVER
 		if(useDX11Native)
+		{
 			g_r3dDX11State.ClearTexture(StageID);
+			CurrentTexID[StageID] = -1;
+			Stats.AddNumTextureChanges( 1 );
+			return;
+		}
 #endif
+
 		if (CurrentTexID[StageID] == -1) return;
 		CurrentTexID[StageID] = -1;
 		D3D_V( pd3ddev->SetTexture(StageID, NULL) );
@@ -4320,10 +4410,15 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 		Stats.AddNumTextureChanges( 1 );
 		CurrentTexID[StageID] = Tex->GetID();
+
 #ifndef WO_SERVER
 		if(useDX11Native)
+		{
 			g_r3dDX11State.BindTexture(StageID, Tex);
+			return;
+		}
 #endif
+
 		D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
 	}
 }
@@ -6201,6 +6296,5 @@ r3dCSHolderWithDeviceQueue::~r3dCSHolderWithDeviceQueue()
 	LeaveCriticalSection( &cs ) ;
 #endif
 }
-
 
 int gDisableDynamicObjectShadows = 0 ;

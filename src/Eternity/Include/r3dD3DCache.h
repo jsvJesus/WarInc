@@ -4,6 +4,18 @@
 #ifndef WO_SERVER
 #include "r3dDX11.h"
 #include "r3dDX11LegacyGeometryBridge.h"
+
+R3D_FORCEINLINE bool r3dD3DCache_UseDX11Native()
+{
+	return g_r3dDX11.IsInitialized() &&
+		r3dRenderer &&
+		!r3dRenderer->GetUseD3D9Present();
+}
+#else
+R3D_FORCEINLINE bool r3dD3DCache_UseDX11Native()
+{
+	return false;
+}
 #endif
 
 class IDirect3D9Cache
@@ -45,6 +57,12 @@ R3D_FORCEINLINE HRESULT IDirect3D9Cache::_SetVertexShader(IDirect3DVertexShader9
 	if ( pVS != v )
 	{
 		pVS = v;
+
+#ifndef WO_SERVER
+		if(r3dD3DCache_UseDX11Native())
+			return S_OK;
+#endif
+
 		return r3dRenderer->pd3ddev->SetVertexShader( v ) ;
 	}
 
@@ -56,6 +74,12 @@ R3D_FORCEINLINE HRESULT IDirect3D9Cache::_SetPixelShader(IDirect3DPixelShader9* 
 	if ( pPS != v )
 	{
 		pPS = v;
+
+#ifndef WO_SERVER
+		if(r3dD3DCache_UseDX11Native())
+			return S_OK;
+#endif
+
 		return r3dRenderer->pd3ddev->SetPixelShader( v ) ;
 	}
 
@@ -67,10 +91,17 @@ R3D_FORCEINLINE void IDirect3D9Cache::_SetDecl(LPDIRECT3DVERTEXDECLARATION9 decl
 	if( pDecl != decl )
 	{
 		pDecl = decl;
+
+#ifndef WO_SERVER
+		if(r3dD3DCache_UseDX11Native())
+			return;
+#endif
+
 #undef SetVertexDeclaration
 
 		r3d_assert( decl ) ;
 		D3D_V( r3dRenderer->pd3ddev->SetVertexDeclaration(decl) );
+
 #define SetVertexDeclaration DIRECT_CALLS_OF_SetVertexDeclaration_FUNCTION_NOT_ALLOWED_USE_D3DC_
 	}
 }
@@ -88,13 +119,12 @@ R3D_FORCEINLINE void IDirect3D9Cache::_SetStreamSource( UINT idx, IDirect3DVerte
 		VBStrides[ idx ] = stride ;
 
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized() && (!r3dRenderer || !r3dRenderer->GetUseD3D9Present()))
+		if(r3dD3DCache_UseDX11Native())
 		{
-			if(g_r3dDX11LegacyGeometryBridge.SetStreamSource(idx, buff, offset, stride))
-				return;
+			if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+				g_r3dDX11LegacyGeometryBridge.SetStreamSource(idx, buff, offset, stride);
 
-			if(!r3dRenderer || !r3dRenderer->pd3ddev)
-				return;
+			return;
 		}
 #endif
 
@@ -109,20 +139,18 @@ R3D_FORCEINLINE void IDirect3D9Cache::_SetIndices( IDirect3DIndexBuffer9* ibuff 
 		pIB = ibuff;
 
 #ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized() && g_r3dDX11LegacyGeometryBridge.IsInitialized() && (!r3dRenderer || !r3dRenderer->GetUseD3D9Present()))
+		if(r3dD3DCache_UseDX11Native())
 		{
-			if(g_r3dDX11LegacyGeometryBridge.SetIndices(ibuff))
-				return;
+			if(g_r3dDX11LegacyGeometryBridge.IsInitialized())
+				g_r3dDX11LegacyGeometryBridge.SetIndices(ibuff);
 
-			if(!r3dRenderer || !r3dRenderer->pd3ddev)
-				return;
+			return;
 		}
 #endif
 
 		D3D_V( r3dRenderer->pd3ddev->SetIndices( ibuff ) ) ;
 	}
 }
-
 
 extern	IDirect3D9Cache	d3dc;
 
