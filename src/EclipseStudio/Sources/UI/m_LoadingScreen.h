@@ -5,40 +5,17 @@
 
 #include "multiplayer/ClientGameLogic.h"
 
-namespace Rocket
-{
-	namespace Core
-	{
-		class ElementDocument;
-	}
-}
-
 class LoadingScreen : public UIMenu
 {
 private:
 	r3dTexture*	m_pBackgroundTex;
 	bool m_RenderingDisabled;
-	Rocket::Core::ElementDocument* m_RmlDocument;
-	float m_Progress;
-	char m_MapName[512];
-	char m_MapDesc[1024];
-	char m_MapMode[256];
-	char m_MapType[64];
-	char m_TipCaption[256];
-	char m_TipText[2048];
-
-	bool CreateRmlDocument();
-	void CloseRmlDocument();
-	void UpdateRmlData();
-
 public:
 
 	LoadingScreen( const char * movieName );
 	virtual ~LoadingScreen();
 
 	virtual bool Initialize() OVERRIDE;
-	virtual bool Load() OVERRIDE;
-	virtual bool Unload() OVERRIDE;
 	virtual int Update() OVERRIDE;
 
 	void SetLoadingTexture(const char* ImagePath);
@@ -51,7 +28,6 @@ public:
 void StartLoadingScreen( );
 void DisableLoadingRendering( );
 void StopLoadingScreen( );
-void UpdateLoadingScreenOnce();
 void SetLoadingTexture(const char* ImagePath);
 void SetLoadingProgress( float progress );
 void AdvanceLoadingProgress( float add );

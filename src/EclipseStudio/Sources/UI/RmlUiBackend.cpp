@@ -1046,8 +1046,8 @@ int RmlUiBackend::ProcessHotkeys(const struct AppSelectCommandBinding* commands,
 {
 	for(int i = 0; i < numCommands; ++i)
 	{
-		if(Keyboard->WasPressed(commands[i].HotKey))
-			return commands[i].Result;
+		//if(Keyboard->WasPressed(commands[i].HotKey))
+			//return commands[i].Result;
 	}
 
 	return 0;
