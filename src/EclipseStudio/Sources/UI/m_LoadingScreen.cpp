@@ -43,7 +43,7 @@ LoadingScreen::~LoadingScreen()
 
 namespace
 {
-	const char* g_LoadingTemplatePath = "Data\\UI\\LoadingScreen.rml";
+	const char* g_LoadingTemplatePath = "Data\\UI\\m_LoadingScreen.rml";
 	const char* g_LoadingDefaultBackgroundPath = "Data\\UI\\Assets\\ConnectScreen.dds";
 
 	std::string LoadingEscapeRml(const char* text)

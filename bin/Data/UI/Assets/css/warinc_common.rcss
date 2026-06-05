@@ -443,44 +443,74 @@ button
 /* APP SELECT */
 /* ========================================================= */
 
-.app-panel
+#app_panel
 {
     position: absolute;
-    width: 430px;
-    height: 366px;
+    width: 500px;
+    height: 430px;
     left: 50%;
     top: 50%;
-    margin-left: -215px;
-    margin-top: -183px;
-    padding: 26px 32px;
-    background-color: rgba(12, 15, 14, 230);
+    margin-left: -250px;
+    margin-top: -215px;
+    padding: 0px;
+    background-color: rgba(12, 15, 14, 238);
     border: 1px #5b604e;
 }
 
-.app-title
+#app_top_line
 {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 500px;
+    height: 4px;
+    background-color: rgba(170, 92, 28, 255);
+}
+
+#app_title
+{
+    position: absolute;
+    left: 0px;
+    top: 32px;
+    width: 500px;
+    height: 42px;
     font-size: 34px;
     color: #f3ead6;
-    margin-bottom: 4px;
     text-align: center;
 }
 
-.app-subtitle
+#app_subtitle
 {
+    position: absolute;
+    left: 0px;
+    top: 76px;
+    width: 500px;
+    height: 18px;
     font-size: 12px;
     color: #9a947f;
-    margin-bottom: 18px;
     text-align: center;
+}
+
+#app_buttons
+{
+    position: absolute;
+    left: 65px;
+    top: 122px;
+    width: 370px;
+    height: 244px;
 }
 
 .app-button
 {
     display: block;
-    height: 34px;
-    text-align: center;
+    width: 370px;
+    height: 31px;
     margin-bottom: 9px;
-    padding: 8px 14px 0px 14px;
-    font-size: 17px;
+    padding-top: 10px;
+    padding-left: 0px;
+    padding-right: 0px;
+    text-align: center;
+    font-size: 16px;
     color: #e2dac7;
     background-color: rgba(33, 39, 34, 245);
     border: 1px #454b3d;
@@ -497,6 +527,7 @@ button
 {
     color: #ffffff;
     background-color: rgba(160, 87, 31, 255);
+    border-color: #ffd28b;
 }
 
 .app-exit
@@ -513,9 +544,13 @@ button
     border-color: #d17b5b;
 }
 
-.app-footer
+#app_footer
 {
-    margin-top: 12px;
+    position: absolute;
+    left: 0px;
+    bottom: 24px;
+    width: 500px;
+    height: 18px;
     font-size: 12px;
     color: #9b6b39;
     text-align: center;
