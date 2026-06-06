@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,15 +32,18 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9RendererInstanceBuffer.h"
-#include "PsUserAllocated.h"
+
+#include <RendererConfig.h>
 #if defined(RENDERER_ENABLE_DIRECT3D9)
 
+#include "D3D9RendererInstanceBuffer.h"
 #include <RendererInstanceBufferDesc.h>
 
 #if defined(PX_WINDOWS)
-#include <PxCudaContextManager.h>
+#include <PxTaskIncludes.h>
 #endif
+
+using namespace SampleRenderer;
 
 static D3DVERTEXELEMENT9 buildVertexElement(WORD stream, WORD offset, D3DDECLTYPE type, BYTE method, BYTE usage, BYTE usageIndex)
 {
@@ -63,52 +66,60 @@ static D3DDECLTYPE getD3DType(RendererInstanceBuffer::Format format)
 	D3DDECLTYPE d3dType = D3DDECLTYPE_UNUSED;
 	switch(format)
 	{
-		case RendererInstanceBuffer::FORMAT_FLOAT1:  d3dType = D3DDECLTYPE_FLOAT1;   break;
-		case RendererInstanceBuffer::FORMAT_FLOAT2:  d3dType = D3DDECLTYPE_FLOAT2;   break;
-		case RendererInstanceBuffer::FORMAT_FLOAT3:  d3dType = D3DDECLTYPE_FLOAT3;   break;
-		case RendererInstanceBuffer::FORMAT_FLOAT4:  d3dType = D3DDECLTYPE_FLOAT4;   break;
+	case RendererInstanceBuffer::FORMAT_FLOAT1:  d3dType = D3DDECLTYPE_FLOAT1;   break;
+	case RendererInstanceBuffer::FORMAT_FLOAT2:  d3dType = D3DDECLTYPE_FLOAT2;   break;
+	case RendererInstanceBuffer::FORMAT_FLOAT3:  d3dType = D3DDECLTYPE_FLOAT3;   break;
+	case RendererInstanceBuffer::FORMAT_FLOAT4:  d3dType = D3DDECLTYPE_FLOAT4;   break;
 	}
 	RENDERER_ASSERT(d3dType != D3DDECLTYPE_UNUSED, "Invalid Direct3D9 vertex type.");
 	return d3dType;
 }
 
-static D3DDECLUSAGE getD3DUsage(RendererInstanceBuffer::Semantic semantic, physx::PxU8 &usageIndex)
+static D3DDECLUSAGE getD3DUsage(RendererInstanceBuffer::Semantic semantic, PxU8 &usageIndex)
 {
 	D3DDECLUSAGE d3dUsage = D3DDECLUSAGE_FOG;
 	usageIndex = 0;
 	switch(semantic)
 	{
-		case RendererInstanceBuffer::SEMANTIC_POSITION:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_POSITION_CHANNEL;
-			break;
-		case RendererInstanceBuffer::SEMANTIC_NORMALX:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_NORMALX_CHANNEL;
-			break;
-		case RendererInstanceBuffer::SEMANTIC_NORMALY:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_NORMALY_CHANNEL;
-			break;
-		case RendererInstanceBuffer::SEMANTIC_NORMALZ:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_NORMALZ_CHANNEL;
-			break;
-		case RendererInstanceBuffer::SEMANTIC_VELOCITY_LIFE:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_VEL_LIFE_CHANNEL;
-			break;
-		case RendererInstanceBuffer::SEMANTIC_DENSITY:
-			d3dUsage   = D3DDECLUSAGE_TEXCOORD;
-			usageIndex = RENDERER_INSTANCE_DENSITY_CHANNEL;
-			break;
+	case RendererInstanceBuffer::SEMANTIC_POSITION:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_POSITION_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_NORMALX:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_NORMALX_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_NORMALY:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_NORMALY_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_NORMALZ:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_NORMALZ_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_VELOCITY_LIFE:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_VEL_LIFE_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_DENSITY:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_DENSITY_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_UV_OFFSET:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_UV_CHANNEL;
+		break;
+	case RendererInstanceBuffer::SEMANTIC_LOCAL_OFFSET:
+		d3dUsage   = D3DDECLUSAGE_TEXCOORD;
+		usageIndex = RENDERER_INSTANCE_LOCAL_CHANNEL;
+		break;
 	}
 	RENDERER_ASSERT(d3dUsage != D3DDECLUSAGE_FOG, "Invalid Direct3D9 vertex usage.");
 	return d3dUsage;
 }
 
 D3D9RendererInstanceBuffer::D3D9RendererInstanceBuffer(IDirect3DDevice9 &d3dDevice, const RendererInstanceBufferDesc &desc) :
-	RendererInstanceBuffer(desc)
+RendererInstanceBuffer(desc)
 #if RENDERER_INSTANCING
 	,m_d3dDevice(d3dDevice)
 #endif
@@ -116,11 +127,11 @@ D3D9RendererInstanceBuffer::D3D9RendererInstanceBuffer(IDirect3DDevice9 &d3dDevi
 #if RENDERER_INSTANCING
 	m_d3dVertexBuffer = 0;
 #endif
-	
+
 	m_usage      = 0;
 	m_pool       = D3DPOOL_MANAGED;
 	m_bufferSize = (UINT)(desc.maxInstances * m_stride);
-	
+
 #if RENDERER_ENABLE_DYNAMIC_VB_POOLS
 	if(desc.hint==RendererInstanceBuffer::HINT_DYNAMIC)
 	{
@@ -128,7 +139,7 @@ D3D9RendererInstanceBuffer::D3D9RendererInstanceBuffer(IDirect3DDevice9 &d3dDevi
 		m_pool  = D3DPOOL_DEFAULT;
 	}
 #endif
-	
+
 	onDeviceReset();
 
 #if RENDERER_INSTANCING	
@@ -138,7 +149,7 @@ D3D9RendererInstanceBuffer::D3D9RendererInstanceBuffer(IDirect3DDevice9 &d3dDevi
 	}
 #else
 	m_maxInstances = desc.maxInstances;
-	mInstanceBuffer = PX_ALLOC(m_maxInstances*m_stride);
+	mInstanceBuffer = malloc(m_maxInstances*m_stride); // PX_ALLOC(m_maxInstances*m_stride);
 #endif
 }
 
@@ -154,19 +165,19 @@ D3D9RendererInstanceBuffer::~D3D9RendererInstanceBuffer(void)
 #endif
 	if(m_d3dVertexBuffer) m_d3dVertexBuffer->Release();
 #else
-	PX_FREE(mInstanceBuffer);
+	free(mInstanceBuffer); // PX_FREE(mInstanceBuffer);
 #endif
 }
 
-void D3D9RendererInstanceBuffer::addVertexElements(physx::PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const
+void D3D9RendererInstanceBuffer::addVertexElements(PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const
 {
-	for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+	for(PxU32 i=0; i<NUM_SEMANTICS; i++)
 	{
 		Semantic semantic = (Semantic)i;
 		const SemanticDesc &sm = m_semanticDescs[semantic];
 		if(sm.format < NUM_FORMATS)
 		{
-			physx::PxU8 d3dUsageIndex  = 0;
+			PxU8 d3dUsageIndex  = 0;
 			D3DDECLUSAGE d3dUsage = getD3DUsage(semantic, d3dUsageIndex);
 			vertexElements.push_back(buildVertexElement((WORD)streamIndex, (WORD)sm.offset, getD3DType(sm.format), D3DDECLMETHOD_DEFAULT, (BYTE)d3dUsage, d3dUsageIndex));
 		}
@@ -175,13 +186,11 @@ void D3D9RendererInstanceBuffer::addVertexElements(physx::PxU32 streamIndex, std
 
 void *D3D9RendererInstanceBuffer::lock(void)
 {
-	RENDERER_PERFZONE(D3D9RenderIBlock);
-
 	void *lockedBuffer = 0;
 #if RENDERER_INSTANCING
 	if(m_d3dVertexBuffer)
 	{
-		const physx::PxU32 bufferSize = m_maxInstances * m_stride;
+		const PxU32 bufferSize = m_maxInstances * m_stride;
 		m_d3dVertexBuffer->Lock(0, (UINT)bufferSize, &lockedBuffer, 0);
 		RENDERER_ASSERT(lockedBuffer, "Failed to lock Direct3D9 Vertex Buffer.");
 	}
@@ -193,7 +202,6 @@ void *D3D9RendererInstanceBuffer::lock(void)
 
 void D3D9RendererInstanceBuffer::unlock(void)
 {
-	RENDERER_PERFZONE(D3D9RenderIBunlock);
 #if RENDERER_INSTANCING
 	if(m_d3dVertexBuffer)
 	{
@@ -202,7 +210,7 @@ void D3D9RendererInstanceBuffer::unlock(void)
 #endif
 }
 
-void D3D9RendererInstanceBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstInstance) const
+void D3D9RendererInstanceBuffer::bind(PxU32 streamID, PxU32 firstInstance) const
 {
 #if RENDERER_INSTANCING
 	if(m_d3dVertexBuffer)
@@ -213,7 +221,7 @@ void D3D9RendererInstanceBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstI
 #endif
 }
 
-void D3D9RendererInstanceBuffer::unbind(physx::PxU32 streamID) const
+void D3D9RendererInstanceBuffer::unbind(PxU32 streamID) const
 {
 #if RENDERER_INSTANCING
 	m_d3dDevice.SetStreamSource((UINT)streamID, 0, 0, 0);
@@ -249,7 +257,7 @@ void D3D9RendererInstanceBuffer::onDeviceReset(void)
 	{
 		m_d3dDevice.CreateVertexBuffer(m_bufferSize, m_usage, 0, m_pool, &m_d3dVertexBuffer, 0);
 		RENDERER_ASSERT(m_d3dVertexBuffer, "Failed to create Direct3D9 Vertex Buffer.");
-	
+
 #if defined(PX_WINDOWS)
 		if(m_interopContext && m_d3dVertexBuffer && m_mustBeRegisteredInCUDA)
 		{

@@ -495,10 +495,6 @@ public:
         Event_TouchEnd,
         Event_TouchMove,
         Event_TouchTap,
-        Event_TouchOver,
-        Event_TouchOut,
-        Event_TouchRollOver,
-        Event_TouchRollOut,
 
         Event_GestureBegin, // 0x100001B
         Event_GestureEnd,

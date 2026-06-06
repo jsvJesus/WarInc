@@ -8,8 +8,8 @@ namespace NetPacketsGameBrowser
 #pragma pack(push)
 #pragma pack(1)
 
-#define GBNET_VERSION		(0x00000107 + GBGAMEINFO_VERSION)
-#define GBNET_KEY1		0x531425ae
+#define GBNET_VERSION		(0x00000004 + GBGAMEINFO_VERSION)
+#define GBNET_KEY1		0x25e1454e
 
 //
 // Game Browser Packet IDs
@@ -25,11 +25,8 @@ enum gbpktType_e
   GBPKT_M2C_GameData,
   GBPKT_M2C_EndGamesList,
 
-  GBPKT_C2M_CreateGame,
   GBPKT_C2M_JoinGameReq,
-  GBPKT_C2M_JoinFriendGameReq,
   GBPKT_C2M_QuickGameReq,
-  GBPKT_C2M_NextRoundReq,
   GBPKT_M2C_JoinGameAns,
 
   GBPKT_M2C_ServerInfo,
@@ -53,7 +50,6 @@ struct GBPKT_ValidateConnectingPeer_s : public r3dNetPacketMixin<GBPKT_ValidateC
 
 struct GBPKT_C2M_RefreshList_s : public r3dNetPacketMixin<GBPKT_C2M_RefreshList>
 {
-	BYTE		playerLevel;
 };
 
 struct GBPKT_M2C_StartGamesList_s : public r3dNetPacketMixin<GBPKT_M2C_StartGamesList>
@@ -79,50 +75,14 @@ struct GBPKT_M2C_GameData_s : public r3dNetPacketMixin<GBPKT_M2C_GameData>
           return *this;
 	}
 
-	DWORD		gameId;
+	WORD		superId; // ID of supervisor
 	GBGameInfo	info;
-
-	BYTE		status; //0-good. 1-finished, 2-full, 4-too_late, 8-passworded,16-not avail for join
+	BYTE		status;  // 0-good. 1-finished, 2-full, 4-too_late, 8-passworded,16-not avail for join
 	BYTE		curPlayers;
 };
 
 struct GBPKT_M2C_EndGamesList_s : public r3dNetPacketMixin<GBPKT_M2C_EndGamesList>
 {
-};
-
-struct GBPKT_C2M_CreateGame_s : public r3dNetPacketMixin<GBPKT_C2M_CreateGame>
-{
-	GBPKT_C2M_CreateGame_s() { 
-	  pwd[0]  = 0;
-	  name[0] = 0;
-	}
-	
-	DWORD		CustomerID;
-	DWORD		createGameKey;
-	
-	BYTE		region;
-	char		name[16];
-	char		pwd[16];
-	BYTE		mapId;
-	BYTE		mapType;
-	BYTE		minPlayerLevel;
-	BYTE		maxPlayerLevel;
-	
-	BYTE		maxPlayers; // actual number of players
-	// this is indices of possible choices, not final values
-	BYTE		timeLimitVar;
-	BYTE		numRoundsVar; // bomb mode only
-	BYTE		friendlyFire;
-	BYTE		autoBalance;
-	BYTE		isBasicGame; // ranked, non premium game
-
-	// possible choices for parameters.
-	// defined in MasterUserServer.cpp
-	static const int timeLimitChoices[3]; 
-	static const int conquestStartTickets[3]; // should match timeLimitChoices size
-	static const int timeLimitChoicesPractice[2]; 
-	static const int timeLimitChoicesCybersport[4]; 
-	static const int numRoundsChoices[3]; 
 };
 
 struct GBPKT_C2M_JoinGameReq_s : public r3dNetPacketMixin<GBPKT_C2M_JoinGameReq>
@@ -132,40 +92,15 @@ struct GBPKT_C2M_JoinGameReq_s : public r3dNetPacketMixin<GBPKT_C2M_JoinGameReq>
 	}
 	
 	DWORD		CustomerID;
-	DWORD		gameId;
-	char		pwd[16];
-};
-
-struct GBPKT_C2M_JoinFriendGameReq_s : public r3dNetPacketMixin<GBPKT_C2M_JoinFriendGameReq>
-{
-	DWORD		CustomerID;
-	DWORD		FriendID;	// your friend id
-	BYTE		playerLevel;	// level of player
-	BYTE		playerOKToJoinHighLevelGame;
-	__int64		sessionId;
+	DWORD		gameServerId;
 	char		pwd[16];
 };
 
 struct GBPKT_C2M_QuickGameReq_s : public r3dNetPacketMixin<GBPKT_C2M_QuickGameReq>
 {
 	DWORD		CustomerID;
-	BYTE		playerLevel;	// level of player
 	BYTE		region;		// EGBGameRegion
-	BYTE		gameMode;	// 0xFF for any mode
 	BYTE		gameMap;	// 0xFF for any map
-};
-
-struct GBPKT_C2M_NextRoundReq_s : public r3dNetPacketMixin<GBPKT_C2M_NextRoundReq>
-{
-	DWORD		CustomerID;
-	BYTE		playerLevel;	// level of player
-
-	// info about previosly played game
-	// theoretically it should be kept on server, but let players send it
-	__int64		sessionId;
-	BYTE		region;
-	BYTE		mapId;
-	BYTE		mapType;
 };
 
 struct GBPKT_M2C_JoinGameAns_s : public r3dNetPacketMixin<GBPKT_M2C_JoinGameAns>
@@ -182,8 +117,6 @@ struct GBPKT_M2C_JoinGameAns_s : public r3dNetPacketMixin<GBPKT_M2C_JoinGameAns>
 	  rGameFinished,
 	  rGameNotFound,
 	  rWrongPassword,
-	  rWrongCreateGameKey,
-	  rHaveCreatedGame,		// user already have spawned game
 	  rLevelTooLow,
 	  rLevelTooHigh,
 	  rJoinDelayActive,

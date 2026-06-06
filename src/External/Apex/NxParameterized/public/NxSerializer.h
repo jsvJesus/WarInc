@@ -1,40 +1,32 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
 #ifndef NX_SERIALIZER_H
 #define NX_SERIALIZER_H
-
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
 
 /*!
 \file
@@ -42,9 +34,10 @@
 */
 
 
-#include "PsShare.h"
-#include "PxAssert.h"
-#include "NxParameterizedTraits.h"
+#include "foundation/PxAssert.h"
+#include <PxFileBuf.h>
+
+#include "NxApexUsingNamespace.h"
 
 namespace NxParameterized
 {
@@ -60,14 +53,16 @@ struct SerializePlatform
 {
 	/** 
 	\brief Processor architectures enumeration
+	\warning Do not change values of enums!
 	*/
 	typedef enum
 	{
 		ARCH_GEN = 0,
-		ARCH_X86,
-		ARCH_X86_64,
-		ARCH_PPC,
-		ARCH_CELL,
+		ARCH_X86 = 1,
+		ARCH_X86_64 = 2,
+		ARCH_PPC = 3,
+		ARCH_CELL = 4,
+		ARCH_ARM = 5,
 		ARCH_LAST
 	} ArchType;
 
@@ -78,13 +73,14 @@ struct SerializePlatform
 
 	/** 
 	\brief Compilers enumeration
+	\warning Do not change values of enums!
 	*/
 	typedef enum
 	{
 		COMP_GEN = 0,
-		COMP_GCC,
-		COMP_VC,
-		COMP_MW,
+		COMP_GCC = 1,
+		COMP_VC = 2,
+		COMP_MW = 3,
 		COMP_LAST
 	} CompilerType;
 
@@ -100,15 +96,17 @@ struct SerializePlatform
 
 	/** 
 	\brief OSes enumeration
+	\warning Do not change values of enums!
 	*/
 	typedef enum
 	{
 		OS_WINDOWS = 0,
-		OS_LINUX,
-		OS_PS3,
-		OS_MACOSX,
-		OS_XBOX,
-		OS_GEN,
+		OS_LINUX = 1,
+		OS_LV2 = 2, // PS3
+		OS_MACOSX = 3,
+		OS_XBOX = 4,
+		OS_GEN = 5,
+		OS_ANDROID = 6,
 		OS_LAST
 	} OsType;
 
@@ -127,23 +125,11 @@ struct SerializePlatform
 	*/
 	static const physx::PxU32 ANY_VERSION = (physx::PxU32)-1;
 
-	/**
-	\brief Get current (native) platform
-	*/
-	PX_INLINE static const SerializePlatform &GetCurrentPlatform();
-
-	/**
-	\brief Get platform by human-readable name
-	\param [in] name platform name
-	\param [out] platform Platform corresponding to name
-
-	Name format: compiler + compiler version (if needed) + architecture.
-	Supported names: VcWin32, VcWin64, VcXbox, GccPs3, Pib.
-	*/
-	PX_INLINE static bool GetPlatform(const char *name, SerializePlatform &platform);
-
 	PX_INLINE SerializePlatform();
 
+	/**
+	\brief Constructor of SerializePlatform
+	*/
 	PX_INLINE SerializePlatform(ArchType archType, CompilerType compType, physx::PxU32 compVer, OsType osType, physx::PxU32 osVer);
 
 	/**
@@ -158,35 +144,9 @@ struct SerializePlatform
 };
 
 class Interface;
+class Definition;
 class Traits;
 struct SerializePlatform;
-
-/**
-\brief Interface to use when compressing or decompressing parameterized data streams.
-*/
-class SerializerCompression
-{
-public:
-	/**
-	\brief Returns true if this memory represents compressed data
-	*/
-	virtual bool isCompressedData(const void *mem, physx::PxU32 dlen) = 0;
-
-	/**
-	\brief Compress data
-	*/
-	virtual void *compressData(const void *mem, physx::PxU32 inLen, physx::PxU32 &outLen, Traits *traits) = 0;
-
-	/**
-	\brief Decompress data
-	*/
-	virtual void *decompressData(const void *mem, physx::PxU32 inLen, physx::PxU32 &outLen, Traits *traits) = 0;
-
-	/**
-	\brief Release memory returned by compressData or decompressData
-	*/
-	virtual void releaseCompressedData(void *mem, Traits *traits) = 0;
-};
 
 /**
 \brief Interface class for serializer-deserializer of NxParameterized objects
@@ -204,33 +164,46 @@ public:
 	enum ErrorType
 	{
 		ERROR_NONE = 0,
+
 		ERROR_UNKNOWN,
+		ERROR_NOT_IMPLEMENTED,
+
+		// File format related errors
+		ERROR_INVALID_PLATFORM,
+		ERROR_INVALID_PLATFORM_NAME,
+		ERROR_INVALID_FILE_VERSION,
+		ERROR_INVALID_FILE_FORMAT,
+		ERROR_INVALID_MAGIC,
+		ERROR_INVALID_CHAR,
+
+		// External errors
 		ERROR_STREAM_ERROR,
-		ERROR_OBJECT_HAS_NO_ROOT_PARAMETER_DEFINITION,
-		ERROR_INVALID_ARRAY,
+		ERROR_MEMORY_ALLOCATION_FAILURE,
+		ERROR_UNALIGNED_MEMORY,
+		ERROR_PRESERIALIZE_FAILED,
+		ERROR_INTERNAL_BUFFER_OVERFLOW,
+		ERROR_OBJECT_CREATION_FAILED,
+		ERROR_CONVERSION_FAILED,
+
+		// Xml-specific errors
 		ERROR_VAL2STRING_FAILED,
 		ERROR_STRING2VAL_FAILED,
-		ERROR_INVALID_FILE_FORMAT,
-		ERROR_INVALID_PARAMETERIZED_OBJECT,
-		ERROR_ARRAY_INDEX_OUT_OF_RANGE,
-		ERROR_UNKNOWN_STRUCT_MEMBER,
-		ERROR_UNKNOWN_DATA_TYPE,
+		ERROR_INVALID_TYPE_ATTRIBUTE,
 		ERROR_UNKNOWN_XML_TAG,
-		ERROR_TYPE_MISMATCH,
-		ERROR_NOT_IMPLEMENTED,
-		ERROR_INVALID_PLATFORM,
-		ERROR_INVALID_INTERNAL_PTR,
-		ERROR_INVALID_VERSION,
-		ERROR_INVALID_CHECKSUM,
-		ERROR_MEMORY_ALLOCATION_FAILURE,
-		ERROR_INVALID_ENUM,
+		ERROR_MISSING_DOCTYPE,
+		ERROR_MISSING_ROOT_ELEMENT,
+		ERROR_INVALID_NESTING,
+		ERROR_INVALID_ATTR,
+
+		// Other stuff
+		ERROR_INVALID_ARRAY,
+		ERROR_ARRAY_INDEX_OUT_OF_RANGE,
 		ERROR_INVALID_VALUE,
-		ERROR_OBJECT_CREATION_FAILED,
+		ERROR_INVALID_INTERNAL_PTR,
 		ERROR_INVALID_PARAM_HANDLE,
-		ERROR_CONVERSION_FAILED,
-		ERROR_UNALIGNED_MEMORY,
-		ERROR_NULL_OBJECT,
-		ERROR_INVALID_RELOC
+		ERROR_INVALID_RELOC_TYPE,
+		ERROR_INVALID_DATA_TYPE,
+		ERROR_INVALID_REFERENCE
 	};
 
 	/**
@@ -251,14 +224,14 @@ public:
 	\brief Get type of stream (binary or xml)
 	\param [in] stream stream to be analyzed
 	*/
-	static SerializeType peekSerializeType(physx::PxFileBuf &stream);
+	static SerializeType peekSerializeType(physx::general_PxIOStream2::PxFileBuf &stream);
 
 	/**
 	\brief Get stream native platform
 	\param [in] stream stream to be analyzed
 	\param [out] platform stream native platform
 	*/
-	static ErrorType peekPlatform(physx::PxFileBuf &stream, SerializePlatform &platform);
+	static ErrorType peekPlatform(physx::general_PxIOStream2::PxFileBuf &stream, SerializePlatform &platform);
 
 	virtual ~Serializer() {}
 
@@ -275,22 +248,29 @@ public:
 	virtual ErrorType setTargetPlatform(const SerializePlatform &platform) = 0;
 
 	/**
+	\brief Sets whether serializer will automatically update
+		objects after deserialization
+	\param [in] doUpdate should automatic update be done?
+
+	\warning Normally you will not need this
+	\warning This is true by default
+	*/
+	virtual void setAutoUpdate(bool doUpdate) = 0;
+
+	/**
 	\brief Serialize array of NxParameterized-objects to a stream
 	\param [in] stream the stream to which the object will be serialized
 	\param [in] objs NxParameterized-objects which will be serialized
 	\param [in] nobjs number of objects
 	\param [in] doSerializeMetadata set this to store object metadata in file
-	\param [in] doCompression set this to compress data
 
-	\warning doCompression and doSerializeMetadata are not implemented
 	\warning Serialized file may depend on selected target platform
 	*/
 	virtual ErrorType serialize(
-		physx::PxFileBuf &stream,
+		physx::general_PxIOStream2::PxFileBuf &stream,
 		const ::NxParameterized::Interface **objs,
 		physx::PxU32 nobjs,
-		bool doSerializeMetadata = false,
-		bool doCompression = false) = 0;
+		bool doSerializeMetadata = false) = 0;
 
 	/**
 	\brief Peek number of NxParameterized-objects in stream with serialized data
@@ -299,7 +279,7 @@ public:
 
 	\warning Not all streams support peeking
 	*/
-	virtual ErrorType peekNumObjects(physx::PxFileBuf &stream, physx::PxU32 &numObjects) = 0;
+	virtual ErrorType peekNumObjects(physx::general_PxIOStream2::PxFileBuf &stream, physx::PxU32 &numObjects) = 0;
 
 	/**
 	\brief Peek number of NxParameterized-objects in stream with serialized data
@@ -309,7 +289,7 @@ public:
 
 	\warning User is responsible for releasing every element of classNames via Traits::strfree()
 	*/
-	virtual ErrorType peekClassNames(physx::PxFileBuf &stream, char **classNames, physx::PxU32 &numClassNames) = 0;
+	virtual ErrorType peekClassNames(physx::general_PxIOStream2::PxFileBuf &stream, char **classNames, physx::PxU32 &numClassNames) = 0;
 
 	/**
 	\brief Peek number of NxParameterized-objects in memory buffer with serialized data
@@ -319,28 +299,34 @@ public:
 	*/
 	virtual ErrorType peekNumObjectsInplace(const void *data, physx::PxU32 dataLen, physx::PxU32 &numObjects) = 0;
 
-	/**
-	\brief Container for results of deserialization
-
-	DeserializedData holds array of NxParameterized objects obtained during deserialization.
-	*/
-	class DeserializedData
+	/// TODO
+	template < typename T, int bufSize = 8 > class DeserializedResults
 	{
+		T buf[bufSize]; //For small number of objects
+
+		T *objs;
+
+		physx::PxU32 nobjs;
+
+		Traits *traits;
+
+		void clear();
+
 	public:
 
-		PX_INLINE DeserializedData();
+		PX_INLINE DeserializedResults();
 
-		PX_INLINE ~DeserializedData();
+		PX_INLINE ~DeserializedResults();
 
 		/**
 		\brief Copy constructor
 		*/
-		PX_INLINE DeserializedData(const DeserializedData &data);
+		PX_INLINE DeserializedResults(const DeserializedResults &data);
 
 		/**
 		\brief Assignment operator
 		*/
-		PX_INLINE DeserializedData &operator =(const DeserializedData &rhs);
+		PX_INLINE DeserializedResults &operator =(const DeserializedResults &rhs);
 
 		/**
 		\brief Allocate memory for values
@@ -350,7 +336,7 @@ public:
 		/**
 		\brief Allocate memory and set values
 		*/
-		PX_INLINE void init(Traits *traits_, ::NxParameterized::Interface **objs_, physx::PxU32 nobjs_);
+		PX_INLINE void init(Traits *traits_, T *objs_, physx::PxU32 nobjs_);
 
 		/**
 		\brief Number of objects in a container
@@ -360,38 +346,66 @@ public:
 		/**
 		\brief Access individual object in container
 		*/
-		PX_INLINE ::NxParameterized::Interface *&operator[](physx::PxU32 i);
+		PX_INLINE T &operator[](physx::PxU32 i);
 
 		/**
 		\brief Const-access individual object in container
 		*/
-		PX_INLINE ::NxParameterized::Interface *operator[](physx::PxU32 i) const;
+		PX_INLINE const T &operator[](physx::PxU32 i) const;
 
 		/**
 		\brief Read all NxParameterized objects in container to buffer outObjs
 		\warning outObjs must be large enough to hold all contained objects
 		*/
-		PX_INLINE void getObjects(::NxParameterized::Interface **outObjs);
+		PX_INLINE void getObjects(T *outObjs);
 
-	private:
-		static const physx::PxU32 bufSize = 8;
-		::NxParameterized::Interface *buf[bufSize]; //For small number of objects
-
-		::NxParameterized::Interface **objs;
-
-		physx::PxU32 nobjs;
-
-		Traits *traits;
-
-		void clear();
+		/**
+		\brief Release all objects
+		*/
+		PX_INLINE void releaseAll();
 	};
+
+	/**
+	\brief Container for results of deserialization
+
+	DeserializedData holds array of NxParameterized objects obtained during deserialization.
+	*/
+	typedef DeserializedResults< ::NxParameterized::Interface *> DeserializedData;
+
+	/// This class keeps metadata of a single NxParameterized class
+	struct MetadataEntry
+	{
+		/// Class name
+		const char *className;
+
+		/// Class version
+		physx::PxU32 version;
+
+		/// Class metadata
+		Definition *def;
+	};
+
+	/**
+	\brief Container for results of metadata deserialization
+
+	DeserializedMetadata holds array of MetadataEntry obtained during metadata deserialization.
+	*/
+	typedef DeserializedResults<MetadataEntry> DeserializedMetadata;
+
+	/**
+	\brief Deserialize metadata from a stream into one or more definitions
+	\param [in] stream the stream from which metadata will be deserialized
+	\param [out] desData storage for deserialized metadata
+	\warning This is a draft implementation!
+	*/
+	virtual ErrorType deserializeMetadata(physx::general_PxIOStream2::PxFileBuf &stream, DeserializedMetadata &desData);
 
 	/**
 	\brief Deserialize a stream into one or more NxParameterized objects
 	\param [in] stream the stream from which objects will be deserialized
 	\param [out] desData storage for deserialized data
 	*/
-	virtual ErrorType deserialize(physx::PxFileBuf &stream, DeserializedData &desData) = 0;
+	virtual ErrorType deserialize(physx::general_PxIOStream2::PxFileBuf &stream, DeserializedData &desData);
 
 	/**
 	\brief Deserialize a stream into one or more NxParameterized objects
@@ -399,7 +413,7 @@ public:
 	\param [out] desData storage for deserialized data
 	\param [out] isUpdated true if any legacy object was updated, false otherwise
 	*/
-	virtual ErrorType deserialize(physx::PxFileBuf &stream, DeserializedData &desData, bool &isUpdated) = 0;
+	virtual ErrorType deserialize(physx::general_PxIOStream2::PxFileBuf &stream, DeserializedData &desData, bool &isUpdated) = 0;
 
 	/**
 	\brief Deserialize memory buffer into one or more NxParameterized objects
@@ -410,7 +424,7 @@ public:
 	\warning Currently only binary serializer supports inplace deserialization
 	\warning Memory must be aligned to 8 byte boundary
 	*/
-	virtual ErrorType deserializeInplace(void *data, physx::PxU32 dataLen, DeserializedData &desData) = 0;
+	virtual ErrorType deserializeInplace(void *data, physx::PxU32 dataLen, DeserializedData &desData);
 
 	/**
 	\brief Deserialize memory buffer into one or more NxParameterized objects
@@ -420,27 +434,28 @@ public:
 	\param [out] isUpdated true if any legacy object was updated, false otherwise
 
 	\warning Currently only binary serializer supports inplace deserialization
+	\warning Memory must be aligned to the boundary required by the data (see getInplaceAlignment)
 	*/
 	virtual ErrorType deserializeInplace(void *data, physx::PxU32 dataLen, DeserializedData &desData, bool &isUpdated) = 0;
+
+	/**
+	\brief Get minimum alignment required for inplace deserialization of data in stream
+	\param [in] stream stream which will be inplace deserialized
+	\param [out] align alignment required for inplace deserialization of stream
+	\note For most of the objects this will return default alignment of 8 bytes
+	*/
+	virtual ErrorType peekInplaceAlignment(physx::general_PxIOStream2::PxFileBuf& stream, physx::PxU32& align) = 0;
 
 	/**
 	\brief Release deserializer and any memory allocations associated with it
 	*/
 	virtual void release() = 0;
-
-	/**
-	\brief setSerializerCompression sets the interface to use when compressing or decompressing parameterized data streams.
-	\param [serializerCompression] A pointer to a serializer compression interface.
-
-	\warning Currently this does not work
-	*/
-	virtual void setSerializerCompression(SerializerCompression *serializerCompression) = 0;
 };
-
-#include "NxSerializer.inl"
 
 PX_POP_PACK
 
-}; // end of namespace
+} // namespace NxParameterized
 
-#endif
+#include "NxSerializer.inl"
+
+#endif // NX_SERIALIZER_H

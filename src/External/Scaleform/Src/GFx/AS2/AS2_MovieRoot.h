@@ -640,13 +640,13 @@ public:
     virtual void        AdvanceFrame(bool nextFrame);
 
     // forces garbage collection (if GC is enabled)
-    virtual void        ForceCollect(unsigned);
+    virtual void        ForceCollect();
     // forces emergency garbage collection (if GC is enabled). This method is called
     // when heap is overflown. 
     virtual void        ForceEmergencyCollect();
 
     virtual void        SuspendGC(bool) {}
-    virtual void        ScheduleGC(unsigned) {}
+    virtual void        ScheduleGC() {}
 
     // Generate button events (onRollOver, onPress, etc)
     virtual void        GenerateMouseEvents(unsigned mouseIndex);

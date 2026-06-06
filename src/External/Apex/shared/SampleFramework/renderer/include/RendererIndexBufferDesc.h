@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,24 +37,28 @@
 
 #include <RendererIndexBuffer.h>
 
-class RendererIndexBufferDesc
+namespace SampleRenderer
 {
+
+	class RendererIndexBufferDesc
+	{
 	public:
-		RendererIndexBuffer::Hint   hint;
-		RendererIndexBuffer::Format format;
-		
-		physx::PxU32                       maxIndices;
+		RendererIndexBuffer::Hint          hint;
+		RendererIndexBuffer::Format        format;
+
+		PxU32                              maxIndices;
 
 		///choose if the resource must be registered in CUDA upon creation
-		bool						registerInCUDA;
+		bool                               registerInCUDA;
 		///This context must be used to register and unregister the resource everytime the device is lost and recreated
 		physx::pxtask::CudaContextManager *interopContext;  
-		
+
 	public:
 		RendererIndexBufferDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif
-

@@ -1,31 +1,6 @@
 #include	"r3dPCH.h"
 #include	"r3d.h"
 
-#ifndef WO_SERVER
-#pragma warning(push)
-#pragma warning(disable: 4005)
-#pragma warning(disable: 4061)
-#pragma warning(disable: 4062)
-#pragma warning(disable: 4191)
-#pragma warning(disable: 4255)
-#pragma warning(disable: 4365)
-#pragma warning(disable: 4571)
-#pragma warning(disable: 4625)
-#pragma warning(disable: 4626)
-#pragma warning(disable: 4668)
-#pragma warning(disable: 4710)
-#pragma warning(disable: 4711)
-#pragma warning(disable: 4820)
-#include <d3d11.h>
-#pragma warning(pop)
-
-#include "r3dDX11.h"
-#include "r3dDX11Geometry.h"
-#include "r3dDX11RenderTarget.h"
-#include "r3dDX11State.h"
-#include "r3dDX11Texture.h"
-#endif
-
 #pragma warning(disable:4996)
 
 #include <ddraw.h>
@@ -34,19 +9,14 @@
 #include <wbemidl.h>
 
 #ifndef WO_SERVER
-
-#define R3D_USE_NVAPI 0
-#define R3D_NVAPI "NVApi disabled: "
-
+#include "NVApi/nvapi.h"
+#define R3D_NVAPI "NVApi: "
+#pragma comment(lib, "../External/NVApi/x86/nvapi.lib")
 #endif
 
 #include "../SF/Console/Config.h"
 
 #include "r3dDeviceQueue.h"
-#include "r3dBuffer.h"
-#ifndef WO_SERVER
-#include "r3dDX11.h"
-#endif
 
 #include "r3dBackgroundTaskDispatcher.h"
 
@@ -98,31 +68,6 @@ int	VS_Mode = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 DWORD gMainThreadID = GetCurrentThreadId();
 
 void r3dFrameQueryRelease();
-
-#ifndef WO_SERVER
-static void r3dDX11_UnregisterSurfaceMirror(IDirect3DSurface9* surface)
-{
-	g_r3dDX11RenderTargets.UnregisterSurface(surface);
-}
-
-static void r3dDX11_SetSamplerStateMirror(DWORD stage, D3DSAMPLERSTATETYPE type, DWORD value)
-{
-	if(g_r3dDX11.IsInitialized())
-		g_r3dDX11State.SetSamplerState((int)stage, (int)type, (unsigned int)value);
-}
-
-static bool r3dDX11_IsNativeRendering()
-{
-	return g_r3dDX11.IsInitialized() &&
-		r3dRenderer &&
-		!r3dRenderer->GetUseD3D9Present();
-}
-#else
-static bool r3dDX11_IsNativeRendering()
-{
-	return false;
-}
-#endif
 
 void r3dGPUStats::Reset()
 {
@@ -241,32 +186,28 @@ void r3dGPUStats::AddOtherBufferDXMem( int val )
 	AddVMem( val ) ;
 }
 
-HRESULT r3dRenderLayer::SetSamplerState(DWORD Stage, D3DSAMPLERSTATETYPE Type, DWORD Value)
+R3D_FORCEINLINE void r3dRenderLayer::SetBlackPixelShader()
 {
-#ifndef WO_SERVER
-	r3dDX11_SetSamplerStateMirror(Stage, Type, Value);
-
-	if(r3dDX11_IsNativeRendering())
-		return D3D_OK;
-#endif
-
-	return pd3ddev->SetSamplerState(Stage, Type, Value);
+	if( ForceBlackPixelShaderId >= 0 )
+	{
+		PixelShaders[ ForceBlackPixelShaderId ].SetActive( 1 );
+	}
 }
 
 void r3dRenderLayer::SetMipMapBias(float Bias, int Stage)
 {
 	if (Stage != -1)
-		SetSamplerState(Stage, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(Stage, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
 	else
 	{
-		SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(1, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(2, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(3, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(4, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(5, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(6, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
-		SetSamplerState(7, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(1, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(2, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(3, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(4, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(5, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(6, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
+		pd3ddev->SetSamplerState(7, D3DSAMP_MIPMAPLODBIAS, *((LPDWORD) (&Bias)));
 	}
 }
 
@@ -479,6 +420,12 @@ r3dRenderLayer::GetVertexShaderIdx( const char* Name )
 
 void r3dRenderLayer::SetPixelShader(const char* Name)
 {
+	if( ForceBlackPixelShader )
+	{
+		SetBlackPixelShader();
+		return;
+	}
+
 	for(int i=0;i<NumPixelShaders;i++) {
 		if(stricmp(PixelShaders[i].Name, Name) == NULL) {
 			CurrentPixelShaderID = i;
@@ -496,6 +443,12 @@ void r3dRenderLayer::SetPixelShader(const char* Name)
 
 void r3dRenderLayer::SetPixelShader(int Id)
 {
+	if( ForceBlackPixelShader )
+	{
+		SetBlackPixelShader();
+		return;
+	}
+
 	CurrentPixelShaderID = Id;
 	if(Id != -1) {
 		PixelShaders[Id].SetActive(1);
@@ -702,7 +655,7 @@ r3dRenderLayer::SetD3DDev( IDirect3DDevice9* dev )
 
 int r3dRenderLayer::Close()
 {
-#if !defined(WO_SERVER) && R3D_USE_NVAPI
+#ifndef WO_SERVER 
 	if( NVApiStereoHandle )
 	{
 		if( NvAPI_Stereo_DestroyHandle( NVApiStereoHandle ) != NVAPI_OK )
@@ -710,10 +663,6 @@ int r3dRenderLayer::Close()
 			r3dOutToLog( R3D_NVAPI "failed to destroy stereo handle!" ) ;
 		}
 	}
-#endif
-
-#ifndef WO_SERVER
-	g_r3dDX11.Shutdown();
 #endif
 
 	r3dMesh::Close() ;
@@ -784,11 +733,6 @@ int r3dRenderLayer::Close()
 	SAFE_DELETE(vtxArray3D);
 	SAFE_DELETE(vtxArray3D_Lines);
 	SAFE_DELETE(vtxArrayMinimalist2D_Lines)
-
-#ifndef WO_SERVER
-	r3dDX11_UnregisterSurfaceMirror(MainRT);
-	r3dDX11_UnregisterSurfaceMirror(MainDSS);
-#endif
 
 	SAFE_RELEASE( MainRT );
 	SAFE_RELEASE( MainDSS );
@@ -929,7 +873,7 @@ void __EvaluateDisplayModes(IDirect3D9 *d3d, ModesArray &outModes)
 		{
 			d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, fmt, i, &mode);
 			outModes.PushBack(mode);
-			r3dOutToLog ("Mode %d:  \t  %dx%d  \tFormat: %s\tRefresh rate: %i\n", i, (int)mode.Width, (int)mode.Height, __GetFormatName((int)mode.Format), mode.RefreshRate);
+			//r3dOutToLog ("Mode %d:  \t  %dx%d  \tFormat: %s\tRefresh rate: %i\n", i, (int)mode.Width, (int)mode.Height, __GetFormatName((int)mode.Format), mode.RefreshRate);
 		}
 	}
 }
@@ -938,7 +882,7 @@ void __EvaluateDisplayModes(IDirect3D9 *d3d, ModesArray &outModes)
 
 bool r3dRenderLayer::FindCompatibleNVidiaStereoDisplayMode(const char *displayName, D3DDISPLAYMODE &inOutMode, const ModesArray &allModes)
 {
-#if defined(WO_SERVER) || !R3D_USE_NVAPI
+#ifdef WO_SERVER
 	return false;
 #else
 	if (!NVApiActive || !NVApiStereoMode)
@@ -1228,6 +1172,8 @@ typedef BOOL ( WINAPI* PfnCoSetProxyBlanket )( IUnknown* pProxy, DWORD dwAuthnSv
 
 int LocalVideoMemoryWMI()
 {
+	return 0; // doesn't work on laptops with two video cards. throws exception that interface isn't available
+
 	HMONITOR hMonitor = r3dRenderer->pd3d->GetAdapterMonitor( 0 );
 
 	WCHAR strInputDeviceID[512];
@@ -1530,7 +1476,7 @@ static int DoesGPUSupportVertexFetch( IDirect3D9* d3d )
 
 int r3dRenderLayer::InitStereo()
 {
-#if !defined(WO_SERVER) && R3D_USE_NVAPI
+#ifndef WO_SERVER 
 	NvAPI_Status status ;
 	status = NvAPI_Initialize() ;
 
@@ -1606,7 +1552,7 @@ int r3dRenderLayer::InitStereo()
 
 void r3dRenderLayer::SetEye( StereoEyeEnum eye )
 {
-#if !defined(WO_SERVER) && R3D_USE_NVAPI
+#ifndef WO_SERVER 
 	if( NVApiStereoMode )
 	{
 		NvAPI_Status status ;
@@ -1654,7 +1600,7 @@ void BrightnessContrastCallback( int oldI, float oldF )
 void StereoChangeCallback(int oldI, float oldF)
 {
 
-#if !defined(WO_SERVER) && R3D_USE_NVAPI
+#ifndef WO_SERVER 
 
 	if (!r3dRenderer->NVApiActive)
 		return;
@@ -1696,12 +1642,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	int	isWindowed;
 	int	DepthMode;
 
-	(void)RenderPath;
-	const bool cmdLineDX9 = strstr(__r3dCmdLine, "-dx9") || strstr(__r3dCmdLine, "/dx9");
-	bool useDX11 = true;
-
-	if(cmdLineDX9)
-		r3dOutToLog("DX11: ignoring -dx9 command line switch; DX11 renderer is required\n");
+	RenderPath = RenderPath; //UNUSED
 
 	// RTBuffer = NULL;
 
@@ -1734,16 +1675,9 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 		DWORD dw3 = (di.DriverVersion.LowPart  >> 16) & 0xFFFF;
 		DWORD dw4 = (di.DriverVersion.LowPart  >>  0) & 0xFFFF;
 		r3dOutToLog("%s %d.%d.%d.%d\n", di.Driver, dw1, dw2, dw3, dw4);
-
-		extern DWORD DriverUpdater(HWND hParentWnd, DWORD VendorId, DWORD v1, DWORD v2, DWORD v3, DWORD v4, DWORD hash);
-		DWORD hash = (DWORD)r_driver_hash->GetInt();
-		DWORD newHash = (DWORD)DriverUpdater(0, di.VendorId, dw1, dw2, dw3, dw4, hash);
-		if(hash != newHash)
-		{
-			r_driver_hash->SetInt(newHash);
-		}
 	}
-	
+
+
 	// display monitor info
 	MONITORINFOEX mi;
 	ZeroMemory(&mi, sizeof(mi));
@@ -1755,7 +1689,8 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 
 		r3dOutToLog("Monitor: %s (%dx%d)\n", mi.szDevice, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
 	}
-	
+
+
 	ModesArray allModes;
 	__EvaluateDisplayModes(pd3d, allModes);
 
@@ -1769,13 +1704,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	//	Modify mode for stereo
 	FindCompatibleNVidiaStereoDisplayMode(mi.szDevice, mode, allModes);
 
-	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d,renderPath=%s)\n",
-		mode.Width,
-		mode.Height,
-		BPP,
-		Flags,
-		mode.RefreshRate,
-		useDX11 ? "DX11" : "DX9");
+	r3dOutToLog("r3dRenderLayer::SetMode(x=%d,y=%d,bpp=%d,windowed=%d,hz=%d)\n", mode.Width, mode.Height, BPP, Flags, mode.RefreshRate); 
 
 	// Set up the structure used to create the D3DDevice. Since we are now
 	ZeroMemory( &d3dpp, sizeof(d3dpp) );
@@ -1851,7 +1780,7 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 
 	SetD3DDev( dev );
 
-#if !defined(WO_SERVER) && R3D_USE_NVAPI
+#ifndef WO_SERVER
 	if( this->NVApiActive )
 	{
 		if( NvAPI_Stereo_CreateHandleFromIUnknown( dev, &NVApiStereoHandle ) != NVAPI_OK)
@@ -1905,6 +1834,13 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	}
 
 	SupportsVertexTextureFetch = DoesGPUSupportVertexFetch( pd3d );
+
+#ifndef WO_SERVER
+	if( r_disable_vfetch->GetInt() )
+	{
+		SupportsVertexTextureFetch = 0;
+	}
+#endif
 
 	SupportsR32FBlending = 0 ;
 
@@ -2002,12 +1938,12 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 	int Want32bpp = (BPP == 32);
 
 	// Texture format's listing
-	r3dOutToLog ("Texture Formats availability\n");
+	/*r3dOutToLog ("Texture Formats availability\n");
 	for(int i=0; i<_Num_ModeNames; i++)
 	{
 		if ( IsTextureFormatAvailable((D3DFORMAT)_ModeNames[i].ModeCode))
 			r3dOutToLog ("Texture Format found ID %d: \t %s\n", _ModeNames[i].ModeCode,_ModeNames[i].ModeName);
-	}
+	}*/
 
 	/*r3dOutToLog ("Special Texture Formats availability\n");
 	if ( IsTextureFormatAvailable(D3DFMT_UYVY))
@@ -2056,61 +1992,23 @@ int r3dRenderLayer::SetMode(int XRes, int YRes, int BPP, int Flags, int RenderPa
 
 	r3dMaterialLibrary::Reset();
 
-	r_brightness->SetChangeCallback( BrightnessContrastCallback ) ;
-	r_contrast->SetChangeCallback( BrightnessContrastCallback ) ;
+	//r_brightness->SetChangeCallback( BrightnessContrastCallback ) ;
+	//r_contrast->SetChangeCallback( BrightnessContrastCallback ) ;
 	r_3d_vision_direct->SetChangeCallback( &StereoChangeCallback );
 
-#ifndef WO_SERVER
-	if(useDX11)
-	{
-		const bool dx11Windowed = isWindowed ? true : false;
-
-		if(g_r3dDX11.Init(HLibWin, mode.Width, mode.Height, dx11Windowed))
-		{
-			g_r3dDX11.SetDebugTriangle(
-				strstr(__r3dCmdLine, "-dx11tri") || strstr(__r3dCmdLine, "/dx11tri")
-			);
-
-			g_r3dDX11.SetDebugTexturedQuad(
-				strstr(__r3dCmdLine, "-dx11tex") || strstr(__r3dCmdLine, "/dx11tex")
-			);
-
-			// Важно:
-			// MainRT/MainDSS были созданы раньше, когда DX11 bridge еще не был initialized.
-			// Нужно пере-захватить backbuffer/depth после DX11 Init, чтобы RegisterRenderTarget/RegisterDepthStencil
-			// получили реальные DX11 RTV/DSV mirror.
-			AquireMainRT();
-
-			RTs[0] = NULL;
-			SetRT(0, MainRT);
-
-			DSS = NULL;
-			SetDSS(MainDSS);
-
-			r3dOutToLog("DX11: main RT/DSS registered after DX11 init\n");
-			r3dOutToLog("DX11: renderer layer started %dx%d windowed=%d\n", mode.Width, mode.Height, dx11Windowed ? 1 : 0);
-		}
-		else
-		{
-			r3dOutToLog("DX11: renderer layer failed, requested DX11 cannot continue\n");
-			return FALSE;
-		}
-	}
-#endif
-	
 	return TRUE;
 }
-
+/*
 static WORD GetRampFor( WORD val )
 {
 	int ival = val * 256 ;
 	ival = int( ival * r_contrast->GetFloat() * 2.0f + ( r_brightness->GetFloat() - 0.5f ) * 65536 ) ;
 
 	return R3D_MAX( R3D_MIN( ival, 0xffff ), 0 ) ;
-}
+}*/
 
 void r3dRenderLayer::ApplyGammaRamp()
-{
+{/*
 	// we do manual brightness/ contrast
 #if 0
 	if( pd3ddev )
@@ -2126,7 +2024,7 @@ void r3dRenderLayer::ApplyGammaRamp()
 
 		pd3ddev->SetGammaRamp( 0, D3DSGR_NO_CALIBRATION, &ramp ) ;
 	}
-#endif
+#endif*/
 }
 
 int r3dRenderLayer::IsTextureFormatAvailable(D3DFORMAT Fmt)
@@ -2176,8 +2074,7 @@ static	int		ZBuffer_Mode     = D3DZB_TRUE; //D3DZB_USEW; //
 r3dRenderLayer::r3dRenderLayer()
 : ActiveStereoEye( R3D_STEREO_EYE_MONO )
 , PresentEye( R3D_STEREO_EYE_MONO )
-, UseD3D9Present(false)
-, UseD3D9UI(true)
+, DoubleDepthShadowPath( 0 )
 {
 	bInited = 0;
 	pfnGetVertColor    = NULL;
@@ -2234,11 +2131,19 @@ r3dRenderLayer::r3dRenderLayer()
 	PendingQuery	= NULL ;
 	DefaultCullMode	= D3DCULL_CCW;
 
+	DistanceCullRefPos = r3dPoint3D( 0, 0, 0 );
+
 	D3DXMatrixIdentity( &ViewMatrix );
 	D3DXMatrixIdentity( &InvViewMatrix );
 	D3DXMatrixIdentity( &ProjMatrix );
 	D3DXMatrixIdentity( &InvProjMatrix );
 	D3DXMatrixIdentity( &ViewProjMatrix );
+
+	D3DXMatrixIdentity( &ViewMatrix_Localized );
+	D3DXMatrixIdentity( &InvViewMatrix_Localized );	
+	D3DXMatrixIdentity( &ViewProjMatrix_Localized );
+
+	LocalizationPos = r3dPoint3D( 0, 0, 0 );
 
 	SupportsVertexTextureFetch = 1;
 
@@ -2258,6 +2163,12 @@ r3dRenderLayer::r3dRenderLayer()
 	ZRange = R3D_ZRANGE_WORLD ;
 
 	FrustumType = R3D_FRUSTUM_NORMAL ;
+
+	ZDir = ZDIR_NORMAL;
+
+	ForceBlackPixelShader = 0;
+
+	ForceBlackPixelShaderId = -1;
 }
 
 
@@ -2273,7 +2184,6 @@ static void d3dSetDefaultStates()
 
 	pd3ddev->SetRenderState(D3DRS_ZENABLE, 	ZBuffer_Mode);
 	pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, 	TRUE);
-	pd3ddev->SetRenderState(D3DRS_ZFUNC, 		D3DCMP_LESSEQUAL);
 
 	pd3ddev->SetRenderState(D3DRS_SHADEMODE,    	D3DSHADE_GOURAUD);
 	pd3ddev->SetRenderState(D3DRS_SPECULARENABLE, 0);
@@ -2301,9 +2211,9 @@ static void d3dSetDefaultStates()
 
 	for (int i=0;i<8;i++)
 	{
-		r3dRenderer->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-		r3dRenderer->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-		r3dRenderer->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+		pd3ddev->SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		pd3ddev->SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+		pd3ddev->SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 
 		CurrentTexID[i] = -999;
 	}
@@ -2342,6 +2252,13 @@ bool r3dRenderLayer::Reset()
 	AmbientColor = r3dColor(0,0,0);
 
 	pd3ddev->GetDeviceCaps(&d3dCaps);
+
+	// this is definetelly a DX9 card - disable vertex fetch
+	// because we use some formats which don't vfetch well with these cards
+	if( d3dCaps.MaxTextureWidth < 8192 )
+	{
+		SupportsVertexTextureFetch = 0;
+	}
 
 	DWORD NEEDED_PSVER = D3DPS_VERSION( 3, 0 ) ;
 	DWORD NEEDED_VSVER = D3DVS_VERSION( 3, 0 ) ;
@@ -2389,7 +2306,7 @@ bool r3dRenderLayer::Reset()
 void r3dRenderLayer::PushCamera( const r3dCamera &cam )
 {	
 	m_CameraStack.PushBack( cam );
-	SetCamera( cam );
+	SetCamera( cam, false );
 }
 
 
@@ -2404,31 +2321,14 @@ void r3dRenderLayer::PopCamera()
 	}
 
 	m_CameraStack.PopBack();
-	SetCamera( m_CameraStack.GetLast() );
+	SetCamera( m_CameraStack.GetLast(), false );
 }
 
 //------------------------------------------------------------------------
 
-void r3dRenderLayer::BuildPerspectiveMtx( const r3dCamera &Cam, D3DXMATRIX* oMtx )
+void r3dRenderLayer::BuildViewMtx( const r3dCamera &Cam, D3DXMATRIX* oMtx, D3DXMATRIX* oLocalizedMtx )
 {
-	D3DVIEWPORT9 vp;
-	GetViewport(&vp);
-
-	FLOAT fAspect = (((FLOAT)vp.Width) / (FLOAT)vp.Height);
-	fAspect = Cam.Aspect; //1.777f ;//1.33333f;
-
-	D3DXMatrixPerspectiveFovLH(oMtx, (Cam.FOV * D3DX_PI) / 180.0f, fAspect, Cam.NearClip, Cam.FarClip);
-}
-
-//--------------------------------------------------------------------------------------------------------
-void r3dRenderLayer::SetCamera( const r3dCamera &Cam)
-{
-	// hardware vp
-	D3DXMATRIX 	WorldMatrix;
 	D3DXVECTOR3 VEye, VAt, VUP;
-
-	D3DXMatrixIdentity(&WorldMatrix);
-	D3DXMatrixIdentity(&ProjMatrix);
 
 	VEye.x = Cam.X;
 	VEye.y = Cam.Y;
@@ -2441,24 +2341,83 @@ void r3dRenderLayer::SetCamera( const r3dCamera &Cam)
 	VUP.y = Cam.vUP.y;
 	VUP.z = Cam.vUP.z;
 
-	D3DXMatrixLookAtLH(&ViewMatrix, &VEye, &VAt, &VUP );
-	D3DXMatrixInverse( &InvViewMatrix, NULL, &ViewMatrix );
+	D3DXMatrixLookAtLH(oMtx, &VEye, &VAt, &VUP );
 
-	if ( Cam.bOrtho )
+	if( oLocalizedMtx )
 	{
-		D3DXMatrixOrthoLH(&ProjMatrix, Cam.Width, Cam.Height, Cam.NearClip, Cam.FarClip);
+		VEye.x -= LocalizationPos.x;
+		VEye.y -= LocalizationPos.y;
+		VEye.z -= LocalizationPos.z;
+		VAt.x  -= LocalizationPos.x;
+		VAt.y  -= LocalizationPos.y;
+		VAt.z  -= LocalizationPos.z;
+
+		D3DXMatrixLookAtLH( oLocalizedMtx, &VEye, &VAt, &VUP );
+	}
+}
+
+//------------------------------------------------------------------------
+
+void r3dRenderLayer::BuildPerspectiveMtx( const r3dCamera &Cam, D3DXMATRIX* oMtx )
+{
+	D3DVIEWPORT9 vp;
+	GetViewport(&vp);
+
+	FLOAT fAspect = (((FLOAT)vp.Width) / (FLOAT)vp.Height);
+	fAspect = Cam.Aspect; //1.777f ;//1.33333f;
+
+	float nearClip = Cam.NearClip;
+	float farClip = Cam.FarClip;
+
+	BuildMatrixPerspectiveFovLH(oMtx, (Cam.FOV * D3DX_PI) / 180.0f, fAspect, nearClip, farClip);
+}
+
+//--------------------------------------------------------------------------------------------------------
+void r3dRenderLayer::SetCamera( const r3dCamera &Cam, bool asDistanceCullReference )
+{
+	if( asDistanceCullReference )
+	{
+		DistanceCullRefPos = Cam;
+		LocalizationPos = Cam;
+	}
+
+	// hardware vp
+	D3DXMATRIX 	WorldMatrix;
+
+	D3DXMatrixIdentity(&WorldMatrix);
+	D3DXMatrixIdentity(&ProjMatrix);
+
+	float nearClip = Cam.NearClip;
+	float farClip = Cam.FarClip;
+
+	switch( Cam.ProjectionType )
+	{
+	case r3dCamera::PROJTYPE_ORTHO:
+		BuildMatrixOrthoLH(&ProjMatrix, Cam.Width, Cam.Height, nearClip, farClip );
 		// for better precision
 		r3dOrthoProjInverse( InvProjMatrix, ProjMatrix );
-	}
-	else
-	{
+		break;
+	case r3dCamera::PROJTYPE_PRESPECTIVE:
 		BuildPerspectiveMtx( Cam, &ProjMatrix) ;
-
 		// for better precision
 		r3dPerspProjInverse( InvProjMatrix, ProjMatrix );
+		break;
+	case r3dCamera::PROJTYPE_CUSTOM:
+		D3DXMatrixIdentity( &ProjMatrix );
+		D3DXMatrixIdentity( &InvProjMatrix );
+		break;
 	}
 
-	ViewProjMatrix = ViewMatrix * ProjMatrix ;
+	// view & inverse view matrices
+	{
+		BuildViewMtx( Cam, &ViewMatrix, &ViewMatrix_Localized );
+
+		D3DXMatrixInverse( &InvViewMatrix, NULL, &ViewMatrix );
+		D3DXMatrixInverse( &InvViewMatrix_Localized, NULL, &ViewMatrix_Localized );
+	}
+
+	ViewProjMatrix = ViewMatrix * ProjMatrix;
+	ViewProjMatrix_Localized = ViewMatrix_Localized * ProjMatrix;
 
 	NearClip	= Cam.NearClip;
 	FarClip		= Cam.FarClip;
@@ -2472,17 +2431,44 @@ void r3dRenderLayer::SetCamera( const r3dCamera &Cam)
 #endif
 	}
 
-	D3DXMATRIX mat;
-	D3DXMatrixMultiply( &mat, &InvProjMatrix, &InvViewMatrix );
+	float n = 0.0f;
+	float f = 1.0f;
 
-	FrustumCorners[0] = D3DXVECTOR3(-1.0f, -1.0f,  0.0f); // xyz
-	FrustumCorners[1] = D3DXVECTOR3( 1.0f, -1.0f,  0.0f); // Xyz
-	FrustumCorners[2] = D3DXVECTOR3(-1.0f,  1.0f,  0.0f); // xYz
-	FrustumCorners[3] = D3DXVECTOR3( 1.0f,  1.0f,  0.0f); // XYz
-	FrustumCorners[4] = D3DXVECTOR3(-1.0f, -1.0f,  1.0f); // xyZ
-	FrustumCorners[5] = D3DXVECTOR3( 1.0f, -1.0f,  1.0f); // XyZ
-	FrustumCorners[6] = D3DXVECTOR3(-1.0f,  1.0f,  1.0f); // xYZ
-	FrustumCorners[7] = D3DXVECTOR3( 1.0f,  1.0f,  1.0f); // XYZ
+	if( ZDir == ZDIR_INVERSED && Cam.ProjectionType == r3dCamera::PROJTYPE_PRESPECTIVE )
+	{
+		R3D_SWAP( n, f );
+	}
+
+	D3DXMATRIX mat;
+
+	if( Cam.ProjectionType == r3dCamera::PROJTYPE_CUSTOM )
+	{
+		float R = R3D_MAX( n, f );
+
+		FrustumCorners[0] = D3DXVECTOR3(-R, -R,  n); // xyz
+		FrustumCorners[1] = D3DXVECTOR3( R, -R,  n); // Xyz
+		FrustumCorners[2] = D3DXVECTOR3(-R,  R,  n); // xYz
+		FrustumCorners[3] = D3DXVECTOR3( R,  R,  n); // XYz
+		FrustumCorners[4] = D3DXVECTOR3(-R, -R,  f); // xyZ
+		FrustumCorners[5] = D3DXVECTOR3( R, -R,  f); // XyZ
+		FrustumCorners[6] = D3DXVECTOR3(-R,  R,  f); // xYZ
+		FrustumCorners[7] = D3DXVECTOR3( R,  R,  f); // XYZ
+
+		mat = InvViewMatrix;
+	}
+	else
+	{
+		FrustumCorners[0] = D3DXVECTOR3(-1.0f, -1.0f,  n); // xyz
+		FrustumCorners[1] = D3DXVECTOR3( 1.0f, -1.0f,  n); // Xyz
+		FrustumCorners[2] = D3DXVECTOR3(-1.0f,  1.0f,  n); // xYz
+		FrustumCorners[3] = D3DXVECTOR3( 1.0f,  1.0f,  n); // XYz
+		FrustumCorners[4] = D3DXVECTOR3(-1.0f, -1.0f,  f); // xyZ
+		FrustumCorners[5] = D3DXVECTOR3( 1.0f, -1.0f,  f); // XyZ
+		FrustumCorners[6] = D3DXVECTOR3(-1.0f,  1.0f,  f); // xYZ
+		FrustumCorners[7] = D3DXVECTOR3( 1.0f,  1.0f,  f); // XYZ
+
+		D3DXMatrixMultiply( &mat, &InvProjMatrix, &InvViewMatrix );
+	}
 
 	for( int i = 0; i < 8; i++ )
 		D3DXVec3TransformCoord( &FrustumCorners[i], &FrustumCorners[i], &mat );
@@ -2506,7 +2492,7 @@ void r3dRenderLayer::SetCamera( const r3dCamera &Cam)
 	}
 }
 
-void r3dRenderLayer::SetCameraEx(const D3DXMATRIX& view, const D3DXMATRIX& proj, const r3dPoint3D& camPos, float nearD, float farD)
+void r3dRenderLayer::SetCameraEx(const D3DXMATRIX& view, const D3DXMATRIX& proj, float nearD, float farD, bool asDistanceCullReference)
 {
 	D3DXMATRIX 	WorldMatrix;
 	D3DXMatrixIdentity(&WorldMatrix);
@@ -2528,18 +2514,60 @@ void r3dRenderLayer::SetCameraEx(const D3DXMATRIX& view, const D3DXMATRIX& proj,
 	D3DXMATRIX mat;
 
 	D3DXMatrixInverse( &InvViewMatrix, NULL, &ViewMatrix );
+
+	if( asDistanceCullReference )
+	{
+		DistanceCullRefPos = r3dPoint3D(	InvViewMatrix._41, 
+											InvViewMatrix._42,
+											InvViewMatrix._43 );
+
+		LocalizationPos = DistanceCullRefPos;
+	}
+
+	//------------------------------------------------------------------------
+
+	ViewMatrix_Localized = ViewMatrix;
+
+	r3dPoint3D camPos( InvViewMatrix._41, InvViewMatrix._42, InvViewMatrix._43 );
+
+	D3DXVECTOR3 locaOffset( camPos.x - LocalizationPos.x, camPos.y - LocalizationPos.y, camPos.z - LocalizationPos.z );
+
+	ViewMatrix_Localized._41 = -(	locaOffset.x * ViewMatrix_Localized._11 + 
+									locaOffset.y * ViewMatrix_Localized._21 + 
+									locaOffset.z * ViewMatrix_Localized._31 );
+	ViewMatrix_Localized._42 = -(	locaOffset.x * ViewMatrix_Localized._12 + 
+									locaOffset.y * ViewMatrix_Localized._22 + 
+									locaOffset.z * ViewMatrix_Localized._32 );
+	ViewMatrix_Localized._43 = -(	locaOffset.x * ViewMatrix_Localized._13 + 
+									locaOffset.y * ViewMatrix_Localized._23 + 
+									locaOffset.z * ViewMatrix_Localized._33 );
+
+	D3DXMatrixInverse( &InvViewMatrix_Localized, NULL, &ViewMatrix_Localized );
+
+	ViewProjMatrix_Localized = ViewMatrix_Localized * ProjMatrix;
+
+	//------------------------------------------------------------------------
+
 	D3DXMatrixInverse( &InvProjMatrix, NULL, &ProjMatrix );
 
 	D3DXMatrixMultiply( &mat, &InvProjMatrix, &InvViewMatrix );
 
-	FrustumCorners[0] = D3DXVECTOR3(-1.0f, -1.0f,  0.0f); // xyz
-	FrustumCorners[1] = D3DXVECTOR3( 1.0f, -1.0f,  0.0f); // Xyz
-	FrustumCorners[2] = D3DXVECTOR3(-1.0f,  1.0f,  0.0f); // xYz
-	FrustumCorners[3] = D3DXVECTOR3( 1.0f,  1.0f,  0.0f); // XYz
-	FrustumCorners[4] = D3DXVECTOR3(-1.0f, -1.0f,  1.0f); // xyZ
-	FrustumCorners[5] = D3DXVECTOR3( 1.0f, -1.0f,  1.0f); // XyZ
-	FrustumCorners[6] = D3DXVECTOR3(-1.0f,  1.0f,  1.0f); // xYZ
-	FrustumCorners[7] = D3DXVECTOR3( 1.0f,  1.0f,  1.0f); // XYZ
+	float n = 0.0f;
+	float f = 1.0f;
+
+	if( ZDir == ZDIR_INVERSED )
+	{
+		R3D_SWAP( n, f );
+	}
+
+	FrustumCorners[0] = D3DXVECTOR3(-1.0f, -1.0f,  n); // xyz
+	FrustumCorners[1] = D3DXVECTOR3( 1.0f, -1.0f,  n); // Xyz
+	FrustumCorners[2] = D3DXVECTOR3(-1.0f,  1.0f,  n); // xYz
+	FrustumCorners[3] = D3DXVECTOR3( 1.0f,  1.0f,  n); // XYz
+	FrustumCorners[4] = D3DXVECTOR3(-1.0f, -1.0f,  f); // xyZ
+	FrustumCorners[5] = D3DXVECTOR3( 1.0f, -1.0f,  f); // XyZ
+	FrustumCorners[6] = D3DXVECTOR3(-1.0f,  1.0f,  f); // xYZ
+	FrustumCorners[7] = D3DXVECTOR3( 1.0f,  1.0f,  f); // XYZ
 
 	for( int i = 0; i < 8; i++ )
 		D3DXVec3TransformCoord( &FrustumCorners[i], &FrustumCorners[i], &mat );
@@ -2552,6 +2580,46 @@ void r3dRenderLayer::SetCameraEx(const D3DXMATRIX& view, const D3DXMATRIX& proj,
 	D3DXPlaneFromPoints( &FrustumPlanes[5], &FrustumCorners[1], &FrustumCorners[0], &FrustumCorners[4] ); // Bottom
 
 	CameraPosition = camPos;
+}
+
+void r3dRenderLayer::BuildMatrixPerspectiveFovLH( D3DXMATRIX *pOut, FLOAT fovy, FLOAT Aspect, FLOAT zn, FLOAT zf )
+{
+	if( ZDir == ZDIR_INVERSED )
+	{
+		R3D_SWAP( zn, zf );
+	}
+
+	D3DXMatrixPerspectiveFovLH( pOut, fovy, Aspect, zn, zf );
+}
+
+void r3dRenderLayer::BuildMatrixPerspectiveOffCenterLH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn, FLOAT zf )
+{
+	if( ZDir == ZDIR_INVERSED )
+	{
+		R3D_SWAP( zn, zf );
+	}
+
+	D3DXMatrixPerspectiveOffCenterLH( pOut, l, r, b, t, zn, zf );
+}
+
+void r3dRenderLayer::BuildMatrixOrthoLH( D3DXMATRIX *pOut, FLOAT w, FLOAT h, FLOAT zn, FLOAT zf )
+{
+	if( ZDir == ZDIR_INVERSED )
+	{
+		R3D_SWAP( zn, zf );
+	}
+
+	D3DXMatrixOrthoLH( pOut, w, h, zn, zf );
+}
+
+void r3dRenderLayer::BuildMatrixOrthoOffCenterLH( D3DXMATRIX *pOut, FLOAT l, FLOAT r, FLOAT b, FLOAT t, FLOAT zn, FLOAT zf )
+{
+	if( ZDir == ZDIR_INVERSED )
+	{
+		R3D_SWAP( zn, zf );
+	}
+
+	D3DXMatrixOrthoOffCenterLH( pOut, l, r, b, t, zn, zf );
 }
 
 void r3dRenderLayer::SetZRange( r3dZRange range )
@@ -2586,44 +2654,6 @@ void r3dRenderLayer::SetViewportInternal ( const D3DVIEWPORT9* viewport )
 	ViewMinZ = viewport->MinZ ;
 	ViewMaxZ = viewport->MaxZ ;
 
-#ifndef WO_SERVER
-	if(r3dDX11_IsNativeRendering())
-	{
-		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-
-		if(context)
-		{
-			D3D11_VIEWPORT vp;
-			ZeroMemory(&vp, sizeof(vp));
-
-#ifndef FINAL_BUILD
-			if( AllowNullViewport && r_null_viewport->GetInt() )
-			{
-				vp.TopLeftX = 0.0f;
-				vp.TopLeftY = 0.0f;
-				vp.Width = 1.0f;
-				vp.Height = 1.0f;
-				vp.MinDepth = 0.0f;
-				vp.MaxDepth = 1.0f;
-			}
-			else
-#endif
-			{
-				vp.TopLeftX = (float)viewport->X;
-				vp.TopLeftY = (float)viewport->Y;
-				vp.Width = (float)viewport->Width;
-				vp.Height = (float)viewport->Height;
-				vp.MinDepth = viewport->MinZ;
-				vp.MaxDepth = viewport->MaxZ;
-			}
-
-			context->RSSetViewports(1, &vp);
-		}
-
-		return;
-	}
-#endif
-
 #ifndef FINAL_BUILD
 	if( AllowNullViewport && r_null_viewport->GetInt() )
 	{
@@ -2636,9 +2666,9 @@ void r3dRenderLayer::SetViewportInternal ( const D3DVIEWPORT9* viewport )
 
 #undef SetViewport
 		D3D_V( pd3ddev->SetViewport( &vp ) );
+		return ;
 #define SetViewport DoSetViewport	
 
-		return ;
 	}
 	else
 	{
@@ -2686,20 +2716,44 @@ void r3dRenderLayer::SetViewportZRange( D3DVIEWPORT9* oViewport )
 	switch( ZRange )
 	{
 	case R3D_ZRANGE_FIRST_PERSON:
-		oViewport->MinZ = 0.f ;
-		oViewport->MaxZ = r_first_person_z_end->GetFloat();
+		if( ZDir == ZDIR_NORMAL )
+		{
+			oViewport->MinZ = 0.f;
+			oViewport->MaxZ = r_first_person_z_end->GetFloat();
+		}
+		else
+		{
+			oViewport->MinZ = 1.0f - r_first_person_z_end->GetFloat();
+			oViewport->MaxZ = 1.0f;
+		}
 		break ;
 	case R3D_ZRANGE_WORLD:
-		oViewport->MinZ = r_first_person_z_end->GetFloat();
-		oViewport->MaxZ = 1.0f ;
+		if( ZDir == ZDIR_NORMAL )
+		{
+			oViewport->MinZ = r_first_person_z_end->GetFloat();
+			oViewport->MaxZ = 1.0f;
+		}
+		else
+		{
+			oViewport->MinZ = 0.f;
+			oViewport->MaxZ = 1.0f - r_first_person_z_end->GetFloat();
+		}
 		break ;
 	case R3D_ZRANGE_WHOLE:
-		oViewport->MinZ = 0.f ;
-		oViewport->MaxZ = 1.0f ;
+		oViewport->MinZ = 0.f;
+		oViewport->MaxZ = 1.0f;
 		break ;
 	case R3D_ZRANGE_ANTICHEAT:
-		oViewport->MinZ = r_wall_hack_anti_cheat_z;
-		oViewport->MaxZ = 1.0f ;
+		if( ZDir == ZDIR_NORMAL )
+		{
+			oViewport->MinZ = r_wall_hack_anti_cheat_z;
+			oViewport->MaxZ = 1.0f;
+		}
+		else
+		{
+			oViewport->MinZ = 0.0f;
+			oViewport->MaxZ = 1.0f - r_wall_hack_anti_cheat_z;
+		}
 		break ;
 	}
 }
@@ -2754,11 +2808,11 @@ extern	void	fog_UpdateVS(int bVShaderActive)
 		_bVSActive = bVShaderActive;
 
 	if(_bVSActive) {
-		r3dRenderer->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_NONE);
-		r3dRenderer->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_LINEAR);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_NONE);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_LINEAR);
 	} else {
-		r3dRenderer->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_LINEAR);
-		r3dRenderer->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_NONE);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGTABLEMODE,   D3DFOG_LINEAR);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_FOGVERTEXMODE,  D3DFOG_NONE);
 	}
 
 }
@@ -2784,89 +2838,13 @@ void r3dRenderLayer::SetFog(int fogEnabled)
 }
 
 void
-r3dRenderLayer::StretchRect( r3dScreenBuffer* Source, r3dScreenBuffer* Target, int Filter )
+r3dRenderLayer::StretchRect( r3dScreenBuffer* Source, r3dScreenBuffer* Target, int Filter /*= 0*/ )
 {
+	// if this fails, IMPLEMENT ME
 	Source->AsTex2D() ;
 	Target->AsTex2D();
 
-#ifndef WO_SERVER
-	if(r3dDX11_IsNativeRendering())
-	{
-		bool copied = false;
-
-		if(!Filter && Source && Target && Source->Tex && Target->Tex)
-		{
-			r3dDX11Texture* srcDX11 = Source->Tex->GetDX11Texture();
-			r3dDX11Texture* dstDX11 = Target->Tex->GetDX11Texture();
-
-			ID3D11Texture2D* srcTexture = srcDX11 ? srcDX11->GetTexture2D() : NULL;
-			ID3D11Texture2D* dstTexture = dstDX11 ? dstDX11->GetTexture2D() : NULL;
-
-			if(srcTexture && dstTexture && srcTexture != dstTexture)
-			{
-				D3D11_TEXTURE2D_DESC srcDesc;
-				D3D11_TEXTURE2D_DESC dstDesc;
-
-				srcTexture->GetDesc(&srcDesc);
-				dstTexture->GetDesc(&dstDesc);
-
-				if(
-					srcDesc.Width == dstDesc.Width &&
-					srcDesc.Height == dstDesc.Height &&
-					srcDesc.Format == dstDesc.Format &&
-					srcDesc.SampleDesc.Count == dstDesc.SampleDesc.Count &&
-					srcDesc.SampleDesc.Quality == dstDesc.SampleDesc.Quality
-					)
-				{
-					ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-
-					if(context)
-					{
-						context->CopyResource(dstTexture, srcTexture);
-						copied = true;
-					}
-				}
-			}
-		}
-
-		if(!copied)
-		{
-			r3dOutToLog("DX11: StretchRect skipped, unsupported source/target/filter\n");
-		}
-
-		return;
-	}
-#endif
-
 	D3D_V( pd3ddev->StretchRect( Source->GetTex2DSurface(), NULL, Target->GetTex2DSurface(), NULL, Filter ? D3DTEXF_LINEAR : D3DTEXF_NONE ) );
-}
-
-void r3dRenderLayer::Clear(DWORD count, const D3DRECT* rects, DWORD flags, D3DCOLOR color, float z, DWORD stencil)
-{
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		const bool cleared = g_r3dDX11RenderTargets.Clear(
-			count,
-			rects,
-			flags,
-			color,
-			z,
-			stencil
-		);
-
-		if(r3dDX11_IsNativeRendering())
-		{
-			r3d_assert(cleared);
-			return;
-		}
-	}
-#endif
-
-	if(pd3ddev)
-	{
-		D3D_V( pd3ddev->Clear(count, rects, flags, color, z, stencil) );
-	}
 }
 
 void r3dRenderLayer :: ResetStats()
@@ -2874,7 +2852,10 @@ void r3dRenderLayer :: ResetStats()
 	Stats.Reset();
 }
 
+
+
 bool g_bStartFrame = false;
+
 void r3dRenderLayer::StartFrame()
 {
 	if( DeviceAvailable )
@@ -2890,15 +2871,41 @@ void r3dRenderLayer::StartFrame()
 
 		ResetTextureCache();
 
-#ifndef WO_SERVER
-		if(!r3dDX11_IsNativeRendering())
-#endif
+		pd3ddev->BeginScene();
+
+		if( r_inverse_zbuffer->GetInt() )
 		{
-			pd3ddev->BeginScene();
+			SetZDir( ZDIR_INVERSED );
+		}
+		else
+		{
+			SetZDir( ZDIR_NORMAL );
 		}
 
 		PresentEye = R3D_STEREO_EYE_MONO;
 		SetEye( R3D_STEREO_EYE_MONO ) ;
+
+#ifndef WO_SERVER 
+/*
+		if( NVApiStereoHandle )
+		{
+			float separation, convergence ;
+
+			NvAPI_Status status ;
+
+			status = NvAPI_Stereo_GetSeparation( NVApiStereoHandle, &separation ) ;
+			if( status != NVAPI_OK )
+				r3dOutToLog( R3D_NVAPI "NvAPI_Stereo_GetSeparation failed!" ) ;
+
+			status = NvAPI_Stereo_GetConvergence( NVApiStereoHandle, &convergence ) ;
+			if( status != NVAPI_OK )
+				r3dOutToLog( R3D_NVAPI "NvAPI_Stereo_GetConvergence failed!" ) ;
+
+ 			r_3d_stereo_separation->SetFloat( separation ) ;
+ 			r_3d_stereo_convergance->SetFloat( convergence ) ;
+		}
+*/
+#endif
 	}
 
 	g_bStartFrame = true;
@@ -2910,12 +2917,7 @@ void r3dRenderLayer::EndFrame()
 	{
 		IssuePendingQuery();
 
-#ifndef WO_SERVER
-		if(!r3dDX11_IsNativeRendering())
-#endif
-		{
-			D3D_V( pd3ddev->EndScene() );
-		}
+		D3D_V( pd3ddev->EndScene() );
 	}
 
 	g_bStartFrame = false;
@@ -2924,6 +2926,7 @@ void r3dRenderLayer::EndFrame()
 	{
 		if( IsDeviceLost() )
 		{
+			// this can hold stuff, so reset it by ourselves
 			r3dResetWatchDog();
 		}
 		else
@@ -2959,12 +2962,12 @@ void r3dRenderLayer::SetBackBufferViewport()
 
 void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 {
-	static int ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL;
+	static int ClearFlag = D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL;
 	static int _FlagSet = 0;
 
-	if(!_FlagSet)
+	if ( !_FlagSet)
 	{
-		if(CurrentBPP == 16)
+		if (CurrentBPP == 16 )
 			ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER;
 		else
 			ClearFlag = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL;
@@ -2972,33 +2975,29 @@ void r3dRenderLayer::StartRender(int bClear, bool clearToWhite)
 		_FlagSet = 1;
 	}
 
-	if(bClear)
-	{
-		Clear(
-			0,
-			NULL,
-			ClearFlag,
-			clearToWhite ? D3DCOLOR_ARGB(255, 255, 255, 255) : Fog.Color.GetPacked(),
-			1.0f,
-			0
-		);
-	}
+	if (bClear)
+		D3D_V( pd3ddev->Clear(0, NULL, ClearFlag, clearToWhite?D3DCOLOR_ARGB(255,255,255,255):Fog.Color.GetPacked(), r3dRenderer->GetClearZValue(), 0 ) );
 
-	D3D_V(d3dc._SetVertexShader(0));
-	D3D_V(d3dc._SetPixelShader(0));
+
+	D3D_V( d3dc._SetVertexShader(0) );
 	d3dc._SetDecl(R3D_DEBUG_VERTEX::getDecl());
 
 	ResetViewport();
 
 	CurrentRenderingMode = R3D_BLEND_NONE;
-	CurrentMaterialID = -999;
+	CurrentMaterialID    = -999;
 
-	RModeStackTop = 0;
+	RModeStackTop        = 0;
 
 	SetTex(NULL);
 	SetMaterial(NULL);
-	SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW);
+	SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
+
+	//  pd3ddev->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, 1);
+
 }
+
+
 
 void r3dRenderLayer::StartRenderSimple(int bClear)
 {
@@ -3016,7 +3015,7 @@ void r3dRenderLayer::StartRenderSimple(int bClear)
 	}
 
 	if (bClear)
-		Clear(0, NULL, ClearFlag, Fog.Color.GetPacked(), 1.0f, 0);
+		pd3ddev->Clear(0, NULL, ClearFlag, Fog.Color.GetPacked(), r3dRenderer->GetClearZValue(), 0 );
 
 
 	ResetViewport();
@@ -3064,46 +3063,45 @@ void r3dRenderLayer::RegisterScreenBuffer( r3dScreenBuffer* sb )
 
 void r3dRenderLayer::UnregisterScreenBuffer( r3dScreenBuffer* sb )
 {
-	for( int i = 0, e = static_cast<int>( ScreenBuffers_.Count() ); i < e; i++ )
+	for( int i = 0, e = ScreenBuffers_.Count() ; i < e ; i ++ )
 	{
 		if( ScreenBuffers_[ i ] == sb )
 		{
-			ScreenBuffers_.Erase( i, 1 );
-			return;
+			ScreenBuffers_.Erase( i, 1 ) ;
+			return ;
 		}
 	}
 
-	r3d_assert( false );
+	r3d_assert( false ) ;
 }
 
 void r3dRenderLayer::RegisterResource(r3dIResource* res)
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	int firstFree = -1;
-
-	for( int i = 0, e = static_cast<int>( resources_.Count() ); i < e; ++i )
+	size_t firstFree = -1;
+	for(size_t i = 0; i<resources_.Count(); ++i)
 	{
-		if( resources_[ i ] == res )
+		if(resources_[i] == res)
 		{
 			r3dError("r3d: resource %p already registered\n", res);
 			return;
 		}
 
-		if( resources_[ i ] == NULL && firstFree == -1 )
+		if(resources_[i] == NULL && firstFree == -1)
 		{
 			firstFree = i;
 		}
 	}
 
-	if( firstFree == -1 )
+	if(firstFree == -1)
 	{
-		firstFree = static_cast<int>( resources_.Count() );
+		firstFree = resources_.Count();
 		resources_.PushBack( res );
 	}
 	else
 	{
-		resources_[ firstFree ] = res;
+		resources_[ firstFree ] = res ;
 	}
 
 	r3d_assert( resources_[ firstFree ] == res );
@@ -3113,12 +3111,12 @@ void r3dRenderLayer::DeregisterResource(r3dIResource* res)
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	for( int i = 0, e = static_cast<int>( resources_.Count() ); i < e; i++ )
+	for( uint32_t i = 0, e = resources_.Count() ; i < e ; i ++ )
 	{
 		if( res == resources_[ i ] )
 		{
-			resources_[ i ] = NULL;
-			return;
+			resources_[ i ] = NULL ;
+			return ;
 		}
 	}
 
@@ -3127,10 +3125,55 @@ void r3dRenderLayer::DeregisterResource(r3dIResource* res)
 }
 
 static int eventCounter = 0;
-static r3dD3DQuery* pQueryEvent[3] = {0};
+static IDirect3DQuery9* pQueryEvent[3] = {0};
 
-r3dD3DQuery*	g_pOcclusionQueries[1000] = {0};
-int					g_OcclusionQueryCounter = 0;
+IDirect3DQuery9*	g_pOcclusionQueries[ R3D_NUM_OCCLUSION_QUERIES ] = {0};
+int					g_pOcclusionQueryUsed[ R3D_NUM_OCCLUSION_QUERIES ] = {0};
+
+int					g_LastAllocatedQueryIdx = 0;
+int					g_NumAllocatedNodes = 0;
+
+int r3dAllocateOcclusionQuery()
+{
+	if( g_NumAllocatedNodes >= R3D_NUM_OCCLUSION_QUERIES )
+		return -1;
+
+	int i;
+
+	for( i = g_LastAllocatedQueryIdx + 1 ; i != g_LastAllocatedQueryIdx ; )
+	{
+		i ++;
+
+		if( i >= R3D_NUM_OCCLUSION_QUERIES )
+			i = 0;
+
+		if( !g_pOcclusionQueryUsed[ i ] )
+		{
+			g_pOcclusionQueryUsed[ i ] = 1;
+
+			g_NumAllocatedNodes ++;
+
+			g_LastAllocatedQueryIdx = i;
+
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void r3dFreeOcclusionQuery( int i )
+{
+	g_NumAllocatedNodes --;
+	g_pOcclusionQueryUsed[ i ] = 0;
+}
+
+IDirect3DQuery9* r3dGetOcclusionQuery( int i )
+{
+	return g_pOcclusionQueries[ i ];
+}
+
+//------------------------------------------------------------------------
 
 void r3dFrameQueryCreate()
 {
@@ -3138,20 +3181,27 @@ void r3dFrameQueryCreate()
 	{
 		eventCounter = 0;
 
-		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[0]);
-		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[1]);
-		r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[2]);
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[0]) );
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[1]) );
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_EVENT, &pQueryEvent[2]) );
 
 		pQueryEvent[1]->Issue(D3DISSUE_END);
 		pQueryEvent[2]->Issue(D3DISSUE_END);
 	}
 	if( g_pOcclusionQueries[0] == 0 && r3dRenderer->SupportsOQ )
 	{
-		for(int i =0; i<1000; ++i)
+		for(int i =0; i<R3D_NUM_OCCLUSION_QUERIES; ++i)
 		{
-			r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE_OCCLUSION, &g_pOcclusionQueries[i]);
+			D3D_V( r3dRenderer->pd3ddev->CreateQuery(D3DQUERYTYPE_OCCLUSION, &g_pOcclusionQueries[i] ) );
 		}
 	}
+
+	for(int i =0; i<R3D_NUM_OCCLUSION_QUERIES; ++i)
+	{
+		g_pOcclusionQueryUsed[ i ] = 0;
+	}
+
+	g_NumAllocatedNodes = 0;
 }
 
 void r3dFrameQueryRelease()
@@ -3166,7 +3216,7 @@ void r3dFrameQueryRelease()
 			pQueryEvent[i] = 0;
 		}
 	}
-	for(int i =0; i<1000; ++i)
+	for(int i =0; i<R3D_NUM_OCCLUSION_QUERIES; ++i)
 	{
 		if(g_pOcclusionQueries[i])
 		{
@@ -3240,7 +3290,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 
 		// otherwise shouldn't have ruined it
 
-		const int resources_count = static_cast<int>(resources_.Count());
+		int resources_count = resources_.Count();
 
 		if( DeviceWasAvailable )
 		{
@@ -3257,15 +3307,10 @@ int r3dRenderLayer::TryToRestoreDevice()
 			for(int i=0; i<16; ++i)
 				SetTex(NULL, i);
 
-#ifndef WO_SERVER
-			r3dDX11_UnregisterSurfaceMirror(MainRT);
-			r3dDX11_UnregisterSurfaceMirror(MainDSS);
-#endif
-
 			SAFE_RELEASE( MainRT ) ;
 			SAFE_RELEASE( MainDSS ) ;
 
-			for(int i = 0, e = static_cast<int>(resources_.Count()); i < e; ++i)
+			for( size_t i = 0; i < resources_.Count() ; ++ i )
 			{
 				r3dIResource* res = resources_[i];
 				if(res) 
@@ -3274,11 +3319,22 @@ int r3dRenderLayer::TryToRestoreDevice()
 				}
 			}
 
+			if( r_no_managed_textures->GetInt() )
+			{
+				for( r3dTexture* Tex = FirstTexture; Tex; Tex = Tex->pNext)
+				{
+					if( Tex->GetFlags() & r3dTexture::fPoolDefault && !( Tex->GetFlags() & r3dTexture::fCreated ) )
+					{
+						Tex->Unload();
+					}
+				}
+			}
+
 			r3dOutToLog("released\n");
 		}
 		else
 		{
-			r3dOutToLog( "Device lost during Reset attempt, hence all resources are alread released!\n" );
+			r3dOutToLog( "Device lost during Reset attempt, hence all resources are already released!\n" );
 		}
 
 		hr = r3dRenderer->pd3ddev->Reset(&d3dpp);
@@ -3298,7 +3354,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 
 		gResetCount ++ ;
 
-		r3dOutToLog("resetted\n");
+		r3dOutToLog("reseted\n");
 
 		d3dSetDefaultStates();
 
@@ -3310,7 +3366,7 @@ int r3dRenderLayer::TryToRestoreDevice()
 
 		PendingQuery = 0 ;
 
-		for(int i = 0, e = static_cast<int>(resources_.Count()); i < e; ++i) 
+		for( size_t i = 0; i < resources_.Count(); ++ i ) 
 		{
 			if(resources_[i]) 
 			{
@@ -3319,6 +3375,22 @@ int r3dRenderLayer::TryToRestoreDevice()
 		}
 		// make sure that we are not creating new resource while restoring d3d device!!!
 		r3d_assert( resources_count == resources_.Count() );		
+
+		if( r_no_managed_textures->GetInt() )
+		{
+			int prevAsyncLoading = g_async_loading->GetInt();
+			g_async_loading->SetInt( 0 );
+
+			for( r3dTexture* Tex = FirstTexture; Tex; Tex = Tex->pNext)
+			{
+				if( Tex->GetFlags() & r3dTexture::fPoolDefault && !( Tex->GetFlags() & r3dTexture::fCreated ) )
+				{
+					Tex->Load( Tex->getFileLoc().FileName, Tex->GetD3DFormat(), Tex->GetDownScale(), Tex->GetDownScaleMinDim(), D3DPOOL_DEFAULT );
+				}
+			}
+
+			g_async_loading->SetInt( prevAsyncLoading );
+		}
 
 		r3dOutToLog("restored (%d). reset ok\n", gResetCount);
 
@@ -3376,9 +3448,6 @@ void r3dRenderLayer::UpdateSettings()
 		int mainRTRefs = 0 ;
 		if( MainRT )
 		{
-#ifndef WO_SERVER
-			r3dDX11_UnregisterSurfaceMirror(MainRT);
-#endif
 			mainRTRefs = MainRT->Release() ;
 			MainRT = NULL ;
 		}
@@ -3386,9 +3455,6 @@ void r3dRenderLayer::UpdateSettings()
 		int dssRefs = 0 ;
 		if( MainDSS )
 		{
-#ifndef WO_SERVER
-			r3dDX11_UnregisterSurfaceMirror(MainDSS);
-#endif
 			dssRefs = MainDSS->Release() ;
 			MainDSS = NULL ;
 		}
@@ -3429,6 +3495,9 @@ void r3dRenderLayer::UpdateSettings()
 			}
 		}
 		CurRenderPipeline->CreateResolutionBoundResources();
+
+		if( r3dDeviceResetCallback )
+			r3dDeviceResetCallback() ;
 	}
 }
 
@@ -3762,7 +3831,7 @@ D3DFORMAT UnpackD3DFormat( PackedD3DFormat fmt )
 template < typename T >
 void FillFormatValues( T &Formats )
 {
-	TL_STATIC_ASSERT( T::COUNT >= P_D3DFMT_COUNT ) ;
+	COMPILE_ASSERT( T::COUNT >= P_D3DFMT_COUNT ) ;
 
 	for( int i = 0, e = P_D3DFMT_COUNT ; i < e; i ++ )
 	{
@@ -4042,6 +4111,8 @@ void r3dRenderLayer::Flush()
 	vtxArray3D_Lines->Flush();
 }
 
+
+
 void Show_Copyright();
 
 int gRenderFrameCounter = 0;
@@ -4072,13 +4143,31 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 
 	gRenderFrameCounter++; // end of frame
 
-	bool dx11Active = false;
+	HRESULT hr = D3DERR_DEVICELOST ;
 
-#ifndef WO_SERVER
-	dx11Active = g_r3dDX11.IsInitialized();
-#endif
+	if( r3dRenderer->DeviceAvailable )
+	{
+		R3DPROFILE_START("r3dRenderLayer::EndRender:Present");
+		SetEye(PresentEye);
+		hr = pd3ddev->Present(NULL, NULL, NULL, NULL);
+		R3DPROFILE_END("r3dRenderLayer::EndRender:Present");
+	}
 
 	ProcessDeviceQueue(r3dGetTime(), 0.033f);
+
+	if(hr == D3DERR_DEVICELOST ) {
+
+		if( !deviceLost_ )
+		{
+			r3dOutToLog("r3d: device is lost\n");
+			deviceLost_ = true;
+		}
+
+		TryToRestoreDevice();
+
+		// this is important - do not wait for token
+		return;
+	}
 
 	r3dFrameQueryCreate();
 	if(SupportsEventQueries && pQueryEvent[eventCounter])
@@ -4089,60 +4178,18 @@ void r3dRenderLayer::EndRender( bool present /*= false*/ )
 		while(S_FALSE == pQueryEvent[eventCounter]->GetData(0, 0, D3DGETDATA_FLUSH)) {};
 		R3DPROFILE_END("SyncGPUtoCPU(3frames)")
 	}
-
-#ifndef WO_SERVER
-	if(dx11Active && !GetUseD3D9Present())
-	{
-#ifndef FINAL_BUILD
-		static unsigned int s_dx11NativeEndRenderPresentCalls = 0;
-		++s_dx11NativeEndRenderPresentCalls;
-
-		if(s_dx11NativeEndRenderPresentCalls <= 120 || (s_dx11NativeEndRenderPresentCalls % 60) == 0)
-		{
-		}
-#endif
-
-		g_r3dDX11.EndFrame(present);
-	}
-#endif
 }
 
-void r3dRenderLayer::EndRenderSimple( bool present )
+
+
+void r3dRenderLayer::EndRenderSimple( bool present /*= false*/ )
 {
-	if( !present )
-		return;
-
-#ifndef WO_SERVER
-	if(r3dDX11_IsNativeRendering())
-	{
-		g_r3dDX11.EndFrame(true);
-		return;
-	}
-#endif
+	// Present the backbuffer contents to the display
+	if( present )
+		pd3ddev->Present( NULL, NULL, NULL, NULL );
 }
 
-static void r3dDX11_SetRenderStateMirror(D3DRENDERSTATETYPE state, DWORD value)
-{
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-		g_r3dDX11State.SetRenderState((int)state, (unsigned int)value);
-#else
-	(void)state;
-	(void)value;
-#endif
-}
 
-HRESULT r3dRenderLayer::SetRenderState(D3DRENDERSTATETYPE State, DWORD Value)
-{
-	r3dDX11_SetRenderStateMirror(State, Value);
-
-#ifndef WO_SERVER
-	if(r3dDX11_IsNativeRendering())
-		return D3D_OK;
-#endif
-
-	return pd3ddev->SetRenderState(State, Value);
-}
 
 void r3dRenderLayer::SetRenderingMode(int Mode)
 {
@@ -4163,89 +4210,74 @@ void r3dRenderLayer::SetRenderingMode(int Mode)
 	CurrentRenderingMode = Mode;
 	Stats.AddNumModesChanges( 1 );
 
-#ifndef WO_SERVER
-	const bool dx11NativeRendering = r3dDX11_IsNativeRendering();
-#else
-	const bool dx11NativeRendering = false;
-#endif
-
-#define R3D_SET_RENDER_STATE(state, value) \
-do { \
-r3dDX11_SetRenderStateMirror((state), (DWORD)(value)); \
-if(!dx11NativeRendering) \
-pd3ddev->SetRenderState((state), (value)); \
-} while(0)
-
 	// Z Buffer Control
 	if(Mode & R3D_BLEND_ZC)
-		R3D_SET_RENDER_STATE(D3DRS_ZENABLE, ZBuffer_Mode);
+		pd3ddev->SetRenderState(D3DRS_ZENABLE,	ZBuffer_Mode);
 	else
-		R3D_SET_RENDER_STATE(D3DRS_ZENABLE, 0);
+		pd3ddev->SetRenderState(D3DRS_ZENABLE,	0);
 
 	if(Mode & R3D_BLEND_ZW)
-		R3D_SET_RENDER_STATE(D3DRS_ZWRITEENABLE, TRUE);
+		pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, 		TRUE);
 	else
-		R3D_SET_RENDER_STATE(D3DRS_ZWRITEENABLE, 0);
+		pd3ddev->SetRenderState(D3DRS_ZWRITEENABLE, 		0);
 
 	// Blending Mode Control
 	if(Mode & R3D_BLEND_NOALPHA) 
 	{
-		R3D_SET_RENDER_STATE(D3DRS_ALPHABLENDENABLE, 0);
+		pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, 	0);
 	} 
 	else
 	{
-		R3D_SET_RENDER_STATE(D3DRS_ALPHABLENDENABLE, TRUE);
+		pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, 	TRUE);
 
 		if( Mode & R3D_BLEND_MAX )
 		{
-			R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
-			R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
-			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_MAX);
+			pd3ddev->SetRenderState(D3DRS_SRCBLEND,			D3DBLEND_ONE );
+			pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_ONE );
+			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_MAX );
 		}
 		else
 		if( Mode & R3D_BLEND_MIN )
 		{
-			R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
-			R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
-			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_MIN);
+			pd3ddev->SetRenderState(D3DRS_SRCBLEND,			D3DBLEND_ONE );
+			pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_ONE );
+			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_MIN );
 		}
 		else
 		{
-			R3D_SET_RENDER_STATE(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+			pd3ddev->SetRenderState(D3DRS_BLENDOP,			D3DBLENDOP_ADD );
 			if(Mode & R3D_BLEND_ALPHA) 
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_SRCALPHA);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCALPHA);
 			}
 			else if(Mode & R3D_BLEND_ADD) 
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ONE);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_ONE);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ONE);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_ONE);
 			} 
 			else if(Mode & R3D_BLEND_SUB) 
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ZERO);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 		D3DBLEND_INVSRCCOLOR);
 			} 
 			else if(Mode & R3D_BLEND_MODULATE) 
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_ZERO);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_SRCCOLOR);
 			}
 			else if(Mode & R3D_BLEND_ADDMODULATE) 
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_DESTCOLOR);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_SRCCOLOR);
 			}
 			else if(Mode & R3D_BLEND_COLOR)
 			{
-				R3D_SET_RENDER_STATE(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
-				R3D_SET_RENDER_STATE(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+				pd3ddev->SetRenderState(D3DRS_SRCBLEND, 	 	D3DBLEND_SRCCOLOR);
+				pd3ddev->SetRenderState(D3DRS_DESTBLEND, 	   	D3DBLEND_INVSRCCOLOR);
 			}
 		}
 	}
-
-#undef R3D_SET_RENDER_STATE
 }
 
 int	r3dRenderLayer::GetRenderingMode() const
@@ -4328,55 +4360,26 @@ void r3dRenderLayer::SetMaterial(r3dMaterial *Mat)
 	pd3ddev->SetRenderState(D3DRS_ALPHAREF, (unsigned long)Mat->AlphaRef);
 }
 
+
 #ifdef SetTexture
 #undef SetTexture
 #endif
 
+
 void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 {
-#ifndef WO_SERVER
-	const bool useDX11Native = r3dDX11_IsNativeRendering();
-#else
-	const bool useDX11Native = false;
-#endif
-
 	if ( StageID >= D3DVERTEXTEXTURESAMPLER0 ) 
 	{
-#ifndef WO_SERVER
-		if(useDX11Native)
-		{
-			g_r3dDX11State.BindTexture(StageID, Tex);
-			return;
-		}
-#endif
-
 		if(Tex)
 			D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
-
 		return;
 	}
 
 	if(Tex && Tex->GetID() == CurrentTexID[StageID])
-	{
-#ifndef WO_SERVER
-		if(useDX11Native)
-			g_r3dDX11State.BindTexture(StageID, Tex);
-#endif
 		return;
-	}
 
 	if(Tex == NULL)
 	{
-#ifndef WO_SERVER
-		if(useDX11Native)
-		{
-			g_r3dDX11State.ClearTexture(StageID);
-			CurrentTexID[StageID] = -1;
-			Stats.AddNumTextureChanges( 1 );
-			return;
-		}
-#endif
-
 		if (CurrentTexID[StageID] == -1) return;
 		CurrentTexID[StageID] = -1;
 		D3D_V( pd3ddev->SetTexture(StageID, NULL) );
@@ -4388,15 +4391,6 @@ void r3dRenderLayer::SetTex(r3dTexture *Tex, int StageID)
 	{
 		Stats.AddNumTextureChanges( 1 );
 		CurrentTexID[StageID] = Tex->GetID();
-
-#ifndef WO_SERVER
-		if(useDX11Native)
-		{
-			g_r3dDX11State.BindTexture(StageID, Tex);
-			return;
-		}
-#endif
-
 		D3D_V( pd3ddev->SetTexture(StageID, Tex->GetD3DTexture()) );
 	}
 }
@@ -4424,7 +4418,22 @@ void r3dRenderLayer::Render3DPolygon(int NumV, R3D_DEBUG_VERTEX *V)
 {
 	vtxArray3D->Add(V, NumV);
 }
-
+void r3dRenderLayer::BeginFill3DPolygon(int NumV)
+{
+	vtxArray3D->StartListVertices(NumV);
+}
+void r3dRenderLayer::Fill3DPolygon(int NumV, R3D_DEBUG_VERTEX *V)
+{
+	vtxArray3D->SetListVtx(V, NumV);
+}
+void r3dRenderLayer::EndFill3DPolygon()
+{
+	vtxArray3D->EndListVertices();
+}
+int r3dRenderLayer::GetPolygon3DBufferCapacity()
+{
+	return vtxArray3D->GetCapacity();
+}
 
 
 void r3dRenderLayer::Render3DLine(int NumV, R3D_DEBUG_VERTEX *V)
@@ -4452,6 +4461,26 @@ void r3dRenderLayer::Render3DTriangles(int NumV, R3D_DEBUG_VERTEX *V)
 	vtxArray3D->AddList( V, NumV );
 }
 
+void r3dRenderLayer::SetForceBlackPixelShader( int bForceBlackShader )
+{
+	if( bForceBlackShader )
+	{
+		if( ForceBlackPixelShaderId < 0 )
+		{
+			ForceBlackPixelShaderId = r3dRenderer->GetPixelShaderIdx( "PS_DARKNESS" );
+		}
+
+		if( ForceBlackPixelShaderId >= 0 )
+		{
+			ForceBlackPixelShader = 1;
+		}
+	}
+	else
+	{
+		ForceBlackPixelShader = 0;
+	}
+}
+
 
 void r3dMaterial::RenderPrimitive(int Start1, int End1, int Start2, int End2)
 {
@@ -4459,133 +4488,92 @@ void r3dMaterial::RenderPrimitive(int Start1, int End1, int Start2, int End2)
 }
 
 
-R3D_FORCEINLINE int r3dRenderLayer::IsSphereInsideFrustum_NORMAL(const r3dPoint3D& c, float r)
+R3D_FORCEINLINE VisibilityInfoEnum r3dRenderLayer::IsSphereInsideFrustum_NORMAL(const r3dPoint3D& c, float r, const D3DXPLANE (&planes)[6])
 {
-	float fDistance;
+	float fDistance = 0;
 
-	int result = 1;
+	VisibilityInfoEnum result = VI_INSIDE;
 
 	for(int i = 0; i < 6; ++i) 
 	{
-		fDistance = FrustumPlanes[i].a * c.x + FrustumPlanes[i].b * c.y + FrustumPlanes[i].c * c.z + FrustumPlanes[i].d;
-		if(fDistance < -r)
-			return 0;
-		if(fabs(fDistance) < r)
-			result = 2;
+		fDistance = planes[i].a * c.x + planes[i].b * c.y + planes[i].c * c.z + planes[i].d;
+		if (fDistance < -r)
+			return VI_OUTSIDE;
+		if (fDistance < r)
+			result = VI_INTERSECTING;
 	}
 
 	return result;
 }
 
-R3D_FORCEINLINE int r3dRenderLayer::IsSphereInsideFrustum_PARABOLOID(const r3dPoint3D& c, float r)
+R3D_FORCEINLINE VisibilityInfoEnum r3dRenderLayer::IsSphereInsideFrustum_PARABOLOID(const r3dPoint3D& c, float r, const D3DXPLANE (&planes)[6])
 {
 	float fDistance;
 
-	fDistance = FrustumPlanes[0].a * c.x + FrustumPlanes[0].b * c.y + FrustumPlanes[0].c * c.z + FrustumPlanes[0].d;
+	fDistance = planes[0].a * c.x + planes[0].b * c.y + planes[0].c * c.z + planes[0].d;
 	if(fDistance < -r)
-		return 0;
+		return VI_OUTSIDE;
 
 	float centreDistance = ( CameraPosition - c ).Length() ;
 
 	if( centreDistance > this->FarClip + r )
-		return 0 ;
+		return VI_OUTSIDE ;
 
-	return 1 ;
+	return VI_INSIDE ;
 }
 
-int r3dRenderLayer::IsSphereInsideFrustum(const r3dPoint3D& c, float r)
+//////////////////////////////////////////////////////////////////////////
+
+VisibilityInfoEnum r3dRenderLayer::IsSphereInsideCustomFrustum(const r3dPoint3D& c, float r, const D3DXPLANE (&planes)[6])
+{
+	return IsSphereInsideFrustum_NORMAL( c, r, planes ) ;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+VisibilityInfoEnum r3dRenderLayer::IsSphereInsideFrustum(const r3dPoint3D& c, float r)
 {
 	switch( FrustumType )
 	{
 	case R3D_FRUSTUM_NORMAL:
-		return IsSphereInsideFrustum_NORMAL( c, r ) ;
+		return IsSphereInsideFrustum_NORMAL( c, r, FrustumPlanes ) ;
 	case R3D_FRUSTUM_PARABOLOID:
-		return IsSphereInsideFrustum_PARABOLOID( c, r ) ;
+		return IsSphereInsideFrustum_PARABOLOID( c, r, FrustumPlanes ) ;
 	}
 
 	r3d_assert( false ) ;
-	return 1 ;
+	return VI_INSIDE ;
 }
 
-R3D_FORCEINLINE int r3dRenderLayer::IsBoxInsideFrustum_NORMAL(const r3dBoundBox& BBox)
+R3D_FORCEINLINE VisibilityInfoEnum r3dRenderLayer::IsBoxInsideFrustum_NORMAL(const r3dBoundBox& BBox, const D3DXPLANE (&planes)[6])
 {
-	int res=0;
-	if( ( res = IsSphereInsideFrustum( BBox.Org+BBox.Size*0.5f, 0.5f * sqrtf( BBox.Size.x*BBox.Size.x + BBox.Size.y*BBox.Size.y + BBox.Size.z*BBox.Size.z ) ) ) == 2 )
+	VisibilityInfoEnum res = IsSphereInsideCustomFrustum( BBox.Org+BBox.Size*0.5f, 0.5f * sqrtf( BBox.Size.x*BBox.Size.x + BBox.Size.y*BBox.Size.y + BBox.Size.z*BBox.Size.z ), planes );
+	if (res == VI_INTERSECTING)
 	{
-		BYTE bOutside[8];
-		D3DXVECTOR3 pVecBounds[8];
-
-#define DVX(v) D3DXVECTOR3(v.x, v.y, v.z)
-
-		pVecBounds[0] = DVX(BBox.Org);
-
-		pVecBounds[1] = DVX(BBox.Org);
-		pVecBounds[1].x += BBox.Size.X;
-
-		pVecBounds[2] = DVX(BBox.Org);
-		pVecBounds[2].z += BBox.Size.Z;
-
-		pVecBounds[3] = DVX(BBox.Org);
-		pVecBounds[3].x += BBox.Size.X;
-		pVecBounds[3].z += BBox.Size.Z;
-
-		pVecBounds[4] = DVX(BBox.Org);
-		pVecBounds[4].y += BBox.Size.Y;
-
-		pVecBounds[5] = DVX(BBox.Org);
-		pVecBounds[5].y += BBox.Size.Y;
-		pVecBounds[5].x += BBox.Size.X;
-
-		pVecBounds[6] = DVX(BBox.Org);
-		pVecBounds[6].y += BBox.Size.Y;
-		pVecBounds[6].z += BBox.Size.Z;
-
-		pVecBounds[7] = DVX(BBox.Org);
-		pVecBounds[7].y += BBox.Size.Y;
-		pVecBounds[7].x += BBox.Size.X;
-		pVecBounds[7].z += BBox.Size.Z;
-
-#undef DVX
-
-		ZeroMemory( &bOutside, sizeof(bOutside) );
-
-		// Check boundary vertices against all 6 frustum planes, 
-		// and store result (1 if outside) in a bitfield
-		for( int iPoint = 0; iPoint < 8; iPoint++ )
+		bool intersect = false;
+		for (uint32_t i = 0; i < _countof(planes); ++i)
 		{
-			for( int iPlane = 0; iPlane < 6; iPlane++ )
-			{
-				if( FrustumPlanes[iPlane].a * pVecBounds[iPoint].x +
-					FrustumPlanes[iPlane].b * pVecBounds[iPoint].y +
-					FrustumPlanes[iPlane].c * pVecBounds[iPoint].z +
-					FrustumPlanes[iPlane].d < 0)
-				{
-					bOutside[iPoint] |= (1 << iPlane);
-				}
-			}
-			// If any point is inside all 6 frustum planes, it is inside
-			// the frustum, so the object must be rendered.
-			if( bOutside[iPoint] == 0 )
-				return 1;
+			res = IsBoxOnPositiveHalfSpace(planes[i], BBox);
+			//	Frustum planes point outwards, so there is flip of results here
+			if (res == VI_INSIDE)
+				return VI_OUTSIDE;
+			else if(res == VI_INTERSECTING)
+				intersect = true;
 		}
-
-		// If all points are outside any single frustum plane, the object is
-		// outside the frustum
-		if( (bOutside[0] & bOutside[1] & bOutside[2] & bOutside[3] & 
-			bOutside[4] & bOutside[5] & bOutside[6] & bOutside[7]) != 0 )
-		{
-			return 0;
-		}
-
-		return 2;
+		if (intersect)
+			res = VI_INTERSECTING;
+		else
+			res = VI_INSIDE;
 	}
-	else
-		return res; // fully inside or outside sphere
+	return res;
 }
 
-R3D_FORCEINLINE int r3dRenderLayer::IsBoxInsideFrustum_PARABOLOID( const r3dBoundBox& BBox )
+R3D_FORCEINLINE VisibilityInfoEnum r3dRenderLayer::IsBoxInsideFrustum_PARABOLOID( const r3dBoundBox& BBox )
 {
 	r3dPoint3D pVecBounds[8];
+	BYTE bOutside[8];
+
+	ZeroMemory( &bOutside, sizeof(bOutside) );
 
 #define DVX(v) r3dPoint3D(v.x, v.y, v.z)
 
@@ -4620,7 +4608,6 @@ R3D_FORCEINLINE int r3dRenderLayer::IsBoxInsideFrustum_PARABOLOID( const r3dBoun
 #undef DVX
 
 	// Check boundary vertices against NEAR plane 
-	// and store result (1 if outside) in a bitfield
 	for( int iPoint = 0; iPoint < 8; iPoint++ )
 	{
 		float centreDist = ( pVecBounds[ iPoint ] - CameraPosition ).Length() ;
@@ -4629,23 +4616,49 @@ R3D_FORCEINLINE int r3dRenderLayer::IsBoxInsideFrustum_PARABOLOID( const r3dBoun
 			FrustumPlanes[ 0 ].b * pVecBounds[iPoint].y +
 			FrustumPlanes[ 0 ].c * pVecBounds[iPoint].z +
 			FrustumPlanes[ 0 ].d >= 0 
-				&&
-			centreDist < FarClip )
+			 )
 		{
-			return 1 ;
+			bOutside[ iPoint ] = 0;
+		}
+		else
+		{
+			bOutside[ iPoint ] = 1;
 		}
 	}
 
-	return 0 ;
+	int allOutside = 1;
+
+	for( int i = 0; i < 8; i ++ )
+	{
+		if( !bOutside[ i ] )
+		{
+			allOutside = 0;
+			break;
+		}
+	}
+
+	if( allOutside )
+		return VI_OUTSIDE;
+	else
+		return VI_INTERSECTING;
 }
 
+//////////////////////////////////////////////////////////////////////////
 
-int r3dRenderLayer::IsBoxInsideFrustum( const r3dBoundBox& BBox )
+VisibilityInfoEnum r3dRenderLayer::IsBoxInsideCustomFrustum(const r3dBoundBox& BBox, const D3DXPLANE (&planes)[6])
 {
+	return IsBoxInsideFrustum_NORMAL(BBox, planes);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+VisibilityInfoEnum r3dRenderLayer::IsBoxInsideFrustum(const r3dBoundBox& BBox)
+{
+#if 0
 	switch( FrustumType )
 	{
 	case R3D_FRUSTUM_NORMAL:
-		return IsBoxInsideFrustum_NORMAL( BBox ) ;
+		return IsBoxInsideFrustum_NORMAL2( BBox ) ;
 		break ;
 
 	case R3D_FRUSTUM_PARABOLOID:
@@ -4654,7 +4667,10 @@ int r3dRenderLayer::IsBoxInsideFrustum( const r3dBoundBox& BBox )
 	}
 
 	r3d_assert( false ) ;
-	return 1 ;
+	return VI_INSIDE ;
+#else
+	return IsBoxInsideFrustum_NORMAL(BBox, FrustumPlanes);
+#endif
 }
 
 bool r3dRenderLayer::DoesBoxIntersectNearPlane(const r3dBoundBox& BBox)
@@ -4721,7 +4737,7 @@ void r3dRenderLayer::IssuePendingQuery()
 }
 
 void
-r3dRenderLayer::SetPendingQuery( r3dD3DQuery* query )
+r3dRenderLayer::SetPendingQuery( IDirect3DQuery9* query )
 {
 	IssuePendingQuery();
 
@@ -4756,6 +4772,33 @@ void r3dRenderLayer::CheckOutOfMemory( HRESULT hr )
 	if( hr == D3DERR_OUTOFVIDEOMEMORY )
 	{
 		r_out_of_vmem_encountered->SetInt( 1 );
+		HWND targ = HLibWin;
+		if( r_fullscreen->GetInt() )
+		{
+			targ = NULL;
+			ShowWindow(HLibWin, SW_MINIMIZE);
+			r3dProcessWindowMessages();
+		}
+		MessageBoxA( targ, "Out of video memory!", "Error", MB_ICONERROR | MB_SYSTEMMODAL );
+		TerminateProcess(r3d_CurrentProcess, 0);
+	}
+
+	if( hr == E_OUTOFMEMORY )
+	{
+		// free some memory - maybe it will help the message box!
+		r3dTL::TArray<r3dIResource*>().Swap( resources_ );
+		ResetShaders();
+		FlushTextures();
+
+		HWND targ = HLibWin;
+		if( r_fullscreen->GetInt() )
+		{
+			targ = NULL;
+			ShowWindow(HLibWin, SW_MINIMIZE);
+			r3dProcessWindowMessages();
+		}
+		MessageBoxA( targ, "Out of system memory!", "Error", MB_ICONERROR | MB_SYSTEMMODAL );
+		TerminateProcess(r3d_CurrentProcess, 0);
 	}
 }
 
@@ -4790,31 +4833,11 @@ r3dRenderLayer::SetFrustumType( r3dFrustumType type )
 
 void r3dRenderLayer::AquireMainRT()
 {
-#ifndef WO_SERVER
-	r3dDX11_UnregisterSurfaceMirror(MainRT);
-#endif
-
 	SAFE_RELEASE( MainRT );
 	D3D_V( pd3ddev->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, &MainRT ) );
 
 	D3DSURFACE_DESC sdesc ;
 	D3D_V( MainRT->GetDesc( &sdesc) );
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		g_r3dDX11RenderTargets.RegisterRenderTarget(
-			MainRT,
-			g_r3dDX11.GetBackBufferRTV(),
-			(unsigned int)g_r3dDX11.GetWidth(),
-			(unsigned int)g_r3dDX11.GetHeight()
-		);
-	}
-#endif
-
-#ifndef WO_SERVER
-	r3dDX11_UnregisterSurfaceMirror(MainDSS);
-#endif
 
 	SAFE_RELEASE( MainDSS );
 
@@ -4840,18 +4863,6 @@ void r3dRenderLayer::AquireMainRT()
 	void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName);
 	SetD3DResourcePrivateData(MainDSS, "Main DSS");
 
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		g_r3dDX11RenderTargets.RegisterDepthStencil(
-			MainDSS,
-			g_r3dDX11.GetDepthStencilView(),
-			(unsigned int)g_r3dDX11.GetWidth(),
-			(unsigned int)g_r3dDX11.GetHeight()
-		);
-	}
-#endif
-
 	DSS = NULL ;
 	SetDSS( MainDSS );
 
@@ -4863,11 +4874,6 @@ void r3dRenderLayer::AquireMainRT()
 void r3dRenderLayer::SetVertexDecl( IDirect3DVertexDeclaration9* decl ) const
 {
 	d3dc._SetDecl( decl ) ;
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-		r3dDX11_ApplyCurrentVertexShaderInputLayout(decl);
-#endif
 }
 
 //------------------------------------------------------------------------
@@ -4969,10 +4975,10 @@ void ClearBackBufferFringes()
 
 	if( needClear )
 	{
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE );
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE );
 		r3dRenderer->SetViewport( 0.f, 0.f, (float)r3dRenderer->d3dpp.BackBufferWidth, (float)r3dRenderer->d3dpp.BackBufferHeight );
-		r3dRenderer->Clear( R3D_ARRAYSIZE(rects), rects, D3DCLEAR_TARGET, 0, 1.f, 0 );
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE );
+		D3D_V( r3dRenderer->pd3ddev->Clear( R3D_ARRAYSIZE(rects), rects, D3DCLEAR_TARGET, 0, r3dRenderer->GetClearZValue(), 0 ) );
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE );	
 	}
 }
 
@@ -5196,44 +5202,11 @@ static void DoCreateTextureADS( void* params )
 {
 	CreateTextureParamsAutoDownScale* pms = (CreateTextureParamsAutoDownScale*) params ;
 
+	IDirect3DTexture9* tex ;
+
 	int W = *pms->Width ;
 	int H = *pms->Height ;
 	int L = *pms->Levels ;
-
-#ifndef WO_SERVER
-	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
-	{
-		for( ; ; )
-		{
-			if(pms->TextureTunnel->CreateDX11RenderTarget2D((UINT)W, (UINT)H, (UINT)L, pms->Format))
-				break;
-
-			W /= 2 ;
-			H /= 2 ;
-
-			if( L > 1 )
-				L -- ;
-
-			if( !W || !H )
-			{
-				r3dError(
-					"DX11 native CreateTextureADS RenderTarget failed: reached zero texture dimensions. Original size was: %dx%d fmt=%d\n",
-					*pms->Width,
-					*pms->Height,
-					(int)pms->Format
-				);
-			}
-		}
-
-		*pms->Width		= W ;
-		*pms->Height	= H ;
-		*pms->Levels	= L ;
-
-		return;
-	}
-#endif
-
-	IDirect3DTexture9* tex ;
 
 	for( ; ; )
 	{
@@ -5267,6 +5240,8 @@ static void DoCreateTextureADS( void* params )
 	pms->TextureTunnel->Set( tex ) ;
 }
 
+
+/*static*/
 void
 r3dDeviceTunnel::CreateTextureAutoDownScale( UINT* Width, UINT* Height, UINT* Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, r3dD3DTextureTunnel* TextureTunnel  )
 {
@@ -5281,6 +5256,7 @@ r3dDeviceTunnel::CreateTextureAutoDownScale( UINT* Width, UINT* Height, UINT* Le
 	parms.TextureTunnel  = TextureTunnel ;	
 
 	ProcessCustomDeviceQueueItem( DoCreateTextureADS, &parms ) ;
+	
 }
 
 //------------------------------------------------------------------------
@@ -5317,26 +5293,6 @@ const char* PoolToString( D3DPOOL pool )
 static void DoCreateTexture( void* params )
 {
 	CreateTextureParams* pms = (CreateTextureParams*) params ;
-
-#ifndef WO_SERVER
-	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
-	{
-		if(!pms->TextureTunnel->CreateDX11RenderTarget2D(pms->Width, pms->Height, pms->Levels, pms->Format))
-		{
-			r3dError(
-				"DX11 native CreateTexture RenderTarget failed: %ux%u mips=%u fmt=%d usage=0x%X pool=%s\n",
-				(unsigned int)pms->Width,
-				(unsigned int)pms->Height,
-				(unsigned int)pms->Levels,
-				(int)pms->Format,
-				(unsigned int)pms->Usage,
-				PoolToString(pms->Pool)
-			);
-		}
-
-		return;
-	}
-#endif
 
 	IDirect3DTexture9* tex ;
 
@@ -5381,7 +5337,7 @@ r3dDeviceTunnel::CreateTexture( UINT Width, UINT Height, UINT Levels, DWORD Usag
 	parms.Usage			= Usage ;
 	parms.Format		= Format ;
 	parms.Pool			= Pool ;
-	parms.TextureTunnel  = TextureTunnel ;
+	parms.TextureTunnel  = TextureTunnel ;	
 
 	ProcessCustomDeviceQueueItem( DoCreateTexture, &parms ) ;
 }
@@ -5443,26 +5399,6 @@ static void DoCreateCubeTexture( void* params )
 {
 	CreateCubeTextureParams* pms = (CreateCubeTextureParams*) params ;
 
-#ifndef WO_SERVER
-	if((pms->Usage & D3DUSAGE_RENDERTARGET) && r3dDX11_IsNativeRendering())
-	{
-		if(!pms->TextureTunnel->CreateDX11RenderTargetCube(pms->EdgeLength, pms->Levels, pms->Format))
-		{
-			r3dError(
-				"DX11 native CreateCubeTexture RenderTarget failed: %ux%u mips=%u fmt=%d usage=0x%X pool=%s\n",
-				(unsigned int)pms->EdgeLength,
-				(unsigned int)pms->EdgeLength,
-				(unsigned int)pms->Levels,
-				(int)pms->Format,
-				(unsigned int)pms->Usage,
-				PoolToString(pms->Pool)
-			);
-		}
-
-		return;
-	}
-#endif
-
 	IDirect3DCubeTexture9* tex ;
 
 	D3D_V( r3dRenderer->pd3ddev->CreateCubeTexture ( pms->EdgeLength, pms->Levels, pms->Usage, pms->Format, pms->Pool, &tex, 0 ) );
@@ -5479,7 +5415,7 @@ void r3dDeviceTunnel::CreateCubeTexture( UINT EdgeLength,UINT Levels,DWORD Usage
 	parms.Usage			= Usage ;
 	parms.Format		= Format ;
 	parms.Pool			= Pool ;
-	parms.TextureTunnel  = TextureTunnel ;
+	parms.TextureTunnel  = TextureTunnel ;	
 
 	ProcessCustomDeviceQueueItem( DoCreateCubeTexture, &parms )  ;
 }
@@ -5599,71 +5535,12 @@ static void DoCreateRenderTarget( void* params )
 {
 	CreateRenderTargetParams* pms = (CreateRenderTargetParams*) params ;
 
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
-	{
-		pms->SurfaceTunnel->ReleaseAndReset();
-		pms->SurfaceTunnel->SetFormat(pms->Format);
-
-		if(!g_r3dDX11RenderTargets.CreateRenderTargetMirror(
-			pms->SurfaceTunnel,
-			pms->Width,
-			pms->Height,
-			pms->Format,
-			pms->MultiSample,
-			pms->MultisampleQuality
-		))
-		{
-			r3dError(
-				"DX11 native CreateRenderTarget failed: %ux%u fmt=%d ms=%d quality=%u\n",
-				pms->Width,
-				pms->Height,
-				(int)pms->Format,
-				(int)pms->MultiSample,
-				(unsigned int)pms->MultisampleQuality
-			);
-		}
-
-		r3dOutToLog(
-			"DX11 native CreateRenderTarget: %ux%u fmt=%d\n",
-			pms->Width,
-			pms->Height,
-			(int)pms->Format
-		);
-
-		return;
-	}
-#endif
-
 	IDirect3DSurface9* surf ;
 
-	D3D_V( r3dRenderer->pd3ddev->CreateRenderTarget(
-		pms->Width,
-		pms->Height,
-		pms->Format,
-		pms->MultiSample,
-		pms->MultisampleQuality,
-		pms->Lockable,
-		&surf,
-		0
-	) );
+	D3D_V( r3dRenderer->pd3ddev->CreateRenderTarget( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Lockable, &surf, 0 ) );
 
 	pms->SurfaceTunnel->Set( surf ) ;
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		g_r3dDX11RenderTargets.CreateRenderTargetMirror(
-			pms->SurfaceTunnel,
-			pms->Width,
-			pms->Height,
-			pms->Format,
-			pms->MultiSample,
-			pms->MultisampleQuality
-		);
-	}
-#endif
-}
+};
 
 void r3dDeviceTunnel::CreateRenderTarget( UINT Width,UINT Height,D3DFORMAT Format,D3DMULTISAMPLE_TYPE MultiSample,DWORD MultisampleQuality,BOOL Lockable,r3dD3DSurfaceTunnel* SurfaceTunnel )
 {
@@ -5697,70 +5574,11 @@ static void DoCreateDepthStencil( void * params )
 {
 	CreateDepthStencilParams* pms = ( CreateDepthStencilParams* ) params ;
 
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
-	{
-		pms->SurfaceTunnel->ReleaseAndReset();
-		pms->SurfaceTunnel->SetFormat(pms->Format);
-
-		if(!g_r3dDX11RenderTargets.CreateDepthStencilMirror(
-			pms->SurfaceTunnel,
-			pms->Width,
-			pms->Height,
-			pms->Format,
-			pms->MultiSample,
-			pms->MultisampleQuality
-		))
-		{
-			r3dError(
-				"DX11 native CreateDepthStencilSurface failed: %ux%u fmt=%d ms=%d quality=%u\n",
-				pms->Width,
-				pms->Height,
-				(int)pms->Format,
-				(int)pms->MultiSample,
-				(unsigned int)pms->MultisampleQuality
-			);
-		}
-
-		r3dOutToLog(
-			"DX11 native CreateDepthStencilSurface: %ux%u fmt=%d\n",
-			pms->Width,
-			pms->Height,
-			(int)pms->Format
-		);
-
-		return;
-	}
-#endif
-
 	IDirect3DSurface9* surf ;
 
-	D3D_V( r3dRenderer->pd3ddev->CreateDepthStencilSurface(
-		pms->Width,
-		pms->Height,
-		pms->Format,
-		pms->MultiSample,
-		pms->MultisampleQuality,
-		pms->Discard,
-		&surf,
-		0
-	) ) ;
+	D3D_V( r3dRenderer->pd3ddev->CreateDepthStencilSurface( pms->Width, pms->Height, pms->Format, pms->MultiSample, pms->MultisampleQuality, pms->Discard, &surf, 0 ) ) ;
 
 	pms->SurfaceTunnel->Set( surf );
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized())
-	{
-		g_r3dDX11RenderTargets.CreateDepthStencilMirror(
-			pms->SurfaceTunnel,
-			pms->Width,
-			pms->Height,
-			pms->Format,
-			pms->MultiSample,
-			pms->MultisampleQuality
-		);
-	}
-#endif
 }
 
 void
@@ -5776,36 +5594,7 @@ r3dDeviceTunnel::CreateDepthStencilSurface( UINT Width,UINT Height,D3DFORMAT For
 	params.Discard				= Discard ;
 	params.SurfaceTunnel		= SurfaceTunnel ;
 
-ProcessCustomDeviceQueueItem( DoCreateDepthStencil, &params ) ;
-}
-
-//------------------------------------------------------------------------
-
-struct CreateQueryParams
-{
-	D3DQUERYTYPE Type;
-	r3dD3DQuery** ppQuery;
-};
-
-static void DoCreateQuery(void* params)
-{
-	CreateQueryParams* pms = (CreateQueryParams*) params;
-
-	if(pms->ppQuery)
-		*pms->ppQuery = NULL;
-
-	if(pms->ppQuery)
-		*pms->ppQuery = r3dD3DQuery::CreateClass(pms->Type);
-}
-
-void r3dDeviceTunnel::CreateQuery(D3DQUERYTYPE Type, r3dD3DQuery** ppQuery)
-{
-	CreateQueryParams params;
-
-	params.Type = Type;
-	params.ppQuery = ppQuery;
-
-	ProcessCustomDeviceQueueItem( DoCreateQuery, &params );
+	ProcessCustomDeviceQueueItem( DoCreateDepthStencil, &params ) ;
 }
 
 //------------------------------------------------------------------------
@@ -5872,15 +5661,7 @@ static void DoCreateTextureFFIMEX( void* params )
 	
 	HRESULT hr = D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, pms->pSrcData, pms->SrcDataSize, pms->Width, pms->Height, pms->MipLevels, pms->Usage, pms->Format, pms->Pool, pms->Filter, pms->MipFilter, pms->ColorKey, pms->pSrcInfo, pms->pPalette, &tex ) ;
 
-	if( hr == E_OUTOFMEMORY )
-	{
-		r3dError( "D3DXCreateTextureFromFileInMemoryEx: Out of CPU MEMORY on %s\n", pms->pDebugName ) ;
-	}
-
-	if( hr == D3DERR_OUTOFVIDEOMEMORY )
-	{
-		r3dError( "D3DXCreateTextureFromFileInMemoryEx: Out of VIDEO MEMORY on %s\n", pms->pDebugName ) ;
-	}
+	r3dRenderer->CheckOutOfMemory( hr );
 
 	if( hr != S_OK )
 	{
@@ -6077,299 +5858,8 @@ void r3dDeviceTunnel::SetD3DResourcePrivateData( r3dD3DResourceTunnel* tunnel, c
 
 void r3dDeviceTunnel::SetD3DResourcePrivateData( r3dD3DSurfaceTunnel* tunnel, const char* data )
 {
-	if(!tunnel)
-		return;
-
-	if(!tunnel->Get())
-		return;
-
 	SetD3DResourcePrivateData( static_cast<r3dD3DResourceTunnel*>(tunnel), data ) ;
 }
-
-//------------------------------------------------------------------------
-
-#ifndef WO_SERVER
-
-static int r3dDX11TextureTunnel_CalcMipCount(UINT width, UINT height)
-{
-	int mipCount = 1;
-
-	while(width > 1 || height > 1)
-	{
-		width = R3D_MAX<UINT>(1, width / 2);
-		height = R3D_MAX<UINT>(1, height / 2);
-		++mipCount;
-	}
-
-	return mipCount;
-}
-
-static DXGI_FORMAT r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat(DXGI_FORMAT format)
-{
-	switch(format)
-	{
-	case DXGI_FORMAT_B5G6R5_UNORM:
-	case DXGI_FORMAT_B5G5R5A1_UNORM:
-	case DXGI_FORMAT_B8G8R8X8_UNORM:
-		return DXGI_FORMAT_B8G8R8A8_UNORM;
-
-	default:
-		return format;
-	}
-}
-
-#endif
-
-r3dD3DTextureTunnel::r3dD3DTextureTunnel()
-#ifndef WO_SERVER
-: mDX11Texture(NULL)
-, mDX11NativeRenderTarget(false)
-, mDX11NativeCube(false)
-, mDX11Width(0)
-, mDX11Height(0)
-, mDX11Levels(0)
-, mDX11Format(D3DFMT_UNKNOWN)
-#endif
-{
-}
-
-void r3dD3DTextureTunnel::Set(IDirect3DBaseTexture9* res)
-{
-	R3D_ENSURE_MAIN_THREAD();
-
-	mRes = res;
-
-#ifndef WO_SERVER
-	if(res)
-		ClearDX11NativeNoRelease();
-#endif
-}
-
-int r3dD3DTextureTunnel::Valid() const
-{
-#ifndef WO_SERVER
-	return mRes != NULL || HasDX11Texture();
-#else
-	return mRes != NULL;
-#endif
-}
-
-#ifndef WO_SERVER
-
-void r3dD3DTextureTunnel::ClearDX11NativeNoRelease()
-{
-	mDX11Texture = NULL;
-	mDX11NativeRenderTarget = false;
-	mDX11NativeCube = false;
-	mDX11Width = 0;
-	mDX11Height = 0;
-	mDX11Levels = 0;
-	mDX11Format = D3DFMT_UNKNOWN;
-}
-
-#endif
-
-static void DoTextureTunnelReleaseAndReset(void* param)
-{
-	r3dD3DTextureTunnel* tunnel = (r3dD3DTextureTunnel*)param;
-	tunnel->ReleaseAndReset();
-}
-
-void r3dD3DTextureTunnel::ReleaseAndReset()
-{
-	if(!R3D_IS_MAIN_THREAD())
-	{
-		ProcessCustomDeviceQueueItem(DoTextureTunnelReleaseAndReset, this);
-		return;
-	}
-
-#ifndef WO_SERVER
-	if(mDX11Texture)
-	{
-		delete mDX11Texture;
-		ClearDX11NativeNoRelease();
-	}
-#endif
-
-	if(mRes)
-	{
-		mRes->Release();
-		mRes = NULL;
-	}
-}
-
-#ifndef WO_SERVER
-
-bool r3dD3DTextureTunnel::CreateDX11RenderTarget2D(UINT Width, UINT Height, UINT Levels, D3DFORMAT Format)
-{
-	R3D_ENSURE_MAIN_THREAD();
-
-	ReleaseAndReset();
-
-	if(!g_r3dDX11.IsInitialized())
-		return false;
-
-	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)Format);
-	if(dx11Format == 0)
-		return false;
-
-	DXGI_FORMAT compatibleFormat = r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat((DXGI_FORMAT)dx11Format);
-
-	UINT mipCount = Levels;
-	if(mipCount == 0)
-		mipCount = (UINT)r3dDX11TextureTunnel_CalcMipCount(Width, Height);
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-
-	if(!tex->CreateRenderTarget2D((int)Width, (int)Height, (R3D_DX11_FORMAT)compatibleFormat, (int)mipCount))
-	{
-		delete tex;
-		return false;
-	}
-
-	mDX11Texture = tex;
-	mDX11NativeRenderTarget = true;
-	mDX11NativeCube = false;
-	mDX11Width = Width;
-	mDX11Height = Height;
-	mDX11Levels = mipCount;
-	mDX11Format = Format;
-
-	r3dOutToLog(
-		"DX11 native CreateTexture RenderTarget: %ux%u mips=%u fmt=%d\n",
-		(unsigned int)Width,
-		(unsigned int)Height,
-		(unsigned int)mipCount,
-		(int)Format
-	);
-
-	return true;
-}
-
-bool r3dD3DTextureTunnel::CreateDX11RenderTargetCube(UINT EdgeLength, UINT Levels, D3DFORMAT Format)
-{
-	R3D_ENSURE_MAIN_THREAD();
-
-	ReleaseAndReset();
-
-	if(!g_r3dDX11.IsInitialized())
-		return false;
-
-	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat((int)Format);
-	if(dx11Format == 0)
-		return false;
-
-	DXGI_FORMAT compatibleFormat = r3dDX11TextureTunnel_GetCompatibleRenderTargetFormat((DXGI_FORMAT)dx11Format);
-
-	UINT mipCount = Levels;
-	if(mipCount == 0)
-		mipCount = (UINT)r3dDX11TextureTunnel_CalcMipCount(EdgeLength, EdgeLength);
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-
-	if(!tex->CreateRenderTargetCube((int)EdgeLength, (R3D_DX11_FORMAT)compatibleFormat, (int)mipCount))
-	{
-		delete tex;
-		return false;
-	}
-
-	mDX11Texture = tex;
-	mDX11NativeRenderTarget = true;
-	mDX11NativeCube = true;
-	mDX11Width = EdgeLength;
-	mDX11Height = EdgeLength;
-	mDX11Levels = mipCount;
-	mDX11Format = Format;
-
-	r3dOutToLog(
-		"DX11 native CreateCubeTexture RenderTarget: %ux%u mips=%u fmt=%d\n",
-		(unsigned int)EdgeLength,
-		(unsigned int)EdgeLength,
-		(unsigned int)mipCount,
-		(int)Format
-	);
-
-	return true;
-}
-
-bool r3dD3DTextureTunnel::HasDX11Texture() const
-{
-	return mDX11Texture && mDX11Texture->IsValid();
-}
-
-bool r3dD3DTextureTunnel::IsDX11NativeRenderTarget() const
-{
-	return mDX11NativeRenderTarget && HasDX11Texture();
-}
-
-bool r3dD3DTextureTunnel::IsDX11NativeCube() const
-{
-	return mDX11NativeCube;
-}
-
-r3dDX11Texture* r3dD3DTextureTunnel::GetDX11Texture() const
-{
-	return mDX11Texture;
-}
-
-ID3D11ShaderResourceView* r3dD3DTextureTunnel::GetDX11SRV() const
-{
-	if(!HasDX11Texture())
-		return NULL;
-
-	return mDX11Texture->GetSRV();
-}
-
-int r3dD3DTextureTunnel::GetDX11Width() const
-{
-	return (int)mDX11Width;
-}
-
-int r3dD3DTextureTunnel::GetDX11Height() const
-{
-	return (int)mDX11Height;
-}
-
-int r3dD3DTextureTunnel::GetDX11MipCount() const
-{
-	return (int)mDX11Levels;
-}
-
-D3DFORMAT r3dD3DTextureTunnel::GetDX11Format() const
-{
-	return mDX11Format;
-}
-
-bool r3dD3DTextureTunnel::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip) const
-{
-	if(!surface || !IsDX11NativeRenderTarget())
-		return false;
-
-	ID3D11Texture2D* texture = NULL;
-	ID3D11RenderTargetView* rtv = NULL;
-
-	if(!mDX11Texture->AddRefRenderTargetMirror(face, mip, &texture, &rtv))
-		return false;
-
-	const unsigned int mipWidth = (unsigned int)R3D_MAX(1, (int)mDX11Width >> mip);
-	const unsigned int mipHeight = (unsigned int)R3D_MAX(1, (int)mDX11Height >> mip);
-
-	surface->SetFormat(mDX11Format);
-	surface->SetDX11RenderTargetMirror(texture, rtv, mipWidth, mipHeight);
-
-	r3dOutToLog(
-		"DX11 render target texture registered: face=%d mip=%d size=%ux%u fmt=%d\n",
-		face,
-		mip,
-		mipWidth,
-		mipHeight,
-		(int)mDX11Format
-	);
-
-	return true;
-}
-
-#endif
 
 //------------------------------------------------------------------------
 
@@ -6440,34 +5930,16 @@ struct GetLevelCountParams
 static void DoGetLevelCount( void* ptr )
 {
 	GetLevelCountParams* params = static_cast< GetLevelCountParams* >( ptr ) ;
-
-#ifndef WO_SERVER
-	if(params->Caller->IsDX11NativeRenderTarget())
-	{
-		params->Result = params->Caller->GetDX11MipCount();
-		return;
-	}
-#endif
-
-	IDirect3DBaseTexture9* base = params->Caller->AsBaseTex();
-	params->Result = base ? base->GetLevelCount() : 0;
+	
+	params->Result = params->Caller->AsBaseTex()->GetLevelCount() ;
 }
 
 int
 r3dD3DTextureTunnel::GetLevelCount() const
 {
-#ifndef WO_SERVER
-	if(IsDX11NativeRenderTarget())
-		return GetDX11MipCount();
-#endif
-
-	if(!AsBaseTex())
-		return 0;
-
 	GetLevelCountParams params ;
 
 	params.Caller = this ;
-	params.Result = 0;
 
 	ProcessCustomDeviceQueueItem( DoGetLevelCount, &params ) ;
 
@@ -6486,39 +5958,7 @@ struct GetLevelDescParams
 static void DoGetLevelDesc2D( void* ptr )
 {
 	GetLevelDescParams* params = static_cast< GetLevelDescParams* >( ptr ) ;
-
-	if(!params->oDesc)
-		return;
-
-#ifndef WO_SERVER
-	if(params->Caller->IsDX11NativeRenderTarget())
-	{
-		int mipLevel = params->Level;
-		if(mipLevel < 0)
-			mipLevel = 0;
-
-		ZeroMemory(params->oDesc, sizeof(*params->oDesc));
-
-		params->oDesc->Format	= params->Caller->GetDX11Format();
-		params->oDesc->Type		= D3DRTYPE_TEXTURE;
-		params->oDesc->Usage	= D3DUSAGE_RENDERTARGET;
-		params->oDesc->Pool		= D3DPOOL_DEFAULT;
-		params->oDesc->MultiSampleType		= D3DMULTISAMPLE_NONE;
-		params->oDesc->MultiSampleQuality	= 0;
-		params->oDesc->Width	= (UINT)R3D_MAX(1, params->Caller->GetDX11Width() >> mipLevel);
-		params->oDesc->Height	= (UINT)R3D_MAX(1, params->Caller->GetDX11Height() >> mipLevel);
-
-		return;
-	}
-#endif
-
 	IDirect3DBaseTexture9* baseTex = params->Caller->AsBaseTex() ;
-
-	if(!baseTex)
-	{
-		ZeroMemory(params->oDesc, sizeof(*params->oDesc));
-		return;
-	}
 
 	switch( baseTex->GetType() )
 	{
@@ -6536,37 +5976,6 @@ static void DoGetLevelDesc2D( void* ptr )
 void
 r3dD3DTextureTunnel::GetLevelDesc2D( int level, D3DSURFACE_DESC* oDesc ) const
 {
-	if(!oDesc)
-		return;
-
-#ifndef WO_SERVER
-	if(IsDX11NativeRenderTarget())
-	{
-		int mipLevel = level;
-		if(mipLevel < 0)
-			mipLevel = 0;
-
-		ZeroMemory(oDesc, sizeof(*oDesc));
-
-		oDesc->Format	= GetDX11Format();
-		oDesc->Type		= D3DRTYPE_TEXTURE;
-		oDesc->Usage	= D3DUSAGE_RENDERTARGET;
-		oDesc->Pool		= D3DPOOL_DEFAULT;
-		oDesc->MultiSampleType		= D3DMULTISAMPLE_NONE;
-		oDesc->MultiSampleQuality	= 0;
-		oDesc->Width	= (UINT)R3D_MAX(1, GetDX11Width() >> mipLevel);
-		oDesc->Height	= (UINT)R3D_MAX(1, GetDX11Height() >> mipLevel);
-
-		return;
-	}
-#endif
-
-	if(!AsBaseTex())
-	{
-		ZeroMemory(oDesc, sizeof(*oDesc));
-		return;
-	}
-
 	GetLevelDescParams params ;
 
 	params.Caller = this ;
@@ -6651,11 +6060,6 @@ r3dD3DSurfaceTunnel::Set( IDirect3DSurface9* resource )
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-#ifndef WO_SERVER
-	if( mRes != resource )
-		ReleaseDX11Mirror();
-#endif
-
 	if( resource )
 	{
 		D3DSURFACE_DESC desc ;
@@ -6678,95 +6082,13 @@ r3dD3DSurfaceTunnel::ReleaseAndReset()
 
 	int refCount = 0 ;
 
-#ifndef WO_SERVER
-	ReleaseDX11Mirror();
-#endif
-
 	if( mRes )
 	{
 		refCount = mRes->Release() ;
-		Parent::Set( 0 ) ;
+		Set( 0 ) ;
 	}
-
-	mFormat = D3DFMT_UNKNOWN ;
 
 	return refCount ;
-}
-
-void r3dRenderLayer::SetRTTunnel(int slot, r3dD3DSurfaceTunnel* surf)
-{
-	r3d_assert(slot >= 0 && slot < MAX_RENDER_TARGETS);
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
-	{
-		if(!surf || !surf->Valid())
-		{
-			RTs[slot] = NULL;
-
-			if(slot == 0)
-				g_r3dDX11RenderTargets.ResetToBackBuffer();
-			else
-				g_r3dDX11RenderTargets.SetRenderTargetDX11(slot, NULL, 0, 0);
-
-			return;
-		}
-
-		ID3D11RenderTargetView* rtv = surf->GetDX11RTV();
-
-		if(rtv)
-		{
-			g_r3dDX11RenderTargets.SetRenderTargetDX11(
-				slot,
-				rtv,
-				surf->GetDX11Width(),
-				surf->GetDX11Height()
-			);
-
-			RTs[slot] = surf->Get();
-			return;
-		}
-
-		SetRT(slot, surf->Get());
-		return;
-	}
-#endif
-
-	SetRT(slot, surf ? surf->Get() : NULL);
-}
-
-void r3dRenderLayer::SetDSSTunnel(r3dD3DSurfaceTunnel* dss)
-{
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && !GetUseD3D9Present())
-	{
-		if(!dss || !dss->Valid())
-		{
-			DSS = NULL;
-			g_r3dDX11RenderTargets.SetDepthStencilDX11(NULL, 0, 0);
-			return;
-		}
-
-		ID3D11DepthStencilView* dsv = dss->GetDX11DSV();
-
-		if(dsv)
-		{
-			g_r3dDX11RenderTargets.SetDepthStencilDX11(
-				dsv,
-				dss->GetDX11Width(),
-				dss->GetDX11Height()
-			);
-
-			DSS = dss->Get();
-			return;
-		}
-
-		SetDSS(dss->Get());
-		return;
-	}
-#endif
-
-	SetDSS(dss ? dss->Get() : NULL);
 }
 
 void r3dEnableWatchDog( float TimeOut )
@@ -6857,6 +6179,28 @@ void r3dPrintVMem()
 	r3dOutToLog( "We have %d MB texture memory\n", texMem / 1024 / 1024 );
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+VisibilityInfoEnum IsBoxOnPositiveHalfSpace(const D3DXPLANE &p, const r3dBoundBox &bb)
+{
+	VisibilityInfoEnum rv = VI_INTERSECTING;
+	r3dPoint3D c = bb.Center();
+	r3dPoint3D h = bb.Size * 0.5f;
+	r3dPoint3D maxNorm(abs(p.a), abs(p.b), abs(p.c));
+	float e = maxNorm.Dot(h);
+	float s = c.Dot(r3dPoint3D(p.a, p.b, p.c)) + p.d;
+
+	if (s - e > 0)
+		rv = VI_OUTSIDE;
+
+	if (s + e < 0)
+		rv = VI_INSIDE;
+
+	return rv;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 r3dCSHolderWithDeviceQueue::r3dCSHolderWithDeviceQueue(CRITICAL_SECTION& in_cs)
 : cs( in_cs )
 {
@@ -6883,5 +6227,6 @@ r3dCSHolderWithDeviceQueue::~r3dCSHolderWithDeviceQueue()
 	LeaveCriticalSection( &cs ) ;
 #endif
 }
+
 
 int gDisableDynamicObjectShadows = 0 ;

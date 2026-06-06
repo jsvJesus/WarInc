@@ -234,7 +234,6 @@ void MasterServerLogic::RequestGameList()
   
   // send refresh command
   CREATE_PACKET(GBPKT_C2M_RefreshList, n);
-  n.playerLevel = gUserProfile.ProfileData.Stats.getRankLevel();
   net_->SendToHost(&n, sizeof(n));
   
   return;
@@ -270,7 +269,7 @@ int MasterServerLogic::WaitForGameJoin()
   return 1;
 }
 
-void MasterServerLogic::SendJoinGame(int gameNum, const char* pwd)
+void MasterServerLogic::SendJoinGame(DWORD gameServerId, const char* pwd)
 {
   if(!net_ || !net_->IsConnected())
     r3dError("masterserver isn't connected\n");
@@ -278,14 +277,14 @@ void MasterServerLogic::SendJoinGame(int gameNum, const char* pwd)
     r3dError("badClientVersion");
 
   r3d_assert(gameListReceived_);
-  r3d_assert(gameNum >= 0 && gameNum < (int)games_.size());
+  r3d_assert(gameServerId > 0);
   
   gameJoinAnswered_ = false;
 
   // send join game request
   CREATE_PACKET(GBPKT_C2M_JoinGameReq, n);
-  n.CustomerID = gUserProfile.CustomerID;
-  n.gameId     = games_[gameNum].gameId;
+  n.CustomerID   = gUserProfile.CustomerID;
+  n.gameServerId = gameServerId;
   r3dscpy(n.pwd, pwd);
   net_->SendToHost(&n, sizeof(n));
 }
@@ -298,44 +297,6 @@ void MasterServerLogic::SendJoinQuickGame(const NetPacketsGameBrowser::GBPKT_C2M
     r3dError("badClientVersion");
 
   gameJoinAnswered_ = false;
-  net_->SendToHost(&n, sizeof(n));
-}
-
-void MasterServerLogic::SendFriendJoinGame(const NetPacketsGameBrowser::GBPKT_C2M_JoinFriendGameReq_s& n)
-{
-  if(!net_ || !net_->IsConnected())
-    r3dError("masterserver isn't connected\n");
-  if(badClientVersion_) 
-    r3dError("badClientVersion");
-
-  gameJoinAnswered_ = false;
-  net_->SendToHost(&n, sizeof(n));
-}
-
-void MasterServerLogic::SendNextRoundReq(const NetPacketsGameBrowser::GBPKT_C2M_NextRoundReq_s& n)
-{
-  if(!net_ || !net_->IsConnected())
-    r3dError("masterserver isn't connected\n");
-  if(badClientVersion_) 
-    r3dError("badClientVersion");
-
-  gameJoinAnswered_ = false;
-  net_->SendToHost(&n, sizeof(n));
-}
-
-void MasterServerLogic::SendCreateGame(const NetPacketsGameBrowser::GBPKT_C2M_CreateGame_s& n)
-{
-  if(!net_ || !net_->IsConnected())
-    r3dError("masterserver isn't connected\n");
-  if(badClientVersion_) 
-    r3dError("badClientVersion");
-
-  //r3dOutToLog("Creating game. name:%s, map:%d, players:%d, time:%d, respawn:%d, ff:%d, ab:%d\n", 
-  //  info.name, info.mapId, info.maxPlayers, info.timeLimit, info.respawnDelay, info.friendlyFire, info.autoBalance);
-
-  gameJoinAnswered_ = false;
-
-  // send create request
   net_->SendToHost(&n, sizeof(n));
 }
 

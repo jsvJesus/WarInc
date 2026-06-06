@@ -10,6 +10,15 @@ extern r3dScreenBuffer* TempScreenBuffer;
 extern r3dScreenBuffer* BlurBuffer;
 extern r3dScreenBuffer* TempBuffer;
 
+extern r3dScreenBuffer*	One8Buffer0;
+extern r3dScreenBuffer*	One8Buffer1;
+extern r3dScreenBuffer*	One16Buffer0;
+extern r3dScreenBuffer*	One16Buffer1;
+extern r3dScreenBuffer*	One32Buffer0;
+extern r3dScreenBuffer*	One32Buffer1;
+extern r3dScreenBuffer*	One64Buffer0;
+extern r3dScreenBuffer*	One64Buffer1;
+
 extern r3dScreenBuffer* TempSMBuffer;
 extern r3dScreenBuffer* gFlashbang_Multiframe;
 
@@ -19,7 +28,6 @@ extern r3dScreenBuffer*	LFUpdateShadowMap;
 extern r3dScreenBuffer* SharedShadowCubeMap;
 extern r3dScreenBuffer* TransparentShadowMap;
 
-extern r3dScreenBuffer* AntiCheatBuffer;
 extern r3dScreenBuffer* AvgSceneLuminanceBuffer ;
 extern r3dScreenBuffer* SceneExposure0 ;
 extern r3dScreenBuffer* SceneExposure1 ;

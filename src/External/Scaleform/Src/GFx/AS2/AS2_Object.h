@@ -366,11 +366,6 @@ protected:
         ASUserData*     pUserData;
         UserDataHolder(Movie* pmovieView, ASUserData* puserData) :
         pMovieView(pmovieView), pUserData(puserData) {}
-        ~UserDataHolder() 
-        { 
-            if (pUserData)
-                pUserData->SetLastObjectValue(NULL, NULL, false);
-        }
         void    NotifyDestroy(ObjectInterface* pthis) const 
         {
             if (pUserData)  
@@ -522,7 +517,7 @@ protected:
 public:
     ASRefCountCollector *GetCollector() 
     { 
-        return static_cast<ASRefCountCollector*>(ASRefCountBase<Object>::GetCollector());
+        return reinterpret_cast<ASRefCountCollector*>(ASRefCountBase<Object>::GetCollector());
     }
 #else
 public:

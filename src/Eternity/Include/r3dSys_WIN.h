@@ -2,8 +2,6 @@
 #define	__R3DSYS_WIN_H
 
 #include "r3dTypedefs.h"
-#include <math.h>
-#include <xmmintrin.h>
 
 #define extern_nspace(nspace, var)  namespace nspace { extern var; };
 
@@ -20,6 +18,7 @@
 #define R3D_NOCLASSCOPY(xx)		\
 	xx(const xx &);			\
 	xx &operator= (const xx &);
+
 
 //
 // various templates
@@ -123,6 +122,7 @@ int LList_Destroy(T **base)
   return 1;
 }
 
+
 //----------------------------------------------------------------------------
 //	General math functions
 //----------------------------------------------------------------------------
@@ -138,52 +138,113 @@ inline FLOAT r3dAtan( FLOAT Value ) { return atanf(Value); }
 inline FLOAT r3dAtan2( FLOAT Y, FLOAT X ) { return atan2f(Y,X); }
 inline FLOAT r3dPow( FLOAT A, FLOAT B ) { return powf(A,B); }
 
-inline int r3dFloatToInt_2(float _fvar)
+
+
+
+inline int 	r3dFloatToInt_2(float _fvar)
 {
-	_fvar += (1l << 23l);
-	return *((int*)&_fvar) & 0x7fffffl;
+  _fvar += (1l<<23l);
+  return *((int *)&_fvar) & 0x7fffffl;
 }
 
-__forceinline int r3dFloatToInt(float _fvar)
+__forceinline int 	r3dFloatToInt(float _fvar)
 {
-#if defined(_M_IX86) || defined(_M_X64)
-	return _mm_cvt_ss2si(_mm_set_ss(_fvar));
-#else
-	return (int)(_fvar >= 0.0f ? _fvar + 0.5f : _fvar - 0.5f);
-#endif
+  int r3d__IConvTemp;
+  _asm 
+  {
+    fld		dword ptr _fvar;
+    fistp	dword ptr r3d__IConvTemp;
+  }
+  return r3d__IConvTemp;
 }
 
-inline INT r3dFloor(FLOAT F)
+
+/*
+inline INT r3dFloatToInt( FLOAT F )
 {
-	return (INT)floorf(F);
+	__asm cvtss2si eax,[F]
+	// return value in eax.
+}
+*/
+
+inline INT r3dFloor( FLOAT F )
+{
+	const DWORD mxcsr_floor = 0x00003f80;
+	const DWORD mxcsr_default = 0x00001f80;
+
+	__asm ldmxcsr [mxcsr_floor]		// Round toward -infinity.
+	__asm cvtss2si eax,[F]
+	__asm ldmxcsr [mxcsr_default]	// Round to nearest
+	// return value in eax.
 }
 
-inline FLOAT r3dInvSqrt(FLOAT F)
+//
+// MSM: Fast float inverse square root using SSE.
+// Accurate to within 1 LSB.
+//
+inline FLOAT r3dInvSqrt( FLOAT F )
 {
-#if defined(_M_IX86) || defined(_M_X64)
-	__m128 x = _mm_set_ss(F);
-	__m128 y = _mm_rsqrt_ss(x);
+	const FLOAT fThree = 3.0f;
+	const FLOAT fOneHalf = 0.5f;
+	FLOAT temp;
 
-	const __m128 half = _mm_set_ss(0.5f);
-	const __m128 three = _mm_set_ss(3.0f);
+	__asm
+	{
+		movss	xmm1,[F]
+		rsqrtss	xmm0,xmm1			// 1/sqrt estimate (12 bits)
+		
+		// Newton-Raphson iteration (X1 = 0.5*X0*(3-(Y*X0)*X0))
+		movss	xmm3,[fThree]
+		movss	xmm2,xmm0
+		mulss	xmm0,xmm1			// Y*X0
+		mulss	xmm0,xmm2			// Y*X0*X0
+		mulss	xmm2,[fOneHalf]		// 0.5*X0
+		subss	xmm3,xmm0			// 3-Y*X0*X0
+		mulss	xmm3,xmm2			// 0.5*X0*(3-Y*X0*X0)
+		movss	[temp],xmm3
+	}
 
-	y = _mm_mul_ss(
-		_mm_mul_ss(half, y),
-		_mm_sub_ss(three, _mm_mul_ss(_mm_mul_ss(x, y), y))
-	);
-
-	FLOAT result;
-	_mm_store_ss(&result, y);
-	return result;
-#else
-	return 1.0f / sqrtf(F);
-#endif
+	return temp;
 }
 
-inline FLOAT r3dSqrt(FLOAT F)
+//
+// MSM: Fast float square root using SSE.
+// Accurate to within 1 LSB.
+//
+inline FLOAT r3dSqrt( FLOAT F )
 {
-	return sqrtf(F);
+	const FLOAT fZero = 0.0f;
+	const FLOAT fThree = 3.0f;
+	const FLOAT fOneHalf = 0.5f;
+	FLOAT temp;
+
+	__asm
+	{
+		movss	xmm1,[F]
+		rsqrtss xmm0,xmm1			// 1/sqrt estimate (12 bits)
+		
+		// Newton-Raphson iteration (X1 = 0.5*X0*(3-(Y*X0)*X0))
+		movss	xmm3,[fThree]
+		movss	xmm2,xmm0
+		mulss	xmm0,xmm1			// Y*X0
+		mulss	xmm0,xmm2			// Y*X0*X0
+		mulss	xmm2,[fOneHalf]		// 0.5*X0
+		subss	xmm3,xmm0			// 3-Y*X0*X0
+		mulss	xmm3,xmm2			// 0.5*X0*(3-Y*X0*X0)
+
+		movss	xmm4,[fZero]
+		cmpss	xmm4,xmm1,4			// not equal
+
+		mulss	xmm3,xmm1			// sqrt(f) = f * 1/sqrt(f)
+
+		andps	xmm3,xmm4			// seet result to zero if input is zero
+
+		movss	[temp],xmm3
+	}
+
+	return temp;
 }
+
 
 //----------------------------------------------------------------------------
 //	Time functions.
@@ -217,5 +278,6 @@ inline FLOAT r3dSqrt(FLOAT F)
 //----------------------------------------------------------------------------
 
 extern void (*OnDblClick)();
+
 
 #endif	//__R3DSYS_WIN_H

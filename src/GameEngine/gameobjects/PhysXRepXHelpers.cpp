@@ -1,175 +1,189 @@
+//=========================================================================
+//	Module: PhysXRepXHelpers.hpp
+//	Copyright (C) 2011.
+//=========================================================================
+
+#pragma once
 #include "r3dPCH.h"
 #include "r3d.h"
 
+//////////////////////////////////////////////////////////////////////////
+
+#include "RepX\RepX.h"
+#include "RepX\RepXUtility.h"
+#include "extensions\PxStringTableExt.h"
+//#include "PhysX\PxFoundation\internal\PxIOStream\public\PxFileBuf.h"
+
 #include "PhysXRepXHelpers.h"
 
-UserStream::UserStream(const char* filename, bool load)
-: fpw(NULL)
-, fpr(NULL)
+//////////////////////////////////////////////////////////////////////////
+
+class MyPhysXFileBuf_ReadOnly : public PxInputData
 {
-	if (load)
-		fpr = r3d_open(filename, "rb");
-	else
-		fpw = fopen_for_write(filename, "wb");
+private:
+	r3dFile* f;
+public:
+	MyPhysXFileBuf_ReadOnly(const char* fname)
+	{
+		f = r3d_open(fname, "rb");
+		r3d_assert(f);
+	}
+
+	virtual ~MyPhysXFileBuf_ReadOnly(void) {
+		fclose(f);
+	}
+
+	virtual PxU32	getLength(void) const { return f->size; }
+	virtual void	seek(PxU32 loc) { fseek(f, loc, SEEK_SET); }
+	virtual PxU32	read(void *mem, PxU32 len) { return fread(mem, 1, len, f); }
+	virtual PxU32	tell(void) const { return ftell(f); }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+physx::repx::RepXCollection* loadCollection(const char* inPath, PxAllocatorCallback& inCallback)
+{
+	physx::repx::RepXExtension* theExtensions[64];
+	PxU32 numExtensions = buildExtensionList( theExtensions, 64, inCallback );
+
+	MyPhysXFileBuf_ReadOnly fileBuf(inPath);
+	physx::repx::RepXCollection* retval = physx::repx::RepXCollection::create( fileBuf, theExtensions, numExtensions, inCallback );
+	if ( retval )
+		retval = &physx::repx::RepXUpgrader::upgradeCollection( *retval );
+	return retval;
 }
 
-UserStream::~UserStream()
-{
-	if (fpr)
-		fclose(fpr);
+//////////////////////////////////////////////////////////////////////////
 
+PhysxUserFileReadStream::PhysxUserFileReadStream(const char* filename) : 
+fpr(NULL)
+{
+	fpr = r3d_open(filename, "rb");
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+PhysxUserFileReadStream::~PhysxUserFileReadStream()
+{
+	if(fpr)  fclose(fpr);
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+PxU32 PhysxUserFileReadStream::read(void* buffer, PxU32 size)
+{
+	size_t w = fread(buffer, size, 1, fpr);
+	PX_ASSERT(w);
+	return w;
+}
+
+//-------------------------------------------------------------------------
+//	PhysxUserMemoryReadStream
+//-------------------------------------------------------------------------
+
+PhysxUserMemoryWriteStream::PhysxUserMemoryWriteStream()
+: mData(0)
+, mSize(0)
+, mCapacity(0)
+{
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+PhysxUserMemoryWriteStream::~PhysxUserMemoryWriteStream()
+{
+	delete[] mData;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+PxU32 PhysxUserMemoryWriteStream::write(const void* src, PxU32 size)
+{
+	PxU32 expectedSize = mSize + size;
+	if(expectedSize > mCapacity)
+	{
+		mCapacity = expectedSize + 4096;
+
+		PxU8* newData = new PxU8[mCapacity];
+		PX_ASSERT(newData!=NULL);
+
+		if(newData)
+		{
+			memcpy(newData, mData, mSize);
+			delete[] mData;
+		}
+		mData = newData;
+	}
+	memcpy(mData+mSize, src, size);
+	mSize += size;
+	return size;
+}
+
+//-------------------------------------------------------------------------
+//	PhysxUserFileWriteStream
+//-------------------------------------------------------------------------
+
+PhysxUserFileWriteStream::PhysxUserFileWriteStream(const char *fileName)
+: fpw(0)
+{
+	fpw = fopen_for_write(fileName, "wb");
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+PhysxUserFileWriteStream::~PhysxUserFileWriteStream()
+{
 	if (fpw)
 		fclose(fpw);
 }
 
-PxU32 UserStream::read(void* dest, PxU32 count)
-{
-	if (!fpr || !dest || count == 0)
-		return 0;
+//////////////////////////////////////////////////////////////////////////
 
-	return (PxU32)fread(dest, 1, count, fpr);
+PxU32 PhysxUserFileWriteStream::write(const void* src, PxU32 count)
+{
+	PxU32 cnt = fwrite(src, count, 1, fpw);
+	return cnt;
 }
 
-PxU32 UserStream::write(const void* src, PxU32 count)
-{
-	if (!fpw || !src || count == 0)
-		return 0;
+//-------------------------------------------------------------------------
+//	PhysxUserMemoryWriteStream
+//-------------------------------------------------------------------------
 
-	return (PxU32)fwrite(src, 1, count, fpw);
-}
-
-PxU32 UserStream::getLength() const
-{
-	if (!fpr)
-		return 0;
-
-	return (PxU32)fpr->size;
-}
-
-void UserStream::seek(PxU32 offset)
-{
-	if (fpr)
-		fseek(fpr, offset, SEEK_SET);
-}
-
-PxU32 UserStream::tell() const
-{
-	if (!fpr)
-		return 0;
-
-	return (PxU32)ftell(fpr);
-}
-
-MemoryWriteBuffer::MemoryWriteBuffer()
-: currentSize(0)
-, maxSize(0)
-, data(NULL)
+PhysxUserMemoryReadStream::PhysxUserMemoryReadStream(PxU8* data, PxU32 length)
+: mSize(length)
+, mData(data)
+, mPos(0)
 {
 }
 
-MemoryWriteBuffer::~MemoryWriteBuffer()
+//////////////////////////////////////////////////////////////////////////
+
+PxU32 PhysxUserMemoryReadStream::read(void* dest, PxU32 count)
 {
-	delete[] data;
+	PxU32 length = PxMin<PxU32>(count, mSize - mPos);
+	memcpy(dest, mData + mPos, length);
+	mPos += length;
+	return length;
 }
 
-void MemoryWriteBuffer::clear()
+//////////////////////////////////////////////////////////////////////////
+
+PxU32 PhysxUserMemoryReadStream::getLength() const
 {
-	currentSize = 0;
+	return mSize;
 }
 
-PxU32 MemoryWriteBuffer::write(const void* src, PxU32 count)
+//////////////////////////////////////////////////////////////////////////
+
+void PhysxUserMemoryReadStream::seek(PxU32 offset)
 {
-	if (!src || count == 0)
-		return 0;
-
-	const PxU32 expectedSize = currentSize + count;
-
-	if (expectedSize > maxSize)
-	{
-		maxSize = expectedSize + 4096;
-
-		PxU8* newData = new PxU8[maxSize];
-		PX_ASSERT(newData);
-
-		if (data)
-		{
-			memcpy(newData, data, currentSize);
-			delete[] data;
-		}
-
-		data = newData;
-	}
-
-	memcpy(data + currentSize, src, count);
-	currentSize += count;
-
-	return count;
+	mPos = PxMin<PxU32>(mSize, offset);
 }
 
-MemoryReadBuffer::MemoryReadBuffer(const PxU8* sourceData, PxU32 sourceLength)
-: buffer(sourceData)
-, size(sourceLength)
-, pos(0)
+//////////////////////////////////////////////////////////////////////////
+
+PxU32 PhysxUserMemoryReadStream::tell() const
 {
-}
-
-MemoryReadBuffer::~MemoryReadBuffer()
-{
-}
-
-PxU32 MemoryReadBuffer::read(void* dest, PxU32 count)
-{
-	if (!dest || !buffer || count == 0)
-		return 0;
-
-	if (pos + count > size)
-		count = size - pos;
-
-	memcpy(dest, buffer + pos, count);
-	pos += count;
-
-	return count;
-}
-
-PxU32 MemoryReadBuffer::getLength() const
-{
-	return size;
-}
-
-void MemoryReadBuffer::seek(PxU32 offset)
-{
-	pos = R3D_MIN(offset, size);
-}
-
-PxU32 MemoryReadBuffer::tell() const
-{
-	return pos;
-}
-
-FileSerialStream::FileSerialStream(const char* fileName)
-: writtenBytes(0)
-, f(fopen_for_write(fileName, "wb"))
-{
-}
-
-FileSerialStream::~FileSerialStream()
-{
-	if (f)
-		fclose(f);
-}
-
-PxU32 FileSerialStream::write(const void* src, PxU32 count)
-{
-	if (!f || !src || count == 0)
-		return 0;
-
-	PxU32 written = (PxU32)fwrite(src, 1, count, f);
-	writtenBytes += written;
-
-	return written;
-}
-
-PxU32 FileSerialStream::getTotalStoredSize() const
-{
-	return writtenBytes;
+	return mPos;
 }

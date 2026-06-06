@@ -1,7 +1,7 @@
 #ifndef SAMPLE_PLATFORM_H
 #define SAMPLE_PLATFORM_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,77 +38,123 @@
 #include <RendererWindow.h>
 #include <RendererTexture2D.h>
 
-class SampleApplication;
-
-class SamplePlatform 
+namespace SampleFramework
 {
-protected:
-	RendererWindow*						m_app;
-	SampleApplication*					m_sf_app;
-	static SamplePlatform*				m_platform;
-public:
-	// access
-	static SamplePlatform*				platform();
-	static void							setPlatform(SamplePlatform*);
-	// creation
-	explicit							SamplePlatform(RendererWindow* _app);
-	virtual								~SamplePlatform() = 0;
-	// System
-	virtual void						setCWDToEXE(void);
-	virtual void						popPathSpec(char *path);
-	virtual bool						openWindow(physx::pubfnd2::PxU32& width, 
-													physx::pubfnd2::PxU32& height,
-													const char* title,
-													bool fullscreen);
-	virtual void						update();
-	virtual bool						closeWindow();
-	virtual bool						hasFocus() const;
-	virtual void						setFocus(bool b);
-	virtual bool						isOpen();
-	virtual physx::pubfnd2::PxU64		getWindowHandle();
-	virtual void						setWindowSize(physx::pubfnd2::PxU32 width, 
-														physx::pubfnd2::PxU32 height);
-	virtual void						getWindowSize(physx::pubfnd2::PxU32& width, physx::pubfnd2::PxU32& height);
-	virtual void						getTitle(char *title, physx::pubfnd2::PxU32 maxLength) const;
-	virtual void						setTitle(const char *title);
-	virtual void						recenterCursor(physx::pubfnd2::PxReal& deltaMouseX, 
-														physx::pubfnd2::PxReal& deltaMouseY);
-	virtual void						showMessage(const char* title, const char* message);
-	virtual void*						compileProgram(void * context, 
-														const char *programPath, 
-														physx::pubfnd2::PxU64 profile, 
-														const char *entry, 
-														const char **args);
-	virtual void*						initializeD3D9();
-	virtual bool						isD3D9ok();
-	// Rendering
-	virtual void						initializeCGRuntimeCompiler();
-	virtual void						initializeOGLDisplay(const RendererDesc& desc,
-															physx::pubfnd2::PxU32& width, 
-															physx::pubfnd2::PxU32& height);
-	virtual physx::pubfnd2::PxU32		initializeD3D9Display(void * presentParameters, 
-															char* m_deviceName, 
-															physx::pubfnd2::PxU32& width, 
-															physx::pubfnd2::PxU32& height,
-															void * m_d3dDevice_out);
-	virtual physx::pubfnd2::PxU32		D3D9Present();
-	virtual void						D3D9BlockUntilNotBusy(void * resource);
-	virtual void						D3D9DeviceBlockUntilIdle();
-	virtual physx::pubfnd2::PxU64		getD3D9TextureFormat(RendererTexture2D::Format format);
-	virtual void						postInitializeOGLDisplay();
-	virtual bool						makeContextCurrent();
-	virtual bool						isContextValid();
-	virtual void						freeDisplay();
-	virtual void						swapBuffers();
-	virtual void						postRendererRelease();
-	virtual void						preRendererSetup();
-	virtual void						postRendererSetup();
-	virtual void						setupRendererDescription(RendererDesc& renDesc);
-	// Input
-	virtual void						doInput();
-	virtual void						processGamepads();
-};
+	class SampleApplication;
+	class SampleUserInput;
 
-SamplePlatform*		createPlatform(RendererWindow* _app);
+	/* This class declares and partly implements platform-abstraction level.
+		Do not use platform-specific types and functions here.
+	*/
+	class SamplePlatform 
+	{
+	protected:
+		SampleRenderer::RendererWindow*		m_app;
+		SampleApplication*					m_sf_app;
+		static SamplePlatform*				m_platform;
+
+	public:
+		// access
+		static SamplePlatform*				platform();
+		static void							setPlatform(SamplePlatform*);
+		SampleApplication*					application();
+
+		// creation
+		explicit							SamplePlatform(SampleRenderer::RendererWindow* _app);
+		virtual								~SamplePlatform() = 0;
+		// System
+		virtual void						showCursor(bool);
+
+		virtual size_t						getCWD(char* path, size_t len);
+		virtual void						setCWDToEXE(void);
+		virtual void						popPathSpec(char *path);
+		virtual bool						preOpenWindow(void * ptr);
+		virtual bool						openWindow(physx::PxU32& width, 
+														physx::PxU32& height,
+														const char* title,
+														bool fullscreen);
+		virtual bool						useWindow(physx::PxU64 hwnd);
+		virtual void						update();
+		virtual bool						closeWindow();
+		virtual bool						updateWindow();
+		virtual bool						hasFocus() const;
+		virtual void						setFocus(bool b);
+		virtual bool						isOpen();
+		virtual physx::PxU64				getWindowHandle();
+		virtual void						setWindowSize(physx::PxU32 width, 
+															physx::PxU32 height);
+		virtual void						getWindowSize(physx::PxU32& width, physx::PxU32& height);
+		virtual void						getTitle(char *title, physx::PxU32 maxLength) const;
+		virtual void						setTitle(const char *title);
+
+		virtual void						setMouseCursorRecentering(bool val) {}
+		virtual bool						getMouseCursorRecentering() const { return false; }
+
+		virtual void						showMessage(const char* title, const char* message);
+		virtual bool						saveBitmap(const char* fileName, 
+														physx::PxU32 width, 
+														physx::PxU32 height, 
+														physx::PxU32 sizeInBytes, 
+														const void* data);
+		virtual void*						compileProgram(void * context, 
+															const char* assetDir, 
+															const char *programPath, 
+															physx::PxU64 profile, 
+															const char* passString, 
+															const char *entry, 
+															const char **args);
+		virtual void*						initializeD3D9();
+		virtual void*						initializeD3D11();
+		virtual bool						isD3D9ok();
+		virtual const char*					getPathSeparator();
+		virtual bool						isD3D11ok();
+		// Rendering
+		virtual void						initializeCGRuntimeCompiler();
+		virtual void						initializeOGLDisplay(const SampleRenderer::RendererDesc& desc,
+																 physx::PxU32& width, 
+																 physx::PxU32& height);
+		virtual physx::PxU32				initializeD3D9Display(void * presentParameters, 
+																char* m_deviceName, 
+																  physx::PxU32& width, 
+																  physx::PxU32& height,
+																void * m_d3dDevice_out);
+		virtual physx::PxU32				initializeD3D11Display(void *dxgiSwapChainDesc, 
+																char *m_deviceName, 
+																   physx::PxU32& width, 
+																   physx::PxU32& height,
+																void *m_d3dDevice_out,
+																void *m_d3dDeviceContext_out,
+																void *m_dxgiSwap_out);
+		virtual physx::PxU32				D3D9Present();
+		virtual void						D3D9BlockUntilNotBusy(void * resource);
+		virtual void						D3D9DeviceBlockUntilIdle();
+		virtual physx::PxU64				getD3D9TextureFormat(SampleRenderer::RendererTexture2D::Format format);
+		virtual physx::PxU32				D3D11Present(bool vsync);
+		virtual physx::PxU64				getD3D11TextureFormat(SampleRenderer::RendererTexture2D::Format format);
+		virtual void						postInitializeOGLDisplay();
+		virtual void						setOGLVsync(bool on);
+		virtual bool						makeContextCurrent();
+		virtual bool						isContextValid();
+		virtual void						freeDisplay();
+		virtual void						swapBuffers();
+		virtual void						postRendererRelease();
+		virtual void						preRendererSetup();
+		virtual void						postRendererSetup(SampleRenderer::Renderer* renderer);
+		virtual void						setupRendererDescription(SampleRenderer::RendererDesc& renDesc);
+		// Input
+		virtual void						doInput();
+
+		virtual void						showSoftInput();
+
+		virtual const SampleUserInput*		getSampleUserInput() const = 0;
+		virtual SampleUserInput*			getSampleUserInput() = 0;
+
+		virtual const char*					getPlatformName() const { return NULL; }
+		// File System
+		virtual bool						makeSureDirectoryPathExists(const char* dirPath);
+	};
+
+	SamplePlatform*		createPlatform(SampleRenderer::RendererWindow* _app);
+}
 
 #endif

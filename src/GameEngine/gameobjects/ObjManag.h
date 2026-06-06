@@ -26,10 +26,13 @@ struct SnapPointResult_t
 
 struct draw_s {
 	GameObject	*obj;
-	float		dist;
+	float		distSq;
 	uint8_t		shadow_slice; // 1,2,3 bit flag
 };
-#define OBJECTMANAGER_MAXOBJECTS 10000
+#define OBJECTMANAGER_MAXOBJECTS 8192
+#define OBJECTMANAGER_MAXSTATICOBJECTS 32768
+
+#define OBJECTMANAGER_STATICBIT 0x80000000
 
 #include "sceneBox.h"
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,6 +40,13 @@ struct draw_s {
 //	>	
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct ObjectIterator
+{
+	GameObject* current;
+	int staticIndex;
+};
+
 class ObjectManagerResourceHelper : public r3dIResource
 {
 public:
@@ -69,15 +79,25 @@ public:
 
 	int				GetFrameId() ;
 
+	r3dSec_type<int, 0x1FDCFDE1> MaxObjects;
+	r3dSec_type<GameObject*, 0x0F9CD8CA> pFirstObject;
+	r3dSec_type<int, 0xFDF1CDDF> NumObjects;
+	r3dSec_type<GameObject*, 0xFF3D8CD2> pLastObject;
+
 	int		bInited;
 
-	r3dSec_type<GameObject*, 0x0F9FD85A> pFirstObject;
-	r3dSec_type<int, 0x1FDC2DE9> MaxObjects;
-	r3dSec_type<GameObject*, 0xF83A8CD2> pLastObject;
-	r3dSec_type<int, 0xF4F1CD3F> NumObjects;
-	r3dSec_type<int, 0xF22EB5C0> CurObjID;
-	r3dSec_type<int, 0xDA4CE36C> LastFreeObject;
-	r3dSec_type<GameObject**, 0x30D6ADFC> pObjectArray;
+	r3dSec_type<int, 0xF2DEB5C0> CurObjID;
+	r3dSec_type<GameObject**, 0x3016FD4C> pObjectArray;
+	r3dSec_type<int, 0x1A4CD36C> LastFreeObject;
+
+	r3dSec_type<int, 0x2FACFEE3> MaxStaticObjects;
+	r3dSec_type<int, 0xFDF1CDDF> NumStaticObjects;
+	r3dSec_type<GameObject**, 0x1DC9A54C> pStaticObjectArray;
+
+	int LastStaticUpdateIdx;
+
+	typedef std::tr1::unordered_map<DWORD, GameObject*> NetMapType;
+	NetMapType NetworkIDMap;
 
 	// prolly no need to protect these - they're unimportant - used for particle
 	// shadow casting only
@@ -94,11 +114,13 @@ public:
 	class BulletShellMngr* m_BulletMngr;
 #endif
 
+	int JustLoaded;
+
   public:
 	ObjectManager();
 	~ObjectManager();
 
-	int	    	Init(int MaxObjects);
+	int	    	Init(int MaxObjects, int MaxStaticObjects);
 	int	    	Destroy();
 	
 	void		OnResetDevice();
@@ -121,6 +143,13 @@ public:
 	GameObject*	GetObjectByHash(uint32_t hash);
 	GameObject*	GetFirstObject();
 	GameObject*	GetNextObject(const GameObject* obj);
+
+	ObjectIterator GetFirstOfAllObjects();
+	ObjectIterator GetNextOfAllObjects( const ObjectIterator& it );
+
+	GameObject* GetStaticObject( int idx );
+	int			GetStaticObjectCount() const;
+
 	GameObject*	GetNetworkObject(DWORD netID);
 
 	void		GetObjectsInCube(const r3dBoundBox& box, GameObject**& result, int& objectsCount);
@@ -145,8 +174,6 @@ public:
 	void		DrawIntermediate( eRenderStageID DrawState );
 
 	void		ResetObjFlags();
-
-	void		FlushInstancedMeshes(eRenderStageID DrawState);
 
 	GameObject*	CastRay(const r3dPoint3D& pos, const r3dPoint3D& vRay, float RayLen, CollisionInfo *cInfo, int bboxonly = false);
 	GameObject*	CastMeshRay(const r3dPoint3D& pos, const r3dPoint3D& vRay, float RayLen, CollisionInfo *cInfo);
@@ -189,7 +216,5 @@ extern	GameObject*	srv_CreateGameObject(const char* class_name, const char* load
 
 bool		DoesShadowCullNeedRecalc() ;
 void		PrecalculateWorldMatrices(void* Data, size_t ItemStart, size_t ItemCount);
-
-extern void (*gInstance_Compute_Visibility) ( bool shadows, bool directionalSM );
 
 #endif	//__PWAR_OBJMANAG_H

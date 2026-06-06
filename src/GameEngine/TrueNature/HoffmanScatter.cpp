@@ -21,12 +21,12 @@ void r3dSetVshC( HoffmanScatter::VSConst iReg, const r3dPoint3D& v, float f4)
   f[1] = v.Y;
   f[2] = v.z;
   f[3] = f4;
-  r3dRenderer->SetVertexShaderConstantF(iReg, (const float *)&f[0], 1);
+  r3dRenderer->pd3ddev->SetVertexShaderConstantF(iReg, (const float *)&f[0], 1);
 }
 
 void r3dSetVshC( HoffmanScatter::VSConst iReg, const D3DXVECTOR4& v)
 {
-  r3dRenderer->SetVertexShaderConstantF(iReg, (const float *)&v, 1);
+  r3dRenderer->pd3ddev->SetVertexShaderConstantF(iReg, (const float *)&v, 1);
 }
 
 void r3dSetPshC( HoffmanScatter::PSConst iReg, const r3dPoint3D& v, float f4)
@@ -36,12 +36,12 @@ void r3dSetPshC( HoffmanScatter::PSConst iReg, const r3dPoint3D& v, float f4)
   f[1] = v.Y;
   f[2] = v.z;
   f[3] = f4;
-  r3dRenderer->SetPixelShaderConstantF(iReg, (const float *)&f[0], 1);
+  r3dRenderer->pd3ddev->SetPixelShaderConstantF(iReg, (const float *)&f[0], 1);
 }
 
 void r3dSetPshC( HoffmanScatter::PSConst iReg, const D3DXVECTOR4& v)
 {
-  r3dRenderer->SetPixelShaderConstantF(iReg, (const float *)&v, 1);
+  r3dRenderer->pd3ddev->SetPixelShaderConstantF(iReg, (const float *)&v, 1);
 }
 
 
@@ -132,6 +132,8 @@ HoffmanScatter::HoffmanScatter()
     r3dPoint3D vBetaMieTemp( K[0] * fLambda2[0], K[1] * fLambda2[1], K[2] * fLambda2[2] );
 
     m_betaMie = fTemp3 * vBetaMieTemp;
+
+	m_fSkyIntensity = 1.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -252,7 +254,8 @@ void HoffmanScatter::renderSkyLight( const r3dCamera& a_camera
 								   , r3dPoint2D tCloudsDim
 								   , bool normals
 								   , float mie
-								   , float amplify
+								   , float angle
+								   , float angle_range
 								   , bool setShaders
 								   )
 {
@@ -260,21 +263,23 @@ void HoffmanScatter::renderSkyLight( const r3dCamera& a_camera
 
 	r3dPoint3D vecZenith( 0.0f, 1.0f, 0.0f );
 
-	float   fThetaS = a_sunDirection.Dot(vecZenith);
-            fThetaS = acosf( fThetaS );
+	float   fThetaO = a_sunDirection.Dot(vecZenith);
+			fThetaO = acosf( fThetaO );
+
+	float   fThetaS = fabs( ( angle + ( angle_range - 180.f ) * 0.5f ) / angle_range - 0.5f ) * float( M_PI ) ;
 
 	static float fOldTheta = -fThetaS;
 
 	if(fOldTheta != fThetaS || g_bSkyDomeNeedFullUpdate)
 	{
-		computeAttenuation(fThetaS);
+		computeAttenuation(fThetaS, angle_range);
 		fOldTheta = fThetaS;
 	}
 	
 
 	// Set shader constants
 
-	setShaderConstants( a_camera, a_sunDirection, tFog_CloudAnim_Params, fogColor, tCloudsDim, mie, amplify );
+	setShaderConstants( a_camera, a_sunDirection, tFog_CloudAnim_Params, fogColor, tCloudsDim, mie, m_fSkyIntensity );
 
 	// Enable programs
 
@@ -315,20 +320,18 @@ void HoffmanScatter::renderAerialPerspective( const r3dCamera& a_camera
                                             , r3dColor fogColor
 											, r3dPoint2D tCloudsDim
 											, float mie
-											, float amplify
+											, float angle
+											, float angle_range
 											)
 {
     // Compute thetaS dependencies
 
-    r3dPoint3D vecZenith( 0.0f, 1.0f, 0.0f );
+	float   fThetaS = fabs( ( angle + ( angle_range - 180.f ) * 0.5f ) / angle_range - 0.5f ) * float( M_PI ) ;
 
-    float   fThetaS = a_sunDirection.Dot(vecZenith);
-            fThetaS = acosf( fThetaS );
-
-    computeAttenuation( fThetaS );
+    computeAttenuation( fThetaS, angle_range );
 
     // Set shader constants
-    setShaderConstants( a_camera, a_sunDirection, tFog_CloudAnim_Params, fogColor, tCloudsDim, mie, amplify );
+    setShaderConstants( a_camera, a_sunDirection, tFog_CloudAnim_Params, fogColor, tCloudsDim, mie, m_fSkyIntensity );
 
     r3dSetPshC(PSC_LightVector, a_sunDirection);
 }
@@ -345,11 +348,11 @@ void HoffmanScatter::renderAerialPerspective( const r3dCamera& a_camera
 //-----------------------------------------------------------------------------
 //  computeAttenuation
 //-----------------------------------------------------------------------------
-void HoffmanScatter::computeAttenuation( const float a_theta )
+void HoffmanScatter::computeAttenuation( const float a_theta, float angle_range )
 {
     float fBeta = 0.04608365822050f * m_turbitity - 0.04586025928522f;
     float fTauR, fTauA, fTau[3];
-    float m = 1.0f / (cosf( a_theta ) + 0.15f * powf( 93.885f - a_theta / R3D_PI * 180.0f, -1.253f ));  // Relative Optical Mass
+    float m = 1.0f / (cosf( a_theta ) + 0.15f * powf( 93.885f - a_theta / angle_range * 180.f / R3D_PI * 180.0f, -1.253f ));  // Relative Optical Mass
 
 	//float fLambda[3] = {0.65f, 0.57f, 0.475f }; 
 	

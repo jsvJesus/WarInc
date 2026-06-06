@@ -538,8 +538,6 @@ enum ResizeImageType
     ResizeGray          // 8-bit gray scale
 };
 
-typedef ResizeImageType ImageRescaleType;
-
 
 void SF_STDCALL ResizeImageBox(UByte* pDst, 
                                int dstWidth, int dstHeight, int dstPitch,

@@ -20,7 +20,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Kernel/SF_Random.h"
 
 #include "Render/GL/GLES11_HAL.h"
-#include "Render/Render_TextureCacheGeneric.h"
 
 namespace Scaleform { namespace Render { namespace GL {
 
@@ -51,9 +50,6 @@ bool HAL::InitHAL(const GL::HALInitParams& params)
     // Clear the error stack.
     glGetError();
 
-    if (!initHAL(params))
-        return false;
-
     int stencilBits, depthBits;
     glGetIntegerv(GL_STENCIL_BITS, &stencilBits);
     glGetIntegerv(GL_DEPTH_BITS, &depthBits);
@@ -68,12 +64,11 @@ bool HAL::InitHAL(const GL::HALInitParams& params)
         SF_DEBUG_WARNING(true, "GLES 1.1 hardware is reporting that it supports stencil, please double-check.");
     }
     
+    Render::HAL::initHAL(params);
+
     pTextureManager = params.GetTextureManager();
     if (!pTextureManager)
-    {
-        Ptr<TextureCacheGeneric> texCache = *SF_HEAP_AUTO_NEW(this) TextureCacheGeneric();
-        pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(params.RenderThreadId, pRTCommandQueue, texCache);
-    }
+        pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(params.RenderThreadId, pRTCommandQueue);
 
     pTextureManager->Initialize(this);
 
@@ -116,8 +111,7 @@ bool HAL::ShutdownHAL()
     if (!(HALState & HS_ModeSet))
         return true;
 
-    if (!shutdownHAL())
-        return false;
+    Render::HAL::shutdownHAL();
 
     // Destroy the dummy texture.
     glDeleteTextures(1, &DummyTextureID);
@@ -270,6 +264,28 @@ void HAL::GetHWViewMatrix(Matrix* pmatrix, const Viewport& vp)
     int        dx =0, dy =0;
     vp.GetClippedRect(&viewRect, &dx, &dy);
     CalcHWViewMatrix(vp.Flags, pmatrix, viewRect, dx, dy);
+}
+
+void HAL::CalcHWViewMatrix(unsigned VPFlags, Matrix* pmatrix, const Rect<int>& viewRect, int dx, int dy)
+{
+    float       vpWidth = (float)viewRect.Width();
+    float       vpHeight= (float)viewRect.Height();
+
+    pmatrix->SetIdentity();
+    if (VPFlags & Viewport::View_IsRenderTexture)
+    {
+        pmatrix->Sx() = 2.0f  / vpWidth;
+        pmatrix->Sy() = 2.0f /  vpHeight;
+        pmatrix->Tx() = -1.0f - pmatrix->Sx() * ((float)dx); 
+        pmatrix->Ty() = -1.0f - pmatrix->Sy() * ((float)dy);
+    }
+    else
+    {
+        pmatrix->Sx() = 2.0f  / vpWidth;
+        pmatrix->Sy() = -2.0f / vpHeight;
+        pmatrix->Tx() = -1.0f - pmatrix->Sx() * ((float)dx); 
+        pmatrix->Ty() = 1.0f  - pmatrix->Sy() * ((float)dy);
+    }
 }
 
 void   HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
@@ -484,6 +500,11 @@ bool HAL::SetVertexArray( PrimitiveFillType fillType, const VertexFormat* pForma
     }
 
     return true;
+}
+
+PrimitiveFill*  HAL::CreatePrimitiveFill(const PrimitiveFillData &data)
+{
+    return SF_HEAP_NEW(pHeap) PrimitiveFill(data);
 }
 
 // Draws a range of pre-cached and preprocessed primitives
@@ -1036,6 +1057,14 @@ void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
 
 void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
 {    
+    static const UInt32 BlendOps[BlendOp_Count] = 
+    {
+        GL_FUNC_ADD,                // BlendOp_ADD
+        GL_MAX,                     // BlendOp_MAX
+        GL_MIN,                     // BlendOp_MIN
+        GL_FUNC_REVERSE_SUBTRACT,   // BlendOp_REVSUBTRACT
+    };
+
     static const UInt32 BlendFactors[BlendFactor_Count] = 
     {
         GL_ZERO,                // BlendFactor_ZERO
@@ -1043,7 +1072,6 @@ void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
         GL_SRC_ALPHA,           // BlendFactor_SRCALPHA
         GL_ONE_MINUS_SRC_ALPHA, // BlendFactor_INVSRCALPHA
         GL_DST_COLOR,           // BlendFactor_DESTCOLOR
-        GL_ONE_MINUS_DST_COLOR, // BlendFactor_INVDESTCOLOR
     };
 
     GLenum sourceColor = BlendFactors[BlendModeTable[mode].SourceColor];
@@ -2004,22 +2032,6 @@ void HAL::DisableExtraStages(unsigned stage)
         }
     }
 }
-    
-bool HAL::CheckExtension(const char *name)
-{
-    if (Extensions.IsEmpty())
-    {
-        Extensions = (const char *) glGetString(GL_EXTENSIONS);
-        // Add space, just so we know it is initialized.
-        Extensions += " ";
-    }
-    
-    if (name == 0)
-        return false;
-    const char *p = strstr(Extensions.ToCStr(), name);
-    return (p && (p[strlen(name)] == 0 || p[strlen(name)] == ' '));
-}
-
 
 void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
 {

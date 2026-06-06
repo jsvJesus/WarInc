@@ -16,12 +16,12 @@ class CUberEquip;
 class CUberAnim;
 class obj_Vehicle;
 
-class obj_AI_Player : public GameObject
+class obj_Player : public GameObject
 {
 public:
-	DECLARE_CLASS(obj_AI_Player, GameObject)
+	DECLARE_CLASS(obj_Player, GameObject)
 
-	obj_AI_Player();
+	obj_Player();
 
 	enum AuraType
 	{
@@ -33,30 +33,13 @@ public:
 		AT_COUNT
 	} m_AuraType ;
 
-	float	m_BerserkerTime;
-	Scaleform::GFx::Value m_CommRoseIcon;
-	Scaleform::GFx::Value m_MarkedTargetIcon;
-	Scaleform::GFx::Value m_PingTeamIcon;
-	Scaleform::GFx::Value m_WoundedTeamIcon;
-	Scaleform::GFx::Value m_SpawnProtectIcon;
-	Scaleform::GFx::Value m_MedicTeamIcon;
-	Scaleform::GFx::Value m_TagIcon;
 	char				m_MinimapTagIconName[64]; // temp, to be optimized soon
-	bool				m_onMinimap; // temp
-	float	m_commRoseTimer;
-	float	m_SpawnProtectedUntil;
-	float   m_pingIconTimer;
-	float	m_bombDropCooldown;
-	float	m_targetIconTime;
-	float	m_localTargetIconTime; // we need this to know if you can retag the player. 
-#define MAX_UAV_TARGETS 4
-	gobjid_t m_localPlayer_lastUAVTarget[MAX_UAV_TARGETS];
-
-	int		m_Loaded ;
 
 	float   CurrentSpread;
 
-	bool	isPremiumAccount;
+	int	PhysXObstacleIndex;
+
+	DWORD	CustomerID;
 	r3dSec_string<64, 0xF7>	m_EncryptedUserName; // utf8 string so use it carefully. Encrypted to make life more difficult for haxorz :)
 	// encrypted user name
 	void		GetUserName(char* out) const {
@@ -81,7 +64,7 @@ public:
 			default:
 				break;
 			}
-			sprintf(out, "<font color='%s'>[%s]</font>%s", tagColor, ClanTag, tmpUsername);
+			sprintf(out, "<font color='%s'>[%s]</font> %s", tagColor, ClanTag, tmpUsername);
 			return;
 		}
 		else
@@ -91,69 +74,34 @@ public:
 	int		ClanTagColor;
 	char		ClanTag[5*2];
 
-	int		LoadoutSlot;
-	wiLoadoutSlot	CurLoadout;
-	wiWeaponAttachments CurWeaponAttachments;
+	Scaleform::GFx::Value m_CharIcon;
+
+	wiCharDataFull	CurLoadout;
 	float		m_GearWeight;
-
-    // boosts
-	bool		m_haveBoostStamina;
-
-	r3dSec_type<int, 0x21C3DFCA> TeamID;			// Virtual team id used for markings, 0 - blue, 1-red
-
-	// minimap
-	bool	m_visibleOnMinimap;
+	void		OnBackpackChanged(int idx);
 
 	bool	m_enableRendering;
 
-	// siege
-	float	m_siegeArmingTimer;
-
-	bool shownWeaponPickup;
-#if ENABLE_ZOMBIES
 	PlayerLifeProps lifeProperties;
-#endif // ENABLE_ZOMBIES
-
-	void setHasSabotageBomb(bool set);
-	bool hasSabotageBomb() const { return m_hasBomb; }
+	float			showSlotsInfoTimer;
 
 private:
 	bool	m_ItemSimulateLeftClick;
-	bool	m_hasBomb;
-	float	m_fVisibleTimer; // timer for how long player is visible on minimap
 	/**	Memorize bounding box, when switch to ragdoll. We will restore it after switching back. */
 	r3dBoundBox m_OrigBBox;
 
 public:
-	void	setMinimapVisibleTimer(float time, bool force);
-
-	// color correction texture, only for local player
-	static r3dTexture* s_damageHitColorCorrectionTex;
 	static r3dTexture* s_laserPointerTex;
 	static r3dTexture* s_flashlightFlashTex;
 	static r3dTexture* s_laserFlashTex;
 	static r3dTexture* s_lightHaloTex;
-	static float s_damageHitColorCorrectionVal;
 
-	// for UAV view
-	static r3dTexture* s_UAVFriendlyBlinkTex;
-
-	uint32_t		m_needToDrawRiotShieldPlacement; // itemID of what shield to draw
-	r3dMesh*		m_RiotShieldMeshPlacement; // mesh to render when you are placing shield, not sure how to implement that better rather than having pointer to mesh directly
-	r3dMesh*		m_RiotPersonalShieldMeshPlacement;
-	bool			m_spawnedRiotShield;
-
-	uint32_t		m_needToDrawAutoTurretPlacement; // itemID of turret
-	r3dMesh*		m_AutoTurretMeshPlacement; 
-	bool			m_spawnedAutoTurret;
-
-	uint32_t		m_needToDrawRespawnBeaconPlacement; // itemID of turret
-	r3dMesh*		m_RespawnBeaconMeshPlacement; 
+	uint32_t		m_needToDrawBarricadePlacement; // itemID of what shield to draw
+	r3dMesh*		m_BarricadeMeshPlacement; // mesh to render when you are placing shield, not sure how to implement that better rather than having pointer to mesh directly
 
 	// shared for all placeable items
 	PrecalculatedMeshVSConsts	m_ConsumableItemPlacementMeshVSConsts;
 	bool			m_canPlaceConsumableItem;
-
 
 	class r3dPhysSkeleton* m_PhysSkeleton;
 	bool m_disablePhysSkeleton; // for character in frontend and respawn
@@ -166,22 +114,29 @@ public:
 	int		PlayerState;	// player state as Playerstate_e
 	int		PlayerMoveDir;	// movement direction as CUberData::EAnimDir
 
-	void UpdateLoadoutSlot(const struct wiLoadoutSlot& slot, const struct wiWeaponAttachments& attms, bool canBeWithoutWeapon = false); // updates meshes from loadout slot
-	void   UpdateLoadoutWeaponAttachments(const struct wiWeaponAttachments& attms);
+	void UpdateLoadoutSlot(const struct wiCharDataFull& slot); // updates meshes from loadout slot
+	void RemoveWpnAttm(int wid, int attmType); // also used to equip default attm
+	void EquipWpnAttm(int wid, int backpackSlot);
+	bool ChangeBackpack(int slotfrom);
+	void DropItem(int slotFrom);
+	void loadHeroMeshes(const class HeroConfig* heroConfig);
 
 	void updateWeaponUI();
 
 	float	grenadeReadyTime;
+
+	void switchFPS_TPS();
+	void switchToEmptyHands();
+	bool forcedEmptyHands;
 
 	void		SyncAnimation(bool force = false);
 	void		UpdateAnimations(const D3DXMATRIX& CharDrawMatrix);
 
 	r3dPoint3D	GetHeadPosition();
 
-	Weapon*		m_Weapons[NUM_WEAPONS_ON_PLAYER]; // 0,1,2 - rifles. 3-item, 4-item, 5-item, 6-item
+	Weapon*		m_Weapons[NUM_WEAPONS_ON_PLAYER]; // 0,1 - rifles. 2-item, 3-item, 4-item, 5-item
 	int		m_SelectedWeapon;
 	int		m_PrevSelectedWeapon;
-	int		m_QuickThrowGrenade;
 	bool		hasScopeMode() const;
 	bool		hasScopeMode_hidePlayerModel() const;
 	bool		m_isPressedFireTrigger;
@@ -192,6 +147,7 @@ public:
 
 	bool		ChangeWeaponByIndex(int index);
 	void		UpdateCharWeaponMeshes();
+	void		ReloadWeaponFromSlot(int wpnSlot, int ammoSlot, int amount);
 
 	static void AddBloodOnGround(const r3dPoint3D& posOfShot); // will cast a ray down from posOfShot
 	float		m_BloodTimer;
@@ -201,47 +157,20 @@ public:
 	r3dTexture*	m_HitMarkerTex; // only for local player
 
 
-	// UAV
-	bool		uavViewActive_;
-	int		uavRequested_;
-	gobjid_t	uavId_;
-	void		ProcessSpawnUAV();
-	bool		 GetUAVSpawnPos(r3dPoint3D* pos);
-	void		ToggleUAVView(bool force_disable=false);
-
-	bool		laserViewActive_;
-	void		ToggleLaserView(bool force_disable=false);
-
 	// local stats for scoreboard
 	struct stats_s
 	{
-		int		Score;
+		int		XP;
 		int		GD;
-		int		Kills;
-		int		Deaths;
-
-		// for kill tag (passed from server - total player stats)
-		int		TotalScore;
-		int		Wins;
-		int		Loss;
 
 		stats_s() 
 		{
-			Score = 0;
+			XP = 0;
 			GD = 0;
-			Kills  = 0;
-			Deaths = 0;
-			TotalScore = 0;
-			Wins = 0;
-			Loss = 0;
 		}
 	};
 	stats_s		GameStats;
-	int			numLootBoxesPickedup;
-	int			numBombsPlanted;
-	int			numBombsDiffused;
-	int			numSaboRoundsWon;
-	
+
 	// queue of local player added rewards
 	std::vector<PKT_S2C_AddScore_s> rewards_;
 	float		lastRewardShowTime_;
@@ -256,8 +185,6 @@ public:
 	int		boneId_Bip01_LUpperArm;
 	int		boneId_Bip01_RUpperArm;
 	int		boneId_Bip01_Head;
-
-	r3dSec_type<float, 0x1515CD3A>	m_Health;
 
 	int		boneId_Bip01_R_Hand;
 	int		boneId_Bip01_L_Hand;
@@ -283,41 +210,37 @@ public:
 	float		Height;
 	float		getPlayerHeightForCamera() const;
 
-	float		getMaxHealth(); // return max possible health (affected by skills)
-
-	// spring energy vars
-	r3dSec_type<float, 0x3786FA41> m_Energy;
-	r3dSec_type<float, 0x56DDB60C> m_EnergyPenaltyTime;
+	// sprint energy vars
+	float m_Stamina;
+	float m_StaminaPenaltyTime;
 	float		getMaxStamina();
 
 	// sniper & breath vars
-	//r3dSec_type<float, 0xA88B28F5> m_BreathPenaltyTime;
 	r3dVector SniperViewMod; // to simulate rifle movement when trying to snipe
-	r3dSec_type<float, 0x061F2DC8> m_Breath;
 	float		getMaxBreath();
 	bool		m_isHoldingBreath;
+	r3dSec_type<float, 0x561F2DC8> m_Breath;
 
-	float		getMinimapDetectionRadius();
-	float		getMinimapDetectionFireRadius();
 	float		lastDamageRcvd;
 	float		lastTimeHit;
-	float		lastTimeHit_OldHealth;
 	int		lastTimeHitBone;
 	r3dPoint3D	lastTimeHitForce;
 	void		ApplyDamage(const r3dPoint3D& dmgPos, float damage, GameObject* fromObj, int bodyBone, int dmgType);
 	float		BloodEffect; // timer
-	int		bDead;
+	int			bDead;
 	float		TimeOfDeath; // for animations after dying
 	STORE_CATEGORIES DeathDamageSource;
 	r3dPoint3D	PosOfDeath;
 	float		TimeOfLastRespawn;
-	int		Dead_KillerID; // killer ID of a person who killed you
+	int			Dead_KillerID; // killer ID of a person who killed you
 	bool		DisableKillerView; // if user clicks on a mouse, show respawn right away
 	bool		bCrouch;
+	bool		bProne;
 
 	// jump stuff
 	void		DetectIfOnGround();
 	bool		bOnGround; // true if player is touching any geometry
+	float		fHeightAboveGround;
 	void		StartJump();
 	bool		IsJumpActive();
 	float		JumpVelocity;
@@ -325,14 +248,14 @@ public:
 	float		StartFallingHeight;
 	float		StartFallingTime;
 
+	r3dSec_type<float,		0x5Fc3cdAa>	RecoilCooldown;
+
 	r3dVector RecoilViewMod; // adds recoil to ViewAngle
 	float		m_LastKillTime;
 	r3dVector RecoilViewModTarget;
 	r3dVector RecoilViewModTarget2; // used for when you are being shot
 
 	r3dVector ViewAngle;		// mouse controlled view angle, in degrees. 
-	int		m_KillStreak; // how many kills within certain time
-	r3dSec_type<float,		0x5Fc4c6Aa>	RecoilCooldown;
 	r3dPoint3D RealAcceleration; // actual player speed, after weight mod, jump, gravity, etc
 	r3dPoint3D InputAcceleration; // that is the desired accel based on what buttons player pressed
 	float m_RemainingSecondWindTime;  // for the second wind Ability
@@ -341,6 +264,7 @@ public:
 
 	D3DXMATRIX 	DrawRotMatrix;	// character rotation matrix
 	D3DXMATRIX 	DrawFullMatrix;
+	D3DXMATRIX 	DrawFullMatrix_Localized;
 
 	D3DXMATRIX	MoveMatrix;
 	r3dVector	GetvForw() const { return r3dVector(MoveMatrix._31, MoveMatrix._32, MoveMatrix._33); }
@@ -380,7 +304,6 @@ public:
 	r3dPoint3D	GetMuzzlerPosition();
 
 	void		DoDeath(int networdIDKiller, bool forced_by_server, STORE_CATEGORIES damageSource); // not passing the actual pointer, to make sure that we will not later access dead pointer, in case if killer left the game
-	void		DoRespawn(int newTeamId, int slotNum, const wiLoadoutSlot& lslot, const wiWeaponAttachments& attms, const r3dPoint3D& pos, float dir, float spawnProtection);
 	void		Undie();
 	void		DoRagdoll(bool toRagdoll, int boneId = 0, const r3dPoint3D* impulse = NULL);
 
@@ -388,20 +311,17 @@ public:
 	void		DrawReticle();
 	float		m_ReticleTargetScale;
 	float		m_ReticleCurrentScale;
+
+	bool		m_isFemaleHero;
 public:
 
 	virtual	BOOL		Load(const char *name);
-	virtual	BOOL		OnCreate();			// ObjMan: called before objman take control of this object
-	virtual	BOOL		OnDestroy();			// ObjMan: just before destructor called
+	virtual	BOOL		OnCreate();			
+	virtual	BOOL		OnDestroy();		
 
-	//virtual	void 		SetPosition(const r3dPoint3D& pos);
-
-	virtual	BOOL		Update();			// ObjMan: tick update
-
-	bool isWeaponGrenadeOutofAmmo( int weaponIndex );
+	virtual	BOOL		Update();			
 
 	void				UpdateLocalPlayerMovement();
-	void				UpdateLoaded() ;
 
 	virtual void		AppendShadowRenderables( RenderArray & rarr, const r3dCamera& Cam ) OVERRIDE;
 	virtual void		AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )  OVERRIDE;
@@ -412,18 +332,39 @@ public:
 	void			 OnNetPacket(const PKT_C2C_MoveRel_s& n);
 	void			 OnNetPacket(const PKT_C2C_PlayerJump_s& n);
 	void			 OnNetPacket(const PKT_S2C_AddScore_s& n);
+	void			 OnNetPacket(const PKT_S2C_SetPlayerVitals_s& n);
+	void			 OnNetPacket(const PKT_S2C_SetPlayerLoadout_s& n);
+	void			 OnNetPacket(const PKT_S2C_SetPlayerAttachments_s& n);
+	void			 OnNetPacket(const PKT_S2C_SetPlayerWorldFlags_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerSwitchWeapon_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerReadyGrenade_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerThrewGrenade_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerReload_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerFired_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerHitNothing_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerHitStatic_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerHitStaticPierced_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerHitDynamic_s& n);
+	void			 OnNetPacket(const PKT_S2C_SpawnExplosion_s& n);
+	void			 OnNetPacket(const PKT_C2C_PlayerUseItem_s& n);
+	void			 OnNetPacket(const PKT_S2C_PlayerUsedItemAns_s& n);
+	void			 OnNetPacket(const PKT_S2C_BackpackAddNew_s& n);
+	void			 OnNetPacket(const PKT_S2C_BackpackModify_s& n);
+	void			 OnNetPacket(const PKT_S2C_SetPlayerReputation_s& n);
 
 	virtual void		UpdateTransform();
 
 	void		stopFootstepsSound();
-	void		SetTransparentCamouflage(float alpha);
 
+	bool		bAllowToUseWeapons;
 	void		CheckFireWeapon();
-	bool		IsPlantingMine();
 	float		GetGrenadeLaunchDelay();
+	void		GrenadeCallbackFromWeapon(const wiInventoryItem& wi);
 
 	void		OnGameEnded();
 	BYTE		getBodyNameFromBoneName(const char* boneName);
+
+	void		localPlayer_UseItem(int slotID, uint32_t itemID, const r3dPoint3D& pos, float var1=0.0f, float var2=0.0f, float var3=0.0f, DWORD var4=0);
 
 #if VEHICLES_ENABLED
 
@@ -461,27 +402,38 @@ private:
 	r3dTL::TStaticArray<footStepEntry_s, 128> footStepsArr;
 	int		currentFootStepsSoundID;
 	void		UpdateFootsteps();
+
+	void		UpdateSounds();
+
+	// sprinting sounds
+	void*	m_sndBreathSprint;
+	float	m_sndBreathBaseVolume;
+
+	void*	m_sndInPain;
+
+	void*	m_sndClothMovementSprint;
+
+	void*	m_sndSniperBreath;
+	void*	m_sndSniperHeartSlow;
+	void*	m_sndSniperExhale;
+
+	void		UpdateActionUI();
 public:
 	CamoTimeLine camoTimeLine;
 };
 
-struct TCamoSettings
-{
-	TCamoSettings();
+extern void InitializePhysSkeletonCache( int count, float progressStart, float progressEnd ) ;
+extern void DestroyPhysSkeletonCache() ;
+extern r3dPhysSkeleton* AquireCacheSkeleton();
+extern void ReleaseCachedPhysSkeleton(r3dPhysSkeleton* skel);
 
-	float texScale ;
-	float distortScale ;
-	float animSpeed ;
+extern void InitializePhysObstacleCache(int count);
+extern void DestroyPhysObstacleCache();
+extern int AcquirePlayerObstacle(const r3dPoint3D& pos);
+extern void ReleasePlayerObstacle(int* out_idx);
+extern void UpdatePlayerObstacle(int idx, const r3dPoint3D& pos);
 
-	float reflectionAmmount ;
 
-	r3dColor color0 ;
-	r3dColor color1 ;
 
-} extern gCamoSettings ;
-
-void InitializePhysSkeletonCache( int count, float progressStart, float progressEnd ) ;
-void DestroyPhysSkeletonCache() ;
-
-// for use when processing a bullet hit by obj_bullet or obj_AI_player::executeWeaponFireLocalPlayer
-bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoint3D &hitPoint, const r3dPoint3D &hitNormal, GameObject* shootTarget, const r3dMaterial* shootMaterial, const char* hitActorName, const WeaponConfig *weaponInfo);
+// for use when processing a bullet hit by obj_bullet or obj_Player::executeWeaponFireLocalPlayer
+bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoint3D &hitPoint, const r3dPoint3D &hitNormal, GameObject* shootTarget, const r3dMaterial* shootMaterial, const char* hitActorName, const WeaponConfig *weaponInfo, const r3dPoint3D& muzzlerPosAtFireStart);

@@ -7,11 +7,9 @@
 
 
 REG_VAR( d_mouse_window_lock,		false,			0 );		// should I restrict mouse at window client area?
-REG_VAR( d_show_scene_luma,			0,				0 );
 #ifndef FINAL_BUILD
 REG_VAR( d_show_muzzle,				0,				0 );
 REG_VAR( d_map_force_load,			"",				0 );		// map 
-REG_VAR( d_ps3_bin_dir,				"",				0 );		// ps3 bin dir 
 REG_VAR( d_gfxlog_filter,			true,			0 );		// scaleform log messages filter
 REG_VAR( d_video_spectator_mode,	false,			0 );		// spectator mode in game
 REG_VAR( d_disable_game_hud,		false,			0 );		// disable HUD rendering
@@ -26,7 +24,24 @@ REG_VAR( d_do_ragdoll,				false,			0 );
 REG_VAR( d_show_checker_texture,	0,				0 );
 REG_VAR( d_visualize_tex_density,	0,				0 );
 
+#ifndef FINAL_BUILD
+REG_VAR( d_physx_debug,				0,				0 );
+#endif
+
 REG_VAR( d_temp_green_screen,		false,			0 );
+
+REG_VAR( d_use_test_map,			2,			0 );
+
+REG_VAR( d_login,					"",			0 );
+REG_VAR( d_password,				"",			0 );
+
+REG_VAR( d_ui_health,				-1,			0);
+REG_VAR( d_ui_toxic,				-1,			0);
+REG_VAR( d_ui_water,				-1,			0);
+REG_VAR( d_ui_food,					-1,			0);
+REG_VAR( d_ui_stamina,				-1,			0);
+
+REG_VAR( d_allow_musictriggerarea,	0,			0);
 
 #if VEHICLES_ENABLED
 REG_VAR( d_drive_vehicles,			false,			0 );		
@@ -61,6 +76,7 @@ REG_VAR( r_grass_anim_amp,			0.04f,			0 );
 
 REG_VAR( r_grass_view_dist,			64.f,			0 );
 REG_VAR( r_grass_view_coef,			1.f,			0 );
+REG_VAR( r_grass_zoom_coef,			1.f,			0 );
 REG_VAR( r_grass_show_debug,		false,			0 );
 REG_VAR( r_grass_draw,				true,			0 );
 REG_VAR( r_grass_skip_step,			0,				0 );
@@ -128,6 +144,7 @@ REG_VAR( r_simplify_pure_shadows	, true		, 0 );
 REG_VAR( r_debug_helper				, 0			, 0 );
 REG_VAR( r_show_light_helper		, 0			, 0 );
 REG_VAR( r_hide_icons				, 0			, 0 );
+REG_VAR( r_icons_draw_distance		, 512.0f	, 0 );
 REG_VAR( r_hide_editor_statusbar	, 0			, 0 );
 
 REG_VAR( r_show_budgeter			, false		, 0 );
@@ -139,6 +156,7 @@ REG_VAR( r_profiler_paused			, true		, 0 );
 REG_VAR( r_profiler_hierarchy		, true		, 0 );
 REG_VAR( r_show_player_debug_data	, false		, 0 );
 REG_VAR( r_show_player_health		, false		, 0 );
+REG_VAR( r_show_zombie_stats		, false		, 0 );
 #endif
 
 REG_VAR( r_instanced_particles		, true		, 0 );
@@ -167,7 +185,7 @@ REG_VAR( r_last_exposure_source		, 0			, 0 );
 REG_VAR( r_light_adapt_speed_pos	, 1.0f		, 0 );
 REG_VAR( r_light_adapt_speed_neg	, 1.0f		, 0 );
 
-REG_VAR( r_gameui_exposure			, 1.0f		, 0 ); 
+REG_VAR( r_gameui_exposure			, 1.0f		, 0 );
 
 #ifndef FINAL_BUILD
 REG_VAR( r_draw_particles			, 1			, 0 );
@@ -213,29 +231,13 @@ REG_VAR( r_show_grass_tint_scale	, 1.f		, 0 );
 REG_VAR( r_decals					, 1			, 0 );
 REG_VAR( r_decals_proximity_multiplier	, 1.0f	, 0 );
 
-REG_VAR_C( r_weather_rain_intensity,		0.0f,	0.0f,	1.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_wetness,				0.0f,	0.0f,	1.0f,	VF_CONSTRAINT );
-
-REG_VAR_C( r_weather_puddles,				1,		0,		1,		VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_density,		0.55f,	0.0f,	1.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_radius,		32.0f,	4.0f,	160.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_spawn_rate,	18.0f,	0.0f,	128.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_max_count,		96,		0,		512,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_life,			55.0f,	2.0f,	300.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_min_wetness,	0.01f,	0.0f,	1.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_min_size,		0.75f,	0.1f,	8.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_max_size,		3.25f,	0.1f,	8.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_min_spacing,	2.2f,	0.0f,	16.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_min_normal_y,	0.35f,	0.0f,	1.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_reflection,	0.65f,	0.0f,	1.0f,	VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_normal_anim,	1,		0,		1,		VF_CONSTRAINT );
-REG_VAR_C( r_weather_puddles_normal_speed,	0.35f,	0.0f,	4.0f,	VF_CONSTRAINT );
-
 REG_VAR( r_lfsm_cache_dist			, 8.f		, 0 );
 REG_VAR( r_lfsm_wrap_mode			, 1			, 0 );
+REG_VAR( r_lfsm_recticular_warp		, 0			, 0 );
+
+REG_VAR( r_draw_composite			, 1			, 0 );
 
 REG_VAR( r_shadow_low_size_coef		, 0.5f		, 0 );
-REG_VAR( r_sky_intensity			, 1.0f		, 0 );
 
 REG_VAR( r_depth_mode				, 0			, 0 );
 
@@ -244,6 +246,7 @@ REG_VAR( r_gamepad_view_sens,		40.0f			, 0	);
 REG_VAR( r_gamepad_move_speed,		5.f			, 0	);
 #ifndef FINAL_BUILD
 REG_VAR( r_video_fov,				60.0f		, 0);
+REG_VAR( r_video_DOF_enable,		true		, 0);
 REG_VAR( r_video_nearDOF_start,		1.0f		, 0);
 REG_VAR( r_video_nearDOF_end,		2.0f		, 0);
 REG_VAR( r_video_farDOF_start,		300.0f		, 0);
@@ -257,6 +260,7 @@ REG_VAR( g_num_matches_played	 , 0			, VF_SAVE );
 REG_VAR( g_user_save_login		, false		, VF_SAVE );
 REG_VAR( g_user_login_info		, ""		, VF_SAVE );
 REG_VAR( g_vertical_look		, false		, VF_SAVE );
+REG_VAR( g_left_side_camera		, false		, VF_SAVE );
 REG_VAR( g_mouse_wheel			, true		, VF_SAVE );
 REG_VAR( g_mouse_acceleration	, false		, VF_SAVE );
 //REG_VAR( g_hint_system			, true		, VF_SAVE );
@@ -267,6 +271,8 @@ REG_VAR( g_user_language		, ""		, VF_SAVE );
 REG_VAR( g_tps_camera_mode		, 0,		VF_SAVE); // temp var to save TPS camera mod settings
 REG_VAR_C( g_camera_mode		, 1,    0, 2, VF_SAVE|VF_CONSTRAINT ); // 0 - TPS mode, crosshair in center, 1- TPS mode, crosshair off-center, 2 - FPS mode
 
+REG_VAR_C( g_ui_chat_alpha		, 70,	0, 100, VF_SAVE | VF_CONSTRAINT);
+
 REG_VAR_C( r_server_region,	-1,			-1,	2, VF_SAVE | VF_CONSTRAINT); // 0 - us west, 1-eu, 2 - any
 
 REG_VAR_C( g_mouse_sensitivity		, 1.f		, 0.1f, 10.0f, VF_SAVE | VF_CONSTRAINT);
@@ -274,8 +280,9 @@ REG_VAR_C( s_sound_volume			, 1.f		, 0.0f, 1.0f, VF_SAVE | VF_CONSTRAINT );
 REG_VAR_C( s_music_volume			, 1.f		, 0.0f, 1.0f, VF_SAVE | VF_CONSTRAINT );
 REG_VAR_C( s_comm_volume			, 1.f		, 0.0f, 1.0f, VF_SAVE | VF_CONSTRAINT );
 
-REG_VAR_C( r_brightness				, 0.5f		, 0.125f, 0.875f, VF_SAVE | VF_CONSTRAINT );
-REG_VAR_C( r_contrast				, 0.5f		, 0.125f, 0.875f, VF_SAVE | VF_CONSTRAINT );
+//REG_VAR_C( r_brightness				, 0.5f		, 0.125f, 0.875f, VF_SAVE | VF_CONSTRAINT );
+//REG_VAR_C( r_contrast				, 0.5f		, 0.125f, 0.875f, VF_SAVE | VF_CONSTRAINT );
+REG_VAR( r_gamma_pow,				2.2f,			VF_SAVE );
 
 REG_VAR( r_width				, 1024		, VF_SAVE );		// width window
 REG_VAR( r_height				, 768		, VF_SAVE );		// height window
@@ -283,7 +290,7 @@ REG_VAR( r_height				, 768		, VF_SAVE );		// height window
 REG_VAR_C( r_overall_quality		, 2			, 1, 5, VF_SAVE | VF_CONSTRAINT );
 REG_VAR( r_fullscreen			, true			, VF_SAVE );		// fullscreen mode
 REG_VAR( r_fullscreen_load		, true			, 0 );		// this value will hold r_fullscreen after loading ini file
-REG_VAR( r_apex_enabled			, true			, VF_SAVE );
+REG_VAR( r_apex_enabled			, false			, VF_SAVE );
 
 REG_VAR_C( r_mesh_quality			, 3			, 1, 3, VF_SAVE | VF_CONSTRAINT );
 REG_VAR_C( r_texture_quality		, 2			, 1, 3, VF_SAVE | VF_CONSTRAINT );
@@ -299,7 +306,6 @@ REG_VAR_C( r_postprocess_quality	, 2			, 1, 3, VF_SAVE | VF_CONSTRAINT );
 REG_VAR_C( r_ssao_quality			, 2			, 1, 5, VF_SAVE | VF_CONSTRAINT );
 REG_VAR_C( r_vsync_enabled			, 0			, 0, 1,	VF_SAVE | VF_CONSTRAINT );
 
-REG_VAR( r_driver_hash				, 0			, VF_SAVE );		//video driver update check
 REG_VAR( r_out_of_vmem_encountered	, 0			, VF_SAVE );
 //------------------------------------------------------------------------
 // Vars, derived from the vars which are influenced by settings menu
@@ -307,24 +313,7 @@ REG_VAR( r_out_of_vmem_encountered	, 0			, VF_SAVE );
 REG_VAR( r_max_texture_dim		, 0			, 0 );
 
 REG_VAR_C( r_half_scale_ssao		, 0		, 0	, 1, VF_CONSTRAINT );
-REG_VAR_C( r_ssao_method			, 3		, 1	, 4, VF_CONSTRAINT ); // 1=HSAO, 2=HQ, 3=HBAO+
-
-// HBAO+ parameters
-REG_VAR( r_hbao_radius			, 1.5f		, 0 );
-REG_VAR( r_hbao_bias			, 0.1f		, 0 );
-REG_VAR( r_hbao_power			, 2.0f		, 0 );
-REG_VAR( r_hbao_blur_sharpness		, 16.0f		, 0 );
-
-// PBR toggle
-REG_VAR_C( r_pbr_enabled		, 0		, 0	, 1, VF_CONSTRAINT );
-
-// ACES tonemapping toggle
-REG_VAR_C( r_aces_tonemap		, 0		, 0	, 1, VF_CONSTRAINT );
-
-// SSS debug
-REG_VAR( r_sss_distortion		, 0.0f		, 0 );
-REG_VAR( r_sss_power			, 0.0f		, 0 );
-REG_VAR( r_sss_scale			, 0.0f		, 0 );
+REG_VAR_C( r_ssao_method			, 1		, 1 , 2, VF_CONSTRAINT );
 
 REG_VAR( r_max_mesh_lod,			0,				0 );
 REG_VAR( r_shared_sm_size,			512,			0 );
@@ -361,101 +350,7 @@ REG_VAR( r_bloom,					0,				0 );
 REG_VAR( r_glow,					0,				0 );
 REG_VAR( r_sun_rays,				0,				0 );
 
-REG_VAR( r_gamma_pow,				1.f,			0 );
 REG_VAR( r_allow_gpu_timestamps,	1,				0 );
-
-//------------------------------------------------------------------------
-// Modern Graphics Tuning
-//------------------------------------------------------------------------
-
-REG_VAR( r_modern_graphics,					0,			VF_SAVE );
-REG_VAR( r_modern_force_postfx,				0,			VF_SAVE );
-
-REG_VAR( r_modern_film_a,					0.15f,		VF_SAVE );
-REG_VAR( r_modern_film_b,					0.50f,		VF_SAVE );
-REG_VAR( r_modern_film_c,					0.10f,		VF_SAVE );
-REG_VAR( r_modern_film_d,					0.20f,		VF_SAVE );
-REG_VAR( r_modern_film_e,					0.020f,		VF_SAVE );
-REG_VAR( r_modern_film_f,					0.30f,		VF_SAVE );
-REG_VAR( r_modern_exposure_bias,			-0.18f,		VF_SAVE );
-REG_VAR( r_modern_white_level,				12.00f,		VF_SAVE );
-
-REG_VAR( r_modern_bloom_power,				0.10f,		VF_SAVE );
-REG_VAR( r_modern_bloom_threshold,			1.95f,		VF_SAVE );
-REG_VAR( r_modern_glow_amplify,				0.00f,		VF_SAVE );
-REG_VAR( r_modern_glow_threshold,			2.50f,		VF_SAVE );
-REG_VAR( r_modern_bloom_blur_passes,		1,			VF_SAVE );
-REG_VAR( r_modern_bloom_blur_taps,			0,			VF_SAVE );
-
-REG_VAR( r_modern_ssao_radius,				0.55f,		VF_SAVE );
-REG_VAR( r_modern_ssao_depth_range,			0.35f,		VF_SAVE );
-REG_VAR( r_modern_ssao_brightness,			0.85f,		VF_SAVE );
-REG_VAR( r_modern_ssao_contrast,			1.35f,		VF_SAVE );
-REG_VAR( r_modern_ssao_detail_strength,		0.55f,		VF_SAVE );
-REG_VAR( r_modern_ssao_blur_strength,		0.25f,		VF_SAVE );
-
-REG_VAR( r_modern_gamma,					0.98f,		VF_SAVE );
-REG_VAR( r_modern_contrast,					1.08f,		VF_SAVE );
-REG_VAR( r_modern_brightness,				-0.025f,	VF_SAVE );
-
-REG_VAR( r_modern_fxaa,						0,			VF_SAVE );
-
-REG_VAR( r_modern_reshade_look,				0,			VF_SAVE );
-
-REG_VAR( r_modern_reshade_phdr_strength,	0.30f,		VF_SAVE );
-REG_VAR( r_modern_reshade_phdr_exposure,	0.10f,		VF_SAVE );
-
-REG_VAR( r_modern_reshade_jasharpen,		0.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_unsharp,			0.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_unsharp_blur,		1.00f,		VF_SAVE );
-
-REG_VAR( r_modern_reshade_vignette_amount,	-1.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_vignette_radius,	2.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_vignette_slope,	2.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_vignette_ratio,	1.00f,		VF_SAVE );
-
-REG_VAR( r_modern_color_lut,				0,			VF_SAVE );
-REG_VAR( r_modern_lut_name,					"",			VF_SAVE );
-
-REG_VAR( r_modern_sun_glare,				0,			VF_SAVE );
-REG_VAR( r_modern_sun_glare_count,			1,			VF_SAVE );
-REG_VAR( r_modern_sun_glare_opacity,		0.00f,		VF_SAVE );
-REG_VAR( r_modern_sun_glare_scale,			1.00f,		VF_SAVE );
-REG_VAR( r_modern_sun_glare_threshold,		1.50f,		VF_SAVE );
-REG_VAR( r_modern_sun_rays,					0,			VF_SAVE );
-
-REG_VAR( r_modern_fog,						0,			VF_SAVE );
-REG_VAR( r_modern_fog_mul,					0.35f,		VF_SAVE );
-REG_VAR( r_modern_fog_tint_r,				1.00f,		VF_SAVE );
-REG_VAR( r_modern_fog_tint_g,				1.00f,		VF_SAVE );
-REG_VAR( r_modern_fog_tint_b,				1.00f,		VF_SAVE );
-REG_VAR( r_modern_ambient_mul,				0.92f,		VF_SAVE );
-
-//------------------------------------------------------------------------
-// Screen Rain Drops
-//------------------------------------------------------------------------
-
-REG_VAR( r_screen_rain_drops,				1,			VF_SAVE );
-REG_VAR( r_screen_rain_amount,				1.00f,		VF_SAVE );
-REG_VAR( r_screen_rain_distort,				0.028f,	VF_SAVE );
-REG_VAR( r_screen_rain_slide_speed,			0.45f,		VF_SAVE );
-REG_VAR( r_screen_rain_scale,				1.00f,		VF_SAVE );
-REG_VAR( r_screen_rain_streaks,				0.70f,		VF_SAVE );
-
-//------------------------------------------------------------------------
-// Wet Weapon
-//------------------------------------------------------------------------
-
-REG_VAR( r_wet_weapon,						1,			VF_SAVE );
-REG_VAR( r_wet_weapon_amount,				1.00f,		VF_SAVE );
-REG_VAR( r_wet_weapon_dark,					0.72f,		VF_SAVE );
-REG_VAR( r_wet_weapon_gloss_boost,			0.35f,		VF_SAVE );
-REG_VAR( r_wet_weapon_spec_mul,				1.65f,		VF_SAVE );
-REG_VAR( r_wet_weapon_streaks,				0.85f,		VF_SAVE );
-REG_VAR( r_wet_weapon_streak_scale,			38.0f,		VF_SAVE );
-REG_VAR( r_wet_weapon_streak_speed,			0.35f,		VF_SAVE );
-
-//------------------------------------------------------------------------
 
 REG_VAR( r_3d_stereo_post_fx,		0,				0 );
 REG_VAR( r_3d_stereo_separation,	0.08f,			0 );
@@ -498,14 +393,12 @@ REG_VAR( e_auto_save_interval,		5,				0 );
 REG_VAR( g_trees,					true,			0 );		//	enable/disable trees
 REG_VAR( r_trees_noninst_render,	false,			0 );
 
-REG_VAR( g_serverip,			"26.163.92.76",	0 );
-REG_VAR( g_api_ip,				"26.163.92.76", 0);
+REG_VAR( g_serverip,			"localhost",	0 ); // 66.180.197.56 - IP of dev server where we host dev master\supervisor
+REG_VAR( g_api_ip,				"localhost", 0);
 REG_VAR( g_locl_settings,			true,			0 );
 REG_VAR( g_leveldata_xml_ver,		0,				0 );
 REG_VAR( g_cursor_mode,				0,				VF_HIDDEN );
 REG_VAR( g_hide_minimap,			0,				0 );
-REG_VAR( g_force_rus_lang,			true,				0 );
-REG_VAR( g_test_rus_client,			false,			0 );
 
 REG_VAR( g_level_settings_ver,		0,				0 );
 
@@ -602,7 +495,7 @@ REG_VAR( r_3d_vision_direct,		0,						0 );
 REG_VAR( r_3d_stereo_swap_eyes,		0,						0 );
 REG_VAR( r_3d_stereo_emu,			0,						0 );
 
-REG_VAR( r_terrain2,				true,					0 );
+REG_VAR( r_terrain2,				false,					0 );
 REG_VAR( r_terrain2_anisotropy,		16,						0 );
 REG_VAR( r_terrain2_padding,		4,						0 );
 
@@ -634,7 +527,7 @@ REG_VAR( d_terrain2_no_updates,		false,					0 );
 
 REG_VAR( r_show_wind,					0,					0 );
 REG_VAR( r_show_probes,					0,					0 );
-REG_VAR( r_show_probe_vol_scheme,		1,					0 );
+REG_VAR( r_show_probe_vol_scheme,		0,					0 );
 REG_VAR( r_show_probe_boxes,			0,					0 );
 REG_VAR( r_show_probes_mode,			0,					0 );
 REG_VAR( r_show_probes_radius,			128.0f,				0 );
@@ -645,16 +538,12 @@ REG_VAR( r_show_luma,					0,					0 );
 #endif
 
 REG_VAR( r_light_probes,				0,					0 );
+REG_VAR( r_dynamic_light_probes,		0,					0 );
+REG_VAR( r_lp_fast_update,				0,					0 );
 REG_VAR( r_lp_sky_direct,				1.0f,				0 );
 REG_VAR( r_lp_sky_bounce,				1.0f,				0 );
 REG_VAR( r_lp_sun_bounce,				1.0f,				0 );
-
-REG_VAR( r_lp_show_proximity,			0,					0 );
-REG_VAR( r_lp_show_proximity_x,			0,					0 );
-REG_VAR( r_lp_show_proximity_y,			0,					0 );
-REG_VAR( r_lp_show_proximity_z,			0,					0 );
-
-REG_VAR( r_lp_out_sky,					0.5f,				0 );
+REG_VAR( r_lp_dyna_coef,				16.0f,				0 );
 
 #if R3D_ALLOW_TEMPORAL_SSAO
 REG_VAR( r_ssao_temporal_reset_freq,	8,					0 );
@@ -670,6 +559,7 @@ REG_VAR( r_grass_ssao,					0,					0 );
 
 REG_VAR( r_allow_ingame_unloading,		0,					0 );
 REG_VAR( r_need_recalc_probes,			0,					0 );
+REG_VAR( r_need_update_sky_sun_sh,		0,					0 );
 REG_VAR( r_need_update_probes,			0,					0 );
 REG_VAR( r_update_sh_with_sun,			1,					0 );
 REG_VAR( r_sky_vis_affects_bounces,		0,					0 );
@@ -680,4 +570,23 @@ REG_VAR( r_lp_16bit_amplify,			4,					0 );
 #define R3D_HDR_FMT_A2R10G10B10 0
 REG_VAR( r_hdr_format,					R3D_HDR_FMT_A16R16G16B16F,	1 ) ;
 
-REG_VAR( r_warn_shaders,				0,					0 ) ;
+REG_VAR( r_warn_shaders,				0,					0 );
+REG_VAR( r_no_managed_textures,			0,					0 );
+
+REG_VAR( r_force_shared_sm_size,		0,					0 );
+REG_VAR( r_spot_light_shadow_bias_hw,	0.0021f,			0 );
+REG_VAR( r_spot_light_shadow_bias_pcf,	0.075f,				0 );
+
+REG_VAR( r_default_draw_distance,		3072.f,				0 );
+REG_VAR( r_allow_distance_cull,			1,					0 );
+
+REG_VAR( r_highlight_thickness,			0.015f,			0 );
+REG_VAR( r_highlight_glow,				0.25f,			0 );
+
+REG_VAR( r_inverse_zbuffer,				1,				0 );
+REG_VAR( r_ssao_clear_val,				0,				0 );
+
+REG_VAR( r_dd_pointlight_shadows,		0,				0 );
+REG_VAR( g_zombie_update_radius,		512,			0 );
+
+REG_VAR( r_disable_vfetch,				0,				0 );

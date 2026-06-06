@@ -1,7 +1,6 @@
 #include "r3dPCH.h"
 #ifndef FINAL_BUILD
 #include "r3d.h"
-#include "r3dBuffer.h"
 
 #include "GameLevel.h"
 
@@ -313,10 +312,10 @@ VisibiltyGrid::BuildCellHeights( float DesiredCellHeight )
 {
 	m_CellHeightRanges.Resize( m_CellCountX * m_CellCountZ ) ;
 
-	for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current; iter = GameWorld().GetNextOfAllObjects(iter) )
 	{
 		// force update world bbox
-		obj->SetBBoxLocal( obj->GetBBoxLocal() ) ;
+		iter.current->SetBBoxLocal( iter.current->GetBBoxLocal() ) ;
 	}
 
 	for( int j = 0 ; j < m_CellCountZ ; j ++ )
@@ -337,8 +336,10 @@ VisibiltyGrid::BuildCellHeights( float DesiredCellHeight )
 				terra_GetMinMaxTerraHeight( cellMiX, cellMiZ, cellMaX, cellMaZ, &cellMiH, &cellMaH ) ;
 			}
 
-			for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+			for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 			{
+				GameObject * obj = iter.current;
+
 				if( !IsVisGridObj( obj ) )
 					continue ;
 
@@ -420,11 +421,10 @@ namespace
 		// perspective projection matrix 
 		Cam->FOV		= fov;
 
-		// orthographic projection matrix
-		Cam->bOrtho	= false;
-		Cam->Width	= 0.f;
-		Cam->Height	= 0.f;
-		Cam->Aspect		= 1.0f;
+		Cam->ProjectionType	= r3dCamera::PROJTYPE_PRESPECTIVE;
+		Cam->Width			= 0.f;
+		Cam->Height			= 0.f;
+		Cam->Aspect			= 1.0f;
 	}
 }
 
@@ -436,7 +436,7 @@ VisibiltyGrid::Calculate()
 #ifdef FINAL_BUILD
 	return;
 #else
-	typedef r3dTL::TArray< r3dD3DQuery* > Queries ;
+	typedef r3dTL::TArray< IDirect3DQuery9* > Queries ;
 	typedef r3dTL::TArray< float > FloatArray ;
 	typedef r3dTL::TArray< int > IntArray ;
 
@@ -453,6 +453,23 @@ VisibiltyGrid::Calculate()
 		DoCaptureVisGrid = true ;
 		r_capture_vis_grid->SetInt( 0 ) ;
 	}
+
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
 
 	struct ModifyRestoreRender
 	{
@@ -544,7 +561,7 @@ VisibiltyGrid::Calculate()
 
 			for( uint32_t i = 0, e = queries->Count(); i < e; i ++ )
 			{
-				r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_OCCLUSION, &(*queries)[ i ] );
+				D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_OCCLUSION, &(*queries)[ i ] ) );
 			}			
 		}
 
@@ -665,9 +682,9 @@ VisibiltyGrid::Calculate()
 								{
 									SetupCamForFace( &cam, camP, Far, face );
 
-									r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER, 0, 1.f, 0 );
+									D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER, 0, r3dRenderer->GetClearZValue(), 0 ) );
 
-									r3dRenderer->SetCamera( cam ) ;
+									r3dRenderer->SetCamera( cam, false ) ;
 
 									r3dRenderer->SetVertexShader( "VS_FWD_COLOR" ) ;
 									r3dRenderer->SetPixelShader( "PS_FWD_COLOR" ) ;
@@ -686,7 +703,7 @@ VisibiltyGrid::Calculate()
 									D3DXMATRIX shaderMtx = r3dRenderer->ViewProjMatrix ;
 									D3DXMatrixTranspose( &shaderMtx, &shaderMtx ) ;
 
-									D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*)&shaderMtx, 4 ) ) ;
+									D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*)&shaderMtx, 4 ) ) ;
 
 									d3dc._SetDecl( modifyRestoreRender.vdecl ) ;
 
@@ -792,7 +809,7 @@ VisibiltyGrid::Calculate()
 								{
 									lastInfoFrame = r3dGetTime() ;
 
-									r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
+									r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), r3dRenderer->GetClearZValue(), 0 );
 
 									r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ ) ;
 

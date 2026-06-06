@@ -75,7 +75,7 @@ public:
     virtual InteractiveObject* FindTarget(const ASString& path) const =0;
 
     // forces garbage collection (if GC is enabled)
-    virtual void        ForceCollect(unsigned gcFlags) =0;
+    virtual void        ForceCollect() =0;
     // forces emergency garbage collection (if GC is enabled). This method is called
     // when heap is overflown. 
     virtual void        ForceEmergencyCollect() =0;
@@ -86,7 +86,7 @@ public:
     virtual void        SuspendGC(bool suspend) = 0;
     // Schedule garbage collection. Unlike ForceCollectGarbage it doesn't execute collection immediately;
     // instead, it will be executed when next Advance is called.
-    virtual void        ScheduleGC(unsigned gcFlags) = 0;
+    virtual void        ScheduleGC() = 0;
 
     // Generate button events (onRollOver, onPress, etc)
     virtual void        GenerateMouseEvents(unsigned mouseIndex) =0;
@@ -114,7 +114,6 @@ public:
     virtual void        NotifyTransferFocus(InteractiveObject* curFocused,
                                             InteractiveObject* pNewFocus, 
                                             unsigned controllerIdx) =0;
-    // Should return true if focus change is allowed; if false, then focus change is denied.
     virtual bool        NotifyOnFocusChange(InteractiveObject* curFocused, 
                                             InteractiveObject* toBeFocused, 
                                             unsigned controllerIdx, 

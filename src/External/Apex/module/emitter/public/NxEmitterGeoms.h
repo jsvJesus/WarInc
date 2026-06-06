@@ -1,39 +1,33 @@
-#ifndef __NX_EMITTER_GEOM_H__
-#define __NX_EMITTER_GEOM_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_EMITTER_GEOMS_H
+#define NX_EMITTER_GEOMS_H
+
 #include "NxApex.h"
 
 namespace physx
@@ -139,27 +133,114 @@ public:
 class NxEmitterExplicitGeom : public NxEmitterGeom
 {
 public:
-	///Remove all particles
+
+	struct PointParams
+	{
+		physx::PxVec3 position;
+		bool doDetectOverlaps;
+	};
+
+	struct SphereParams
+	{
+		physx::PxVec3 center;
+		physx::PxF32 radius;
+		bool doDetectOverlaps;
+	};
+
+	struct EllipsoidParams
+	{
+		physx::PxVec3 center;
+		physx::PxF32 radius;
+		physx::PxVec3 normal;
+		physx::PxF32 polarRadius;
+		bool doDetectOverlaps;
+	};
+
+	///Remove all shapes
 	virtual void    resetParticleList() = 0;
 
 	/**
 	\brief Add particles to geometry to be emitted
 	\param [in] count - number of particles being added by this call
-	\param [in] relPositions must be specified.  when emitted, these relative positions are added to emitter actor position
+	\param [in] params must be specified.  When emitted, these relative positions are added to emitter actor position
 	\param [in] velocities if NULL, the geometry's velocity list will be padded with zero velocities and the asset's velocityRange will be used for velocity
 	*/
-	virtual void    addParticleList(physx::PxU32 count, const physx::PxVec3* relPositions, const physx::PxVec3* velocities = 0) = 0;
+	virtual void    addParticleList(physx::PxU32 count,
+	                                const PointParams* params,
+	                                const physx::PxVec3* velocities = 0) = 0;
 
-	///Access the list of particles
-	virtual void	getParticleList(const physx::PxVec3* &relPositions,
-	                                physx::PxU32& numPositions,
+	virtual void    addParticleList(physx::PxU32 count,
+	                                const physx::PxVec3* positions,
+	                                const physx::PxVec3* velocities = 0) = 0;
+
+	struct PointListData
+	{
+		const void* positionStart;
+		physx::PxU32 positionStrideBytes;
+		const void* velocityStart;
+		physx::PxU32 velocityStrideBytes;
+		const void* userDataStart;
+		physx::PxU32 userDataStrideBytes;
+	};
+	virtual void    addParticleList(physx::PxU32 count, const PointListData& data) = 0;
+
+
+	virtual void    addSphereList(physx::PxU32 count,
+	                              const SphereParams* params,
+	                              const physx::PxVec3* velocities = 0) = 0;
+
+	virtual void    addEllipsoidList(physx::PxU32 count,
+	                                 const EllipsoidParams*  params,
+	                                 const physx::PxVec3* velocities = 0) = 0;
+
+	///Access the list of shapes
+	virtual void	getParticleList(const PointParams* &params,
+	                                physx::PxU32& numPoints,
 	                                const physx::PxVec3* &velocities,
-	                                physx::PxU32& numVelocities) = 0;
+	                                physx::PxU32& numVelocities) const = 0;
 
-	///Get the number of particles
+	virtual void	getSphereList(const SphereParams* &params,
+	                              physx::PxU32& numSpheres,
+	                              const physx::PxVec3* &velocities,
+	                              physx::PxU32& numVelocities) const = 0;
+
+	virtual void	getEllipsoidList(const EllipsoidParams* &params,
+	                                 physx::PxU32& numEllipsoids,
+	                                 const physx::PxVec3* &velocities,
+	                                 physx::PxU32& numVelocities) const = 0;
+
+	///Get the number of points
 	virtual physx::PxU32   getParticleCount() const = 0;
-	///Get the position of the particle
+
+	///Get the position of point
 	virtual physx::PxVec3  getParticlePos(physx::PxU32 index) const = 0;
+
+	///Get the number of spheres
+	virtual physx::PxU32   getSphereCount() const = 0;
+
+	///Get the center of the sphere
+	virtual physx::PxVec3 getSphereCenter(physx::PxU32 index) const = 0;
+
+	///Get the radius of the sphere
+	virtual physx::PxF32 getSphereRadius(physx::PxU32 index) const = 0;
+
+	///Get the number of ellipsoids
+	virtual physx::PxU32   getEllipsoidCount() const = 0;
+
+	///Get the center of the ellipsoid
+	virtual physx::PxVec3 getEllipsoidCenter(physx::PxU32 index) const = 0;
+
+	///Get the radius of the ellipsoid
+	virtual physx::PxF32 getEllipsoidRadius(physx::PxU32 index) const = 0;
+
+	///Get the normal of the ellipsoid
+	virtual physx::PxVec3 getEllipsoidNormal(physx::PxU32 index) const = 0;
+
+	///Get the polar radius of the ellipsoid
+	virtual physx::PxF32 getEllipsoidPolarRadius(physx::PxU32 index) const = 0;
+
+	///Get average distance between particles
+	virtual physx::PxF32 getDistance() const = 0;
 };
 
 
@@ -168,4 +249,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif
+#endif // NX_EMITTER_GEOMS_H

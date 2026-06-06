@@ -7,10 +7,6 @@
 
 #include "PostFXChief.h"
 
-#ifndef WO_SERVER
-#include "r3dDX11.h"
-#endif
-
 extern r3dScreenBuffer* AvgSceneLuminanceBuffer ;
 extern r3dScreenBuffer* SceneExposure0 ;
 extern r3dScreenBuffer* SceneExposure1 ;
@@ -24,6 +20,15 @@ extern r3dScreenBuffer* BlurBuffer;
 extern r3dScreenBuffer* TempBuffer;
 extern r3dScreenBuffer* TempSMBuffer;
 extern r3dScreenBuffer* DepthBuffer;
+
+extern r3dScreenBuffer* One8Buffer0;
+extern r3dScreenBuffer* One8Buffer1;
+extern r3dScreenBuffer* One16Buffer0;
+extern r3dScreenBuffer* One16Buffer1;
+extern r3dScreenBuffer* One32Buffer0;
+extern r3dScreenBuffer* One32Buffer1;
+extern r3dScreenBuffer* One64Buffer0;
+extern r3dScreenBuffer* One64Buffer1;
 
 extern r3dScreenBuffer*	gScreenSmall;  // 1/4th of screen size
 extern r3dScreenBuffer*	gScreenSmall2;  // 1/4th of screen size
@@ -48,32 +53,6 @@ static PFX_Copy gPFX_AuxiliaryCopy( R3D_BLEND_NOALPHA, PostFXChief::DEFAULT_COLO
 namespace
 {
 	int DEFUALT_RMODE = R3D_BLEND_NOALPHA | R3D_BLEND_NZ;
-
-#ifndef WO_SERVER
-	static bool IsDX11NativePresentPath()
-	{
-		return r3dRenderer &&
-			g_r3dDX11.IsInitialized() &&
-			!r3dRenderer->GetUseD3D9Present();
-	}
-
-	static RECT GetDX11BackBufferRect()
-	{
-		RECT rect;
-		rect.left = 0;
-		rect.top = 0;
-		rect.right = 0;
-		rect.bottom = 0;
-
-		if(IsDX11NativePresentPath())
-		{
-			rect.right = g_r3dDX11.GetWidth();
-			rect.bottom = g_r3dDX11.GetHeight();
-		}
-
-		return rect;
-	}
-#endif
 
 	enum
 	{
@@ -239,7 +218,7 @@ PostFXChief::Execute( bool toBackBuffer, bool resetTargets )
 
 		// NOTE : synchronize constant start with postfx_common.h
 		// float4x4 	g_mInvViewProj 		: register ( c32 );
-		r3dRenderer->SetVertexShaderConstantF( 32, (float*)InvViewProj, 4 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 32, (float*)InvViewProj, 4 );
 	}
 
 	// skip ping pong stage at s0
@@ -247,7 +226,7 @@ PostFXChief::Execute( bool toBackBuffer, bool resetTargets )
 	r3dRenderer->SetTex( gBuffer_Depth->Tex,	DEF_STAGE_DEPTH );
 	r3dRenderer->SetTex( gBuffer_Aux->Tex,		DEF_STAGE_AUX );
 
-	TL_STATIC_ASSERT( DEF_STAGE_COUNT <= FREE_TEX_STAGE_START );
+	COMPILE_ASSERT( DEF_STAGE_COUNT <= FREE_TEX_STAGE_START );
 
 	SetDefaultTexFilteringTillN< NUM_SAMPLERS - 1 >();
 
@@ -353,9 +332,9 @@ PostFXChief::BindBufferTexture( RTType type, int stage )
 void
 PostFXChief::SetDefaultTexAddressMode( int stage )
 {
-	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( stage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
 }
 
 //------------------------------------------------------------------------
@@ -409,7 +388,7 @@ template void PostFXChief::SetDefaultTexFilteringTillN< PostFXChief::NUM_SAMPLER
 void
 PostFXChief::SetDefaultColorWriteMask()
 {
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, DEFAULT_COLOR_WRITE_MASK ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, DEFAULT_COLOR_WRITE_MASK ) );
 }
 
 //------------------------------------------------------------------------
@@ -439,6 +418,14 @@ PostFXChief::ResetBuffers()
 	mScreenBuffers[ RTT_HALVED1_32BIT				]	= gScreenSmall2;
 	mScreenBuffers[ RTT_ONEFOURTH0_64BIT			]	= TempBuffer;
 	mScreenBuffers[ RTT_ONEFOURTH1_64BIT			]	= BlurBuffer;
+	mScreenBuffers[ RTT_ONE8_0_64BIT				]	= One8Buffer0;
+	mScreenBuffers[ RTT_ONE8_1_64BIT				]	= One8Buffer1;
+	mScreenBuffers[ RTT_ONE16_0_64BIT				]	= One16Buffer0;
+	mScreenBuffers[ RTT_ONE16_1_64BIT				]	= One16Buffer1;
+	mScreenBuffers[ RTT_ONE32_0_64BIT				]	= One32Buffer0;
+	mScreenBuffers[ RTT_ONE32_1_64BIT				]	= One32Buffer1;
+	mScreenBuffers[ RTT_ONE64_0_64BIT				]	= One64Buffer0;
+	mScreenBuffers[ RTT_ONE64_1_64BIT				]	= One64Buffer1;
 	mScreenBuffers[ RTT_AUX_32BIT					]	= gBuffer_Aux;
 	mScreenBuffers[ RTT_DIFFUSE_32BIT				]	= gBuffer_Color;
 	mScreenBuffers[ RTT_DEPTH_32BIT					]	= gBuffer_Depth;
@@ -560,13 +547,6 @@ PostFXChief::CopyOutput()
 
 	RECT rect = { 0, 0, 0, 0 } ;
 
-#ifndef WO_SERVER
-	if(IsDX11NativePresentPath())
-	{
-		rect = GetDX11BackBufferRect();
-	}
-#endif
-
 #ifndef FINAL_BUILD
 	if( r_internal_width->GetInt() || r_internal_height->GetInt() )
 	{
@@ -580,13 +560,6 @@ PostFXChief::CopyOutput()
 	gPFX_Copy.PushSettings( sts );
 
 	DoDrawFX( &gPFX_Copy, src, dest, rect );
-
-#ifndef WO_SERVER
-	if(IsDX11NativePresentPath())
-	{
-		PrepareBackBufferRender();
-	}
-#endif
 }
 
 //------------------------------------------------------------------------
@@ -702,7 +675,7 @@ PostFXChief::DoDrawFX( PostFX* PFX, r3dScreenBuffer* src, r3dScreenBuffer* dest,
 	{
 		// NOTE : synchronize constant start with postfx_common.h
 		// float4 		g_vTexcTransform	: register ( c36 );
-		D3D_V( r3dRenderer->SetVertexShaderConstantF( 36, data.TexTransform, 1 ) );
+		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 36, data.TexTransform, 1 ) );
 	}
 
 	r3d_assert( data.VertexShaderID != data.WRONG_SHADER_ID && 
@@ -733,7 +706,7 @@ PostFXChief::DoDrawFX( PostFX* PFX, r3dScreenBuffer* src, r3dScreenBuffer* dest,
 void
 PostFXChief::DoClear( const Action& act )
 {
-	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, act.Clear.Color, 1.f, 0 );
+	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, act.Clear.Color, r3dRenderer->GetClearZValue(), 0 ) );
 }
 
 //------------------------------------------------------------------------
@@ -741,29 +714,6 @@ PostFXChief::DoClear( const Action& act )
 void
 PostFXChief::PrepareBackBufferRender()
 {
-#ifndef WO_SERVER
-	if(r3dRenderer &&
-		g_r3dDX11.IsInitialized() &&
-		!r3dRenderer->GetUseD3D9Present())
-	{
-		g_r3dDX11.ResetBackBufferTarget();
-
-		const float w = (float)g_r3dDX11.GetWidth();
-		const float h = (float)g_r3dDX11.GetHeight();
-
-		r3dRenderer->ScreenW = w;
-		r3dRenderer->ScreenH = h;
-		r3dRenderer->ScreenW2 = w * 0.5f;
-		r3dRenderer->ScreenH2 = h * 0.5f;
-
-		r3dRenderer->AllowNullViewport = 0;
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-		r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
-
-		return;
-	}
-#endif
-
 	r3dRenderer->SetBackBufferViewport();
 }
 
@@ -796,26 +746,7 @@ PostFXChief::DrawLastFX( const Action& act )
 
 	PrepareBackBufferRender();
 
-	RECT rect = act.DrawFX.TargetViewport;
-
-#ifndef WO_SERVER
-	if(IsDX11NativePresentPath())
-	{
-		if(rect.left == rect.right && rect.right == 0)
-		{
-			rect = GetDX11BackBufferRect();
-		}
-	}
-#endif
-
-	DoDrawFX( PFX, src, dest, rect );
-
-#ifndef WO_SERVER
-	if(IsDX11NativePresentPath())
-	{
-		PrepareBackBufferRender();
-	}
-#endif
+	DoDrawFX( PFX, src, dest, act.DrawFX.TargetViewport );
 }
 
 //------------------------------------------------------------------------

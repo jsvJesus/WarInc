@@ -34,8 +34,6 @@ namespace r3dTL
 		return (v < T (min)) ? T (min) : ((v > T (max)) ? T (max) : v);
 	}
 
-#define TL_STATIC_ASSERT(expr) { int static_assertion_failure[(expr)*2-1]; (void)static_assertion_failure; }
-
 	template <typename T> class IsPOD
 	{
 	public:

@@ -31,12 +31,11 @@ private:
 	FMOD::EventProject	*soundsProject;
 	mutable stringlist_t soundsList;
 
-
 	FMOD::Sound*		m_SoundBank00;
 	FMOD::Sound*		m_SoundBank_Streaming;
 	FMOD::Sound*		m_SoundBank_Weapons;
 
-	FMOD::Sound*		m_rygvol_SoundBank;
+	FMOD::Sound*		m_WarZ_SoundBank;
 
 	bool				m_isSoundDisabled;
 	
@@ -57,14 +56,20 @@ public:
 
 	FMOD::EventReverb*	createPresetReverb(const char* presetName);
 
-	void *		Play(int SampleID, const r3dPoint3D& Pos); // will choose how to play
+	void		PlayAndForget(int SampleID, const r3dPoint3D& Pos); // sound sys will manage sound and will release it once it is done playing. (do not use this for looping sounds, otherwise they will never stop)
+	void*		Play(int SampleID, const r3dPoint3D& Pos, bool donotcheckIsAudible=false); // will choose how to play
 	void		SetPaused(void* handle, bool paused);
+	bool		GetPaused(void* handle);
 	bool		SetSoundPos(void *handle, const r3dPoint3D& pos);
 	void		Release(void *handle);
 	float		GetSoundMaxDistance(void *handle) const;
 	float		GetSoundMaxDistance(int id) const;
 	void		SetProperty(void *handle, FMOD_EVENT_PROPERTY propID, void *value);
+	void		GetProperty(void *handle, FMOD_EVENT_PROPERTY propID, void *value);
 	int			GetState(void *handle) const;
+	bool		isPlaying(void* handle) const;
+
+	float		getEventMax3DDistance(int SampleID);
 	
 	void		Stop(void *handle);
 	void		Start(void *handle);
@@ -81,7 +86,16 @@ public:
 
 private:
 	void *		Play2D(int SampleID);
-	void *		Play3D(int SampleID, const r3dPoint3D& Pos);
+	void *		Play3D(int SampleID, const r3dPoint3D& Pos, bool donotcheckIsAudible=false);
+
+	struct ManagedSoundS
+	{
+		void* handle;
+		float timeNotPlaying;
+		ManagedSoundS():handle(0), timeNotPlaying(0) {}
+		ManagedSoundS(void* h):handle(h), timeNotPlaying(0) {}
+	};
+	std::list<ManagedSoundS> m_ManagedSoundsList;
 };
 
 
@@ -94,10 +108,5 @@ extern  int 		snd_LoadSoundEffects(char *basedir, char *fname);
 
 enum { SOUND_GROUP_START = 1000};
 extern	void		snd_SetGroupVolume(int groupId, int Volume);
-
-// all PlaySound* functions will accept sound group ID as volume.
-extern	void *	snd_PlaySound(int SampleID, const r3dPoint3D& pos);
-extern	bool	snd_SetSoundPos(void *e, const r3dPoint3D& pos);
-
 
 #endif	// __PWAR_SOUNDSYS_H

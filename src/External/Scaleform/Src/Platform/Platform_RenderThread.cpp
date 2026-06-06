@@ -99,16 +99,7 @@ void RenderThread::setToleranceParams(const Render::ToleranceParams& params)
 {
     TolParams = params;
     if (pRenderer)
-	{
         pRenderer->SetToleranceParams(TolParams);
-		pRenderer->GetHAL()->GetMeshCache().ClearCache();
-	}
-}
-
-void RenderThread::getToleranceParams(Render::ToleranceParams* params)
-{
-	if (pRenderer && params)
-		*params = pRenderer->GetToleranceParams();
 }
 
 void RenderThread::addDisplayHandle(const DisplayHandleType& root, DisplayHandleCategory cat, bool clearBeforeAdd,
@@ -213,11 +204,6 @@ RenderThread::DHContainerType& RenderThread::DisplayWindow::getDHContainer(Displ
     case DHCAT_Overlay: return OverlayHandles;
     default:            return NormalHandles;
     }
-}
-
-void RenderThread::finishFrame()
-{
-    pRenderer->FinishFrame();
 }
 
 void RenderThread::drawFrame()

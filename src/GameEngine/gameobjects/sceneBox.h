@@ -6,7 +6,6 @@
 #define SCENEBOX_MAXOBJECTS 25
 
 class GameObject;
-class r3dD3DQuery;
 class SceneBox : public r3dTreeNode<SceneBox>
 {
 public:
@@ -43,7 +42,7 @@ public:
 	r3dVector  GetHalfSize() const { return m_HalfSize; }
 
 	//temp, test
-	r3dD3DQuery* query;
+	int queryIndex;
 	bool visible;
 	int lastVisited;
 	int lastRendered;
@@ -79,9 +78,21 @@ public: // test!!!
 	int m_Level;
 };
 
+struct SceneTraversalStats
+{
+	int NumTraversedNodes;
+	int MaxTraversedNodes;
+
+	SceneTraversalStats();
+};
+
+void UpdateSceneTraversalStats();
+SceneTraversalStats GetSceneTraversalStats();
+
 void InitOcclusionQuerySystem();
 void CloseOcclusionQuerySystem();
 
 void AdvanceQueryBalancer();
+void SceneBoxOnUpdate();
 
 #endif //__SCENEBOX_H__

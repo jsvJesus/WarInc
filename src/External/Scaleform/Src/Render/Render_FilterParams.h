@@ -48,9 +48,7 @@ enum FilterType
     // Non-blur filter implementations.
     Filter_ColorMatrix      = 8,
     Filter_Convolution      = 9,
-    Filter_DisplacementMap  = 10,
-
-    Filter_CacheAsBitmap,
+    Filter_DisplacementMap  = 10
 };
 
 

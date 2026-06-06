@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,48 +35,56 @@
 #ifndef RENDERER_MESH_CONTEXT_H
 #define RENDERER_MESH_CONTEXT_H
 
-#include "PsShare.h"
 #include <RendererConfig.h>
-#include <PxMat34Legacy.h>
 
-class Renderer;
-class RendererMesh;
-class RendererMaterial;
-class RendererMaterialInstance;
-
-class RendererMeshContext
+namespace SampleRenderer
 {
-	friend class Renderer;
+
+	class Renderer;
+	class RendererMesh;
+	class RendererMaterial;
+	class RendererMaterialInstance;
+
+	class RendererMeshContext
+	{
+		friend class Renderer;
 	public:
 		const RendererMesh       *mesh;
 		RendererMaterial         *material;
 		RendererMaterialInstance *materialInstance;
-		const physx::PxMat34Legacy     *transform; // TODO: use a float4x3 instead of a 3x4. Which is basically a transposed 3x4 for better GPU packing.
+		const physx::PxMat44	 *transform;
+		const physx::PxF32		 *shaderData;
 
 		// TODO: this is kind of hacky, would prefer a more generalized
 		//       solution via RendererMatrialInstance.
-		const physx::PxMat34Legacy     *boneMatrices; // TODO: use a float4x3 instead of a 3x4. Which is basically a transposed 3x4 for better GPU packing.
-		physx::PxU32                     numBones;
+		const physx::PxMat44	 *boneMatrices;
+		PxU32                     numBones;
 
-        enum Enum
-        {
-            CLOCKWISE = 0,
-            COUNTER_CLOCKWISE,
-		    NONE
-        };
+		enum CullMode
+		{
+			CLOCKWISE = 0,
+			COUNTER_CLOCKWISE,
+			NONE
+		};
 
-        Enum					cullMode;
+		CullMode				cullMode;
 		bool					screenSpace;		//TODO: I am not sure if this is needed!
+
+		enum FillMode
+		{
+			SOLID,
+			LINE,
+			POINT,
+		};
+		FillMode				fillMode;
 
 	public:
 		RendererMeshContext(void);
 		~RendererMeshContext(void);
-		
+
 		bool isValid(void) const;
-		bool isLocked(void) const;
-	
-	private:
-		Renderer *m_renderer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

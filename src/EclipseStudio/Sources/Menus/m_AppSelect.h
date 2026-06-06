@@ -5,7 +5,7 @@
 
 class Menu_AppSelect : public MenuLayer
 {
-public:
+  public:
 	START_MENU_ENUMS
 
 		bUpdateDB,
@@ -20,14 +20,14 @@ public:
 		bQuit
 	};
 
-protected:	
-void		Draw();
+  protected:	
+	void		Draw();
 
-public:
-Menu_AppSelect();
-~Menu_AppSelect();
+  public:
+	Menu_AppSelect();
+	~Menu_AppSelect();
 	
-int		DoModal();
+	int		DoModal();
 };
 
 #endif

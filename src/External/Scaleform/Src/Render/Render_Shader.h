@@ -233,14 +233,15 @@ public:
     }
 };
 
-template<typename ShaderDesc, typename VShaderDesc,
+template<typename FShaderDesc, typename VShaderDesc,
          class Uniforms, class ShaderInterface, class NativeTexture>
 class StaticShaderManager
 {
 public:
-    typedef typename VShaderDesc::VertexAttrDesc    VertexAttrDesc;
-    typedef typename ShaderDesc::ShaderType         ShaderType;
-    typedef typename ShaderInterface::Shader        Shader;
+    typedef typename VShaderDesc::VertexAttrDesc VertexAttrDesc;
+    typedef typename VShaderDesc::ShaderType VShaderType;
+    typedef typename FShaderDesc::ShaderType FShaderType;
+    typedef typename ShaderInterface::Shader Shader;
 
 protected:
     MultiKeyCollection<VertexElement, VertexFormat, 32>        VFormats;
@@ -249,7 +250,7 @@ protected:
 public:
     StaticShaderManager(ProfileViews* prof) : Profiler(prof) {}
 
-    ShaderType StaticShaderForFill (PrimitiveFill* pfill, unsigned& fillflags, unsigned batchType)
+    FShaderType StaticShaderForFill (PrimitiveFill* pfill, unsigned& fillflags, unsigned batchType)
     {
         switch(pfill->GetType())
         {
@@ -259,39 +260,34 @@ public:
             if ( pfill->GetTextureCount() == 1 && ImageData::GetFormatPlaneCount(pfill->GetTexture(0)->GetFormat()) >= 3)
             {
                 unsigned shader = pfill->GetType() == PrimFill_Texture_EAlpha ? 
-                    ShaderDesc::ST_YUVEAlpha : ShaderDesc::ST_YUV;
+                    FShaderDesc::FS_FYUVEAlpha : FShaderDesc::FS_FYUV;
 
                 if (ImageData::GetFormatPlaneCount(pfill->GetTexture(0)->GetFormat()) == 4)
-                    shader += ShaderDesc::ST_base_video_YUVA;
+                    shader += FShaderDesc::FS_base_YUVA;
 
-                if (shader != ShaderDesc::ST_Text)
-                {
-                    if ((fillflags & (FF_AlphaWrite|FF_Cxform)) == (FF_AlphaWrite|FF_Cxform))
-                        shader += ShaderDesc::ST_base_video_CxformAc;
-                    else if ((fillflags & FF_Cxform))
-                        shader += ShaderDesc::ST_base_video_Cxform;
-                }
+                if ((fillflags & FF_Cxform) && shader != FShaderDesc::FS_FText)
+                    shader += FShaderDesc::FS_base_Cxform;
 
                 switch(batchType)
                 {
                 case PrimitiveBatch::DP_Batch:
-                    shader += ShaderDesc::ST_base_video_Batch;
+                    shader += FShaderDesc::FS_base_Batch;
                     break;
 
                 case PrimitiveBatch::DP_Instanced:
-                    shader += ShaderDesc::ST_base_video_Instanced;
+                    shader += FShaderDesc::FS_base_Instanced;
                     break;
                 default: break;
-                }
+        }
 
                 if (fillflags & FF_Multiply)
-                    shader += ShaderDesc::ST_base_video_Mul;
+                    shader += FShaderDesc::FS_base_Mul;
 
                 if (fillflags & FF_3DProjection)
-                    shader += ShaderDesc::ST_base_video_Position3d;
+                    shader += FShaderDesc::FS_base_Position3d;
 
 
-                return (ShaderType)shader;
+                return (FShaderType)shader;
             }
             break;
 
@@ -300,9 +296,9 @@ public:
         return StaticShaderForFill(pfill->GetType(), fillflags, batchType);
     }
 
-    ShaderType StaticShaderForFill (PrimitiveFillType fill, unsigned& fillflags, unsigned batchType)
+    FShaderType StaticShaderForFill (PrimitiveFillType fill, unsigned& fillflags, unsigned batchType)
     {
-        unsigned shader = ShaderDesc::ST_None;
+        unsigned shader = FShaderDesc::FS_None;
 
         switch (fill)
         {
@@ -310,88 +306,81 @@ public:
         case PrimFill_None:
         case PrimFill_Mask:
         case PrimFill_SolidColor:
-            shader = ShaderDesc::ST_Solid;
+            shader = FShaderDesc::FS_FSolid;
             fillflags &= ~FF_Cxform;
             break;
 
         case PrimFill_VColor:
-            shader = ShaderDesc::ST_Vertex;
+            shader = FShaderDesc::FS_FVertex;
             break;
 
         case PrimFill_VColor_EAlpha:
-            shader = ShaderDesc::ST_VertexEAlpha;
+            shader = FShaderDesc::FS_FVertexEAlpha;
             break;
 
         case PrimFill_Texture:
-            shader = ShaderDesc::ST_TexTG;
+            shader = FShaderDesc::FS_FTexTG;
             break;
 
         case PrimFill_Texture_EAlpha:
-            shader = ShaderDesc::ST_TexTGEAlpha;
+            shader = FShaderDesc::FS_FTexTGEAlpha;
             break;
     		
         case PrimFill_Texture_VColor:
-            shader = ShaderDesc::ST_TexTGVertex;
+            shader = FShaderDesc::FS_FTexTGVertex;
             break;
 
         case PrimFill_Texture_VColor_EAlpha:
-            shader = ShaderDesc::ST_TexTGVertexEAlpha;
+            shader = FShaderDesc::FS_FTexTGVertexEAlpha;
             break;
 
         case PrimFill_2Texture:
-            shader = ShaderDesc::ST_TexTGTexTG;
+            shader = FShaderDesc::FS_FTexTGTexTG;
             break;
 
         case PrimFill_2Texture_EAlpha:
-            shader = ShaderDesc::ST_TexTGTexTGEAlpha;
+            shader = FShaderDesc::FS_FTexTGTexTGEAlpha;
             break;
 
         case PrimFill_UVTexture:
-            shader = ShaderDesc::ST_TextColor;
+            shader = FShaderDesc::FS_FTextColor;
             break;
 
         case PrimFill_UVTextureAlpha_VColor:
-            shader = ShaderDesc::ST_Text;
+            shader = FShaderDesc::FS_FText;
             fillflags |= FF_Cxform;
             break;
 
-        //case PrimFill_UVTextureDFAlpha_VColor:
-        //    fillflags |= FF_Cxform;
-        //    return FShaderDesc::FindStaticShader("TextDFA", (batchType == PrimitiveBatch::DP_Batch ? SS_Batch : 0) | (fillflags & FF_Multiply ? SS_Mul : 0));
-        //    break;
+        case PrimFill_UVTextureDFAlpha_VColor:
+            fillflags |= FF_Cxform;
+            return FShaderDesc::FindStaticShader("TextDFA", (batchType == PrimitiveBatch::DP_Batch ? SS_Batch : 0) | (fillflags & FF_Multiply ? SS_Mul : 0));
+            break;
         }
 
-        if (shader != ShaderDesc::ST_Text)
-        {
-            if ((fillflags & (FF_AlphaWrite|FF_Cxform)) == (FF_AlphaWrite|FF_Cxform))
-                shader += ShaderDesc::ST_base_CxformAc;
-            else if ((fillflags & FF_Cxform))
-                shader += ShaderDesc::ST_base_Cxform;
-        }
+        if ((fillflags & FF_Cxform) && shader != FShaderDesc::FS_FText)
+            shader += FShaderDesc::FS_base_Cxform;
 
 
         switch(batchType)
         {
         case PrimitiveBatch::DP_Batch:
-            shader += ShaderDesc::ST_base_Batch;
+            shader += FShaderDesc::FS_base_Batch;
             break;
 
         case PrimitiveBatch::DP_Instanced:
-            shader += ShaderDesc::ST_base_Instanced;
+            shader += FShaderDesc::FS_base_Instanced;
             break;
 
         default: break;
         }
 
         if (fillflags & FF_Multiply)
-            shader += ShaderDesc::ST_base_Mul;
-        if (fillflags & FF_Invert)
-            shader += ShaderDesc::ST_base_Inv;
+            shader += FShaderDesc::FS_base_Mul;
 
         if (fillflags & FF_3DProjection)
-            shader += ShaderDesc::ST_base_Position3d;
+            shader += FShaderDesc::FS_base_Position3d;
 
-        return (ShaderType)shader;
+        return (FShaderType)shader;
     }
 
     const VertexFormat* GetVertexFormat(VertexElement* pelements, unsigned count, unsigned size, unsigned alignment = 1)
@@ -456,8 +445,8 @@ public:
         }
         
         unsigned             fillflags = 0;
-        ShaderType           shader  = StaticShaderForFill(fill, fillflags, PrimitiveBatch::DP_Single);
-        const VShaderDesc*   pshader = VShaderDesc::GetDesc(shader);
+        FShaderType          shader = this->StaticShaderForFill(fill, fillflags, PrimitiveBatch::DP_Single);
+        const VShaderDesc*   pshader = VShaderDesc::GetDesc(FShaderDesc::VShaderForFShader(shader));
 
         const VertexAttrDesc* psvf = pshader->Attributes;
         const unsigned       maxVertexElements = 8;
@@ -573,13 +562,10 @@ public:
         if ((fillFlags & FF_Blending) == 0 && pfill->RequiresBlend())
             fillFlags |= FF_Blending;
 
-        // If we do not have CxForms, or blending, check the color transforms of the matrices to determine if we will need to apply them.
-        if ((fillFlags & (FF_Blending|FF_Cxform)) != (FF_Blending|FF_Cxform))
-        {
             for (unsigned i = 0; i < meshCount; i++)
             {
                 Cxform finalCx = Profiler->GetCxform(pmeshes[i].M.GetCxform());
-                if (finalCx != Cxform::Identity)
+                if (!(finalCx == Cxform::Identity))
                 {
                     fillFlags |= FF_Cxform;
                     if (finalCx.RequiresBlend())
@@ -587,11 +573,11 @@ public:
                     break;
                 }
             }
-        }
 
-        ShaderType shader = StaticShaderForFill(pfill, fillFlags, batchType);
+        FShaderType shader = StaticShaderForFill(pfill, fillFlags, batchType);
+        VShaderType vshader = FShaderDesc::VShaderForFShader(shader);
 
-        psi->SetStaticShader(shader, pvf);
+        psi->SetStaticShader(vshader, shader, pvf);
         psi->BeginPrimitive();
         const Shader& pso = psi->GetCurrentShaders();
         bool solid = (fillType == PrimFill_None || fillType == PrimFill_Mask || fillType == PrimFill_SolidColor);
@@ -652,8 +638,10 @@ public:
 
     const Shader& SetFill(PrimitiveFillType fillType, unsigned& fillFlags, unsigned batchType, const VertexFormat* pvf, ShaderInterface* psi)
     {
-        ShaderType shader = StaticShaderForFill(fillType, fillFlags, batchType);
-        psi->SetStaticShader(shader, pvf);
+        FShaderType shader = this->StaticShaderForFill(fillType, fillFlags, batchType);
+        VShaderType vshader = FShaderDesc::VShaderForFShader(shader);
+
+        psi->SetStaticShader(vshader, shader, pvf);
         psi->BeginPrimitive();
         return psi->GetCurrentShaders();
     }
@@ -663,7 +651,9 @@ public:
                        unsigned* shaders, unsigned pass, unsigned passCount, const VertexFormat* pvf, 
                        ShaderInterface* psi)
     { 
-        if ( !psi->SetStaticShader( (ShaderType)shaders[pass], pvf ) )
+        VShaderType vshader = FShaderDesc::VShaderForFShader((FShaderType)shaders[pass]);
+
+        if ( !psi->SetStaticShader( vshader, (FShaderType)shaders[pass], pvf ) )
             return false;
         psi->BeginPrimitive();
         const Shader& pso = psi->GetCurrentShaders();
@@ -672,7 +662,7 @@ public:
         psi->SetMatrix(pso, Uniforms::SU_mvp, mvp );
 
         // Apply the source texture.
-        bool shadowPass = shaders[pass] >= ShaderDesc::ST_start_shadows && shaders[pass] <= ShaderDesc::ST_end_shadows;
+        bool shadowPass = shaders[pass] >= FShaderDesc::FS_start_shadows && shaders[pass] <= FShaderDesc::FS_end_shadows;
         NativeTexture* ptexture = (NativeTexture*)targets[Target_Source]->GetTexture();
         psi->SetTexture(pso, Uniforms::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
 
@@ -699,7 +689,7 @@ public:
             float fsize[4];
             float blurx = Alg::Max( 1.0f, floorf(TwipsToPixels(params.BlurX)));
             float blury = Alg::Max( 1.0f, floorf(TwipsToPixels(params.BlurY)));
-            if ( shaders[pass] == ShaderDesc::ST_Box1Blur || shaders[pass] == ShaderDesc::ST_Box1BlurMul)
+            if ( shaders[pass] == FShaderDesc::FS_FBox1Blur || shaders[pass] == FShaderDesc::FS_FBox1BlurMul)
             {
                 // On even passes, do the X blur, on odd passes, do the Y blur.
                 if ( (pass & 1) == 0 )
@@ -746,8 +736,8 @@ public:
                 offset[0] = -TwipsToPixels(params.Offset.x);
                 offset[1] = -TwipsToPixels(params.Offset.y);
 
-                if ( (shaders[pass] & ShaderDesc::ST_shadows_Shadowonly) == 0 &&
-                     (shaders[pass] & ShaderDesc::ST_shadows_ShadowonlyHighlight) == 0 &&
+                if ( !(params.Mode & BlurFilterParams::Mode_HideObject &&
+                     !(params.Mode & BlurFilterParams::Mode_Knockout)) && 
                      targets[Target_Original] )
                 {
                     NativeTexture* psrctex = (NativeTexture*)targets[Target_Original]->GetTexture();
@@ -760,7 +750,7 @@ public:
                 psi->SetUniform(pso, Uniforms::SU_scolor, scolors[0], 4 );
                 psi->SetUniform(pso, Uniforms::SU_offset, offset, 2 );
 
-                if (filter->GetFilterType() == Filter_Bevel)
+                if ( params.Mode & BlurFilterParams::Mode_Highlight)
                     psi->SetUniform(pso, Uniforms::SU_scolor2, scolors[1], 4 );
             }
         }
@@ -795,8 +785,7 @@ public:
     }
 
     static const int MaximumBlurKernel = 32 * 20 * 20; // in twips^2
-    static const int MaximumQuality      = 15;
-    static const int MaximumFilterPasses = 8 * MaximumQuality;
+    static const int MaximumFilterPasses = 8;
 
     // Returns the number of passes required to render the given filter from scratch. Fills out the passes
     // array (which must contain at least MaximumPasses elements), with the shaders used per-pass.
@@ -820,68 +809,53 @@ public:
 
             // Every pass except the last is simply a blur
             unsigned pass;
-            for ( pass = 0; pass < Alg::Max<unsigned>(0,passCount-1); ++pass )
-                passes[pass] = box1 ? ShaderDesc::ST_Box1Blur : ShaderDesc::ST_Box2Blur;
+            for ( pass = 0; pass < passCount-1; ++pass )
+                passes[pass] = box1 ? FShaderDesc::FS_FBox1Blur : FShaderDesc::FS_FBox2Blur;
 
-            FilterType type = (FilterType)(params.Mode & BlurFilterParams::Mode_FilterMask);
-            switch( type )
+            switch( params.Mode & BlurFilterParams::Mode_FilterMask )
             {
                 default:
                 case Filter_Blur:
-                    passes[pass] = ShaderDesc::ST_start_blurs;
+                    passes[pass] = FShaderDesc::FS_start_blurs;
 
                     // Extra flags.
-                    passes[pass] += box1 ? 0 : ShaderDesc::ST_blurs_Box2;
+                    passes[pass] += box1 ? 0 : FShaderDesc::FS_blurs_Box2;
                     if ( fillFlags & FF_Multiply )
-                        passes[pass] += (unsigned)ShaderDesc::ST_blurs_Mul;
+                        passes[pass] += (unsigned)FShaderDesc::FS_blurs_Mul;
                     break;
                 case Filter_Glow:
-                case Filter_Shadow:
-                    // Base shader.
-                    if ( params.Mode & BlurFilterParams::Mode_Inner )
-                    {
-                        if (params.Mode & (BlurFilterParams::Mode_HideObject|BlurFilterParams::Mode_Knockout))
-                            passes[pass] = ShaderDesc::ST_Box2InnerShadowKnockout; // Inner+Hide identical to Inner+Knockout.
-                        else
-                            passes[pass] = ShaderDesc::ST_Box2InnerShadow;
-                    }
-                    else
-                    {
-                        if ((params.Mode & (BlurFilterParams::Mode_HideObject|BlurFilterParams::Mode_Knockout)) == BlurFilterParams::Mode_HideObject)
-                            passes[pass] = ShaderDesc::ST_Box2Shadowonly;
-                        else
-                        {
-                            passes[pass] = ShaderDesc::ST_Box2Shadow;
-                            if (params.Mode & BlurFilterParams::Mode_Knockout)
-                                passes[pass] += ShaderDesc::ST_shadows_Knockout;
-                        }
-                    }
-
-                    // Extra flags.
-                    if ( fillFlags & FF_Multiply )
-                        passes[pass] += (unsigned)ShaderDesc::ST_shadows_Mul;
-                    break;
-
                 case Filter_Bevel:
+                case Filter_Shadow:
+
                     // Base shader.
                     if ( params.Mode & BlurFilterParams::Mode_Inner )
-						passes[pass] = ShaderDesc::ST_Box2InnerShadowHighlight; // inner
-                    else if (params.Mode & BlurFilterParams::Mode_Highlight)
-                    {
-                        if (params.Mode & BlurFilterParams::Mode_Knockout)
-                            passes[pass] = ShaderDesc::ST_Box2ShadowonlyHighlight;  // full + knockout.
-                        else
-                            passes[pass] = ShaderDesc::ST_Box2FullShadowHighlight;  // full.                    
-                    }
+					{
+						if ( !(params.Mode & BlurFilterParams::Mode_Highlight) )
+							passes[pass] = FShaderDesc::FS_FBox2InnerShadow;
+						else
+							passes[pass] = FShaderDesc::FS_FBox2InnerShadowHighlight;
+					}
+                    else if (params.Mode & BlurFilterParams::Mode_HideObject &&
+                        !(params.Mode & BlurFilterParams::Mode_Knockout))
+					{
+						if ( !(params.Mode & BlurFilterParams::Mode_Highlight) )
+							passes[pass] = FShaderDesc::FS_FBox2Shadowonly;
+						else
+							passes[pass] = FShaderDesc::FS_FBox2ShadowonlyHighlight;
+					}
                     else
-                        passes[pass] = ShaderDesc::ST_Box2ShadowHighlight;      // outer
-
+					{
+						if ( !(params.Mode & BlurFilterParams::Mode_Highlight) )
+							passes[pass] = FShaderDesc::FS_FBox2Shadow;
+						else
+							passes[pass] = FShaderDesc::FS_FBox2ShadowHighlight;
+					}
 
                     // Extra flags.
-                    if ( passes[pass] != ShaderDesc::ST_Box2ShadowonlyHighlight && (params.Mode & BlurFilterParams::Mode_Knockout) )
-                        passes[pass] += (unsigned)ShaderDesc::ST_shadows_Knockout;
                     if ( fillFlags & FF_Multiply )
-                        passes[pass] += (unsigned)ShaderDesc::ST_shadows_Mul;
+                        passes[pass] += (unsigned)FShaderDesc::FS_shadows_Mul;
+                    if ( params.Mode & BlurFilterParams::Mode_Knockout )
+                        passes[pass] += (unsigned)FShaderDesc::FS_shadows_Knockout;
                     break;
 
                 // Unsupported.
@@ -889,22 +863,15 @@ public:
                 //case Filter_GradientBevel:
             }
         }
-        else if (filter->GetFilterType() == Filter_ColorMatrix)
+        else
         {
             passCount = 1;
             ColorMatrixFilter* matrixFilter = (ColorMatrixFilter*)filter;
             float* params = &((float&)matrixFilter[0]);
             SF_UNUSED(params);
-            passes[0] = ShaderDesc::ST_start_cmatrix;
+            passes[0] = FShaderDesc::FS_start_cmatrix;
             if ( fillFlags & FF_Multiply )
-                passes[0] += (unsigned)ShaderDesc::ST_cmatrix_Mul;
-        }
-        else
-        {
-            // Report 0 passes. This should cause the HAL::drawUncachedFilter code to just use the
-            // source texture as the destination.
-            SF_DEBUG_ASSERT(filter->GetFilterType() == Filter_CacheAsBitmap, "Expected filter type to be CacheAsBitmap.");
-            passCount = 0;
+                passes[0] += (unsigned)FShaderDesc::FS_cmatrix_Mul;
         }
         return passCount;
     }
@@ -922,17 +889,18 @@ public:
 									ShaderInterface* psi, unsigned flags = 0 )
     {
         // Determine which shader to use, based on parameters.
-		unsigned type = ShaderDesc::ST_start_DrawableCopyPixels;
+		unsigned type = VShaderDesc::VS_start_DrawableCopyPixels;
         if ( tex[2] )
 		{
-            type += ShaderDesc::ST_DrawableCopyPixels_DrawableCopyPixelsAlpha;
+            type += VShaderDesc::VS_DrawableCopyPixels_DrawableCopyPixelsAlpha;
 		}
-        if ( !destAlpha )
-            type += ShaderDesc::ST_DrawableCopyPixels_NoDestAlpha;
-		else if ( mergeAlpha )
-			type += ShaderDesc::ST_DrawableCopyPixels_MergeAlpha;
+		if ( mergeAlpha )
+			type += VShaderDesc::VS_DrawableCopyPixels_MergeAlpha;
+		if ( !destAlpha )
+			type += VShaderDesc::VS_DrawableCopyPixels_NoDestAlpha;
+		type += VShaderDesc::VS_DrawableCopyPixels_CopyLerp;
 
-        if (!psi->SetStaticShader((ShaderType)type, pvf ))
+        if (!psi->SetStaticShader((VShaderType)type, (FShaderType)type, pvf ))
             return false;
 
         psi->BeginPrimitive();
@@ -944,7 +912,7 @@ public:
                                 const Matrix4F* cxmul,
                                 const VertexFormat* pvf, ShaderInterface* psi, unsigned flags = 0 )
     {
-        if (!psi->SetStaticShader(ShaderDesc::ST_DrawableMerge, pvf ))
+        if (!psi->SetStaticShader(VShaderDesc::VS_VDrawableMerge, FShaderDesc::FS_FDrawableMerge, pvf ))
             return false;
         psi->BeginPrimitive();
         const Shader& pso = psi->GetCurrentShaders();
@@ -962,7 +930,7 @@ public:
                             const Cxform* cx,
                             const VertexFormat* pvf, ShaderInterface* psi, unsigned flags = 0 )
     {
-        if (!psi->SetStaticShader(ShaderDesc::ST_TexTGCxform, pvf ))
+        if (!psi->SetStaticShader(VShaderDesc::VS_VTexTGCxform, FShaderDesc::FS_FTexTGCxform, pvf ))
             return false;
         psi->BeginPrimitive();
         const Shader& pso = psi->GetCurrentShaders();
@@ -977,7 +945,7 @@ public:
     bool SetDrawableCompare( Render::Texture** tex, const Matrix2F* texgen, const Size<int> texsize, 
                              const VertexFormat* pvf, ShaderInterface* psi, unsigned flags = 0 )
     {
-        if (!psi->SetStaticShader(ShaderDesc::ST_DrawableCompare, pvf ))
+        if (!psi->SetStaticShader(VShaderDesc::VS_VDrawableCompare, FShaderDesc::FS_FDrawableCompare, pvf ))
             return false;
         psi->BeginPrimitive();
 
@@ -990,7 +958,7 @@ public:
                                 const Matrix2F& mvp, Render::Texture* paletteMap,
                                 const VertexFormat* pvf, ShaderInterface* psi, unsigned flags = 0 )
     {
-        if (!psi->SetStaticShader(ShaderDesc::ST_DrawablePaletteMap, pvf ))
+        if (!psi->SetStaticShader(VShaderDesc::VS_VDrawablePaletteMap, FShaderDesc::FS_FDrawablePaletteMap, pvf ))
             return false;
         psi->BeginPrimitive();
         const Shader& pso = psi->GetCurrentShaders();
@@ -1000,6 +968,59 @@ public:
 
         return DrawableFinish(1, tex, texgen, texsize, mvp, psi, flags);
     }
+
+#if 1
+    bool SetDrawableThreshold(  Render::Texture**, const Matrix2F*, const Size<int>, 
+        const Matrix2F&, DrawableImage::OperationType, UInt32, UInt32, UInt32, bool,
+        const VertexFormat*, ShaderInterface*, unsigned = 0 )
+    {
+        return false;
+    }
+#else
+    bool SetDrawableThreshold(  Render::Texture** tex, const Matrix2F* texgen, const Size<int> texsize, 
+                                const Matrix2F& mvp, DrawableImage::OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource,
+                                const VertexFormat* pvf, ShaderInterface* psi, unsigned flags = 0 )
+    {
+        // Determine which shader to use, based on parameters.
+        unsigned type = VShaderDesc::VS_start_DrawableThreshold;
+        if ( copySource )
+        {
+            type += VShaderDesc::VS_DrawableThreshold_DrawableThresholdSource;
+            type += VShaderDesc::VS_DrawableThreshold_ThresholdFinishSource;
+        }
+        else
+            type += VShaderDesc::VS_DrawableThreshold_ThresholdFinish;
+
+        switch(op)
+        {
+        case DrawableImage::Operator_LT: type += VShaderDesc::VS_DrawableThreshold_LT; break;
+        case DrawableImage::Operator_LE: type += VShaderDesc::VS_DrawableThreshold_LE; break;
+        case DrawableImage::Operator_GT: type += VShaderDesc::VS_DrawableThreshold_GT; break;
+        case DrawableImage::Operator_GE: type += VShaderDesc::VS_DrawableThreshold_GE; break;
+        case DrawableImage::Operator_EQ: type += VShaderDesc::VS_DrawableThreshold_EQ; break;
+        case DrawableImage::Operator_NE: type += VShaderDesc::VS_DrawableThreshold_NE; break;
+        }
+
+        if (!psi->SetStaticShader((VShaderType)type, (FShaderType)type, pvf ))
+            return false;
+        psi->BeginPrimitive();
+        const Shader& pso = psi->GetCurrentShaders();
+
+        // Threshold is expected to already be masked in the shader.
+        Color maskedThreshold = threshold & mask;
+        float colorConv[4];
+        maskedThreshold.GetRGBAFloat(colorConv);
+        psi->SetUniform(pso, Uniforms::SU_threshold, colorConv, 4 );
+        Color maskC = mask;
+        maskC.GetRGBAFloat(colorConv);
+        psi->SetUniform(pso, Uniforms::SU_mask, colorConv, 4);
+        Color col = color;
+        col.GetRGBAFloat(colorConv);
+        psi->SetUniform(pso, Uniforms::SU_color, colorConv, 4);
+   
+        return DrawableFinish(copySource ? 2 : 1, tex, texgen, texsize, mvp, psi, flags);
+    }
+#endif
 
     // This function is used by many BitmapData commands. It assumes that one of the SetDrawable* functions
     // has already been called.

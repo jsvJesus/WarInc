@@ -120,7 +120,7 @@ LPDIRECT3DVERTEXDECLARATION9	GrassChunk::VDecl = NULL;
 GrassLib::Settings::Settings()
 : CellScale( 64.f )
 , MaxMeshScale( 16.f )
-, UniformMaskThreshold( 0.9f )
+, UniformMaskThreshold( 0.975f )
 , BlankMaskThreshold( 0.1f )
 , MaxBlankMaskThreshold( 0.2f )
 {

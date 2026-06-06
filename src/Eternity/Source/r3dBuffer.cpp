@@ -5,98 +5,12 @@
 
 #include "r3dDeviceQueue.h"
 
-#ifndef WO_SERVER
-
-#pragma warning(push)
-#pragma warning(disable: 4005)
-#pragma warning(disable: 4061)
-#pragma warning(disable: 4062)
-#pragma warning(disable: 4191)
-#pragma warning(disable: 4255)
-#pragma warning(disable: 4365)
-#pragma warning(disable: 4571)
-#pragma warning(disable: 4625)
-#pragma warning(disable: 4626)
-#pragma warning(disable: 4668)
-#pragma warning(disable: 4710)
-#pragma warning(disable: 4711)
-#pragma warning(disable: 4820)
-#include <dxgi.h>
-#include <d3d11.h>
-#pragma warning(pop)
-
-#include "r3dDX11.h"
-#include "r3dDX11Geometry.h"
-#include "VShader.h"
-
-#endif
-
 static	HRESULT		hr;
-
-#ifndef WO_SERVER
-
-static bool r3dVertexArrayUseDX11Mirror()
-{
-	return g_r3dDX11.IsInitialized() &&
-		r3dRenderer &&
-		!r3dRenderer->GetUseD3D9Present();
-}
-
-static int r3dD3DQuery_GetDX11Type(D3DQUERYTYPE type, D3D11_QUERY* outType)
-{
-	if(!outType)
-		return 0;
-
-	switch(type)
-	{
-	case D3DQUERYTYPE_EVENT:
-		*outType = D3D11_QUERY_EVENT;
-		return 1;
-
-	case D3DQUERYTYPE_OCCLUSION:
-		*outType = D3D11_QUERY_OCCLUSION;
-		return 1;
-
-	case D3DQUERYTYPE_TIMESTAMP:
-		*outType = D3D11_QUERY_TIMESTAMP;
-		return 1;
-
-	case D3DQUERYTYPE_TIMESTAMPFREQ:
-		*outType = D3D11_QUERY_TIMESTAMP_DISJOINT;
-		return 1;
-	}
-
-	return 0;
-}
-
-static void r3dD3DQuery_WriteCounterValue(void* pData, DWORD dwSize, UINT64 value)
-{
-	if(!pData || !dwSize)
-		return;
-
-	if(dwSize >= sizeof(UINT64))
-	{
-		*(UINT64*)pData = value;
-		return;
-	}
-
-	if(dwSize >= sizeof(DWORD))
-	{
-		*(DWORD*)pData = value > 0xffffffffull ? 0xffffffffu : (DWORD)value;
-	}
-}
-
-#endif
 
 r3dD3DQuery::r3dD3DQuery(D3DQUERYTYPE type, const r3dIntegrityGuardian& ig /*= r3dIntegrityGuardian()*/ )
 : r3dIResource( ig )
 {
 	type_ = type;
-	query_ = NULL;
-#ifndef WO_SERVER
-	dx11Query_ = NULL;
-	dx11Open_ = 0;
-#endif
 	CreateQueuedResource( this ) ;
 }
 
@@ -107,143 +21,13 @@ r3dD3DQuery::~r3dD3DQuery()
 
 void r3dD3DQuery::D3DCreateResource()
 {
-	R3D_ENSURE_MAIN_THREAD();
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && g_r3dDX11.GetDevice())
-	{
-		D3D11_QUERY dx11Type;
-		if(r3dD3DQuery_GetDX11Type(type_, &dx11Type))
-		{
-			D3D11_QUERY_DESC desc;
-			ZeroMemory(&desc, sizeof(desc));
-			desc.Query = dx11Type;
-
-			HRESULT dx11hr = g_r3dDX11.GetDevice()->CreateQuery(&desc, &dx11Query_);
-			if(FAILED(dx11hr))
-			{
-				r3dOutToLog(
-					"DX11Query: CreateQuery failed, D3D9 type=%d HRESULT=0x%08X\n",
-					(int)type_,
-					(unsigned int)dx11hr
-				);
-			}
-		}
-	}
-#endif
-
-	if(r3dRenderer && r3dRenderer->pd3ddev)
-	{
-		D3D_V( r3dRenderer->pd3ddev->CreateQuery(type_, &query_) ) ;
-	}
+	D3D_V( r3dRenderer->pd3ddev->CreateQuery(type_, &query_) ) ;
 }
 
 void r3dD3DQuery::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 	SAFE_RELEASE(query_);
-
-#ifndef WO_SERVER
-	SAFE_RELEASE(dx11Query_);
-	dx11Open_ = 0;
-#endif
-}
-
-HRESULT r3dD3DQuery::Issue(DWORD dwIssueFlags)
-{
-	R3D_ENSURE_MAIN_THREAD();
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && dx11Query_)
-	{
-		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-		if(!context)
-			return D3DERR_INVALIDCALL;
-
-		if(type_ == D3DQUERYTYPE_OCCLUSION || type_ == D3DQUERYTYPE_TIMESTAMPFREQ)
-		{
-			if(dwIssueFlags & D3DISSUE_BEGIN)
-			{
-				context->Begin(dx11Query_);
-				dx11Open_ = 1;
-			}
-
-			if(dwIssueFlags & D3DISSUE_END)
-			{
-				if(type_ == D3DQUERYTYPE_TIMESTAMPFREQ && !dx11Open_)
-				{
-					context->Begin(dx11Query_);
-				}
-
-				context->End(dx11Query_);
-				dx11Open_ = 0;
-			}
-
-			return S_OK;
-		}
-
-		if(dwIssueFlags & D3DISSUE_END)
-		{
-			context->End(dx11Query_);
-			return S_OK;
-		}
-
-		return S_OK;
-	}
-#endif
-
-	return query_ ? query_->Issue(dwIssueFlags) : D3DERR_INVALIDCALL;
-}
-
-HRESULT r3dD3DQuery::GetData(void* pData, DWORD dwSize, DWORD dwGetDataFlags)
-{
-	R3D_ENSURE_MAIN_THREAD();
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && dx11Query_)
-	{
-		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-		if(!context)
-			return D3DERR_INVALIDCALL;
-
-		const UINT flags = (dwGetDataFlags & D3DGETDATA_FLUSH) ? 0 : D3D11_ASYNC_GETDATA_DONOTFLUSH;
-
-		if(!pData || !dwSize)
-			return context->GetData(dx11Query_, NULL, 0, flags);
-
-		if(type_ == D3DQUERYTYPE_EVENT)
-			return context->GetData(dx11Query_, pData, dwSize, flags);
-
-		if(type_ == D3DQUERYTYPE_OCCLUSION || type_ == D3DQUERYTYPE_TIMESTAMP)
-		{
-			UINT64 value = 0;
-			HRESULT dx11hr = context->GetData(dx11Query_, &value, sizeof(value), flags);
-			if(dx11hr == S_OK)
-				r3dD3DQuery_WriteCounterValue(pData, dwSize, value);
-
-			return dx11hr;
-		}
-
-		if(type_ == D3DQUERYTYPE_TIMESTAMPFREQ)
-		{
-			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT data;
-			ZeroMemory(&data, sizeof(data));
-
-			HRESULT dx11hr = context->GetData(dx11Query_, &data, sizeof(data), flags);
-			if(dx11hr == S_OK)
-			{
-				if(data.Disjoint)
-					return S_FALSE;
-
-				r3dD3DQuery_WriteCounterValue(pData, dwSize, data.Frequency);
-			}
-
-			return dx11hr;
-		}
-	}
-#endif
-
-	return query_ ? query_->GetData(pData, dwSize, dwGetDataFlags) : D3DERR_INVALIDCALL;
 }
 
 //------------------------------------------------------------------------
@@ -479,41 +263,6 @@ static void SetupSurfacePointers( void* params )
 {
 	r3dScreenBuffer* sbuf = (r3dScreenBuffer*) params ;
 
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
-	{
-		if(sbuf->bCubemap)
-		{
-			int mipCount = sbuf->Tex ? sbuf->Tex->GetNumMipmaps() : sbuf->ActualNumMipLevels;
-			for( int i = 0; i < r3dScreenBuffer::FACE_COUNT; i ++ )
-			{
-				for( int m = 0; m < mipCount; m ++ )
-				{
-					sbuf->Surfs[ i ][ m ].Set( NULL );
-					sbuf->Surfs[ i ][ m ].SetFormat( sbuf->BufferFormat );
-
-					if(sbuf->Tex)
-						sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ i ][ m ], i, m);
-				}
-			}
-		}
-		else
-		{
-			int mipCount = sbuf->Tex ? sbuf->Tex->GetNumMipmaps() : sbuf->ActualNumMipLevels;
-			for( int m = 0; m < mipCount; m ++ )
-			{
-				sbuf->Surfs[ 0 ][ m ].Set( NULL );
-				sbuf->Surfs[ 0 ][ m ].SetFormat( sbuf->BufferFormat );
-
-				if(sbuf->Tex)
-					sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ 0 ][ m ], 0, m);
-			}
-		}
-
-		return;
-	}
-#endif
-
 	IDirect3DSurface9* surf ;
 
 	if( sbuf->bCubemap )
@@ -526,11 +275,6 @@ static void SetupSurfacePointers( void* params )
 				{
 					D3D_V(sbuf->AsTexCUBE()->GetCubeMapSurface( (D3DCUBEMAP_FACES)i, m, &surf ));
 					sbuf->Surfs[ i ][ m ].Set( surf );
-
-#ifndef WO_SERVER
-					if(sbuf->Tex)
-						sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ i ][ m ], i, m);
-#endif
 				}				
 			}
 		}
@@ -543,11 +287,6 @@ static void SetupSurfacePointers( void* params )
 			{
 				D3D_V(sbuf->AsTex2D()->GetSurfaceLevel(m, &surf ));
 				sbuf->Surfs[ 0 ][ m ].Set( surf ) ;
-
-#ifndef WO_SERVER
-				if(sbuf->Tex)
-					sbuf->Tex->RegisterDX11RenderTargetSurface(&sbuf->Surfs[ 0 ][ m ], 0, m);
-#endif
 			}
 		}
 	}
@@ -676,7 +415,7 @@ void r3dScreenBuffer::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if( Surfs[ 0 ][ 0 ].Valid() )
+	if( Surfs[ 0 ][ 0 ].Get() )
 	{
 		r3dRenderer->DeleteTexture(Tex, true);
 		Tex		= NULL ;
@@ -685,7 +424,7 @@ void r3dScreenBuffer::D3DReleaseResource()
 		r3dRenderer->Stats.AddRenderTargetMem ( -UsedMemory ) ;
 		UsedMemory = 0 ;
 
-		if ( OurZBuf.Valid() && zType == Z_OWN )
+		if ( OurZBuf.Get() && zType == Z_OWN )
 		{
 			OurZBuf.ReleaseAndReset();
 		}
@@ -714,32 +453,32 @@ void r3dScreenBuffer::D3DReleaseResource()
 	return;
 }
 
+
+
 void r3dScreenBuffer::SetMRT(int RTID, int bSet)
 {
 	if (!Tex) return;
 
 	if (!bSet)
 	{
-		r3dRenderer->SetRTTunnel(RTID, NULL);
+		r3dRenderer->SetRT(RTID, NULL);
 		return;
 	}
 
 	BufferID	= RTID;
 
-	r3dRenderer->SetRTTunnel( RTID, &Surfs[ FACE_PX ][ 0 ] );
+	r3dRenderer->SetRT( RTID, Surfs[ FACE_PX ][ 0 ].Get() );
 
 	return;
 }
 
 bool r3dScreenBuffer::IsNull() const
 {
-	return BufferFormat == D3DFMT_UNKNOWN || !Surfs[ 0 ][ 0 ].Valid() ;
+	return BufferFormat == D3DFMT_UNKNOWN || !Surfs[ 0 ][ 0 ].Get() ;
 }
 
 IDirect3DSurface9* r3dScreenBuffer::GetTex2DSurface()
 {
-	if( !Surfs[ FACE_PX ][ 0 ].Valid() )
-		return NULL;
 	return Surfs[ FACE_PX ][ 0 ].Get();
 }
 
@@ -750,35 +489,8 @@ int r3dScreenBuffer::GetShadowZBufSize()
 
 int r3dScreenBuffer::GetNumMipLevels() const
 {
-	if(!Tex)
-		return 0;
-
-#ifndef WO_SERVER
-	if(g_r3dDX11.IsInitialized() && r3dRenderer && !r3dRenderer->GetUseD3D9Present())
-	{
-		int mips = Tex->GetNumMipmaps();
-
-		if(mips > 0)
-			return mips;
-
-		if(ActualNumMipLevels > 0)
-			return ActualNumMipLevels;
-
-		return 1;
-	}
-#endif
-
-	IDirect3DTexture9* tex2D = Tex->AsTex2D();
-
-	if(!tex2D)
-	{
-		if(ActualNumMipLevels > 0)
-			return ActualNumMipLevels;
-
-		return Tex->GetNumMipmaps();
-	}
-
-	return tex2D->GetLevelCount();
+	if(!Tex) return 0;
+	return Tex->AsTex2D()->GetLevelCount();
 }
 
 void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/)
@@ -786,19 +498,17 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 	r3d_assert( Mip < ActualNumMipLevels || !ActualNumMipLevels ) ;
 
 	BufferID	= RTID;
-
-	r3dD3DSurfaceTunnel* s = &Surfs[ Face ][ Mip ];
-
-	if (s->Valid())
+	r3dD3DSurfaceTunnel s(Surfs[ Face ][ Mip ]);
+	if (s.Get())
 	{
 		r3d_assert( bCubemap || Face == FACE_PX );
 
-		r3dRenderer->SetRTTunnel( RTID, s );
+		r3dRenderer->SetRT( RTID, s.Get() );
 	}
 
 	if ( zType == Z_SYSTEM  )
 	{
-		r3dRenderer->SetDSSTunnel(&ZBuf);
+		r3dRenderer->SetDSS(ZBuf.Get());
 	}
 	else
 	{
@@ -806,17 +516,17 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 		{
 			if ( zType == Z_OWN )
 			{
-				r3dRenderer->SetDSSTunnel(&OurZBuf);
+				r3dRenderer->SetDSS(OurZBuf.Get());
 			}
 			else
-				if( zType == Z_SHADOW )
-				{
-					r3dRenderer->SetDSSTunnel(&ShadowZBuf);
-				}
-				else
-				{
-					r3dRenderer->SetDSSTunnel(NULL);
-				}
+			if( zType == Z_SHADOW )
+			{
+				r3dRenderer->SetDSS(ShadowZBuf.Get());
+			}
+			else
+			{
+				r3dRenderer->SetDSS(NULL);
+			}
 		}
 	}
 
@@ -835,18 +545,22 @@ void r3dScreenBuffer::Activate(int RTID, int Face /*= FACE_PX*/, int Mip /*= 0*/
 		r3dRenderer->ScreenW2      = r3dRenderer->ScreenW / 2 ;
 		r3dRenderer->ScreenH2      = r3dRenderer->ScreenH / 2 ;
 
-		if( s->Valid() )
+		if( s.Get() )
 		{
 			r3dRenderer->SetViewport(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH);
 		}
 	}
+
 }
+
 
 void r3dScreenBuffer::Deactivate(int bReset)
 {
 	if (BufferID)
 	{
-		r3dRenderer->SetRTTunnel(BufferID, NULL);
+		r3dRenderer->SetRT(BufferID, NULL);
+
+		//  r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, 0x00000000 );
 
 		return;
 	}
@@ -854,10 +568,10 @@ void r3dScreenBuffer::Deactivate(int bReset)
 	r3d_assert( ActivateGuard == 1 ) ;
 	ActivateGuard -- ;
 
-	if (bReset && BBuf.Valid())
+	if (bReset && BBuf.Get())
 	{
-		r3dRenderer->SetRTTunnel(0, &BBuf);
-		r3dRenderer->SetDSSTunnel(&ZBuf);
+		r3dRenderer->SetRT(0, BBuf.Get());
+		r3dRenderer->SetDSS(ZBuf.Get());
 	}
 
 	r3dRenderer->ScreenW  = OldW;
@@ -866,7 +580,13 @@ void r3dScreenBuffer::Deactivate(int bReset)
 	r3dRenderer->ScreenH2 = r3dRenderer->ScreenH / 2;
 
 	r3dRenderer->SetViewport(0,0,r3dRenderer->ScreenW, r3dRenderer->ScreenH);
+
+	//  if (bUseSystemZ)
+	//    r3dRenderer->pd3ddev->StretchRect(r3dRenderer->RTBuffer, NULL, surf1, NULL, D3DTEXF_NONE);
+
 }
+
+
 
 r3dD3DBuffer::r3dD3DBuffer(type_e type, int size, int stride, LPDIRECT3DVERTEXDECLARATION9 decl, const r3dIntegrityGuardian& ig /*= r3dIntegrityGuardian()*/)
 : r3dIResource( ig )
@@ -884,12 +604,6 @@ r3dD3DBuffer::r3dD3DBuffer(type_e type, int size, int stride, LPDIRECT3DVERTEXDE
 
 	m_Decl    = decl;
 
-#ifndef WO_SERVER
-	m_DX11Buffer = NULL;
-	m_DX11MappedPtr = NULL;
-	m_DX9LockedPtr = NULL;
-#endif
-
 	R3D_ENSURE_MAIN_THREAD();
 
 	D3DCreateResource();
@@ -901,100 +615,6 @@ r3dD3DBuffer::~r3dD3DBuffer()
 
 	D3DReleaseResource();
 }
-
-#ifndef WO_SERVER
-
-void r3dD3DBuffer::DX11CreateResource()
-{
-	if(m_DX11Buffer)
-		return;
-
-	if(!g_r3dDX11.IsInitialized())
-		return;
-
-	ID3D11Device* device = g_r3dDX11.GetDevice();
-
-	if(!device)
-		return;
-
-	if(!m_Size || !m_Stride)
-		return;
-
-	D3D11_BUFFER_DESC desc;
-	ZeroMemory(&desc, sizeof(desc));
-
-	desc.ByteWidth = m_Size * m_Stride;
-	desc.Usage = D3D11_USAGE_DYNAMIC;
-	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	desc.MiscFlags = 0;
-	desc.StructureByteStride = 0;
-
-	switch(m_Type)
-	{
-	default:
-		r3d_assert(0);
-		return;
-
-	case BUFFER_Index:
-		desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		break;
-
-	case BUFFER_Vertex:
-		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		break;
-	}
-
-	HRESULT dx11hr = device->CreateBuffer(&desc, NULL, &m_DX11Buffer);
-
-	if(FAILED(dx11hr))
-	{
-		r3dOutToLog(
-			"DX11Geometry: failed to create mirror %s buffer, size=%d stride=%d bytes=%d HRESULT=0x%08X\n",
-			m_Type == BUFFER_Index ? "index" : "vertex",
-			m_Size,
-			m_Stride,
-			m_Size * m_Stride,
-			(unsigned int)dx11hr
-		);
-
-		m_DX11Buffer = NULL;
-		return;
-	}
-
-	r3dOutToLog(
-		"DX11Geometry: created mirror %s buffer, size=%d stride=%d bytes=%d\n",
-		m_Type == BUFFER_Index ? "index" : "vertex",
-		m_Size,
-		m_Stride,
-		m_Size * m_Stride
-	);
-}
-
-void r3dD3DBuffer::DX11ReleaseResource()
-{
-	if(m_DX11MappedPtr)
-	{
-		if(g_r3dDX11.IsInitialized())
-		{
-			ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-
-			if(context && m_DX11Buffer)
-				context->Unmap(m_DX11Buffer, 0);
-		}
-
-		m_DX11MappedPtr = NULL;
-	}
-
-	if(m_DX11Buffer)
-	{
-		m_DX11Buffer->Release();
-		m_DX11Buffer = NULL;
-	}
-
-	m_DX9LockedPtr = NULL;
-}
-
-#endif
 
 void r3dD3DBuffer::D3DCreateResource()
 {
@@ -1042,11 +662,7 @@ void r3dD3DBuffer::D3DCreateResource()
 		SetD3DResourcePrivateData(pVB, "r3dD3DBuffer: VB");
 		r3dRenderer->Stats.AddBufferMem ( + m_Size * m_Stride );
 		break;
-	}
-
-#ifndef WO_SERVER
-	DX11CreateResource();
-#endif
+	} 
 
 	return;
 }
@@ -1054,10 +670,6 @@ void r3dD3DBuffer::D3DCreateResource()
 void r3dD3DBuffer::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
-
-#ifndef WO_SERVER
-	DX11ReleaseResource();
-#endif
 
 	switch(m_Type) 
 	{
@@ -1111,53 +723,6 @@ void* r3dD3DBuffer::LockData(int size, int *lstart)
 	// advance to the next position
 	m_Pos      += size;
 
-#ifndef WO_SERVER
-	m_DX9LockedPtr = pOut;
-	m_DX11MappedPtr = NULL;
-
-	if(g_r3dDX11.IsInitialized())
-	{
-		if(!m_DX11Buffer)
-			DX11CreateResource();
-
-		if(m_DX11Buffer)
-		{
-			ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-
-			if(context)
-			{
-				D3D11_MAPPED_SUBRESOURCE mapped;
-				ZeroMemory(&mapped, sizeof(mapped));
-
-				D3D11_MAP mapType = D3D11_MAP_WRITE_NO_OVERWRITE;
-
-				if(dwLockFlags & D3DLOCK_DISCARD)
-					mapType = D3D11_MAP_WRITE_DISCARD;
-
-				HRESULT dx11hr = context->Map(
-					m_DX11Buffer,
-					0,
-					mapType,
-					0,
-					&mapped
-				);
-
-				if(SUCCEEDED(dx11hr))
-				{
-					m_DX11MappedPtr = (BYTE*)mapped.pData + m_LockStart * m_Stride;
-				}
-				else
-				{
-					r3dOutToLog(
-						"DX11Geometry: failed to map mirror buffer, HRESULT=0x%08X\n",
-						(unsigned int)dx11hr
-					);
-				}
-			}
-		}
-	}
-#endif
-
 	if(lstart)
 		*lstart = m_LockStart;
 
@@ -1171,25 +736,6 @@ void r3dD3DBuffer::Unlock()
 {
 	r3d_assert(m_LockSize);
 
-#ifndef WO_SERVER
-	if(m_DX11Buffer && m_DX11MappedPtr && m_DX9LockedPtr)
-	{
-		memcpy(
-			m_DX11MappedPtr,
-			m_DX9LockedPtr,
-			m_LockSize * m_Stride
-		);
-
-		ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-
-		if(context)
-			context->Unmap(m_DX11Buffer, 0);
-
-		m_DX11MappedPtr = NULL;
-		m_DX9LockedPtr = NULL;
-	}
-#endif
-
 	switch(m_Type) {
 	case BUFFER_Index:
 		hr = pIB->Unlock();
@@ -1200,11 +746,6 @@ void r3dD3DBuffer::Unlock()
 	}
 
 	m_LockSize = 0;
-
-#ifndef WO_SERVER
-	m_DX11MappedPtr = NULL;
-	m_DX9LockedPtr = NULL;
-#endif
 }
 
 void r3dD3DBuffer::Activate()
@@ -1213,103 +754,36 @@ void r3dD3DBuffer::Activate()
 
 	switch(m_Type) 
 	{
-	default:
-		r3d_assert(0);
-		break;
-
+	default: r3d_assert(0);
 	case BUFFER_Index:
 		d3dc._SetIndices(pIB);
-
-#ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized())
-		{
-			if(!m_DX11Buffer)
-				DX11CreateResource();
-
-			if(m_DX11Buffer)
-			{
-				g_r3dDX11Geometry.SetIndexBufferRaw(
-					m_DX11Buffer,
-					m_Stride == 2 ? R3D_DX11_INDEX_16BIT : R3D_DX11_INDEX_32BIT,
-					0
-				);
-			}
-		}
-#endif
-
 		break;
-
 	case BUFFER_Vertex:
 		d3dc._SetDecl(m_Decl);
 		d3dc._SetStreamSource(0, GetVB(), 0, m_Stride);
-
-#ifndef WO_SERVER
-		if(g_r3dDX11.IsInitialized())
-		{
-			if(!m_DX11Buffer)
-				DX11CreateResource();
-
-			if(m_DX11Buffer)
-			{
-				g_r3dDX11Geometry.SetVertexBufferRaw(
-					0,
-					m_DX11Buffer,
-					m_Stride,
-					0
-				);
-			}
-		}
-#endif
-
 		break;
 	}
 
 	return;
 }
 
+
 void r3dVertexArray::D3DCreateResource()
 {
 	r3dDeviceTunnel::CreateVertexBuffer(size_*stride_, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &vrtBuff_ ) ;
 	r3dDeviceTunnel::SetD3DResourcePrivateData( &vrtBuff_, "r3dVertexArray: VB");
-
-#ifndef WO_SERVER
-	SAFE_DELETE_ARRAY(dx11Mirror_);
-	dx11MirrorBytes_ = size_ * stride_;
-	if(dx11MirrorBytes_ > 0)
-		dx11Mirror_ = new unsigned char[dx11MirrorBytes_];
-#endif
 }
 
 void r3dVertexArray::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-#ifndef WO_SERVER
-	if(dx11MirrorLocked_)
-	{
-		lockedPtr_ = 0;
-		dx11MirrorLocked_ = 0;
-	}
-#endif
-
-	if( !vrtBuff_.Valid() )
-	{
-#ifndef WO_SERVER
-		SAFE_DELETE_ARRAY(dx11Mirror_);
-		dx11MirrorBytes_ = 0;
-#endif
-		return;
-	}
+	if( !vrtBuff_.Valid() )	return;
 
 	//unlock buffer if still locked
 
 	if(lockedPtr_!=0)	vrtBuff_->Unlock();
 	vrtBuff_.ReleaseAndReset();
-
-#ifndef WO_SERVER
-	SAFE_DELETE_ARRAY(dx11Mirror_);
-	dx11MirrorBytes_ = 0;
-#endif
 }
 
 r3dVertexArray::r3dVertexArray( const r3dIntegrityGuardian& ig )
@@ -1318,11 +792,6 @@ r3dVertexArray::r3dVertexArray( const r3dIntegrityGuardian& ig )
 	size_ = 0;
 	pos_  = 0;
 	type = TRIANGLE_LIST;
-#ifndef WO_SERVER
-	dx11Mirror_ = NULL;
-	dx11MirrorBytes_ = 0;
-	dx11MirrorLocked_ = 0;
-#endif
 }
 
 r3dVertexArray::~r3dVertexArray()
@@ -1476,19 +945,6 @@ void r3dVertexArray::Lock()
 	r3dRenderer->Stats.AddBytesLocked( +toLock );
 	r3dRenderer->Stats.AddNumLocks( 1 );
 
-#ifndef WO_SERVER
-	if(r3dVertexArrayUseDX11Mirror())
-	{
-		const int lockOffset = (pos_ + unflushed_) * stride_;
-		if(!dx11Mirror_ || lockOffset < 0 || lockOffset + (int)toLock > dx11MirrorBytes_)
-			r3dError("r3dVertexArray::Lock DX11 mirror overflow\n");
-
-		lockedPtr_ = dx11Mirror_ + lockOffset;
-		dx11MirrorLocked_ = 1;
-		return;
-	}
-#endif
-
 	vrtBuff_->Lock((pos_ + unflushed_)* stride_, toLock, (void**)&lockedPtr_, flg);
 }
 void r3dVertexArray::Unlock()
@@ -1497,17 +953,6 @@ void r3dVertexArray::Unlock()
 
 	if(lockedPtr_ == 0) r3dError("r3dVertexArray::Unlock error: is not locked\n");
 	if(actual_ < needed_) r3dError("r3dVertexArray::Unlock error: the buffer is not filled completely\n");
-
-#ifndef WO_SERVER
-	if(dx11MirrorLocked_)
-	{
-		unflushed_ += actual_;
-		actual_ = 0;
-		lockedPtr_ = 0;
-		dx11MirrorLocked_ = 0;
-		return;
-	}
-#endif
 
 	vrtBuff_->Unlock();
 	unflushed_ += actual_;
@@ -1524,31 +969,6 @@ void r3dVertexArray::Flush()
 	if(unflushed_ == 0)	return;
 
 	d3dc._SetDecl(decl_);
-
-#ifndef WO_SERVER
-	if(r3dVertexArrayUseDX11Mirror())
-	{
-		const unsigned char* vertexData = dx11Mirror_ + pos_ * stride_;
-
-		switch( type )
-		{
-		case LINE_LIST:
-			r3dRenderer->DrawUP(D3DPT_LINELIST, unflushed_ / 2, vertexData, stride_);
-			break ;
-		case LINE_STRIP:
-			r3dRenderer->DrawUP(D3DPT_LINESTRIP, unflushed_ - 1, vertexData, stride_);
-			break ;
-		case TRIANGLE_LIST:
-			r3dRenderer->DrawUP(D3DPT_TRIANGLELIST, unflushed_ / 3, vertexData, stride_);
-			break ;
-		}
-
-		pos_ += unflushed_;
-		unflushed_ = 0;
-		return;
-	}
-#endif
-
 	d3dc._SetStreamSource(0, vrtBuff_.Get(), 0, stride_);
 
 	switch( type )

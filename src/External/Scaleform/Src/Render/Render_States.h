@@ -177,26 +177,6 @@ public:
     Data *GetUserData() const    { return (Data*)(RefCountBase<Data, Stat_Default_Mem>*)GetData(); }
 };
 
-// Original Mask's parent
-class OrigScale9ParentState : public State
-{
-public:
-    class Interface : public State::Interface
-    {
-    public:
-        Interface() : State::Interface(State_OrigScale9Parent) { }
-        virtual void AddRef(void* data, RefBehaviour b);
-        virtual void Release(void* data, RefBehaviour b);
-    };
-    static Interface InterfaceImpl;
-    static StateType GetType_Static() { return State_OrigScale9Parent; }
-
-    OrigScale9ParentState(const TreeNode* op) : State(&InterfaceImpl, (void*)op)
-    { SF_ASSERT(op);}
-
-    TreeNode *GetNode() const    { return (TreeNode*)pData; }
-};
-
 // MaskOwner - This stores a pointer to mask owner TreeNode, without AddRef.
 class Internal_MaskOwnerState : public State
 {

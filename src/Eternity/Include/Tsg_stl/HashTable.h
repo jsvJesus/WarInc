@@ -95,6 +95,7 @@ protected:
 
 public:
 
+	// you have to call IterateNext right after that to populate first Node
 	void IterateStart() const
 	{
 		m_pIterNode = NULL;

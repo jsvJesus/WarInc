@@ -10,12 +10,6 @@ class CLoginHelper
 	DWORD		SessionID;
 	DWORD		AccountStatus;
 	
-	// Gamersfirst data
-	char		g1AuthToken[2048];
-	int		g1AccountId;
-	char		g1Username[256];
-	int		g1PayCode;
-	
 	enum {
 	  ANS_Unactive,
 	  ANS_Processing,
@@ -24,7 +18,12 @@ class CLoginHelper
 	  
 	  ANS_Logged,
 	  ANS_BadPassword,
+	  ANS_GameActive,
+	  ANS_Deleted, // account deleted 
+	  ANS_TimeExpired,
 	  ANS_Frozen,
+	  ANS_Banned,
+	  ANS_Unknown,
 	};
 	volatile DWORD loginAnswerCode;
 
@@ -37,11 +36,6 @@ class CLoginHelper
 	  SessionID     = 0;
 	  AccountStatus = 0;
 	  loginAnswerCode = ANS_Unactive;
-	  
-	  g1AccountId   = 0;
-	  g1PayCode     = 0;
-	  g1AuthToken[0]= 0;
-	  g1Username[0] = 0;
 	  
 	  LoadUserName();
 	}
@@ -57,7 +51,6 @@ class CLoginHelper
 	void		DoLogin();
 	
 	bool		CheckSteamLogin();
-	bool		CheckG1Login();
 
 	void		SaveUserName();
 	bool		LoadUserName();

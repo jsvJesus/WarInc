@@ -15,6 +15,14 @@
 #include "obj_Apex.hpp"
 #include "ApexFileStream.h"
 
+#ifdef _DEBUG
+#pragma comment(lib, "ApexFrameworkCHECKED_x86.lib")
+#elif defined(FINAL_BUILD)
+#pragma comment(lib, "ApexFramework_x86.lib")
+#else // RELEASE
+#pragma comment(lib, "ApexFrameworkPROFILE_x86.lib")
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 
 extern int DisablePhysXSimulation;
@@ -28,7 +36,7 @@ using namespace physx::apex;
 
 namespace
 {
-	class MyOutputStream : public PxUserOutputStream
+	class MyOutputStream : public PxErrorCallback
 	{
 	public:
 		virtual void reportError (PxErrorCode::Enum code, const char *message, const char* file, int line)
@@ -51,14 +59,14 @@ namespace
 			strcpy_s(buf, _countof(buf), name);
 			const char * matName = strtok(buf, ";");
 			const char * depot = strtok(NULL, ";");
-			return r3dMaterialLibrary::RequestMaterialByName(matName, depot);
+			return r3dMaterialLibrary::RequestMaterialByName(matName, depot, false);
 		}
 
 		//////////////////////////////////////////////////////////////////////////
 		
 		void * RequestDestructibleAsset(const char* name)
 		{
-			//physx::PxFileBuf *stream = g_pApexWorld->apexSDK->createStream(name, physx::apex::NxApexStreamFlags::OPEN_FOR_READ);
+//			physx::PxFileBuf *stream = g_pApexWorld->apexSDK->createStream(name, physx::apex::NxApexStreamFlags::OPEN_FOR_READ);
 			physx::PxFileBuf *stream = new ApexFileStream(name, physx::general_PxIOStream2::PxFileBuf::OPEN_READ_ONLY);
 			r3d_assert(stream);
 			if (!stream) return 0;
@@ -70,14 +78,28 @@ namespace
 
 			NxParameterized::Serializer * ser = g_pApexWorld->apexSDK->createSerializer(serType);
 
+			NxParameterized::Traits* t = g_pApexWorld->apexSDK->getParameterizedTraits();
+			physx::PxU32 len = stream->getFileLength();
+
 			NxApexAsset *asset = 0;
 			NxParameterized::Serializer::DeserializedData data;
 
 			if (ser)
 			{
-				ser->deserialize(*stream, data);
-				NxParameterized::Interface *params = data[0];
-				asset = g_pApexWorld->apexSDK->createAsset(params, name);
+				void* p = t->alloc(len);
+				stream->read(p, len);
+				physx::PxFileBuf* memStream = g_pApexWorld->apexSDK->createMemoryReadStream(p, len);
+
+				NxParameterized::Serializer::ErrorType serError = ser->deserialize(*memStream, data);
+
+				g_pApexWorld->apexSDK->releaseMemoryReadStream(*memStream);
+				t->free(p);
+
+				if (serError == NxParameterized::Serializer::ERROR_NONE && data.size() == 1)
+				{
+					NxParameterized::Interface *params = data[0];
+					asset = g_pApexWorld->apexSDK->createAsset(params, name);
+				}
 			}
 
 			stream->release();
@@ -119,7 +141,6 @@ ApexWorld *g_pApexWorld;
 ApexWorld::ApexWorld()
 : apexSDK(0)
 , apexScene(0)
-, apexDestructibleModule(0)
 , r3dIResource(r3dIntegrityGuardian())
 {
 	
@@ -134,9 +155,27 @@ ApexWorld::~ApexWorld()
 
 //////////////////////////////////////////////////////////////////////////
 
+physx::apex::NxModule * ApexWorld::InitModule(const char *moduleName)
+{
+	physx::apex::NxModule * module = 0;
+	if (apexSDK)
+	{
+		module = apexSDK->createModule(moduleName);
+		r3d_assert(module);
+		if (module)
+		{
+			module->init(*module->getDefaultModuleDesc());
+			modules.PushBack(module);
+		}
+	}
+
+	return module;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 void ApexWorld::Init()
 {
-#if APEX_ENABLED
 	NxApexSDKDesc apexDesc;
 	apexDesc.physXSDK = g_pPhysicsWorld->PhysXSDK;
 	apexDesc.cooking = g_pPhysicsWorld->Cooking;
@@ -155,26 +194,33 @@ void ApexWorld::Init()
 	apexScene = apexSDK->createScene(sceneDesc);
 
 	//	Create apex destruction module
-	NxSDKCreateError errorCode;
-	apexDestructibleModule = static_cast<NxModuleDestructible*>(apexSDK->createModule("Destructible", &errorCode));
-	r3d_assert(errorCode == NXCE_NO_ERROR);
-	if (!apexDestructibleModule || errorCode != NXCE_NO_ERROR)
-		return;
+	physx::apex::NxModuleDestructible * destrMod = static_cast<physx::apex::NxModuleDestructible*>(InitModule("Destructible"));
+	if (destrMod)
+	{
+		destrMod->setLODEnabled(false);
+	}
 
-	NxParameterized::Interface *params = apexDestructibleModule->getDefaultModuleDesc();
-	apexDestructibleModule->init(*params);
-#endif
+	InitModule("Common_Legacy");
+	InitModule("Framework_Legacy");
+	InitModule("Destructible_Legacy");
+
+	apexScene->allocViewMatrix(physx::ViewMatrixType::LOOK_AT_LH);
+	apexScene->allocProjMatrix(physx::ProjMatrixType::USER_CUSTOMIZED);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void ApexWorld::Destroy()
 {
-	if (apexDestructibleModule)
+	for (uint32_t i = 0; i < modules.Count(); ++i)
 	{
-		apexDestructibleModule->release();
-		apexDestructibleModule = 0;
+		physx::apex::NxModule *mod = modules[i];
+		if (mod)
+		{
+			mod->release();
+		}
 	}
+	modules.Clear();
 
 	if (apexScene)
 	{
@@ -192,28 +238,16 @@ void ApexWorld::Destroy()
 
 //////////////////////////////////////////////////////////////////////////
 
-void ApexWorld::EndSimulation()
+void ApexWorld::FetchResults(bool block)
 {
-#if APEX_ENABLED
-	if (!DisablePhysXSimulation)
-	{
-		apexScene->fetchResults(true, 0);
-	}
-#endif
+	apexScene->fetchResults(block, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void ApexWorld::StartSimulation()
+void ApexWorld::Simulate(float timeStep, bool final)
 {
-#if APEX_ENABLED
-	if (!DisablePhysXSimulation)
-	{
-		float elapsedTime = r3dGetFrameTime();
-		apexScene->simulate(elapsedTime);
-		apexScene->getPhysXScene()->flushStream();
-	}
-#endif
+	apexScene->simulate(timeStep, final);
 }
 
 //////////////////////////////////////////////////////////////////////////

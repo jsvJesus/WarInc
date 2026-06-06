@@ -1,9 +1,6 @@
 #include "r3dpch.h"
 #include "r3d.h"
 
-#include "PxQueryFiltering.h"
-#include "PxQueryReport.h"
-
 #include "APIScaleformGfx.h"
 #include "AI_Player.h"
 #include "AI_PlayerAnim.h"
@@ -18,25 +15,21 @@
 #include "ObjectsCode/world/MaterialTypes.h"
 
 #include "ObjectsCode/weapons/Weapon.h"
-#include "ObjectsCode/Airstrikes/Airstrike.h"
 
 #include "ObjectsCode/weapons/Gear.h"
 #include "ObjectsCode/WEAPONS/Ammo.h"
 #include "ObjectsCode/weapons/WeaponArmory.h"
 #include "ObjectsCode/weapons/ExplosionVisualController.h"
-#include "ObjectsCode/WEAPONS/DroppedWeapon.h"
-#include "ObjectsCode/WEAPONS/DroppedLootbox.h"
-#include "ObjectsCode/WEAPONS/Mine.h"
 
-#include "ObjectsCode/Gameplay/obj_SupplyCrate.h"
-#include "ObjectsCode/Gameplay/obj_SiegeObjective.h"
-#include "ObjectsCode/Gameplay/obj_BombPlacement.h"
-#include "ObjectsCode/Gameplay/obj_DroppedBomb.h"
-#include "ObjectsCode/Gameplay/obj_ControlPoint.h"
+#include "ObjectsCode/Gameplay/obj_PlayerSpawnPoint.h"
 #include "ObjectsCode/Gameplay/obj_DamageArea.h"
-#include "ObjectsCode/Gameplay/obj_UAV.h"
+#include "ObjectsCode/Gameplay/obj_DroppedItem.h"
+#include "ObjectsCode/Gameplay/obj_Note.h"
+#include "ObjectsCode/Gameplay/obj_PostBox.h"
 #include "../../GameEngine/gameobjects/obj_Vehicle.h"
 #include "../Gameplay/obj_Zombie.h"
+#include "../Gameplay/obj_ZombieDummy.h"
+#include "ObjectsCode/Gameplay/NPCObject.h"
 
 #include "ObjectsCode/WORLD/obj_LightMesh.h"
 
@@ -52,32 +45,31 @@
 #include "../SF/CmdProcessor/CmdConsole.h"
 
 #include "..\..\ui\HUDDisplay.h"
-#include "..\..\ui\HUDMinimap.h"
 #include "..\..\ui\HUD_EditorGame.h"
-#include "..\..\ui\HUDRespawn.h"
 #include "..\..\ui\FrontEndShared.h"
-#include "..\..\ui\HUDCommCalls.h"
-#include "..\..\ui\HUDLaserDesignator.h"
 #include "..\..\ui\HUDPause.h"
-#include "ui/m_EndRound.h"
+#include "..\..\ui\HUDActionUI.h"
+#include "..\..\ui\HUDAttachments.h"
+#include "..\..\ui\HUDGeneralStore.h"
+#include "..\..\ui\HUDVault.h"
 
-extern HUDEndRound*	hudEndRound;
 extern HUDDisplay*	hudMain;
-extern HUDMinimap*	hudMinimap;
-extern HUDRespawn*	hudRespawn;
-extern HUDCommCalls* hudCommCalls;
-extern HUDLaserDesignator* hudLaserDesignator;
 extern HUDPause*	hudPause;
+extern HUDAttachments*	hudAttm;
+extern HUDActionUI*	hudActionUI;
+extern HUDGeneralStore*	hudGeneralStore;
+extern HUDVault* hudVault;
 
 extern 	PlayerStateVars_s CurrentRig;
 
 extern bool g_bEditMode;
-extern int RUS_CLIENT;
 
 extern void TPSGameHud_UnlockAchievement( int achievementID );
 
-IMPLEMENT_CLASS(obj_AI_Player, "obj_AI_Player", "Object");
-AUTOREGISTER_CLASS(obj_AI_Player);
+extern float getWaterDepthAtPos(const r3dPoint3D& pos);
+
+IMPLEMENT_CLASS(obj_Player, "obj_Player", "Object");
+AUTOREGISTER_CLASS(obj_Player);
 
 float		_ai_fTurnSpeedIdle      = 360;
 float		_ai_fTurnSpeedWalk	= 720;
@@ -89,16 +81,12 @@ bool		g_CameraInsidePlayer = false;
 extern int g_RenderScopeEffect;
 extern PFX_ScopeEffect gPFX_ScopeEffect;
 
-r3dSec_type<CUberData*, 0x345fd82a> AI_Player_UberData = NULL;
+r3dSec_type<CUberData*, 0x345fdFCa> AI_Player_UberData = NULL;
 
-r3dTexture* obj_AI_Player::s_damageHitColorCorrectionTex = NULL;
-r3dTexture* obj_AI_Player::s_laserPointerTex = NULL;
-r3dTexture* obj_AI_Player::s_flashlightFlashTex = NULL;
-r3dTexture* obj_AI_Player::s_laserFlashTex = NULL;
-r3dTexture* obj_AI_Player::s_lightHaloTex = NULL;
-float obj_AI_Player::s_damageHitColorCorrectionVal = 0.0f;
-
-r3dTexture* obj_AI_Player::s_UAVFriendlyBlinkTex = NULL;
+r3dTexture* obj_Player::s_laserPointerTex = NULL;
+r3dTexture* obj_Player::s_flashlightFlashTex = NULL;
+r3dTexture* obj_Player::s_laserFlashTex = NULL;
+r3dTexture* obj_Player::s_lightHaloTex = NULL;
 
 r3dTexture* gPlayer_AuraTexture;
 r3dTexture* gPlayer_CamoTexture;
@@ -241,6 +229,97 @@ r3dPhysSkeleton* AquireCacheSkeleton()
 	return entry.Skel ;
 }
 
+
+struct PhysObstacleCacheEntry
+{
+	int Taken;
+	ObstacleHandle Handle;
+};
+PhysObstacleCacheEntry*	g_PhysObstacleCache = NULL;
+int		g_PhysObstacleSize  = 0;
+
+void InitializePhysObstacleCache(int count)
+{
+	r3d_assert(g_PhysObstacleCache == NULL) ;
+	
+	g_PhysObstacleCache = new PhysObstacleCacheEntry[count];
+	g_PhysObstacleSize  = count;
+
+	for(int i=0; i<count; i++)
+	{
+		PxBoxObstacle obstacle;
+		obstacle.mHalfExtents = PxVec3(0.25f, 1.0f, 0.25f);
+		obstacle.mPos = PxExtendedVec3(0, 9000 + (float)i * 10, 0); // teleport way up
+		g_PhysObstacleCache[i].Handle = g_pPhysicsWorld->m_PlayerObstaclesManager->addObstacle(obstacle);
+		g_PhysObstacleCache[i].Taken  = 0;
+	}
+}
+
+void DestroyPhysObstacleCache()
+{
+	r3d_assert(g_PhysObstacleCache);
+
+	// destroy in reverse order 
+	for(int i=g_PhysObstacleSize-1; i>=0; i--)
+	{
+		g_pPhysicsWorld->m_PlayerObstaclesManager->removeObstacle(g_PhysObstacleCache[i].Handle);
+		g_PhysObstacleCache[i].Handle = 0;
+		g_PhysObstacleCache[i].Taken  = 0;
+	}
+	
+	SAFE_DELETE_ARRAY(g_PhysObstacleCache);
+	g_PhysObstacleSize = 0;
+}
+
+int AcquirePlayerObstacle(const r3dPoint3D& pos)
+{
+	r3d_assert(g_PhysObstacleCache);
+
+	for(int i=0; i<g_PhysObstacleSize; i++)
+	{
+		if(g_PhysObstacleCache[i].Taken)
+			continue;
+			
+		g_PhysObstacleCache[i].Taken = 1;
+		UpdatePlayerObstacle(i, pos);
+		return i;
+	}
+	
+	return -1;
+}
+
+void ReleasePlayerObstacle(int* out_idx)
+{
+	int idx = *out_idx;
+	if(idx == -1)
+		return;
+
+	r3d_assert(idx >= 0 && idx < g_PhysObstacleSize);
+	r3d_assert(g_PhysObstacleCache[idx].Taken);
+
+	UpdatePlayerObstacle(idx, r3dPoint3D(0, 9000 + (float)idx * 10, 0)); // teleport way up
+	g_PhysObstacleCache[idx].Taken = 0;
+	*out_idx = -1;
+}
+
+void UpdatePlayerObstacle(int idx, const r3dPoint3D& pos)
+{
+	if(idx == -1)
+		return;
+
+	R3DPROFILE_FUNCTION("UpdateObstacle");
+	
+	r3d_assert(idx >= 0 && idx < g_PhysObstacleSize);
+	r3d_assert(g_PhysObstacleCache[idx].Taken);
+	
+	PxBoxObstacle obstacle;
+	obstacle.mHalfExtents = PxVec3(0.25f, 1.0f, 0.25f);
+	obstacle.mPos = PxExtendedVec3(pos.x, pos.y + 1.0f, pos.z);
+	g_pPhysicsWorld->m_PlayerObstaclesManager->updateObstacle(g_PhysObstacleCache[idx].Handle, obstacle);
+	
+	return;
+}
+
 static void AdjustHitPosition(DecalParams& params, GameObject* target);
 
 void AI_Player_FreeStuff()
@@ -263,62 +342,334 @@ void AI_Player_FreeStuff()
 }
 
 #ifndef FINAL_BUILD
-DECLARE_CMD(cw)
+DECLARE_CMD(binv)
+{
+	if(ev.NumArgs() != 1)
+	{
+		ConPrint("binv");
+		return;
+	}
+
+	obj_Player* plr = gClientLogic().localPlayer_;
+	wiCharDataFull& slot = plr->CurLoadout;
+
+	ConPrint("Backpack id:%d, size:%d\n", slot.BackpackID, slot.BackpackSize);
+	ConPrint("Inventory List:\n");
+	for(int i=0; i<slot.BackpackSize; i++)
+	{
+		wiInventoryItem& wi = slot.Items[i];
+		if(wi.itemID == 0)
+			continue;
+		const BaseItemConfig* cfg = g_pWeaponArmory->getConfig(wi.itemID);
+		ConPrint("%02d: ItemID:%d, q:%d, Var1:%d Var2:%d %s", i, wi.itemID, wi.quantity, wi.Var1, wi.Var2, cfg->m_StoreName);
+	}
+	
+	return;
+}
+
+DECLARE_CMD(pickup)
+{
+	obj_Player* plr = gClientLogic().localPlayer_;
+
+	GameObject* closest = NULL;
+	float       minDist = 99999999.0f;
+	for(GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	{
+		if(obj->Class->Name == "obj_DroppedItem" || obj->Class->Name == "obj_Note")
+		{
+			float dist = (plr->GetPosition() - obj->GetPosition()).Length();
+			if(dist < minDist) 
+			{
+				closest = obj;
+				minDist = dist;
+			}
+		}
+	}
+	
+	if(!closest) {
+		ConPrint("no closest items");
+		return;
+	}
+
+	ConPrint("using network obj %d\n", closest->GetNetworkID());
+
+	PKT_C2S_UseNetObject_s n;
+	n.spawnID = toP2pNetId(closest->GetNetworkID());
+	p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+}
+
+DECLARE_CMD(giveitem)
+{
+	if(ev.NumArgs() != 3)
+	{
+		ConPrint("giveitem {itemid} {num}");
+		return;
+	}
+
+	int num = ev.GetInteger(2);
+	for(int i=0; i<num; i++)
+	{
+		PKT_C2S_Admin_GiveItem_s n;
+		n.ItemID = ev.GetInteger(1);
+		p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+	}
+}
+
+
+DECLARE_CMD(changebp)
 {
 	if(ev.NumArgs() != 2)
 	{
-		ConPrint("cw {weapon id}");
+		ConPrint("changebp {slot}");
+		return;
+	}
+
+	obj_Player* plr = gClientLogic().localPlayer_;
+	wiCharDataFull& slot = plr->CurLoadout;
+	
+	int slotFrom = ev.GetInteger(1);
+	
+	const BackpackConfig* cfg = g_pWeaponArmory->getBackpackConfig(slot.Items[slotFrom].itemID);
+	if(!cfg) {
+		ConPrint("bad backpack itemid");
+		return;
+	}
+
+	plr->ChangeBackpack(slotFrom);
+}
+
+DECLARE_CMD(alist)
+{
+	if(ev.NumArgs() != 1)
+	{
+		ConPrint("alist {slot}");
+		return;
+	}
+
+	obj_Player* plr = gClientLogic().localPlayer_;
+	wiCharDataFull& slot = plr->CurLoadout;
+	
+	int wid      = 0; // test - by default modify weapon 0
+	Weapon* wpn = plr->m_Weapons[wid];
+	if(!wpn) {
+		ConPrint("no weapon");
 		return;
 	}
 	
-	obj_AI_Player* plr = gClientLogic().localPlayer_;
-	if(plr == NULL)
+	ConPrint("Weapon: %s\n", wpn->getConfig()->m_StoreName);
+	for(int i=0; i<WPN_ATTM_MAX; i++)
 	{
-		ConPrint("not connected to server");
-		return;
-	}
-
-	DWORD weapId = (DWORD)ev.GetInteger(1);
-	const WeaponConfig* wc = gWeaponArmory.getWeaponConfig(weapId);
-	if(wc == NULL)
-	{
-		ConPrint("there is no weapon id %d", weapId);
-		return;
-	}
-
-	ConPrint("changing to weapon '%s', id:%d", wc->m_StoreName, weapId);
-	ConPrint(" ammo damage: %f, decay: %f", wc->m_AmmoDamage, wc->m_AmmoDecay);
-	
-	PKT_C2S_TEST_PlayerSetWeapon_s n;
-	n.weapId = (DWORD)weapId;
-	p2pSendToHost(plr, &n, sizeof(n));
-
-	// equip new player weapon
-	SAFE_DELETE(plr->m_Weapons[0]);
-	{
-		const bool isFirstPerson = g_camera_mode->GetInt() == 2 && plr->NetworkLocal;
-
-		if(plr->uberEquip_)
-			plr->uberEquip_->isFirstPerson = isFirstPerson;
-
-		plr->m_Weapons[0] = gWeaponArmory.createWeapon(weapId, plr, isFirstPerson, false);
-
-		if(isFirstPerson && plr->m_Weapons[0])
+		ConPrint(" Slot: %d, cur %d, def %d\n", i, slot.Attachment[wid].attachments[i], wpn->getConfig()->FPSDefaultID[i]);
+		if(!wpn->getConfig()->FPSSpecID[i])
+			continue;
+		
+		char buf[2084] = "  ";
+		g_pWeaponArmory->startItemSearch();
+		while(g_pWeaponArmory->searchNextItem())
 		{
-			plr->m_Weapons[0]->getModel(true, true);
-			plr->m_Weapons[0]->checkForSkeleton();
+			uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+			const WeaponAttachmentConfig* config = g_pWeaponArmory->getAttachmentConfig(itemID);
+			if(!config) continue;
+			if(config->m_specID == wpn->getConfig()->FPSSpecID[i])
+				sprintf(buf + strlen(buf), ", %d %s", config->m_itemID, config->m_StoreName);
+			if(config->m_itemID == wpn->getConfig()->FPSDefaultID[i])
+				sprintf(buf + strlen(buf), ", (def) %d %s", config->m_itemID, config->m_StoreName);
 		}
+		ConPrint(buf);
 	}
-	plr->m_SelectedWeapon = -1;
-	plr->ChangeWeaponByIndex(0);
-	plr->SyncAnimation(true);
-	return;
+}
+
+DECLARE_CMD(aequip)
+{
+	if(ev.NumArgs() != 2)
+	{
+		ConPrint("attmequip {slot}");
+		return;
+	}
+
+	obj_Player* plr = gClientLogic().localPlayer_;
+	wiCharDataFull& slot = plr->CurLoadout;
+	
+	int wid      = 0; // test - by default modify weapon 0
+	int slotFrom = ev.GetInteger(1);
+	
+	const WeaponAttachmentConfig* cfg = g_pWeaponArmory->getAttachmentConfig(slot.Items[slotFrom].itemID);
+	if(!cfg) {
+		ConPrint("bad attachment itemid");
+		return;
+	}
+	
+	Weapon* wpn = plr->m_Weapons[wid];
+	if(!wpn) {
+		ConPrint("no weapon");
+		return;
+	}
+
+	plr->EquipWpnAttm(wid, slotFrom);
+}
+
+DECLARE_CMD(aremove)
+{
+	if(ev.NumArgs() != 2)
+	{
+		ConPrint("aremove {weapon attm type}");
+		return;
+	}
+
+
+	int wid      = 0; // test - by default modify weapon 0
+	int wpnAttmType = ev.GetInteger(1);
+	if(wpnAttmType >= WPN_ATTM_MAX)  {
+		ConPrint("bad wpnAttmType");
+		return;
+	}
+
+	obj_Player* plr = gClientLogic().localPlayer_;
+	plr->RemoveWpnAttm(0, wpnAttmType);
 }
 #endif
 
+bool obj_Player::ChangeBackpack(int slotFrom)
+{
+	wiCharDataFull& slot = CurLoadout;
+
+	const BackpackConfig* cfg = g_pWeaponArmory->getBackpackConfig(slot.Items[slotFrom].itemID);
+	if(!cfg) {
+		return false;
+	}
+
+	PKT_C2S_PlayerChangeBackpack_s n;
+	n.SlotFrom     = slotFrom;
+	n.BackpackSize = cfg->m_maxSlots;
+	p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+
+	// replace backpack in used slot with current one (SERVER CODE SYNC POINT)
+	slot.Items[slotFrom].itemID = slot.BackpackID;
+
+	// change it
+	slot.BackpackID   = cfg->m_itemID;
+	slot.BackpackSize = cfg->m_maxSlots;
+	UpdateLoadoutSlot(slot);
+
+	return true;
+}
+
+void obj_Player::DropItem(int slotFrom)
+{
+	PKT_C2S_BackpackDrop_s n;
+	n.SlotFrom = slotFrom;
+	n.pos      = GetPosition() + GetvForw()*0.1f;
+	p2pSendToHost(this, &n, sizeof(n));
+
+	int itemID = CurLoadout.Items[slotFrom].itemID;
+
+	//local logic
+	CurLoadout.Items[slotFrom].quantity--;
+	if(CurLoadout.Items[slotFrom].quantity <= 0) {
+		CurLoadout.Items[slotFrom].Reset();
+	}
+
+	// fucked up attachment design!
+	const WeaponAttachmentConfig* wac = g_pWeaponArmory->getAttachmentConfig(itemID);
+	if(wac)
+	{
+		int quantity = CurLoadout.Items[slotFrom].quantity; // if attm is droppen, then here will be zero
+		for(int i=0; i<CurLoadout.BackpackSize; ++i)
+		{
+			if(CurLoadout.Items[i].itemID == itemID)
+				quantity += CurLoadout.Items[i].quantity;
+		}
+		if(quantity == 0) // check if that attm is equipped and if yes, remove it from weapon
+		{
+			uint32_t curAttm[WPN_ATTM_MAX] = {0};
+			if(m_Weapons[0])
+			{
+				m_Weapons[0]->getCurrentAttachmentIDs(curAttm);
+				if(curAttm[wac->m_type] == itemID)
+					RemoveWpnAttm(0, wac->m_type);
+			}
+			if(m_Weapons[1])
+			{
+				m_Weapons[1]->getCurrentAttachmentIDs(curAttm);
+				if(curAttm[wac->m_type] == itemID)
+					RemoveWpnAttm(1, wac->m_type);
+			}			
+		}
+	}
+
+	OnBackpackChanged(slotFrom);
+
+	if(NetworkLocal)
+	{
+		const WeaponConfig* wc = g_pWeaponArmory->getWeaponConfig(itemID);
+		if(wc)
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_DROPGUN"), GetPosition());
+		else
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_DROPITEM"), GetPosition());
+	}
+}
+
+void obj_Player::RemoveWpnAttm(int wid, int attmType)
+{
+	wiCharDataFull& slot = CurLoadout;
+
+	if(attmType >= WPN_ATTM_MAX)  {
+		return;
+	}
+
+	Weapon* wpn = m_Weapons[wid];
+	if(!wpn) {
+		return;
+	}
+
+	PKT_C2S_PlayerRemoveAttachment_s n;
+	n.wid         = wid;
+	n.WpnAttmType = attmType;
+	p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+
+	// set wpn attachment
+	slot.Attachment[wid].attachments[attmType] = 0;
+	wpn->setWeaponAttachmentsByIDs(slot.Attachment[wid].attachments);
+}
+
+void obj_Player::EquipWpnAttm(int wid, int backpackSlot)
+{
+	wiCharDataFull& slot = CurLoadout;
+
+	int slotFrom = backpackSlot;
+
+	const WeaponAttachmentConfig* cfg = g_pWeaponArmory->getAttachmentConfig(slot.Items[slotFrom].itemID);
+	if(!cfg) {
+		return;
+	}
+
+	Weapon* wpn = m_Weapons[wid];
+	if(!wpn) {
+		return;
+	}
+
+	PKT_C2S_PlayerEquipAttachment_s n;
+	n.wid          = wid;
+	n.AttmSlot     = slotFrom;
+	n.dbg_AttmID   = cfg->m_itemID;
+	n.dbg_WeaponID = wpn->getConfig()->m_itemID;
+	p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+
+	// set wpn attachment
+	slot.Attachment[wid].attachments[cfg->m_type] = cfg->m_itemID;
+	wpn->setWeaponAttachmentsByIDs(slot.Attachment[wid].attachments);
+
+	// we're changing clip, reload weapon
+	if(cfg->m_type == WPN_ATTM_CLIP)
+	{
+		wpn->Reload();
+	}
+}
+
+
 void _player_AdjustBoneCallback(DWORD dwData, int boneId, D3DXMATRIX &mp, D3DXMATRIX &anim)
 {
-	obj_AI_Player* npc = (obj_AI_Player*)dwData;
+	obj_Player* npc = (obj_Player*)dwData;
 	if (!npc)
 		return;
 
@@ -364,7 +715,7 @@ void _player_AdjustBoneCallback(DWORD dwData, int boneId, D3DXMATRIX &mp, D3DXMA
 			float yRot = npc->RecoilViewMod.y*0.5f;
 
 			xRot = 0;//-R3D_MIN(xRot, 0.5f); 
-			yRot = -R3D_MIN(yRot, 0.1f);
+			yRot = R3D_MIN(yRot, 0.1f);
 
 			D3DXMATRIX r1, r2;
 
@@ -382,87 +733,34 @@ void _player_AdjustBoneCallback(DWORD dwData, int boneId, D3DXMATRIX &mp, D3DXMA
 	return;    
 }
 
-void obj_AI_Player::UpdateLoadoutSlot(const wiLoadoutSlot& slot, const wiWeaponAttachments& attms, bool canBeWithoutWeapon)
+void obj_Player::UpdateLoadoutSlot(const wiCharDataFull& slot)
 {
-	R3DPROFILE_FUNCTION("obj_AI_Player::UpdateLoadoutSlot");
-
-	// some meshes may change
-	m_Loaded = 0 ;
+	R3DPROFILE_FUNCTION("obj_Player::UpdateLoadoutSlot");
 
 	CurLoadout = slot; // save loadout
-	CurWeaponAttachments = attms;
 	m_GearWeight = 0;
-
-	// always switch to primary weapon on update loadout (mimic server behavior)
-	m_SelectedWeapon = 0;
-	m_PrevSelectedWeapon = -1;
+	m_isFemaleHero = CurLoadout.HeroItemID==20184;
 
 	for(int i=0; i<NUM_WEAPONS_ON_PLAYER; ++i)
 		SAFE_DELETE(m_Weapons[i]);
 
 	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
 
-	if(uberEquip_)
-		uberEquip_->isFirstPerson = isFirstPerson;
-
-	if(isFirstPerson && m_SelectedWeapon >= 0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER && m_Weapons[m_SelectedWeapon])
+	// create weapons & items
+	for(int i=0; i<NUM_WEAPONS_ON_PLAYER; i++)
 	{
-		m_Weapons[m_SelectedWeapon]->getModel(true, true);
-		m_Weapons[m_SelectedWeapon]->checkForSkeleton();
-	}
-
-	uberEquip_->isFirstPerson = isFirstPerson;
-
-	if(slot.PrimaryWeaponID > 0)
-		m_Weapons[0] = gWeaponArmory.createWeapon(slot.PrimaryWeaponID, this, isFirstPerson, true);
-	if(slot.SecondaryWeaponID > 0)
-		m_Weapons[1] = gWeaponArmory.createWeapon(slot.SecondaryWeaponID, this, isFirstPerson, true);
-	if(slot.SidearmWeaponID > 0)
-		m_Weapons[2] = gWeaponArmory.createWeapon(slot.SidearmWeaponID, this, isFirstPerson, true);
-
-	if(slot.Item1 > 0 && gWeaponArmory.getWeaponConfig(slot.Item1))
-		m_Weapons[3] = gWeaponArmory.createWeapon(slot.Item1, this, isFirstPerson, true);
-
-	if(slot.Item2 > 0 && gWeaponArmory.getWeaponConfig(slot.Item2))
-		m_Weapons[4] = gWeaponArmory.createWeapon(slot.Item2, this, isFirstPerson, true);
-
-	if(slot.Item3 > 0 && gWeaponArmory.getWeaponConfig(slot.Item3))
-		m_Weapons[5] = gWeaponArmory.createWeapon(slot.Item3, this, isFirstPerson, true);
-
-	if(slot.Item4 > 0 && gWeaponArmory.getWeaponConfig(slot.Item4))
-		m_Weapons[6] = gWeaponArmory.createWeapon(slot.Item4, this, isFirstPerson, true);
-
-	if(!canBeWithoutWeapon)
-	{
-		if(m_Weapons[0] == 0 && m_Weapons[1] == 0 && m_Weapons[2] == 0)
-		{
-#ifndef FINAL_BUILD
-			if(g_bEditMode)
-			{
-				m_Weapons[0] = gWeaponArmory.createWeapon(101035, this, isFirstPerson, true); // ak74
-				m_Weapons[1] = gWeaponArmory.createWeapon(101109, this, isFirstPerson, true); // rpg7
-				m_Weapons[2] = gWeaponArmory.createWeapon(101180, this, isFirstPerson, true); // desert eagle
-				// added items is defined in EditorGameHUD::AddPlayer
-				
-				m_SelectedWeapon = 0;
-			}
-#endif
+		int ItemID = slot.Items[i].itemID;
+		if(ItemID == 0)
+			continue;
+			
+		const WeaponConfig* wcfg = g_pWeaponArmory->getWeaponConfig(ItemID);
+		if(wcfg == NULL) {
+			//r3dOutToLog("!!!! there is no weapon id %d\n", ItemID);
+			continue;
 		}
-	}
 
-	UpdateLoadoutWeaponAttachments(attms);
-
-	Weapon* selWeapon = m_Weapons[m_SelectedWeapon];
-
-	// always add ak47 to primary weapon
-	if(m_Weapons[0] == NULL)
-		m_Weapons[0] = gWeaponArmory.createWeapon(101032, this, isFirstPerson, true);
-
-	if(m_Weapons[m_SelectedWeapon] == NULL)
-	{
-		// this will happen only when server send selected weapon on spawn
-		// that does not exists on client
-		r3dError("Player does not have selected weapon\n");
+		m_Weapons[i] = new Weapon(this, i, wcfg, isFirstPerson, true, i <= wiCharDataFull::CHAR_LOADOUT_WEAPON2 ? &CurLoadout.Attachment[i] : NULL);
+		r3d_assert(m_Weapons[i]); // to check for out of memory
 	}
 
 	if(NetworkLocal)
@@ -471,38 +769,31 @@ void obj_AI_Player::UpdateLoadoutSlot(const wiLoadoutSlot& slot, const wiWeaponA
 	}
 
 	uberEquip_->SetSlot(SLOT_Weapon, m_Weapons[m_SelectedWeapon]);
-	uberEquip_->SetSlot(SLOT_WeaponBackLeft, (Weapon*)NULL);
-	uberEquip_->SetSlot(SLOT_WeaponBackLeftRPG, (Weapon*)NULL);
 	uberEquip_->SetSlot(SLOT_WeaponBackRight, (Weapon*)NULL);
 	uberEquip_->SetSlot(SLOT_WeaponSide, (Weapon*)NULL);
 
+	if(m_Weapons[m_SelectedWeapon] && !forcedEmptyHands)
+		m_Weapons[m_SelectedWeapon]->OnEquip();
+
 	if(m_Weapons[1] && m_SelectedWeapon != 1)
+		uberEquip_->SetSlot(SLOT_WeaponSide, m_Weapons[1]);
+
+	const HeroConfig* heroConfig = g_pWeaponArmory->getHeroConfig(CurLoadout.HeroItemID);
+	loadHeroMeshes(heroConfig);
+	if(heroConfig)
+		m_GearWeight += heroConfig->m_Weight;
+
+	const BackpackConfig* backpack = g_pWeaponArmory->getBackpackConfig(CurLoadout.BackpackID);
+	if(backpack)
+		uberEquip_->SetSlot(SLOT_Backpack, backpack->getMesh());
+	else
+		uberEquip_->SetSlot(SLOT_Backpack, (r3dMesh*)NULL);
+
+	uint32_t SlotArmorID    = slot.Items[wiCharDataFull::CHAR_LOADOUT_ARMOR].itemID;
+	uint32_t SlotHeadGearID = slot.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID;
+	if(SlotArmorID>0)
 	{
-		if(m_Weapons[1]->getCategory() == storecat_SUPPORT)
-			uberEquip_->SetSlot(SLOT_WeaponBackLeftRPG, m_Weapons[1]);
-		else
-			uberEquip_->SetSlot(SLOT_WeaponBackLeft, m_Weapons[1]);
-	}
-	if(m_Weapons[2] && m_SelectedWeapon != 2)
-		uberEquip_->SetSlot(SLOT_WeaponSide, m_Weapons[2]);
-
-	Gear* bodyGear = gWeaponArmory.createGear(slot.BodyMeshID > 0 ? slot.BodyMeshID : 20000);
-	bool hasHeroMesh = bodyGear->getCategory() == storecat_Heroes;
-
-	const char* defaultWeaponMesh = 0;
-	const char* defaultBodyMesh = 0;
-	const char* defaultArmorMesh = 0;
-	const char* defaultHead1Mesh = 0;
-	const char* defaultHead2Mesh = 0;
-
-	uberEquip_->SetSlot(SLOT_Body, bodyGear);
-
-	if(uberEquip_->slots_[SLOT_Body].gear)
-		m_GearWeight += uberEquip_->slots_[SLOT_Body].gear->GetWeight();
-
-	if(slot.BodyArmorID>0 && !hasHeroMesh)
-	{
-		uberEquip_->SetSlot(SLOT_Armor, gWeaponArmory.createGear(slot.BodyArmorID));
+		uberEquip_->SetSlot(SLOT_Armor, g_pWeaponArmory->createGear(SlotArmorID));
 
 		if(uberEquip_->slots_[SLOT_Armor].gear)
 			m_GearWeight += uberEquip_->slots_[SLOT_Armor].gear->GetWeight();
@@ -510,42 +801,15 @@ void obj_AI_Player::UpdateLoadoutSlot(const wiLoadoutSlot& slot, const wiWeaponA
 	else
 		uberEquip_->SetSlot(SLOT_Armor, (Gear*)NULL);
 
-	if(slot.BodyHeadID>0 && !hasHeroMesh)
-		uberEquip_->SetSlot(SLOT_Head1, gWeaponArmory.createGear(slot.BodyHeadID));
-	else
-		uberEquip_->SetSlot(SLOT_Head1, (hasHeroMesh)?(Gear*)NULL:gWeaponArmory.createGear(20019));
-
-	if(uberEquip_->slots_[SLOT_Head1].gear)
-		m_GearWeight += uberEquip_->slots_[SLOT_Head1].gear->GetWeight();
-
-	if(slot.BodyHeadGearID>0 && !hasHeroMesh)
+	if(SlotHeadGearID>0)
 	{
-		uberEquip_->SetSlot(SLOT_Head2, gWeaponArmory.createGear(slot.BodyHeadGearID));
+		uberEquip_->SetSlot(SLOT_Helmet, g_pWeaponArmory->createGear(SlotHeadGearID));
 
-		if(uberEquip_->slots_[SLOT_Head2].gear)
-			m_GearWeight += uberEquip_->slots_[SLOT_Head2].gear->GetWeight();
+		if(uberEquip_->slots_[SLOT_Helmet].gear)
+			m_GearWeight += uberEquip_->slots_[SLOT_Helmet].gear->GetWeight();
 	}
 	else
-		uberEquip_->SetSlot(SLOT_Head2, (Gear*)NULL);
-
-	int EngineerArmorWeightReductionSkill = CurLoadout.getSkillLevel(CUserSkills::SPEC_ArmorWeight);
-	switch(EngineerArmorWeightReductionSkill)
-	{
-	case 1: m_GearWeight *= 0.85f; break;
-	case 2: m_GearWeight *= 0.70f; break;
-	case 3: m_GearWeight *= 0.55f; break;
-	default: break;
-	}
-	int AssaultArmorWeightReductionSkill = CurLoadout.getSkillLevel(CUserSkills::ASSAULT_ArmorWeight);
-	switch(AssaultArmorWeightReductionSkill)
-	{
-	case 1: m_GearWeight *= 0.95f; break;
-	case 2: m_GearWeight *= 0.90f; break;
-	case 3: m_GearWeight *= 0.85f; break;
-	case 4: m_GearWeight *= 0.80f; break;
-	case 5: m_GearWeight *= 0.70f; break;
-	default: break;
-	}
+		uberEquip_->SetSlot(SLOT_Helmet, (Gear*)NULL);
 
 	// start loading meshes
 	for(int i=0; i<NUM_WEAPONS_ON_PLAYER; ++i)
@@ -563,47 +827,24 @@ void obj_AI_Player::UpdateLoadoutSlot(const wiLoadoutSlot& slot, const wiWeaponA
 	SyncAnimation(true);
 }
 
-void obj_AI_Player::UpdateLoadoutWeaponAttachments(const struct wiWeaponAttachments& attms)
+void obj_Player::loadHeroMeshes(const HeroConfig* heroConfig)
 {
-	if(m_Weapons[0])
-		m_Weapons[0]->setWeaponAttachmentsByIDs(attms.primary_attachments.attachments);
-
-	if(m_Weapons[1])
-		m_Weapons[1]->setWeaponAttachmentsByIDs(attms.secondary_attachments.attachments);
-
-	if(m_Weapons[2])
-		m_Weapons[2]->setWeaponAttachmentsByIDs(attms.sidearm_attachments.attachments);
-		
-/*	// game mode, get attachments from local player profile
-	// scan for primary-secondary-sidearm
-	for(int wpnSlot = 0; wpnSlot < 3; wpnSlot++)
+	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
+	if(heroConfig)
 	{
-		Weapon* wpn = m_Weapons[wpnSlot];
-		if(!wpn) continue;
-		
-		const WeaponAttachmentConfig* wpnAttmConfigs[WPN_ATTM_MAX] = {0};
-
-		// scan for player attachments inventory
-		for(uint32_t i=0; i<gUserProfile.ProfileData.NumFPSAttachments; i++)
-		{
-			const wiUserProfile::temp_fps_attach& att = gUserProfile.ProfileData.FPSAttachments[i];
-			if(att.isEquipped && att.WeaponID == wpn->getItemID())
-			{
-				const WeaponAttachmentConfig* wpnAttmConfig = gWeaponArmory.getAttachmentConfig(att.AttachmentID);
-				if(!wpnAttmConfig) {
-					r3dError("there is no attachment %d", att.AttachmentID);
-					continue;
-				}
-				wpnAttmConfigs[wpnAttmConfig->m_type] = wpnAttmConfig;
-			}
-		}
-		wpn->setWeaponAttachments(wpnAttmConfigs);
-	}*/
+		uberEquip_->SetSlot(SLOT_UpperBody, heroConfig->getBodyMesh(CurLoadout.BodyIdx, isFirstPerson));
+		uberEquip_->SetSlot(SLOT_LowerBody, heroConfig->getLegMesh(CurLoadout.LegsIdx));
+		uberEquip_->SetSlot(SLOT_Head, heroConfig->getHeadMesh(CurLoadout.HeadIdx));
+	}
+	else
+	{
+		uberEquip_->SetSlot(SLOT_UpperBody, (r3dMesh*)NULL);
+		uberEquip_->SetSlot(SLOT_LowerBody, (r3dMesh*)NULL);
+		uberEquip_->SetSlot(SLOT_Head, (r3dMesh*)NULL);
+	}
 }
 
-
-
-obj_AI_Player::obj_AI_Player()
+obj_Player::obj_Player()
 : footStepsSnd(0)
 , currentFootStepsSoundID(-1)
 , boneId_Bip01_Spine1(-1)
@@ -615,51 +856,45 @@ obj_AI_Player::obj_AI_Player()
 , boneId_Bip01_L_Hand(-1)
 , m_AuraType(AT_NONE)
 , netMover(this, _ai_NetPosUpdateDelta, (float)PKT_C2C_MoveSetCell_s::PLAYER_CELL_RADIUS)
-, m_Loaded( 0 )
 , m_enableRendering(true)
-#if ENABLE_ZOMBIES
 , lifeProperties(this)
-#endif // ENABLE_ZOMBIES
-, m_RiotShieldMeshPlacement(NULL)
-, m_RiotPersonalShieldMeshPlacement(NULL)
-, m_AutoTurretMeshPlacement(NULL)
-, m_RespawnBeaconMeshPlacement(NULL)
 , m_ItemSimulateLeftClick(false)
+, showSlotsInfoTimer(0.0f)
+, forcedEmptyHands(false)
+, m_sndBreathSprint(0)
+, m_sndInPain(0)
+, m_sndClothMovementSprint(0)
+, m_sndBreathBaseVolume(1)
+, m_BarricadeMeshPlacement(NULL)
+, m_isFemaleHero(false)
+, m_sndSniperBreath(0)
+, m_sndSniperHeartSlow(0)
+, m_sndSniperExhale(0)
 {
-	//explosionTime = 0;
-
-	m_targetIconTime = 0;
-	m_localTargetIconTime = 0;
-	for(int i=0; i<MAX_UAV_TARGETS; ++i)
-		m_localPlayer_lastUAVTarget[i] = invalidGameObjectID;
-
-	m_visibleOnMinimap = false;
 	uberEquip_ = NULL;
 	m_PhysSkeleton = NULL;
 
 	m_disablePhysSkeleton = false;
 
+	PhysXObstacleIndex = -1;
+
 	lastTimeHit = 0;
 	bOnGround =1;
+	fHeightAboveGround = 0.0f;
 	StartFallingHeight = 0;
 	StartFallingTime = 0;
 	bCrouch = 0;
+	bProne = 0;
 	TimeOfDeath = 0;
 	PosOfDeath.Assign(0,0,0);
 	DisableKillerView = false;
 	Dead_KillerID = 0;
 	m_BloodTimer = 0;
 	m_GearWeight = 0;
-	m_haveBoostStamina = false;
-	isPremiumAccount = false;
+	CustomerID     = 0;
 	ClanID         = 0;
 	ClanTagColor   = 0xFFFFFFFF;
 	r3dscpy(ClanTag, "CLAN");
-
-	uavRequested_  = 0;
-	uavViewActive_ = false;
-	
-	laserViewActive_ = false;
 
 	viewTargetPos		= r3dPoint3D(0, 0, 0);
 	viewTargetNorm		= r3dPoint3D(0, 1, 0);
@@ -678,12 +913,17 @@ obj_AI_Player::obj_AI_Player()
 #endif
 
 #ifndef FINAL_BUILD
-	// register "cw" command for changing player weapon online
-	static bool cw_cmd_registered = false;
-	if(!cw_cmd_registered)
+	static bool cmd_registered = false;
+	if(!cmd_registered)
 	{
-		cw_cmd_registered = true;
-		REG_CCOMMAND(cw, 0, "Change current primary weapon");
+		cmd_registered = true;
+		REG_CCOMMAND(binv, 0, "show backpack");
+		REG_CCOMMAND(pickup, 0, "use closest network object");
+		REG_CCOMMAND(giveitem, 0, "give item to player");
+		REG_CCOMMAND(changebp, 0, "change backpack");
+		REG_CCOMMAND(alist, 0, "list attachments");
+		REG_CCOMMAND(aequip, 0, "equip attachment");
+		REG_CCOMMAND(aremove, 0, "remove attachment");
 	}
 #endif
 	
@@ -704,18 +944,18 @@ obj_AI_Player::obj_AI_Player()
 
 	if(!gPlayer_AuraTexture)
 	{
-		gPlayer_AuraTexture = r3dRenderer->LoadTexture("Data/Shaders/TEXTURE/Aura.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
+		gPlayer_AuraTexture = r3dRenderer->LoadTexture("Data/Shaders/TEXTURE/Aura.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem);
 	}
 
 	if(!gPlayer_CamoTexture)
 	{
-		gPlayer_CamoTexture = r3dRenderer->LoadTexture("Data/Shaders/TEXTURE/plastic_nm.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
+		gPlayer_CamoTexture = r3dRenderer->LoadTexture("Data/Shaders/TEXTURE/plastic_nm.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem);
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-BOOL obj_AI_Player::Load(const char *fname)
+BOOL obj_Player::Load(const char *fname)
 {
 	if(!parent::Load(fname)) return FALSE;
 
@@ -723,9 +963,7 @@ BOOL obj_AI_Player::Load(const char *fname)
 
 	ObjTypeFlags |= OBJTYPE_Human;
 
-	Height 	 	= SRV_WORLD_SCALE (1.8f);
-	TeamID		= TEAM_UNKNOWN;
-	LoadoutSlot     = 0;
+	Height 	 	= 1.8f;
 	m_EncryptedUserName.set("---");
 
 	lastDamageRcvd = 0;
@@ -740,8 +978,6 @@ BOOL obj_AI_Player::Load(const char *fname)
 	m_isPressedFireTrigger = false;
 	m_isFinishedAiming = false;
 	m_isInScope = false;
-
-	m_siegeArmingTimer = 0;
 
 	grenadeReadyTime = 0;
 
@@ -763,14 +999,13 @@ BOOL obj_AI_Player::Load(const char *fname)
 
 	D3DXMatrixIdentity(&DrawRotMatrix);
 	D3DXMatrixIdentity(&DrawFullMatrix);
+	D3DXMatrixIdentity(&DrawFullMatrix_Localized);
 	D3DXMatrixIdentity(&MoveMatrix);
 
 	JumpVelocity = 0;
-	m_EnergyPenaltyTime = 0;
+	m_StaminaPenaltyTime = 0;
 	//m_BreathPenaltyTime = 0;
 
-	m_SpawnProtectedUntil = 0.0f;
-	m_KillStreak = 0;
 	m_LastKillTime = 0;
 	m_RemainingSecondWindTime = 0.0f;
 	m_isHoldingBreath = false;
@@ -786,15 +1021,8 @@ BOOL obj_AI_Player::Load(const char *fname)
 	PlayerState	= PLAYER_IDLE;
 	PlayerMoveDir   = 0;
 	// we pack both vars into single byte in PKT_C2C_MoveRel.state, so check for overflow
-	TL_STATIC_ASSERT(PLAYER_NUM_STATES <= 0xF);
-	TL_STATIC_ASSERT(CUberData::ANIMDIR_COUNT <= 0xF);
-
-	m_visibleOnMinimap = false;
-	m_onMinimap = false;
-	m_fVisibleTimer = 0;
-	m_pingIconTimer = -1.0f;
-	m_commRoseTimer = -1.0f;
-	setHasSabotageBomb(false);
+	COMPILE_ASSERT(PLAYER_NUM_STATES <= 0xF);
+	COMPILE_ASSERT(CUberData::ANIMDIR_COUNT <= 0xF);
 
 	m_HitMarkerFadeout = 0;
 	m_HitMarkerTex = NULL;
@@ -803,29 +1031,30 @@ BOOL obj_AI_Player::Load(const char *fname)
 	return TRUE;
 }
 
-BOOL obj_AI_Player::OnCreate()
+BOOL obj_Player::OnCreate()
 {
-	R3DPROFILE_FUNCTION("obj_AI_Player::OnCreate");
+	R3DPROFILE_FUNCTION("obj_Player::OnCreate");
 
 	R3D_LOG_TIMESPAN_START(Ai_Player_OnCreate);
 
 	parent::OnCreate();
 
+	r3d_assert(PhysXObstacleIndex == -1);
+	if(!NetworkLocal)
+	{
+		// create obstacle for network players, so we can't bump to them.
+		PhysXObstacleIndex = AcquirePlayerObstacle(GetPosition());
+	}
+
+	bAllowToUseWeapons	= 1;
 	afterRespawnTimer = 0;
 	lastTimeWeaponSwitch = 0;
 	TimeOfLastRespawn = r3dGetTime();
-	m_QuickThrowGrenade = 0;
-	m_BerserkerTime = 0;
 	m_AuraType = AT_NONE;
-	m_bombDropCooldown = 0;
 	footsteps_timeSinceLastMissingHitResult = 0;
 
-	m_needToDrawRiotShieldPlacement = 0;
-	m_spawnedRiotShield = false;
-	m_needToDrawAutoTurretPlacement = 0;
-	m_spawnedAutoTurret = false;
-	m_needToDrawRespawnBeaconPlacement = 0;
-
+	m_needToDrawBarricadePlacement = 0;
+	m_BarricadeMeshPlacement = NULL;
 	m_canPlaceConsumableItem = false;
 
 	m_SpeedBoost = 0;
@@ -835,74 +1064,42 @@ BOOL obj_AI_Player::OnCreate()
 
 	CurrentSpread = 0;
 
-	numLootBoxesPickedup = 0;
-	numBombsPlanted = 0;
-	numBombsDiffused = 0;
-	numSaboRoundsWon = 0;
-
-	shownWeaponPickup = false;
-
 	if(NetworkLocal)
 	{
-		// because we can switch between TPS\FPS
-		if(hudMain)
-			hudMain->updateReticlePosition();
-
-		ObjFlags |=	OBJFLAG_SkipOcclusionCheck // otherwise when you are in scope mode you might not see your own player, and so scope will not render. Anyway, we should see our player always
-						| 
-					OBJFLAG_ForceSceneBoxBBox ; 
+		// otherwise when you are in scope mode you might not see your own player, and so scope will not render. Anyway, we should see our player always
+		setSkipOcclusionCheck(true);
+		ObjFlags |=	OBJFLAG_ForceSceneBoxBBox | OBJFLAG_AlwaysDraw; 
 		PhysicsConfig.group = PHYSCOLL_CHARACTERCONTROLLER;
 		PhysicsConfig.type = PHYSICS_TYPE_CONTROLLER;
 		PhysicsConfig.mass = 100.0f;
 		PhysicsConfig.ready = true;
 		PhysicsObject = BasePhysicsObject::CreateCharacterController(PhysicsConfig, this);
 
-		if(hudRespawn && hudRespawn->isInit() && gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-		{
-			if(hudRespawn->getSelectedTeamID() != TeamID)
-				hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_MovedToOppositeTeam"));
-		}
-
-		if(s_damageHitColorCorrectionTex == 0)
-		{
-			char tempstr[512];
-			GetCCLUT3DTextureFullPath(tempstr, "DamegeHit.dds");
-			s_damageHitColorCorrectionTex = r3dRenderer->LoadTexture( tempstr, D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem );
-			r3d_assert(s_damageHitColorCorrectionTex != NULL);
-			s_damageHitColorCorrectionVal = 0.0f;
-		}
-
-		if(s_UAVFriendlyBlinkTex == 0)
-		{
-			s_UAVFriendlyBlinkTex = r3dRenderer->LoadTexture("data/shaders/texture/PlayerBlinkSphere.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
-			r3d_assert(s_UAVFriendlyBlinkTex!=NULL);
-		}
-
 		if(s_laserPointerTex == 0)
 		{
-			s_laserPointerTex = r3dRenderer->LoadTexture("data/shaders/texture/laserPointerDot.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem );
+			s_laserPointerTex = r3dRenderer->LoadTexture("data/shaders/texture/laserPointerDot.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem );
 			r3d_assert(s_laserPointerTex!=NULL);
 		}
 
 		if(s_flashlightFlashTex == 0)
 		{
-			s_flashlightFlashTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Flashlight.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
+			s_flashlightFlashTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Flashlight.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem);
 			r3d_assert(s_flashlightFlashTex!=NULL);
 		}
 
 		if(s_laserFlashTex == 0)
 		{
-			s_laserFlashTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Laser.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
+			s_laserFlashTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Laser.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem);
 			r3d_assert(s_laserFlashTex!=NULL);
 		}
 	
 		if(s_lightHaloTex == 0)
 		{
-			s_lightHaloTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Halo_01.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem);
+			s_lightHaloTex = r3dRenderer->LoadTexture("data/shaders/texture/Light_Halo_01.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem);
 			r3d_assert(s_lightHaloTex!=NULL);
 		}
 
-		m_HitMarkerTex = r3dRenderer->LoadTexture("data/weapons/hitmarker.dds", D3DFMT_UNKNOWN, false, 1, 1, 0, PlayerTexMem );
+		m_HitMarkerTex = r3dRenderer->LoadTexture("data/weapons/hitmarker.dds", D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_MANAGED, PlayerTexMem );
 		r3d_assert(m_HitMarkerTex != NULL);
 	}
 	else
@@ -913,33 +1110,14 @@ BOOL obj_AI_Player::OnCreate()
 		// NOTE : if you change this, sync with PHYSICS_TYPE_CONTROLLER offset...
 		PhysicsConfig.offset = r3dPoint3D( 0, 0.9f, 0 );
 		PhysicsObject = BasePhysicsObject::CreateDynamicObject(PhysicsConfig, this);
-		wchar_t tempStr[64];
-        char plrUserName[64]; GetUserName(plrUserName);
-		swprintf(tempStr, 64, gLangMngr.getString("$HUD_Msg_JoinedGame"), utf8ToWide(plrUserName));
-		if(hudMain)
-			hudMain->AddMessage(tempStr);
-
-		if(hudMain)
-		{
-			hudMain->addWoundedIcon(m_WoundedTeamIcon);
-			hudMain->moveScreenIcon(m_WoundedTeamIcon, r3dPoint3D(-1, -1, -1), false, true);
-		}
-
-		if(hudMain)
-		{
-			hudMain->addPingIcon(m_PingTeamIcon);
-			hudMain->moveScreenIcon(m_PingTeamIcon, r3dPoint3D(-1, -1, -1), false, true);
-		}
-
-		if( hudMain )
-		{
-			hudMain->addIconSpawnIcon(m_SpawnProtectIcon);
-			hudMain->moveScreenIcon(m_SpawnProtectIcon, r3dPoint3D(-1, -1, -1), false, true);
-			
-		}
+		//wchar_t tempStr[64];
+		//char plrUserName[64]; GetUserName(plrUserName);
+		//swprintf(tempStr, 64, gLangMngr.getString("$HUD_Msg_JoinedGame"), utf8ToWide(plrUserName));
+		//if(hudMain)
+		//	hudMain->showMessage(tempStr);
 	}
 
-	m_Energy = getMaxStamina();
+	m_Stamina = getMaxStamina();
 	m_Breath = getMaxBreath();
 
 	// init animation
@@ -956,14 +1134,7 @@ BOOL obj_AI_Player::OnCreate()
 	boneId_Bip01_R_Hand	   = uberAnim_->GetBoneID("Bip01_R_Hand");
 	boneId_Bip01_L_Hand	   = uberAnim_->GetBoneID("Bip01_L_Hand");
 
-	// setup boosts
-	if(NetworkLocal)
-	{
-		if(gUserProfile.getInventoryItemByID(301008) != -1)
-			m_haveBoostStamina = true;
-	}
-
-	UpdateLoadoutSlot(CurLoadout, CurWeaponAttachments);
+	UpdateLoadoutSlot(CurLoadout);
 
 	PlayerState = PLAYER_IDLE;
 	SyncAnimation(true);
@@ -986,22 +1157,6 @@ BOOL obj_AI_Player::OnCreate()
 		m_PhysSkeleton->SwitchToRagdoll(false);
 	}
 
-	if(!NetworkLocal)
-	{
-		if(gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-		{
-			if(CurLoadout.hasItem(AbilityConfig::AB_GuardianAngel)) // guardian angel
-			{
-				if(hudMain)
-				{
-					hudMain->addMedicIcon(m_MedicTeamIcon);
-					hudMain->moveScreenIcon(m_MedicTeamIcon, r3dPoint3D(-1, -1, -1), false, true);
-					hudMain->setScreenIconScale(m_MedicTeamIcon, 0.5f);
-				}
-			} 
-		}
-	}
-
 	// if we was dead on spawn
 	if(bDead) 
 	{
@@ -1016,79 +1171,63 @@ BOOL obj_AI_Player::OnCreate()
 		SetPosition(GetPosition());
 	}
 
+	// load local player sounds
+	if(NetworkLocal)
+	{
+		m_sndBreathSprint = SoundSys.Play(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_BREATHE_F_SLOW":"Sounds/WarZ/PlayerSounds/PLAYER_BREATHE_M_SLOW"), GetPosition(), true);
+		SoundSys.Stop(m_sndBreathSprint);
+		r3d_assert(m_sndBreathSprint);
+		SoundSys.GetProperty(m_sndBreathSprint, FMOD_EVENTPROPERTY_VOLUME, &m_sndBreathBaseVolume);
+
+		m_sndInPain = SoundSys.Play(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_in_pain_F":"Sounds/WarZ/PlayerSounds/PLAYER_in_pain_M"), GetPosition(), true);
+		SoundSys.Stop(m_sndInPain);
+		r3d_assert(m_sndInPain);
+
+		m_sndClothMovementSprint = SoundSys.Play(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_PANTS_MOVE"), GetPosition(), true);
+		SoundSys.Stop(m_sndClothMovementSprint);
+		r3d_assert(m_sndClothMovementSprint);
+
+		m_sndSniperBreath = SoundSys.Play(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_BREATHE_F":"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_BREATHE_M"), GetPosition(), true);
+		SoundSys.Stop(m_sndSniperBreath);
+		r3d_assert(m_sndSniperBreath);
+		m_sndSniperHeartSlow = SoundSys.Play(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_HEART_SLOW"), GetPosition(), true);
+		SoundSys.Stop(m_sndSniperHeartSlow);
+		r3d_assert(m_sndSniperHeartSlow);
+		m_sndSniperExhale = SoundSys.Play(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_EXHALE_F":"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_EXHALE_M"), GetPosition(), true);
+		SoundSys.Stop(m_sndSniperExhale);
+		r3d_assert(m_sndSniperExhale);
+	}
+
 	lastWeapDataRep = r3dGetTime();
 
 	TeleportPlayer(GetPosition(), "OnCreate");
-	m_Health	= getMaxHealth();
 
 	R3D_LOG_TIMESPAN_END(Ai_Player_OnCreate);
 
 	return TRUE;
 }
 
-BOOL obj_AI_Player::OnDestroy()
+BOOL obj_Player::OnDestroy()
 {
-	wchar_t tempStr[64];
-	char plrUserName[64]; GetUserName(plrUserName);
-	swprintf(tempStr, 64, gLangMngr.getString("$HUD_Msg_LeftGame"), utf8ToWide(plrUserName));
-	if(hudMain)
-		hudMain->AddMessage(tempStr);
+	//wchar_t tempStr[64];
+	//char plrUserName[64]; GetUserName(plrUserName);
+	//swprintf(tempStr, 64, gLangMngr.getString("$HUD_Msg_LeftGame"), utf8ToWide(plrUserName));
+	//if(hudMain)
+	//	hudMain->showMessage(tempStr);
+
+	m_BarricadeMeshPlacement = NULL;
 
 	for(int i=0; i<NUM_WEAPONS_ON_PLAYER; ++i)
 	{
 		SAFE_DELETE(m_Weapons[i]);
 	}
 
-	if(hudMain)
-	{
-		if(!m_MarkedTargetIcon.IsUndefined())
-		{
-			hudMain->deleteScreenIcon(m_MarkedTargetIcon);
-		}
-
-		if(!m_TagIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_TagIcon);
-
-		if(!m_WoundedTeamIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_WoundedTeamIcon);
-
-		if(!m_PingTeamIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_PingTeamIcon);
-
-		if(m_commRoseTimer>0 && !m_CommRoseIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_CommRoseIcon);
-
-		if(!m_MedicTeamIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_MedicTeamIcon);
-		if(!m_SpawnProtectIcon.IsUndefined())
-			hudMain->deleteScreenIcon(m_SpawnProtectIcon);
-		
-	}
-
-	if(!NetworkLocal)
-	{
-		if(hudMinimap && hudMinimap->IsInited() && m_onMinimap)
-		{
-			hudMinimap->EraseUnit(m_MinimapTagIconName);
-			m_onMinimap = false;
-		}
-	}
-
-	m_RiotShieldMeshPlacement = NULL;
-	m_RiotPersonalShieldMeshPlacement = NULL;
-	m_AutoTurretMeshPlacement = NULL;
-	m_RespawnBeaconMeshPlacement = NULL;
+	ReleasePlayerObstacle(&PhysXObstacleIndex);	// player is gone, clear obstacle
 
 	if(NetworkLocal)
 	{
 		if(gClientLogic().localPlayer_ == this)
 			gClientLogic().localPlayer_ = 0;
-
-		r3dRenderer->DeleteTexture(s_damageHitColorCorrectionTex);
-		s_damageHitColorCorrectionTex = NULL;
-
-		r3dRenderer->DeleteTexture(s_UAVFriendlyBlinkTex);
-		s_UAVFriendlyBlinkTex = NULL;
 
 		r3dRenderer->DeleteTexture(s_laserPointerTex);
 		s_laserPointerTex = NULL;
@@ -1116,6 +1255,24 @@ BOOL obj_AI_Player::OnDestroy()
 	}
 	footStepsArr.Clear();
 
+	if(NetworkLocal)
+	{
+		SoundSys.Stop(m_sndBreathSprint); SoundSys.Release(m_sndBreathSprint);
+		SoundSys.Stop(m_sndInPain); SoundSys.Release(m_sndInPain);
+		SoundSys.Stop(m_sndClothMovementSprint); SoundSys.Release(m_sndClothMovementSprint);
+
+		SoundSys.Stop(m_sndSniperBreath); SoundSys.Release(m_sndSniperBreath);
+		SoundSys.Stop(m_sndSniperHeartSlow); SoundSys.Release(m_sndSniperHeartSlow);
+		SoundSys.Stop(m_sndSniperExhale); SoundSys.Release(m_sndSniperExhale);
+	}
+
+	if(hudMain)
+	{
+		if(!m_CharIcon.IsUndefined())
+			hudMain->removeUserIcon(m_CharIcon);
+
+	}
+
 	return parent::OnDestroy();
 }
 
@@ -1140,7 +1297,7 @@ void Fix_Angle(float& deg)
 		deg -= R3D_PI * 2;
 }
 
-void obj_AI_Player::UpdateRotationToTarget(float fY, float fTurnSpeed)
+void obj_Player::UpdateRotationToTarget(float fY, float fTurnSpeed)
 {
 	// if don't need to rotate
 	if(R3D_ABS(fY) < 0.2f|| R3D_ABS(fY) > 120)
@@ -1191,7 +1348,7 @@ R3D_FORCEINLINE void UpdateBodyAdjustX( float* ioAdjust, float newadjust, float 
 	*ioAdjust = bodyAdjust_x ;
 }
 
-void obj_AI_Player::UpdateUpperBodyAngLegs()
+void obj_Player::UpdateUpperBodyAngLegs()
 {
 	float fTimePassed = r3dGetFrameTime();
 	const float fMaxBodyAngle = R3D_DEG2RAD(45.0f);
@@ -1227,7 +1384,7 @@ void obj_AI_Player::UpdateUpperBodyAngLegs()
 	}
 }
 
-void obj_AI_Player::UpdateRotation()
+void obj_Player::UpdateRotation()
 {
 	R3DPROFILE_FUNCTION("UpdateRotation");
 
@@ -1251,9 +1408,9 @@ void obj_AI_Player::UpdateRotation()
 	
 	// lerp body bending to target
 	if(bodyAdjust_y[0] < bodyAdjust_y[1]) {
-		bodyAdjust_y[0] = R3D_MIN(bodyAdjust_y[0] + fTimePassed * 1.8f, bodyAdjust_y[1]);
+		bodyAdjust_y[0] = R3D_MIN(bodyAdjust_y[0] + fTimePassed * 3.2f, bodyAdjust_y[1]);
 	} else if(bodyAdjust_y[0] > bodyAdjust_y[1]) {
-		bodyAdjust_y[0] = R3D_MAX(bodyAdjust_y[0] - fTimePassed * 1.8f, bodyAdjust_y[1]);
+		bodyAdjust_y[0] = R3D_MAX(bodyAdjust_y[0] - fTimePassed * 3.2f, bodyAdjust_y[1]);
 	} else
 		bodyAdjust_y[0] = bodyAdjust_y[1];
 
@@ -1264,7 +1421,7 @@ void obj_AI_Player::UpdateRotation()
 	r3dPoint3D pos = GetPosition();
 
 	extern int CurHUDID;
-	if(g_camera_mode->GetInt()==2 && NetworkLocal && ((g_bEditMode && (CurHUDID==1 || CurHUDID==6) )||!g_bEditMode) && !uavViewActive_)
+	if(g_camera_mode->GetInt()==2 && NetworkLocal && ((g_bEditMode && (CurHUDID==1 || CurHUDID==6) )||!g_bEditMode) && !bDead)
 	{
 		float hands_height = 0.0f;
 		{
@@ -1291,10 +1448,10 @@ void obj_AI_Player::UpdateRotation()
 
 		D3DXMatrixTranslation(&m4, 0, -hands_height, 0.1f);
 		D3DXMatrixMultiply(&DrawFullMatrix, &m3, &m4);
-		D3DXMATRIX m1, m2;
-		D3DXMatrixMultiply(&m1, &DrawFullMatrix, &r3dRenderer->InvViewMatrix);
-		D3DXMatrixTranslation(&m2, 0, 0.0f, 0.0f);
-		D3DXMatrixMultiply(&DrawFullMatrix, &m1, &m2);
+		
+		D3DXMatrixMultiply(&DrawFullMatrix_Localized, &DrawFullMatrix, &r3dRenderer->InvViewMatrix_Localized);		
+
+		D3DXMatrixMultiply(&DrawFullMatrix, &DrawFullMatrix, &r3dRenderer->InvViewMatrix);
 	}
 	else
 	{
@@ -1303,13 +1460,19 @@ void obj_AI_Player::UpdateRotation()
 		DrawFullMatrix._41 += pos.x;
 		DrawFullMatrix._42 += pos.y;
 		DrawFullMatrix._43 += pos.z;
+
+		DrawFullMatrix_Localized = DrawRotMatrix;
+
+		DrawFullMatrix_Localized._41 += pos.x - r3dRenderer->LocalizationPos.x;
+		DrawFullMatrix_Localized._42 += pos.y - r3dRenderer->LocalizationPos.y;
+		DrawFullMatrix_Localized._43 += pos.z - r3dRenderer->LocalizationPos.z;
 	}
 
 	// set physx rotation vectors
 	SetRotationVector(r3dVector(m_fPlayerRotation, 0, 0));
 }
 
-static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, const r3dPoint3D& muzzlePos, r3dPoint3D& sPos, r3dPoint3D& sNorm, r3dMaterial** sMat, GameObject** gameObj, const char** actorName, float spread, bool recheckCollisionAgainsMuzzler)
+static bool updateShootingTarget(obj_Player* pl, const r3dPoint3D& shootFrom, const r3dPoint3D& muzzlePos, r3dPoint3D& sPos, r3dPoint3D& sNorm, r3dMaterial** sMat, GameObject** gameObj, const char** actorName, float spread, bool recheckCollisionAgainsMuzzler)
 {
 	r3d_assert(pl);
 	r3d_assert(sMat);
@@ -1340,15 +1503,15 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 		PhysicsCallbackObject* target = NULL;
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 		g_pPhysicsWorld->raycastSingle(PxVec3(shootFrom.x, shootFrom.y, shootFrom.z), PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z), MAX_CASTING_DISTANCE, 
-													PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit, filter);
+													PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter);
 		// check if target position is still visible from muzzler (prevent against shooting from wall edges
 		if( recheckCollisionAgainsMuzzler && hit.shape )
 		{
-			PxVec3 dir2(hit.position.x - muzzlePos.x, hit.position.y - muzzlePos.y, hit.position.z - muzzlePos.z);
+			PxVec3 dir2(hit.impact.x - muzzlePos.x, hit.impact.y - muzzlePos.y, hit.impact.z - muzzlePos.z);
 			dir2.normalize();
 
 			PxRaycastHit hit2;
-			g_pPhysicsWorld->raycastSingle(PxVec3(muzzlePos.x, muzzlePos.y, muzzlePos.z), dir2, MAX_CASTING_DISTANCE, PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit2, filter);
+			g_pPhysicsWorld->raycastSingle(PxVec3(muzzlePos.x, muzzlePos.y, muzzlePos.z), dir2, MAX_CASTING_DISTANCE, PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit2, filter);
 			if(hit2.shape != hit.shape)
 			{
 				// replace old collision data with new one
@@ -1356,10 +1519,10 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 			}
 		}
 		
-		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
+		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
 		{
 			if(actorName)
-				*actorName = hit.shape->getActor()->getName();
+				*actorName = hit.shape->getActor().getName();
 
 			*gameObj = target->isGameObject();
 			if(*gameObj)
@@ -1374,9 +1537,9 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 			if (!*sMat)
 				*sMat = target->GetMaterial(hit.faceIndex);
 
-			sPos.x = hit.position.x;
-			sPos.y = hit.position.y;
-			sPos.z = hit.position.z;
+			sPos.x = hit.impact.x;
+			sPos.y = hit.impact.y;
+			sPos.z = hit.impact.z;
 
 			sNorm.x = hit.normal.x;
 			sNorm.y = hit.normal.y;
@@ -1402,7 +1565,7 @@ static bool updateShootingTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom,
 	return false;
 }
 
-static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, const r3dPoint3D& muzzlePos, r3dPoint3D& sPos, r3dPoint3D& sNorm, r3dMaterial** sMat, GameObject** gameObj, const char** actorName, float spread, bool recheckCollisionAgainsMuzzler)
+static bool updateMeleeTarget(obj_Player* pl, const r3dPoint3D& shootFrom, const r3dPoint3D& muzzlePos, r3dPoint3D& sPos, r3dPoint3D& sNorm, r3dMaterial** sMat, GameObject** gameObj, const char** actorName, float spread, bool recheckCollisionAgainsMuzzler)
 {
 	r3d_assert(pl);
 	r3d_assert(sMat);
@@ -1415,7 +1578,7 @@ static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, co
 	// I'm going to do 9 ray casts in front of player. They are super short, so it shouldn't cause any performance issues 
 	// and we going to hit first player, if any
 	// TODO: we need to handle a case when we hit static object only and do not hit any player, but for melee this is minor
-	const float MAX_CASTING_DISTANCE = 1.5f;
+	const float MAX_CASTING_DISTANCE = 2.0f;
 	float rayDegrees[9] = {-30.0f, -20.0f, -10.0f, -5.0f, 0.0f, 5.0f, 10.0f, 20.0f, 30.0f};
 	for(int iRay = 0; iRay <9; ++iRay)
 	{
@@ -1429,24 +1592,24 @@ static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, co
 			PhysicsCallbackObject* target = NULL;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 			g_pPhysicsWorld->raycastSingle(PxVec3(shootFrom.x, shootFrom.y, shootFrom.z), PxVec3(dirWithSpread.x, dirWithSpread.y, dirWithSpread.z), MAX_CASTING_DISTANCE, 
-				PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL, hit, filter);
+				PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter);
 
-			if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
+			if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
 			{
 				*gameObj = target->isGameObject();
 				if(!*gameObj)
 					continue;
-				if(!(*gameObj)->isObjType(OBJTYPE_Human))
+				if(!((*gameObj)->isObjType(OBJTYPE_Human) || (*gameObj)->isObjType(OBJTYPE_Zombie) || (*gameObj)->Class->Name == "obj_ZombieDummy"))
 					continue;
 
 				*sMat = NULL;
 
 				if(actorName)
-					*actorName = hit.shape->getActor()->getName();
+					*actorName = hit.shape->getActor().getName();
 
-				sPos.x = hit.position.x;
-				sPos.y = hit.position.y;
-				sPos.z = hit.position.z;
+				sPos.x = hit.impact.x;
+				sPos.y = hit.impact.y;
+				sPos.z = hit.impact.z;
 
 				sNorm.x = hit.normal.x;
 				sNorm.y = hit.normal.y;
@@ -1479,7 +1642,7 @@ static bool updateMeleeTarget(obj_AI_Player* pl, const r3dPoint3D& shootFrom, co
 	return false;
 }
 
-static bool isMuzzlerBlocked(obj_AI_Player* pl, const r3dPoint3D& muzzlePos)
+static bool isMuzzlerBlocked(obj_Player* pl, const r3dPoint3D& muzzlePos)
 {
 	// check if muzzler is visible, and if not (inside of wall) then we do not shoot anything
 	bool muzzlerBlocked = false;
@@ -1491,7 +1654,7 @@ static bool isMuzzlerBlocked(obj_AI_Player* pl, const r3dPoint3D& muzzlePos)
 		{
 			PxRaycastHit hit;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::eSTATIC));
-			muzzlerBlocked = g_pPhysicsWorld->raycastSingle( PxVec3(gCam.x,gCam.y,gCam.z), PxVec3(temp.x, temp.y, temp.z), len, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
+			muzzlerBlocked = g_pPhysicsWorld->raycastSingle( PxVec3(gCam.x,gCam.y,gCam.z), PxVec3(temp.x, temp.y, temp.z), len, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
 		}
 	}
 	if(muzzlerBlocked)
@@ -1522,16 +1685,13 @@ static bool isMuzzlerBlocked(obj_AI_Player* pl, const r3dPoint3D& muzzlePos)
 	return false;
 }
 
-void obj_AI_Player::UpdateTargetting()
+void obj_Player::UpdateTargetting()
 {
 	R3DPROFILE_FUNCTION("UpdateTargetting");
 	r3d_assert(NetworkLocal);
 
 	m_LocalPlayer_CurrentAimAt = invalidGameObjectID;
 	
-	if(uavViewActive_ || laserViewActive_)
-		return;
-
 	r3dMaterial* temp;
 	GameObject* tempObj;
 	r3dPoint3D muzzlerPos = GetMuzzlerPosition();
@@ -1553,20 +1713,13 @@ void obj_AI_Player::UpdateTargetting()
 		m_LocalPlayer_CurrentAimAt = tempObj->GetSafeID();
 		if(tempObj->isObjType(OBJTYPE_Human))
 		{
-			obj_AI_Player* target = (obj_AI_Player*)tempObj;
+			obj_Player* target = (obj_Player*)tempObj;
 			if(!target->bDead)
 			{
-				if(target->TeamID != TeamID)
-				{
-					reticleColor = "red";
-				}
-				else
-					reticleColor = "blue";
+				reticleColor = "red";
 			}
 		}
 	}
-	if(hudMain)
-		hudMain->setReticleColor(reticleColor);
 
 	r3dPoint3D bendTarget = GetPosition();
 	bendTarget.Y += Height * 0.9f;
@@ -1578,6 +1731,10 @@ void obj_AI_Player::UpdateTargetting()
 	if(dist<1.8f)
 		bendUp = R3D_LERP(0.0f, bendUp, dist/1.8f);
 
+	// do not bend body in prone position
+	if(PlayerState == PLAYER_PRONE_DOWN || PlayerState == PLAYER_PRONE_UP || PlayerState == PLAYER_MOVE_PRONE || PlayerState == PLAYER_PRONE_IDLE || PlayerState == PLAYER_PRONE_AIM)
+		bendUp = 0;
+
 	bodyAdjust_y[1] = bendUp;
 
 #ifndef FINAL_BUILD
@@ -1588,7 +1745,7 @@ void obj_AI_Player::UpdateTargetting()
 #endif
 }
 
-r3dPoint3D obj_AI_Player::GetMuzzlerPosition()
+r3dPoint3D obj_Player::GetMuzzlerPosition()
 {
 	if(GetSkeleton() && m_Weapons[m_SelectedWeapon])
 	{
@@ -1602,7 +1759,7 @@ r3dPoint3D obj_AI_Player::GetMuzzlerPosition()
 // 1 - head
 // 2 - hands
 // 3 - legs
-BYTE obj_AI_Player::getBodyNameFromBoneName(const char* boneName)
+BYTE obj_Player::getBodyNameFromBoneName(const char* boneName)
 {
 	struct boneToBodyPart_s {
 		BYTE part;
@@ -1640,191 +1797,222 @@ BYTE obj_AI_Player::getBodyNameFromBoneName(const char* boneName)
 	return 0;
 }
 
-void obj_AI_Player::CheckFireWeapon()
+void obj_Player::CheckFireWeapon()
 {
 	r3d_assert(NetworkLocal);
 
-	VMPROTECT_BeginMutation("obj_AI_Player::CheckFireWeapon");
-
-	static bool wasReloading = false; // static is okay, this code is running for local player only
-#if ENABLE_ZOMBIES	
-	lifeProperties.weaponFired = false;
-#endif
-
-	Weapon* wpn = m_Weapons[m_SelectedWeapon];
-	if(wpn == NULL)
-		return;
+	VMPROTECT_BeginMutation("obj_Player::CheckFireWeapon");
 
 	bool needExit = false;
 #ifndef FINAL_BUILD
 	if(d_video_spectator_mode->GetBool()) needExit = true;
 	if(d_observer_mode->GetBool()) needExit = true;
 #endif
-	if(hudMain && hudMain->isChatVisible()) needExit = true;
-	if(m_siegeArmingTimer > 0) needExit = true;
 	if(hudPause && hudPause->isActive()) needExit = true;
+	if(hudAttm && hudAttm->isActive()) needExit = true;
+	if(hudGeneralStore && hudGeneralStore->isActive()) needExit = true;
+	if(hudVault && hudVault->isActive()) needExit = true;
 	if(Mouse->GetMouseVisibility()) needExit = true;
-	if(hudCommCalls && hudCommCalls->isCommRoseVisible()) needExit = true;
+	if(hudMain && hudMain->isChatInputActive()) needExit = true;
+	if(hudMain && hudMain->isPlayersListVisible()) needExit = true;
+
+	static bool wasReloading = false; // static is okay, this code is running for local player only
+	lifeProperties.weaponFired = false;
+
+	Weapon* wpn = m_Weapons[m_SelectedWeapon];
+	if((wpn == NULL || forcedEmptyHands))
+	{
+		if (!needExit)
+		{
+			if(g_toggle_aim->GetBool())
+			{
+				if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_AIM))
+					m_isAiming = !m_isAiming;
+			}
+			else
+			{
+				m_isAiming = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_AIM);
+			}
+		}
+		return;
+	}
+
 	if((PlayerState == PLAYER_MOVE_SPRINT && wpn->getCategory()!=storecat_MELEE) || bDead)  
 	{
 		if(wasReloading)
 		{
-			if(hudMain)
-				hudMain->showReloading(false);
 			wasReloading = false;
 		}
 		needExit = true;
 	}
+	if(PlayerState == PLAYER_PRONE_DOWN || PlayerState == PLAYER_PRONE_UP)
+		needExit = true;
 	
-	if(uavViewActive_ || laserViewActive_) needExit = true;
+	float gamepadLeftTrigger, gamepadRightTrigger;
+	Gamepad->GetTrigger(gamepadLeftTrigger, gamepadRightTrigger);
 
+	bool wpnIsNoLongerAvailable = false; // workaround for the fast that when you use last item, it will call OnBackpackChanged and will DELETE current weapon that you are using
+										// not sure what is the proper way to fix this. Use smart pointers maybe?? 
 	if(wpn->isUsableItem() && !needExit)
 	{
-		if(wpn->getItemID() == WeaponConfig::ITEMID_LLDR || wpn->getItemID() == WeaponConfig::ITEMID_Cypher2)
+		// special case items
+		if(wpn->getItemID() == WeaponConfig::ITEMID_Binoculars || wpn->getItemID() == WeaponConfig::ITEMID_RangeFinder) // binoculars, range finder, etc
 		{
-		}
-		else
-		{
-			// consumables
-			if(m_needToDrawRiotShieldPlacement && InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_AIM))
-				m_needToDrawRiotShieldPlacement = 0;
-			if(m_needToDrawAutoTurretPlacement && InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_AIM))
-				m_needToDrawAutoTurretPlacement = 0;
-			if(m_needToDrawRespawnBeaconPlacement && InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_AIM))
-				m_needToDrawRespawnBeaconPlacement = 0;
+			bool oldAiming = m_isAiming;
+			if(g_toggle_aim->GetBool())
+			{
+				if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_AIM))
+					m_isAiming = !m_isAiming;
+			}
+			else
+			{
+				m_isAiming = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_AIM) || gamepadLeftTrigger > 0;
+			}
 
+			extern 	PlayerStateVars_s CurrentRig;
+			m_isInScope = hasScopeMode() && CurrentRig.allowScope;
+
+			// remember that aiming was changed
+			if(m_isAiming != oldAiming)
+				m_isChangedAiming1 = true;
+
+			extern float LerpValue;
+			m_isFinishedAiming = m_isAiming && LerpValue==1.0f;
+
+			if(wpn->getItemID() == 101319 && hudMain)
+				hudMain->showRangeFinderUI(m_isFinishedAiming && m_isInScope);
+		}
+		else if(wpn->getItemID() == WeaponConfig::ITEMID_PieceOfPaper)
+		{
+			m_isAiming = false;
+			m_isFinishedAiming = false;
 			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_PRIMARY_FIRE) || m_ItemSimulateLeftClick)
 			{
 				m_ItemSimulateLeftClick = false;
-				if(gClientLogic().m_gameHasStarted) // allow to use consumables only when game has started
+				if(hudMain && hudMain->canShowWriteNote())
+					hudMain->showWriteNote(wpn->m_BackpackIdx);
+			}
+		}
+		else if(wpn->getItemID() == WeaponConfig::ITEMID_AirHorn)
+		{
+			// todo
+		}
+		else
+		{
+			m_isAiming = false;
+			m_isFinishedAiming = false;
+			if(m_needToDrawBarricadePlacement && InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_AIM))
+			{
+				m_needToDrawBarricadePlacement = 0;
+				m_BarricadeMeshPlacement = NULL;
+			}
+
+			// consumables
+			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_PRIMARY_FIRE) || m_ItemSimulateLeftClick)
+			{
+				m_ItemSimulateLeftClick = false;
+
+				wiInventoryItem wi = wpn->getPlayerItem(); // COPY of item, not reference. because it can be reset in Fire()
+				if(wi.quantity > 0 && wpn->isReadyToFire(true, false)) // consumables have rate of fire (cooldown)
 				{
-					int numCharges = 1;
-					if(wpn->m_usableItemInventoryIdx >= 0)
-						numCharges = gUserProfile.ProfileData.Inventory[wpn->m_usableItemInventoryIdx].quantity;
-					if(numCharges > 0 && wpn->isReadyToFire(true, false)) // consumables have rate of fire (cooldown)
+					if(wpn->getItemID() == WeaponConfig::ITEMID_BarbWireBarricade || 
+						wpn->getItemID() == WeaponConfig::ITEMID_WoodShieldBarricade ||
+						wpn->getItemID() == WeaponConfig::ITEMID_RiotShieldBarricade ||
+						wpn->getItemID() == WeaponConfig::ITEMID_SandbagBarricade )
 					{
-						if(wpn->getItemID() == WeaponConfig::ITEMID_RiotShield || wpn->getItemID() == WeaponConfig::ITEMID_RiotShieldConsumable)
+						if(m_needToDrawBarricadePlacement == 0)
 						{
-							if(wpn->getItemID() == WeaponConfig::ITEMID_RiotShield && m_spawnedRiotShield)
-							{
-								return; // skill based riot shield - only one per player spawn
-							}
-							if(m_needToDrawRiotShieldPlacement == 0)
-							{
-								m_needToDrawRiotShieldPlacement = wpn->getItemID();
-								return;
-							}
-							else
-							{
-								if(m_canPlaceConsumableItem)
-									m_needToDrawRiotShieldPlacement = 0; // and let user place riot shield by sending packet to server
-								else
-									return;
-							}
-						}
-						if(wpn->getItemID() == WeaponConfig::ITEMID_AutoTurret || wpn->getItemID() == WeaponConfig::ITEMID_AutoTurretCons)
-						{
-							if(wpn->getItemID() == WeaponConfig::ITEMID_AutoTurret && m_spawnedAutoTurret)
-							{
-								return; // skill based - only one per player spawn
-							}
-							if(m_needToDrawAutoTurretPlacement == 0)
-							{
-								m_needToDrawAutoTurretPlacement = wpn->getItemID();
-								return;
-							}
-							else
-							{
-								if(m_canPlaceConsumableItem)
-									m_needToDrawAutoTurretPlacement = 0; // and let user place it by sending packet to server
-								else
-									return;
-							}
-						}
-						if(wpn->getItemID() == WeaponConfig::ITEMID_RespawnBeacon || wpn->getItemID() == WeaponConfig::ITEMID_RespawnBeaconCons)
-						{
-							if(m_needToDrawRespawnBeaconPlacement == 0)
-							{
-								m_needToDrawRespawnBeaconPlacement = wpn->getItemID();
-								return;
-							}
-							else
-							{
-								if(m_canPlaceConsumableItem)
-									m_needToDrawRespawnBeaconPlacement = 0; // and let user place it by sending packet to server
-								else
-									return;
-							}
-						}
-						if((wpn->getItemID() == WeaponConfig::ITEMID_Bandages || wpn->getItemID() == WeaponConfig::ITEMID_Bandages2) && m_Health >= (getMaxHealth()-1.0f))
+							m_needToDrawBarricadePlacement = wpn->getItemID();
 							return;
-
-						uberAnim_->StartShootAnim();
-						wpn->Fire(r3dPoint3D(0,0,0), D3DXMATRIX()); // to update last fire time
-
-						// todo: we need to sync this crap over network, so that network players will see us using item
-						// todo: also, we need to sync when we sent this packet, so that it is in sync with animation
-						PKT_C2C_PlayerUseItem_s n;
-						n.itemId  = wpn->getItemID();
-						n.pos     = GetPosition() + GetvForw()*1.0f + r3dPoint3D(0,1,0);
-						if(n.itemId == WeaponConfig::ITEMID_RiotShield || n.itemId == WeaponConfig::ITEMID_RiotShieldConsumable)
-						{
-							n.var1 = (m_fPlayerRotation) + R3D_RAD2DEG(bodyAdjust_x) + 180;
-							if(n.itemId == WeaponConfig::ITEMID_RiotShield)
-								m_spawnedRiotShield = true;
 						}
-						if(n.itemId == WeaponConfig::ITEMID_AutoTurret || n.itemId == WeaponConfig::ITEMID_AutoTurretCons)
+						else
 						{
-							n.var1 = (m_fPlayerRotation) + R3D_RAD2DEG(bodyAdjust_x) + 180;
-							if(n.itemId == WeaponConfig::ITEMID_AutoTurret)
-								m_spawnedAutoTurret = true;
+							if(m_canPlaceConsumableItem)
+							{
+								m_needToDrawBarricadePlacement = 0; // and let user place riot shield by sending packet to server
+								m_BarricadeMeshPlacement = NULL;
+							}
+							else
+								return;
 						}
-						if(n.itemId == WeaponConfig::ITEMID_RespawnBeacon || n.itemId == WeaponConfig::ITEMID_RespawnBeaconCons)
-						{
-							n.var1 = (m_fPlayerRotation) + R3D_RAD2DEG(bodyAdjust_x) + 180;
-						}
-						bool needCorrectPos = false;
-						if(n.itemId == WeaponConfig::ITEMID_MedKit || 
-							n.itemId == WeaponConfig::ITEMID_MotionSensor || 
-							n.itemId == WeaponConfig::ITEMID_MotionSensorConsumable || 
-							n.itemId == WeaponConfig::ITEMID_RiotShield || 
-							n.itemId == WeaponConfig::ITEMID_RiotShieldConsumable || 
-							n.itemId == WeaponConfig::ITEMID_AutoTurret || 
-							n.itemId == WeaponConfig::ITEMID_AutoTurretCons || 
-							n.itemId == WeaponConfig::ITEMID_RespawnBeacon || 
-							n.itemId == WeaponConfig::ITEMID_RespawnBeaconCons  
-							)
-							needCorrectPos = true; // those objects require precise position, otherwise there will be desync between client\server (mainly spawn beacon problem)
-
-						if(needCorrectPos)
-						{
-							PxRaycastHit hit;
-							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC));
-							if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y, n.pos.z), PxVec3(0,-1,0), 3.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter))
-								n.pos = r3dPoint3D(hit.position.x, hit.position.y+0.1f, hit.position.z);
-						}
-
-						p2pSendToHost(this, &n, sizeof(n), true);
 					}
-				}
-				else
-				{
+
+					if((wpn->getItemID() == WeaponConfig::ITEMID_Bandages || wpn->getItemID() == WeaponConfig::ITEMID_Bandages2 || wpn->getItemID() == WeaponConfig::ITEMID_Antibiotics ||
+						wpn->getItemID() == WeaponConfig::ITEMID_Painkillers || wpn->getItemID() == WeaponConfig::ITEMID_Medkit) 
+						&& CurLoadout.Health > 99)
+					{
+						if(hudMain) hudMain->showMessage(gLangMngr.getString("InfoMsg_MaxHealthAlready"));
+						return;
+					}
+					if((wpn->getItemID() == WeaponConfig::ITEMID_C01Vaccine || wpn->getItemID() == WeaponConfig::ITEMID_C04Vaccine) 
+						&& CurLoadout.Toxic < 1.0f)
+					{
+						if(hudMain) hudMain->showMessage(gLangMngr.getString("InfoMsg_NoTocixInBlood"));
+						return;
+					}
+
+					uberAnim_->StartShootAnim();
+					wpn->Fire(r3dPoint3D(0,0,0), D3DXMATRIX(), true); // to update last fire time
+
+					showSlotsInfoTimer = r3dGetTime() + 5.0f; // show weapon info for X seconds
 					if(hudMain)
-						hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_CannotUseConsumableBeforeGameStart"));
+						hudMain->showSlots(true);
+
+					// todo: we need to sync this crap over network, so that network players will see us using item
+					// todo: also, we need to sync when we sent this packet, so that it is in sync with animation
+					float var1 = 0.0f;
+					r3dPoint3D pos       = GetPosition() + GetvForw()*1.0f + r3dPoint3D(0,1,0);
+					bool needCorrectPos = false; // those objects require precise position, otherwise there will be desync between client\server (mainly spawn beacon problem)
+					if(wi.itemID == WeaponConfig::ITEMID_BarbWireBarricade ||
+						wi.itemID == WeaponConfig::ITEMID_WoodShieldBarricade ||
+						wi.itemID == WeaponConfig::ITEMID_RiotShieldBarricade || 
+						wi.itemID == WeaponConfig::ITEMID_SandbagBarricade)
+					{
+						var1 = (m_fPlayerRotation) + R3D_RAD2DEG(bodyAdjust_x) + 180;
+						needCorrectPos = true; 
+					}
+
+					if(needCorrectPos)
+					{
+						PxRaycastHit hit;
+						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC));
+						if(g_pPhysicsWorld->raycastSingle(PxVec3(pos.x, pos.y, pos.z), PxVec3(0,-1,0), 3.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
+							pos = r3dPoint3D(hit.impact.x, hit.impact.y+0.1f, hit.impact.z);
+					}
+					localPlayer_UseItem(wpn->m_BackpackIdx, wi.itemID, pos, var1);
+
+					m_BandagesEffectTime = r3dGetTime() + 0.5f;
+
+					// after Fire() check new quantity
+					{
+						if(wpn->getConfig()->m_isConsumable)
+							wi.quantity--; // simulate what fire() does
+						if(wi.quantity <= 0) {
+							wpnIsNoLongerAvailable = true;
+							OnBackpackChanged(m_SelectedWeapon);
+						}
+						else
+						{
+							if(hudMain)
+								hudMain->updateSlotInfo(m_SelectedWeapon, wi.quantity);
+						}
+					}
+
 				}
 			}
 		}
 		needExit = true;
 	}
 	
+	if(!bAllowToUseWeapons)
+		needExit = true;
+
 	if(needExit)
 	{
-		wpn->isReadyToFire(false, false); // very important to call ready to fire with false to reset internal counter of how long trigger was pressed
+		if(!wpnIsNoLongerAvailable)
+			wpn->isReadyToFire(false, false); // very important to call ready to fire with false to reset internal counter of how long trigger was pressed
 		return;
 	}
-
-	float gamepadLeftTrigger, gamepadRightTrigger;
-	Gamepad->GetTrigger(gamepadLeftTrigger, gamepadRightTrigger);
 
 	m_isPressedFireTrigger = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE) || gamepadRightTrigger > 0;
 	// check muzzle block except when using scope
@@ -1849,24 +2037,14 @@ void obj_AI_Player::CheckFireWeapon()
 		m_isAiming = false;
 	}
 
-	// intentional, skip weapon switch check
-	if(m_QuickThrowGrenade == 2 && !uberAnim_->GetGrenadeAnimState())
-	{
-		m_QuickThrowGrenade--;
-		m_isPressedFireTrigger = true;
-	} 
-	else if( m_QuickThrowGrenade == 1 )
-	{
-		m_isPressedFireTrigger = false;
-	}
-
 	extern 	PlayerStateVars_s CurrentRig;
 	m_isInScope = hasScopeMode() && CurrentRig.allowScope;
 
 	if(wpn->isReloading())
 		m_isAiming = false;
-	if(wpn->getAnimType()== WPN_ANIM_MELEE) // no aiming in melee
-		m_isAiming = false;
+
+	//if(wpn->getAnimType()== WPN_ANIM_MELEE) // no aiming in melee
+	//	m_isAiming = false;
 
 	// remember that aiming was changed
 	if(m_isAiming != oldAiming)
@@ -1883,6 +2061,7 @@ void obj_AI_Player::CheckFireWeapon()
 	}
 
 	bool playerCrouching = PlayerState==PLAYER_MOVE_CROUCH || PlayerState==PLAYER_MOVE_CROUCH_AIM; 
+	bool playerProning = PlayerState==PLAYER_MOVE_PRONE || PlayerState==PLAYER_PRONE_AIM || PlayerState == PLAYER_PRONE_IDLE;
 	bool playerMoving  = InputAcceleration.Length() > 0.01f;
 	bool playerRunning = PlayerState==PLAYER_MOVE_RUN;
 	int triggerPressedCounter = wpn->getTriggerPressedCounter();
@@ -1976,86 +2155,6 @@ void obj_AI_Player::CheckFireWeapon()
 	if(wpn->getCategory() == storecat_SNP && !m_isInScope)
 		spread = 11; // fixed spread at 11 for sniper rifles if not aiming - per sergey's request
 
-	if(m_BerserkerTime > 0)
-		spread *= 2.5f; // 150% more spread when in berserker mode
-
-	if(wpn->getCategory() == storecat_ASR)
-	{
-		if(CurLoadout.getSkillLevel(CUserSkills::ASSAULT_ASRWeapons) == 5)
-		{
-			spread *= 0.95f;
-			recoil *= 0.95f;
-		}
-		else
-		{
-			if(CurLoadout.getSkillLevel(CUserSkills::ASSAULT_ASRWeapons)>=2)
-			{
-				recoil *= 0.98f;
-			}
-			if(CurLoadout.getSkillLevel(CUserSkills::ASSAULT_ASRWeapons)>=3)
-			{
-				spread *= 0.98f;
-			}
-		}
-	}
-	if(wpn->getCategory() == storecat_SNP)
-	{
-		if(CurLoadout.getSkillLevel(CUserSkills::RECON_SniperWeapons) == 5)
-		{
-			spread *= 0.95f;
-			recoil *= 0.95f;
-		}
-		else
-		{
-			if(CurLoadout.getSkillLevel(CUserSkills::RECON_SniperWeapons)>=2)
-			{
-				recoil *= 0.98f;
-			}
-			if(CurLoadout.getSkillLevel(CUserSkills::RECON_SniperWeapons)>=3)
-			{
-				spread *= 0.98f;
-			}
-		}
-	}
-	if(wpn->getCategory() == storecat_MG)
-	{
-		if(CurLoadout.getSkillLevel(CUserSkills::SPEC_LMGWeapons) == 5)
-		{
-			spread *= 0.95f;
-			recoil *= 0.95f;
-		}
-		else
-		{
-			if(CurLoadout.getSkillLevel(CUserSkills::SPEC_LMGWeapons)>=2)
-			{
-				recoil *= 0.98f;
-			}
-			if(CurLoadout.getSkillLevel(CUserSkills::SPEC_LMGWeapons)>=3)
-			{
-				spread *= 0.98f;
-			}
-		}
-	}
-	if(wpn->getCategory() == storecat_SMG)
-	{
-		if(CurLoadout.getSkillLevel(CUserSkills::MEDIC_SMGWeapons) == 5)
-		{
-			spread *= 0.95f;
-			recoil *= 0.95f;
-		}
-		else
-		{
-			if(CurLoadout.getSkillLevel(CUserSkills::MEDIC_SMGWeapons)>=2)
-			{
-				recoil *= 0.98f;
-			}
-			if(CurLoadout.getSkillLevel(CUserSkills::MEDIC_SMGWeapons)>=3)
-			{
-				spread *= 0.98f;
-			}
-		}
-	}
-
 
 	// FINISHED SPREAD\RECOIL LOGIC
 
@@ -2063,21 +2162,15 @@ void obj_AI_Player::CheckFireWeapon()
 		bool isReloading = wpn->isReloading();
 		if(isReloading && !wasReloading)
 		{
-			if(hudMain)
-				hudMain->showReloading(true);
 			wasReloading = true;
 		}
 		if(!isReloading && wasReloading)
 		{
-			if(hudMain)
-				hudMain->showReloading(false);
 			wasReloading = false;
 		}
 		if(isReloading)
 		{
 			float progress = R3D_CLAMP((wpn->getReloadProgress()/wpn->getReloadTime()), 0.0f, 1.0f);
-			if(hudMain)
-				hudMain->SetReloadingProgress(progress*100.0f);
 		}
 	}
 
@@ -2087,14 +2180,15 @@ void obj_AI_Player::CheckFireWeapon()
 	if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_CHANGE_RATE_FIRE) && !wpn->isReloading())
 	{
 		wpn->switchFiremode();
-		if(hudMain)
-			hudMain->setFireMode(wpn->getFiremode());
+//		if(hudMain)
+//			hudMain->setFireMode(wpn->getFiremode());
 	}
 
 	// check for grenade throw, if successful it will go to normal fire code
-	if(wpn->isGrenadeOrMineAnim())
+	if(wpn->getCategory() == storecat_GRENADE)
 	{
-		if(!uberAnim_->IsGrenadePinPullActive())
+		const wiInventoryItem& wi = wpn->getPlayerItem(); 
+		if(!uberAnim_->IsGrenadePinPullActive() && wi.quantity > 0)
 		{
 			if(wpn->isReadyToFire(m_isPressedFireTrigger, m_isFinishedAiming)) 
 			{
@@ -2108,19 +2202,20 @@ void obj_AI_Player::CheckFireWeapon()
 		}
 	}
 
+
 	bool isReadyToFire = wpn->isReadyToFire(m_isPressedFireTrigger, m_isFinishedAiming);
 	float holdingDelay = 0;
 
-	// for grenades, overide regular logic a little bit
-	if(wpn->isGrenadeOrMineAnim() && uberAnim_->IsGrenadePinPullActive())
+	// for grenades, override regular logic a little bit
+	if(wpn->getCategory()==storecat_GRENADE && uberAnim_->IsGrenadePinPullActive())
 	{
 		// override previous readytofire, grenade will be ready only after animation is finished
 		isReadyToFire = false;
-		if(uberAnim_->IsGrenadePinPullFinished() && IsPlantingMine() == false ) // ready to throw
+		if(uberAnim_->IsGrenadePinPullFinished()) // ready to throw
 		{
 			if(grenadeReadyTime == 0)
 				grenadeReadyTime = r3dGetTime(); // first frame when we finished playing pin pull animation, store time, as after that grenade timer is start to tick :)
-			if(!m_isPressedFireTrigger || (r3dGetTime()-grenadeReadyTime)>wpn->getAmmoDelay()) // released trigger -> throw
+			if(!m_isPressedFireTrigger || (r3dGetTime()-grenadeReadyTime)>wpn->getConfig()->m_AmmoDelay) // released trigger -> throw
 			{
 				holdingDelay = r3dGetTime()-grenadeReadyTime;
 				grenadeReadyTime = 0;
@@ -2155,16 +2250,6 @@ void obj_AI_Player::CheckFireWeapon()
 			else
 			{
 				float swayDecrease = 0.75f;
-				int BreathControl = CurLoadout.getSkillLevel(CUserSkills::RECON_BreathControl);
-				switch(BreathControl)
-				{
-				case 1: swayDecrease *= 0.9f; break;
-				case 2: swayDecrease *= 0.8f; break;
-				case 3: swayDecrease *= 0.6f; break;
-				case 4: swayDecrease *= 0.5f; break;
-				case 5: swayDecrease *= 0.25f; break;
-				default:break;
-				}
 
 				SniperViewMod.Assign((r3dSin(last_timer/3)*3)*swayDecrease, (r3dCos(last_timer))*swayDecrease, 0);
 				last_timer += r3dGetFrameTime();
@@ -2179,7 +2264,7 @@ void obj_AI_Player::CheckFireWeapon()
 
 	if(isReadyToFire) 
 	{
-		if(wpn->isGrenadeOrMineAnim())
+		if(wpn->getCategory() == storecat_GRENADE)
 		{
 			uberAnim_->StartGrenadeThrowAnimation();
 		}
@@ -2197,17 +2282,13 @@ void obj_AI_Player::CheckFireWeapon()
 			// update spread after shooting
 			CurrentSpread += SpreadIncrease[wpn->getCategory()-storecat_ASR]*wpn->getSpread();
 			CurrentSpread = R3D_MIN(CurrentSpread, wpn->getSpread());
-#if ENABLE_ZOMBIES	
 			lifeProperties.weaponFired = true;
-#endif
 		}
 		while(numVirtualShots>0)
 		{
 			executeWeaponFireLocalPlayer(gCam, recoil, spread, recoilCoolDownMod, holdingDelay, false, !m_isInScope, 0);	
 			--numVirtualShots;
-#if ENABLE_ZOMBIES	
 			lifeProperties.weaponFired = true;
-#endif
 		}
 
 		uberAnim_->StartRecoilAnim();
@@ -2228,39 +2309,37 @@ void obj_AI_Player::CheckFireWeapon()
 	VMPROTECT_End();
 }
 
-bool obj_AI_Player::IsPlantingMine()
+// grenades are thrown at specific animation frame, so we cannot remove weapon (grenade) before it executed. So we have to wait for grenade to be thrown before updating our inventory
+// this callback handles this
+void obj_Player::GrenadeCallbackFromWeapon(const wiInventoryItem& wi)
 {
-	const Weapon* curWeapon = m_Weapons[m_SelectedWeapon];
-	if(curWeapon && curWeapon->getConfig()->getGrenadeAnimType() != WeaponConfig::GRENADE_ANIM_Normal)
-	{
-		if(uberAnim_->GetGrenadeAnimState())
-			return true;
+	// simulate what fire() will do
+	if(hudMain)
+		hudMain->showSlots(true);
+
+	if(wi.quantity <= 0) {
+		OnBackpackChanged(m_SelectedWeapon);
 	}
-	
-	return false;
+	else
+	{
+		if(hudMain)
+			hudMain->updateSlotInfo(m_SelectedWeapon, wi.quantity);
+	}
 }
 
-float obj_AI_Player::GetGrenadeLaunchDelay()
+float obj_Player::GetGrenadeLaunchDelay()
 {
 	return uberAnim_->GetGrenadeLaunchFrame() / 25.0f;
 }
+
 
 // make sure this function is the same on server: bool ServerGameLogic::CanDamageThisObject(const GameObject* targetObj)
 bool canDamageTarget(const GameObject* obj)
 {
 	if(obj->isObjType(OBJTYPE_Human))
 		return true;
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_UAV"))
-	{
-		// server will check if UAV killed, then it will say that object is not damageable
-		// on a client once UAV is killed, object will be removed, so unless there is bad desync, it should be okay
+	if(obj->isObjType(OBJTYPE_Zombie))
 		return true;
-	}
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_Mine"))
-	{
-		// same logic for mine as for UAV
-		return true;
-	}
 	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_LightMesh"))
 	{
 		obj_LightMesh* lmesh = (obj_LightMesh*)obj;
@@ -2268,19 +2347,7 @@ bool canDamageTarget(const GameObject* obj)
 			return true;
 		return false;
 	}
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("DroppedMotionSensor"))
-	{
-		return true;
-	}
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("DroppedRespawnBeacon"))
-	{
-		return true;
-	}
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_RiotShield"))
-	{
-		return true;
-	}
-	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_AutoTurret"))
+	if(obj->Class->Name == VMPROTECT_DecryptStringA("obj_Barricade"))
 	{
 		return true;
 	}
@@ -2290,7 +2357,7 @@ bool canDamageTarget(const GameObject* obj)
 
 float g_ScopeFeedbackTimer = 0.0f;
 
-void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float recoil, float spread, float recoilCoolDownMod, float holdingDelay, bool executeWeaponFireCode, bool checkAgainsMuzzler, int damagePercFromPiercing)
+void obj_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float recoil, float spread, float recoilCoolDownMod, float holdingDelay, bool executeWeaponFireCode, bool checkAgainsMuzzler, int damagePercFromPiercing)
 {
 	r3d_assert(NetworkLocal);
 
@@ -2300,9 +2367,9 @@ void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float r
 
 	r3dPoint3D	shootTargetPos;
 	r3dPoint3D	shootTargetNorm;
-	GameObject*	shootTarget;
-	r3dMaterial*	shootMaterial;
-	const char*	shootActorName;
+	GameObject*	shootTarget    = NULL;
+	r3dMaterial*	shootMaterial  = NULL;
+	const char*	shootActorName = "";
 
 	// reset rotation if we're firing from idle mode
 	if(PlayerState == PLAYER_IDLE)
@@ -2322,7 +2389,7 @@ void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float r
 	r3dPoint3D muzzlerPos = GetMuzzlerPosition();
 	{
 		if(wpn->getCategory() == storecat_MELEE)
-			updateMeleeTarget(this, GetPosition()+r3dPoint3D(0, bCrouch?0.6f:1.5f, 0.0f), muzzlerPos, shootTargetPos, shootTargetNorm, &shootMaterial, &shootTarget, &shootActorName, spread, checkAgainsMuzzler);
+			updateMeleeTarget(this, GetPosition()+r3dPoint3D(0, bProne?0.2f:(bCrouch?0.6f:1.5f), 0.0f), muzzlerPos, shootTargetPos, shootTargetNorm, &shootMaterial, &shootTarget, &shootActorName, spread, checkAgainsMuzzler);
 		else
 			updateShootingTarget(this, from, muzzlerPos, shootTargetPos, shootTargetNorm, &shootMaterial, &shootTarget, &shootActorName, spread, checkAgainsMuzzler);
 	}
@@ -2339,14 +2406,14 @@ void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float r
 		RecoilCooldown = R3D_MAX(wpn->getRateOfFire()*recoilCoolDownMod, r3dGetFrameTime()*2.50f);
 	}
 
-	if(wpn->getCategory()==storecat_SNP || wpn->getCategory()==storecat_SUPPORT || wpn->getCategory()==storecat_SHTG)
+	if(wpn->getCategory()==storecat_SNP || wpn->getCategory()==storecat_SHTG)
 		if(RecoilCooldown > r3dGetFrameTime()*8.0f)
 			RecoilCooldown = r3dGetFrameTime()*8.0f;
 
 
 
 	// send weapon fired event
-	if(executeWeaponFireCode && wpn->getAnimType() != WPN_ANIM_GRENADE )
+	if(wpn->getCategory() != storecat_GRENADE)
 	{
 		PKT_C2C_PlayerFired_s n; 
 		n.fire_from = GetPosition();
@@ -2354,22 +2421,24 @@ void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float r
 		n.holding_delay = holdingDelay;
 		n.debug_wid = m_SelectedWeapon;
 		n.wasAiming = m_isAiming;
+		n.execWeaponFire = executeWeaponFireCode;
 		p2pSendToHost(this, &n, sizeof(n), true);
 	}
 
 	if(wpn->isImmediateShooting())
 	{
-		if ( ProcessBulletHit(damagePercFromPiercing, this, shootTargetPos, shootTargetNorm, shootTarget, shootMaterial, shootActorName,  wpn->getConfig() )  == false ) 
+		if ( ProcessBulletHit(damagePercFromPiercing, this, shootTargetPos, shootTargetNorm, shootTarget, shootMaterial, shootActorName,  wpn->getConfig(), GetMuzzlerPosition() )  == false ) 
 		{	
 			r3dPoint3D dir = shootTargetPos - from;
 			dir.Normalize();
 			executeWeaponFireLocalPlayer(shootTargetPos + dir*0.1f, 0.0f, 0.0f, 0.0f, holdingDelay, false, false, damagePercFromPiercing);
 		}
 	}
+
+	wpn->Fire(shootTargetPos, uberEquip_->getWeaponBone(GetSkeleton(), DrawFullMatrix), executeWeaponFireCode, holdingDelay);
+		
 	if(executeWeaponFireCode)
 	{
-		wpn->Fire(shootTargetPos, uberEquip_->getWeaponBone(GetSkeleton(), DrawFullMatrix), holdingDelay);
-		
 		extern float g_shootCameraShakeTimer;
 		g_shootCameraShakeTimer = 1.0f;
 		if(m_isAiming && hasScopeMode())
@@ -2379,13 +2448,12 @@ void obj_AI_Player::executeWeaponFireLocalPlayer(const r3dPoint3D& from, float r
 	}
 
 	//	Change player noise value
-#if ENABLE_ZOMBIES	
 	lifeProperties.weaponFired = true;
-#endif
 }
 
-void obj_AI_Player::UpdateAnimations(const D3DXMATRIX& CharDrawMatrix)
+void obj_Player::UpdateAnimations(const D3DXMATRIX& CharDrawMatrix)
 {
+	R3DPROFILE_FUNCTION("UpdateAnimations");
 	const float TimePassed = r3dGetFrameTime();
 #if ENABLE_RAGDOLL
 	bool ragdoll = m_PhysSkeleton && m_PhysSkeleton->IsRagdollMode();
@@ -2403,14 +2471,13 @@ void obj_AI_Player::UpdateAnimations(const D3DXMATRIX& CharDrawMatrix)
 	if (ragdoll)
 	{
 		r3dBoundBox bbox = m_PhysSkeleton->getWorldBBox();
-		SetPosition(bbox.Org + bbox.Size * 0.5f);
-		bbox.Org = -bbox.Size * 0.5;
+		bbox.Org -= GetPosition();
 		SetBBoxLocal(bbox);
 	}
 #endif
 }
 
-r3dPoint3D obj_AI_Player::GetHeadPosition()
+r3dPoint3D obj_Player::GetHeadPosition()
 {
 	D3DXMATRIX m;
 	uberAnim_->anim.GetCurrentSkeleton()->GetBoneWorldTM(boneId_Bip01_Head, &m, DrawFullMatrix);
@@ -2418,21 +2485,24 @@ r3dPoint3D obj_AI_Player::GetHeadPosition()
 	return r3dPoint3D(m._41, m._42, m._43);
 }
 
-void obj_AI_Player::DoDeath(int networdIDKiller, bool forced_by_server, STORE_CATEGORIES damageSource)
+void obj_Player::DoDeath(int networdIDKiller, bool forced_by_server, STORE_CATEGORIES damageSource)
 {
 	//r3dOutToLog("%s: DoDeath\n", Name.c_str());
 	r3d_assert(!bDead);
 
-	snd_PlaySound(SoundSys.GetEventIDByPath("Sounds/BulletHits/Hit_Death"), GetPosition());		
+	if(NetworkLocal)
+	{
+		CurLoadout.Health = 0; // to make sure that UI will show zero health
+	}
+
+	SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/BulletHits/Hit_Death"), GetPosition());		
 
 	CurrentSpread = 0;
 
-	m_needToDrawRiotShieldPlacement = 0;
-	m_spawnedRiotShield = false;
-	m_needToDrawAutoTurretPlacement = 0;
-	m_spawnedAutoTurret = false;
-	m_needToDrawRespawnBeaconPlacement = 0;
+	ReleasePlayerObstacle(&PhysXObstacleIndex);	// player is dead, allow passage thru him
 
+	m_needToDrawBarricadePlacement = 0;
+	m_BarricadeMeshPlacement = NULL;
 	m_canPlaceConsumableItem = false;
 
 	m_ItemSimulateLeftClick = false;
@@ -2442,18 +2512,10 @@ void obj_AI_Player::DoDeath(int networdIDKiller, bool forced_by_server, STORE_CA
 	m_MorhineShotTime = 0;
 	m_BandagesEffectTime = 0;
 
-	m_targetIconTime = 0;
-	m_localTargetIconTime = 0;
-	if(!m_MarkedTargetIcon.IsUndefined())
-	{
-		if(hudMain)
-			hudMain->deleteScreenIcon(m_MarkedTargetIcon);
-	}
-
 	bCrouch = 0;
+	bProne = 0;
 	m_isAiming = 0;
 	m_isPressedFireTrigger = false;
-	m_Health = 0;
 	lastDamageRcvd = 0;
 	BloodEffect = 0;
 	bDead = 1;
@@ -2463,80 +2525,32 @@ void obj_AI_Player::DoDeath(int networdIDKiller, bool forced_by_server, STORE_CA
 	Dead_KillerID = networdIDKiller;
 	DisableKillerView = false;
 
-	m_BerserkerTime = 0;
 	m_AuraType = AT_NONE;
 	grenadeReadyTime = 0;
 
-	// make sure the player is not visible on the minimap. 
-	m_fVisibleTimer = 0;
-	m_visibleOnMinimap = false;
-
-	setHasSabotageBomb(false);
-
-	if(!(forced_by_server && gClientLogic().m_gameInfo.mapType==GBGameInfo::MAPT_Bomb)) // if end of round in sabotage, don't play death anim
-	{
-		PlayerState = PLAYER_DIE;
-		uberAnim_->AnimPlayerState = PLAYER_DIE;
-		uberAnim_->StartDeathAnim();
-		DoRagdoll(true, lastTimeHitBone, &lastTimeHitForce);
-	} 
-	else
-	{
-		// in sabotage, switch player to idle
-		PlayerState = PLAYER_IDLE;
+	// if we have not default backpack - remove it as it will be dropped as item on server
+	if(CurLoadout.BackpackID != 20176) {
+		uberEquip_->SetSlot(SLOT_Backpack, (r3dMesh*)NULL);
 	}
+
+	PlayerState = PLAYER_DIE;
+	uberAnim_->AnimPlayerState = PLAYER_DIE;
+	uberAnim_->StartDeathAnim();
+	DoRagdoll(true, lastTimeHitBone, &lastTimeHitForce);
+
+	// clear rotation so it won't affect ragdoll bbox
+	SetRotationVector(r3dPoint3D(0, 0, 0));
 	
 	RealAcceleration.Assign(0,0,0);
 	InputAcceleration.Assign(0,0,0);
 
-	if(!forced_by_server)
-	{
-		GameStats.Deaths++;
-	}
-
 	if(!NetworkLocal)
 	{
-		if(hudMinimap && hudMinimap->IsInited() && m_onMinimap)
-		{
-			hudMinimap->EraseUnit(m_MinimapTagIconName);
-			m_onMinimap = false;
-		}
-		if(!m_MedicTeamIcon.IsUndefined() && hudMain)
-		{
-			hudMain->deleteScreenIcon(m_MedicTeamIcon);
-		}
-
-		// count kill streaks for local player
 		const ClientGameLogic& CGL = gClientLogic();
-		if(CGL.localPlayer_ && CGL.localPlayer_->NetworkID == Dead_KillerID)
+		if(CGL.localPlayer_ && CGL.localPlayer_->GetNetworkID() == Dead_KillerID)
 		{
 			if(!CGL.localPlayer_->bDead)
 			{
-				if((r3dGetTime() - CGL.localPlayer_->m_LastKillTime) < GPP->c_fKillStreakTimeout)
-				{
-					++CGL.localPlayer_->m_KillStreak;
-					if(CGL.localPlayer_->m_KillStreak == 3 && CGL.localPlayer_->CurLoadout.hasItem(AbilityConfig::AB_NinjaKiller) && CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb) // ninja killer ability
-					{
-						hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_TripleKillNinjaKiller"));
-
-						ObjectManager& GW = GameWorld();
-						for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
-						{
-							if(obj->ObjTypeFlags & OBJTYPE_Human)
-							{
-								((obj_AI_Player*)obj)->setMinimapVisibleTimer(GPP->c_fMinimapNinjaKillerTimer, true);
-							}
-						}
-
-						if(CGL.localPlayer_->m_KillStreak >= KILLSTREAK_FOR_SECOND_WIND && CGL.localPlayer_->CurLoadout.hasItem(AbilityConfig::AB_SecondWind) ) // Second Wind ability
-						{
-							CGL.localPlayer_->m_RemainingSecondWindTime = TIME_FOR_SECOND_WIND;
-						}
-					
-					}
-				}
-				else // if timer ran out, then reset kill streaks counter
-					CGL.localPlayer_->m_KillStreak = 1;
 				CGL.localPlayer_->m_LastKillTime = r3dGetTime();
 			}
 		}
@@ -2544,183 +2558,54 @@ void obj_AI_Player::DoDeath(int networdIDKiller, bool forced_by_server, STORE_CA
 	else
 	{
 		
-		if(shownWeaponPickup)
-		{
-			hudMain->hidePickupMsg();
-			hudMain->hideActionMessage( "pickup" );
-		}
-		shownWeaponPickup = false;
-
-		hudMain->setHealth(0);
-
-		ToggleUAVView(true); // force disable
-		ToggleLaserView(true); // force disable
+//		hudMain->setHealth(0);
 
 		r_hud_filter_mode->SetInt(0); // turn off NVG
+	}
 
-		if( CurLoadout.hasItem(AbilityConfig::AB_EyeSpy) && ( gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)) // eye spy ability
-		{	
-			for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+	if(NetworkLocal)
+	{
+		if(hudAttm && hudAttm->isActive())
+			hudAttm->Deactivate();
+		if(hudPause && hudPause->isActive())
+			hudPause->Deactivate();
+		if(hudGeneralStore && hudGeneralStore->isActive())
+			hudGeneralStore->Deactivate();
+		if(hudVault && hudVault->isActive())
+			hudVault->Deactivate();	
+
+		g_camera_mode->SetInt(0);
+		UpdateLoadoutSlot(CurLoadout); // reload meshes
+		SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_player_death"), GetPosition());
+
+		if(hudMain)
+		{
+			char deadMsg[128] = {0};
+			GameObject* killedByObj = GameWorld().GetNetworkObject(networdIDKiller);
+			if(killedByObj)
 			{
-				if( obj->ObjTypeFlags & OBJTYPE_Human )
+				if(killedByObj == this)
 				{
-					obj_AI_Player* player  = static_cast< obj_AI_Player* > ( obj );
-
-					player->setMinimapVisibleTimer( 0.0f, true );
+					r3dscpy(deadMsg, "KILLED BY ENVIRONMENT");
 				}
+				else if(killedByObj->isObjType(OBJTYPE_Human))
+				{
+					obj_Player* killedByPlr = (obj_Player*)killedByObj;
+					char tmpName[64] = {0};
+					killedByPlr->GetUserName(tmpName);
+					sprintf(deadMsg, "KILLED BY %s", tmpName);
+				}
+				else if(killedByObj->isObjType(OBJTYPE_Zombie))
+					r3dscpy(deadMsg, "EATEN BY ZOMBIE");
 			}
+			hudMain->showYouAreDead(deadMsg);
 		}
 	}
 
 	return;
 }
 
-void obj_AI_Player::DoRespawn(int newTeamId, int slotNum, const wiLoadoutSlot& lslot, const wiWeaponAttachments& attms, const r3dPoint3D& pos, float dir, float spawnProtection)
-{
-	R3DPROFILE_FUNCTION("obj_AI_Player::DoRespawn");
-	//r3dOutToLog("%s: DoRespawn at %f %f %f\n", UserName, pos.x, pos.y, pos.z);
-	r3d_assert(bDead);
-
-	m_QuickThrowGrenade = 0;
-	m_ItemSimulateLeftClick = false;
-
-	CurrentSpread = 0;
-
-	m_needToDrawRiotShieldPlacement = 0;
-	m_spawnedRiotShield = false;
-	m_needToDrawAutoTurretPlacement = 0;
-	m_spawnedAutoTurret = false;
-	m_needToDrawRespawnBeaconPlacement = 0;
-
-	m_canPlaceConsumableItem = false;
-
-	m_SpeedBoost = 0;
-	m_SpeedBoostTime = 0;
-	m_MorhineShotTime = 0;
-	m_BandagesEffectTime = 0;
-
-	// recreate player tag each time on respawn to fix a rare bug when player has blue tag but he is an enemy
-	if(!m_TagIcon.IsUndefined())
-	{
-		hudMain->deleteScreenIcon(m_TagIcon);
-	}
-
-	if(TeamID != newTeamId) // switched teams
-	{
-		TeamID = newTeamId; // update it before updating CPs
-
-		if(NetworkLocal) // if we changed a team, then we need to recreate tag icons for all players
-		{
-			const ClientGameLogic& CGL = gClientLogic();
-			for(int i=0; i<CGL.CurMaxPlayerIdx; ++i)
-			{
-				obj_AI_Player* plr = CGL.GetPlayer(i);
-				if(plr)
-				{
-					if(!plr->m_TagIcon.IsUndefined())
-						hudMain->deleteScreenIcon(plr->m_TagIcon);
-					obj_UAV* uav = (obj_UAV*)GameWorld().GetObject(plr->uavId_);
-					if(uav && !uav->m_TagIcon.IsUndefined())
-						hudMain->deleteScreenIcon(uav->m_TagIcon);
-				}
-			}
-			for(int i=0; i<gCPMgr.NumCP(); ++i)
-			{
-				((obj_ControlPoint*)gCPMgr.GetCP(i))->SetControlPointStatusOnMinimap();
-			}
-		}
-	}
-
-	TeamID      = newTeamId;
-	
-	CurLoadout  = lslot;
-	LoadoutSlot = slotNum;
-
-	UpdateLoadoutSlot(CurLoadout, attms);
-	
-	const ClientGameLogic& CGL = gClientLogic();
-
-	if(NetworkLocal)
-	{
-		// because we can switch between TPS\FPS
-		if(hudMain)
-			hudMain->updateReticlePosition();
-
-		for(int i=0; i<NUM_WEAPONS_ON_PLAYER; ++i)
-		{
-			if(m_Weapons[i]) 
-				m_Weapons[i]->Reset();
-		}
-
-		uberEquip_->ResetSlots();
-
-		if(hudRespawn && hudRespawn->isInit() && CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-		{
-			if(hudRespawn->getSelectedTeamID() != TeamID)
-				hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_MovedToOppositeTeam"));
-		}
-
-		if(hudRespawn && hudRespawn->isActive())
-			hudRespawn->Deactivate();
-	}
-	else
-	{
-		if((CGL.localPlayer_ && CGL.localPlayer_->TeamID == TeamID))
-		{
-			hudMinimap->AddUnit(m_MinimapTagIconName, false, false, GetPosition());
-			m_onMinimap = true;
-		}
-		if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-		{
-			if(CurLoadout.hasItem(AbilityConfig::AB_GuardianAngel)) // guardian angel
-			{
-				if(m_MedicTeamIcon.IsUndefined())
-					hudMain->addMedicIcon(m_MedicTeamIcon);
-				hudMain->moveScreenIcon(m_MedicTeamIcon, r3dPoint3D(-1, -1, -1), false, true);
-				hudMain->setScreenIconScale(m_MedicTeamIcon, 0.5f);
-			}
-		}
-	}
-
-	m_visibleOnMinimap = false;
-	m_onMinimap = false;
-	m_fVisibleTimer = 0;
-
-	m_Health      = getMaxHealth();
-	lastDamageRcvd = 0;
-	BloodEffect = 0;
-	bDead      = 0;
-	m_KillStreak = 0;
-	m_LastKillTime = 0;
-	m_Energy = getMaxStamina(); // reset sprint energy
-	m_Breath = getMaxBreath();
-	lastTimeWeaponSwitch = 0;
-	m_RemainingSecondWindTime = 0.0f;  // reset it to 0 
-
-	m_SpawnProtectedUntil = r3dGetTime() + spawnProtection;
-	TimeOfLastRespawn = r3dGetTime();
-
-	r3dVector spawnPosition = pos;
-	PxRaycastHit hit;
-	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-	if(g_pPhysicsWorld->raycastSingle(PxVec3(spawnPosition.x, spawnPosition.y+1, spawnPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::ePOSITION, hit, filter))
-	{
-		spawnPosition.x = hit.position.x;
-		spawnPosition.y = hit.position.y;
-		spawnPosition.z = hit.position.z;
-	}
-
-	//r3dOutToLog("respawning player %s at %0.2f, %0.2f, %0.2f\n", UserName, pos.x, pos.y, pos.z);
-	TeleportPlayer(spawnPosition, "Respawn");
-
-	SetVelocity(r3dPoint3D(0, 0, 0));
-	ViewAngle.Assign(dir, 0, 0);
-
-	Undie();
-
-}
-
-void obj_AI_Player::Undie()
+void obj_Player::Undie()
 {
 	afterRespawnTimer = 2.0f;
 
@@ -2755,46 +2640,50 @@ static void dumpAnim(r3dAnimation& anim)
   }
 }
 
-r3dSkeleton* obj_AI_Player::GetSkeleton()
+r3dSkeleton* obj_Player::GetSkeleton()
 {
 	return uberAnim_->anim.pSkeleton;
 }
 
-r3dAnimation& obj_AI_Player::GetAnimation()
+r3dAnimation& obj_Player::GetAnimation()
 {
 	return uberAnim_->anim;
 }
 
-void obj_AI_Player::SyncAnimation(bool force)
+void obj_Player::SyncAnimation(bool force)
 {
-	R3DPROFILE_FUNCTION("obj_AI_Player::SyncAnimation");
+	R3DPROFILE_FUNCTION("obj_Player::SyncAnimation");
 	if(bDead)
 		return;
-		
-	uberAnim_->SyncAnimation(PlayerState, PlayerMoveDir, force, m_Weapons[m_SelectedWeapon]); // firstly sync to update weapon pointer and only then update jump
+
+	const Weapon* wpn = m_Weapons[m_SelectedWeapon];
+	if(forcedEmptyHands)
+		wpn = NULL;
+	bool isInAttmMenu = false;
+	if(wpn && hudAttm && hudAttm->isActive() && wpn->getCategory()>=storecat_ASR && wpn->getCategory()<=storecat_SMG)
+		isInAttmMenu = true;
+
+	uberAnim_->SyncAnimation(PlayerState, PlayerMoveDir, force, wpn, isInAttmMenu); // firstly sync to update weapon pointer and only then update jump
 	uberAnim_->UpdateJump(bOnGround);
 }
 
 static float accumLastDamageRcvd = 0;
-void obj_AI_Player::ApplyDamage(const r3dPoint3D& dmgPos, float damage, GameObject* fromObj, int bodyBone, int dmgType)
+void obj_Player::ApplyDamage(const r3dPoint3D& dmgPos, float damage, GameObject* fromObj, int bodyBone, int dmgType)
 {
 	lastTimeHit = r3dGetTime();
 	lastTimeHitBone = bodyBone;
 	lastDamageRcvd = damage;
 	accumLastDamageRcvd += damage;
-	m_Health = m_Health - damage;
-	lastTimeHit_OldHealth = m_Health;
 
-	// sergey's code here. I guess he was trying to make it so that only if you shoot other player, you should hear sound confirmation that you hit him. 
-	// so I fixed it. As prev.code was playing sound from the position of the player, which might be >100 meters away, and so you never hear hit confirmation.
-	// still. retarded code. it shouldn't be here. should be two separate sound events: one hit player by player, and second hit confirmation played by local player only
-	if (fromObj == gClientLogic().localPlayer_ && gClientLogic().localPlayer_!=NULL)
+	/*if (fromObj == gClientLogic().localPlayer_)
 	{
 		if(bodyBone == uberAnim_->GetBoneID("Bip01_Head"))
-			snd_PlaySound(SoundSys.GetEventIDByPath("Sounds/BulletHits/Hit_Headshot"), gClientLogic().localPlayer_->GetPosition());
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/BulletHits/Hit_Headshot"), GetPosition());
+		else if(dmgType==storecat_MELEE)
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/Impacts/Impacts-KnifeStab"), GetPosition());		
 		else
-			snd_PlaySound(SoundSys.GetEventIDByPath("Sounds/BulletHits/Hit_Body"), gClientLogic().localPlayer_->GetPosition());		
-	}
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/Impacts/Impacts-Body"), GetPosition());		
+	}*/
 
 	// apply ragdoll force from object position, or up if too close
 	r3dPoint3D ragHitPos = GetPosition();
@@ -2819,9 +2708,6 @@ void obj_AI_Player::ApplyDamage(const r3dPoint3D& dmgPos, float damage, GameObje
 	case storecat_MG:
 		dmgForce = 40.0f;
 		break;
-	case storecat_SUPPORT:
-		dmgForce = 70.0f;
-		break;
 	case storecat_HG:
 		dmgForce = 10.0f;
 		break;
@@ -2841,17 +2727,17 @@ void obj_AI_Player::ApplyDamage(const r3dPoint3D& dmgPos, float damage, GameObje
 #endif
 }
 
-bool obj_AI_Player::ChangeWeaponByIndex(int index)
+bool obj_Player::ChangeWeaponByIndex(int index)
 {
 	r3d_assert(index>=0 && index < NUM_WEAPONS_ON_PLAYER);
-	if(m_SelectedWeapon == index)
+	if(m_SelectedWeapon == index && !forcedEmptyHands)
 		return false;
 
-	m_needToDrawRiotShieldPlacement = 0;
-	m_needToDrawAutoTurretPlacement = 0;
-	m_needToDrawRespawnBeaconPlacement = 0;
+	m_needToDrawBarricadePlacement = 0;
+	m_BarricadeMeshPlacement = NULL;
 	m_canPlaceConsumableItem = false;
 
+	forcedEmptyHands = false;
 	m_PrevSelectedWeapon = m_SelectedWeapon;
 	m_SelectedWeapon = index;
 
@@ -2866,12 +2752,21 @@ bool obj_AI_Player::ChangeWeaponByIndex(int index)
 	{
 		m_Weapons[m_SelectedWeapon]->OnEquip();
 	}
+
+	if(hudMain && NetworkLocal)
+	{
+		showSlotsInfoTimer = r3dGetTime() + 5.0f;
+		hudMain->showSlots(true);
+
+		updateWeaponUI();
+	}
+
 	
 	UpdateCharWeaponMeshes();
 	return true;
 }
 
-void obj_AI_Player::UpdateCharWeaponMeshes()
+void obj_Player::UpdateCharWeaponMeshes()
 {
 	//r3d_assert(!m_Weapons[m_SelectedWeapon].Empty());
 
@@ -2889,124 +2784,73 @@ void obj_AI_Player::UpdateCharWeaponMeshes()
 		}
 	}
 	if(m_SelectedWeapon==1)
-	{
-		uberEquip_->SetSlot(SLOT_WeaponBackLeft, (Weapon*)NULL);
-		uberEquip_->SetSlot(SLOT_WeaponBackLeftRPG, (Weapon*)NULL);
-	}
-	else
-	{
-		if(m_Weapons[1])
-		{
-			if(m_Weapons[1]->getCategory() == storecat_SUPPORT)
-			{
-				uberEquip_->SetSlot(SLOT_WeaponBackLeft, (Weapon*)NULL);
-				uberEquip_->SetSlot(SLOT_WeaponBackLeftRPG, m_Weapons[1]);
-			}
-			else
-			{
-				uberEquip_->SetSlot(SLOT_WeaponBackLeftRPG, (Weapon*)NULL);
-				uberEquip_->SetSlot(SLOT_WeaponBackLeft, m_Weapons[1]);
-			}
-		}
-	}
-	if(m_SelectedWeapon==2)
 		uberEquip_->SetSlot(SLOT_WeaponSide, (Weapon*)NULL);
 	else
 	{
-		if(m_Weapons[2])
-			uberEquip_->SetSlot(SLOT_WeaponSide, m_Weapons[2]);
+		if(m_Weapons[1])
+			uberEquip_->SetSlot(SLOT_WeaponSide, m_Weapons[1]);
 	}
 }
 
-float obj_AI_Player::getMaxHealth()
+void obj_Player::ReloadWeaponFromSlot(int wpnSlot, int ammoSlot, int amount)
 {
-	float maxHealth = 100.0f;
-	if(gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-	{
-		/*if(m_Skills[7] == 1)
-			maxHealth *= 1.03f;
-		else if(m_Skills[7] == 2)
-			maxHealth *= 1.05f;
-		else if(m_Skills[7] == 3)
-			maxHealth *= 1.07f;
-		else if(m_Skills[7] == 4)
-			maxHealth *= 1.10f;
-		else if(m_Skills[7] == 5)
-			maxHealth *= 1.15f;*/
-	}
-	return maxHealth;
+	r3d_assert(NetworkLocal);
+	
+	// remove clip (SERVER CODE SYNC POINT)
+	wiInventoryItem& wi = CurLoadout.Items[ammoSlot];
+	r3d_assert(wi.quantity > 0);
+	wi.quantity--;
+	if(wi.quantity <= 0)
+		wi.Reset();
+		
+	OnBackpackChanged(ammoSlot);
+
+	PKT_C2C_PlayerReload_s n;
+	n.WeaponSlot = (BYTE)wpnSlot;
+	n.AmmoSlot   = (BYTE)ammoSlot;
+	n.dbg_Amount = (BYTE)amount;
+	p2pSendToHost(this, &n, sizeof(n));
+	
+	return;
 }
 
-float obj_AI_Player::getMaxStamina()
+float obj_Player::getMaxStamina()
 {
 	float maxStamina = GPP->c_fSprintMaxEnergy;
-	if(gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-	{
-		/*if(m_Skills[1] == 1)
-			maxStamina *= 1.05f;
-		else if(m_Skills[1] == 2)
-			maxStamina *= 1.10f;
-		else if(m_Skills[1] == 3)
-			maxStamina *= 1.15f;
-		else if(m_Skills[1] == 4)
-			maxStamina *= 1.20f;
-		else if(m_Skills[1] == 5)
-			maxStamina *= 1.25f;*/
-	}
 	return maxStamina;
 }
 
-float obj_AI_Player::getMaxBreath()
+float obj_Player::getMaxBreath()
 {
 	float maxBreath = GPP->c_fSniperRifleHoldBreathTime;
-	switch(CurLoadout.getSkillLevel(CUserSkills::RECON_LongBreathing))
-	{
-	case 1: maxBreath += 1; break;
-	case 2: maxBreath += 2; break;
-	case 3: maxBreath += 3; break;
-	case 4: maxBreath += 4; break;
-	case 5: maxBreath += 5; break;
-	}
 	return maxBreath;
 }
 
-float obj_AI_Player::getMinimapDetectionRadius()
-{
-	float radius = GPP->c_fMinimapEnemyVisibileRadius;
-	int EnemyRadar = CurLoadout.getSkillLevel(CUserSkills::RECON_EnemyRadar);
-	switch(EnemyRadar)
-	{
-	case 1: radius += 1.0f; break;
-	case 2: radius += 2.0f; break;
-	case 3: radius += 3.0f; break;
-	case 4: radius += 5.0f; break;
-	default:break;
-	}
-	return radius;
-}
-
-float obj_AI_Player::getMinimapDetectionFireRadius()
-{
-    float radius = GPP->c_fMinimapEnemyShootVisibleRadius;
-    if(gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-    {
-        /*if(m_Skills[6] == 1)
-            radius += 5;
-        else if(m_Skills[6] == 2)
-            radius += 10;
-        else if(m_Skills[6] == 3)
-            radius += 15;
-        else if(m_Skills[6] == 4)
-            radius += 20;
-        else if(m_Skills[6] == 5)
-            radius += 30;*/
-    }
-    return radius;
-}
-
-void obj_AI_Player::StartJump()
+void obj_Player::StartJump()
 {
 	r3d_assert(NetworkLocal);
+
+	//check if we are joing to jump into water, cancel jump in that case
+	{
+		r3dPoint3D vel    = r3dPoint3D(0,0,0);
+		vel    += (GetvForw()  * InputAcceleration.Z);
+		vel    += (GetvRight() * InputAcceleration.X);
+		vel.Y  += InputAcceleration.Y;
+
+		r3dPoint3D newPos = vel + GetPosition();
+		PxRaycastHit hit;
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
+		bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(newPos.x, newPos.y + 0.5f, newPos.z), PxVec3(0, -1, 0), 10.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+		r3dPoint3D posForWater = newPos;
+		if( hitResult )
+			posForWater = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);			
+
+		float waterDepth = getWaterDepthAtPos(posForWater);
+		if(waterDepth > 1.0f) // too deep
+		{
+			return; // cancel jump
+		}
+	}
 	
 	uberAnim_->StartJump();
 	JumpVelocity  = 17;
@@ -3014,15 +2858,17 @@ void obj_AI_Player::StartJump()
 
 	PKT_C2C_PlayerJump_s n;
 	p2pSendToHost(this, &n, sizeof(n));
+
+	SoundSys.PlayAndForget(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_JUMPING_F":"Sounds/WarZ/PlayerSounds/PLAYER_JUMPING_M"), GetPosition());
 }
 
-bool obj_AI_Player::IsJumpActive()
+bool obj_Player::IsJumpActive()
 {
 	// going up on jump, or in air.
 	return (JumpVelocity > 0 || !bOnGround);
 }
 
-void obj_AI_Player::DetectIfOnGround()
+void obj_Player::DetectIfOnGround()
 {
 	//static bool prevOnGround = bOnGround;
 	
@@ -3031,13 +2877,20 @@ void obj_AI_Player::DetectIfOnGround()
 	if(g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 1.0f, PxSceneQueryFlags(PxSceneQueryFlag::eDISTANCE), hit, filter))
 	{
 		bOnGround = (hit.distance < 0.6f);
+		fHeightAboveGround = hit.distance - 0.5f;
 	}
 	else
+	{
 		bOnGround = false;
+		fHeightAboveGround = 10.0f;
+	}
 
 	// hack to check if player got glued to some geometry while jumping. Happen if he jumped on something that has some bumps and character controller thinks that he can stay on that tiny bump
 	if(!bOnGround && R3D_ABS(oldstate.Position.y - GetPosition().y) < 0.01f)
+	{
 		bOnGround = true;
+		fHeightAboveGround = 0.0f;
+	}
 
 	//if(prevOnGround != bOnGround)
 	//{
@@ -3046,11 +2899,11 @@ void obj_AI_Player::DetectIfOnGround()
 	//}
 }
 
-void obj_AI_Player::UpdateLocalPlayerMovement()
+void obj_Player::UpdateLocalPlayerMovement()
 {
 	r3d_assert(NetworkLocal);
 	
-	VMPROTECT_BeginMutation("obj_AI_Player::UpdateLocalPlayerMovement");
+	VMPROTECT_BeginMutation("obj_Player::UpdateLocalPlayerMovement");
 	
 	// important: limit movement to max for 1 sec. so server can check for teleports
 	const float TimePassed = R3D_MIN(r3dGetFrameTime(), 0.1f);
@@ -3086,7 +2939,6 @@ void obj_AI_Player::UpdateLocalPlayerMovement()
 	vel.Y  += RealAcceleration.Y;
 	
 	// send some info to server about fast movement
-	if(!RUS_CLIENT)
 	{
 		static float lastUpd = -999;
 		r3dPoint3D velXZ(vel.x, 0, vel.z);
@@ -3108,7 +2960,27 @@ void obj_AI_Player::UpdateLocalPlayerMovement()
 	controller->Move(vel * TimePassed, 0.5f);
 	r3dPoint3D prevPos = GetPosition();
 	parent::Update(); // manually update position after updating physics. Needed for camera, otherwise it will be lagging one frame behind
-	SetVelocity(vel);
+
+	// check if player is trying to get into water
+	// use raycast to fix bug when player able to walk on water by jumping
+	{
+		PxRaycastHit hit;
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
+		bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 500.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+		r3dPoint3D posForWater = GetPosition();
+		if( hitResult )
+			posForWater = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);			
+
+		float waterDepth = getWaterDepthAtPos(posForWater);
+		if(waterDepth > 1.0f) // too deep
+		{
+			SetPosition(prevPos);
+			parent::Update();
+			SetVelocity(r3dPoint3D(0,0,0));
+		}
+		else
+			SetVelocity(vel);
+	}
 
 	float ll = (prevPos-GetPosition()).LengthSq();
 	if(ll > 0.0001f)
@@ -3116,7 +2988,6 @@ void obj_AI_Player::UpdateLocalPlayerMovement()
 		extern void WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, float amount, int texIdx);
 		WaterSplash(GetPosition(), 2.0f, 5.0f, 0.1f*ll, 3);
 	}
-
 
 	bool bWasOnGround = bOnGround;
 	DetectIfOnGround();
@@ -3139,105 +3010,99 @@ void obj_AI_Player::UpdateLocalPlayerMovement()
 			PKT_C2S_FallingDamage_s n;
 			n.damage = (BYTE)damageAmount;
 			p2pSendToHost(this, &n, sizeof(n));
+
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_GRUNTING_M"), GetPosition());
 		}
 	}
 
+	// STAMINA LOGIC SHOULD BE SYNCED WITH SERVER CODE!
 	if(PlayerState == PLAYER_MOVE_SPRINT)
 	{
-/*#ifdef FINAL_BUILD
-		float decayPerSec = 1.0f; // minus one per each second
-		//BOOST: Boost Stamina
-		// Gives you 50% more sprinting time
-		if(m_haveBoostStamina)
-			decayPerSec *= 0.66f;
-
-		m_Energy = m_Energy - (r3dGetFrameTime() * decayPerSec);
-		if(m_Energy <= 0)
+		m_Stamina = m_Stamina - TimePassed;
+		if(m_Stamina <= 0)
 		{
-			m_EnergyPenaltyTime = 3.0f;
+			m_StaminaPenaltyTime = 3.0f;
 		}
-#endif*/
 	}
 	else if(bOnGround) // regen only if standing on ground
 	{
-		float regen_rate = 0.3f;
-		// refill faster if idle or crouching
-		if(PlayerState == PLAYER_IDLE || PlayerState == PLAYER_IDLEAIM || PlayerState == PLAYER_MOVE_CROUCH || PlayerState == PLAYER_MOVE_CROUCH_AIM)
-			regen_rate = 0.5f;
+		float regen_rate = CurLoadout.Health<50?GPP->c_fSprintRegenRateLowHealth:GPP->c_fSprintRegenRateNormal;
 
-		m_Energy = m_Energy + TimePassed*regen_rate; // regeneration rate
-		if(m_EnergyPenaltyTime > 0.0f)
-			m_EnergyPenaltyTime = m_EnergyPenaltyTime - TimePassed;
+		m_Stamina = m_Stamina + TimePassed*regen_rate; // regeneration rate
+		if(m_StaminaPenaltyTime > 0.0f)
+			m_StaminaPenaltyTime = m_StaminaPenaltyTime - TimePassed;
 	}
-	m_Energy = R3D_CLAMP((float)m_Energy, 0.0f, getMaxStamina());
+	m_Stamina = R3D_CLAMP((float)m_Stamina, 0.0f, getMaxStamina());
 
 	bool scopeRendering = hasScopeMode() && CurrentRig.allowScope;
 	if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getCategory() == storecat_SNP && m_isFinishedAiming) 
 	{
 		if(hudMain)
 		{
-			hudMain->SetEnergyValue(1.0f); // hide energy bar
-			hudMain->SetBreathValue(R3D_CLAMP((m_Breath/getMaxBreath()), 0.0f, 1.0f));
+//			hudMain->SetEnergyValue(1.0f); // hide energy bar
+//			hudMain->SetBreathValue(R3D_CLAMP((m_Breath/getMaxBreath()), 0.0f, 1.0f));
 		}
 	}
 	else
 	{
 		if(hudMain)
 		{
-			hudMain->SetBreathValue(2.0f); // hide breath
-			hudMain->SetEnergyValue(m_Energy/getMaxStamina());
+//			hudMain->SetBreathValue(2.0f); // hide breath
+//			hudMain->SetEnergyValue(m_Stamina/getMaxStamina());
 		}
 	}
 
 	VMPROTECT_End();
 }
 
-void obj_AI_Player::UpdateLoaded()
+void obj_Player::localPlayer_UseItem(int slotID, uint32_t itemID, const r3dPoint3D& pos, float var1, float var2, float var3, DWORD var4)
 {
-	int equipLoaded = uberEquip_->IsLoaded() ;
+	r3d_assert(NetworkLocal);
 
-	int itemsLoaded = 1 ;
+	PKT_C2C_PlayerUseItem_s n;
+	n.SlotFrom  = (BYTE)slotID;
+	n.dbg_ItemID= itemID;
+	n.pos       = pos;
+	n.var1		= var1;
+	n.var2		= var2;
+	n.var3		= var3;
+	n.var4		= var4;
+	p2pSendToHost(this, &n, sizeof(n), true);
 
-	for( int i = 0, e = NUM_WEAPONS_ON_PLAYER ; i < e ; i ++ )
+	const FoodConfig* fc = g_pWeaponArmory->getFoodConfig(itemID);
+	if(fc)
 	{
-		if( Weapon* wpn = m_Weapons[ i ] )
+		if(fc->category == storecat_Food)
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_EAT"), GetPosition());
+		else
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_DRINK"), GetPosition());
+
+		m_Stamina += GPP->c_fSprintMaxEnergy*fc->Stamina;
+	}
+	if (itemID==WeaponConfig::ITEMID_Antibiotics||itemID==WeaponConfig::ITEMID_Bandages||itemID==WeaponConfig::ITEMID_Bandages2||
+		itemID==WeaponConfig::ITEMID_Painkillers||itemID==WeaponConfig::ITEMID_Medkit)
+	{
+		if(var4!=0)
 		{
-			if( !wpn->isLoaded() )
+			GameObject* obj = GameWorld().GetNetworkObject(var4);
+			if(obj && obj->isObjType(OBJTYPE_Human))
 			{
-				itemsLoaded = 0 ;
-				break ;
+				obj_Player* plr = (obj_Player*)obj;
+				SoundSys.PlayAndForget(SoundSys.GetEventIDByPath(plr->m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_HEAL_F":"Sounds/WarZ/PlayerSounds/PLAYER_HEAL_M"), plr->GetPosition());
 			}
 		}
+		else
+			SoundSys.PlayAndForget(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_HEAL_F":"Sounds/WarZ/PlayerSounds/PLAYER_HEAL_M"), GetPosition());
 	}
 
-	if( equipLoaded && itemsLoaded )
-	{
-		m_Loaded = true ;
 
-		for( int i = 0, e = NUM_WEAPONS_ON_PLAYER ; i < e ; i ++ )
-		{
-			if( Weapon* wpn = m_Weapons[ i ] )
-			{
-				wpn->getConfig()->updateMuzzleOffset(g_camera_mode->GetInt()==2 && NetworkLocal) ;
-				if(g_camera_mode->GetInt()==2 && NetworkLocal)
-					wpn->checkForSkeleton();
-			}
-		}
-
-	}
 }
 
-BOOL obj_AI_Player::Update()
+BOOL obj_Player::Update()
 {
-	if( !m_Loaded )
-	{
-		UpdateLoaded() ;
-	}
-
-	R3DPROFILE_FUNCTION("obj_AI_Player::Update");
+	R3DPROFILE_FUNCTION("obj_Player::Update");
 	if(!NetworkLocal) // for local already done in UpdateLocalPlayerMovement
 		parent::Update();
-	r3d_assert(TeamID != TEAM_UNKNOWN);
 
 	camoTimeLine.Update();
 
@@ -3246,7 +3111,7 @@ BOOL obj_AI_Player::Update()
 		ProcessRewardQueue();
 
 	const ClientGameLogic& CGL = gClientLogic();
-	if(CGL.gameFinished_)
+	if(gClientLogic().disconnectStatus_)
 		return TRUE;
 		
 	const float curTime = r3dGetTime();
@@ -3259,76 +3124,69 @@ BOOL obj_AI_Player::Update()
 			g_char_spect->SetInt( !g_char_spect->GetInt() ) ;
 		}
 
-		if(Keyboard->IsPressed(kbsLeftAlt) && hudEndRound && hudMain)
-		{
-			if(Keyboard->WasPressed(kbsF12))
-			{
-				hudEndRound->Activate();
-			}
+// 		if(Keyboard->WasPressed(kbsF4))
+// 		{
+// 			// send disconnect request to server
+// 			PKT_C2S_DisconnectReq_s n;
+// 			p2pSendToHost(this, &n, sizeof(n), true);
+// 		}
 
+		if(Keyboard->IsPressed(kbsLeftAlt) && hudMain)
+		{
+			if(Keyboard->WasPressed(kbs8))
+			{
+				hudMain->showChat(true);
+				hudMain->addChatMessage(0, "blabla", "rtjdkfhdkjfhdf dfd f", 1);
+			}
 			if(Keyboard->WasPressed(kbsF5))
 			{
 				// send data update request to server
 				PKT_C2S_DataUpdateReq_s n;
 				p2pSendToHost(this, &n, sizeof(n), true);
-				hudMain->AddMessage(L"Data update request sent");
+				hudMain->showMessage(L"Data update request sent");
 			}
 
-			if(Keyboard->WasPressed(kbsH))
-			{
-				static int selector = 0;
-				const char* pressRTypes[] = {"blackops", "resupply", "fixer", "usekey", "needkey", "armBomb", "disarmBomb"};
-				{
-					hudMain->showActionMessage(pressRTypes[selector], "X");
-					++selector;
-					if(selector == 7) selector = 0;
-				}
-			}
-			if(Keyboard->WasPressed(kbsJ))
-			{
-				TPSGameHud_UnlockAchievement( 1 );
-			}
-			if(Keyboard->WasPressed(kbsL))
-			{
-				hudMain->ShowScore(100, 200, 300, 500, 600);
-			}
-			if(Keyboard->WasPressed(kbsP))
-			{
-				hudMain->ShowKillTag(this, storecat_INVALID);
-			}
-			if(Keyboard->WasPressed(kbsO))
-			{
-				hudMain->AddKillMessage(this, this, storecat_SHTG);
-			}
 			if(Keyboard->WasPressed(kbs8))
 			{
 				PKT_C2S_TEST_SpawnDummyReq_s n;
 				n.pos = GetPosition() + GetvForw() * 4.0f;
 				PxRaycastHit hit;
 				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-				if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y+2, n.pos.z), PxVec3(0, -1, 0), 4, PxSceneQueryFlag::ePOSITION, hit, filter))
+				if(g_pPhysicsWorld->raycastSingle(PxVec3(n.pos.x, n.pos.y+2, n.pos.z), PxVec3(0, -1, 0), 4, PxSceneQueryFlag::eIMPACT, hit, filter))
 				{
-					n.pos.x = hit.position.x;
-					n.pos.y = hit.position.y;
-					n.pos.z = hit.position.z;
+					n.pos.x = hit.impact.x;
+					n.pos.y = hit.impact.y;
+					n.pos.z = hit.impact.z;
 				}
 
 				p2pSendToHost(this, &n, sizeof(n));
 			}
-			if(Keyboard->WasPressed(kbsC))
-			{
-				hudMain->showYouGotCoolThing(L"YOU DESERVED IT!", /*L"200 WP", L"bla bla bla\n bla bla\n lalalala",*/ "$Data/Weapons/StoreIcons/ASR_AK108_PSO_Camo.dds");
-			}
 		}
 	}
 #endif
+
+	/*{
+		// check that last known position is good (player didn't log out while in air, or underground, etc) to prevent being stuck
+		{
+			PxSweepHit hit;
+			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
+			PxBoxGeometry boxg(0.5f, 0.1f, 0.5f);
+			PxTransform pose(PxVec3(GetPosition().x, GetPosition().y+0.5f, GetPosition().z));
+			if(g_pPhysicsWorld->PhysXScene->sweepSingle(boxg, pose, PxVec3(0,-1,0), 2000.0f, PxSceneQueryFlag::eIMPACT, hit, filter))
+			{
+				r3dOutToLog("@@@@ %.2f, %.2f, %.2f\n", hit.impact.x, hit.impact.y, hit.impact.z);
+			}
+		}
+	}*/
+
+	float timePassed = r3dGetFrameTime();
 
 	// SPREAD/RECOIL LOGIC
 	if(NetworkLocal && m_Weapons[m_SelectedWeapon])
 	{
 		if(CurrentSpread > 0 && !m_isPressedFireTrigger)
 		{
-			CurrentSpread -= r3dGetFrameTime()*SpreadDecrease[m_Weapons[m_SelectedWeapon]->getCategory()-storecat_ASR];
+			CurrentSpread -= timePassed*SpreadDecrease[m_Weapons[m_SelectedWeapon]->getCategory()-storecat_ASR];
 		}
 		CurrentSpread = R3D_MAX(CurrentSpread, SpreadMin[m_Weapons[m_SelectedWeapon]->getCategory()-storecat_ASR]*m_Weapons[m_SelectedWeapon]->getSpread());
 
@@ -3336,20 +3194,20 @@ BOOL obj_AI_Player::Update()
 		// update recoil
 		if(!RecoilViewMod.AlmostEqual((RecoilViewModTarget), 0.01f))
 		{
-			RecoilViewMod = R3D_LERP(RecoilViewMod, RecoilViewModTarget, R3D_MIN(r3dGetFrameTime()*GPP->c_fRecoilCooldownSpeed*4.0f * u_GetRandom(0.75f, 1.25f), 1.0f)); // lerp to make it smooth, less jerky
+			RecoilViewMod = R3D_LERP(RecoilViewMod, RecoilViewModTarget, R3D_MIN(timePassed*GPP->c_fRecoilCooldownSpeed*4.0f * u_GetRandom(0.75f, 1.25f), 1.0f)); // lerp to make it smooth, less jerky
 		}
-		RecoilViewMod = R3D_LERP(RecoilViewMod, (RecoilViewMod+RecoilViewModTarget2), r3dGetFrameTime()*2.0f);
+		RecoilViewMod = R3D_LERP(RecoilViewMod, (RecoilViewMod+RecoilViewModTarget2), timePassed*2.0f);
 
 		if(RecoilCooldown>0)
-			RecoilCooldown = RecoilCooldown-r3dGetFrameTime();
+			RecoilCooldown = RecoilCooldown-timePassed;
 
 		if(RecoilCooldown<=0)
 		{
 			// slowly make recoil go back to zero
-			RecoilViewModTarget = R3D_LERP(RecoilViewModTarget, r3dVector(0,0,0), R3D_MIN(r3dGetFrameTime()*GPP->c_fRecoilCooldownSpeed*8.0f, 1.0f));
+			RecoilViewModTarget = R3D_LERP(RecoilViewModTarget, r3dVector(0,0,0), R3D_MIN(timePassed*GPP->c_fRecoilCooldownSpeed*8.0f, 1.0f));
 		}
 		// recoil effect when you are hit
-		RecoilViewModTarget2 = R3D_LERP(RecoilViewModTarget2, r3dVector(0,0,0), R3D_MIN(r3dGetFrameTime()*GPP->c_fRecoilCooldownSpeed*2.0f, 1.0f));
+		RecoilViewModTarget2 = R3D_LERP(RecoilViewModTarget2, r3dVector(0,0,0), R3D_MIN(timePassed*GPP->c_fRecoilCooldownSpeed*2.0f, 1.0f));
 
 		//r3dOutToLog("2) Recoil=%.2f, cooldown=%.2f\n", RecoilViewModTarget.y, RecoilCooldown.get());
 	}
@@ -3357,47 +3215,43 @@ BOOL obj_AI_Player::Update()
 
 	// if mouse is visible - then we are in control menu mode, so DO NOT update player weapon (shooting) or player movement
 	// update weapon selection
-	if(NetworkLocal && !Mouse->GetMouseVisibility() && !uavViewActive_ && !laserViewActive_ && !bDead)
+	if(NetworkLocal && !Mouse->GetMouseVisibility() && !bDead && !(g_pDefaultConsole && g_pDefaultConsole->IsVisible()) && !(hudMain && hudMain->isChatInputActive()))
 	{
 		R3DPROFILE_FUNCTION("WeaponSelection");
-		int prevAnimType = m_Weapons[m_SelectedWeapon]->getAnimType();
 		int prevSelectedItem = m_SelectedWeapon;
-		
+		bool prevEmptyHandsState = forcedEmptyHands;
 		{
 			int buttonPressed = 0;
-			if(!(hudMain && hudMain->isChatVisible()) && m_QuickThrowGrenade==0 && !(hudCommCalls && hudCommCalls->isVisible()) 
-				&& uberAnim_->bombPlantingTrackID == CUberAnim::INVALID_TRACK_ID && PlayerState != PLAYER_MOVE_SPRINT )
+			if(PlayerState != PLAYER_MOVE_SPRINT )
 			{
 				if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_PRIMARY_WEAPON))
 					buttonPressed = 1;
-				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SECONDARY_WEAPON))
-					buttonPressed = 2;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_HANDGUN_WEAPON))
-					buttonPressed = 3;
+					buttonPressed = 2;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_ITEM1))
-					buttonPressed = 4;
+					buttonPressed = 3;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_ITEM2))
-					buttonPressed = 5;
+					buttonPressed = 4;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_ITEM3))
-					buttonPressed = 6;
+					buttonPressed = 5;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_ITEM4))
-					buttonPressed = 7;
+					buttonPressed = 6;
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_QUICK_SWITCH_WEAPON))
 				{
 					if(m_PrevSelectedWeapon == -1)
-						buttonPressed = 2;	// switch to second weapon if no previous weapon was selected
+						buttonPressed = 1;	// switch to second weapon if no previous weapon was selected
 					else
 						buttonPressed = m_PrevSelectedWeapon+1; // +1 to map from index to button pressed
 				}
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_NEXTITEM))
 				{
 					// scan for 4 item slots and see if we can switch to next item
-					int selWeapon = R3D_MAX(m_SelectedWeapon, 2);
+					int selWeapon = R3D_MAX(m_SelectedWeapon, 1);
 					for(int i=0; i<4; i++)
 					{
 						if(++selWeapon >= NUM_WEAPONS_ON_PLAYER)
-							selWeapon = 3;
-						if(m_Weapons[selWeapon] != NULL && !isWeaponGrenadeOutofAmmo(selWeapon))
+							selWeapon = 2;
+						if(m_Weapons[selWeapon] != NULL)
 						{
 							buttonPressed = selWeapon + 1;
 							break;
@@ -3407,39 +3261,15 @@ BOOL obj_AI_Player::Update()
 				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_TOGGLE_NIGHTVISION))
 				{
 					// check if player has night vision goggles
-					if(
-						// helmets
-						CurLoadout.isEquipped(20066) || CurLoadout.isEquipped(20067) 
-						// heroes
-						|| CurLoadout.isEquipped(20104) || CurLoadout.isEquipped(20105) || CurLoadout.isEquipped(20106) || CurLoadout.isEquipped(20107)
-						|| CurLoadout.isEquipped(20164) || CurLoadout.isEquipped(20165) || CurLoadout.isEquipped(20166) || CurLoadout.isEquipped(20167) || CurLoadout.isEquipped(20168)
+					if(CurLoadout.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID == 20188 ||
+						CurLoadout.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID == 20187 ||
+						CurLoadout.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID == 20067
 						)
 						r_hud_filter_mode->SetInt(r_hud_filter_mode->GetInt() == HUDFilter_NightVision ? HUDFilter_Default : HUDFilter_NightVision);
 				}
-				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_DROP_BOMB))
+				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_FREE_HANDS))
 				{
-					if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb)
-					{
-						if(hasSabotageBomb() && bOnGround && m_bombDropCooldown <= 0)
-						{
-							PKT_C2S_Bomb_RequestDrop_s n;
-							p2pSendToHost(this, &n, sizeof(n));
-							m_bombDropCooldown = 3.0f;
-						}
-					}
-				}
-				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_THROW_GRENADE))
-				{
-					// check if player has grenades
-					for(int i=3; i<NUM_WEAPONS_ON_PLAYER; i++)
-					{
-						if(m_Weapons[i] && m_Weapons[i]->getNumBulletsLeft() > 0 && strcmp(m_Weapons[i]->getConfig()->m_PrimaryAmmo->getBulletClass(), "obj_Grenade")==0)
-						{
-							buttonPressed = i+1; // switch to grenade
-							m_QuickThrowGrenade = 2; // counter, on 2 it'll throw grenade. after that, it'll switch to previous item
-							break;
-						}
-					}
+					switchToEmptyHands();
 				}
 				else
 				{
@@ -3452,38 +3282,21 @@ BOOL obj_AI_Player::Update()
 					if(mouseScroll!=0)
 					{
 						int selWeapon = m_SelectedWeapon;
-						if(mouseScroll>0)
+						for(int i=0; i<NUM_WEAPONS_ON_PLAYER; i++)
 						{
-							selWeapon++;
-							while(1)
-							{
-								if(selWeapon>=NUM_WEAPONS_ON_PLAYER)
+							if(mouseScroll>0) {
+								if(++selWeapon >= NUM_WEAPONS_ON_PLAYER)
 									selWeapon = 0;
-								if(m_Weapons[selWeapon] == NULL || isWeaponGrenadeOutofAmmo(selWeapon))
-								{
-									selWeapon++;
-									continue;
-								}
+							} else {
+								if(--selWeapon < 0)
+									selWeapon = NUM_WEAPONS_ON_PLAYER - 1;
+							}
+
+							if(m_Weapons[selWeapon] != NULL) {
+								buttonPressed = selWeapon + 1;
 								break;
 							}
 						}
-						else if(mouseScroll<0)
-						{
-							selWeapon--;
-							while(1)
-							{
-								if(selWeapon<0)
-									selWeapon = NUM_WEAPONS_ON_PLAYER-1;
-								if(m_Weapons[selWeapon] == NULL || isWeaponGrenadeOutofAmmo(selWeapon))
-								{
-									selWeapon--;
-									continue;
-								}
-								break;
-							}
-						}
-						// convert to buttonPressed
-						buttonPressed = selWeapon+1;
 					}
 				}
 			} 
@@ -3495,37 +3308,44 @@ BOOL obj_AI_Player::Update()
 			}
 
 			
-			// disable switch if we're cooking grenade or it wasn't launched yet
-			int grState = uberAnim_->GetGrenadeAnimState();
-			if(!(grState == 1 || (grState == 2 && m_Weapons[m_SelectedWeapon]->m_needDelayedAction)))
+			r3d_assert(buttonPressed>=0 && buttonPressed <=NUM_WEAPONS_ON_PLAYER);
+			const FoodConfig* foodItem = NULL;
+			if((buttonPressed-1)>=wiCharDataFull::CHAR_LOADOUT_ITEM1 && (buttonPressed-1)<=wiCharDataFull::CHAR_LOADOUT_ITEM4)
+				foodItem = g_pWeaponArmory->getFoodConfig(CurLoadout.Items[buttonPressed-1].itemID);
+			if(foodItem)
 			{
-				// check for empty grenades, and if empty - switch to primary weapon
-				if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->isGrenadeOrMineAnim())
+				wiInventoryItem& wi = CurLoadout.Items[buttonPressed-1];
+				if(wi.quantity > 0)
 				{
-					if( isWeaponGrenadeOutofAmmo(m_SelectedWeapon) )
+					showSlotsInfoTimer = r3dGetTime() + 5.0f; // show weapon info for X seconds
+					if(hudMain)
 					{
-						m_QuickThrowGrenade = 0;
-						buttonPressed = m_PrevSelectedWeapon+1;
-						// need additional check
-						if( buttonPressed > 0 && isWeaponGrenadeOutofAmmo(buttonPressed - 1) )
-							buttonPressed = 1;
+						hudMain->showSlots(true);
+						hudMain->setActivatedSlot(buttonPressed-1);
 					}
-					if(m_QuickThrowGrenade > 0 && buttonPressed == 0)
+					
+					localPlayer_UseItem(buttonPressed-1, foodItem->m_itemID, GetPosition() + GetvForw()*1.0f + r3dPoint3D(0,1,0));
+
+					if(--wi.quantity <= 0) {
+						wi.Reset();
+						OnBackpackChanged(buttonPressed-1);
+					}
+					else
 					{
-						m_QuickThrowGrenade = 0;
-						buttonPressed = m_PrevSelectedWeapon+1;
-						m_Weapons[m_SelectedWeapon]->isReadyToFire(false, false); // workaround
+						if(hudMain)
+							hudMain->updateSlotInfo(buttonPressed-1, wi.quantity);
 					}
 				}
-
-				r3d_assert(buttonPressed>=0 && buttonPressed <=NUM_WEAPONS_ON_PLAYER);
-				if(buttonPressed && m_Weapons[buttonPressed-1])
+			}
+			else if(buttonPressed && m_Weapons[buttonPressed-1])
+			{
+				if(buttonPressed>2 && !(m_Weapons[buttonPressed-1]->isUsableItem() || m_Weapons[buttonPressed-1]->getCategory()==storecat_GRENADE))
 				{
-					if( isWeaponGrenadeOutofAmmo(buttonPressed - 1) )
-					{
-						// do nothing, no grenades - so do not switch
-					}
-					else if(m_Weapons[buttonPressed-1]->isUsableItem() && InputMappingMngr->isPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE))
+					// do not allow to switch to quick slots if they are not usable items or grenades
+				}
+				else
+				{
+					if((m_Weapons[buttonPressed-1]->isUsableItem() || m_Weapons[buttonPressed-1]->getCategory()==storecat_GRENADE) && InputMappingMngr->isPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE))
 					{
 						// do not allow switching to usable item while fire key is pressed
 					}
@@ -3534,44 +3354,26 @@ BOOL obj_AI_Player::Update()
 						if(ChangeWeaponByIndex(buttonPressed-1))
 						{
 							lastTimeWeaponSwitch = curTime;
-							if(hudMain)
-							{
-								hudMain->setCurrentWeapon(buttonPressed-1);
-								if(m_Weapons[m_SelectedWeapon])
-								{
-									hudMain->showUseItem(false);
-									hudMain->setFireMode(m_Weapons[m_SelectedWeapon]->getFiremode());
-								}
-								else
-								{
-									hudMain->showUseItem(true);
-								}
-							}
 						}
-						else if(buttonPressed >= 4 && buttonPressed <=7) // sergey's request: already was pressed and this is an item, simulate left click!
+						else if(buttonPressed >= 3 && buttonPressed <=6) // sergey's request: already was pressed and this is an item, simulate left click!
 						{
 							if(m_Weapons[buttonPressed-1]->isUsableItem())
 								m_ItemSimulateLeftClick = true;
 						}
 					}
-
 				}
 			}
 		}
-		r3d_assert(m_Weapons[m_SelectedWeapon]);
-		if(prevAnimType != m_Weapons[m_SelectedWeapon]->getAnimType())
-			SyncAnimation(true);
 		
-		if(prevSelectedItem != m_SelectedWeapon)
+		if(prevSelectedItem != m_SelectedWeapon || prevEmptyHandsState != forcedEmptyHands)
 		{
-			uberAnim_->StopGrenadeAnimations(); // cancel the mine placement. 
+			SyncAnimation(true);
+
 			PKT_C2C_PlayerSwitchWeapon_s n;
-			n.wid       = m_SelectedWeapon;
+			n.wid       = forcedEmptyHands?255:m_SelectedWeapon;
 			p2pSendToHost(this, &n, sizeof(n), true);
 		}
 	}
-
-	const float lastFrameTime = r3dGetFrameTime();
 
 	// WARNING: current model is rotated 180 around y
 	D3DXMATRIX mr;
@@ -3581,28 +3383,9 @@ BOOL obj_AI_Player::Update()
 	if(NetworkLocal && !Mouse->GetMouseVisibility()) 
 	{
 		if(m_HitMarkerFadeout > 0)
-			m_HitMarkerFadeout -= lastFrameTime * GPP->c_fHitMarkerFadeoutSpeed;
+			m_HitMarkerFadeout -= timePassed * GPP->c_fHitMarkerFadeoutSpeed;
 
 		UpdateTargetting();
-	}
-
-	// detect if UAV is still here (it can be killed)
-	if(NetworkLocal)
-	{
-		if(uavId_ != invalidGameObjectID)
-		{
-			if(GameWorld().GetObject(uavId_) == NULL)
-			{
-				//OnUAVKill();
-				if(hudMain)
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_UAVKilled"));
-				r_hud_filter_mode->SetInt(HUDFilter_Default);
-
-				uavId_ = invalidGameObjectID;
-				uavViewActive_ = false;
-				uavRequested_  = 3;
-			}
-		}
 	}
 
 	plr_local_moving_speed = (GetPosition() - oldstate.Position).Length();
@@ -3614,7 +3397,7 @@ BOOL obj_AI_Player::Update()
 	{
 		R3DPROFILE_FUNCTION("NetPlayer_Move");
 		r3dPoint3D prevPos = GetPosition();
-		SetPosition(GetPosition() + GetVelocity() * lastFrameTime);
+		SetPosition(GetPosition() + GetVelocity() * timePassed);
 
 		DetectIfOnGround();
 
@@ -3634,14 +3417,17 @@ BOOL obj_AI_Player::Update()
 		}
 	}
 	if(afterRespawnTimer>0)
-		afterRespawnTimer -= lastFrameTime;
+		afterRespawnTimer -= timePassed;
 	//r3dOutToLog("Player Update: %s to %.2f, %.2f, %.2f\n", UserName, GetPosition().x, GetPosition().y, GetPosition().z);
 
 	// update footsteps after moving player
 	UpdateFootsteps();
-	// update camo only if player has special items
-	if(CurLoadout.BodyMeshID==20073 || CurLoadout.BodyArmorID==20074 || CurLoadout.BodyArmorID==20075)
+	/*
+		// update camo only if player has special items
 		gCamouflageDataManager.UpdateCamouflageData(*this);
+	*/
+
+	UpdateSounds();
 
 
 	// even if dead, still need to send pos, otherwise if died in the air - you will still be in the air.
@@ -3652,7 +3438,14 @@ BOOL obj_AI_Player::Update()
 		md.turnAngle = m_fPlayerRotationTarget;
 		md.bendAngle = bodyAdjust_y[1];
 		md.state     = (PlayerState&0xF) | ((PlayerMoveDir&0xF) << 4);
-		netMover.SendPosUpdate(md);
+
+		PKT_C2C_MoveSetCell_s n1;
+		PKT_C2C_MoveRel_s     n2;
+		DWORD pktFlags = netMover.SendPosUpdate(md, &n1, &n2);
+		if(pktFlags & 0x1)
+			p2pSendToHost(this, &n1, sizeof(n1), true);
+		if(pktFlags & 0x2)
+			p2pSendToHost(this, &n2, sizeof(n2), false);
 	}
 	
 	//
@@ -3664,10 +3457,11 @@ BOOL obj_AI_Player::Update()
 		lastWeapDataRep = curTime;
 		
 		PKT_C2S_PlayerWeapDataRep_s n;
-		r3d_assert(NUM_WEAPONS_ON_PLAYER == R3D_ARRAYSIZE(n.weaponsDataHash));
-		for(int i=0; i<NUM_WEAPONS_ON_PLAYER; i++)
+		r3d_assert(2 == R3D_ARRAYSIZE(n.weaponsDataHash));
+		for(int i=0; i<2; i++)
 		{
 			n.weaponsDataHash[i] = 0;
+			n.debug_wid[i] = 0;
 			if(m_Weapons[i] == NULL)
 				continue;
 			n.weaponsDataHash[i] = m_Weapons[i]->getConfig()->GetClientParametersHash();
@@ -3679,240 +3473,86 @@ BOOL obj_AI_Player::Update()
 		p2pSendToHost(this, &n, sizeof(n), true);
 	}
 
-	// TARGET ICON
-	if(m_targetIconTime > 0 && m_MarkedTargetIcon.IsUndefined())
+	if(NetworkLocal && hudMain)
 	{
-		hudMain->addTargetIcon(m_MarkedTargetIcon);
-	}
-	else if(!m_MarkedTargetIcon.IsUndefined() && m_targetIconTime <= 0)
-	{
-		hudMain->deleteScreenIcon(m_MarkedTargetIcon);
-	}
-	if(m_targetIconTime > 0)
-	{
-		m_targetIconTime -= lastFrameTime;
-	}
-	if( m_localTargetIconTime > 0 )
-	{
-		m_localTargetIconTime -= lastFrameTime;
-	}
-	if(!m_MarkedTargetIcon.IsUndefined())
-		hudMain->moveScreenIcon(m_MarkedTargetIcon, GetPosition()+r3dPoint3D(0,1,0), true);
-
-	//// PLAYER TAG ///////
-	if(!NetworkLocal && m_TagIcon.IsUndefined() && (CGL.localPlayer_ || CGL.m_isSpectator))
-	{
-		char* team = "";
-		if(CGL.localPlayer_)
-			team = CGL.localPlayer_->TeamID == TeamID?"blue":"red";
-		else
-			team = TeamID==1?"blue":"red";
-
-        char plrUserName[256]; GetUserNameAndClanTag(plrUserName);
-		hudMain->addPlayerTagIcon(plrUserName, team, m_TagIcon);
-	}
-
-	bool spawnProtected = r3dGetTime() < m_SpawnProtectedUntil;
-	if(!m_TagIcon.IsUndefined())
-	{
-		R3DPROFILE_FUNCTION("moveScreenIcon");
-		r3dPoint3D scrCoord;
-		r3dProjectToScreen(GetPosition()+r3dPoint3D(0,2.0f,0), &scrCoord);
-
-		r3dPoint3D dir;
-		if(m_isInScope || g_camera_mode->GetInt() != 1)
-			r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH2, &dir);
-		else
-			r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &dir);
-
-		bool showTag = false;
-		bool showName = false;
-		bool alwaysShow = false;
-		// if same team, or withing 10meters, or aim is on player
-		if(CGL.localPlayer_)
+		R3DPROFILE_FUNCTION("update hud");
+		// update HUD
 		{
-			float dist = (CGL.localPlayer_->GetPosition()-GetPosition()).Length();
-			if(CGL.localPlayer_->bDead) // if local player is dead, use camera instead of player position
-				dist = (gCam - GetPosition()).Length();
-
-			if((CGL.localPlayer_->TeamID == TeamID) ||
-				(dist < 10.0f) ||
-				this->GetSafeID() == m_LocalPlayer_CurrentAimAt ||
-				(uavId_ == m_LocalPlayer_CurrentAimAt && GameWorld().GetObject(uavId_))
-				)
 			{
-				showTag = true;
+				float bloodAlpha = 1.0f-R3D_MIN(r3dGetTime()-lastTimeHit, 1.0f);
+				hudMain->setBloodAlpha(bloodAlpha);
 			}
 
-			
-			if( (CGL.localPlayer_->TeamID == TeamID && dist < 20.0f) ||
-				(this->GetSafeID() == m_LocalPlayer_CurrentAimAt) ||
-				(uavId_ == m_LocalPlayer_CurrentAimAt && GameWorld().GetObject(uavId_))
-				)
-			{
-				showName = true;
-			}
+			bAllowToUseWeapons = true;
+			if(CurLoadout.GameFlags & wiCharDataFull::GAMEFLAG_NearPostBox)
+				bAllowToUseWeapons = false;
+			hudMain->showSafeZoneWarning(!bAllowToUseWeapons);
 
-			if(CGL.localPlayer_->TeamID != TeamID)
+			hudMain->setVisibility(lifeProperties.getPlayerVisibility());
+			hudMain->setHearing(lifeProperties.getPlayerHearRadius());
+
+			//hudMain->setTime(CGL.GetServerGameTime());
+			if(hudPause->isActive())
+				hudPause->setTime(CGL.GetServerGameTime());
+
+			hudMain->setLifeParams((int)CurLoadout.Hunger, (int)CurLoadout.Thirst, (int)CurLoadout.Health, (int)CurLoadout.Toxic, int(((getMaxStamina()-m_Stamina)/getMaxStamina())*100.0f));
+			if(m_Weapons[m_SelectedWeapon])
 			{
-				// disable enemy tag if behind obstacle and not targetted
-				if(showTag && this->GetSafeID() != m_LocalPlayer_CurrentAimAt)
+				if(m_Weapons[m_SelectedWeapon]->getCategory() == storecat_GRENADE) // treated as items
 				{
-					r3dPoint3D viewTrg = GetPosition();
-					viewTrg.y = GetMuzzlerPosition().y;
-					r3dPoint3D viewVec = (viewTrg - gCam);
-					float rayLen = viewVec.Length();
-					viewVec.Normalize();
-
-					// check if we hit any static geometry shape on our view from camera to this player
-					PxRaycastHit hit;
-					PhysicsCallbackObject* target = NULL;
-					PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-					if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(viewVec.x, viewVec.y, viewVec.z), rayLen, PxSceneQueryFlag::ePOSITION, hit, filter))
-						showTag = false;
+					const wiInventoryItem& wi = m_Weapons[m_SelectedWeapon]->getPlayerItem();
+					hudMain->setWeaponInfo(R3D_MIN(1, wi.quantity), R3D_MIN(0, wi.quantity-1), 1);
 				}
+				else
+					hudMain->setWeaponInfo(m_Weapons[m_SelectedWeapon]->getNumBulletsLeft(), m_Weapons[m_SelectedWeapon]->getNumClipsLeft(), (int)m_Weapons[m_SelectedWeapon]->getFiremode());
+			}
 
-				// if detected, show triangle on top
-				if(/*m_onMinimap ||*/ !m_MarkedTargetIcon.IsUndefined())
-					showTag = true;
+			if(r3dGetTime() > showSlotsInfoTimer && showSlotsInfoTimer>0)
+			{
+				hudMain->showSlots(false);
+				showSlotsInfoTimer = 0;
+			}
+		}
+		{
+			// update items
+			for(int i=wiCharDataFull::CHAR_LOADOUT_WEAPON1; i<=wiCharDataFull::CHAR_LOADOUT_ITEM4; ++i)
+			{
+				const Weapon* wpn = m_Weapons[i];
+				if(!wpn) continue;
 
-				// if inside death zone, always show his icon (todo: optimize this, as it might be slow)
-				R3DPROFILE_START( "Damage Area" ) ;
-
-				const obj_DamageArea::Arr& damageAreas = obj_DamageArea::GetDamageAreaArr() ;
-				for( int i = 0, e = damageAreas.Count() ; i < e; i ++ )
+				if(wpn->isUsableItem())
 				{
-					obj_DamageArea* damageArea = (obj_DamageArea*)damageAreas[ i ];
-					if(((GetPosition() - damageArea->GetPosition()).LengthSq() < (damageArea->GetRadius()*damageArea->GetRadius())) && damageArea->getTeamID() == TeamID)
-					{
-						showTag = true;
-						alwaysShow = true;
-						break;
-					}
+					hudMain->updateSlotInfo(i, CurLoadout.Items[i].quantity);
 				}
-
-				R3DPROFILE_END( "Damage Area" ) ;
 			}
 
-			// if local player is dead, always show tags, so that when you are in dead mode, you can see who is who
-			if(CGL.localPlayer_->bDead)
-			{
-				showTag = CGL.localPlayer_->TeamID == TeamID;
-			}
+			float bloodLevel = 0;
+			if(CurLoadout.Health < 25.0f)
+				bloodLevel = 100.0f - ((CurLoadout.Health/25.0f)*100.0f); // show blood effect when health is between 0 and 25
+			PFX_3DLUTColorCorrection::s_damageHitColorCorrectionVal = (bloodLevel/100.0f);
+			//hudMain->SetBloodLevel(bloodLevel);
 		}
-		else if(CGL.m_isSpectator)
+	}
+	// CLAN TAG
+	if(!NetworkLocal && hudMain)
+	{
+		if(m_CharIcon.IsUndefined() && CGL.localPlayer_ && ClanID == CGL.localPlayer_->ClanID)
 		{
-			extern int spectator_observingPlrIdx;
-			extern r3dPoint3D spectator_cameraPos;
-			if(CGL.GetPlayer(spectator_observingPlrIdx) == this || (spectator_cameraPos-GetPosition()).Length() < 25.0f)
-			{
-				showTag = true;
-				showName = true;
-			}
+			char plrUserName[256]; GetUserNameAndClanTag(plrUserName);
+			hudMain->addCharTag(plrUserName, CurLoadout.Stats.Reputation, false, m_CharIcon);
 		}
-		if(bDead)
-			showTag = false;
 
-#ifndef FINAL_BUILD
-		if(d_observer_mode->GetBool())
+		if(!m_CharIcon.IsUndefined())
 		{
-			showTag = true;
-			showName = true;
-		}
-#endif
+			bool showTag = true;
+			bool showName = (this->GetSafeID() == m_LocalPlayer_CurrentAimAt)?true:false;
+			bool alwaysShow = true;
 
-		hudMain->showPlayerNameTag(m_TagIcon, showName);
-
-		if ( CGL.localPlayer_ && CGL.localPlayer_->TeamID != TeamID )
-		{
-			if(!m_SpawnProtectIcon.IsUndefined() && showName && spawnProtected )
-			{
-				hudMain->moveScreenIcon(m_SpawnProtectIcon, GetPosition()+r3dPoint3D(0,2.5,0), false);
-			} 
-			else 
-			{
-				hudMain->moveScreenIcon(m_SpawnProtectIcon, r3dPoint3D(-1, -1, -1), false, true);
-			}
-		}
-
-		if(uavId_ == m_LocalPlayer_CurrentAimAt && GameWorld().GetObject(uavId_))
-		{			
-			GameObject* uav = GameWorld().GetObject(uavId_);
-			obj_AI_Player* uavOwner = (obj_AI_Player*)GameWorld().GetObject(uav->ownerID);
-			if(!uavOwner || (uavOwner && uavOwner->TeamID == TeamID) ) // uav handles friendly tag itself
-			{
-				alwaysShow = false;
+			if(bDead)
 				showTag = false;
-			}
-			hudMain->moveScreenIcon(m_TagIcon, uav->GetPosition()+r3dPoint3D(0,2.0f,0), alwaysShow, !showTag);
-		}
-		else
-			hudMain->moveScreenIcon(m_TagIcon, GetPosition()+r3dPoint3D(0,2.0f,0), alwaysShow, !showTag);
-	}
 
-	// guardian angel
-	if(!NetworkLocal)
-	{
-		if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-		{	
-			if(CGL.localPlayer_ )
-			{
-				if(CGL.localPlayer_->TeamID == TeamID)
-				{
-					if(CGL.localPlayer_->CurLoadout.hasItem(AbilityConfig::AB_GuardianAngel)) // if local player has guardian angel ability, show injured team mates
-					{
-						if((GetPosition() - CGL.localPlayer_->GetPosition()).Length() < 50.0f && m_Health < getMaxHealth() && !bDead)
-							hudMain->moveScreenIcon(m_WoundedTeamIcon, GetPosition()+r3dPoint3D(0,3,0), false);
-						else
-							hudMain->moveScreenIcon(m_WoundedTeamIcon, GetPosition()+r3dPoint3D(0,3,0), false, true);
-					}
-					if(CurLoadout.hasItem(AbilityConfig::AB_GuardianAngel)) // if player has guardina angel ability - show medic icon
-					{
-						if(!m_MedicTeamIcon.IsUndefined())
-						{
-							if((GetPosition() - CGL.localPlayer_->GetPosition()).Length() < 50.0f)
-								hudMain->moveScreenIcon(m_MedicTeamIcon, GetPosition()+r3dPoint3D(0,3,0), false);
-							else
-								hudMain->moveScreenIcon(m_MedicTeamIcon, GetPosition()+r3dPoint3D(0,3,0), false, true);
-						}
-					}
-				} 
-			}
-		}
-	}
-
-	// ping icon
-	if(!NetworkLocal)
-	{
-		if(m_pingIconTimer>0)
-		{
-			m_pingIconTimer -= lastFrameTime;
-			if(m_pingIconTimer <=0)
-			{
-				m_pingIconTimer = -1;
-				hudMain->moveScreenIcon(m_PingTeamIcon, GetPosition()+r3dPoint3D(0,2,0), false, true); // hide icon
-			}
-			else
-			{
-				hudMain->moveScreenIcon(m_PingTeamIcon, GetPosition()+r3dPoint3D(0,2,0), true);
-			}
-		}
-	}
-	// comm rose icon
-	if(!NetworkLocal)
-	{
-		if(m_commRoseTimer>0)
-		{
-			m_commRoseTimer -= lastFrameTime;
-			if(m_commRoseTimer <=0)
-			{
-				m_commRoseTimer = -1;
-				hudMain->deleteScreenIcon(m_CommRoseIcon);
-			}
-			else
-			{
-				hudMain->moveScreenIcon(m_CommRoseIcon, GetPosition()+r3dPoint3D(0,2,0), true);
-			}
+			hudMain->setCharTagTextVisible(m_CharIcon, showName, false);
+			hudMain->moveUserIcon(m_CharIcon, GetPosition()+r3dPoint3D(0,2.0f,0), alwaysShow);
 		}
 	}
 
@@ -3920,7 +3560,9 @@ BOOL obj_AI_Player::Update()
 	if(bDead)
 	{
 		if(NetworkLocal)
-			s_damageHitColorCorrectionVal = 0;
+			PFX_3DLUTColorCorrection::s_damageHitColorCorrectionVal = 0;
+
+		UpdateRotation();
 
 		UpdateAnimations(CharDrawMatrix);
 
@@ -3928,6 +3570,11 @@ BOOL obj_AI_Player::Update()
 			m_Weapons[m_SelectedWeapon]->Update(uberEquip_->getWeaponBone(GetSkeleton(), DrawFullMatrix));
 
 		return TRUE;
+	}
+
+	if(!NetworkLocal)
+	{
+		UpdatePlayerObstacle(PhysXObstacleIndex, GetPosition());
 	}
 
 	SyncAnimation();
@@ -3939,82 +3586,6 @@ BOOL obj_AI_Player::Update()
 	if(m_Weapons[m_SelectedWeapon])
 	{
 		m_Weapons[m_SelectedWeapon]->Update(uberEquip_->getWeaponBone(GetSkeleton(), DrawFullMatrix));
-	}
-
-	// simple regeneration
-	bool guardingAngelHealing = false;
-	if(m_Health < getMaxHealth())
-	{
-		// THIS CODE HAS TO BE IN SYNC WITH THE SAME CODE ON SERVER
-		if((curTime-lastTimeHit) > 5.0f || m_BerserkerTime > 0) // no regeneration for 5 sec after someone hit you
-		{
-			float regenSpeed = GPP->c_fRegenSpeed;
-
-			/* - disabled 2012-05-23 by Syncopate request. NOTE: must be synched with SERVER
-			// disable regen on sabotage on russian server
-			extern int RUS_CLIENT;
-			if(RUS_CLIENT && CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb)
-				regenSpeed = 0.0f;
-			*/
-
-			int HealthRegenSkill = CurLoadout.getSkillLevel(CUserSkills::MEDIC_HealthRegeneration);
-			switch(HealthRegenSkill)
-			{
-			case 1: regenSpeed *= 1.05f; break;
-			case 2: regenSpeed *= 1.10f; break;
-			case 3: regenSpeed *= 1.15f; break;
-			case 4: regenSpeed *= 1.20f; break;
-			case 5: regenSpeed *= 1.25f; break;
-			default:break;
-			}
-			if(m_BerserkerTime > 0)
-			{
-				int berserkerRage = CurLoadout.getSkillLevel(CUserSkills::ASSAULT_BerserkersRage);
-				switch(berserkerRage)
-				{
-				case 1: regenSpeed *= 1.05f; break;
-				case 2: regenSpeed *= 1.10f; break;
-				case 3: regenSpeed *= 1.15f; break;
-				case 4: regenSpeed *= 1.20f; break;
-				case 5: regenSpeed *= 1.25f; break;
-				default:break;
-				}
-			}
-
-			m_Health = m_Health + lastFrameTime*regenSpeed; //X hit points in one second
-			// guardian angel
-			float guardianAngelBoostRadius = 0.0f;
-			int GuardianAngelSkill = CurLoadout.getSkillLevel(CUserSkills::MEDIC_GuardianAngel);
-			switch(GuardianAngelSkill)
-			{
-			case 1: guardianAngelBoostRadius = 1.0f; break;
-			case 2: guardianAngelBoostRadius = 2.0f; break;
-			case 3: guardianAngelBoostRadius = 3.0f; break;
-			case 4: guardianAngelBoostRadius = 4.0f; break;
-			default:break;
-			}
-			if(CGL.CheckTeamAbilityAvailable(this, AbilityConfig::AB_GuardianAngel, 10.0f+guardianAngelBoostRadius))
-			{
-				if(lastTimeHit_OldHealth < 70) // show guardian angel heal only if you were damaged substantially, otherwise the effect will show up just for a second, which makes it look like a random green effect
-					guardingAngelHealing = true;
-				float healthNutBoost = 1.0f;
-				switch(CurLoadout.getSkillLevel(CUserSkills::RECON_HealthNut))
-				{
-				case 1: healthNutBoost = 1.1f; break;
-				case 2: healthNutBoost = 1.2f; break;
-				case 3: healthNutBoost = 1.3f; break;
-				}
-				m_Health = m_Health + lastFrameTime*(regenSpeed*4.0f)*healthNutBoost; // 20 points per second
-			}
-
-			m_Health = R3D_MIN((float)m_Health, getMaxHealth());
-		}
-	}
-
-	if(NetworkLocal)
-	{
-		if(hudMain)
-			hudMain->setHealth(int((m_Health/getMaxHealth())*100.0f));
 	}
 
 	if(NetworkLocal)
@@ -4031,703 +3602,52 @@ BOOL obj_AI_Player::Update()
 			if(!InputMappingMngr->isPressed(r3dInputMappingMngr::KS_HOLD_BREATH))
 			{
 				if(m_Breath < getMaxBreath())
-					m_Breath = m_Breath + lastFrameTime;
+					m_Breath = m_Breath + timePassed;
 			}
 		}
 	}
 
 	{
-		if(guardingAngelHealing && m_AuraType == AT_NONE)
-			m_AuraType = AT_HEALING;
-		else if(guardingAngelHealing==false && m_AuraType == AT_HEALING)
-		{
-			// so that debug works in editor correctly
-			if( !g_bEditMode )
-			{
-				m_AuraType = AT_NONE;
-			}
-		}
-
-		if(m_BerserkerTime > 0)
-		{
-			m_BerserkerTime -= lastFrameTime;
-			if(m_BerserkerTime <= 0)
-				m_AuraType = AT_NONE;
-		}
 		if(r3dGetTime() < m_MorhineShotTime && m_AuraType == AT_NONE)
 			m_AuraType = AT_MORHINE;
 		if(m_AuraType == AT_MORHINE && r3dGetTime() > m_MorhineShotTime)
-			m_AuraType = AT_NONE;
-		if(m_AuraType == AT_NONE && spawnProtected)
-			m_AuraType = AT_SPAWNPROTECTION;
-		if(m_AuraType == AT_SPAWNPROTECTION && !spawnProtected)
 			m_AuraType = AT_NONE;
 	}
 
 	if(NetworkLocal)
 	{
-		extern r3dVector g_vBattleZonePlayerPos;
-		g_vBattleZonePlayerPos = GetPosition();
-
 		if(BloodEffect > 0)
 		{
-			BloodEffect -= lastFrameTime;
+			BloodEffect -= timePassed;
 			if(BloodEffect < 0) BloodEffect = 0;
 		}
 	}
 	
 	// update fire
-	if(NetworkLocal && !Mouse->GetMouseVisibility() && !uavViewActive_ && !laserViewActive_)
+	if(NetworkLocal && !Mouse->GetMouseVisibility())
 	{
 		if(fabs(m_ReticleCurrentScale - m_ReticleTargetScale)>0.01f)
-			m_ReticleCurrentScale = R3D_LERP(m_ReticleCurrentScale, m_ReticleTargetScale, lastFrameTime * 5.0f);
+			m_ReticleCurrentScale = R3D_LERP(m_ReticleCurrentScale, m_ReticleTargetScale, timePassed * 5.0f);
 
 		bool scopeRendering = (hasScopeMode() && CurrentRig.allowScope && m_isAiming) || (g_camera_mode->GetInt()==2 && m_isAiming);
-		if(hudMain)
-		{
-			hudMain->showReticle(!scopeRendering && m_Weapons[m_SelectedWeapon] && !m_Weapons[m_SelectedWeapon]->isReloading() && PlayerState!=PLAYER_MOVE_SPRINT);
-			hudMain->setReticleScale(m_ReticleCurrentScale);
-		}
 	}
 
 	// if low health - start dropping blood every second
-	m_BloodTimer += lastFrameTime;
-	if(m_Health < 30 && m_BloodTimer > 1.0f)
+	m_BloodTimer += timePassed;
+	if(CurLoadout.Health < 30 && m_BloodTimer > 1.0f)
 	{
 		r3dPoint3D pos = GetPosition(); pos.y += 2.0f;
 		AddBloodOnGround(pos);
 		m_BloodTimer = 0;
 	}
 
-	{
-		R3DPROFILE_FUNCTION("update hud");
-		if(NetworkLocal)
-		{
-			if(m_bombDropCooldown > 0)
-				m_bombDropCooldown -= lastFrameTime;
-			// update hud
-			{
-				const Weapon* wpn = m_Weapons[m_SelectedWeapon];
-				if(wpn && !wpn->isUsableItem() )
-				{
-					if(hudMain) hudMain->SetBullets(m_Weapons[m_SelectedWeapon]->getNumBulletsLeftInClip(), m_Weapons[m_SelectedWeapon]->getNumBulletsInClip(), m_Weapons[m_SelectedWeapon]->getNumClipsLeft());
-				}
-				else if(wpn && wpn->isUsableItem())
-				{
-					int numCharges = 1;
-					if(wpn->m_usableItemInventoryIdx >= 0)
-					{
-						numCharges = gUserProfile.ProfileData.Inventory[wpn->m_usableItemInventoryIdx].quantity;
-					}
-					
-					if(wpn->getItemID() == WeaponConfig::ITEMID_Cypher2)
-					{
-						if(uavRequested_) // destroyed or spawned UAV
-							numCharges = 0;
-					}
-					if(wpn->getItemID() == WeaponConfig::ITEMID_RiotShield && m_spawnedRiotShield)
-						numCharges = 0;
-					if(wpn->getItemID() == WeaponConfig::ITEMID_AutoTurret && m_spawnedAutoTurret)
-						numCharges = 0;
-					
-					if(hudMain)
-						hudMain->SetBullets(numCharges, 0, 0);
-				}
-				// update items
-				if(hudMain)
-				{
-					for(int i=3; i<7; ++i)
-					{
-						const Weapon* wpn = m_Weapons[i];
-						if(wpn)
-						{
-							if(wpn->isUsableItem())
-							{
-								int numCharges = 1;
-								if(wpn->m_usableItemInventoryIdx >= 0)
-								{
-									numCharges = gUserProfile.ProfileData.Inventory[wpn->m_usableItemInventoryIdx].quantity;
-								}
-
-								if(wpn->getItemID() == WeaponConfig::ITEMID_Cypher2)
-								{
-									if(uavRequested_) // destroyed or spawned UAV
-										numCharges = 0;
-								}
-								if(wpn->getItemID() == WeaponConfig::ITEMID_RiotShield && m_spawnedRiotShield)
-									numCharges = 0;
-								if(wpn->getItemID() == WeaponConfig::ITEMID_AutoTurret && m_spawnedAutoTurret)
-									numCharges = 0;
-								if(hudMain)
-								{
-									float cooldown = wpn->getRateOfFire() - (r3dGetTime() - wpn->getLastTimeFired());
-									if(cooldown < 0 || numCharges == 0) cooldown = 0;
-									hudMain->SetItemInfo(i, cooldown, wpn->getRateOfFire(), numCharges);
-								}
-							}
-							else
-							{
-								hudMain->SetItemInfo(i, 0, 1, wpn->getNumBulletsLeft());
-							}
-						}
-					}
-				}
-	
-				float bloodLevel = 0;
-				if(m_Health < 80)
-					bloodLevel = 100.0f - ((m_Health/80.0f)*100.0f); // show blood effect when health is between 0 and 80
-				s_damageHitColorCorrectionVal = (bloodLevel/100.0f);
-				if(hudMain) hudMain->SetBloodLevel(bloodLevel);
-
-				if(CGL.localPlayer_ && !(hudMain && hudMain->isChatVisible()))
-				{
-					// THE FIXER ability
-					if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-					{
-						if(CurLoadout.hasItem(AbilityConfig::AB_TheFixer))
-						{
-							static bool showMessage = false;
-							GameObject* obj = GameWorld().GetObject(m_LocalPlayer_CurrentAimAt);
-							if(obj && obj->isObjType(OBJTYPE_Mine) && (GetPosition()-obj->GetPosition()).Length() < 2.0f) // should be within 2meters to switch mine
-							{
-								obj_Mine* mine = (obj_Mine*)obj;
-								GameObject* owner = GameWorld().GetObject(mine->ownerID);
-								if(owner && owner->isObjType(OBJTYPE_Human))
-								{
-									obj_AI_Player* ownPl = (obj_AI_Player*)owner;
-									if(ownPl->TeamID != TeamID)
-									{
-										// ok, finally here. Show player an option to switch mine
-										if(!showMessage)
-										{
-											showMessage = true;
-											hudMain->showActionMessage("fixer", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-										}
-										if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INTERACT) || Gamepad->WasReleased(gpRightShoulder))
-										{
-											// send request to switch mine
-											PKT_C2C_PlayerSwitchMine_s n;
-											n.mineID = toP2pNetId(mine->NetworkID);
-											p2pSendToHost(this, &n, sizeof(n));
-										}
-									}
-									else
-										showMessage = false;
-								}
-								else 
-									showMessage = false;
-							}
-							else
-								showMessage = false;
-						}
-					}
-					// WEAPON PICKUP LOGIC
-					//if(g_camera_mode->GetInt()!=2) // disabled in FPS for now, until fixed
-					{
-						// slow, need to rewrite
-						DroppedWeapon* dropWpn = 0;
-						float distance = 999999999.0f;
-
-						ObjectManager& GW = GameWorld();
-						for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
-						{
-							if(obj->isObjType(OBJTYPE_WeaponDrop))
-							{
-								float d = (obj->GetPosition() - GetPosition()).LengthSq();
-								if(!((DroppedWeapon*)obj)->m_IsPicked && distance > d && ((DroppedWeapon*)obj)->m_isGood)
-								{
-									dropWpn = (DroppedWeapon*)obj;
-									distance = d;
-								}
-							}
-						}
-						float maxDist = PKT_C2S_RequestWeaponPickup_s::PICKUP_RADIUS*0.5f;
-						static float pressedKeyTimer = 0.0f;
-						static bool movedOff = true; // have we moved off the object? 
-						const static float maxTimeForDisplay = 2.0f;
-						static float timeForDisplay = 2.0f;
-						if(distance < (maxDist*maxDist))
-						{
-							
-							if(!shownWeaponPickup )
-							{
-								if ( movedOff )
-								{
-									timeForDisplay = maxTimeForDisplay;
-									movedOff = false;
-									shownWeaponPickup = true;
-									const WeaponConfig* config = gWeaponArmory.getWeaponConfig(dropWpn->m_WeaponItemID);
-									int damage   = 0;
-									int accuracy = 0;
-									int recoil = 0;
-									int firerate = 0;
-									getWeaponParamForUI(config, &damage, &accuracy, &firerate, &recoil);
-
-									const WeaponConfig* currentConfig = 0;
-									if(config->category == storecat_ASR || config->category == storecat_SNP || config->category == storecat_MG)
-									{
-										if(m_Weapons[0])
-											currentConfig = m_Weapons[0]->getConfig();
-									}
-									else if(config->category == storecat_SUPPORT || config->category == storecat_SHTG || config->category == storecat_SMG)
-									{
-										if(m_Weapons[1])
-											currentConfig = m_Weapons[1]->getConfig();
-									}
-									else if(config->category == storecat_HG)
-									{
-										if(m_Weapons[2])
-											currentConfig = m_Weapons[2]->getConfig();
-									}
-									int mydamage   = 1;
-									int myaccuracy = 1;
-									int myrecoil = 1;
-									int myfirerate = 1;
-									if(currentConfig)
-										getWeaponParamForUI(currentConfig, &mydamage, &myaccuracy, &myfirerate, &myrecoil);
-
-
-									hudMain->showPickupMsg(InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT),
-										config->m_StoreName, config->m_StoreIcon,
-										gLangMngr.getString("$StatDamageCAP"), mydamage, damage - mydamage,
-										gLangMngr.getString("$StatAccuracyCAP"), myaccuracy, accuracy - myaccuracy,
-										gLangMngr.getString("$StatRecoilCAP"), myrecoil, recoil - myrecoil,
-										gLangMngr.getString("$StatFireRateCAP"), myfirerate, firerate - myfirerate,
-										gLangMngr.getString("$StatCapacityCAP"), dropWpn->m_NumBullets);
-								
-								}
-							}
-							else 
-							{
-								if( timeForDisplay > 0 ) 
-								{
-									timeForDisplay-= r3dGetFrameTime();
-									if( timeForDisplay <= 0 ) 
-									{
-										timeForDisplay = 0;
-										hudMain->hidePickupMsg();
-										hudMain->hideActionMessage( "pickup" );	
-										shownWeaponPickup = false;
-									}
-								}
-							}
-
-							if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_INTERACT) || Gamepad->IsPressed(gpRightShoulder))
-							{
-								pressedKeyTimer += lastFrameTime;
-								// send request to pickup weapon
-								if(pressedKeyTimer > 1.0f) 
-								{
-									dropWpn->m_IsPicked = true;
-
-									pressedKeyTimer = 0.0f;
-									PKT_C2S_RequestWeaponPickup_s n;
-									n.spawnID = toP2pNetId(dropWpn->NetworkID);
-									p2pSendToHost(this, &n, sizeof(n));
-								}
-							}
-							else
-								pressedKeyTimer = 0.0f;
-						}
-						else
-						{
-							if(shownWeaponPickup)
-							{
-								hudMain->hidePickupMsg();
-								hudMain->hideActionMessage( "pickup" );	
-							}
-							shownWeaponPickup = false;
-							movedOff = true;
-							pressedKeyTimer = 0.0f;
-						}
-					}
-					
-					// SUPPLY CRATES logic
-					static bool shownCrateMessage = false; // it is a local code only, so static here should be safe
-					if(obj_SupplyCrate* crate = g_SupplyCrateMngr.getCrateInRadius(GetPosition(), 3.0f))
-					{
-						if(!shownCrateMessage)
-						{
-							shownCrateMessage = true;
-							hudMain->showActionMessage(crate->SupplyType==0?"resupply":"blackops", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-						}
-						if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INTERACT) || Gamepad->WasReleased(gpRightShoulder))
-						{
-							// send request for resupply
-							PKT_C2S_ResupplyRequest_s n;
-							p2pSendToHost(this, &n, sizeof(n));
-						}
-					}
-					else
-						shownCrateMessage = false;
-
-					// Siege objective logic
-					if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Siege)
-					{
-						static bool shownSiegeMessage = false; // it is a local code only, so static here should be safe
-						obj_SiegeObjective* sobj = gSiegeObjMgr.GetActiveObjective();
-						if(sobj && (sobj->GetPosition() - GetPosition()).Length() < 2.0f && ((CGL.localPlayer_->TeamID == 0 && sobj->Status == obj_SiegeObjective::SS_ACTIVE) || (CGL.localPlayer_->TeamID == 1 && sobj->Status == obj_SiegeObjective::SS_ARMED))) // within 1 meter and not armed already
-						{
-							if(!shownSiegeMessage)
-							{
-								shownSiegeMessage = true;
-								if(sobj->Status == obj_SiegeObjective::SS_ACTIVE)
-									hudMain->showActionMessage("armBomb", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-								else
-									hudMain->showActionMessage("disarmBomb", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-							}
-							if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_INTERACT))
-							{
-								if(m_siegeArmingTimer == 0)
-									hudMain->showReloading(true);
-								m_siegeArmingTimer += lastFrameTime;
-								hudMain->SetReloadingProgress((1.0f-(sobj->m_ActivationTimer-m_siegeArmingTimer)/sobj->m_ActivationTimer)*100.0f);
-								// for now, just sent a packet when we think we finished arming bomb, later, send two packets, when started arming and when done to prevent cheating
-								if(m_siegeArmingTimer > sobj->m_ActivationTimer)
-								{
-									PKT_C2S_Siege_Activate_s n;
-									n.ObjectiveID = toP2pNetId(sobj->NetworkID);
-									p2pSendToHost(this, &n, sizeof(n));
-								}
-							}
-							else
-							{
-								if(m_siegeArmingTimer > 0)
-									hudMain->showReloading(false);
-								m_siegeArmingTimer = 0;
-							}
-						}
-						else
-						{
-							shownSiegeMessage = false;
-							if(m_siegeArmingTimer > 0)
-								hudMain->showReloading(false);
-							m_siegeArmingTimer = 0;
-						}
-					}
-					// BOMB CYBERSPORT LOGIC
-					if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb)
-					{
-						// check if we are able to pick up dropped bomb
-						if(CGL.m_DroppedBomb->isBombDropped() && TeamID == 0 && m_bombDropCooldown <= 0)
-						{
-							static float lastRequest = 0.0f;
-							if((CGL.m_DroppedBomb->GetPosition() - GetPosition()).Length() < 0.5f)
-							{
-								if((r3dGetTime() - lastRequest) > 2.0f)
-								{
-									lastRequest = r3dGetTime();
-									PKT_C2S_Bomb_RequestBombPickup_s n;
-									p2pSendToHost(this, &n, sizeof(n));
-								}
-							}
-						}
-
-						if(!uberAnim_->GetGrenadeAnimState()) // do not allow to arm/disarm bomb if throwing grenade or arming mines.
-						{
-							static bool shownBombMessage = false; // it is a local code only, so static here should be safe
-							static int  playBombAnim = 0;
-							bool found = false;
-							for(int i=0; i<gBombPlacementMgr.NumBombPlacements(); ++i)
-							{
-								obj_BombPlacement* bobj = gBombPlacementMgr.GetBombPlacement(i);
-								float actRadius = bobj->getActivationRadius();
-								r3dPoint3D bombPos = bobj->GetPosition();
-								if(bobj->getStatus() == obj_BombPlacement::SS_ARMED)
-								{
-									actRadius = 1.0f; // you have to stand on top of bomb to start disarming it
-									bombPos = bobj->m_satchelChargePos;
-								}
-								if((bombPos - GetPosition()).Length() < actRadius && ((CGL.localPlayer_->TeamID == 0 && bobj->getStatus() == obj_BombPlacement::SS_EMPTY && CGL.localPlayer_->hasSabotageBomb()) || (CGL.localPlayer_->TeamID == 1 && bobj->getStatus() == obj_BombPlacement::SS_ARMED))) 
-								{
-									if(!shownBombMessage)
-									{
-										shownBombMessage = true;
-										if(bobj->getStatus() == obj_BombPlacement::SS_EMPTY)
-											hudMain->showActionMessage("armBomb", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-										else
-											hudMain->showActionMessage("disarmBomb", InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
-									}
-									if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_INTERACT))
-									{
-										if(m_siegeArmingTimer == 0)
-											hudMain->showBombTimer(true);
-
-										m_siegeArmingTimer += lastFrameTime;
-										float activTimer = 0;
-										if(TeamID == 0)
-											activTimer = bobj->m_ArmingTimer;
-										else
-											activTimer = bobj->m_DisarmingTimer;
-
-										if(playBombAnim == 0)
-										{
-											uberAnim_->StartBombPlantingAnimation(0);
-											playBombAnim = 1;
-										}
-										else if(playBombAnim == 1 && m_siegeArmingTimer > 0.4f)
-										{
-											uberAnim_->StartBombPlantingAnimation(1);
-											playBombAnim = 2;
-										}
-										else if(playBombAnim == 2 && (activTimer-m_siegeArmingTimer) < 0.4f)
-										{
-											uberAnim_->StartBombPlantingAnimation(2);
-											playBombAnim = 3;
-										}
-
-										hudMain->setBombTimerProgress((1.0f-(activTimer-m_siegeArmingTimer)/activTimer));
-										// for now, just sent a packet when we think we finished arming bomb, later, send two packets, when started arming and when done to prevent cheating
-										if(m_siegeArmingTimer > activTimer)
-										{
-											static float timerAntiSpam = 0.0f;
-											if((r3dGetTime() - timerAntiSpam) > 1.0f) // send only once per second
-											{
-												timerAntiSpam = r3dGetTime();
-												PKT_C2S_Bomb_RequestBombPlacement_s n;
-												n.bombID = toP2pNetId(bobj->NetworkID);
-												n.pos = GetPosition();
-												p2pSendToHost(this, &n, sizeof(n));
-											}
-										}
-									}
-									else
-									{
-										if(m_siegeArmingTimer > 0)
-										{
-											hudMain->showBombTimer(false);
-											m_siegeArmingTimer = 0;
-											playBombAnim = 0;
-											uberAnim_->StartBombPlantingAnimation(3);
-										}
-									}
-									found = true;
-									break;
-								}
-							}
-							if(!found)
-							{
-								shownBombMessage = false;
-								if(m_siegeArmingTimer > 0)
-								{
-									hudMain->showBombTimer(false);
-									m_siegeArmingTimer = 0;
-									playBombAnim = 0;
-									uberAnim_->StartBombPlantingAnimation(3);
-								}
-							}
-						}
-					}
-				}
-
-			}
-			if(hudMinimap && hudMinimap->IsInited())
-			{
-				hudMinimap->SetCameraPosition(GetPosition(), GetvForw());
-			}
-		}
-		else // Not network local
-		{
-			if(hudMinimap && hudMinimap->IsInited())
-			{
-				if(CGL.localPlayer_)
-				{
-					if(CGL.localPlayer_->TeamID != TeamID)
-					{
-						// check timer
-						if(m_fVisibleTimer > 0)
-						{
-							m_visibleOnMinimap = true;
-							m_fVisibleTimer -= lastFrameTime;
-							if(m_fVisibleTimer<=0)
-							{
-								m_fVisibleTimer = 0;
-								m_visibleOnMinimap = false;
-							}
-						}
-						// check distance
-						if((CGL.localPlayer_->GetPosition() - GetPosition()).Length() < CGL.localPlayer_->getMinimapDetectionRadius() && CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-							m_visibleOnMinimap = true;
-						else if(m_fVisibleTimer == 0)
-							m_visibleOnMinimap = false;
-
-						if(m_visibleOnMinimap && !m_onMinimap) // need to add
-						{
-							hudMinimap->AddUnit(m_MinimapTagIconName, true, CGL.localPlayer_->Dead_KillerID == NetworkID, GetPosition());
-							m_onMinimap = true;
-						}
-						if(!m_visibleOnMinimap && m_onMinimap) // remove
-						{
-							hudMinimap->EraseUnit(m_MinimapTagIconName);
-							m_onMinimap = false;
-						}
-					}
-					else
-					{
-						// check that ally is visible, sometimes during joining game ally might be created before you and so will not be added to minimap automatically
-						if(!m_onMinimap)
-						{
-							hudMinimap->AddUnit(m_MinimapTagIconName, false, false, GetPosition());
-							m_onMinimap = true;
-						}
-					}
-				}
-				else if(CGL.m_isSpectator)
-				{
-					if(!m_onMinimap)
-					{
-						if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb) // due to legacy shenanigans in sabo teams are switched
-							hudMinimap->AddUnit(m_MinimapTagIconName, TeamID==0, false, GetPosition());
-						else
-							hudMinimap->AddUnit(m_MinimapTagIconName, TeamID==1, false, GetPosition());
-						m_onMinimap = true;
-					}
-				}
-				if(m_onMinimap)
-				{
-					bool visible = true;
-					if(CGL.localPlayer_)
-						visible = (CGL.localPlayer_->GetPosition()-GetPosition()).Length() < 100.0f;
-					hudMinimap->MoveUnit(m_MinimapTagIconName, GetPosition(), visible);		
-					float angle = 360.0f + GetRotationVector().x;
-					//angle = angle / 360.0f;
-					hudMinimap->RotateUnit(m_MinimapTagIconName, angle);
-				}
-			}
-		}
-	}
+	if(NetworkLocal)
+		UpdateActionUI();
 
 	return TRUE;
 }
 
-void obj_AI_Player::ProcessSpawnUAV()
-{
-	// can spawn UAV only one time per session
-	if(uavRequested_ == 1 || uavRequested_ == 2)
-	{
-		if(hudMain) hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_UAVOnline"));
-		return;
-	}
-	if(uavRequested_ == 3)
-	{
-		if(hudMain) hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_UAVOffline"));
-		return;
-	}
-	
-	// dont spawn UAV if no item
-	if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getItemID() != WeaponConfig::ITEMID_Cypher2) {
-		return;
-	}
-
-	r3d_assert(!uavRequested_);
-
-	r3dPoint3D pos;
-	if(!GetUAVSpawnPos(&pos))
-	{
-		if(hudMain) hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_NoUAVSpace"));
-		return;
-	}
-
-	uavRequested_ = 1;
-
-#ifndef FINAL_BUILD
-	if(g_bEditMode)
-	{
-		// spawn test uav in editor
-		GameObject* uav = srv_CreateGameObject("obj_UAV", "uav", pos);
-		uav->ownerID = GetSafeID();
-		uav->NetworkLocal = true;
-		uav->NetworkID    = 0x454444;
-		uavId_ = uav->GetSafeID();
-		return;
-	}
-#endif
-
-	r3d_assert(NetworkLocal);
-	PKT_C2C_PlayerUseItem_s n;
-	n.itemId  = WeaponConfig::ITEMID_Cypher2;
-	n.pos     = pos;
-	n.var1    = m_fPlayerRotationTarget;
-	p2pSendToHost(this, &n, sizeof(n), true);
-	return;
-}
-
-void obj_AI_Player::ToggleUAVView(bool force_disable)
-{
-	r3d_assert(NetworkLocal);
-	if(laserViewActive_)
-		return;
-	if(hudPause && hudPause->isActive())
-		return;
-
-	GameObject* uav = GameWorld().GetObject(uavId_);
-	if(uavViewActive_ || force_disable)
-	{
-		uavViewActive_ = false;
-		r_hud_filter_mode->SetInt(HUDFilter_Default);
-		if(uav) uav->ObjFlags &= ~OBJFLAG_DisableShadows;
-		if(uav) uav->ObjFlags &= ~OBJFLAG_SkipDraw;	// need that
-	} 
-	else if(uav)
-	{
-		uavViewActive_ = true;
-		r_hud_filter_mode->SetInt(HUDFilter_CameraDrone);
-		uav->ObjFlags |= OBJFLAG_DisableShadows;
-		uav->ObjFlags |= OBJFLAG_SkipDraw;	// need that, because camera is inside body
-	}
-}
-
-void obj_AI_Player::ToggleLaserView(bool force_disable)
-{
-	r3d_assert(NetworkLocal);
-	if(force_disable)
-		laserViewActive_ = false;
-	else
-	{
-		if(hudPause && hudPause->isActive())
-			return;
-
-		if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getItemID() == WeaponConfig::ITEMID_LLDR) 
-		{
-			if(!uavViewActive_)
-				laserViewActive_ = !laserViewActive_;
-		}
-		else
-			laserViewActive_ = false;
-	}
-}
-
-bool obj_AI_Player::GetUAVSpawnPos(r3dPoint3D* pos)
-{
-	r3dPoint3D uavPos = GetPosition() + GetvForw() * 1.0f;
-	uavPos.y += 4;
-
-	// loop 100m up to check if we can spawn uav
-	for(int i=0; i<100; i++)
-	{
-		// half sizes from obj_Uav mesh
-		float uavSizeX = 4.7f/2;
-		float uavBelowSpace = 3.0f;  // needed free meters below UAV
-		float uavTopSpace   = 10.0f; // needed free meters above UAV
-		
-		PxBoxGeometry bbox(uavSizeX, (uavBelowSpace+uavTopSpace)*0.5f, uavSizeX);
-		PxTransform pose(PxVec3(uavPos.x, uavPos.y+3.0f, uavPos.z), PxQuat(0,0,0,1));
-		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-		PxOverlapBuffer overlapHit;
-		if(!g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, filter))
-		{
-			*pos = uavPos;
-			return true;
-		}
-
-		uavPos.y += 1.0f;
-	}
-
-	*pos = uavPos;
-	return false;
-}
-
-float dist_Point_to_Line( const r3dPoint3D& p, const r3dPoint3D& l1, const r3dPoint3D& l2)
+float dist_Point_to_Line( const r3dPoint3D& p, const r3dPoint3D& l1, const r3dPoint3D& l2, bool clampToSegment=false)
 {
 	r3dVector v = l2 - l1;
 	r3dVector w = p - l1;
@@ -4735,12 +3655,225 @@ float dist_Point_to_Line( const r3dPoint3D& p, const r3dPoint3D& l1, const r3dPo
 	float c1 = w.Dot(v);
 	float c2 = v.Dot(v);
 	float b = c1 / c2;
+	if(clampToSegment)
+		b = R3D_CLAMP(b, 0.0f, 1.0f);
 
 	r3dPoint3D Pb = l1 + b * v;
 	return (p-Pb).Length();
 }
 
-void obj_AI_Player::AddBloodOnGround(const r3dPoint3D& posOfShot)
+void obj_Player::UpdateActionUI()
+{
+	R3DPROFILE_FUNCTION("UpdateActionUI");
+	r3d_assert(NetworkLocal);
+	if(hudMain==NULL || hudActionUI == NULL || hudPause == NULL ||
+	   hudAttm == NULL || hudGeneralStore == NULL || hudVault == NULL)
+		return;
+
+	if(hudMain->isChatInputActive())
+		return;
+	if(hudPause->isActive())
+		return;
+	if(hudAttm->isActive())
+		return;
+	if(hudGeneralStore->isActive())
+		return;
+	if(hudVault->isActive())
+		return;
+
+	if(bDead && hudActionUI->isActive())
+		hudActionUI->Deactivate();
+	if(bDead)
+		return;
+
+	float maxDist = g_camera_mode->GetInt()==2?3.0f:4.0f;
+
+	r3dVector forw = gCam.vPointTo;//GetvForw();
+	r3dVector searchStartLine = gCam;
+	r3dVector searchEndLine = searchStartLine + forw*maxDist;
+
+	// slow, need to rewrite
+	GameObject* dropObj = 0;
+	float distance = 999999999.0f;
+
+	float curTime = r3dGetTime();
+
+	bool selectHumans = false;
+	{
+		uint32_t wpnItemID = 0;
+		if(m_Weapons[m_SelectedWeapon])
+			wpnItemID = m_Weapons[m_SelectedWeapon]->getItemID();
+		selectHumans = wpnItemID==WeaponConfig::ITEMID_Antibiotics||wpnItemID==WeaponConfig::ITEMID_Bandages||wpnItemID==WeaponConfig::ITEMID_Bandages2||
+			wpnItemID==WeaponConfig::ITEMID_Painkillers||wpnItemID==WeaponConfig::ITEMID_ZombieRepellent||wpnItemID==WeaponConfig::ITEMID_C01Vaccine||
+			wpnItemID==WeaponConfig::ITEMID_C04Vaccine||wpnItemID==WeaponConfig::ITEMID_Medkit;
+		if(m_Weapons[m_SelectedWeapon])
+		{
+			wiInventoryItem wi = CurLoadout.Items[m_Weapons[m_SelectedWeapon]->m_BackpackIdx];
+			if(wi.quantity == 0)
+				selectHumans = false;
+		}
+	}
+
+/*	ObjectManager& GW = GameWorld();
+	for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
+	{
+		if(obj->isObjType(OBJTYPE_SharedUsableItem) || (obj->isObjType(OBJTYPE_Human)&&selectHumans&&obj!=this))
+		{
+			float d = dist_Point_to_Line(obj->GetBBoxWorld().Center(), searchStartLine, searchEndLine, true); 
+			if(distance > d)
+			{
+				if(obj->isObjType(OBJTYPE_SharedUsableItem))
+				{
+					 if(((SharedUsableItem*)obj)->m_lastPickupAttempt < curTime)
+					 {
+						 dropObj = obj;
+						 distance = d;
+					 }
+				}
+				else // human
+				{
+					dropObj = obj;
+					distance = d;
+				}
+			}
+		}
+	}*/
+	{
+		std::list<SharedUsableItem*>::iterator it;
+		for(it=m_SharedUsableItemList.begin(); it!=m_SharedUsableItemList.end(); ++it)
+		{
+			SharedUsableItem* obj = *it;
+			r3dPoint3D objCenter = obj->GetBBoxWorld().Center();
+			float d = dist_Point_to_Line(objCenter, searchStartLine, searchEndLine, true); 
+			if(distance > d)
+			{
+				// check dist to player
+				if((objCenter - GetPosition()).LengthSq() > (maxDist*maxDist))
+					continue;
+				// check if both player and camera are facing object
+				if((GetPosition()-objCenter).Dot(gCam-objCenter) < 0.0f) 
+					continue;
+				if(obj->m_lastPickupAttempt < curTime)
+				{
+					dropObj = obj;
+					distance = d;
+				}
+			}
+		}
+		if(selectHumans)
+		{
+			ClientGameLogic& CGL = gClientLogic();
+			for(int i=0; i<ClientGameLogic::MAX_NUM_PLAYERS; ++i)
+			{
+				obj_Player* plr = CGL.GetPlayer(i);
+				if(plr && plr != this)
+				{
+					float d = dist_Point_to_Line(plr->GetBBoxWorld().Center(), searchStartLine, searchEndLine, true); 
+					if(distance > d)
+					{
+						dropObj = plr;
+						distance = d;
+					}
+				}
+			}
+		}
+	}
+
+	static float pressedKeyTimer = 0.0f;
+	if(distance < 1.0f) // distance to ray. if more than 1, then it is outside of ray
+	{
+		// in case if you are standing right next to pile of objects, we need to re-init ui each time we pick different item from pile
+		static GameObject* prevHUDItem = NULL;
+		if(prevHUDItem != dropObj && hudActionUI->isActive())
+			hudActionUI->Deactivate();
+		prevHUDItem = dropObj;
+
+		if(!hudActionUI->isActive() )
+		{
+			hudActionUI->Activate();
+			
+			if(dropObj->isObjType(OBJTYPE_SharedUsableItem))
+				hudActionUI->setText(((SharedUsableItem*)dropObj)->m_ActionUI_Title, ((SharedUsableItem*)dropObj)->m_ActionUI_Msg, InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
+			else // human
+				hudActionUI->setText(L"USE ITEM", m_Weapons[m_SelectedWeapon]->getConfig()->m_StoreNameW, InputMappingMngr->getKeyName(r3dInputMappingMngr::KS_INTERACT));
+			hudActionUI->enableRegularBlock();
+		}
+		if(hudActionUI->isActive())
+		{
+			r3dPoint3D scrPos;
+			r3dProjectToScreen(dropObj->GetBBoxWorld().Center(), &scrPos);
+			hudActionUI->setScreenPos((int)scrPos.x, (int)scrPos.y);
+		}
+
+		if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_INTERACT))
+		{
+			hudActionUI->enableProgressBlock();
+			hudActionUI->setProgress(int(pressedKeyTimer*100));
+			pressedKeyTimer += r3dGetFrameTime();
+			// send request to pickup weapon
+			if(pressedKeyTimer > 1.0f) 
+			{
+				pressedKeyTimer = 0.0f;
+				if(dropObj->isObjType(OBJTYPE_SharedUsableItem))
+					((SharedUsableItem*)dropObj)->m_lastPickupAttempt = curTime+1.0f; // do not attempt to pick this item for 1 sec (wait for server)
+				// hack for notes
+				if(dropObj->Class->Name == "obj_Note" || dropObj->Class->Name == "obj_PermanentNote")
+				{
+					obj_Note* note = (obj_Note*)dropObj;
+					if(note->m_GotData) // do not send packet to server again
+					{
+						hudMain->showReadNote(note->m_Text.c_str());
+						hudActionUI->Deactivate();
+						return;
+					}
+				}
+
+				if(dropObj->isObjType(OBJTYPE_NPC))
+				{
+					((NPCObject*)dropObj)->OnAction();
+				}
+				else if(dropObj->isObjType(OBJTYPE_SharedUsableItem))
+				{
+					PKT_C2S_UseNetObject_s n;
+					n.spawnID = toP2pNetId(dropObj->GetNetworkID());
+					p2pSendToHost(gClientLogic().localPlayer_, &n, sizeof(n));
+				}
+				else // human
+				{
+					DWORD netID = dropObj->GetNetworkID();
+					wiInventoryItem& wi = CurLoadout.Items[m_Weapons[m_SelectedWeapon]->m_BackpackIdx];
+					localPlayer_UseItem(m_Weapons[m_SelectedWeapon]->m_BackpackIdx, m_Weapons[m_SelectedWeapon]->getItemID(), dropObj->GetPosition(), 0.0f, 0.0f, 0.0f, netID);
+					if(--wi.quantity <= 0) {
+						wi.Reset();
+						OnBackpackChanged(m_Weapons[m_SelectedWeapon]->m_BackpackIdx);
+					}
+					else
+					{
+						if(hudMain)
+							hudMain->updateSlotInfo(m_Weapons[m_SelectedWeapon]->m_BackpackIdx, wi.quantity);
+					}
+				}
+
+				hudActionUI->Deactivate();
+			}
+		}
+		else
+		{
+			hudActionUI->enableRegularBlock();
+			pressedKeyTimer = 0.0f;
+		}
+	}
+	else
+	{
+		if(hudActionUI->isActive())
+		{
+			hudActionUI->Deactivate();
+		}
+		pressedKeyTimer = 0.0f;
+	}
+}
+
+void obj_Player::AddBloodOnGround(const r3dPoint3D& posOfShot)
 {
 	{
 		r3dPoint3D blood_pos;
@@ -4749,9 +3882,9 @@ void obj_AI_Player::AddBloodOnGround(const r3dPoint3D& posOfShot)
 		{
 			PxRaycastHit hit;
 			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
-			if(g_pPhysicsWorld->raycastSingle(PxVec3(posOfShot.x, posOfShot.y, posOfShot.z), PxVec3(0, -1, 0), 10.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION|PxSceneQueryFlag::eNORMAL), hit, filter))
+			if(g_pPhysicsWorld->raycastSingle(PxVec3(posOfShot.x, posOfShot.y, posOfShot.z), PxVec3(0, -1, 0), 10.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL), hit, filter))
 			{
-				blood_pos = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
+				blood_pos = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
 				blood_norm = r3dPoint3D(hit.normal.x, hit.normal.y, hit.normal.z);
 				has_collision = true;
 			}
@@ -4772,64 +3905,17 @@ void obj_AI_Player::AddBloodOnGround(const r3dPoint3D& posOfShot)
 	}
 }
 
-void obj_AI_Player::setMinimapVisibleTimer(float time, bool force)
-{
-	const ClientGameLogic& CGL = gClientLogic();
-	if(CGL.localPlayer_ == 0)
-	{
-		m_fVisibleTimer = time;
-		return;
-	}
-	if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb)
-		return;
-
-	// detect only if within X meters
-	if((CGL.localPlayer_->GetPosition() - GetPosition()).Length() > CGL.localPlayer_->getMinimapDetectionFireRadius() && !force)
-		return;
-
-	float mod = 0;
-	// check for Recon Stealth Boost which will lower time you are visible on minimap by 4% for each level
-	/*if(m_Skills[1] == 1)
-		mod -= 5;
-	else if(m_Skills[1] == 2)
-		mod -= 10;
-	else if(m_Skills[1] == 3)
-		mod -= 15;
-	else if(m_Skills[1] == 4)
-		mod -= 20;
-	else if(m_Skills[1] == 5)
-		mod -= 25;*/
-	// check for tactician stealth detection
-	/*if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-	{
-		if(CGL.localPlayer_->m_Skills[6] == 3)
-			mod += 1;
-		else if(CGL.localPlayer_->m_Skills[6] == 4)
-			mod += 3;
-		else if(CGL.localPlayer_->m_Skills[6] == 5)
-			mod += 5;
-	}*/
-	time = time + mod;
-
-	if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-	{
-		if(CurLoadout.hasItem(AbilityConfig::AB_SilentStrike)) // silent strike, do not show this player on a map
-			return;
-	}
-	m_fVisibleTimer = time;
-}
-
-void obj_AI_Player::OnNetPacket(const PKT_S2C_MoveTeleport_s& n)
+void obj_Player::OnNetPacket(const PKT_S2C_MoveTeleport_s& n)
 {
 	TeleportPlayer(n.teleport_pos, "PlayerMoveTeleport");
 }
 
-void obj_AI_Player::OnNetPacket(const PKT_C2C_MoveSetCell_s& n)
+void obj_Player::OnNetPacket(const PKT_C2C_MoveSetCell_s& n)
 {
 	netMover.SetCell(n);
 }
 
-void obj_AI_Player::OnNetPacket(const PKT_C2C_MoveRel_s& n)
+void obj_Player::OnNetPacket(const PKT_C2C_MoveRel_s& n)
 {
 	const CNetCellMover::moveData_s& md = netMover.DecodeMove(n);
 	
@@ -4843,6 +3929,11 @@ void obj_AI_Player::OnNetPacket(const PKT_C2C_MoveRel_s& n)
 	bodyAdjust_y[1]         = md.bendAngle;
 	PlayerState             = (md.state & 0xF);
 	PlayerMoveDir           = (md.state >> 4) & 0xF;
+	
+	if(PlayerState == PLAYER_IDLE) {
+		// limit idle bend angle to some reasonable value in IDLE mode - by some reason animation look like crap when bending there.
+		bodyAdjust_y[1] = R3D_CLAMP(bodyAdjust_y[1], -0.4f, 0.4f);
+	}
 
 	// calc velocity to reach position on time for next update
 	r3dPoint3D vel = netMover.GetVelocityToNetTarget(
@@ -4853,13 +3944,13 @@ void obj_AI_Player::OnNetPacket(const PKT_C2C_MoveRel_s& n)
 	SetVelocity(vel);
 }
 
-void obj_AI_Player::OnNetPacket(const PKT_C2C_PlayerJump_s& n)
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerJump_s& n)
 {
 	uberAnim_->StartJump();
 	return;
 }
 
-void obj_AI_Player::ProcessRewardQueue()
+void obj_Player::ProcessRewardQueue()
 {
 	r3d_assert(NetworkLocal);
 	
@@ -4877,8 +3968,8 @@ void obj_AI_Player::ProcessRewardQueue()
 
 	if((n.ID & 0x8000) == 0)
 	{
-		GameStats.Score += n.HP;
-		GameStats.GD    += n.GD;
+		GameStats.XP += n.XP;
+		GameStats.GD += n.GD;
 	}
 	else
 	{
@@ -4886,6 +3977,9 @@ void obj_AI_Player::ProcessRewardQueue()
 		n.ID &= ~0x8000;
 	}
 	
+	if(!g_GameRewards) // can happen in server quickjoin from Main_Network
+		return;
+
 	const CGameRewards::rwd_s& rwd = g_GameRewards->GetRewardData(n.ID);
 
 	char rewardName[128] = "";	// localized reward name
@@ -4902,671 +3996,550 @@ void obj_AI_Player::ProcessRewardQueue()
 
 	// and always show some crap about that reward
 	const wchar_t* rewardString=gLangMngr.getString(rewardName);
-	if(n.ID == RWD_KillAtSpawn) // no reward message
-	{
-		hudMain->showSystemMessage(rewardString);
-	}
-	else
-	{
-		hudMain->ShowAchievementCustom(rewardString, "", iconName, "");
-	}
+//	hudMain->ShowAchievementCustom(rewardString, "", iconName, "");
 
-	hudMain->ShowScore(n.HP, 0, n.GD, GameStats.GD, GameStats.Score);
+//	hudMain->ShowScore(n.XP, 0, n.GD, GameStats.GD, GameStats.XP);
+
+	wchar_t tmpStr[64];
+	swprintf(tmpStr, 64, gLangMngr.getString("InfoMsg_XPAdded"), n.XP);
+	hudMain->showMessage(tmpStr);
 }
 
-void obj_AI_Player::OnNetPacket(const PKT_S2C_AddScore_s& n)
+void obj_Player::OnNetPacket(const PKT_S2C_AddScore_s& n)
 {
-	if(n.ID == RWD_Bomb_PlantBomb) // plant bomb
-		++numBombsPlanted;
-	if(n.ID == RWD_Bomb_DiffuseBomb) // diffuse bomb
-		++numBombsDiffused;
-	if(n.ID == RWD_Bomb_WinRound || n.ID == RWD_Bomb_WinRoundKills) // sabo won round
-		++numSaboRoundsWon;
-		
 	if(NetworkLocal)
 	{
 		rewards_.push_back(n);
 	}
 	else
 	{
-		GameStats.Score += n.HP;
-		GameStats.GD    += n.GD;
+		GameStats.XP += n.XP;
+		GameStats.GD += n.GD;
 	}
 }
 
-BOOL obj_AI_Player::OnNetReceive(DWORD EventID, const void* packetData, int packetSize)
+void obj_Player::OnNetPacket(const PKT_S2C_SetPlayerVitals_s& n)
 {
-	R3DPROFILE_FUNCTION("obj_AI_Player::OnNetReceive");
-	r3d_assert(!(ObjFlags & OBJFLAG_JustCreated)); // make sure that object was actually created before processing net commands
+	CurLoadout.Health = (float)n.Health;
+	CurLoadout.Thirst = (float)n.Thirst;
+	CurLoadout.Hunger = (float)n.Hunger;
+	CurLoadout.Toxic  = (float)n.Toxic;
+	
+	//if(NetworkLocal)
+	//	r3dOutToLog("My params: %.1f, %.1f, %.1f, %.1f\n", CurLoadout.Health, CurLoadout.Toxic, CurLoadout.Hunger, CurLoadout.Thirst);
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_SetPlayerLoadout_s& n)
+{
+	// only remote players can change loadout this way
+	if(NetworkLocal)
+		return;
+	
+	// create new loadout
+	wiCharDataFull slot = CurLoadout;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_WEAPON1 ].itemID = n.WeaponID0;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_WEAPON2 ].itemID = n.WeaponID1;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ITEM1   ].itemID = n.QuickSlot1;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ITEM2   ].itemID = n.QuickSlot2;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ITEM3   ].itemID = n.QuickSlot3;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ITEM4   ].itemID = n.QuickSlot4;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ARMOR   ].itemID = n.ArmorID;
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID = n.HeadGearID;
+	slot.BackpackID = n.BackpackID;
+
+	UpdateLoadoutSlot(slot);
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_SetPlayerAttachments_s& n)
+{
+	// only remote players can change loadout this way
+	if(NetworkLocal)
+		return;
+	
+	r3d_assert(n.wid == wiCharDataFull::CHAR_LOADOUT_WEAPON1 || n.wid == wiCharDataFull::CHAR_LOADOUT_WEAPON2);
+	Weapon* wpn = m_Weapons[n.wid];
+	if(!wpn) {
+		return;
+	}
+	
+	// set wpn attachment
+	CurLoadout.Attachment[n.wid].attachments[WPN_ATTM_MUZZLE]    = n.Attm.MuzzleID;
+	CurLoadout.Attachment[n.wid].attachments[WPN_ATTM_LEFT_RAIL] = n.Attm.LeftRailID;
+	wpn->setWeaponAttachmentsByIDs(CurLoadout.Attachment[n.wid].attachments);
+	
+	// workaround to enable flashlight particle (OnEquip will enable flashlight light)!
+	// also we assume that remote player can change attachment only for currently equipped weapon
+	wpn->OnUnequip();
+	wpn->OnEquip();
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_SetPlayerWorldFlags_s& n)
+{
+	CurLoadout.GameFlags = n.flags;
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerSwitchWeapon_s& n)
+{
+	r3d_assert(!NetworkLocal);
+
+	if(n.wid == 255)
+	{
+		switchToEmptyHands();
+		return;
+	}
+
+	r3d_assert(m_Weapons[n.wid]);
+			
+	if(m_Weapons[n.wid] == NULL)
+	{
+#ifndef FINAL_BUILD
+		// do not crash in public build
+		char plrUserName[64]; GetUserName(plrUserName);
+		r3dOutToLog("NET_DEBUG: %s tried to change to empty weapon slot %d", plrUserName, n.wid);
+#endif
+	}
+	else
+	{
+		uberAnim_->StopGrenadeAnimations();	// we now can switch weapon while grenade animation active, so need to abort
+
+		ChangeWeaponByIndex(n.wid);
+		SyncAnimation(true);
+	}
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerReadyGrenade_s& n)
+{
+	//r3dOutToLog("PKT_C2C_PlayerReadyGrenade\n");
+	m_SelectedWeapon = n.wid;
+	r3d_assert(m_SelectedWeapon>=0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER);
+	r3d_assert(m_Weapons[m_SelectedWeapon]);
+
+	uberAnim_->StartGrenadePinPullAnimation();
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerThrewGrenade_s& n)
+{
+	m_SelectedWeapon = n.debug_wid;
+	r3d_assert(m_SelectedWeapon>=0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER);
+	r3d_assert(m_Weapons[m_SelectedWeapon]);
+
+	D3DXMATRIX fireFrom ;
+	fireFrom = DrawRotMatrix ;
+
+	fireFrom._41 = n.fire_from.x ;
+	fireFrom._42 = n.fire_from.y ;
+	fireFrom._43 = n.fire_from.z ;
+
+	// get the weapon bone.  Fire requires it. 
+	D3DXMATRIX weaponBone = uberEquip_->getWeaponBone(GetSkeleton(),fireFrom);
+
+	// remove translation, the rotation is all we wanted for grenades.
+	weaponBone._41 = n.fire_from.x ;
+	weaponBone._42 = n.fire_from.y ;
+	weaponBone._43 = n.fire_from.z ;
+			
+	m_Weapons[m_SelectedWeapon]->Fire(n.fire_to, weaponBone, true, n.holding_delay, n.fire_from);
+
+	uberAnim_->StartGrenadeThrowAnimation();
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerReload_s& n)
+{
+	r3d_assert(!NetworkLocal);
+	
+	Weapon* wpn = m_Weapons[n.WeaponSlot];
+	if(!wpn) return;
+	
+	wpn->StartReloadSequence();
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerFired_s& n)
+{
+	m_SelectedWeapon = n.debug_wid;
+	r3d_assert(m_SelectedWeapon>=0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER);
+	r3d_assert(m_Weapons[m_SelectedWeapon]);
+
+	D3DXMATRIX fireFrom ;
+	fireFrom = DrawRotMatrix ;
+
+	fireFrom._41 = n.fire_from.x ;
+	fireFrom._42 = n.fire_from.y ;
+	fireFrom._43 = n.fire_from.z ;
+
+	// get the weapon bone.  Fire requires it. 
+	D3DXMATRIX weaponBone = uberEquip_->getWeaponBone(GetSkeleton(),fireFrom);
+
+	if( m_Weapons[m_SelectedWeapon]->getCategory() == storecat_GRENADE ) {
+		// remove translation, the rotation is all we wanted for grenades.
+		weaponBone._41 = n.fire_from.x ;
+		weaponBone._42 = n.fire_from.y ;
+		weaponBone._43 = n.fire_from.z ;
+	}
+			
+	m_Weapons[m_SelectedWeapon]->Fire(n.fire_to, weaponBone, n.execWeaponFire?true:false, n.holding_delay, n.fire_from);
+
+	uberAnim_->StartRecoilAnim();
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerHitNothing_s& n)
+{
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerHitStatic_s& n)
+{
+	r3d_assert(m_Weapons[m_SelectedWeapon]);
 
 	const ClientGameLogic& CGL = gClientLogic();
+
+	// create decal
+	if(n.decalIdx != 0 )
+	{
+		DecalParams params;
+		params.Dir	= n.hit_norm;
+		params.Pos	= n.hit_pos;
+		params.TypeID	= (uint32_t)(n.decalIdx) - 1;
+		if(params.TypeID >= 0 && params.TypeID < (int)g_pDecalChief->GetTypeCount())
+		{
+			g_pDecalChief->Add( params );
+		}
+		else
+		{
+			// some cheat or invalid data
+		}
+	}
+
+	// impact particle
+	if(n.particleIdx != 0)
+	{
+		uint32_t particleIdx = (uint32_t)(n.particleIdx) - 1;
+		if(particleIdx < ImpactParticleEntry::NumRegistered)
+		{
+			SpawnImpactParticle(particleIdx, n.hit_pos, n.hit_norm);
+		}
+		else
+		{
+			// some cheat or invalid data
+		}
+	}
+
+	if(GameObject* from = GameWorld().GetNetworkObject(n.FromID))
+	{
+		r3dPoint3D waterSplashPos;
+		extern bool TraceWater(const r3dPoint3D& start, const r3dPoint3D& finish, r3dPoint3D& waterSplashPos);
+		if( TraceWater( from->GetPosition(), n.hit_pos, waterSplashPos))
+		{	
+			extern void WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, float amount, int texIdx);
+			waterSplashPos.y -= 0.1f;
+			WaterSplash(waterSplashPos, 0.1f, 30.0f, 0.04f, 2);
+			}
+	}
+
+	// add impulse
+	GameObject* target = GameWorld().GetObjectByHash(n.hash_obj);
+	if(m_Weapons[m_SelectedWeapon]->isImmediateShooting() && target)
+		if(target->PhysicsObject)
+			target->PhysicsObject->AddImpulseAtPos(-n.hit_norm*m_Weapons[m_SelectedWeapon]->getAmmoSpeed()*m_Weapons[m_SelectedWeapon]->getAmmoMass()/150.0f, n.hit_pos);
+
+	// play near miss sound
+	if(m_Weapons[m_SelectedWeapon]->isImmediateShooting())
+	{
+		if(CGL.localPlayer_)
+		{
+			float dist = dist_Point_to_Line(CGL.localPlayer_->GetPosition(), GetPosition(), n.hit_pos);
+			if(dist < 5.0f && rand()%5==0)
+			{
+				static int bulletHitMissSoundID = -1;
+				if(bulletHitMissSoundID==-1)
+					bulletHitMissSoundID = SoundSys.GetEventIDByPath("Sounds/BulletHits/Miss");
+				SoundSys.PlayAndForget(bulletHitMissSoundID, CGL.localPlayer_->GetPosition());
+			}
+		}
+	}
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerHitStaticPierced_s& n)
+{
+	PKT_C2C_PlayerHitStatic_s n2;
+	r3d_assert(sizeof(n) == sizeof(n2));
+	memcpy(&n2, &n, sizeof(n));
+	OnNetPacket(n2);
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerHitDynamic_s& n)
+{
+	r3d_assert(m_Weapons[m_SelectedWeapon]);
+
+	r3dPoint3D dir = (GetPosition()-n.hit_pos).NormalizeTo();
+
+	GameObject* target = GameWorld().GetNetworkObject(n.targetId);
+	if(!target) // current player doesn't see target
+		return;
+
+	const ClientGameLogic& CGL = gClientLogic();
+
+	// if we hit local player, display hit effect
+	if(target->isObjType(OBJTYPE_Human))
+	{
+		AddBloodOnGround(n.hit_pos);
+		SpawnImpactParticle(r3dHash::MakeHash("player"), r3dHash::MakeHash(m_Weapons[m_SelectedWeapon]->getDecalSource()), n.hit_pos, dir);
+
+		if(target->NetworkLocal == false || CGL.localPlayer_==NULL) 
+			return;
+
+		// if hit local player
+		extern void TPSGameHUD_AddHitEffect(GameObject* from);
+		TPSGameHUD_AddHitEffect(this);
+	}
+	else if(target->isObjType(OBJTYPE_Zombie))
+	{
+		// hit zombie
+		AddBloodOnGround(n.hit_pos);
+		SpawnImpactParticle(r3dHash::MakeHash("zombie"), r3dHash::MakeHash(m_Weapons[m_SelectedWeapon]->getDecalSource()), n.hit_pos, dir);
+		
+		obj_Zombie* z = (obj_Zombie*)target;
+
+		// apply ragdoll force from object position, or up if too close
+		r3dPoint3D zragHitPos = z->GetPosition();
+		r3dPoint3D zlastTimeHitForce = r3dPoint3D(0, 1, 0);
+		if(n.hit_body_bone < GetSkeleton()->NumBones) // zombies use same skeleton as player
+			zragHitPos = uberEquip_->getBonePos(n.hit_body_bone, GetSkeleton(), z->GetTransformMatrix());
+		if((zragHitPos - this->GetPosition()).LengthSq() > 0.001f)
+			zlastTimeHitForce = (zragHitPos - this->GetPosition()).NormalizeTo();
+
+		z->lastTimeHitPos  = zlastTimeHitForce;
+		z->lastTimeDmgType = m_Weapons[m_SelectedWeapon]->getCategory();
+		z->lastTimeHitBoneID = n.hit_body_bone;
+		z->PlayHurtSound();
+	}
+	else // hit something else, for now that is UAV only
+	{
+		SpawnImpactParticle(r3dHash::MakeHash("Metal"),r3dHash::MakeHash(m_Weapons[m_SelectedWeapon]->getDecalSource()), n.hit_pos, dir);
+	}
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_SpawnExplosion_s& n)
+{
+	GameObject* from = GameWorld().GetNetworkObject(n.FromID);
+	if(from)
+	{
+		// add decal
+		DecalParams params;
+		params.Dir		= r3dPoint3D(0,1,0);
+		params.Pos		= from->GetPosition();
+		params.TypeID	= GetDecalID( r3dHash::MakeHash(""), r3dHash::MakeHash("grenade") );
+		if( params.TypeID != INVALID_DECAL_ID )
+			g_pDecalChief->Add( params );
+		SpawnImpactParticle(r3dHash::MakeHash(""), r3dHash::MakeHash("grenade"), from->GetPosition(), r3dPoint3D(0,1,0));
+
+		//	Start radial blur effect
+		gExplosionVisualController.AddExplosion(from->GetPosition(), n.radius);
+	}
+}
+
+void obj_Player::OnNetPacket(const PKT_C2C_PlayerUseItem_s& n)
+{
+	// assumption: current weapon is set to whatever player is about to use so just play it's animation.
+	if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->isUsableItem())
+		uberAnim_->StartShootAnim();
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_PlayerUsedItemAns_s& n)
+{
+	// ptumik: server isn't sending this packet atm
+	/*if(n.itemId == WeaponConfig::ITEMID_Bandages || n.itemId == WeaponConfig::ITEMID_Bandages2 || n.itemId == WeaponConfig::ITEMID_MedKit)
+	{
+		m_BandagesEffectTime = r3dGetTime() + 0.5f;
+	}*/
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_BackpackAddNew_s& n)
+{
+	// NOTE: only for local players
+	r3d_assert(NetworkLocal);
+	
+	if(n.Item.itemID == 'GOLD')
+	{
+		gUserProfile.ProfileData.GameDollars += n.Item.quantity;
+		wchar_t tmpStr[64];
+		swprintf(tmpStr, 64, gLangMngr.getString("InfoMsg_DollarsPickedUp"), n.Item.quantity);
+		hudMain->showMessage(tmpStr);
+		return;
+	}
+	
+	r3d_assert(CurLoadout.Items[n.SlotTo].itemID == 0);
+	CurLoadout.Items[n.SlotTo] = n.Item;
+	
+	OnBackpackChanged(n.SlotTo);
+	
+	hudMain->showMessage(gLangMngr.getString("InfoMsg_NewItemAdded"));
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_BackpackModify_s& n)
+{
+	// NOTE: only for local players
+	r3d_assert(NetworkLocal);
+	
+	if(n.SlotTo == 0xFF)
+	{
+		hudMain->showMessage(gLangMngr.getString("InfoMsg_NoFreeBackpackSlots"));
+		return;
+	}
+
+	if(n.SlotTo == 0xFE)
+	{
+		hudMain->showMessage(gLangMngr.getString("InfoMsg_TooMuchWeight"));
+		return;
+	}
+
+	r3d_assert(n.SlotTo < wiCharDataFull::CHAR_MAX_BACKPACK_SIZE);
+	wiInventoryItem& wi = CurLoadout.Items[n.SlotTo];
+	r3d_assert(wi.itemID == n.dbg_ItemID);
+
+	if(wi.quantity < n.Quantity)
+		hudMain->showMessage(gLangMngr.getString("InfoMsg_ItemAdded"));
+	else
+		hudMain->showMessage(gLangMngr.getString("InfoMsg_ItemRemoved"));
+
+	wi.quantity = n.Quantity;
+	if(wi.quantity <= 0)
+		wi.Reset();
+	
+	OnBackpackChanged(n.SlotTo);
+}
+
+void obj_Player::OnNetPacket(const PKT_S2C_SetPlayerReputation_s& n)
+{
+	if (NetworkLocal && hudMain)
+	{
+		const int diff = n.reputation - CurLoadout.Stats.Reputation;
+		if (diff > 0)
+		{
+			wchar_t tmpStr[64];
+			swprintf(tmpStr, 64, gLangMngr.getString("InfoMsg_ReputationAdded"), diff);
+			hudMain->showMessage(tmpStr);
+		}
+	}
+	CurLoadout.Stats.Reputation = n.reputation;
+}
+
+BOOL obj_Player::OnNetReceive(DWORD EventID, const void* packetData, int packetSize)
+{
+	R3DPROFILE_FUNCTION("obj_Player::OnNetReceive");
+	r3d_assert(!(ObjFlags & OBJFLAG_JustCreated)); // make sure that object was actually created before processing net commands
+
+#undef DEFINE_GAMEOBJ_PACKET_HANDLER
+#define DEFINE_GAMEOBJ_PACKET_HANDLER(xxx) \
+	case xxx: { \
+		const xxx##_s&n = *(xxx##_s*)packetData; \
+		r3d_assert(packetSize == sizeof(n)); \
+		OnNetPacket(n); \
+		return TRUE; \
+	}
 
 	switch(EventID)
 	{
 	default: return FALSE;
-	case PKT_S2C_TeamSwitchError:
-		{
-			const PKT_S2C_TeamSwitchError_s& n = *(PKT_S2C_TeamSwitchError_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			r3d_assert(NetworkLocal); // should come only to local player
-			if(NetworkLocal)
-			{
-				switch(n.errorType)
-				{
-				case PKT_S2C_TeamSwitchError_s::ERR_TOO_EARLY:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_TeamSwitch_TooEarly"));
-					break;
-				case PKT_S2C_TeamSwitchError_s::ERR_ALMOST_FINISHED:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_TeamSwitch_AlmostFinished"));
-					break;
-				case PKT_S2C_TeamSwitchError_s::ERR_JOINING_WINNING_TEAM:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_TeamSwitch_WinTeam"));
-					break;
-				case PKT_S2C_TeamSwitchError_s::ERR_JOINING_TEAM_WITH_MORE_PLAYERS:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_TeamSwitch_MorePlayers"));
-					break;
-					
-				// special rebalancing codes, server will kill player after it
-				case PKT_S2C_TeamSwitchError_s::OK_MOVED_TEAM0:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_MovedToOppositeTeam"));
-					TeamID = 0;
-					break;
-				case PKT_S2C_TeamSwitchError_s::OK_MOVED_TEAM1:
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_MovedToOppositeTeam"));
-					TeamID = 1;
-					break;
-					
-				default:
-					r3d_assert(false);
-					break;
-				}
-			}
-			break;
-		}
-	case PKT_S2C_WeaponPickedUp:
-		{
-			const PKT_S2C_WeaponPickedUp_s& n = *(PKT_S2C_WeaponPickedUp_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			r3d_assert(NetworkLocal);
-
-			// change our current weapon to the new one, depending on which slot it is gonna go
-			WeaponConfig* wpn = const_cast<WeaponConfig*>(gWeaponArmory.getWeaponConfig(n.itemID));
-			if(wpn==NULL)
-			{
-				r3dOutToLog("Unknown weapon received from server, %d\n", n.itemID);
-				break;
-			}
-
-			// update weapon data
-			wpn->copyParametersFrom(n.wi);
-
-			bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
-
-			STORE_CATEGORIES cat = wpn->category;
-			// primary slot
-			if(cat == storecat_ASR || cat == storecat_SNP || cat == storecat_MG)
-			{
-				SAFE_DELETE(m_Weapons[0]);
-				m_Weapons[0] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-				m_Weapons[0]->setWeaponAttachmentsByIDs(n.attms.attachments);
-			}
-			else if(cat == storecat_SUPPORT || cat == storecat_SHTG || cat == storecat_SMG)
-			{
-				SAFE_DELETE(m_Weapons[1]);
-				m_Weapons[1] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-				m_Weapons[1]->setWeaponAttachmentsByIDs(n.attms.attachments);
-			}
-			else if(cat == storecat_HG)
-			{
-				SAFE_DELETE(m_Weapons[2]);
-				m_Weapons[2] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-				m_Weapons[2]->setWeaponAttachmentsByIDs(n.attms.attachments);
-			}
-			else
-			{
-				r3dOutToLog("Non pick able weapon rcvd from server, %d, %d\n", n.itemID, cat);
-				break;
-			}
-
-			// update UI
-			updateWeaponUI();
-
-			UpdateCharWeaponMeshes();
-
-			m_Loaded = false; // force check for loaded meshes, so that new weapon will load it's skeleton once mesh was loaded
-
-			// send confirm to server
-			PKT_C2C_ConfirmWeaponPickup_s confirm;
-			confirm.secretCode = n.secretCode;
-			confirm.itemID = n.itemID;
-			p2pSendToHost(this, &confirm, sizeof(confirm));
-		}
-		break;
-	case PKT_C2C_ConfirmWeaponPickup:
-		{
-			const PKT_C2C_ConfirmWeaponPickup_s& n = *(PKT_C2C_ConfirmWeaponPickup_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			r3d_assert(!NetworkLocal);
-
-			// change our current weapon to the new one, depending on which slot it is gonna go
-			const WeaponConfig* wpn = gWeaponArmory.getWeaponConfig(n.itemID);
-			if(wpn==NULL)
-			{
-				r3dOutToLog("Unknown weapon received from server (confirm), %d\n", n.itemID);
-				break;
-			}
-
-			bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
-
-			STORE_CATEGORIES cat = wpn->category;
-			// primary slot
-			if(cat == storecat_ASR || cat == storecat_SNP || cat == storecat_MG)
-			{
-				SAFE_DELETE(m_Weapons[0]);
-				m_Weapons[0] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-			}
-			else if(cat == storecat_SUPPORT || cat == storecat_SHTG || cat == storecat_SMG)
-			{
-				SAFE_DELETE(m_Weapons[1]);
-				m_Weapons[1] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-			}
-			else if(cat == storecat_HG)
-			{
-				SAFE_DELETE(m_Weapons[2]);
-				m_Weapons[2] = gWeaponArmory.createWeapon(n.itemID, this, isFirstPerson, true);
-			}
-			else
-			{
-				r3dOutToLog("Non pick able weapon rcvd from server (confirm), %d, %d\n", n.itemID, cat);
-				break;
-			}
-			UpdateCharWeaponMeshes();
-		}
-		break;
-	case PKT_S2C_LootBoxPickedUp:
-		{
-			const PKT_S2C_LootBoxPickedUp_s& n = *(PKT_S2C_LootBoxPickedUp_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			r3d_assert(NetworkLocal);
-
-			++numLootBoxesPickedup;
-
-			// show message
-			const ItemConfig* ic = gWeaponArmory.getItemConfig(n.itemID);
-			if(ic)
-				hudMain->ShowLootDropMsg(ic->m_StoreNameW, ic->m_StoreIcon);
-		}
-		break;
-
-	case PKT_S2C_MoveTeleport:
-		{
-			const PKT_S2C_MoveTeleport_s& n = *(PKT_S2C_MoveTeleport_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			OnNetPacket(n);
-			break;
-		}
-	case PKT_C2C_MoveSetCell:
-		{
-			const PKT_C2C_MoveSetCell_s& n = *(PKT_C2C_MoveSetCell_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			OnNetPacket(n);
-			break;
-		}
-	case PKT_C2C_MoveRel:
-		{
-			const PKT_C2C_MoveRel_s& n = *(PKT_C2C_MoveRel_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			OnNetPacket(n);
-			break;
-		}
-
-	case PKT_C2C_PlayerJump:
-		{
-			const PKT_C2C_PlayerJump_s& n = *(PKT_C2C_PlayerJump_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			OnNetPacket(n);
-			break;
-		}
-		
-	case PKT_C2C_PlayerSwitchWeapon:
-		{
-			const PKT_C2C_PlayerSwitchWeapon_s& n = *(PKT_C2C_PlayerSwitchWeapon_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			r3d_assert(!NetworkLocal);
-			r3d_assert(m_Weapons[n.wid]);
-			
-			if(m_Weapons[n.wid] == NULL)
-			{
-				// do not crash in public build
-				char plrUserName[64]; GetUserName(plrUserName);
-#ifndef FINAL_BUILD
-				r3dOutToLog("NET_DEBUG: %s tried to change to empty weapon slot %d", plrUserName, n.wid);
-#endif
-			}
-			else
-			{
-				uberAnim_->StopGrenadeAnimations();	// we now can switch weapon while grenade animation active, so need to abort
-
-				ChangeWeaponByIndex(n.wid);
-				SyncAnimation(true);
-			}
-			break;
-		}
-
-	case PKT_C2C_PlayerReadyGrenade:
-		{
-			//r3dOutToLog("PKT_C2C_PlayerReadyGrenade\n");
-			const PKT_C2C_PlayerReadyGrenade_s& n = *(PKT_C2C_PlayerReadyGrenade_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			m_SelectedWeapon = n.wid;
-			r3d_assert(m_Weapons[m_SelectedWeapon]);
-
-			uberAnim_->StartGrenadePinPullAnimation();
-			break;
-		}
-	case PKT_C2C_PlayerFired:
-		{
-			//r3dOutToLog("PKT_C2C_PlayerFired\n");
-			const PKT_C2C_PlayerFired_s& n = *(PKT_C2C_PlayerFired_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			m_SelectedWeapon = n.debug_wid;
-			r3d_assert(m_Weapons[m_SelectedWeapon]);
-
-			D3DXMATRIX fireFrom ;
-
-			fireFrom = DrawRotMatrix ;
-
-			fireFrom._41 = n.fire_from.x ;
-			fireFrom._42 = n.fire_from.y ;
-			fireFrom._43 = n.fire_from.z ;
-
-			// get the weapon bone.  Fire requires it. 
-			D3DXMATRIX weaponBone = uberEquip_->getWeaponBone(GetSkeleton(),fireFrom);
-
-			if( m_Weapons[m_SelectedWeapon]->getCategory() == storecat_GRENADES ) {
-
-				// bash back the translation, the rotation is all we wanted for grenades.
-				weaponBone._41 = n.fire_from.x ;
-				weaponBone._42 = n.fire_from.y ;
-				weaponBone._43 = n.fire_from.z ;
-			}
-			
-			m_Weapons[m_SelectedWeapon]->Fire(n.fire_to, weaponBone, n.holding_delay, n.fire_from);
-
-			int muzzleAttm = m_Weapons[m_SelectedWeapon]->getWeaponAttachmentID(WPN_ATTM_MUZZLE);
-			if(muzzleAttm != 400013 && muzzleAttm != 400125) // if using silencer - do not show up on minimap at all
-			{
-				float timeToShow = m_Weapons[m_SelectedWeapon]->getCategory()==storecat_SNP?GPP->c_fMinimapEnemyShootVisibleTimerSniper:GPP->c_fMinimapEnemyShootVisibleTimer;
-				if(muzzleAttm == 400012)
-					timeToShow *= 0.5f; // half time if using flash hider
-				setMinimapVisibleTimer(timeToShow, m_Weapons[m_SelectedWeapon]->getCategory()==storecat_SNP); // sniper ALWAYS show up on minimap (Sergey's request)
-			}
-
-			if(m_Weapons[m_SelectedWeapon]->isGrenadeOrMineAnim())
-				uberAnim_->StartGrenadeThrowAnimation();
-			else
-				uberAnim_->StartRecoilAnim();
-
-			break;
-		}
-	case PKT_C2C_PlayerUseItem:
-		{
-			const PKT_C2C_PlayerUseItem_s& n = *(PKT_C2C_PlayerUseItem_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			// assumption: current weapon is set to whatever player is about to use so just play it's animation.
-			if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->isUsableItem() && 
-				m_Weapons[m_SelectedWeapon]->getItemID() != WeaponConfig::ITEMID_Cypher2 && 
-				m_Weapons[m_SelectedWeapon]->getItemID() != WeaponConfig::ITEMID_LLDR)
-				uberAnim_->StartShootAnim();
-		}
-		break;
-	case PKT_S2C_PlayerUsedItemAns:
-		{
-			const PKT_S2C_PlayerUsedItemAns_s& n = *(PKT_S2C_PlayerUsedItemAns_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			// simulate what server does
-			if(n.itemId == WeaponConfig::ITEMID_Bandages || n.itemId == WeaponConfig::ITEMID_Bandages2)
-			{
-				m_Health = m_Health + getMaxHealth()*n.var1;
-				m_Health = R3D_MIN(m_Health.get(), getMaxHealth());
-				m_BandagesEffectTime = r3dGetTime() + 0.5f;
-			}
-			else if(n.itemId == WeaponConfig::ITEMID_AdrenalineShot || n.itemId == WeaponConfig::ITEMID_EpinephrineShot)
-			{
-				m_SpeedBoost = n.var1;
-				m_SpeedBoostTime = r3dGetTime() + n.var2;
-				m_BandagesEffectTime = r3dGetTime() + 0.5f;
-			}
-			else if(n.itemId == WeaponConfig::ITEMID_MorphineShot || n.itemId == WeaponConfig::ITEMID_MethylmorphineShot)
-			{
-				m_MorhineShotTime = r3dGetTime() + n.var1;
-				m_BandagesEffectTime = r3dGetTime() + 0.5f;
-			}
-		}
-		break;
-
-	case PKT_C2C_PlayerHitNothing:
-		{
-			break; 
-		}
-	case PKT_C2C_PlayerHitStatic:
-	case PKT_C2C_PlayerHitStaticPierced:
-		{
-			const PKT_C2C_PlayerHitStatic_s& n = *(PKT_C2C_PlayerHitStatic_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			r3d_assert(m_Weapons[m_SelectedWeapon]);
-
-			// create decal
-			if(n.decalIdx != 0 )
-			{
-				DecalParams params;
-				params.Dir	= n.hit_norm;
-				params.Pos	= n.hit_pos;
-				params.TypeID	= (uint32_t)(n.decalIdx) - 1;
-				if(params.TypeID >= 0 && params.TypeID < (int)g_pDecalChief->GetTypeCount())
-				{
-					g_pDecalChief->Add( params );
-				}
-				else
-				{
-					// some cheat or invalid data
-				}
-			}
-
-			// impact particle
-			if(n.particleIdx != 0)
-			{
-				uint32_t particleIdx = (uint32_t)(n.particleIdx) - 1;
-				if(particleIdx < ImpactParticleEntry::NumRegistered)
-				{
-					SpawnImpactParticle(particleIdx, n.hit_pos, n.hit_norm);
-				}
-				else
-				{
-					// some cheat or invalid data
-				}
-			}
-
-			{
-				if(GameObject* from = GameWorld().GetNetworkObject(n.FromID))
-				{
-					r3dPoint3D waterSplashPos;
-					extern bool TraceWater(const r3dPoint3D& start, const r3dPoint3D& finish, r3dPoint3D& waterSplashPos);
-					if( TraceWater( from->GetPosition(), n.hit_pos, waterSplashPos))
-					{	
-						extern void WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, float amount, int texIdx);
-						waterSplashPos.y -= 0.1f;
-						WaterSplash(waterSplashPos, 0.1f, 30.0f, 0.04f, 2);
-					}
-				}
-			}
-
-			// add impulse
-			GameObject* target = GameWorld().GetObjectByHash(n.hash_obj);
-			if(m_Weapons[m_SelectedWeapon]->isImmediateShooting() && target)
-				if(target->PhysicsObject)
-					target->PhysicsObject->AddImpulseAtPos(-n.hit_norm*m_Weapons[m_SelectedWeapon]->getAmmoSpeed()*m_Weapons[m_SelectedWeapon]->getAmmoMass()/150.0f, n.hit_pos);
-
-			// play near miss sound
-			if(m_Weapons[m_SelectedWeapon]->isImmediateShooting())
-			{
-				if(CGL.localPlayer_)
-				{
-					float dist = dist_Point_to_Line(CGL.localPlayer_->GetPosition(), GetPosition(), n.hit_pos);
-					if(dist < 5.0f && rand()%5==0)
-					{
-						static int bulletHitMissSoundID = -1;
-						if(bulletHitMissSoundID==-1)
-							bulletHitMissSoundID = SoundSys.GetEventIDByPath("Sounds/BulletHits/Miss");
-						snd_PlaySound(bulletHitMissSoundID, CGL.localPlayer_->GetPosition());
-					}
-				}
-			}
-
-			break;
-		}
-
-	case PKT_C2C_PlayerHitDynamic:
-		{
-			const PKT_C2C_PlayerHitDynamic_s& n = *(PKT_C2C_PlayerHitDynamic_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			r3d_assert(m_Weapons[m_SelectedWeapon]);
-
-			r3dPoint3D dir = (GetPosition()-n.hit_pos).NormalizeTo();
-
-			GameObject* target = GameWorld().GetNetworkObject(n.targetId);
-			if(!target) 
-			{
-				r3d_assert(target);
-				break;
-			}
-
-			// if we hit local player, display hit effect
-			if(target->isObjType(OBJTYPE_Human))
-			{
-				if(!(CGL.m_gameInfo.friendlyFire == 0 && (TeamID == ((obj_AI_Player*)target)->TeamID)))
-				{
-					AddBloodOnGround(n.hit_pos);
-					SpawnImpactParticle(r3dHash::MakeHash("player"), r3dHash::MakeHash(m_Weapons[m_SelectedWeapon]->getDecalSource()), n.hit_pos, dir);
-				}
-
-				if(target->NetworkLocal == false || CGL.localPlayer_==NULL) 
-					break;
-
-				// if hit local player
-				extern void TPSGameHUD_AddHitEffect(GameObject* from);
-				if(!(CGL.m_gameInfo.friendlyFire == 0 && (TeamID == ((obj_AI_Player*)target)->TeamID)))
-					TPSGameHUD_AddHitEffect(this);
-
-			}
-			else // hit something else, for now that is UAV only
-			{
-				SpawnImpactParticle(r3dHash::MakeHash("Metal"),r3dHash::MakeHash(m_Weapons[m_SelectedWeapon]->getDecalSource()), n.hit_pos, dir);
-			}
-
-			break;
-		}
-
-	case PKT_S2C_ResupplyPlayer:
-		{
-			//r3dOutToLog("PKT_S2C_ResupplyPlayer\n");
-			const PKT_S2C_ResupplyPlayer_s& n = *(PKT_S2C_ResupplyPlayer_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			if(n.result==1)
-			{
-				for(int i=0; i<NUM_WEAPONS_ON_PLAYER; ++i)
-				{
-					if(m_Weapons[i])
-						m_Weapons[i]->Resupply();
-				}
-	
-				static int resupplySoundID = -1;
-				if(resupplySoundID==-1)
-					resupplySoundID = SoundSys.GetEventIDByPath("Sounds/Misc/Resupply");
-				// play resupply sound
-				snd_PlaySound(resupplySoundID, GetPosition());
-			}
-			else if(NetworkLocal) // show message
-			{	
-				if(n.result ==2)
-				{
-					wchar_t tempBuf[256];
-					swprintf(tempBuf, 256, gLangMngr.getString("$HUD_Msg_TimeUntilResupply"), n.timeLeft);
-					hudMain->AddMessage(tempBuf);
-				}
-				else if(n.result ==3)
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_ResupplyTooFarAway"));
-				else if(n.result == 4)
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_NeedBlackOpsKey"));
-				else
-					hudMain->AddMessage(gLangMngr.getString("$HUD_Msg_FailedResupply"));
-			}
-
-			break;
-		}
-	
-	case PKT_S2C_AddScore:
-		{
-			const PKT_S2C_AddScore_s& n = *(PKT_S2C_AddScore_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			OnNetPacket(n);
-			break;
-		}
-		
-	case PKT_S2C_SetPlayerScore:
-		{
-			const PKT_S2C_SetPlayerScore_s& n = *(PKT_S2C_SetPlayerScore_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			GameStats.Score = n.score;
-			GameStats.Kills = n.kills;
-			GameStats.Deaths = n.deaths;
-
-			// mark all queued rewards as already added to score
-			for(size_t i=0, e=rewards_.size(); i<e; i++)
-				rewards_[i].ID |= 0x8000;
-
-			break;
-		}
-
-	case PKT_S2C_UnlockAchievement:
-		{
-			const PKT_S2C_UnlockAchievement_s& n = *(PKT_S2C_UnlockAchievement_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-			
-			TPSGameHud_UnlockAchievement( n.achiIdx );
-			break;
-		}
-
-	case PKT_S2C_BerserkerAbility:
-		{
-			const PKT_S2C_BerserkerAbility_s& n = *(PKT_S2C_BerserkerAbility_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			m_BerserkerTime = n.time;
-			m_AuraType = AT_BERSERK;
-			break;
-		}
-	case PKT_S2C_BigSurpriseAbility:
-		{
-			const PKT_S2C_BigSurpriseAbility_s& n = *(PKT_S2C_BigSurpriseAbility_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-
-			/*GameObject* from = GameWorld().GetNetworkObject(n.FromID);
-			if(from)
-			{
-				static int bigSurpriseAbilitySoundID = -1;
-				if(bigSurpriseAbilitySoundID==-1)
-					bigSurpriseAbilitySoundID = SoundSys.GetEventIDByPath("Sounds/Misc/BigSurpriseAbility");
-				snd_PlaySound(bigSurpriseAbilitySoundID, from->GetPosition());
-			}*/
-			
-			break;
-		}
-	case PKT_S2C_SpawnExplosion:
-		{
-			const PKT_S2C_SpawnExplosion_s& n = *(PKT_S2C_SpawnExplosion_s*)packetData;
-			r3d_assert(packetSize == sizeof(n));
-		
-
-			GameObject* from = GameWorld().GetNetworkObject(n.FromID);
-			if(from)
-			{
-				// add decal
-				DecalParams params;
-				params.Dir		= r3dPoint3D(0,1,0);
-				params.Pos		= from->GetPosition();
-				params.TypeID	= GetDecalID( r3dHash::MakeHash(""), r3dHash::MakeHash("grenade") );
-				if( params.TypeID != INVALID_DECAL_ID )
-					g_pDecalChief->Add( params );
-				SpawnImpactParticle(r3dHash::MakeHash(""), r3dHash::MakeHash("grenade"), from->GetPosition(), r3dPoint3D(0,1,0));
-
-				//	Start radial blur effect
-				gExplosionVisualController.AddExplosion(from->GetPosition(), n.radius);
-			}
-			break;
-		}
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_MoveTeleport);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_MoveSetCell);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_MoveRel);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerJump);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_AddScore);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SetPlayerVitals);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SetPlayerLoadout);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SetPlayerAttachments);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SetPlayerWorldFlags);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerSwitchWeapon);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerReadyGrenade);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerThrewGrenade);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerReload);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerFired);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerHitNothing);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerHitStatic);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerHitStaticPierced);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerHitDynamic);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SpawnExplosion);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_C2C_PlayerUseItem);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_PlayerUsedItemAns);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_BackpackAddNew);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_BackpackModify);
+		DEFINE_GAMEOBJ_PACKET_HANDLER(PKT_S2C_SetPlayerReputation);
 	}
 
 	return TRUE;
 }
 
-bool obj_AI_Player::hasScopeMode() const 
+bool obj_Player::hasScopeMode() const 
 {
 	if(bDead)
 		return false;
+	if(forcedEmptyHands)
+		return false;
 
-	return (m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->hasScopeMode(uberEquip_->isFirstPerson)) || laserViewActive_; 
+	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
+	return (m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->hasScopeMode(isFirstPerson)); 
 }
 
-bool obj_AI_Player::hasScopeMode_hidePlayerModel() const 
+bool obj_Player::hasScopeMode_hidePlayerModel() const 
 {
-	if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getScopeConfig(uberEquip_->isFirstPerson))
-		return m_Weapons[m_SelectedWeapon]->getScopeConfig(uberEquip_->isFirstPerson)->hide_player_model;
+	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
+	if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getScopeConfig(isFirstPerson))
+		return m_Weapons[m_SelectedWeapon]->getScopeConfig(isFirstPerson)->hide_player_model;
 	
 	return false;
 }
 
-void obj_AI_Player::DrawReticle()
+void obj_Player::DrawReticle()
 {
 	if(!NetworkLocal)
 		return;
 	
 	g_RenderScopeEffect = 0;
 	
-	if(bDead || gClientLogic().gameFinished_ || uavViewActive_ || laserViewActive_ || m_Weapons[m_SelectedWeapon] == NULL)
+	if(bDead || gClientLogic().disconnectStatus_ || (m_Weapons[m_SelectedWeapon] == NULL && !(r_hud_filter_mode->GetInt()==HUDFilter_NightVision)))
 	{
 		CurrentRig.allowScope = false; // to make sure that scope will not be rendered when you are dead
 		g_ScopeFeedbackTimer = 0.0f;
 		return;
 	}
-	
+
+	bool isFirstPerson = g_camera_mode->GetInt()==2 && NetworkLocal;
 	r3dRenderer->SetRenderingMode(R3D_BLEND_PUSH|R3D_BLEND_NZ|R3D_BLEND_ALPHA);
-	const ScopeConfig* scopeConfig = m_Weapons[m_SelectedWeapon]->getScopeConfig(uberEquip_->isFirstPerson);
-	r3d_assert(scopeConfig);
+
 	float cx = r3dRenderer->ScreenW/2;
 	float cy = r3dRenderer->ScreenH/2;
 	float cy2 = r3dRenderer->ScreenH*0.32f;
 
 	// draw laser pointer if any
-	if(PlayerState != PLAYER_MOVE_SPRINT && !m_Weapons[m_SelectedWeapon]->isReloading() && g_camera_mode->GetInt() == 2)
+	if(m_Weapons[m_SelectedWeapon] && !forcedEmptyHands)
 	{
-		r3dPoint3D laserPos;
-		if(m_Weapons[m_SelectedWeapon]->hasLaserPointer(laserPos))
+		if(PlayerState != PLAYER_MOVE_SPRINT && !m_Weapons[m_SelectedWeapon]->isReloading() && g_camera_mode->GetInt() == 2 && !(hudAttm && hudAttm->isActive()))
 		{
-			r3dRenderer->SetRenderingMode( R3D_BLEND_PUSH | R3D_BLEND_ADD | R3D_BLEND_ZC );
-
-			float size  = R3D_MIN(r3dRenderer->ScreenW*0.02f, r3dRenderer->ScreenH*0.02f);
-
-			// gradually decrease size over distance
-			const float maxDecDist = 20.0f;
-			float dist = (gCam - laserPos).Length();
-			if(dist >= maxDecDist) dist = maxDecDist;
-			size = R3D_LERP(size, size*0.25f, dist / maxDecDist);
-
-			r3dPoint3D laserPosScreen;
-			r3dProjectToScreen(laserPos, &laserPosScreen);
-			if(m_isAiming)
+			r3dPoint3D laserPos;
+			if(m_Weapons[m_SelectedWeapon]->hasLaserPointer(laserPos))
 			{
-				laserPosScreen.x = cx;
-				laserPosScreen.y = cy;
-			}
-			r3dColor laserColor = r3dColor::red;
-			laserColor.A = (int)R3D_LERP(196.0f, 0.0f, dist/400.0f);
-			r3dDrawBox2D(float(laserPosScreen.x-(size/2)), float(laserPosScreen.y-(size/2)), size, size, laserColor, s_laserPointerTex);
+				r3dRenderer->SetRenderingMode( R3D_BLEND_PUSH | R3D_BLEND_ADD | R3D_BLEND_ZC );
 
-			r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
+				float size  = R3D_MIN(r3dRenderer->ScreenW*0.02f, r3dRenderer->ScreenH*0.02f);
+
+				// gradually decrease size over distance
+				const float maxDecDist = 20.0f;
+				float dist = (gCam - laserPos).Length();
+				if(dist >= maxDecDist) dist = maxDecDist;
+				size = R3D_LERP(size, size*0.25f, dist / maxDecDist);
+
+				r3dPoint3D laserPosScreen;
+				r3dProjectToScreen(laserPos, &laserPosScreen);
+				if(m_isAiming)
+				{
+					laserPosScreen.x = cx;
+					laserPosScreen.y = cy;
+				}
+				r3dColor laserColor = r3dColor::red;
+				laserColor.A = (int)R3D_LERP(196.0f, 0.0f, dist/400.0f);
+				r3dDrawBox2D(float(laserPosScreen.x-(size/2)), float(laserPosScreen.y-(size/2)), size, size, laserColor, s_laserPointerTex);
+
+				r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
+			}
 		}
 	}
 
@@ -5576,7 +4549,7 @@ void obj_AI_Player::DrawReticle()
 		ClientGameLogic& CGL = gClientLogic();
 		for(int i=0; i<CGL.MAX_NUM_PLAYERS; ++i)
 		{
-			obj_AI_Player* plr = CGL.GetPlayer(i);
+			obj_Player* plr = CGL.GetPlayer(i);
 			if(g_bEditMode)
 			{
 				plr = this;
@@ -5586,10 +4559,17 @@ void obj_AI_Player::DrawReticle()
 				continue;
 			if(plr == this && !g_bEditMode)
 				continue;
+			if( !(plr->m_SelectedWeapon >= 0 && plr->m_SelectedWeapon <=NUM_WEAPONS_ON_PLAYER) )
+				continue;
 			if(plr->m_Weapons[plr->m_SelectedWeapon] == NULL)
 				continue;
+			if(plr->forcedEmptyHands)
+				continue;
 			int attmID = plr->m_Weapons[plr->m_SelectedWeapon]->getWeaponAttachmentID(WPN_ATTM_LEFT_RAIL);
-			if(attmID == 400004 || attmID == 400018 || attmID == 400021 || attmID == 400022) // laser, flashlight
+			bool hasFlashlight = attmID == 400018 || attmID == 400022 || plr->m_Weapons[plr->m_SelectedWeapon]->getItemID()==101306;
+			bool hasLaser = attmID == 400004 || attmID == 400021;
+
+			if( hasFlashlight || hasLaser ) // laser, flashlight
 			{
 				float dist = (plr->GetPosition() - gCam).Length();
 
@@ -5611,7 +4591,7 @@ void obj_AI_Player::DrawReticle()
 					PxRaycastHit hit;
 					PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
 					r3dPoint3D dirToAttm = (attmPos - gCam).NormalizeTo();
-					bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dirToAttm.x, dirToAttm.y, dirToAttm.z), distToCamera, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
+					bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dirToAttm.x, dirToAttm.y, dirToAttm.z), distToCamera, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
 					if(!hitResult)
 					{
 						/*{
@@ -5620,7 +4600,7 @@ void obj_AI_Player::DrawReticle()
 						}*/
 
 						float viewDot = -attmDir.Dot(dirToAttm);
-						if(attmID == 400018 || attmID == 400022) // flashlight
+						if(hasFlashlight) // flashlight
 						{
 							if(viewDot < 0.75f)
 								viewDot = 0;
@@ -5636,7 +4616,7 @@ void obj_AI_Player::DrawReticle()
 						}
 						
 						{
-							r3dTexture* tex = (attmID==400004||attmID==400021)?s_laserFlashTex:s_flashlightFlashTex;
+							r3dTexture* tex = (hasLaser)?s_laserFlashTex:s_flashlightFlashTex;
 							float size = R3D_MIN(r3dRenderer->ScreenW, r3dRenderer->ScreenH);
 							float scale = viewDot*0.5f;
 							if(distToCamera < 10.0f)
@@ -5654,8 +4634,20 @@ void obj_AI_Player::DrawReticle()
 			}
 		}
 	}
-
 	bool scopeRendering = hasScopeMode() && CurrentRig.allowScope;
+	
+	const ScopeConfig* scopeConfig = NULL;
+	if(m_Weapons[m_SelectedWeapon])
+		scopeConfig = m_Weapons[m_SelectedWeapon]->getScopeConfig(isFirstPerson);
+
+	if(r_hud_filter_mode->GetInt()==HUDFilter_NightVision && !scopeRendering)// nightvision
+	{
+		scopeConfig = g_pWeaponArmory->getScopeConfig("nvgframe");
+		scopeRendering = true;
+	}
+
+	r3d_assert(scopeConfig);
+
 	if(scopeRendering) 	// draw sniper scope
 	{
 		g_RenderScopeEffect = 1;
@@ -5668,7 +4660,7 @@ void obj_AI_Player::DrawReticle()
 		params.Lighting = scopeConfig->lighting ;
 		gPFX_ScopeEffect.SetMaterialParams( params ) ;
 
-		float scaleScope = 1.0f;
+		float scaleScope = scopeConfig->scale;
 		float scopeScaleMod = 0.20f;
 		if(g_camera_mode->GetInt() == 2)
 			scopeScaleMod = 0.10f;
@@ -5681,7 +4673,7 @@ void obj_AI_Player::DrawReticle()
 		gPFX_ScopeEffect.SetScopeScale(scaleScope);
 	}
 #ifndef FINAL_BUILD
-	else if(g_bEditMode && r_show_player_debug_data->GetBool()) // draw reticule only in editor, in game reticule is in flash
+	else if(g_bEditMode && r_show_player_debug_data->GetBool() && scopeConfig->reticule) // draw reticule only in editor, in game reticule is in flash
 	{
 		float rw = (float)scopeConfig->reticule->GetWidth();
 		float rh = (float)scopeConfig->reticule->GetHeight();
@@ -5727,9 +4719,22 @@ void obj_AI_Player::DrawReticle()
 	r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
 }
 
-void obj_AI_Player::DrawLabel()
+void obj_Player::DrawLabel()
 {
 	r3dRenderer->SetMaterial(NULL);
+
+	struct PushRestoreStates
+	{
+		PushRestoreStates()
+		{
+			r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
+		}
+
+		~PushRestoreStates()
+		{
+			r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
+		}
+	} pushRestoreStates; (void)pushRestoreStates;
 
 	if(NetworkLocal && gClientLogic().localPlayer_)
 	{
@@ -5739,10 +4744,22 @@ void obj_AI_Player::DrawLabel()
 			Font_Label->PrintF(r3dRenderer->ScreenW-80, 0, r3dColor(243,43,37), "FPS: %.1f", fps);
 	}
 
-	r3dPoint3D off(0, Height, 0);
-	r3dColor team_clr = TeamID == 0 ? r3dColor(0, 0, 255) : r3dColor(255, 0, 0);
-	
-	
+#ifndef FINAL_BUILD
+	// draw player CustomerID/gamertag for admins
+	if(!NetworkLocal && gUserProfile.ProfileData.isDevAccount && Keyboard->IsPressed(kbsLeftAlt))
+	{
+		float dist = (gCam - GetPosition()).Length();
+		int a    = int(R3D_MAX(1.0f - (dist / 300.0f), 0.1f)*255.0f);
+		r3dPoint3D scrCoord;
+		if(r3dProjectToScreen(GetPosition() + r3dPoint3D(0, 1.8f, 0), &scrCoord))
+		{
+			char plrUserName[64]; GetUserName(plrUserName);
+			Font_Editor->PrintF(scrCoord.x, scrCoord.y+12, r3dColor(255,255,255,a), "ID:%d", CustomerID);
+			Font_Editor->PrintF(scrCoord.x, scrCoord.y,    r3dColor(255,255,255,a), "%s", plrUserName);
+		}
+	}
+#endif
+
 	/*
 	{
 	  // muzzler position debug
@@ -5762,7 +4779,7 @@ void obj_AI_Player::DrawLabel()
 #ifndef FINAL_BUILD
 	if(NetworkLocal && r_show_player_debug_data->GetBool() && m_Weapons[m_SelectedWeapon])
 	{
-		Font_Label->PrintF(10, r3dRenderer->ScreenH-240,r3dColor(255,255,255), "m_Health %.2f", m_Health.get());
+		Font_Label->PrintF(10, r3dRenderer->ScreenH-240,r3dColor(255,255,255), "m_Health %.2f", CurLoadout.Health);
 		Font_Label->PrintF(10, r3dRenderer->ScreenH-220,r3dColor(255,255,255), "DmgRcvd %.2f", lastDamageRcvd);
 		Font_Label->PrintF(10, r3dRenderer->ScreenH-200,r3dColor(255,255,255), "AccumDmgRcvd %.2f", accumLastDamageRcvd);
 		Font_Label->PrintF(10, r3dRenderer->ScreenH-180,r3dColor(255,255,255), "Recoil %.2f, %.2f", RecoilViewModTarget.x, RecoilViewModTarget.y);
@@ -5805,7 +4822,6 @@ void obj_AI_Player::DrawLabel()
 	}
 #endif
 
-	//r3dDrawLine3D(GetPosition() + off, GetPosition() + off + r3dPoint3D(0, 0.03f, 0) * m_Health, Cam, 0.1f, team_clr);
 #ifndef FINAL_BUILD
 	if(r_show_player_debug_data->GetBool())
 	{
@@ -5835,8 +4851,13 @@ void obj_AI_Player::DrawLabel()
 		r3dPoint3D scrCoord;
 		if(r3dProjectToScreen(GetPosition() + r3dPoint3D(0, 1, 0), &scrCoord))
 		{
-			Font_Label->PrintF(scrCoord.x, scrCoord.y,   r3dColor(255,255,255), "%.1f", m_Health.get());
+			Font_Label->PrintF(scrCoord.x, scrCoord.y,   r3dColor(255,255,255), "%.1f", CurLoadout.Health);
 		}
+	}
+	if(r_show_zombie_stats->GetBool())
+	{
+		if(NetworkLocal)
+			lifeProperties.DebugVisualizeRanges();
 	}
 #endif
 
@@ -5845,7 +4866,7 @@ void obj_AI_Player::DrawLabel()
 //------------------------------------------------------------------------
 struct PlayerRenderable : Renderable
 {
-	void Init( obj_AI_Player::AuraType at, int Transparent )
+	void Init( obj_Player::AuraType at, int Transparent )
 	{
 		DrawFunc = Draw;
 		PlayerAuraType = at ;
@@ -5899,10 +4920,10 @@ struct PlayerRenderable : Renderable
 			{
 				if( needRestore )
 				{
-					r3dRenderer->SetCamera( gCam ) ;
+					r3dRenderer->SetCamera( gCam, true ) ;
 					if( r_particles_quality->GetInt() > 3 )
 					{
-						D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
+						D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, TRUE ) ) ;
 					}
 				}
 			}
@@ -5910,7 +4931,7 @@ struct PlayerRenderable : Renderable
 			bool needRestore ;
 		} restoreCamOnExit ;
 
-		if( ( This->Transparent || This->PlayerAuraType != obj_AI_Player::AT_NONE )
+		if( ( This->Transparent || This->PlayerAuraType != obj_Player::AT_NONE )
 				&&
 			This->FirstPerson			
 			)
@@ -5922,10 +4943,10 @@ struct PlayerRenderable : Renderable
 
 			restoreCamOnExit.needRestore = true ;
 
-			r3dRenderer->SetCamera( firstPersonCam ) ;
+			r3dRenderer->SetCamera( firstPersonCam, true ) ;
 		}
 
-		if( This->PlayerAuraType != obj_AI_Player::AT_NONE )
+		if( This->PlayerAuraType != obj_Player::AT_NONE )
 		{
 			draw_weapon = false ;
 			dt = CUberEquip::DT_AURA ;
@@ -5936,25 +4957,25 @@ struct PlayerRenderable : Renderable
 
 			float r(1.0f), g(1.0), b(1.0f);
 
-			if( This->PlayerAuraType == obj_AI_Player::AT_HEALING )
+			if( This->PlayerAuraType == obj_Player::AT_HEALING )
 			{
 				r = 0.f ;
 				g = 1.f ;
 				b = 0.25f ;
 			}
-			else if(This->PlayerAuraType == obj_AI_Player::AT_MORHINE)
+			else if(This->PlayerAuraType == obj_Player::AT_MORHINE)
 			{
 				r = 0.f ;
 				g = 0.f ;
 				b = 1.0f ;
 			}
-			else if(This->PlayerAuraType == obj_AI_Player::AT_BERSERK)
+			else if(This->PlayerAuraType == obj_Player::AT_BERSERK)
 			{
 				r = 1.f ;
 				g = 0.f ;
 				b = 0.f ;
 			}
-			else if(This->PlayerAuraType == obj_AI_Player::AT_SPAWNPROTECTION) // golden color
+			else if(This->PlayerAuraType == obj_Player::AT_SPAWNPROTECTION) // golden color
 			{
 				r = 1.0f ;
 				g = 0.62f ;
@@ -5965,7 +4986,7 @@ struct PlayerRenderable : Renderable
 
 			{
 				float vConst[ 4 ] = { r, g, b, r3dGetTime()  } ;
-				D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_AURA, vConst, 1 ) );
+				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_AURA, vConst, 1 ) );
 			}
 
 			void SetupFilmToneConstants( int reg ) ;
@@ -5973,13 +4994,13 @@ struct PlayerRenderable : Renderable
 
 			r3dRenderer->SetPixelShader( PS_TRANSPARENT_AURA_ID ) ;
 			r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
-			r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
-			r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 		}
 		else
 		{
 			const Weapon* wpn = This->Parent->m_Weapons[This->Parent->m_SelectedWeapon];
-			if(wpn && wpn->isGrenadeOrMineAnim())
+			if(wpn && wpn->getCategory() == storecat_GRENADE)
 			{
 				if(This->Parent->uberAnim_->IsGrenadeLaunched())
 					draw_weapon = false; // throwing grenade, so do not render grenade in hand
@@ -5993,24 +5014,25 @@ struct PlayerRenderable : Renderable
 				float vConst[ 4 ][ 4 ] =
 				{
 					// float4 Aura				: register(c14); // (c65);
-					{ 1.0f - ctl.camoMasterTransparency,	s * (1 - s) * 4, ctl.transparentCamoAlpha, r3dGetTime() * 0.25f * gCamoSettings.animSpeed },
+					{ 1.0f,	s * (1 - s) * 4, ctl.transparentCamoAlpha, 0},
 					// float4 TCamoExtra		: register(c15);
-					{ gCamoSettings.texScale * 4, gCamoSettings.distortScale, gCamoSettings.reflectionAmmount, 0.f },
+					{ 0, 0, 0, 0.f },
 					// float4 TCamoColor0			: register(c16);
-					{ gCamoSettings.color0.R / 255.f, gCamoSettings.color0.G / 255.f, gCamoSettings.color0.B / 255.f, 0.f },
+					{ 0, 0, 0, 0.f },
 					// float4 TCamoColor1			: register(c17);
-					{ gCamoSettings.color1.R / 255.f, gCamoSettings.color1.G / 255.f, gCamoSettings.color1.B / 255.f, gCamoSettings.color1.A / 255.f }
+					{ 0, 0, 0, 0 }
 				};
-				D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_AURA, (float*)vConst, 4 ) );
+				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_AURA, (float*)vConst, 4 ) );
 				
 				vConst[0][3] = 0.01f;
-				D3D_V( r3dRenderer->SetVertexShaderConstantF( 23, (float*)vConst, 1 ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 23, (float*)vConst, 1 ) ) ;
 
-				for(int i=0; i<=SLOT_Head3; i++)
+				for(int i=0; i<=SLOT_Helmet; i++)
 				{
 					if(This->Parent->uberEquip_->slots_[i].gear)
 					{
-						if( r3dMesh* mesh = This->Parent->uberEquip_->slots_[i].gear->getModel(This->Parent->uberEquip_->isFirstPerson) )
+						bool isFirstPerson = g_camera_mode->GetInt()==2 && This->Parent->NetworkLocal;
+						if( r3dMesh* mesh = This->Parent->uberEquip_->slots_[i].gear->getModel(isFirstPerson) )
 						{
 							mesh->ExtrudeAmmount = 0.01f ;
 						}
@@ -6019,8 +5041,8 @@ struct PlayerRenderable : Renderable
 
 				r3dRenderer->SetTex( gPlayer_CamoTexture, 9 ) ;
 
-				r3dRenderer->SetSamplerState(9, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-				r3dRenderer->SetSamplerState(9, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+				r3dRenderer->pd3ddev->SetSamplerState(9, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+				r3dRenderer->pd3ddev->SetSamplerState(9, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 			}
 
@@ -6042,7 +5064,7 @@ struct PlayerRenderable : Renderable
  			vCData[ 0 ] = 0 ; vCData[ 1 ] = 0 ; vCData[ 2 ] = 1 ; 
  		}
 #endif
-		D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_MASKCOLOR, vCData, 1 ) );
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MASKCOLOR, vCData, 1 ) );
 
 		if (This->matFlagsModifier)
 		{
@@ -6086,29 +5108,29 @@ struct PlayerRenderable : Renderable
 
 				r3dRenderer->SetPixelShader( PS_DEPTH_ID ) ;
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE,  TRUE ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE,  TRUE ) );
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_ONE ) );
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_MIN ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_MIN ) );
 
-				This->Parent->uberEquip_->Draw( This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix, draw_weapon, CUberEquip::DT_DEPTH, This->FirstPerson ? true : false );
+				This->Parent->uberEquip_->Draw( This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix_Localized, draw_weapon, CUberEquip::DT_DEPTH, This->FirstPerson ? true : false );
 
 				DeactivateParticleDepth();
 				ActivateTransparentBuffer();
 				r3dTransparentSetDistort( 1 ) ;
 				SetParticleDepth();
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD ) );
 			}
 
 			{
 				D3DXMATRIX sm0, sm1 ;
 
-				D3DXMatrixTranspose( &sm0, &This->Parent->DrawFullMatrix ) ;
+				D3DXMatrixTranspose( &sm0, &This->Parent->DrawFullMatrix_Localized ) ;
 
-				sm1 = This->Parent->DrawFullMatrix * r3dRenderer->ViewMatrix ;
+				sm1 = This->Parent->DrawFullMatrix_Localized * r3dRenderer->ViewMatrix_Localized ;
 
 				D3DXMatrixTranspose( &sm1, &sm1 ) ;
 
@@ -6124,44 +5146,34 @@ struct PlayerRenderable : Renderable
 					{ sm1._31, sm1._32, sm1._33, sm1._34 },
 				} ;
 
-				D3D_V( r3dRenderer->SetPixelShaderConstantF( 32, (float*)consts, 6 ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 32, (float*)consts, 6 ) ) ;
 			}
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );
-			D3D_V( r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
-			D3D_V( r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
 
 			r3dTransparentSetDistort( 1 ) ;
 
 			if( This->FirstPerson && r_particles_quality->GetInt() > 3 )
 			{
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ZENABLE, FALSE ) ) ;
 			}
 
 		}
 
-		This->Parent->uberEquip_->Draw( This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix, draw_weapon, dt, This->FirstPerson ? true : false );
+		if(This->Parent->forcedEmptyHands)
+			draw_weapon = false;
 
-		if( This->PlayerAuraType != obj_AI_Player::AT_NONE )
+		This->Parent->uberEquip_->Draw( This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix_Localized, draw_weapon, dt, This->FirstPerson ? true : false );
+
+		if( This->PlayerAuraType != obj_Player::AT_NONE )
 		{
 			r3dRenderer->SetPixelShader( PS_TRANSPARENT_ID ) ;
 		}
-
-		if(This->Parent->s_UAVFriendlyBlinkTex && gClientLogic().localPlayer_ && gClientLogic().localPlayer_->uavViewActive_ && gClientLogic().localPlayer_->TeamID == This->Parent->TeamID)
-		{
-			r3dRenderer->SetTex(NULL);
-			r3dRenderer->SetMaterial(NULL);
-			r3dRenderer->SetRenderingMode( R3D_BLEND_PUSH | R3D_BLEND_ADD | R3D_BLEND_ZC );
-
-			void r3dDrawIcon3D(const r3dPoint3D& pos, r3dTexture *icon, const r3dColor &Col, float size);
-			int alpha = int(floorf(R3D_ABS(r3dSin(r3dGetTime()*6.0f))*255.0f));
-			r3dDrawIcon3D(This->Parent->GetPosition() + r3dPoint3D(0,2,0), This->Parent->s_UAVFriendlyBlinkTex, r3dColor24(alpha,alpha,alpha, alpha), 18);
-
-			r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
-		}
 	}
 
-	obj_AI_Player* Parent ;
+	obj_Player* Parent ;
 	typedef void (*MaterialModifyFlags)(r3dMaterial *mat);
 	MaterialModifyFlags matFlagsModifier;
 
@@ -6184,16 +5196,17 @@ struct PlayerShadowRenderable : Renderable
 
 		bool draw_weapon = true;
 		const Weapon* wpn = This->Parent->m_Weapons[This->Parent->m_SelectedWeapon];
-		if(wpn && wpn->isGrenadeOrMineAnim())
+		if(wpn && wpn->getCategory() == storecat_GRENADE)
 		{
 			if(This->Parent->uberAnim_->IsGrenadeLaunched())
 				draw_weapon = false; // throwing grenade, so do not render grenade in hand
 		}
-
-		This->Parent->uberEquip_->Draw(This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix, draw_weapon, CUberEquip::DT_SHADOWS, false );		
+		if(This->Parent->forcedEmptyHands)
+			draw_weapon = false;
+		This->Parent->uberEquip_->Draw(This->Parent->GetSkeleton(), This->Parent->DrawFullMatrix_Localized, draw_weapon, CUberEquip::DT_SHADOWS, false );
 	}
 
-	obj_AI_Player* Parent;
+	obj_Player* Parent;
 };
 
 struct PlayerFlashRenderable : Renderable
@@ -6211,7 +5224,7 @@ struct PlayerFlashRenderable : Renderable
 		This->Parent->DrawReticle();
 	}
 
-	obj_AI_Player* Parent;
+	obj_Player* Parent;
 };
 
 struct PlayerDebugRenderable : Renderable
@@ -6238,7 +5251,7 @@ struct PlayerDebugRenderable : Renderable
 		//r3dDrawBoundBox(This->Parent->GetBBoxWorld(), Cam, r3dColor24::green/*debugColorLevels[m_Level]*/, 0.05f);
 	}
 
-	obj_AI_Player* Parent;
+	obj_Player* Parent;
 };
 
 #define	RENDERABLE_AI_PLAYER_SORT_VALUE (2*RENDERABLE_USER_SORT_VALUE)
@@ -6246,12 +5259,9 @@ struct PlayerDebugRenderable : Renderable
 extern RenderArray	g_render_arrays[ rsCount ];
 
 void
-obj_AI_Player::AppendShadowRenderables( RenderArray & rarr, const r3dCamera& Cam )
+obj_Player::AppendShadowRenderables( RenderArray & rarr, const r3dCamera& Cam )
 {
 	r3d_assert( &rarr - g_render_arrays - rsCreateSM < NumShadowSlices ) ;
-
-	if( !m_Loaded )
-		return ;
 
 	// HACK: For the moment. 
 #if VEHICLES_ENABLED
@@ -6261,18 +5271,7 @@ obj_AI_Player::AppendShadowRenderables( RenderArray & rarr, const r3dCamera& Cam
 	}
 #endif
 
-	int firstPerson = g_camera_mode->GetInt() == 2 && NetworkLocal && !bDead && !uavViewActive_;
-
-	if(uberEquip_)
-	{
-		uberEquip_->isFirstPerson = firstPerson ? true : false;
-
-		if(firstPerson && m_SelectedWeapon >= 0 && m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER && m_Weapons[m_SelectedWeapon])
-		{
-			m_Weapons[m_SelectedWeapon]->getModel(true, true);
-			m_Weapons[m_SelectedWeapon]->checkForSkeleton();
-		}
-	}
+	int firstPerson = g_camera_mode->GetInt() == 2 && NetworkLocal && !bDead;
 
 	if(firstPerson) // do not render our own shadow in FPS mode (same as in BF3)
 		return;
@@ -6312,7 +5311,6 @@ void UnsetTransparentCamoMatFlags(r3dMaterial *mat)
 	mat->Flags &= ~(R3D_MAT_TRANSPARENT | R3D_MAT_TRANSPARENT_CAMOUFLAGE | R3D_MAT_TRANSPARENT_CAMO_FP |  R3D_MAT_SKIP_DRAW);
 }
 
-//////////////////////////////////////////////////////////////////////////
 struct PlaceableConsumableItemRenderable : MeshDeferredRenderable
 {
 	void Init( int a_transparent )
@@ -6368,96 +5366,47 @@ struct PlaceableConsumableItemRenderable : MeshDeferredRenderable
 		}
 	}
 
-	obj_AI_Player* Parent ;
+	obj_Player* Parent ;
 	int Transparent ;
 };
 
 //------------------------------------------------------------------------
 // special callback to ignore terrain for beacon placement, as otherwise it is almost impossible to place beacon on uneven terrain
-class beaconFilterCallback : public PxQueryFilterCallback
+class beaconFilterCallback : public PxSceneQueryFilterCallback
 {
 public:
-	beaconFilterCallback()
-	{
-	}
+	beaconFilterCallback(){};
 
-	virtual PxQueryHitType::Enum preFilter(
-		const PxFilterData& filterData,
-		const PxShape* shape,
-		const PxRigidActor* actor,
-		PxHitFlags& queryFlags
-	)
+	virtual PxSceneQueryHitType::Enum preFilter(const PxFilterData& filterData, PxShape* shape, PxSceneQueryFilterFlags& filterFlags)
 	{
-		if(actor)
+		if(shape)
 		{
-			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor->userData);
+			PxRigidActor& actor = shape->getActor();
+			PhysicsCallbackObject* target = static_cast<PhysicsCallbackObject*>(actor.userData);
 			if(target)
 			{
-				GameObject* gameObj = target->isGameObject();
-				if(gameObj && gameObj->isObjType(OBJTYPE_Terrain))
-					return PxQueryHitType::eNONE;
+				GameObject *gameObj = target->isGameObject();
+				if(gameObj)
+				{
+					if(gameObj->isObjType(OBJTYPE_Terrain))
+						return PxSceneQueryHitType::eNONE;
+				}
 			}
 		}
-
-		return PxQueryHitType::eBLOCK;
+		return PxSceneQueryHitType::eBLOCK;
 	}
 
-	virtual PxQueryHitType::Enum postFilter(
-		const PxFilterData& filterData,
-		const PxQueryHit& hit
-	)
+	virtual PxSceneQueryHitType::Enum postFilter(const PxFilterData& filterData, const PxSceneQueryHit& hit)
 	{
-		return PxQueryHitType::eBLOCK;
+		// shouldn't be called!
+		return PxSceneQueryHitType::eBLOCK;
 	}
 };
 
-static bool AIPlayer_OverlapAny(
-	PxScene* scene,
-	const PxGeometry& geometry,
-	const PxTransform& pose,
-	const PxSceneQueryFilterData& filter,
-	PxQueryFilterCallback* callback = NULL
-)
-{
-	PxOverlapBuffer hit;
-	return scene->overlap(geometry, pose, hit, filter, callback);
-}
-
-static int AIPlayer_OverlapMultipleShapes(
-	PxScene* scene,
-	const PxGeometry& geometry,
-	const PxTransform& pose,
-	PxShape** outShapes,
-	int maxShapes,
-	const PxSceneQueryFilterData& filter,
-	PxQueryFilterCallback* callback = NULL
-)
-{
-	if(!outShapes || maxShapes <= 0)
-		return 0;
-
-	PxOverlapHit hits[64];
-	const int maxHits = R3D_MIN(maxShapes, 64);
-
-	PxOverlapBuffer buffer(hits, maxHits);
-	if(!scene->overlap(geometry, pose, buffer, filter, callback))
-		return 0;
-
-	const PxU32 numHits = buffer.getNbAnyHits();
-	const int count = R3D_MIN((int)numHits, maxHits);
-
-	for(int i = 0; i < count; ++i)
-		outShapes[i] = buffer.getAnyHit(i).shape;
-
-	return count;
-}
 
 void
-obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )
+obj_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )
 {
-	if( !m_Loaded )
-		return ;
-
 	if(!m_enableRendering)
 		return;
 
@@ -6470,7 +5419,7 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 #endif
 	
 
-	int firstPerson = g_camera_mode->GetInt() == 2 && NetworkLocal && !bDead && !uavViewActive_;
+	int firstPerson = g_camera_mode->GetInt() == 2 && NetworkLocal && !bDead;
 
 	if(firstPerson)
 	{
@@ -6487,7 +5436,7 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 	}
 
 	// deferred
-	if( !NetworkLocal || (NetworkLocal && (!g_CameraInsidePlayer || g_camera_mode->GetInt()==2) && !laserViewActive_) ) // do not render player if camera is inside of player
+	if( !NetworkLocal || (NetworkLocal && (!g_CameraInsidePlayer || g_camera_mode->GetInt()==2)) ) // do not render player if camera is inside of player
 	{
 		if(!(NetworkLocal && hasScopeMode() && hasScopeMode_hidePlayerModel() && CurrentRig.allowScope)) // do not render yourself in scope mode
 		{
@@ -6543,20 +5492,32 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 				render_arrays[ rsDrawTransparents ].PushBack( rend ) ;			
 			}
 
-			if(m_needToDrawRiotShieldPlacement)
+			if(m_needToDrawBarricadePlacement)
 			{
 				r3dMesh* riotMesh = NULL;
-				if(m_needToDrawRiotShieldPlacement == WeaponConfig::ITEMID_RiotShield)
+				if(m_needToDrawBarricadePlacement == WeaponConfig::ITEMID_BarbWireBarricade)
 				{
-					if(m_RiotShieldMeshPlacement == NULL)
-						m_RiotShieldMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_Riot_Shield_01.sco", true, false, true, true );
-					riotMesh = m_RiotShieldMeshPlacement;
+					if(m_BarricadeMeshPlacement == NULL)
+						m_BarricadeMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_Barricade_BarbWire_Built.sco", true, false, true, true );
+					riotMesh = m_BarricadeMeshPlacement;
 				}
-				else
+				else if(m_needToDrawBarricadePlacement == WeaponConfig::ITEMID_WoodShieldBarricade)
 				{
-					if(m_RiotPersonalShieldMeshPlacement == NULL)
-						m_RiotPersonalShieldMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_Riot_Shield_02.sco", true, false, true, true );
-					riotMesh = m_RiotPersonalShieldMeshPlacement;
+					if(m_BarricadeMeshPlacement == NULL)
+						m_BarricadeMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_Barricade_WoodShield_Built.sco", true, false, true, true );
+					riotMesh = m_BarricadeMeshPlacement;
+				}
+				else if(m_needToDrawBarricadePlacement == WeaponConfig::ITEMID_RiotShieldBarricade)
+				{
+					if(m_BarricadeMeshPlacement == NULL)
+						m_BarricadeMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_Riot_Shield_01.sco", true, false, true, true );
+					riotMesh = m_BarricadeMeshPlacement;
+				}
+				else if(m_needToDrawBarricadePlacement == WeaponConfig::ITEMID_SandbagBarricade)
+				{
+					if(m_BarricadeMeshPlacement == NULL)
+						m_BarricadeMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\item_barricade_Sandbag_built.sco", true, false, true, true );
+					riotMesh = m_BarricadeMeshPlacement;
 				}
 				if(riotMesh->IsDrawable())
 				{
@@ -6571,25 +5532,28 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 					D3DXMatrixRotationY(&m2, R3D_PI);
 					D3DXMatrixMultiply(&m3, &DrawRotMatrix, &m2);
 					D3DXMatrixMultiply(&world, &m3, &m1);
-					r3dPrepareMeshVSConsts(m_ConsumableItemPlacementMeshVSConsts, world, scale, texcScale );
+					r3dPrepareMeshVSConsts(m_ConsumableItemPlacementMeshVSConsts, world, scale, texcScale, r3dRenderer->ViewMatrix, r3dRenderer->ViewProjMatrix );
 
 					// check if we can place our riot shield. I don't want to do this in update, as anyway this function is called every frame, so should be fine
 					{
 						PxBoxGeometry bbox(riotMesh->localBBox.Size.x*0.5f, riotMesh->localBBox.Size.y*0.5f, riotMesh->localBBox.Size.z*0.5f);
-						PxTransform pose(PxVec3(pos.x, pos.y+(riotMesh->localBBox.Size.y*0.5f)+0.5f, pos.z), PxQuat(0,0,0,1));
+						D3DXMATRIX rot = GetRotationMatrix();
+						PxMat33 meshRot(PxVec3(rot._11, rot._21, rot._31), PxVec3(rot._12, rot._22, rot._32), PxVec3(rot._13, rot._23, rot._33));
+						PxTransform pose(PxVec3(pos.x, pos.y+(riotMesh->localBBox.Size.y*0.5f)+0.5f, pos.z), PxQuat(meshRot));
+
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
 						PxShape* shape;
-						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter) && bOnGround;
+						m_canPlaceConsumableItem = !g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter) && bOnGround;
 						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
 						{
 							bbox.halfExtents.y *= 4.0f;
 							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
 							PxShape* results[64] = {0};
-							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
+							int numRes = g_pPhysicsWorld->PhysXScene->overlapMultiple(bbox, pose, results, 64, filter);
 							for(int i=0; i<numRes; ++i)
 							{
 								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
+								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor().userData)))
 								{
 									GameObject* gameObj = clbObj->isGameObject();
 									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
@@ -6602,18 +5566,6 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 						}
 					}
 
-					if( 0 )
-					{
-						uint32_t prevCount = render_arrays[ rsFillGBuffer ].Count();
-						riotMesh->AppendRenderablesDeferred( render_arrays[ rsFillGBuffer ], r3dColor::white );
-						for( uint32_t i = prevCount, e = render_arrays[ rsFillGBuffer ].Count(); i < e; i ++ )
-						{
-							PlaceableConsumableItemRenderable& rend = static_cast<PlaceableConsumableItemRenderable&>( render_arrays[ rsFillGBuffer ][ i ] );
-							rend.Init( 0 );
-							rend.Parent = this ;
-						}
-					}
-					else
 					{
 						float dist = (Cam - GetPosition()).Length();
 
@@ -6630,167 +5582,6 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 					}
 				}
 			}
-			if(m_needToDrawAutoTurretPlacement)
-			{
-				r3dMesh* turretMesh = NULL;
-				{
-					if(m_AutoTurretMeshPlacement== NULL)
-						m_AutoTurretMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\item_turret_01_m60.sco", true, false, true, true );
-					turretMesh = m_AutoTurretMeshPlacement;
-				}
-				if(turretMesh->IsDrawable())
-				{
-					r3dPoint3D *scale ;
-					r3dPoint2D *texcScale ;
-					scale = turretMesh->IsSkeletal() ? 0 : &turretMesh->unpackScale;
-					texcScale = &turretMesh->texcUnpackScale ;
-
-					D3DXMATRIX m1, m2, m3, world;
-					r3dPoint3D pos = GetPosition() + GetvForw() * 1.0f + r3dPoint3D(0,1,0);
-					D3DXMatrixTranslation(&m1, pos.x, pos.y, pos.z);
-					D3DXMatrixRotationY(&m2, R3D_PI);
-					D3DXMatrixMultiply(&m3, &DrawRotMatrix, &m2);
-					D3DXMatrixMultiply(&world, &m3, &m1);
-					r3dPrepareMeshVSConsts(m_ConsumableItemPlacementMeshVSConsts, world, scale, texcScale );
-
-					// check if we can place our riot shield. I don't want to do this in update, as anyway this function is called every frame, so should be fine
-					{
-						PxBoxGeometry bbox(turretMesh->localBBox.Size.x*0.5f, turretMesh->localBBox.Size.y*0.5f, turretMesh->localBBox.Size.z*0.5f);
-						PxTransform pose(PxVec3(pos.x, pos.y+(turretMesh->localBBox.Size.y*0.5f)+0.5f - 1.0f, pos.z), PxQuat(0,0,0,1));
-						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
-						PxShape* shape;
-						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter) && bOnGround;
-						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
-						{
-							bbox.halfExtents.y *= 4.0f;
-							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-							PxShape* results[64] = {0};
-							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
-							for(int i=0; i<numRes; ++i)
-							{
-								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
-								{
-									GameObject* gameObj = clbObj->isGameObject();
-									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
-									{
-										m_canPlaceConsumableItem = false;
-										break;
-									}
-								}
-							}
-						}
-					}
-
-					if( 0 )
-					{
-						uint32_t prevCount = render_arrays[ rsFillGBuffer ].Count();
-						turretMesh->AppendRenderablesDeferred( render_arrays[ rsFillGBuffer ], r3dColor::white );
-						for( uint32_t i = prevCount, e = render_arrays[ rsFillGBuffer ].Count(); i < e; i ++ )
-						{
-							PlaceableConsumableItemRenderable& rend = static_cast<PlaceableConsumableItemRenderable&>( render_arrays[ rsFillGBuffer ][ i ] );
-							rend.Init( 0 );
-							rend.Parent = this ;
-						}
-					}
-					else
-					{
-						float dist = (Cam - GetPosition()).Length();
-
-						uint32_t prevTranspCount = render_arrays[rsDrawTransparents].Count();
-
-						turretMesh->AppendTransparentRenderables( render_arrays[rsDrawTransparents], m_canPlaceConsumableItem?r3dColor::white:r3dColor::red, dist, 1 );
-
-						for( uint32_t i = prevTranspCount, e = render_arrays[rsDrawTransparents].Count(); i < e; i ++ )
-						{
-							PlaceableConsumableItemRenderable& rend = static_cast<PlaceableConsumableItemRenderable&>( render_arrays[rsDrawTransparents][ i ] ) ;
-							rend.Init( 1 ) ;
-							rend.Parent = this;
-						}
-					}
-				}
-			}
-			if(m_needToDrawRespawnBeaconPlacement)
-			{
-				r3dMesh* beaconMesh = NULL;
-				{
-					if(m_RespawnBeaconMeshPlacement== NULL)
-						m_RespawnBeaconMeshPlacement = r3dGOBAddMesh("Data\\ObjectsDepot\\Weapons\\Item_RespawnBeacon_01.sco", true, false, true, true );
-					beaconMesh = m_RespawnBeaconMeshPlacement;
-				}
-				if(beaconMesh->IsDrawable())
-				{
-					r3dPoint3D *scale ;
-					r3dPoint2D *texcScale ;
-					scale = beaconMesh->IsSkeletal() ? 0 : &beaconMesh->unpackScale;
-					texcScale = &beaconMesh->texcUnpackScale ;
-
-					D3DXMATRIX m1, m2, m3, world;
-					r3dPoint3D pos = GetPosition() + GetvForw() * 1.0f;
-					D3DXMatrixTranslation(&m1, pos.x, pos.y, pos.z);
-					D3DXMatrixRotationY(&m2, R3D_PI);
-					D3DXMatrixMultiply(&m3, &DrawRotMatrix, &m2);
-					D3DXMatrixMultiply(&world, &m3, &m1);
-					r3dPrepareMeshVSConsts(m_ConsumableItemPlacementMeshVSConsts, world, scale, texcScale );
-
-					// check if we can place our riot shield. I don't want to do this in update, as anyway this function is called every frame, so should be fine
-					{
-						PxBoxGeometry bbox(1.0f, 1.0f, 1.0f); // make bbox big enough to prevent players from spawning inside of geometry
-						PxTransform pose(PxVec3(pos.x, pos.y+1.0f, pos.z), PxQuat(0,0,0,1));
-						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::ePREFILTER);
-						PxShape* shape;
-						beaconFilterCallback filterCallback;
-						m_canPlaceConsumableItem = !AIPlayer_OverlapAny(g_pPhysicsWorld->PhysXScene, bbox, pose, filter, &filterCallback) && bOnGround;
-						if(m_canPlaceConsumableItem) // check if we are trying to place it on top of usable item
-						{
-							bbox.halfExtents.y *= 4.0f;
-							PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-							PxShape* results[64] = {0};
-							int numRes = AIPlayer_OverlapMultipleShapes(g_pPhysicsWorld->PhysXScene, bbox, pose, results, 64, filter);
-							for(int i=0; i<numRes; ++i)
-							{
-								PhysicsCallbackObject* clbObj = NULL;
-								if( results[i] && (clbObj = static_cast<PhysicsCallbackObject*>(results[i]->getActor()->userData)))
-								{
-									GameObject* gameObj = clbObj->isGameObject();
-									if(gameObj && gameObj->isObjType(OBJTYPE_GameplayItem))
-									{
-										m_canPlaceConsumableItem = false;
-										break;
-									}
-								}
-							}
-						}
-					}
-
-					if( 0 )
-					{
-						uint32_t prevCount = render_arrays[ rsFillGBuffer ].Count();
-						beaconMesh->AppendRenderablesDeferred( render_arrays[ rsFillGBuffer ], r3dColor::white );
-						for( uint32_t i = prevCount, e = render_arrays[ rsFillGBuffer ].Count(); i < e; i ++ )
-						{
-							PlaceableConsumableItemRenderable& rend = static_cast<PlaceableConsumableItemRenderable&>( render_arrays[ rsFillGBuffer ][ i ] );
-							rend.Init( 0 );
-							rend.Parent = this ;
-						}
-					}
-					else
-					{
-						float dist = (Cam - GetPosition()).Length();
-
-						uint32_t prevTranspCount = render_arrays[rsDrawTransparents].Count();
-
-						beaconMesh->AppendTransparentRenderables( render_arrays[rsDrawTransparents], m_canPlaceConsumableItem?r3dColor::white:r3dColor::red, dist, 1 );
-
-						for( uint32_t i = prevTranspCount, e = render_arrays[rsDrawTransparents].Count(); i < e; i ++ )
-						{
-							PlaceableConsumableItemRenderable& rend = static_cast<PlaceableConsumableItemRenderable&>( render_arrays[rsDrawTransparents][ i ] ) ;
-							rend.Init( 1 ) ;
-							rend.Parent = this;
-						}
-					}
-				}
-			}		
 		}
 	}
 
@@ -6820,13 +5611,13 @@ obj_AI_Player::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], c
 	}
 }
 
-void obj_AI_Player::UpdateTransform()
+void obj_Player::UpdateTransform()
 {
 	GameObject::UpdateTransform();
 }
 
 //////////////////////////////////////////////////////////////////////////
-void obj_AI_Player::stopFootstepsSound()
+void obj_Player::stopFootstepsSound()
 {
 	if (SoundSys.IsHandleValid(footStepsSnd))
 	{
@@ -6834,7 +5625,86 @@ void obj_AI_Player::stopFootstepsSound()
 	}
 }
 
-void obj_AI_Player::UpdateFootsteps()
+void obj_Player::UpdateSounds()
+{
+	R3DPROFILE_FUNCTION("UpdateSounds");
+
+	if(NetworkLocal) // local sounds
+	{
+		if(!SoundSys.isPlaying(m_sndClothMovementSprint) && PlayerState == PLAYER_MOVE_SPRINT) // started sprinting
+		{
+			SoundSys.Start(m_sndClothMovementSprint);
+		}
+		else if(SoundSys.isPlaying(m_sndClothMovementSprint) && PlayerState != PLAYER_MOVE_SPRINT) // stopped sprinting
+		{
+			SoundSys.Stop(m_sndClothMovementSprint);
+		}
+
+		float breathVolume = 0.0f;
+		float curStaminaR = m_Stamina/getMaxStamina();
+		if(curStaminaR < 0.15f && curStaminaR > 0.1f)
+			breathVolume = 1.0f-((curStaminaR-0.1f)*20.0f);
+		else if(curStaminaR <= 0.1f)
+			breathVolume = 1.0f;
+		else if(curStaminaR > 0.15f)
+			breathVolume = 0.0f;
+
+		if(SoundSys.isPlaying(m_sndBreathSprint) && breathVolume <= 0.0f)
+			SoundSys.Stop(m_sndBreathSprint);
+		else if(!SoundSys.isPlaying(m_sndBreathSprint) && breathVolume > 0.0f)
+			SoundSys.Start(m_sndBreathSprint);
+		
+		if(SoundSys.isPlaying(m_sndBreathSprint))
+		{
+			breathVolume *= m_sndBreathBaseVolume;
+			SoundSys.SetProperty(m_sndBreathSprint, FMOD_EVENTPROPERTY_VOLUME, &breathVolume);
+		}
+
+		if(CurLoadout.Health < 15.0f && !SoundSys.isPlaying(m_sndInPain) && !bDead)
+			SoundSys.Start(m_sndInPain);
+		else if((CurLoadout.Health >= 15.0f || bDead) && SoundSys.isPlaying(m_sndInPain))
+			SoundSys.Stop(m_sndInPain);
+
+	
+		bool scopeRendering = hasScopeMode() && CurrentRig.allowScope && m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getCategory() == storecat_SNP;
+		if(scopeRendering)
+		{
+			if(m_isHoldingBreath && m_Breath > 0)
+			{
+				if(!SoundSys.isPlaying(m_sndSniperHeartSlow))
+				{
+					SoundSys.Stop(m_sndSniperBreath);
+					SoundSys.Start(m_sndSniperHeartSlow);
+					SoundSys.PlayAndForget(SoundSys.GetEventIDByPath(m_isFemaleHero?"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_INHALE_F":"Sounds/WarZ/PlayerSounds/PLAYER_SNIPER_INHALE_M"), GetPosition());
+				}
+			}
+			else
+			{
+				if(SoundSys.isPlaying(m_sndSniperHeartSlow))
+				{
+					SoundSys.Stop(m_sndSniperHeartSlow);
+					SoundSys.Start(m_sndSniperExhale);
+				}
+				if(!SoundSys.isPlaying(m_sndSniperExhale))
+					if(!SoundSys.isPlaying(m_sndSniperBreath))
+						SoundSys.Start(m_sndSniperBreath);
+			}
+		}
+		else
+		{
+			if(SoundSys.isPlaying(m_sndSniperBreath))
+				SoundSys.Stop(m_sndSniperBreath);
+			if(SoundSys.isPlaying(m_sndSniperHeartSlow))
+				SoundSys.Stop(m_sndSniperHeartSlow);
+		}
+	}
+	else // for all players, 3D sounds
+	{
+
+	}
+}
+
+void obj_Player::UpdateFootsteps()
 {
 	R3DPROFILE_FUNCTION("UpdateFootsteps");
 	R3DPROFILE_START("RayCast");
@@ -6846,10 +5716,10 @@ void obj_AI_Player::UpdateFootsteps()
 	PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
 
 	// did we hit anything?
-	bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 1.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter);
+	bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(GetPosition().x, GetPosition().y + 0.5f, GetPosition().z), PxVec3(0, -1, 0), 1.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
 	if( hitResult )
 	{
-		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor()->userData)))
+		if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
 		{
 			r3dMaterial* material = 0;
 			GameObject *gameObj = target->isGameObject();
@@ -6873,6 +5743,13 @@ void obj_AI_Player::UpdateFootsteps()
 			{
 				mt = g_pMaterialTypes->Get(r3dHash::MakeHash(material->TypeName));
 			}
+
+			float waterDepth = getWaterDepthAtPos(GetPosition());
+			if(waterDepth > 0.1f) 
+			{
+				mt = g_pMaterialTypes->Get(r3dHash::MakeHash("Water"));
+			}
+
 		}
 	}
 	R3DPROFILE_END("RayCast");
@@ -6882,9 +5759,14 @@ void obj_AI_Player::UpdateFootsteps()
 		// hack: right now we have a problem with faceID in raycast not matching faceID of the actual mesh (collision mesh vs regular mesh). 
 		// So, in case if we failed to find a proper material because of that, let's just use old foot step sound and that's it
 		int fts = currentFootStepsSoundID; 
-		if(mt && mt->footStepsSound>=0)
+		if(mt)
 		{
-			fts = mt->footStepsSound;
+			if(bCrouch && mt->crouchFootstepsSound>=0)
+				fts = mt->crouchFootstepsSound;
+			else if(bProne && mt->proneFootstepsSound>=0)
+				fts = mt->proneFootstepsSound;
+			else
+				fts = mt->footStepsSound;
 		}
 		if (!SoundSys.IsHandleValid(footStepsSnd) || fts != currentFootStepsSoundID)
 		{
@@ -6925,14 +5807,19 @@ void obj_AI_Player::UpdateFootsteps()
 		static const float SpawnRatesByState[] = {
 			0,	//PLAYER_IDLE,
 			0,	//PLAYER_IDLEAIM,
-			0.76f,	//PLAYER_MOVE_CROUCH,
+			0.6f,	//PLAYER_MOVE_CROUCH,
 			0.54f,	//PLAYER_MOVE_CROUCH_AIM,
-			0.58f,	//PLAYER_MOVE_WALK_AIM,
-			1.0f,	//PLAYER_MOVE_RUN,
-			1.17f,	//PLAYER_MOVE_SPRINT,
+			0.49f,	//PLAYER_MOVE_WALK_AIM,
+			0.95f,	//PLAYER_MOVE_RUN,
+			1.1f,	//PLAYER_MOVE_SPRINT,
+			1.0f,	//PRONE
+			1.0f,	//PRONE_AIM
+			1.0f,  //PRONE_UP
+			0,	//PRONE_DOWN
+			0,	//PRONE_IDLE
 			0,	//PLAYER_DIE,
 		};
-		TL_STATIC_ASSERT( R3D_ARRAYSIZE(SpawnRatesByState) == PLAYER_NUM_STATES ) ;
+		COMPILE_ASSERT( R3D_ARRAYSIZE(SpawnRatesByState) == PLAYER_NUM_STATES ) ;
 		float spawnRate = SpawnRatesByState[PlayerState];
 		if(PlayerMoveDir == CUberData::ANIMDIR_Stand || hitResult == false )
 			spawnRate = 0.0f;
@@ -6955,85 +5842,103 @@ void obj_AI_Player::UpdateFootsteps()
 	}
 }
 
-
-void obj_AI_Player::SetTransparentCamouflage(float alpha)
-{
-	if (uberEquip_)
-	{
-		camoTimeLine.SetNewCamoTarget(alpha);
-	}
-
-	if( alpha < camoTimeLine.transparentCamoAlpha )
-	{
-		camoTimeLine.transparencyOnShock = 1.0f ;
-	}
-}
-
-void obj_AI_Player::updateWeaponUI()
+void obj_Player::updateWeaponUI()
 {
 	if(!hudMain)
 		return;
+	if(!NetworkLocal)
+		return;
 
-	hudMain->removeAllWeapons();
-	if(m_Weapons[0])
-		hudMain->AddNewWeapon(0, m_Weapons[0]->getStoreName(), m_Weapons[0]->getStoreIcon(), m_Weapons[0]->getConfig()->category, m_Weapons[0]->getFiremode());
-	if(m_Weapons[1])
-		hudMain->AddNewWeapon(1, m_Weapons[1]->getStoreName(), m_Weapons[1]->getStoreIcon(), m_Weapons[1]->getConfig()->category, m_Weapons[1]->getFiremode());
-	if(m_Weapons[2])
-		hudMain->AddNewWeapon(2, m_Weapons[2]->getStoreName(), m_Weapons[2]->getStoreIcon(), m_Weapons[2]->getConfig()->category, m_Weapons[2]->getFiremode());
-
-	if(m_Weapons[3])
-		hudMain->AddNewWeapon(3, m_Weapons[3]->getStoreName(), m_Weapons[3]->getStoreIcon(), m_Weapons[3]->getConfig()->category, m_Weapons[3]->getFiremode());
-	else
-		hudMain->AddNewWeapon(3, NULL, "", storecat_INVALID, WPN_FRM_SINGLE);
-
-	if(m_Weapons[4])
-		hudMain->AddNewWeapon(4, m_Weapons[4]->getStoreName(), m_Weapons[4]->getStoreIcon(), m_Weapons[4]->getConfig()->category, m_Weapons[4]->getFiremode());
-	else
-		hudMain->AddNewWeapon(4, NULL, "", storecat_INVALID, WPN_FRM_SINGLE);
-
-	if(m_Weapons[5])
-		hudMain->AddNewWeapon(5, m_Weapons[5]->getStoreName(), m_Weapons[5]->getStoreIcon(), m_Weapons[5]->getConfig()->category, m_Weapons[5]->getFiremode());
-	else
-		hudMain->AddNewWeapon(5, NULL, "", storecat_INVALID, WPN_FRM_SINGLE);
-
-	if(m_Weapons[6])
-		hudMain->AddNewWeapon(6, m_Weapons[6]->getStoreName(), m_Weapons[6]->getStoreIcon(), m_Weapons[6]->getConfig()->category, m_Weapons[6]->getFiremode());
-	else
-		hudMain->AddNewWeapon(6, NULL, "", storecat_INVALID, WPN_FRM_SINGLE);
-
-	hudMain->setCurrentWeapon(m_SelectedWeapon);
-	if(m_Weapons[m_SelectedWeapon])
+	for(int i=0; i<6; ++i)
 	{
-		hudMain->showUseItem(false);
-		hudMain->setFireMode(m_Weapons[m_SelectedWeapon]->getFiremode());
+		const BaseItemConfig* baseItem = g_pWeaponArmory->getConfig(CurLoadout.Items[i].itemID);
+		int numCharges = CurLoadout.Items[i].quantity;
+		if(baseItem)
+		{
+			hudMain->setSlotInfo(i, baseItem->m_StoreName, numCharges, baseItem->m_StoreIcon);
+		}
+		else
+			hudMain->setSlotInfo(i, "", 0, "");
 	}
+	if(!forcedEmptyHands && m_Weapons[m_SelectedWeapon])
+		hudMain->setActiveSlot(m_SelectedWeapon);
 	else
-		hudMain->showUseItem(true);
+		hudMain->setActiveSlot(100);
 
-	hudMain->showReticle(true);
-	hudMain->setReticleColor("white");
+	{
+		bool isMelee = false;
+		if(m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getCategory() == storecat_MELEE)
+			isMelee = true;
+		if(!forcedEmptyHands && ((m_SelectedWeapon < 2 && !isMelee && m_Weapons[m_SelectedWeapon]) || (m_SelectedWeapon>=2 && m_Weapons[m_SelectedWeapon] && m_Weapons[m_SelectedWeapon]->getCategory() == storecat_GRENADE)))
+		{
+			hudMain->showWeaponInfo(true);
+		}
+		else
+		{
+			hudMain->showWeaponInfo(false);
+		}
+	}
 }
 
-float obj_AI_Player::getPlayerHeightForCamera() const
+void obj_Player::switchFPS_TPS()
 {
-	// ptumik: not working :(
-//	if(PlayerState == PLAYER_MOVE_CROUCH || PlayerState == PLAYER_MOVE_CROUCH_AIM)
-//		return 1.0f;
-	
+	r3d_assert(NetworkLocal);
+
+	g_camera_mode->SetInt(g_camera_mode->GetInt()==2?0:2);
+
+	// we only need to reload body meshes
+	const HeroConfig* heroConfig = g_pWeaponArmory->getHeroConfig(CurLoadout.HeroItemID);
+	loadHeroMeshes(heroConfig);
+	// reload weapon meshes (to load skeleton for FPS mode)
+	// create weapons & items
+	for(int i=0; i<NUM_WEAPONS_ON_PLAYER; i++)
+	{
+		if(m_Weapons[i])
+		{
+			m_Weapons[i]->setFirstPersonMeshFlag(g_camera_mode->GetInt()==2);
+			m_Weapons[i]->ResetMeshLoadedFlag();
+			uint32_t attmIDs[WPN_ATTM_MAX];
+			m_Weapons[i]->getCurrentAttachmentIDs(attmIDs);
+			uint32_t zeroID[WPN_ATTM_MAX] = {0};
+			m_Weapons[i]->setWeaponAttachmentsByIDs(zeroID); // reset attachments if any
+			m_Weapons[i]->setWeaponAttachmentsByIDs(attmIDs); // reload attachments
+		}
+	}
+
+	uberAnim_->anim.StopAll();	// prevent animation blending on loadout switch
+	uberAnim_->AnimPlayerState = -1;
+	SyncAnimation(true);
+}
+
+void obj_Player::switchToEmptyHands()
+{
+	if(forcedEmptyHands)
+		return;
+
+	forcedEmptyHands = true;
+	if(m_Weapons[m_SelectedWeapon])
+		m_Weapons[m_SelectedWeapon]->OnUnequip();
+	SyncAnimation(true);
+
+	if(NetworkLocal)
+		updateWeaponUI();
+}
+
+float obj_Player::getPlayerHeightForCamera() const
+{
 	return Height;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void obj_AI_Player::DoRagdoll(bool toRagdoll, int hitBone, const r3dPoint3D* impulse)
+void obj_Player::DoRagdoll(bool toRagdoll, int hitBone, const r3dPoint3D* impulse)
 {
 #if ENABLE_RAGDOLL
 	if (m_PhysSkeleton)
 	{
 		if (impulse)
 		{
-			m_PhysSkeleton->SwitchToRagdollWithForce(toRagdoll, hitBone, *impulse);
+			m_PhysSkeleton->SwitchToRagdollWithForce(toRagdoll, hitBone, impulse);
 		}
 		else
 		{
@@ -7048,7 +5953,7 @@ void obj_AI_Player::DoRagdoll(bool toRagdoll, int hitBone, const r3dPoint3D* imp
 #endif
 }
 
-void obj_AI_Player::OnGameEnded()
+void obj_Player::OnGameEnded()
 {
 	if(m_SelectedWeapon >= 0 && m_Weapons[m_SelectedWeapon] )
 	{
@@ -7057,8 +5962,47 @@ void obj_AI_Player::OnGameEnded()
 	}
 }
 
+void obj_Player::OnBackpackChanged(int idx)
+{
+	r3d_assert(NetworkLocal);
+	
+	if(idx == wiCharDataFull::CHAR_LOADOUT_WEAPON1 || idx == wiCharDataFull::CHAR_LOADOUT_WEAPON2)
+	{
+		// attachments are reset on item change (SERVER CODE SYNC POINT)
+		CurLoadout.Attachment[idx].Reset();
+		if(CurLoadout.Items[idx].Var2 > 0)
+			CurLoadout.Attachment[idx].attachments[WPN_ATTM_CLIP] = CurLoadout.Items[idx].Var2;
+	}
+
+	// check if we need to modify loadout
+	if(idx >= wiCharDataFull::CHAR_LOADOUT_WEAPON1 && idx <= wiCharDataFull::CHAR_LOADOUT_HEADGEAR)
+	{
+		UpdateLoadoutSlot(CurLoadout);
+
+		updateWeaponUI();
+	}
+
+	// if trying to put weapon into quick slot that is active, then force empty hands
+	if(idx >= wiCharDataFull::CHAR_LOADOUT_ITEM1 && idx <= wiCharDataFull::CHAR_LOADOUT_ITEM4 && 
+		m_SelectedWeapon == idx && m_Weapons[m_SelectedWeapon] && !m_Weapons[m_SelectedWeapon]->isUsableItem())
+	{	
+		switchToEmptyHands();
+		{
+			PKT_C2C_PlayerSwitchWeapon_s n;
+			n.wid       = forcedEmptyHands?255:m_SelectedWeapon;
+			p2pSendToHost(this, &n, sizeof(n), true);
+		}
+	}
+
+
+	if(hudPause && hudPause->isActive()) hudPause->reloadBackpackInfo();
+
+	if(NetworkLocal && (idx == wiCharDataFull::CHAR_LOADOUT_ARMOR || idx == wiCharDataFull::CHAR_LOADOUT_HEADGEAR))
+		SoundSys.PlayAndForget(SoundSys.GetEventIDByPath("Sounds/WarZ/PlayerSounds/PLAYER_CHANGECLOTHES"), GetPosition());
+}
+
 #if VEHICLES_ENABLED
-obj_Vehicle* obj_AI_Player::canEnterVehicle()
+obj_Vehicle* obj_Player::canEnterVehicle()
 {
 	// Fast version from Frank
 	for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
@@ -7080,7 +6024,7 @@ obj_Vehicle* obj_AI_Player::canEnterVehicle()
 
 //////////////////////////////////////////////////////////////////////////
 
-void obj_AI_Player::TogglePhysicsSimulation(bool on)
+void obj_Player::TogglePhysicsSimulation(bool on)
 {
 	if (PhysicsObject)
 	{
@@ -7098,7 +6042,7 @@ void obj_AI_Player::TogglePhysicsSimulation(bool on)
 
 //////////////////////////////////////////////////////////////////////////
 
-void obj_AI_Player::enterVehicle( obj_Vehicle* target_Vehicle )
+void obj_Player::enterVehicle( obj_Vehicle* target_Vehicle )
 {
 	// Fast version from Frank
 	target_Vehicle->SwitchToDrivable( true );
@@ -7111,7 +6055,7 @@ void obj_AI_Player::enterVehicle( obj_Vehicle* target_Vehicle )
 	TogglePhysicsSimulation(false);
 }
 
-void obj_AI_Player::exitVehicle()
+void obj_Player::exitVehicle()
 {
 
 	// first let's look for a good location
@@ -7163,17 +6107,17 @@ void obj_AI_Player::exitVehicle()
 	
 }
 
-bool obj_AI_Player::isDriving()
+bool obj_Player::isDriving()
 {
 	return vehicleViewActive_ == VehicleView_Driver;
 }
 
-bool obj_AI_Player::isInVehicle() 
+bool obj_Player::isInVehicle() 
 {
 	return vehicleViewActive_ != VehicleView_None;
 }
 
-bool obj_AI_Player::TestExitPosition( r3dVector& exitPosition, bool ignoreGround)
+bool obj_Player::TestExitPosition( r3dVector& exitPosition, bool ignoreGround)
 {
 
 	// snap to ground
@@ -7181,11 +6125,11 @@ bool obj_AI_Player::TestExitPosition( r3dVector& exitPosition, bool ignoreGround
 		// first find out if there's ground. 
 		PxRaycastHit hit;
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		if(g_pPhysicsWorld->raycastSingle(PxVec3(exitPosition.x, exitPosition.y+1, exitPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::ePOSITION, hit, filter))
+		if(g_pPhysicsWorld->raycastSingle(PxVec3(exitPosition.x, exitPosition.y+1, exitPosition.z), PxVec3(0, -1, 0), 2, PxSceneQueryFlag::eIMPACT, hit, filter))
 		{
-			exitPosition.x = hit.position.x;
-			exitPosition.y = hit.position.y;
-			exitPosition.z = hit.position.z;
+			exitPosition.x = hit.impact.x;
+			exitPosition.y = hit.impact.y;
+			exitPosition.z = hit.impact.z;
 		} 
 		else 
 		{
@@ -7210,43 +6154,12 @@ bool obj_AI_Player::TestExitPosition( r3dVector& exitPosition, bool ignoreGround
 #endif
 
 
-// this weird function (made by our friend Frank) is used to return true only for grenades that is out of ammo.
-bool obj_AI_Player::isWeaponGrenadeOutofAmmo(int weaponIndex)
-{
-	r3d_assert(weaponIndex >= 0 && weaponIndex < NUM_WEAPONS_ON_PLAYER);
-	const Weapon* wpn = m_Weapons[weaponIndex];
-
-	if(wpn->getCategory() == storecat_GRENADES)
-	{
-		if(wpn->getNumBulletsLeft() == 0 && !wpn->m_needDelayedAction)
-			return true;
-	}
-	if(wpn->isUsableItem())
-	{
-		if(wpn->m_usableItemInventoryIdx >= 0)
-		{
-			int numCharges = gUserProfile.ProfileData.Inventory[wpn->m_usableItemInventoryIdx].quantity;
-			if(numCharges == 0)
-				return true;
-		}
-	}
-		
-	return false;
-}
-
-void obj_AI_Player::setHasSabotageBomb(bool set)
-{
-	m_hasBomb = set;
-	if(NetworkLocal && hudMain)
-		hudMain->SetYouHaveBomb(set);
-}
-
 //////////////////////////////////////////////////////////////////////////
 
-void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float height);
+void ProcessCharacterEditor(obj_Player* pl, float left, float top, float height);
 void ProcessCharacterEditor()
 {
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(EditorGameHUD::editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(EditorGameHUD::editorPlayerId);
 	if (!pl)
 	{
 		imgui_Static(r3dRenderer->ScreenW-375, 85, "Spawn player firstly by pressing F8");
@@ -7256,7 +6169,7 @@ void ProcessCharacterEditor()
 	ProcessCharacterEditor(pl, 100, 100, 150);
 }
 
-void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float height)
+void ProcessCharacterEditor(obj_Player* pl, float left, float top, float height)
 {
 	stringlist_t weaponDB_nameList;
 	uint32_t* weaponDB_idList = 0;
@@ -7274,14 +6187,15 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 
 	static int selectedPrimaryWeaponIndex = -1;
 	static int selectedSecondaryWeaponIndex = -1;
-	static int selectedSideWeaponIndex = -1;
 	static int selectedBodyIndex = 0;
+	static int selectedHeroIndex = 0;
+	static int selectedLegsIndex = 0;
 	static int selectedArmorIndex = 0;
 	static int selectedHeadIndex = 0;
 	static int selectedHeadArmorIndex = 0;
 
-	stringlist_t armorDBnames, bodyDBnames, headBDnames, headarmorBDnames;
-	uint32_t *armorDBids = 0, *bodyDBids = 0, *headDBids = 0, *headarmorDBids = 0;
+	stringlist_t armorDBnames, bodyDBnames, heroDBnames, legsDBnames, headDBnames, headarmorBDnames;
+	uint32_t *armorDBids = 0, *bodyDBids = 0, *heroDBids = 0, *legsDBids = 0, *headDBids = 0, *headarmorDBids = 0;
 	if(weaponDB_nameList.empty()) // fill in list
 	{
 		weaponDB_nameList.push_back("empty");
@@ -7307,17 +6221,24 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 			}
 		};
 		std::vector<const WeaponConfig*> allWpns;
-		for(int i=0; i<gWeaponArmory.getNumWeapons(); ++i) {
-			allWpns.push_back(gWeaponArmory.getWeaponConfigByIndex(i));
+		g_pWeaponArmory->startItemSearch();
+		while(g_pWeaponArmory->searchNextItem())
+		{
+			uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+			const WeaponConfig* config = g_pWeaponArmory->getWeaponConfig(itemID);
+			if(config)
+			{
+				allWpns.push_back(config);
+			}
 		}
 		qsort(&allWpns[0], allWpns.size(), sizeof(WeaponConfig*), CWpnNameSort::sort);
 
-		int numItemsInWeaponList = gWeaponArmory.getNumWeapons() + 1;
+		int numItemsInWeaponList = g_pWeaponArmory->getNumWeapons() + 1;
 		weaponDB_idList = new uint32_t[numItemsInWeaponList];
 		weaponDB_idList[0] = -1;
 		for(int i=1; i<numItemsInWeaponList; ++i)
 		{
-			const WeaponConfig* config = allWpns[i-1]; //gWeaponArmory.getWeaponConfigByIndex(i-1);
+			const WeaponConfig* config = allWpns[i-1];
 
 			// get item FNAME without .dds
 			char wname[256];
@@ -7327,22 +6248,18 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 			weaponDB_nameList.push_back(wname);
 			weaponDB_idList[i] = config->m_itemID;
 
-			if(selectedPrimaryWeaponIndex==-1 && config->m_itemID == pl->CurLoadout.PrimaryWeaponID)
+			if(selectedPrimaryWeaponIndex==-1 && config->m_itemID == pl->CurLoadout.Items[0].itemID)
 				selectedPrimaryWeaponIndex = i;
-			if(selectedSecondaryWeaponIndex==-1 && config->m_itemID == pl->CurLoadout.SecondaryWeaponID)
+			if(selectedSecondaryWeaponIndex==-1 && config->m_itemID == pl->CurLoadout.Items[1].itemID)
 				selectedSecondaryWeaponIndex = i;
-			if(selectedSideWeaponIndex==-1 && config->m_itemID == pl->CurLoadout.SidearmWeaponID)
-				selectedSideWeaponIndex = i;
 		}
 
 		if(selectedPrimaryWeaponIndex==-1)
 			selectedPrimaryWeaponIndex = 0;
 		if(selectedSecondaryWeaponIndex==-1)
 			selectedSecondaryWeaponIndex = 0;
-		if(selectedSideWeaponIndex==-1)
-			selectedSideWeaponIndex = 0;
 
-		int numItemsInAttachmentList = gWeaponArmory.getNumAttachments() + 1;
+		int numItemsInAttachmentList = g_pWeaponArmory->getNumAttachments() + 1;
 		attachmentDB_muzzle_idList = new uint32_t[numItemsInAttachmentList]; int numMuzzles = 0;
 		attachmentDB_muzzle_idList[0] = 0;
 		attachmentDB_upperRail_idList = new uint32_t[numItemsInAttachmentList]; int numUpperRails = 0;
@@ -7353,82 +6270,91 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 		attachmentDB_bottomRail_idList[0] = 0;
 		attachmentDB_clip_idList = new uint32_t[numItemsInAttachmentList]; int numClips = 0;
 		attachmentDB_clip_idList[0] = 0;
-		for(int i=1; i<numItemsInAttachmentList; ++i)
+
+		g_pWeaponArmory->startItemSearch();
+		while(g_pWeaponArmory->searchNextItem())
 		{
-			const WeaponAttachmentConfig* config = gWeaponArmory.getAttachmentConfigByIndex(i-1);
-			switch(config->m_type)
+			uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+			const WeaponAttachmentConfig* config = g_pWeaponArmory->getAttachmentConfig(itemID);
+			if(config)
 			{
-			case WPN_ATTM_MUZZLE:
-				attachmentDB_muzzle_nameList.push_back(config->m_StoreName);
-				attachmentDB_muzzle_idList[++numMuzzles] = config->m_itemID;
-				break;
-			case WPN_ATTM_UPPER_RAIL:
-				attachmentDB_upperRail_nameList.push_back(config->m_StoreName);
-				attachmentDB_upperRail_idList[++numUpperRails] = config->m_itemID;
-				break;
-			case WPN_ATTM_LEFT_RAIL:
-				attachmentDB_leftRail_nameList.push_back(config->m_StoreName);
-				attachmentDB_leftRail_idList[++numLeftRails] = config->m_itemID;
-				break;
-			case WPN_ATTM_BOTTOM_RAIL:
-				attachmentDB_bottomRail_nameList.push_back(config->m_StoreName);
-				attachmentDB_bottomRail_idList[++numBottomRails] = config->m_itemID;
-				break;
-			case WPN_ATTM_CLIP:
-				attachmentDB_clip_nameList.push_back(config->m_StoreName);
-				attachmentDB_clip_idList[++numClips] = config->m_itemID;
-				break;
-			default:
-				break;
+				switch(config->m_type)
+				{
+				case WPN_ATTM_MUZZLE:
+					attachmentDB_muzzle_nameList.push_back(config->m_StoreName);
+					attachmentDB_muzzle_idList[++numMuzzles] = config->m_itemID;
+					break;
+				case WPN_ATTM_UPPER_RAIL:
+					attachmentDB_upperRail_nameList.push_back(config->m_StoreName);
+					attachmentDB_upperRail_idList[++numUpperRails] = config->m_itemID;
+					break;
+				case WPN_ATTM_LEFT_RAIL:
+					attachmentDB_leftRail_nameList.push_back(config->m_StoreName);
+					attachmentDB_leftRail_idList[++numLeftRails] = config->m_itemID;
+					break;
+				case WPN_ATTM_BOTTOM_RAIL:
+					attachmentDB_bottomRail_nameList.push_back(config->m_StoreName);
+					attachmentDB_bottomRail_idList[++numBottomRails] = config->m_itemID;
+					break;
+				case WPN_ATTM_CLIP:
+					attachmentDB_clip_nameList.push_back(config->m_StoreName);
+					attachmentDB_clip_idList[++numClips] = config->m_itemID;
+					break;
+				default:
+					break;
+				}
 			}
 		}
-
-		int numItemsInGearList = gWeaponArmory.getNumGears() + 1;
+		int numItemsInGearList = g_pWeaponArmory->getNumGears() + 1;
 		armorDBids = new uint32_t[numItemsInGearList]; int numArmor = 0;
-		bodyDBids = new uint32_t[numItemsInGearList]; int numBody = 0;
-		headDBids = new uint32_t[numItemsInGearList]; int numHead = 0;
 		headarmorDBids = new uint32_t[numItemsInGearList]; int numHeadarmor = 0;
 
 		headarmorBDnames.push_back("empty");
-		headBDnames.push_back("empty");
 		armorDBnames.push_back("empty");
-		bodyDBnames.push_back("empty");
 		armorDBids[0] = 0;
-		bodyDBids[0] = 0; 
-		headDBids[0] = 0;
 		headarmorDBids[0] = 0;
-		for(int i=1; i<numItemsInGearList; ++i)
+	
+		g_pWeaponArmory->startItemSearch();
+		while(g_pWeaponArmory->searchNextItem())
 		{
-			const GearConfig* config = gWeaponArmory.getGearConfigByIndex(i-1);
-			switch(config->category)
+			uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+			const GearConfig* config = g_pWeaponArmory->getGearConfig(itemID);
+			if(config)
 			{
-			case storecat_Characters:
-			case storecat_Heroes:
-				bodyDBnames.push_back(config->m_StoreName);
-				bodyDBids[++numBody] = config->m_itemID;
-				if(selectedBodyIndex==-1 && config->m_itemID == pl->CurLoadout.BodyMeshID)
-					selectedBodyIndex = numBody;
-				break;
-			case storecat_Gear:
-				armorDBnames.push_back(config->m_StoreName);
-				armorDBids[++numArmor] = config->m_itemID;
-				if(selectedArmorIndex==-1 && config->m_itemID == pl->CurLoadout.BodyArmorID)
-					selectedArmorIndex = numArmor;
-				break;
-			case storecat_Heads:
-				headBDnames.push_back(config->m_StoreName);
-				headDBids[++numHead] = config->m_itemID;
-				if(selectedHeadIndex==-1 && config->m_itemID == pl->CurLoadout.BodyHeadID)
-					selectedHeadIndex = numHead;
-				break;
-			case storecat_HeadGear:
-				headarmorBDnames.push_back(config->m_StoreName);
-				headarmorDBids[++numHeadarmor] = config->m_itemID;
-				if(selectedHeadArmorIndex==-1 && config->m_itemID == pl->CurLoadout.BodyHeadGearID)
-					selectedHeadArmorIndex = numHeadarmor;
-				break;
-			default:
-				break;
+				switch(config->category)
+				{
+				case storecat_Armor:
+					armorDBnames.push_back(config->m_StoreName);
+					armorDBids[++numArmor] = config->m_itemID;
+					if(selectedArmorIndex==-1 && config->m_itemID == pl->CurLoadout.Items[6].itemID)
+						selectedArmorIndex = numArmor;
+					break;
+				case storecat_Helmet:
+					headarmorBDnames.push_back(config->m_StoreName);
+					headarmorDBids[++numHeadarmor] = config->m_itemID;
+					if(selectedHeadArmorIndex==-1 && config->m_itemID == pl->CurLoadout.Items[7].itemID)
+						selectedHeadArmorIndex = numHeadarmor;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		int numItemsInHeroList = g_pWeaponArmory->getNumHeroes();
+		heroDBids = new uint32_t[numItemsInHeroList]; int numHero = 0;
+
+		g_pWeaponArmory->startItemSearch();
+		while(g_pWeaponArmory->searchNextItem())
+		{
+			uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+			const HeroConfig* config = g_pWeaponArmory->getHeroConfig(itemID);
+			if(config)
+			{
+				heroDBnames.push_back(config->m_StoreName);
+				heroDBids[numHero] = config->m_itemID;
+				if(selectedHeroIndex==-1 && config->m_itemID == pl->CurLoadout.HeroItemID)
+					selectedHeroIndex = numHero;
+				numHero++;
 			}
 		}
 	}
@@ -7449,111 +6375,131 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 	static int selectedSecondaryWeapon_BottomRail= 0;
 	static int selectedSecondaryWeapon_Clip = 0;
 
-	static int selectedSidearmWeapon_Muzzle = 0;
-	static int selectedSidearmWeapon_UpperRail = 0;
-	static int selectedSidearmWeapon_LeftRail = 0;
-	static int selectedSidearmWeapon_BottomRail= 0;
-	static int selectedSidearmWeapon_Clip = 0;
-
 	float offset = top + shift + height - 20;
 	{
 		static float primWeaponOffset = 0;
-		imgui_Static(left + width * 6, top, "Primary Weapon", width);
-		imgui_DrawList(left + width * 6, top + shift, (float)width, (float)height, weaponDB_nameList, &primWeaponOffset, &selectedPrimaryWeaponIndex);
+		imgui_Static(left + width * 7, top, "Primary Weapon", width);
+		imgui_DrawList(left + width * 7, top + shift, (float)width, (float)height, weaponDB_nameList, &primWeaponOffset, &selectedPrimaryWeaponIndex);
 
 		if(g_camera_mode->GetInt() == 2)
 		{
 			static float primWeaponAttachmentMuzzleOffset = 0;
-			imgui_Static(left + width * 6, offset, "Muzzle", width);
-			imgui_DrawList(left + width * 6, offset + 20, (float)width, (float)100.0f, attachmentDB_muzzle_nameList, &primWeaponAttachmentMuzzleOffset, &selectedPrimaryWeapon_Muzzle);
+			imgui_Static(left + width * 7, offset, "Muzzle", width);
+			imgui_DrawList(left + width * 7, offset + 20, (float)width, (float)100.0f, attachmentDB_muzzle_nameList, &primWeaponAttachmentMuzzleOffset, &selectedPrimaryWeapon_Muzzle);
 
 			static float primWeaponAttachmentUpperRailOffset = 0;
-			imgui_Static(left + width * 6, offset + 100, "Upper Rail", width);
-			imgui_DrawList(left + width * 6, offset + 20 + 100, (float)width, (float)100.0f, attachmentDB_upperRail_nameList, &primWeaponAttachmentUpperRailOffset, &selectedPrimaryWeapon_UpperRail);
+			imgui_Static(left + width * 7, offset + 100, "Upper Rail", width);
+			imgui_DrawList(left + width * 7, offset + 20 + 100, (float)width, (float)100.0f, attachmentDB_upperRail_nameList, &primWeaponAttachmentUpperRailOffset, &selectedPrimaryWeapon_UpperRail);
 
 			static float primWeaponAttachmentLeftRailOffset = 0;
-			imgui_Static(left + width * 6, offset + 200, "Left Rail", width);
-			imgui_DrawList(left + width * 6, offset + 20 + 200, (float)width, (float)100.0f, attachmentDB_leftRail_nameList, &primWeaponAttachmentLeftRailOffset, &selectedPrimaryWeapon_LeftRail);
+			imgui_Static(left + width * 7, offset + 200, "Left Rail", width);
+			imgui_DrawList(left + width * 7, offset + 20 + 200, (float)width, (float)100.0f, attachmentDB_leftRail_nameList, &primWeaponAttachmentLeftRailOffset, &selectedPrimaryWeapon_LeftRail);
 
 			static float primWeaponAttachmentBottomRailOffset = 0;
-			imgui_Static(left + width * 6, offset + 300, "Bottom Rail", width);
-			imgui_DrawList(left + width * 6, offset + 20 + 300, (float)width, (float)100.0f, attachmentDB_bottomRail_nameList, &primWeaponAttachmentBottomRailOffset, &selectedPrimaryWeapon_BottomRail);
+			imgui_Static(left + width * 7, offset + 300, "Bottom Rail", width);
+			imgui_DrawList(left + width * 7, offset + 20 + 300, (float)width, (float)100.0f, attachmentDB_bottomRail_nameList, &primWeaponAttachmentBottomRailOffset, &selectedPrimaryWeapon_BottomRail);
 
 			static float primWeaponAttachmentClipOffset = 0;
-			imgui_Static(left + width * 6, offset + 400, "Clip", width);
-			imgui_DrawList(left + width * 6, offset + 20 + 400, (float)width, (float)100.0f, attachmentDB_clip_nameList, &primWeaponAttachmentClipOffset, &selectedPrimaryWeapon_Clip);
+			imgui_Static(left + width * 7, offset + 400, "Clip", width);
+			imgui_DrawList(left + width * 7, offset + 20 + 400, (float)width, (float)100.0f, attachmentDB_clip_nameList, &primWeaponAttachmentClipOffset, &selectedPrimaryWeapon_Clip);
 		}
 	}
 
 	{
 		static float secWeaponOffset = 0;
-		imgui_Static(left + width * 5, top, "Secondary Weapon", width);
-		imgui_DrawList(left + width * 5, top + shift, (float)width, (float)height, weaponDB_nameList, &secWeaponOffset, &selectedSecondaryWeaponIndex);
+		imgui_Static(left + width * 6, top, "Secondary Weapon", width);
+		imgui_DrawList(left + width * 6, top + shift, (float)width, (float)height, weaponDB_nameList, &secWeaponOffset, &selectedSecondaryWeaponIndex);
 
 		if(g_camera_mode->GetInt() == 2)
 		{
 			static float primWeaponAttachmentMuzzleOffset = 0;
-			imgui_Static(left + width * 5, offset, "Muzzle", width);
-			imgui_DrawList(left + width * 5, offset + 20, (float)width, (float)100.0f, attachmentDB_muzzle_nameList, &primWeaponAttachmentMuzzleOffset, &selectedSecondaryWeapon_Muzzle);
+			imgui_Static(left + width * 6, offset, "Muzzle", width);
+			imgui_DrawList(left + width * 6, offset + 20, (float)width, (float)100.0f, attachmentDB_muzzle_nameList, &primWeaponAttachmentMuzzleOffset, &selectedSecondaryWeapon_Muzzle);
 
 			static float primWeaponAttachmentUpperRailOffset = 0;
-			imgui_Static(left + width * 5, offset + 100, "Upper Rail", width);
-			imgui_DrawList(left + width * 5, offset + 20 + 100, (float)width, (float)100.0f, attachmentDB_upperRail_nameList, &primWeaponAttachmentUpperRailOffset, &selectedSecondaryWeapon_UpperRail);
+			imgui_Static(left + width * 6, offset + 100, "Upper Rail", width);
+			imgui_DrawList(left + width * 6, offset + 20 + 100, (float)width, (float)100.0f, attachmentDB_upperRail_nameList, &primWeaponAttachmentUpperRailOffset, &selectedSecondaryWeapon_UpperRail);
 
 			static float primWeaponAttachmentLeftRailOffset = 0;
-			imgui_Static(left + width * 5, offset + 200, "Left Rail", width);
-			imgui_DrawList(left + width * 5, offset + 20 + 200, (float)width, (float)100.0f, attachmentDB_leftRail_nameList, &primWeaponAttachmentLeftRailOffset, &selectedSecondaryWeapon_LeftRail);
+			imgui_Static(left + width * 6, offset + 200, "Left Rail", width);
+			imgui_DrawList(left + width * 6, offset + 20 + 200, (float)width, (float)100.0f, attachmentDB_leftRail_nameList, &primWeaponAttachmentLeftRailOffset, &selectedSecondaryWeapon_LeftRail);
 
 			static float primWeaponAttachmentBottomRailOffset = 0;
-			imgui_Static(left + width * 5, offset + 300, "Bottom Rail", width);
-			imgui_DrawList(left + width * 5, offset + 20 + 300, (float)width, (float)100.0f, attachmentDB_bottomRail_nameList, &primWeaponAttachmentBottomRailOffset, &selectedSecondaryWeapon_BottomRail);
+			imgui_Static(left + width * 6, offset + 300, "Bottom Rail", width);
+			imgui_DrawList(left + width * 6, offset + 20 + 300, (float)width, (float)100.0f, attachmentDB_bottomRail_nameList, &primWeaponAttachmentBottomRailOffset, &selectedSecondaryWeapon_BottomRail);
 
 			static float primWeaponAttachmentClipOffset = 0;
-			imgui_Static(left + width * 5, offset + 400, "Clip", width);
-			imgui_DrawList(left + width * 5, offset + 20 + 400, (float)width, (float)100.0f, attachmentDB_clip_nameList, &primWeaponAttachmentClipOffset, &selectedSecondaryWeapon_Clip);
+			imgui_Static(left + width * 6, offset + 400, "Clip", width);
+			imgui_DrawList(left + width * 6, offset + 20 + 400, (float)width, (float)100.0f, attachmentDB_clip_nameList, &primWeaponAttachmentClipOffset, &selectedSecondaryWeapon_Clip);
 		}
+	}
+
+	static float heroOffset = 0;
+	imgui_Static(left + width * 5, top, "Heroes", width);
+	int oldIndex = selectedHeroIndex;
+	imgui_DrawList(left + width * 5, top + shift, (float)width, (float)height, heroDBnames, &heroOffset, &selectedHeroIndex);
+	if(oldIndex != selectedHeroIndex)
+	{
+		selectedBodyIndex = 0;
+		selectedLegsIndex = 0;
+		selectedHeadIndex = 0;
 	}
 
 	{
-		static float sideWeaponOffset = 0;
-		imgui_Static(left + width * 4, top, "Side Weapon", width);
-		imgui_DrawList(left + width * 4, top + shift, (float)width, (float)height, weaponDB_nameList, &sideWeaponOffset, &selectedSideWeaponIndex);
-
-		if(g_camera_mode->GetInt() == 2)
+		int heroItemID = heroDBids[selectedHeroIndex];
+		const HeroConfig* heroConf = g_pWeaponArmory->getHeroConfig(heroItemID);
+		if(heroConf)
 		{
-			static float primWeaponAttachmentMuzzleOffset = 0;
-			imgui_Static(left + width * 4, offset, "Muzzle", width);
-			imgui_DrawList(left + width * 4, offset + 20, (float)width, (float)100.0f, attachmentDB_muzzle_nameList, &primWeaponAttachmentMuzzleOffset, &selectedSidearmWeapon_Muzzle);
+			bodyDBids = new uint32_t[heroConf->getNumBodys()]; int numBody = 0;
+			legsDBids = new uint32_t[heroConf->getNumLegs()]; int numLegs = 0;
+			headDBids = new uint32_t[heroConf->getNumHeads()]; int numHead = 0;
 
-			static float primWeaponAttachmentUpperRailOffset = 0;
-			imgui_Static(left + width * 4, offset + 100, "Upper Rail", width);
-			imgui_DrawList(left + width * 4, offset + 20 + 100, (float)width, (float)100.0f, attachmentDB_upperRail_nameList, &primWeaponAttachmentUpperRailOffset, &selectedSidearmWeapon_UpperRail);
-
-			static float primWeaponAttachmentLeftRailOffset = 0;
-			imgui_Static(left + width * 4, offset + 200, "Left Rail", width);
-			imgui_DrawList(left + width * 4, offset + 20 + 200, (float)width, (float)100.0f, attachmentDB_leftRail_nameList, &primWeaponAttachmentLeftRailOffset, &selectedSidearmWeapon_LeftRail);
-
-			static float primWeaponAttachmentBottomRailOffset = 0;
-			imgui_Static(left + width * 4, offset + 300, "Bottom Rail", width);
-			imgui_DrawList(left + width * 4, offset + 20 + 300, (float)width, (float)100.0f, attachmentDB_bottomRail_nameList, &primWeaponAttachmentBottomRailOffset, &selectedSidearmWeapon_BottomRail);
-
-			static float primWeaponAttachmentClipOffset = 0;
-			imgui_Static(left + width * 4, offset + 400, "Clip", width);
-			imgui_DrawList(left + width * 4, offset + 20 + 400, (float)width, (float)100.0f, attachmentDB_clip_nameList, &primWeaponAttachmentClipOffset, &selectedSidearmWeapon_Clip);
+			char tmpStr[16];
+			for(size_t i=0; i<heroConf->getNumBodys(); ++i)
+			{
+				sprintf(tmpStr, "Body %d", i+1);
+				bodyDBnames.push_back(tmpStr);
+				bodyDBids[numBody] = i;
+				if(pl->CurLoadout.BodyIdx == i)
+					selectedBodyIndex = numBody;
+				numBody++;
+			}
+			for(size_t i=0; i<heroConf->getNumLegs(); ++i)
+			{
+				sprintf(tmpStr, "Legs %d", i+1);
+				legsDBnames.push_back(tmpStr);
+				legsDBids[numLegs] = i;
+				if(pl->CurLoadout.LegsIdx == i)
+					selectedLegsIndex = numLegs;
+				numLegs++;
+			}
+			for(size_t i=0; i<heroConf->getNumHeads(); ++i)
+			{
+				sprintf(tmpStr, "Head %d", i+1);
+				headDBnames.push_back(tmpStr);
+				headDBids[numHead] = i;
+				if(pl->CurLoadout.HeadIdx == i)
+					selectedHeadIndex = numHead;
+				numHead++;
+			}
 		}
 	}
+
+	static float legsOffset = 0;
+	imgui_Static(left + width * 4, top, "Legs", width);
+	imgui_DrawList(left + width * 4, top + shift, (float)width, (float)height, legsDBnames, &legsOffset, &selectedLegsIndex);
 
 	static float bodyOffset = 0;
 	imgui_Static(left + width * 3, top, "Body", width);
 	imgui_DrawList(left + width * 3, top + shift, (float)width, (float)height, bodyDBnames, &bodyOffset, &selectedBodyIndex);
 
-	static float armorOffset = 0;
-	imgui_Static(left + width * 2, top, "Armor", width);
-	imgui_DrawList(left + width * 2, top + shift, (float)width, (float)height, armorDBnames, &armorOffset, &selectedArmorIndex);
-
 	static float headOffset = 0;
-	imgui_Static(left + width * 1, top, "Head", width);
-	imgui_DrawList(left + width * 1, top + shift, (float)width, (float)height, headBDnames, &headOffset, &selectedHeadIndex);
+	imgui_Static(left + width * 2, top, "Head", width);
+	imgui_DrawList(left + width * 2, top + shift, (float)width, (float)height, headDBnames, &headOffset, &selectedHeadIndex);
+
+	static float armorOffset = 0;
+	imgui_Static(left + width * 1, top, "Armor", width);
+	imgui_DrawList(left + width * 1, top + shift, (float)width, (float)height, armorDBnames, &armorOffset, &selectedArmorIndex);
 
 	static float headArmorOffset = 0;
 	imgui_Static(left + width * 0, top, "Head Armor", 150);
@@ -7562,45 +6508,43 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 
 	//if(imgui_Button(500, 550, 300, 30, "Apply Changes"))
 	{
-		wiLoadoutSlot loadout;
-		loadout.PrimaryWeaponID = weaponDB_idList[selectedPrimaryWeaponIndex];
-		loadout.SecondaryWeaponID = weaponDB_idList[selectedSecondaryWeaponIndex];
-		loadout.SidearmWeaponID = weaponDB_idList[selectedSideWeaponIndex];
+		wiCharDataFull loadout;
+		loadout.Health = 100;
+		loadout.Items[0].itemID = weaponDB_idList[selectedPrimaryWeaponIndex];
+		loadout.Items[1].itemID = weaponDB_idList[selectedSecondaryWeaponIndex];
+		loadout.Items[6].itemID = armorDBids[selectedArmorIndex];
+		loadout.Items[7].itemID = headarmorDBids[selectedHeadArmorIndex];
 
-		loadout.BodyMeshID = bodyDBids[selectedBodyIndex];
-		loadout.BodyArmorID = armorDBids[selectedArmorIndex];
-		loadout.BodyHeadID = headDBids[selectedHeadIndex];
-		loadout.BodyHeadGearID = headarmorDBids[selectedHeadArmorIndex];
+		loadout.HeroItemID = heroDBids[selectedHeroIndex];
+		loadout.HeadIdx = headDBids[selectedHeadIndex];
+		loadout.BodyIdx = bodyDBids[selectedBodyIndex];
+		loadout.LegsIdx = legsDBids[selectedLegsIndex];
 
-		wiWeaponAttachments Attm;
-		Attm.primary_attachments.attachments[WPN_ATTM_MUZZLE] = attachmentDB_muzzle_idList[selectedPrimaryWeapon_Muzzle];
-		Attm.primary_attachments.attachments[WPN_ATTM_UPPER_RAIL] = attachmentDB_upperRail_idList[selectedPrimaryWeapon_UpperRail];
-		Attm.primary_attachments.attachments[WPN_ATTM_LEFT_RAIL] = attachmentDB_leftRail_idList[selectedPrimaryWeapon_LeftRail];
-		Attm.primary_attachments.attachments[WPN_ATTM_BOTTOM_RAIL] = attachmentDB_bottomRail_idList[selectedPrimaryWeapon_BottomRail];
-		Attm.primary_attachments.attachments[WPN_ATTM_CLIP] = attachmentDB_clip_idList[selectedPrimaryWeapon_Clip];
+		loadout.Attachment[0].attachments[WPN_ATTM_MUZZLE] = attachmentDB_muzzle_idList[selectedPrimaryWeapon_Muzzle];
+		loadout.Attachment[0].attachments[WPN_ATTM_UPPER_RAIL] = attachmentDB_upperRail_idList[selectedPrimaryWeapon_UpperRail];
+		loadout.Attachment[0].attachments[WPN_ATTM_LEFT_RAIL] = attachmentDB_leftRail_idList[selectedPrimaryWeapon_LeftRail];
+		loadout.Attachment[0].attachments[WPN_ATTM_BOTTOM_RAIL] = attachmentDB_bottomRail_idList[selectedPrimaryWeapon_BottomRail];
+		loadout.Attachment[0].attachments[WPN_ATTM_CLIP] = attachmentDB_clip_idList[selectedPrimaryWeapon_Clip];
 
-		Attm.secondary_attachments.attachments[WPN_ATTM_MUZZLE] = attachmentDB_muzzle_idList[selectedSecondaryWeapon_Muzzle];
-		Attm.secondary_attachments.attachments[WPN_ATTM_UPPER_RAIL] = attachmentDB_upperRail_idList[selectedSecondaryWeapon_UpperRail];
-		Attm.secondary_attachments.attachments[WPN_ATTM_LEFT_RAIL] = attachmentDB_leftRail_idList[selectedSecondaryWeapon_LeftRail];
-		Attm.secondary_attachments.attachments[WPN_ATTM_BOTTOM_RAIL] = attachmentDB_bottomRail_idList[selectedSecondaryWeapon_BottomRail];
-		Attm.secondary_attachments.attachments[WPN_ATTM_CLIP] = attachmentDB_clip_idList[selectedSecondaryWeapon_Clip];
+		loadout.Attachment[1].attachments[WPN_ATTM_MUZZLE] = attachmentDB_muzzle_idList[selectedSecondaryWeapon_Muzzle];
+		loadout.Attachment[1].attachments[WPN_ATTM_UPPER_RAIL] = attachmentDB_upperRail_idList[selectedSecondaryWeapon_UpperRail];
+		loadout.Attachment[1].attachments[WPN_ATTM_LEFT_RAIL] = attachmentDB_leftRail_idList[selectedSecondaryWeapon_LeftRail];
+		loadout.Attachment[1].attachments[WPN_ATTM_BOTTOM_RAIL] = attachmentDB_bottomRail_idList[selectedSecondaryWeapon_BottomRail];
+		loadout.Attachment[1].attachments[WPN_ATTM_CLIP] = attachmentDB_clip_idList[selectedSecondaryWeapon_Clip];
 
-		Attm.sidearm_attachments.attachments[WPN_ATTM_MUZZLE] = attachmentDB_muzzle_idList[selectedSidearmWeapon_Muzzle];
-		Attm.sidearm_attachments.attachments[WPN_ATTM_UPPER_RAIL] = attachmentDB_upperRail_idList[selectedSidearmWeapon_UpperRail];
-		Attm.sidearm_attachments.attachments[WPN_ATTM_LEFT_RAIL] = attachmentDB_leftRail_idList[selectedSidearmWeapon_LeftRail];
-		Attm.sidearm_attachments.attachments[WPN_ATTM_BOTTOM_RAIL] = attachmentDB_bottomRail_idList[selectedSidearmWeapon_BottomRail];
-		Attm.sidearm_attachments.attachments[WPN_ATTM_CLIP] = attachmentDB_clip_idList[selectedSidearmWeapon_Clip];
-
-		if(pl->CurLoadout.PrimaryWeaponID != loadout.PrimaryWeaponID ||
-		   pl->CurLoadout.SecondaryWeaponID != loadout.SecondaryWeaponID ||
-		   pl->CurLoadout.SidearmWeaponID != loadout.SidearmWeaponID ||
-		   pl->CurLoadout.BodyMeshID != loadout.BodyMeshID ||
-		   pl->CurLoadout.BodyArmorID != loadout.BodyArmorID ||
-		   pl->CurLoadout.BodyHeadID != loadout.BodyHeadID ||
-		   pl->CurLoadout.BodyHeadGearID != loadout.BodyHeadGearID ||
-		   pl->CurWeaponAttachments != Attm)
+		if(pl->CurLoadout.Items[0].itemID != loadout.Items[0].itemID ||
+		   pl->CurLoadout.Items[1].itemID != loadout.Items[1].itemID ||
+		   pl->CurLoadout.Items[6].itemID != loadout.Items[6].itemID ||
+		   pl->CurLoadout.Items[7].itemID != loadout.Items[7].itemID ||
+		   pl->CurLoadout.HeroItemID != loadout.HeroItemID ||
+		   pl->CurLoadout.HeadIdx != loadout.HeadIdx ||
+		   pl->CurLoadout.BodyIdx != loadout.BodyIdx ||
+		   pl->CurLoadout.LegsIdx != loadout.LegsIdx ||
+		   pl->CurLoadout.Attachment[0] != loadout.Attachment[0] || 
+		   pl->CurLoadout.Attachment[1] != loadout.Attachment[1]
+		)
 		{
-			pl->UpdateLoadoutSlot(loadout, Attm, true);
+			pl->UpdateLoadoutSlot(loadout);
 		}
 	}
 
@@ -7612,6 +6556,7 @@ void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float heig
 	delete [] attachmentDB_clip_idList;
 	delete [] armorDBids;
 	delete [] bodyDBids;
+	delete [] legsDBids;
 	delete [] headDBids;
 	delete [] headarmorDBids;
 }
@@ -7643,31 +6588,14 @@ static void AdjustHitPosition( DecalParams& params, GameObject* target )
 
 //------------------------------------------------------------------------
 
-TCamoSettings::TCamoSettings()
-: texScale( 1.0f )
-, distortScale( 1.0f )
-, animSpeed( 1.0f )
-, reflectionAmmount( 0.33f )
-, color0( 0, 0, 255 )
-, color1( 0, 255, 255, 127 )
-{
-
-}
-
-//------------------------------------------------------------------------
-
-TCamoSettings gCamoSettings;
-
-
-
-bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoint3D &hitPoint, const r3dPoint3D &hitNormal, GameObject* shootTarget, const r3dMaterial* shootMaterial, const char* hitActorName, const WeaponConfig *weaponInfo) 
+bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoint3D &hitPoint, const r3dPoint3D &hitNormal, GameObject* shootTarget, const r3dMaterial* shootMaterial, const char* hitActorName, const WeaponConfig *weaponInfo, const r3dPoint3D& muzzlerPosAtFireStart) 
 {	
 	r3d_assert(owner);
 	r3d_assert(owner->NetworkLocal==true);
 
-	obj_AI_Player* ownerPlayer = NULL;
+	obj_Player* ownerPlayer = NULL;
 	if(owner->isObjType(OBJTYPE_Human))
-		ownerPlayer = (obj_AI_Player*)owner;
+		ownerPlayer = (obj_Player*)owner;
 
 	if( shootTarget == NULL && shootMaterial == NULL) // hit nothing
 	{
@@ -7676,14 +6604,15 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 	} 
 	else if(shootTarget && shootTarget->isObjType(OBJTYPE_Human)) // hit other player
 	{
-		r3d_assert(shootTarget->NetworkID);
-		obj_AI_Player* trgt = (obj_AI_Player*)shootTarget;
+		r3d_assert(shootTarget->GetNetworkID());
+		obj_Player* trgt = (obj_Player*)shootTarget;
 
 		if(!trgt->bDead)
 		{
 			PKT_C2C_PlayerHitDynamic_s n;
+			n.muzzler_pos = muzzlerPosAtFireStart;
 			n.hit_pos = hitPoint;
-			n.targetId = toP2pNetId(shootTarget->NetworkID);
+			n.targetId = toP2pNetId(shootTarget->GetNetworkID());
 			n.hit_body_part = trgt->getBodyNameFromBoneName(hitActorName);
 			n.hit_body_bone = trgt->uberAnim_->GetBoneID(hitActorName);
 			n.damageFromPiercing = damageFromPiercable;
@@ -7697,11 +6626,6 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 			if(!trgt->bDead && ownerPlayer) 
 			{
 				ownerPlayer->m_HitMarkerFadeout = 1.0f;
-				if(ownerPlayer->CurLoadout.hasItem(AbilityConfig::AB_EyeSpy) && ( gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)) // eye spy ability
-				{	
-					trgt->setMinimapVisibleTimer(999999999.0f, true); // just make it super long
-				}
-
 			}
 		}
 		else
@@ -7712,20 +6636,92 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 
 		if(ownerPlayer)
 		{
-			if(!(gClientLogic().m_gameInfo.friendlyFire == 0 && (ownerPlayer->TeamID == ((obj_AI_Player*)shootTarget)->TeamID)))
 			{
 				ownerPlayer->AddBloodOnGround(hitPoint);
 				SpawnImpactParticle(r3dHash::MakeHash("player"),r3dHash::MakeHash(weaponInfo->m_PrimaryAmmo->getDecalSource()), hitPoint, hitNormal);
 			}
 		}
-	} 
-	else if(shootTarget && shootTarget->NetworkID && canDamageTarget(shootTarget))
+	}
+	else if(shootTarget && shootTarget->isObjType(OBJTYPE_Zombie)) // hit zombie
+	{
+		r3d_assert(shootTarget->GetNetworkID());
+
+		PKT_C2C_PlayerHitDynamic_s n;
+		n.muzzler_pos = muzzlerPosAtFireStart;
+		n.hit_pos  = hitPoint;
+		n.targetId = toP2pNetId(shootTarget->GetNetworkID());
+		n.hit_body_part = strcmp("Bip01_Head", hitActorName) == 0 ? 1 : 0;
+		if(ownerPlayer)
+			n.hit_body_bone = ownerPlayer->uberAnim_->GetBoneID(hitActorName); // zombies use same skeleton as player
+		else
+			n.hit_body_bone = 0xFF;
+
+		n.damageFromPiercing = damageFromPiercable;
+		n.state = 0;
+
+		p2pSendToHost(owner, &n, sizeof(n), true);
+
+		if(owner)
+		{
+			obj_Zombie* z = (obj_Zombie*)shootTarget;
+
+			// apply ragdoll force from object position, or up if too close
+			r3dPoint3D zragHitPos = z->GetPosition();
+			r3dPoint3D zlastTimeHitForce = r3dPoint3D(0, 1, 0);
+			if(ownerPlayer)
+			{
+				if(n.hit_body_bone < ownerPlayer->GetSkeleton()->NumBones) // zombies use same skeleton as player
+					zragHitPos = ownerPlayer->uberEquip_->getBonePos(n.hit_body_bone, ownerPlayer->GetSkeleton(), z->GetTransformMatrix());
+				if((zragHitPos - ownerPlayer->GetPosition()).LengthSq() > 0.001f)
+					zlastTimeHitForce = (zragHitPos - ownerPlayer->GetPosition()).NormalizeTo();
+			}
+
+			z->lastTimeHitPos  = zlastTimeHitForce;//ownerPlayer->GetPosition();
+			z->lastTimeDmgType = weaponInfo->category;
+			z->lastTimeHitBoneID = n.hit_body_bone;
+			z->PlayHurtSound();
+		}
+		if(ownerPlayer)
+		{
+			{
+				ownerPlayer->AddBloodOnGround(hitPoint);
+				SpawnImpactParticle(r3dHash::MakeHash("zombie"),r3dHash::MakeHash(weaponInfo->m_PrimaryAmmo->getDecalSource()), hitPoint, hitNormal);
+			}
+		}
+	}
+#ifndef FINAL_BUILD
+	else if(shootTarget && shootTarget->Class->Name == "obj_ZombieDummy")
+	{
+		obj_ZombieDummy* trgt = (obj_ZombieDummy*)shootTarget;
+
+		r3dPoint3D hitForce = (hitPoint - ownerPlayer->GetPosition()).NormalizeTo();
+		int hit_body_bone = trgt->anim_.GetCurrentSkeleton()->GetBoneID(hitActorName);
+		
+		if(strcmp("Bip01_Head", hitActorName) == 0)
+		{
+			r3dPoint3D hitForce_amp = hitForce * 30;
+			trgt->physSkeleton->SwitchToRagdollWithForce(true, hit_body_bone, &hitForce_amp);
+		}
+		else
+		{
+			trgt->DoHit();
+		}
+
+		if(ownerPlayer)
+		{
+			ownerPlayer->AddBloodOnGround(hitPoint);
+			SpawnImpactParticle(r3dHash::MakeHash("player"),r3dHash::MakeHash(weaponInfo->m_PrimaryAmmo->getDecalSource()), hitPoint, hitNormal);
+		}
+	}
+#endif	
+	else if(shootTarget && shootTarget->GetNetworkID() && canDamageTarget(shootTarget))
 	{
 		// hit something that have network Id
-		r3d_assert(shootTarget->NetworkID);
+		r3d_assert(shootTarget->GetNetworkID());
 		PKT_C2C_PlayerHitDynamic_s n;
+		n.muzzler_pos = muzzlerPosAtFireStart;		
 		n.hit_pos = hitPoint;
-		n.targetId = toP2pNetId(shootTarget->NetworkID);
+		n.targetId = toP2pNetId(shootTarget->GetNetworkID());
 		n.hit_body_bone = 0;
 		n.hit_body_part = 0;
 		n.state = 0;
@@ -7735,13 +6731,6 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 		//TODO: add decals
 		SpawnImpactParticle(r3dHash::MakeHash("Metal"),r3dHash::MakeHash(weaponInfo->m_PrimaryAmmo->getDecalSource()), hitPoint, hitNormal);
 	} 
-#if ENABLE_ZOMBIES
-	else if (shootTarget && shootTarget->isObjType(OBJTYPE_Zombie) && strcmp("Bip01_Head", hitActorName) == 0)
-	{
-		obj_Zombie *z = static_cast<obj_Zombie*>(shootTarget);
-		z->Die((z->GetPosition() - owner->GetPosition()).Normalize());
-	}
-#endif // ENABLE_ZOMBIES
 	else 
 	{
 		DecalParams params;
@@ -7759,7 +6748,7 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 		extern bool TraceWater(const r3dPoint3D& start, const r3dPoint3D& finish, r3dPoint3D& waterSplashPos);
 		if( TraceWater( r3dPoint3D(gCam.x, gCam.y, gCam.z), hitPoint, waterSplashPos))
 		{	
-			matHash = r3dHash::MakeHash("Water");
+			matHash = r3dHash::MakeHash("Thirst");
 			particleIdx = SpawnImpactParticle(matHash, sourceHash, waterSplashPos, r3dPoint3D(0,1,0));
 			extern void WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, float amount, int texIdx);
 			waterSplashPos.y -= 0.1f;
@@ -7827,6 +6816,6 @@ bool ProcessBulletHit( int &damageFromPiercable, GameObject* owner, const r3dPoi
 			p2pSendToHost( owner, &n, sizeof(n));
 		}
 	}
-
+	
 	return true;
 }

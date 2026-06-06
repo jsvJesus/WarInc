@@ -25,13 +25,13 @@ void UndoHistory::RegisterUndoAction( const UndoAction_t &action )
 {
 	if ( ! action.pCreateUndoItem )
 	{
-		r3dOutToLog( "#CUndoHistory::RegisterUndoAction : Action id: %d not valid create undo item function", action.nActionID );
+		r3dOutToLog( "#CUndoHistory::RegisterUndoAction : Action id: %d create undo item function is not valid.\n", action.nActionID );
 		return;
 	}
 
 	if ( GetUndoAction( action.nActionID ) )
 	{
-		r3dOutToLog( "#CUndoHistory::RegisterUndoAction : Action id: %d is exist", action.nActionID );
+		r3dOutToLog( "#CUndoHistory::RegisterUndoAction : Action id: %d already exists\n", action.nActionID );
 		return;
 	}
 

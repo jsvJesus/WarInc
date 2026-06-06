@@ -1,7 +1,9 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#include "BaseItemConfig.h"
 #include "WeaponConfig.h"
+#include "GearConfig.h"
 
 const char* WeaponAttachmentBoneNames[WPN_ATTM_MAX] = {
 	"Bone_Attm_Muzzle",
@@ -13,21 +15,12 @@ const char* WeaponAttachmentBoneNames[WPN_ATTM_MAX] = {
 
 bool WeaponAttachmentConfig::loadBaseFromXml(pugi::xml_node& xmlAttachment)
 {
+	ModelItemConfig::loadBaseFromXml(xmlAttachment);
 	m_type = (WeaponAttachmentTypeEnum)xmlAttachment.attribute("type").as_int();
 	m_specID = xmlAttachment.attribute("SpecID").as_int();
 
-	m_ModelPath = strdup(xmlAttachment.child("Model").attribute("file").value());
 	m_MuzzleParticle = strdup(xmlAttachment.child("Model").attribute("MuzzleParticle").value());
 	m_ScopeAnimPath = strdup(xmlAttachment.child("Model").attribute("ScopeAnim").value());
-
-	const char* desc = xmlAttachment.child("Store").attribute("desc").value();
-	r3d_assert(desc);
-	m_Description = strdup(desc);
-	m_StoreIcon = strdup(xmlAttachment.child("Store").attribute("icon").value());
-	m_StoreName = strdup(xmlAttachment.child("Store").attribute("name").value());
-	m_StoreNameW = wcsdup(utf8ToWide(m_StoreName));
-	m_DescriptionW = wcsdup(utf8ToWide(m_Description));
-	m_LevelRequired = xmlAttachment.child("Store").attribute("LevelRequired").as_int();
 
 	m_Damage = xmlAttachment.child("Upgrade").attribute("damage").as_float();
 	m_Range = xmlAttachment.child("Upgrade").attribute("range").as_float();
@@ -42,18 +35,15 @@ bool WeaponAttachmentConfig::loadBaseFromXml(pugi::xml_node& xmlAttachment)
 
 bool WeaponConfig::loadBaseFromXml(pugi::xml_node& xmlWeapon)
 {
-	category = (STORE_CATEGORIES)xmlWeapon.attribute("category").as_int();
-	
-	m_IsUpgradeable = xmlWeapon.attribute("upgrade").as_int();
+	ModelItemConfig::loadBaseFromXml(xmlWeapon);
 
 	FNAME = strdup(xmlWeapon.attribute("FNAME").value());
 
-	m_ModelPath = strdup(xmlWeapon.child("Model").attribute("file").value());
 	{
 		int len = strlen(m_ModelPath);
-		m_ModelPath_1st = (char*)malloc(sizeof(char) * (len + 32));
+		m_ModelPath_1st = (char*)malloc(sizeof(char)*(len+32));
 		r3dscpy(m_ModelPath_1st, m_ModelPath);
-		r3dscpy(&m_ModelPath_1st[len - 4], "_fps.sco");
+		r3dscpy(&m_ModelPath_1st[len-4], "_FPS.sco");
 	}
 
 	m_AnimPrefix = strdup(xmlWeapon.child("Model").attribute("AnimPrefix").value());
@@ -65,15 +55,6 @@ bool WeaponConfig::loadBaseFromXml(pugi::xml_node& xmlWeapon)
 	
 	m_MuzzleParticle = strdup(xmlWeapon.child("MuzzleModel").attribute("file").value());
 
-	const char* desc = xmlWeapon.child("Store").attribute("desc").value();
-	r3d_assert(desc);
-	m_Description = strdup(desc);
-	m_StoreIcon = strdup(xmlWeapon.child("Store").attribute("icon").value());
-	m_StoreName = strdup(xmlWeapon.child("Store").attribute("name").value());
-	m_StoreNameW = wcsdup(utf8ToWide(m_StoreName));
-	m_DescriptionW = wcsdup(utf8ToWide(m_Description));
-	m_LevelRequired = xmlWeapon.child("Store").attribute("LevelRequired").as_int();
-
 	m_AmmoDamage = xmlWeapon.child("PrimaryFire").attribute("damage").as_float();
 	m_AmmoImmediate = xmlWeapon.child("PrimaryFire").attribute("immediate").as_bool();
 	m_AmmoMass = xmlWeapon.child("PrimaryFire").attribute("mass").as_float();
@@ -83,8 +64,9 @@ bool WeaponConfig::loadBaseFromXml(pugi::xml_node& xmlWeapon)
 	m_AmmoDelay = xmlWeapon.child("PrimaryFire").attribute("delay").as_float();
 	m_AmmoTimeout = xmlWeapon.child("PrimaryFire").attribute("timeout").as_float();
 
-	m_numClips = xmlWeapon.child("PrimaryFire").attribute("numShells").as_uint();
-	m_clipSize = xmlWeapon.child("PrimaryFire").attribute("clipSize").as_uint();
+	m_isConsumable = category==storecat_UsableItem;
+	m_ShopStackSize = xmlWeapon.child("PrimaryFire").attribute("clipSize").as_int();
+
 	m_reloadTime= xmlWeapon.child("PrimaryFire").attribute("reloadTime").as_float();
 	m_reloadActiveTick= xmlWeapon.child("PrimaryFire").attribute("activeReloadTick").as_float();
 	m_fireDelay = 60.0f/(xmlWeapon.child("PrimaryFire").attribute("rateOfFire").as_float());
@@ -134,34 +116,19 @@ bool WeaponConfig::loadBaseFromXml(pugi::xml_node& xmlWeapon)
 	return true;
 }
 
-bool GearConfig::loadBaseFromXml(pugi::xml_node& xmlGear)
+bool WeaponConfig::isAttachmentValid(const WeaponAttachmentConfig* wac) const
 {
-	category = (STORE_CATEGORIES)xmlGear.attribute("category").as_int();
-
-	m_ModelPath = strdup(xmlGear.child("Model").attribute("file").value());
+	if(wac)
 	{
-		int len = strlen(m_ModelPath);
-		m_ModelPath_1st = (char*)malloc(sizeof(char)*(len+32));
-		r3dscpy(m_ModelPath_1st, m_ModelPath);
-		r3dscpy(&m_ModelPath_1st[len-4], "_FPS.sco");
+		// check if this is default attachment
+		if(FPSDefaultID[wac->m_type] == wac->m_itemID)
+			return true;
+		else
+		{
+			if(wac->m_specID == FPSSpecID[wac->m_type] && FPSSpecID[wac->m_type] > 0) // specID equal zero means nothing goes in it except for default attm
+				return true;
+		}
 	}
 
-	const char* desc = xmlGear.child("Store").attribute("desc").value();
-	r3d_assert(desc);
-	m_Description = strdup(desc);
-	m_StoreIcon = strdup(xmlGear.child("Store").attribute("icon").value());
-	m_StoreName = strdup(xmlGear.child("Store").attribute("name").value());
-	m_StoreNameW = wcsdup(utf8ToWide(m_StoreName));
-	m_DescriptionW = wcsdup(utf8ToWide(m_Description));
-	m_LevelRequired = xmlGear.child("Store").attribute("LevelRequired").as_int();
-
-	m_Weight = R3D_MIN(xmlGear.child("Armor").attribute("weight").as_float(), 100.0f); // max weight is 100
-	m_damagePerc = xmlGear.child("Armor").attribute("damagePerc").as_float()/100.0f; // from 30 -> 0.3
-	m_damageMax = xmlGear.child("Armor").attribute("damageMax").as_float();
-	m_bulkiness = xmlGear.child("Armor").attribute("bulkiness").as_float();
-	m_inaccuracy = xmlGear.child("Armor").attribute("inaccuracy").as_float();
-	m_stealth = xmlGear.child("Armor").attribute("stealth").as_float();
-	m_ProtectionLevel = xmlGear.child("Armor").attribute("ProtectionLevel").as_int();
-	
-	return true;
+	return false;
 }

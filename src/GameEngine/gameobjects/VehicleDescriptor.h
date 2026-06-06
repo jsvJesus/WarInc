@@ -7,29 +7,29 @@
 
 #if VEHICLES_ENABLED
 
-#include "vehicle/PxVehicle.h"
+#include "vehicle/PxVehicleSDK.h"
 
 //////////////////////////////////////////////////////////////////////////
 
 const char * const VEHICLE_PART_NAMES[] =
 {
 	"Bone_Root",
-	"Bone_Wheel_002",
 	"Bone_Wheel_001",
-	"Bone_Wheel_004",
+	"Bone_Wheel_002",
 	"Bone_Wheel_003",
-// 	"Bone_Wheel_005",
-// 	"Bone_Wheel_006",
-// 	"Bone_Wheel_007",
-// 	"Bone_Wheel_008",
-// 	"Bone_Wheel_009",
-// 	"Bone_Wheel_010",
-// 	"Bone_Wheel_011",
-// 	"Bone_Wheel_012",
-// 	"Bone_Wheel_013",
-// 	"Bone_Wheel_014",
-// 	"Bone_Wheel_015",
-// 	"Bone_Wheel_016"
+	"Bone_Wheel_004",
+ 	"Bone_Wheel_005",
+ 	"Bone_Wheel_006",
+ 	"Bone_Wheel_007",
+ 	"Bone_Wheel_008",
+ 	"Bone_Wheel_009",
+ 	"Bone_Wheel_010",
+ 	"Bone_Wheel_011",
+ 	"Bone_Wheel_012",
+ 	"Bone_Wheel_013",
+ 	"Bone_Wheel_014",
+ 	"Bone_Wheel_015",
+ 	"Bone_Wheel_016"
 };
 
 const char * const VEHICLE_EXIT_NAMES[] =
@@ -53,7 +53,7 @@ class obj_Vehicle;
 
 struct VehicleDescriptor
 {
-	physx::PxVehicle4W *vehicle;
+	physx::PxVehicleDrive4W *vehicle;
 	r3dSkeleton *skl;
 	std::string driveFileDefinitionPath;
 
@@ -63,18 +63,19 @@ struct VehicleDescriptor
 	PxVehicleGearsData gearsData;
 	PxVehicleClutchData clutchData;
 	PxVehicleDifferential4WData diffData;
+
 	struct WheelData
 	{
 		PxVehicleWheelData wheelData;
 		PxVehicleSuspensionData suspensionData;
-		PxVehicleTyreData tireData;
+		PxVehicleTireData tireData;
 		PxVec3 suspensionTravelDir;
 		WheelData()
 		: suspensionTravelDir(0, -1, 0)
 		{
 			wheelData.mRadius = 1.0f;
- 			suspensionData.mSpringStrength = 35000.0f;
- 			suspensionData.mSpringDamperRate = 4500.0f;
+			suspensionData.mSpringStrength = 35000.0f;
+			suspensionData.mSpringDamperRate = 4500.0f;
 			wheelData.mMOI = 1.0f;
 		}
 	};
@@ -105,7 +106,7 @@ struct VehicleDescriptor
 	/** Get hull index corresponding given bone. If requested bone not a hull bone, return INCORRECT_INDEX.  */
 	uint32_t GetHullIndex(uint32_t boneId) const;
 
-	void ApplyDynamicChanges();
+	void ConfigureVehicleSimulationData(PxVehicleDriveSimData4W *dd = 0, PxVehicleWheelsSimData *wd = 0);
 
 	/** Save vehicle parameters to xml file. */
 	bool Save(const char *fileName);

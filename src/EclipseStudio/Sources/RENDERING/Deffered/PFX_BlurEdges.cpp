@@ -26,7 +26,7 @@ PFX_BlurEdges::PFX_BlurEdges( float xDir, float yDir, int tapCount )
 
 	const int MAX_SOURCE_TAPS = 63;
 
-	TL_STATIC_ASSERT( MAX_SOURCE_TAPS & 1 );
+	COMPILE_ASSERT( MAX_SOURCE_TAPS & 1 );
 
 	uint64_t		gauss0[ MAX_SOURCE_TAPS ], 
 		gauss1[ MAX_SOURCE_TAPS ];
@@ -187,7 +187,7 @@ PFX_BlurEdges::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * ( i + 1 ) / dest->Height;
 	}
 
-	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 }
 
 //------------------------------------------------------------------------

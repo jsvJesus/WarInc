@@ -169,13 +169,13 @@ r3dAnimData::track_s::frame_s* r3dAnimData::getSharedFrameData(int iTrack)
 	r3dAnimPool_TotalSize += size;
 
 	r3dAnimPool::trackInfo_s ti;
-	if(pAnimPool->dupTracks.GetObject(crc32, &ti) == false)
+	if(pAnimPool->GetDupTracks().GetObject(crc32, &ti) == false)
 	{
 		// add track info
 		ti.ad        = this;
 		ti.crc32     = crc32;
 		ti.iTrack    = iTrack;
-		pAnimPool->dupTracks.Add(crc32, ti);
+		pAnimPool->GetDupTracks().Add(crc32, ti);
 		return NULL;
 	}
 
@@ -475,6 +475,7 @@ int r3dAnimData::GetTM(int trackId, float fCurFrame, D3DXMATRIX &m) const
 	//
 	
 r3dAnimPool::r3dAnimPool()
+: dupTracks(0)
 {
   animDataTotalSize  = 0;
   animDataSharedSize = 0;
@@ -483,6 +484,7 @@ r3dAnimPool::r3dAnimPool()
 r3dAnimPool::~r3dAnimPool()
 {
   Unload();
+  delete dupTracks;
 }
 
 void r3dAnimPool::Unload()
@@ -523,10 +525,17 @@ int r3dAnimPool::Add(const char* name, const char* fname, float fInitialAngle)
 	  return -1;
   }
 
-  ad->iAnimId = static_cast<int>(Anims.size());
+  ad->iAnimId = Anims.size();
   Anims.push_back(ad);
   
   return ad->iAnimId;
+}
+
+r3dAnimPool::HashTable & r3dAnimPool::GetDupTracks()
+{
+	if (!dupTracks)
+		dupTracks = new HashTable;
+	return *dupTracks;
 }
 
 r3dAnimData* r3dAnimPool::Get(int iId)
@@ -597,7 +606,7 @@ void r3dAnimation::Init(const r3dSkeleton* bindSkeleton, r3dAnimPool* anim, r3dS
 {
 	R3DPROFILE_FUNCTION("r3dAnimation::Init");
   Unload();
-  
+
   pAnimPool = anim;
   for(int i=0; i<sizeof(pBoneRemaps) / sizeof(pBoneRemaps[0]); ++i) {
     pBoneRemaps[i] = NULL;
@@ -859,8 +868,8 @@ void r3dAnimation::Update(float fTimePassed, const r3dPoint3D& pos, const D3DXMA
     }
 
     // just in case frame was out of range, adjust it
-    while(ai.fCurFrame >= ai.pAnim->NumFrames) 
-      ai.fCurFrame -= ai.pAnim->NumFrames;
+    if(ai.fCurFrame >= ai.pAnim->NumFrames) 
+      ai.fCurFrame -= (float)(ai.pAnim->NumFrames * (int)(floorf(ai.fCurFrame) / (float)ai.pAnim->NumFrames));
     if(ai.fCurFrame < 0)
       ai.fCurFrame = 0.0f;
     

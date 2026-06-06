@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,11 +34,13 @@
  */
 #include <RendererSpotLightDesc.h>
 
+using namespace SampleRenderer;
+
 RendererSpotLightDesc::RendererSpotLightDesc(void) :
 	RendererLightDesc(RendererLight::TYPE_SPOT)
 {
-	position = physx::PxVec3(0,0,0);
-	direction = physx::PxVec3(0,0,0);
+	position = PxVec3(0,0,0);
+	direction = PxVec3(0,0,0);
 	innerRadius = 0;
 	outerRadius = 0;
 	innerCone   = 0;

@@ -18,7 +18,8 @@ obj_LocalColorCorrection::obj_LocalColorCorrection ()
 , m_bSelected( false )
 {
 	m_dObjects.PushBack(this);
-	ObjFlags |= OBJFLAG_SkipCastRay | OBJFLAG_SkipOcclusionCheck | OBJFLAG_DisableShadows | OBJFLAG_ForceSleep ;
+	setSkipOcclusionCheck(true);
+	ObjFlags |= OBJFLAG_SkipCastRay | OBJFLAG_DisableShadows | OBJFLAG_ForceSleep ;
 }
 
 obj_LocalColorCorrection::~obj_LocalColorCorrection ()

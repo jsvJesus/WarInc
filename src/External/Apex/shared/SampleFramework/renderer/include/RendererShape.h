@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -40,25 +40,32 @@
 
 #include <RendererConfig.h>
 
-class Renderer;
-class RendererMesh;
-
-class RendererShape
+namespace SampleRenderer
 {
+
+	class Renderer;
+	class RendererMesh;
+
+	class RendererShape
+	{
 	protected:
 		RendererShape(Renderer &renderer);
-	
+
 	public:
 		virtual ~RendererShape(void);
-		
+
 		RendererMesh *getMesh(void);
-	
+
 	private:
 		RendererShape &operator=(const RendererShape &) { return *this; }
-		
+
 	protected:
-		Renderer     &m_renderer;
-		RendererMesh *m_mesh;
-};
+		Renderer&		m_renderer;
+		RendererMesh*	m_mesh;
+	public:
+		void*			m_userData;
+	};
+
+} //  namespace SampleRenderer
 
 #endif

@@ -19,7 +19,6 @@
 
 #include "ObjectsCode/world/EnvmapProbes.h"
 #include "ObjectsCode/world/DecalChief.h"
-#include "ObjectsCode/world/WeatherPuddleManager.h"
 #include "ObjectsCode/world/MaterialTypes.h"
 #include "ObjectsCode/world/WaterPlane.h"
 
@@ -36,9 +35,7 @@
 #include "Menus\m_Main.h"
 
 #include "UI\m_LoadingScreen.h"
-#include "UI\m_Login.h"
 #include "UI\FrontendShared.h"
-#include "UI\m_EndRound.h"
 
 #include "UI/HUDCameraEffects.h"
 
@@ -46,15 +43,17 @@
 #include "Editors/LevelEditor_Collections.h"
 
 #include "RENDERING\Deffered\VisibilityGrid.h"
+#include "rendering\Deffered\D3DMiscFunctions.h"
 #include "rendering\Probes\ProbeMaster.h"
 
-#include "ObjectsCode/weapons/WeaponArmory.h"
+#include "ObjectsCode/weapons/ClientWeaponArmory.h"
 
 #include "CkHttpRequest.h"
 #include "CkHttp.h"
 #include "CkHttpResponse.h"
 
 #include "DamageLib.h"
+#include "MeshPropertyLib.h"
 
 #include "JobChief.h"
 #include "r3dBackgroundTaskDispatcher.h"
@@ -67,12 +66,17 @@
 
 #include "ObjectsCode/Nature/GrassLib.h"
 
+#include "ObjectsCode/Gameplay/obj_Zombie.h"
+
 #include "ObjectsCode/WEAPONS/FlashbangVisualController.h"
 #include "../../Eternity/Source/r3dEternityWebBrowser.h"
+#include "Editors/CollectionsManager.h"
 
 #include "r3dDeviceQueue.h"
 
 #include "GameCode\UserRewards.h"
+#include "GameCode\UserSettings.h"
+
 
 extern bool g_bEditMode;
 extern bool g_bStartedAsParticleEditor;
@@ -90,7 +94,6 @@ extern char initialCameraSpotName[64];
 extern HANDLE	r3d_CurrentProcess;
 extern void r3dFreeGOBMeshes();
 extern void AI_Player_FreeStuff();
-extern void UserProfile_SetRankPointsRUS();
 #if APEX_ENABLED
 void DestroyApexUserRenderer();
 #endif
@@ -134,8 +137,11 @@ void InitRender(int bUseSet = 0)
 
 	r3dRenderer->Init(win::hWnd, NULL);
 
-	if( ( r_local_vmem_size->GetInt() <= 256 * 1024 * 1024 && !r_ini_read->GetInt() )
+	if( 
+#if 0
+		( r_local_vmem_size->GetInt() && r_local_vmem_size->GetInt() <= 256 * 1024 * 1024 && !r_ini_read->GetInt() )
 			||
+#endif
 		r_out_of_vmem_encountered->GetInt()
 		) 
 	{
@@ -157,20 +163,18 @@ void InitRender(int bUseSet = 0)
 		writeGameOptionsFile();
 	}
 
-	const int RenderPath = R3D_RENDER_PATH_DX11;
-
-	r3dOutToLog("Setting mode:  %dx%dx%d Flags=%d RenderPath=DX11\n", r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags);
+	r3dOutToLog("Setting mode:  %dx%dx%d Flags=%d\n", r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags);
 
 	r3dRenderer->InitStereo() ;
 
-	if( !r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, RenderPath) )
+	if( !r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, 0 /*R3D_PATH_DX9*/) )
 	{
 		bool failed = true ;
 		if( ! ( Flags & R3DSetMode_Windowed ) )
 		{
 			r3dOutToLog("SetMode failed, trying to set windowed flag and trying again\n");
 			Flags |= R3DSetMode_Windowed;
-			if( r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, RenderPath) )
+			if( r3dRenderer->SetMode( r_width->GetInt(), r_height->GetInt(), r_bpp->GetInt(), Flags, 0 /*R3D_PATH_DX9*/) )
 			{
 				failed = false ;
 			}
@@ -186,12 +190,42 @@ void InitRender(int bUseSet = 0)
 
 	ShowWindow(win::hWnd, TRUE);
 
+	r3dInitShaders();
+
+	r3dInitMaterials();
+
 	r3d_assert(g_pJobChief == 0);
 	g_pJobChief = new JobChief();
 	g_pJobChief->Init();
 
 	g_pBackgroundTaskDispatcher = new r3dBackgroundTaskDispatcher();
 	g_pBackgroundTaskDispatcher->Init() ;
+
+	g_EnvmapProbes.Init();
+	r3d_assert(g_pDecalChief == 0);
+	g_pDecalChief = new DecalChief();
+	g_pDecalChief->Init();
+	// should follow g_DecalChief
+	r3d_assert(g_pMaterialTypes == 0);
+	g_pMaterialTypes = new MaterialTypes();
+	g_pMaterialTypes->Load();
+
+#if R3D_ALLOW_LIGHT_PROBES
+	g_pProbeMaster = new ProbeMaster ;
+	g_pProbeMaster->Init() ;
+#endif
+
+	r3dRenderer->StartRender();
+	r3dRenderer->EndRender( true );
+
+	r3dUtilInit();
+	InitOcclusionQuerySystem();
+
+	gFlashbangVisualController.Init();
+
+#ifndef FINAL_BUILD
+	InitObjCategories();
+#endif
 
 	if ( d_mouse_window_lock->GetBool() )
 	{
@@ -214,7 +248,6 @@ void InitRender(int bUseSet = 0)
 	}
 
 	r3dScaleformGfxCreate();
-
 #if ENABLE_WEB_BROWSER
 	g_pBrowserManager = new EternityWebBrowser();
 #endif
@@ -223,6 +256,8 @@ void InitRender(int bUseSet = 0)
 
 void CloseRender()
 {
+	ReleaseCheatScreenshot();
+
 	delete Font_Label;
 	delete Font_Editor; 
 
@@ -245,7 +280,6 @@ void CloseRender()
 	r3dUtilClose();
 
 	SAFE_DELETE(g_pMaterialTypes);
-	gWeatherPuddleManager.Close();
 	g_pDecalChief->Close();
 	SAFE_DELETE(g_pDecalChief);
 	g_EnvmapProbes.Close();
@@ -261,7 +295,7 @@ void CloseRender()
 #if APEX_ENABLED
 	DestroyApexUserRenderer();
 #endif
-	
+
 	r3dScaleformGfxDestroy();
 
 	r3dCloseMaterials();
@@ -273,16 +307,13 @@ void CloseRender()
 
 
 #ifdef FINAL_BUILD
-const char * g_szApplicationName = "War Inc. Battlezone";
+const char * g_szApplicationName = "WarZ";
 #else
 const char * g_szApplicationName = "Eclipse Studio";
 #endif 
 
 int32_t	g_nProjectVersionMajor = 1;
 int32_t	g_nProjectVersionMinor = 0;
-
-	int	RUS_CLIENT = 0;
-	int	MASSIVE_CLIENT = 0;
 
 extern	char	Login_PassedUser[256];
 extern	char	Login_PassedPwd[256];
@@ -378,34 +409,20 @@ CHWInfo g_HardwareInfo;
 // This function called by engine before main app window created, before any IO initialized. 
 void game::PreInit()
 {
-	char exeDir[MAX_PATH];
-	DWORD exeDirLen = GetModuleFileNameA(NULL, exeDir, sizeof(exeDir));
-	if(exeDirLen > 0 && exeDirLen < sizeof(exeDir))
-	{
-		char* slash = strrchr(exeDir, '\\');
-		char* slash2 = strrchr(exeDir, '/');
-		if(slash2 && (!slash || slash2 > slash))
-			slash = slash2;
-
-		if(slash)
-		{
-			*slash = 0;
-			SetCurrentDirectoryA(exeDir);
-		}
-	}
+	//@FOR STEAM- SetCurrentDirectory("Z:\\tsg\\WarOnline\\bin\\");
 
 	u_srand(GetTickCount());
 
 	g_HardwareInfo.Grab();
 
-	win::hWinIcon = ::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARINC));
+	win::hWinIcon  = NULL;
 	win::szWinName = GetBuildVersionString();
 
 #ifdef FINAL_BUILD
-	win::hWinIcon = ::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARINC));
+	win::hWinIcon = ::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARZ));
 	if(strstr(__r3dCmdLine, "-WOUpdatedOk") == NULL && strstr(__r3dCmdLine, "-gna") == NULL)
 	{
-		MessageBox(NULL, "Please run game launcher.", g_szApplicationName, MB_OK);
+		MessageBox(NULL, "Please run WarZ launcher.", g_szApplicationName, MB_OK);
 		ExitProcess(0);
 	}
 #endif	
@@ -444,34 +461,6 @@ void game::PreInit()
 		if(strcmp(argv[i], "-survey") == 0 && (i + 1) < argc)
 		{
 			gSurveyOutLink = argv[++i];
-			continue;
-		}
-
-		if(strcmp(argv[i], "-massive") == 0)
-		{
-			MASSIVE_CLIENT = 1;
-			continue;
-		}
-
-		if(strcmp(argv[i], "-gna") == 0)
-		{
-			if(!((i + 3) < argc))
-				r3dError("too few arguments for gamenet");
-
-			r3dscpy(Login_GNA_userid, argv[++i]);
-			r3dscpy(Login_GNA_appkey, argv[++i]);
-			r3dscpy(Login_GNA_token, argv[++i]);
-
-			RUS_CLIENT = 1;
-			r3dOutToLog("gamenet client enabled\n");
-			
-#ifdef FINAL_BUILD
-			g_szApplicationName = "FireStorm";
-			win::szWinName = GetBuildVersionString();
-			win::hWinIcon = ::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_FIRESTORM));
-#endif			
-			
-			UserProfile_SetRankPointsRUS();
 			continue;
 		}
 
@@ -685,6 +674,7 @@ void applyGraphicOptionsSoft( uint32_t settingsFlags )
 			r_active_shadow_slices->SetInt( NumShadowSlices - 2 );
 			r3d_assert( r_active_shadow_slices->GetInt() ) ;
 			r_shadows->SetInt( 1 );
+			r_dd_pointlight_shadows->SetInt( 0 );
 			ShadowSplitDistancesOpaque = &ShadowSplitDistancesOpaqueLow[0];
 			break;
 
@@ -697,6 +687,7 @@ void applyGraphicOptionsSoft( uint32_t settingsFlags )
 			r_shared_sm_cube_size->SetInt( 512 );
 			r_active_shadow_slices->SetInt( NumShadowSlices -1);
 			r_shadows->SetInt( 1 );
+			r_dd_pointlight_shadows->SetInt( 0 );
 			ShadowSplitDistancesOpaque = &ShadowSplitDistancesOpaqueMed[0];
 			break;
 
@@ -708,6 +699,7 @@ void applyGraphicOptionsSoft( uint32_t settingsFlags )
 			r_shared_sm_cube_size->SetInt( 512 );
 			r_active_shadow_slices->SetInt( NumShadowSlices );
 			r_shadows->SetInt( 1 );
+			r_dd_pointlight_shadows->SetInt( 1 );
 			ShadowSplitDistancesOpaque = &ShadowSplitDistancesOpaqueHigh[0];
 			break;
 
@@ -719,9 +711,15 @@ void applyGraphicOptionsSoft( uint32_t settingsFlags )
 			r_shared_sm_cube_size->SetInt( 1024 );
 			r_active_shadow_slices->SetInt( NumShadowSlices );
 			r_shadows->SetInt( 1 );
+			r_dd_pointlight_shadows->SetInt( 1 );
 			ShadowSplitDistancesOpaque = &ShadowSplitDistancesOpaqueHigh[0];
 			break;		
 		}
+	}
+
+	if( r_force_shared_sm_size->GetInt() )
+	{
+		r_shared_sm_size->SetInt( r_force_shared_sm_size->GetInt() );
 	}
 
 	if( settingsFlags & FrontEndShared::SC_PARTICLES_QUALITY )
@@ -759,8 +757,8 @@ void applyGraphicOptionsSoft( uint32_t settingsFlags )
 		switch( r_decoration_quality->GetInt() )
 		{
 		case 1:
-			r_grass_view_coef->SetFloat( 0.125f );
-			r_grass_draw->SetBool( 0 );
+			r_grass_view_coef->SetFloat( 0.5f );
+			r_grass_draw->SetBool( 1 );
 			r_grass_skip_step->SetInt( 1 ) ;
 			break ;
 
@@ -821,15 +819,17 @@ void applyGraphicsOptions( uint32_t settingsFlags )
 			if( obj->Class->Name == "obj_Lake" )
 			{
 				// recreates it with new dimmensions
-				static_cast<WaterBase*>( static_cast<obj_Lake*>(obj) )->CreateRefractionBuffer();
+				static_cast<WaterBase*>( static_cast<obj_Lake*>(obj) )->CreateWaterBuffers();
 			}
 			else
 			if( obj->Class->Name == "obj_WaterPlane" )
 			{
 				// recreates it with new dimmensions
-				static_cast<WaterBase*>( static_cast<obj_WaterPlane*>(obj) )->CreateRefractionBuffer();
+				static_cast<WaterBase*>( static_cast<obj_WaterPlane*>(obj) )->CreateWaterBuffers();
 			}
 		}
+
+		WaterBase::UpdateRefractionBuffer( true );
 	}
 
 	if( settingsFlags & FrontEndShared::SC_PARTICLES_QUALITY )
@@ -847,7 +847,7 @@ void applyGraphicsOptions( uint32_t settingsFlags )
 			g_pGrassLib->Unload() ;
 		}
 
-		if( Terrain && g_pGrassLib && ( r_decoration_quality->GetInt() > 1 || g_bEditMode ) )
+		if( g_pGrassLib && ( r_decoration_quality->GetInt() > 0 || g_bEditMode ) )
 		{
 			g_pGrassLib->Load() ;
 		}
@@ -1329,9 +1329,22 @@ void writeInputMap()
 // Probably it's good place to start networking, etc
 void game::Init()
 {
+	static const char* gameName = "Global\\WarZ_Game_001";
+
+#ifdef FINAL_BUILD  
+	HANDLE h;
+	if((h = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, gameName)) != NULL)
+	{
+		r3dOutToLog("game is already running\n");
+		CloseHandle(h);
+		TerminateProcess(GetCurrentProcess(), 0);
+		return;
+	}
+#endif
+
 	// create named event to signalize that game is started
 	// handle will be automatically closed on program termination
-	static HANDLE g_gameEvt = CreateEvent(NULL, FALSE, FALSE, "Global\\WarInc_Game_001");
+	static HANDLE g_gameEvt = CreateEvent(NULL, FALSE, FALSE, gameName);
 
 	r3dOutToLog("ComputerID: 0x%I64x\n", g_HardwareInfo.uniqueId);
 	r3dOutToLog("Game Version: %s\n", GetBuildVersionString());
@@ -1341,7 +1354,7 @@ void game::Init()
 	GlobalMemoryStatusEx(&stat);
 	r3dOutToLog("Available memory: %d MB\n", (DWORD)(stat.ullTotalPhys / 1024 / 1024));
 
-	r3dFileManager_OpenArchive("wo");
+	r3dFileManager_OpenArchive("wz");
 
 	RegisterAllVars();
 #ifndef FINAL_BUILD
@@ -1352,12 +1365,9 @@ void game::Init()
 	g_num_game_executed2->SetInt(g_num_game_executed2->GetInt()+1);
 	writeGameOptionsFile(); // to make sure that it always exists
 
-	if(g_test_rus_client->GetBool())
-		RUS_CLIENT = 1;
-
 	// set language
-	if(RUS_CLIENT || g_force_rus_lang->GetInt())
-		gLangMngr.Init(LANG_RU);
+	if(strcmp(g_user_language->GetString(), "english")==0)
+		gLangMngr.Init(LANG_EN);
 	else if(strcmp(g_user_language->GetString(), "french")==0)
 		gLangMngr.Init(LANG_FR);
 	else if(strcmp(g_user_language->GetString(), "german")==0)
@@ -1366,8 +1376,6 @@ void game::Init()
 		gLangMngr.Init(LANG_IT);
 	else if(strcmp(g_user_language->GetString(), "spanish")==0)
 		gLangMngr.Init(LANG_SP);
-	else if(strcmp(g_user_language->GetString(), "english")==0)
-		gLangMngr.Init(LANG_EN);
 	else if(strcmp(g_user_language->GetString(), "russian")==0)
 		gLangMngr.Init(LANG_RU);
 	else // default to english, should not happen
@@ -1380,6 +1388,9 @@ void game::Init()
 
 	readInputMap();
 	writeInputMap(); // to make sure that it always exists
+
+	gUserSettings.loadSettings();
+	gUserSettings.saveSettings(); // to make sure that it always exists
 
 	InitSounds();
 
@@ -1447,7 +1458,6 @@ extern int		_r3d_bTerminateOnZ;
 void game::MainLoop()
 {
 	// init steam we need to initialize this before the renderer for the overlay.
-	if(!RUS_CLIENT)
 	{
 		gSteam.InitSteam();
 		if(gSteam.steamID) {
@@ -1458,11 +1468,19 @@ void game::MainLoop()
 
 	InitRender(1);
 
+	CurRenderPipeline = new r3dDefferedRenderer;
+	CurRenderPipeline->Init();
+
 	SetFocus(win::hWnd);
 
 	r3dMenuInit();
 
+	r3dParticleSystemInit();
+
 	InitDesktopSystem();
+
+	InitPostFX();
+	InitPointLightsRendererV2();
 
 	g_pWind = new r3dWind ;
 
@@ -1473,6 +1491,8 @@ void game::MainLoop()
 
 	g_DamageLib = new DamageLib ;
 	g_DamageLib->Load();
+
+	g_MeshPropertyLib = new MeshPropertyLib;
 
 #ifndef FINAL_BUILD
 	g_Manipulator3d.Init();
@@ -1510,71 +1530,17 @@ void game::MainLoop()
 	// all choises is editors by default
 	g_bEditMode = true;
 	g_bStartedAsParticleEditor = false;
-
-	r3dRenderer->SetUseD3D9Present(false);
-	r3dOutToLog("Renderer present mode: DX11 (game+editors), UI native DX11\n");
-#else
-	r3dRenderer->SetUseD3D9Present(false);
 #endif
-
-	if(m_ret == Menu_AppSelect::bQuit)
-		return;
-
-	bool preInitLoadingScreen = false;
-	if(r3dRenderer && !r3dRenderer->GetUseD3D9Present())
-	{
-		r3dOutToLog("Showing DX11 pre-init loading screen...\n");
-		StartLoadingScreen();
-		SetLoadingTexture("Data\\Menu\\ConnectScreen.dds");
-		//pdateLoadingScreenOnce();
-		preInitLoadingScreen = true;
-	}
-
-	r3dOutToLog("Initializing gameplay renderer after AppSelect...\n");
-	r3dInitShaders();
-	r3dInitMaterials();
-
-	g_EnvmapProbes.Init();
-	r3d_assert(g_pDecalChief == 0);
-	g_pDecalChief = new DecalChief();
-	g_pDecalChief->Init();
-	gWeatherPuddleManager.Init();
-	// should follow g_DecalChief
-	r3d_assert(g_pMaterialTypes == 0);
-	g_pMaterialTypes = new MaterialTypes();
-	g_pMaterialTypes->Load();
-
-#if R3D_ALLOW_LIGHT_PROBES
-	g_pProbeMaster = new ProbeMaster ;
-	g_pProbeMaster->Init() ;
-#endif
-
-	r3dUtilInit();
-	InitOcclusionQuerySystem();
-
-	gFlashbangVisualController.Init();
-
-#ifndef FINAL_BUILD
-	InitObjCategories();
-#endif
-
-	CurRenderPipeline = new r3dDefferedRenderer;
-	CurRenderPipeline->Init();
-
-	r3dParticleSystemInit();
-
-	InitPostFX();
-	InitPointLightsRendererV2();
 
 	void InitGrass();
 	InitGrass();
 
 	g_pHUDCameraEffects = new HUDCameraEffects ;
 
-	gWeaponArmory.Init();
-
-	if(preInitLoadingScreen)
-		StopLoadingScreen();
+	r3d_assert(g_pWeaponArmory == NULL);
+	g_pWeaponArmory = new ClientWeaponArmory();
+	g_pWeaponArmory->Init();
+	r3dShowArtBugs();
 
 	// for editors, do not lock mouse. when we start game, in ExecuteNetworkGame we will set that var to true
 	d_mouse_window_lock->SetBool(false);
@@ -1584,11 +1550,8 @@ void game::MainLoop()
 #ifndef FINAL_BUILD
 	case	Menu_AppSelect::bUpdateDB:
 		g_bEditMode = false;
-		UpdateDB("26.163.92.76", "Data/Weapons/itemsDB.xml");
+		UpdateDB("localhost", "Data/Weapons/itemsDB.xml");
 		MessageBox(0, "Successfully updated English DB!", "Result", MB_OK);
-
-		UpdateDB("26.163.92.76", "Data/Weapons/itemsDB_RU.xml");
-		MessageBox(0, "Successfully updated Russian DB!", "Result", MB_OK);
 		break;
 #endif
 
@@ -1596,23 +1559,12 @@ void game::MainLoop()
 		// override server settings if special key isn't set
 		if(strstr(__r3dCmdLine, "-ffgrtvzdf") == NULL)
 		{
-			if(RUS_CLIENT) {
-				g_serverip->SetString("26.163.92.76");
-			} else if(MASSIVE_CLIENT) {
-				g_serverip->SetString("26.163.92.76");
-			} else {
-				g_serverip->SetString("26.163.92.76");
-			}
+			// hardcoded IP for now
+			//g_serverip->SetString("127.0.0.1");
 		}
 
 		// override API settings
-		if(RUS_CLIENT) {
-			g_api_ip->SetString("26.163.92.76");
-		} else if(MASSIVE_CLIENT) {
-			g_api_ip->SetString("26.163.92.76");
-		} else {
-			g_api_ip->SetString("26.163.92.76");
-		}
+		//g_api_ip->SetString("localhost");
 	case	Menu_AppSelect::bStartGameSVN:
 		g_bEditMode = false;
 		ExecuteNetworkGame();
@@ -1636,10 +1588,6 @@ void game::MainLoop()
 		ExecuteCharacterEditor();
 		break;
 #endif
-
-	case Menu_AppSelect::bQuit:
-	default:
-		return;
 	};
 
 #ifndef FINAL_BUILD
@@ -1660,7 +1608,9 @@ void game::MainLoop()
 	r3dMaterialLibrary::UnloadManaged();
 	r3dMaterialLibrary::Reset();	
 	MeshGlobalBuffer::unloadManaged();
-	gWeaponArmory.Destroy();
+	
+	g_pWeaponArmory->Destroy();
+	SAFE_DELETE(g_pWeaponArmory);
 
 #ifndef FINAL_BUILD
 	g_Manipulator3d.Close();
@@ -1682,8 +1632,11 @@ void game::MainLoop()
 	ClosePostFX();
 
 	SAFE_DELETE( g_DamageLib );
+	SAFE_DELETE( g_MeshPropertyLib );
 	
 	r3dFreeGOBMeshes();
+
+	obj_Zombie::FreePhysSkeletonCache();
 
 	g_pEngineConsole->Release();
 	SAFE_DELETE( g_pEngineConsole );
@@ -1692,7 +1645,7 @@ void game::MainLoop()
 
 	ReleaseDesktopSystem();
 
-	CloseCollections();
+	DoneDrawCollections();
 
 	r3dParticleSystemClose();
 	CurRenderPipeline->Close();
@@ -1725,8 +1678,8 @@ void UpdateDB(const char* api_addr, const char* out_xml)
 	{
 		CkHttpRequest req;
 		req.UsePost();
-		req.put_Path("/php/api_getItemsDB.php");
-		req.AddParam("serverkey",g_ServerKey);
+		req.put_Path("/WarZ/api/php/api_getItemsDB.php");
+		req.AddParam("serverkey", "8B1E58D9-1D8A-4942-A2AB-B6809F0A4CDF");
 
 		CkHttpResponse *resp = 0;
 		resp = http.SynchronousRequest(api_addr, gDomainPort, gDomainUseSSL, req);
@@ -1771,7 +1724,7 @@ void 	ExecuteLevelEditor()
 #ifndef FINAL_BUILD
 	int m_ret = 0;
 
-	//d_map_force_load->SetString("WorkInProgress\\Editor_Particles"); //@
+	//d_map_force_load->SetString("WorkInProgress\\ServerTest"); //@
 	if (LevelEditName[0]=='\0')
 	{
 		if ( *d_map_force_load->GetString() )

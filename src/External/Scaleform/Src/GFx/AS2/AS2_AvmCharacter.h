@@ -453,11 +453,11 @@ public:
     // These are used for finding bounds, width and height.
     virtual RectF  GetBounds(const Matrix &transform) const
     {       
-        return transform.EncloseTransform(pDef->GetBoundsLocal(GetRatio()));
+        return transform.EncloseTransform(pDef->GetBoundsLocal());
     }   
     virtual RectF  GetRectBounds(const Matrix &transform) const
     {       
-        return transform.EncloseTransform(pDef->GetRectBoundsLocal(GetRatio()));
+        return transform.EncloseTransform(pDef->GetRectBoundsLocal());
     }   
 
     virtual bool    PointTestLocal(const Render::PointF &pt, UInt8 hitTestMask = 0) const;

@@ -15,10 +15,8 @@
 
 #include "NxApex.h"
 #include "NxUserRenderResourceManager.h"
-#include "PxUserOutputStream.h"
-#include "PxErrors.h"
-#include "NxModuleDestructible.h"
-#include "NxDestructibleActor.h"
-#include "NxDestructibleAsset.h"
+#include "module\destructible\public\NxModuleDestructible.h"
+#include "module\destructible\public\NxDestructibleActor.h"
+#include "module\destructible\public\NxDestructibleAsset.h"
 
 #endif

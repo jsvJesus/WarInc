@@ -113,9 +113,17 @@ public:
 
     virtual void        GetHWViewMatrix(Matrix* pmatrix, const Viewport& vp);
 
+    void                CalcHWViewMatrix(unsigned VPFlags, Matrix* pmatrix, const Rect<int>& viewRect,
+                                         int dx, int dy);
+
     // Updates HW Viewport and ViewportMatrix based on the current
     // values of VP, ViewRect and ViewportValid.
     void                updateViewport();
+
+
+    // Creates / Destroys mesh and DP data 
+
+    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data);    
 
     virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
                                                PrimitiveBatch* pstart, PrimitiveBatch *pend);
@@ -179,9 +187,6 @@ public:
                                     const VertexFormat** batch, const VertexFormat** instanced,
                                     unsigned flags);
 
-    // Check whether the given extension exists in the current profile.
-    bool                CheckExtension(const char *name);
-    
     virtual RQCacheInterface& GetRQCacheInterface()
     {
         return QueueProcessor.GetQueueCachesRef();
@@ -214,8 +219,6 @@ public:
     unsigned AddAlphaTextureID[256];
 
 protected:
-    // Cached GL_EXTENSIONS string.
-    String              Extensions;
 
     void                drawPrimitive(unsigned indexCount, unsigned meshCount);
     void                drawIndexedPrimitive( unsigned indexCount, unsigned meshCount, UByte* indexPtr);

@@ -1,8 +1,5 @@
-
-#ifndef SAMPLE_COMMANDLINE_H
-#define SAMPLE_COMMANDLINE_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,14 +32,28 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-// Container for command-line arguments.
-// This class assumes argument 0 is always the executable path!
 
-class SampleCommandLine
+#ifndef SAMPLE_COMMANDLINE_H
+#define SAMPLE_COMMANDLINE_H
+
+#include <assert.h>
+
+namespace SampleFramework
 {
+
+	// Container for command-line arguments.
+	// This class assumes argument 0 is always the executable path!
+	class SampleCommandLine
+	{
 	public:
-		SampleCommandLine(unsigned int argc, const char *const* argv);
-		SampleCommandLine(const char *args);
+		//! commandLineFilePathFallback is an optional fall-back to a configuration file containing command line arguments.
+		//  Its contents are only processed and used if the other constructor arguments yield only an executable path.
+		//	This is especially useful in the case of an Andriod platform, which does not support command line options.
+		//  e.g. commandLineFilePathFallback = "commandline.txt"
+		//  e.g. contents of commandline.txt = --argument1 --argument2
+
+		SampleCommandLine(unsigned int argc, const char *const* argv, const char * commandLineFilePathFallback = 0);
+		SampleCommandLine(const char *args, const char * commandLineFilePathFallback = 0);
 		~SampleCommandLine(void);
 
 		//! has a given command-line switch?
@@ -54,37 +65,43 @@ class SampleCommandLine
 		const char* getValue(const char *s, unsigned int argNum = invalidArgNum) const;
 
 		// return how many command line arguments there are
-		const unsigned int getNumArgs(void) const;
+		unsigned int getNumArgs(void) const;
 
 		// what is the program name
 		const char* getProgramName(void) const;
 
 		// get the string that contains the unsued args
-		const unsigned int unusedArgsBufSize(void) const;
+		unsigned int unusedArgsBufSize(void) const;
 
 		// get the string that contains the unsued args
 		const char* getUnusedArgs(char *buf, unsigned int bufSize) const;
 
 		//! if the first argument is the given command.
 		bool isCommand(const char *s) const;
-		
+
 		//! get the first argument assuming it isn't a switch.
 		//  e.g. for the command-line "myapp.exe editor -foo" it will return "editor".
 		const char *getCommand(void) const;
-		
+
 		//! get the raw command-line argument list...
 		unsigned int      getArgC(void) const { return m_argc; }
 		const char *const*getArgV(void) const { return m_argv; }
-		
+
+		//! whether or not an argument has been read already
+		bool isUsed(unsigned int argNum) const;
+
 	private:
-		SampleCommandLine(const SampleCommandLine&) { PX_ASSERT(0); }
-		SampleCommandLine(void) { PX_ASSERT(0); }
-		SampleCommandLine operator=(const SampleCommandLine&) { PX_ASSERT(0); }
+		SampleCommandLine(const SampleCommandLine&);
+		SampleCommandLine(void);
+		SampleCommandLine operator=(const SampleCommandLine&);
+		void initCommon(const char * commandLineFilePathFallback);
 		unsigned int		m_argc;
 		const char *const	*m_argv;
 		void				*m_freeme;
 		static const unsigned int invalidArgNum = 0xFFFFFFFFU;
 		bool*				m_argUsed;
-};
+	};
+
+} // namespace SampleFramework
 
 #endif // SAMPLE_COMMANDLINE_H

@@ -2,7 +2,7 @@
 #ifndef SAMPLE_ASSET_MANAGER_H
 #define SAMPLE_ASSET_MANAGER_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,55 +42,77 @@
 
 #include <RendererConfig.h>
 
-class SampleAsset;
-class Renderer;
 
 
-class SampleAssetManager
+namespace SampleRenderer
 {
+	class Renderer;
+}
+
+namespace SampleFramework
+{
+	class SampleAsset;
+
+	class SampleAssetManager
+	{
 	public:
-		SampleAssetManager(Renderer &renderer);
-		~SampleAssetManager(void);
-		
-		Renderer    &getRenderer(void) { return m_renderer; }
-		
-		SampleAsset *getAsset(const char *path, SampleAsset::Type type);
-		void         returnAsset(SampleAsset &asset);
-		
-		void         addSearchPath(const char *path);
-		void         clearSearchPaths(void);
-		FILE*		 findFile(const char* path);
-		const char*	 findPath(const char* path);
 
-		/**
-		Search for the speficied path in the current directory. If not found, move up in the folder hierarchy
-		until the path can be found or until the specified maximum number of steps is reached.
+		class SampleAssetCreator {
+		public:
+			virtual SampleAsset* create(const char*, SampleAsset::Type) = 0;
+		};
 
-		\note On consoles no recursive search will be done
+	public:
+									SampleAssetManager(SampleRenderer::Renderer &renderer,
+													   SampleAssetCreator* fallbackAssetCreator = NULL);
+									~SampleAssetManager();
 
-		\param	[in] path The path to look for
-		\param	[out] buffer Buffer to store the (potentially) adjusted path
-		\param	[in] bufferSize Size of buffer
-		\param	[in] maxRecursion Maximum number steps to move up in the folder hierarchy
-		return	true if path was found
-		*/
-		static bool searchForPath(const char* path, char* buffer, int bufferSize, int maxRecursion);
-	
+		SampleRenderer::Renderer&	getRenderer() { return m_renderer; }
+
+		SampleAsset*				getAsset(const char* path, SampleAsset::Type type);
+		void						returnAsset(SampleAsset& asset);
+
 	protected:
-		SampleAsset *findAsset(const char *path);
-		SampleAsset *loadAsset(const char *path);
-		void         releaseAsset(SampleAsset &asset);
-		
-		SampleAsset *loadXMLAsset(FILE &file, const char *path);
-		SampleAsset *loadTextureAsset(FILE &file, const char *path, SampleTextureAsset::Type texType);
-	
+		SampleAsset*				findAsset(const char* path);
+		SampleAsset*				loadAsset(const char* path, SampleAsset::Type type);
+		void						releaseAsset(SampleAsset& asset);
+
+		void						addAssetUser(SampleAsset& asset);
+		void						addAsset(SampleAsset* asset);
+		void						deleteAsset(SampleAsset* asset);
+
+		SampleAsset*				loadXMLAsset(FILE& file, const char* path);
+		SampleAsset*				loadTextureAsset(FILE& file, const char* path, SampleTextureAsset::Type texType);
+		SampleAsset*				loadODSAsset(FILE& file, const char* path);
+
 	private:
-		SampleAssetManager &operator=(const SampleAssetManager&) { return *this; }
-		
+		SampleAssetManager&	operator=(const SampleAssetManager&) { return *this; }
+
 	protected:
-		Renderer&	m_renderer;
-		std::vector<char *>    m_searchPaths;
+		SampleRenderer::Renderer&	m_renderer;
+		SampleAssetCreator*			m_fallbackAssetCreator;
 		std::vector<SampleAsset*>	m_assets;
-};
+	};
+
+	void		addSearchPath(const char* path);
+	void		clearSearchPaths();
+	FILE*		findFile(const char* path, bool binary = true);
+	const char*	findPath(const char* path);
+
+	/**
+	Search for the speficied path in the current directory. If not found, move up in the folder hierarchy
+	until the path can be found or until the specified maximum number of steps is reached.
+
+	\note On consoles no recursive search will be done
+
+	\param	[in] path The path to look for
+	\param	[out] buffer Buffer to store the (potentially) adjusted path
+	\param	[in] bufferSize Size of buffer
+	\param	[in] maxRecursion Maximum number steps to move up in the folder hierarchy
+	return	true if path was found
+	*/
+	bool		searchForPath(const char* path, char* buffer, int bufferSize, bool isReadOnly, int maxRecursion);
+
+} // namespace SampleFramework
 
 #endif

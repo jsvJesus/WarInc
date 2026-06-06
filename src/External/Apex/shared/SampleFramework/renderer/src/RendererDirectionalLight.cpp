@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,13 +32,13 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "PsShare.h"
 #include <RendererDirectionalLight.h>
 #include <RendererDirectionalLightDesc.h>
 
+using namespace SampleRenderer;
 
 RendererDirectionalLight::RendererDirectionalLight(const RendererDirectionalLightDesc &desc) :
-	RendererLight(desc)
+RendererLight(desc)
 {
 	setDirection(desc.direction);
 }
@@ -48,12 +48,12 @@ RendererDirectionalLight::~RendererDirectionalLight(void)
 
 }
 
-const physx::PxVec3 &RendererDirectionalLight::getDirection(void) const
+const PxVec3 &RendererDirectionalLight::getDirection(void) const
 {
 	return m_direction;
 }
 
-void RendererDirectionalLight::setDirection(const physx::PxVec3 &dir)
+void RendererDirectionalLight::setDirection(const PxVec3 &dir)
 {
 	RENDERER_ASSERT(dir.magnitudeSquared() >= 0.1f, "Trying to give Direction Light invalid Direction value.");
 	if(dir.magnitudeSquared() >= 0.1f)

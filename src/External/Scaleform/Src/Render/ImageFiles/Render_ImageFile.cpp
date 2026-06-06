@@ -95,20 +95,7 @@ ImageFileHandlerRegistry::ImageFileHandlerRegistry(unsigned handlerCount, ...)
 
 void ImageFileHandlerRegistry::AddHandler(ImageFileHandler* handler)
 {
-    SF_DEBUG_ASSERT(handler, "Can't add a NULL ImageFileHander.");
-    if (!handler)
-        return;
-
-    // Make sure that a handler for the current image type doesn't already exist. If it does, skip it.
-    for (unsigned i = 0; i < Handlers.GetSize(); ++i )
-    {
-        SF_DEBUG_WARNING1(Handlers[i]->GetFormat() == handler->GetFormat(), 
-            "Attempt to add multiple ImageFileHandler for the same format (ImageFileFormat=%d)", handler->GetFormat());
-        if (Handlers[i]->GetFormat() == handler->GetFormat())
-            return;
-    }
-
-    // Not a duplicate, add the handler.
+    SF_ASSERT(handler);
     Handlers.PushBack(handler);
 }
 

@@ -24,7 +24,7 @@ BOOL obj_Terrain::Load(const char* fname)
 	DrawOrder	= OBJ_DRAWORDER_FIRST;
 
 	ObjFlags	|= OBJFLAG_SkipCastRay;
-	ObjFlags	|= OBJFLAG_SkipOcclusionCheck;
+	setSkipOcclusionCheck(true);
 	ObjFlags	|= OBJFLAG_DisableShadows;
 
 	ObjTypeFlags |= OBJTYPE_Terrain;
@@ -57,6 +57,8 @@ BOOL obj_Terrain::Load(const char* fname)
 			Terrain = Terrain2 ;
 
 			r_terrain2->SetInt( 1 ) ;
+
+			FileName = "terra2";
 
 			loaded_terrain2 = true ;
 		}

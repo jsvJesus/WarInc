@@ -17,7 +17,6 @@
 #include "ObjectsCode/World/obj_road.h"
 #include "obj_Mesh.h"
 #include "obj_Dummy.h"
-#include "ObjectsCode/weapons/WeaponArmory.h"
 #include "..\..\Eternity\Include\ParallelQuickSort.h"
 
 
@@ -27,13 +26,17 @@
 #include "JobChief.h"
 
 #include "../../EclipseStudio/Sources/ObjectsCode/weapons/BulletShellManager.h"
+#include "../../EclipseStudio/Sources/Editors/CollectionElementProxyObject.h"
+#include "../../EclipseStudio/Sources/Editors/CollectionsManager.h"
 #include "obj_Apex.hpp"
+
+#ifndef WO_SERVER
+#include "../../EclipseStudio/Sources/ObjectsCode/Gameplay/obj_ItemSpawnPoint.h"
+#endif
 
 bool gDestroyingWorld = false;
 
 static r3dTL::TArray< GameObject* > TemporaryObjects ;
-
-void (*gInstance_Compute_Visibility) ( bool shadows, bool directionalSM ) = NULL;
 
 void ObjectManagerResourceHelper::D3DReleaseResource()
 {
@@ -81,6 +84,33 @@ void PrecalculateShadowWorldMatrices(void* Data, size_t ItemStart, size_t ItemCo
 }
 
 //////////////////////////////////////////////////////////////////////////
+bool CastRayToSpawnPoints(GameObject *obj, const r3dPoint3D &vStart, const r3dPoint3D &vRay, float RayLen, float &dst)
+{
+#ifndef WO_SERVER
+	if (obj->isObjType(OBJTYPE_ItemSpawnPoint))
+	{
+		obj_ItemSpawnPoint *sp = static_cast<obj_ItemSpawnPoint*>(obj);
+		bool found = false;
+		for (size_t i = 0; i < sp->m_SpawnPointsV.size(); ++i)
+		{
+			r3dBoundBox spawnPtBB = sp->m_SpawnPointsV[i].GetDebugBBox();
+			if (spawnPtBB.ContainsRay(vStart, vRay, RayLen, &dst))
+			{
+				found = true;
+				r3dPoint3D collision;
+				if (terra_FindIntersection(vStart, vStart + vRay * RayLen, collision, 20000))
+				{
+					dst = (collision - vStart).Length() - 0.01f;
+				}
+			}
+		}
+		return found;
+	}
+#endif //WO_SERVER
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 #define COLL_DEBUG if(0) r3dOutToLog(
 
@@ -108,10 +138,16 @@ GameObject *srv_CreateGameObject(int class_type, const char* load_name, const r3
 	// add to world.
 	//
 
-	if(flags & OBJ_CREATE_LOCAL)
+	if(flags & OBJ_CREATE_LOCAL) {
 		;
-	else
+#ifdef WO_SERVER
+	} else if(obj->ObjFlags & OBJFLAG_AddToDummyWorld) {
+		extern ObjectManager ServerDummyWorld;
+		ServerDummyWorld.AddObject(obj);
+#endif
+	} else {
 		GameWorld().AddObject(obj);
+	}
 
 	return obj;
 }
@@ -120,7 +156,10 @@ GameObject *srv_CreateGameObject(const char* class_name, const char* load_name, 
 {
 	int class_id = AObjectTable_GetClassID(class_name, "Object");
 	if(class_id == -1)
-		r3dError("srv_CreateGameObject: class %s isn't present", class_name);
+	{
+		r3dOutToLog("srv_CreateGameObject: class %s isn't present", class_name);
+		return NULL;
+	}
 
 	return srv_CreateGameObject(class_id, load_name, Pos, flags, data);
 }
@@ -129,7 +168,7 @@ GameObject *srv_CreateGameObject(const char* class_name, const char* load_name, 
 #if USE_VMPROTECT
   #pragma optimize("g", off)
 #endif
-static r3dSec_type<ObjectManager*, 0xFA8DF94A> g_pGameWorld = NULL;
+static r3dSec_type<ObjectManager*, 0xFB8DA94A> g_pGameWorld = NULL;
 void GameWorld_Create()
 {
 	VMPROTECT_BeginVirtualization("GameWorld_Create()");
@@ -168,7 +207,11 @@ ObjectManager::ObjectManager()
 	m_BulletMngr = 0;
 #endif
 
-	TransparentShadowCasterCount = 0 ;
+	LastStaticUpdateIdx = 0;
+
+	TransparentShadowCasterCount = 0;
+
+	JustLoaded = 1;
 }
 
 ObjectManager::~ObjectManager()
@@ -176,7 +219,7 @@ ObjectManager::~ObjectManager()
 	Destroy();
 }
 
-int ObjectManager::Init(int _MaxObjects)
+int ObjectManager::Init(int _MaxObjects, int _MaxStaticObjects)
 {
 	r3d_assert(!bInited);
 	if(bInited) return 0;
@@ -190,10 +233,12 @@ int ObjectManager::Init(int _MaxObjects)
 	m_ResourceHelper = new ObjectManagerResourceHelper;
 #endif
 
-	MaxObjects     = _MaxObjects;
-	LastFreeObject = 0;
-	NumObjects     = 0;
-	CurObjID       = 1;
+	MaxObjects           = _MaxObjects;
+	MaxStaticObjects     = _MaxStaticObjects;
+	LastFreeObject       = 0;
+	NumObjects           = 0;
+	NumStaticObjects     = 0;
+	CurObjID             = 1;
 
 	m_MinimapOrigin.Assign(0,0,0);
 	m_MinimapSize.Assign(100,1,100);
@@ -201,7 +246,12 @@ int ObjectManager::Init(int _MaxObjects)
 	pObjectArray   = new GameObject* [MaxObjects];
 	pFirstObject   = NULL;
 	pLastObject    = NULL;
+
 	memset(pObjectArray, 0, sizeof(GameObject*)*MaxObjects);
+
+	pStaticObjectArray = new GameObject* [MaxStaticObjects];
+
+	memset(pStaticObjectArray, 0, sizeof(GameObject*)*MaxStaticObjects);
 
 	TransparentShadowCasterCount = 0 ;
 
@@ -221,6 +271,12 @@ int ObjectManager::Destroy()
 
 	if(!bInited)
 		return 1;
+
+#ifndef FINAL_BUILD
+#ifndef WO_SERVER
+	CleanOrphanedRoadFiles();
+#endif	
+#endif
 
 	SAFE_DELETE(m_ResourceHelper);
 
@@ -248,11 +304,28 @@ int ObjectManager::Destroy()
 		}
 	}
 
+	for(i=0; i<MaxStaticObjects; i++) 
+		if(pStaticObjectArray[i])
+			DeleteObject(pStaticObjectArray[i], false);
+
+	for(i=0; i<MaxStaticObjects; i++) 
+	{
+		if(pStaticObjectArray[i])
+		{
+			delete pStaticObjectArray[i];
+			pStaticObjectArray[i] = NULL;
+			NumStaticObjects = NumStaticObjects-1;
+		}
+	}
+
+	gSkipOcclusionCheckGameObjects.clear();
+
 	extern std::list<SceneBox*> PrevFrameQueryList;
 	while(!PrevFrameQueryList.empty())
 		PrevFrameQueryList.pop_front();
 
 	delete[] pObjectArray;
+	delete[] pStaticObjectArray;
 
 	MaxObjects = 0;
 	bInited    = 0;
@@ -279,37 +352,70 @@ void ObjectManager::SetDeleteObjectEvent (ObjectManager::GameObjEvent_fn pEvent)
 
 int ObjectManager::AddObject(GameObject *obj)
 {
-	// can't add object - table is full
-	if(LastFreeObject == -1)
-		return 0;
+	int indexForAdding = -1;
+
+	if( obj->IsStatic() )
+	{
+		indexForAdding = NumStaticObjects;
+	}
+	else
+	{
+		if( LastFreeObject == -1 )
+		{
+			// can't add object - table is full
+			r3dError( "failed to add object - increase ObjectManager number of objects" );
+		}
+
+		indexForAdding = LastFreeObject;
+	}
 
 	// Create Object ID:
 	// low word is index in ObjectManager, high is obj ID
-	obj->ID.set(((CurObjID & 0xFFFF) << 16) | LastFreeObject);
+
+	UINT staticBit = obj->IsStatic() ? 0x80000000 : 0;
+
+	obj->ID.set(((CurObjID & 0xFFFF) << 16) | indexForAdding | staticBit );
+
 	CurObjID = CurObjID + 1;
+
+	if( CurObjID >= 0x7fff )
+		CurObjID = 0;
+
 	//r3dOutToLog ("OBJCREATE %s  %d\n", obj->Name.c_str(), obj->ID);
-	pObjectArray[LastFreeObject] = obj;
-	NumObjects = NumObjects + 1;
+
+	if( obj->IsStatic() )
+	{
+		pStaticObjectArray[ NumStaticObjects ] = obj;
+		NumStaticObjects = NumStaticObjects + 1;
+	}
+	else
+	{
+		pObjectArray[ LastFreeObject ] = obj;
+		NumObjects = NumObjects + 1;
+	}
 
 	// add object to linked list
 	{
 		VMPROTECT_BeginMutation("ObjectManager::AddObject-LList");
-	
-		if(pFirstObject == NULL) 
-		{
-			pFirstObject = obj;
-		}
-	
-		if(pLastObject) 
-		{
-			r3d_assert(pLastObject->pNextObject == NULL);
-			r3d_assert(obj->pPrevObject == NULL);
-			r3d_assert(obj->pNextObject == NULL);
 
-			pLastObject->pNextObject = obj;
-			obj->pPrevObject = pLastObject;
+		if( !obj->IsStatic() )
+		{
+			if(pFirstObject == NULL) 
+			{
+				pFirstObject = obj;
+			}
+		
+			if(pLastObject) 
+			{
+				r3d_assert(pLastObject->pNextObject == NULL);
+				r3d_assert(obj->pPrevObject == NULL);
+				r3d_assert(obj->pNextObject == NULL);
+
+				pLastObject->pNextObject = obj;
+				obj->pPrevObject = pLastObject;
+			}
+			pLastObject = obj;
 		}
-		pLastObject = obj;
 
 		VMPROTECT_End();
 	}
@@ -318,27 +424,37 @@ int ObjectManager::AddObject(GameObject *obj)
 	m_pRootBox->Add( obj, false );
 #endif
 
-	AddToTransparentShadowCasters( obj ) ;
+	AddToTransparentShadowCasters( obj );
 
 	if ( pObjectAddEvent ) pObjectAddEvent ( obj );
 
-	// detect next free object
-	int i;
-	for(i = LastFreeObject + 1; i < MaxObjects; i++) {
-		if(pObjectArray[i] == NULL) {
-			LastFreeObject = i;
-			return 1;
+	if( !obj->IsStatic() )
+	{
+		int found = 0;
+
+		// detect next free object
+		int i;
+		for(i = LastFreeObject + 1; i < MaxObjects; i++)
+		{
+			if( pObjectArray[i] == NULL )
+			{
+				LastFreeObject = i;
+				return 1;
+			}
+		}
+
+		for(i = 0; i < LastFreeObject; i++)
+		{
+			if( pObjectArray[i] == NULL )
+			{
+				LastFreeObject = i;
+				return 1;
+			}
 		}
 	}
 
-	for(i = 0; i < LastFreeObject; i++) {
-		if(pObjectArray[i] == NULL) {
-			LastFreeObject = i;
-			return 1;
-		}
-	}
 
-	LastFreeObject = -1;
+
 	return 1;
 }
 
@@ -348,14 +464,25 @@ int ObjectManager::DeleteObject(GameObject* obj, bool call_delete)
 		return 0;
 
 	int n = (obj->ID.get() & 0xFFFF);
-	r3d_assert(n >= 0 && n < MaxObjects);
+
+	if( obj->IsStatic() )
+	{
+		r3d_assert(n >= 0 && n < MaxStaticObjects);
+	}
+	else
+	{
+		r3d_assert(n >= 0 && n < MaxObjects);
+	}
 
 	if(obj->m_SceneBox)
 		obj->m_SceneBox->Remove(obj);
 
-	LastFreeObject = n;
+	if( !obj->IsStatic() )
+	{
+		LastFreeObject = n;
+	}
 
-	RemoveFromTransparentShadowCasters( obj ) ;
+	RemoveFromTransparentShadowCasters( obj );
 
 	if ( pObjectDeleteEvent ) pObjectDeleteEvent ( obj );
 
@@ -366,31 +493,53 @@ int ObjectManager::DeleteObject(GameObject* obj, bool call_delete)
 	{
 		VMPROTECT_BeginMutation("ObjectManager::DeleteObject-LList");
 
-		if(pFirstObject == obj)
-			pFirstObject = obj->pNextObject;
-		if(pLastObject == obj)
-			pLastObject = obj->pPrevObject;
-		if(obj->pPrevObject) {
-			r3d_assert(obj->pPrevObject->pNextObject == obj);
-			obj->pPrevObject->pNextObject = obj->pNextObject;
+		if( !obj->IsStatic() )
+		{
+			if(pFirstObject == obj)
+				pFirstObject = obj->pNextObject;
+			if(pLastObject == obj)
+				pLastObject = obj->pPrevObject;
+			if(obj->pPrevObject) {
+				r3d_assert(obj->pPrevObject->pNextObject == obj);
+				obj->pPrevObject->pNextObject = obj->pNextObject;
+			}
+			if(obj->pNextObject) {
+				r3d_assert(obj->pNextObject->pPrevObject == obj);
+				obj->pNextObject->pPrevObject = obj->pPrevObject;
+			}
+			obj->pNextObject = NULL;
+			obj->pPrevObject = NULL;
 		}
-		if(obj->pNextObject) {
-			r3d_assert(obj->pNextObject->pPrevObject == obj);
-			obj->pNextObject->pPrevObject = obj->pPrevObject;
-		}
-		obj->pNextObject = NULL;
-		obj->pPrevObject = NULL;
-		
+
 		VMPROTECT_End();
 	}
 	
 	obj->OnDestroy();
 
-	if(call_delete)
+	if( call_delete )
 	{
-		pObjectArray[n] = NULL;
-		delete obj;
-		NumObjects = NumObjects-1;
+		if( obj->IsStatic() )
+		{
+			int idx = n;
+			for( ; idx >= 0; idx -- )
+			{
+				if( pStaticObjectArray[ idx ] == obj )
+					break;
+			}
+
+			r3d_assert( idx >= 0 );
+
+			memmove( pStaticObjectArray + idx, pStaticObjectArray + idx + 1, ( NumStaticObjects - idx - 1 ) * sizeof( GameObject * ) );
+			delete obj;
+			NumStaticObjects = NumStaticObjects-1;
+			pStaticObjectArray[ NumStaticObjects] = NULL;
+		}
+		else
+		{
+			pObjectArray[n] = NULL;
+			delete obj;
+			NumObjects = NumObjects-1;
+		}
 	}
 
 	return 1;
@@ -438,6 +587,14 @@ GameObject* ObjectManager::GetObject(const char* name)
 			return obj;
 	}
 
+	for( int i = 0, e = NumStaticObjects; i < e; i ++ )
+	{
+		GameObject* obj = pStaticObjectArray[ i ];
+
+		if( obj->Name == name )
+			return obj;
+	}
+
 	return NULL;
 }
 
@@ -451,6 +608,15 @@ GameObject* ObjectManager::GetObjectByHash(uint32_t hash)
 		if(obj->GetHashID()==hash)
 			return obj;
 	}
+
+	for( int i = 0, e = NumStaticObjects; i < e; i ++ )
+	{
+		GameObject* obj = pStaticObjectArray[ i ];
+
+		if(obj->GetHashID()==hash)
+			return obj;
+	}
+
 	return NULL;
 }
 
@@ -461,23 +627,47 @@ GameObject* ObjectManager::GetObject(gobjid_t ID)
 
 	r3d_assert(ID.get() != -1);
 
-	int n = (ID.get() & 0xFFFF);
-	r3d_assert(n >= 0 && n < MaxObjects);
+	int isStatic = ID.get() & OBJECTMANAGER_STATICBIT;
 
-	if(pObjectArray[n] && pObjectArray[n]->ID == ID)
-		return pObjectArray[n];
+	int n = (ID.get() & 0x7FFF);
+
+	if( isStatic )
+	{
+		r3d_assert(n >= 0 && n < MaxStaticObjects);
+
+		int idx = n;
+		for( ; idx >= 0; idx -- )
+		{
+			GameObject* obj = pStaticObjectArray[ idx ];
+			if( obj && obj->ID == ID )
+				return obj;
+		}
+	}
+	else
+	{
+		r3d_assert(n >= 0 && n < MaxObjects);
+
+		if(pObjectArray[ n ] && pObjectArray[ n ]->ID == ID)
+			return pObjectArray[ n ];
+	}
 
 	return NULL;
 }
 
 GameObject* ObjectManager::GetNetworkObject(DWORD netID)
 {
+	R3DPROFILE_FUNCTION("ObjectManager::GetNetworkObject");
+
 	if(netID == invalidGameObjectID)
 		return NULL;
 
-	for(GameObject* obj = pFirstObject; obj; obj = obj->pNextObject)
-		if(obj->NetworkID == netID)
-			return obj;
+	NetMapType::iterator it = NetworkIDMap.find(netID);
+	if(it!=NetworkIDMap.end())
+		return (*it).second;
+
+// 	for(GameObject* obj = pFirstObject; obj; obj = obj->pNextObject)
+// 		if(obj->NetworkID == netID)
+// 			return obj;
 
 	return NULL;
 }
@@ -515,7 +705,7 @@ void ObjectManager::Update()
 	R3DPROFILE_FUNCTION("ObjectManager::Update");
 	static	std::vector<GameObject*> vObjs;
 
-	AdvanceQueryBalancer();
+	SceneBoxOnUpdate();
 
 	R3DPROFILE_START("SceneBox::Update");
 	m_pRootBox->Update();
@@ -527,6 +717,7 @@ void ObjectManager::Update()
 	vObjs.reserve(MaxObjects);
 
 	// fill objects array to be processed
+	R3DPROFILE_START("UpdateLoading");
 	for(GameObject* obj = pFirstObject; obj; obj = obj->pNextObject)
 	{
 		if(!obj->isActive())
@@ -543,6 +734,7 @@ void ObjectManager::Update()
 
 		vObjs.push_back(obj);
 	}
+	R3DPROFILE_END("UpdateLoading");
 
 	int index = 0;
 	// process OnCreated objects first
@@ -550,13 +742,13 @@ void ObjectManager::Update()
 	for(int i=0, iEnd = vObjs.size(); i<iEnd; ++i) {
 		GameObject *obj = vObjs[i];
 		if(obj->ObjFlags & OBJFLAG_JustCreated) {
-			//char string[200];
-			//sprintf(string,"Object[%d] names[%s]\n",index++,obj->Name.c_str());
-			//OutputDebugString(string);
-			obj->OnCreate();
+			BOOL res = obj->OnCreate();
 			obj->ObjFlags &= ~OBJFLAG_JustCreated;
-			//obj->OnPositionChanged();
-			//obj->OnOrientationChanged();
+			if(!res)
+			{
+				r3dOutToLog("!!! OnCreate failed for obj=%s, filename=%s\n", obj->Class->Name.c_str(), obj->FileName.c_str());
+				obj->setActiveFlag(0);
+			}
 		}
 	}
 	R3DPROFILE_END("OnCreate");
@@ -582,8 +774,44 @@ void ObjectManager::Update()
 			}
 		}
 	}
-
 	R3DPROFILE_END("Update&Move");
+
+	R3DPROFILE_START("Update Static");
+
+	// it's not crucial to update them every frame, thus we update 2048 objects tops,
+	// distributing load between frames on large levels
+
+	int staticUpdateEnd = R3D_MIN( 2048, (int)NumStaticObjects );
+
+	if( JustLoaded )
+	{
+		LastStaticUpdateIdx = 0;
+		staticUpdateEnd = NumStaticObjects;
+		JustLoaded = 0;
+	}
+
+	for( int i = 0; i < staticUpdateEnd; i ++ )
+	{
+		if( LastStaticUpdateIdx >= NumStaticObjects )
+			LastStaticUpdateIdx = 0;
+
+		GameObject* obj = pStaticObjectArray[ LastStaticUpdateIdx ++ ];
+
+		if(obj->ObjFlags & OBJFLAG_JustCreated)
+		{
+			BOOL res = obj->OnCreate();
+			obj->ObjFlags &= ~OBJFLAG_JustCreated;
+			if(!res)
+			{
+				r3dOutToLog("!!! OnCreate failed for obj=%s, filename=%s\n", obj->Class->Name.c_str(), obj->FileName.c_str());
+				obj->setActiveFlag(0);
+			}
+		}
+
+		obj->Update();
+	}
+
+	R3DPROFILE_END("Update Static");
 
 #ifndef WO_SERVER
 #if !R3D_NO_BULLET_MGR
@@ -682,9 +910,72 @@ GameObject* ObjectManager::GetNextObject(const GameObject* in_obj)
 
 	VMPROTECT_End();
 }
+
 #if USE_VMPROTECT
   #pragma optimize("g", on)
 #endif
+
+//------------------------------------------------------------------------
+
+ObjectIterator ObjectManager::GetFirstOfAllObjects()
+{
+	ObjectIterator iter;
+
+	iter.current = pFirstObject;
+	iter.staticIndex = -1;
+
+	if( !iter.current )
+	{
+		iter.current = pStaticObjectArray[ 0 ];
+		iter.staticIndex = 0;
+	}
+
+	return iter;
+}
+
+//------------------------------------------------------------------------
+
+ObjectIterator ObjectManager::GetNextOfAllObjects( const ObjectIterator& it )
+{
+	ObjectIterator iter = it;
+
+	if( iter.staticIndex >= 0 )
+	{
+		iter.staticIndex ++;
+
+		if( iter.staticIndex < NumStaticObjects )
+			iter.current = pStaticObjectArray[ iter.staticIndex ];
+		else
+			iter.current = 0;
+	}
+	else
+	{
+		if( iter.current->pNextObject )
+		{
+			iter.current = iter.current->pNextObject;
+		}
+		else
+		{
+			iter.current = pStaticObjectArray[ 0 ];
+			iter.staticIndex = 0;
+		}
+	}
+
+	return iter;
+}
+
+//------------------------------------------------------------------------
+
+GameObject* ObjectManager::GetStaticObject( int idx )
+{
+	r3d_assert( idx >= 0 && idx < NumStaticObjects );
+	return pStaticObjectArray[ idx ];
+}
+
+int ObjectManager::GetStaticObjectCount() const
+{
+	return NumStaticObjects;
+}
 
 GameObject* ObjectManager::CastRay(const r3dPoint3D& vStart, const r3dPoint3D& vRay, float RayLen, CollisionInfo *cInfo, int bboxonly /* = false */)
 {
@@ -693,13 +984,33 @@ GameObject* ObjectManager::CastRay(const r3dPoint3D& vStart, const r3dPoint3D& v
 	GameObject	*FoundObj    = NULL;
 	r3dMaterial *FoundMtrl = NULL;
 	r3dMaterial *mtrl = NULL;
-	float	     	MinDistSoFar = 999999.0f;
-	float 		dst = 999999;
+	float	     MinDistSoFar = 999999.0f;
+	float		 dst = 999999;
 
 	int MinFace = -1;
 
-	for(GameObject* obj = pFirstObject; obj; obj = obj->pNextObject)
+	GameObject* obj_i = pFirstObject; 
+	GameObject* nextObj = NULL;
+
+	int sidx = 0, se = NumStaticObjects;
+
+	for( ; ; obj_i ? ( obj_i = nextObj, 0 ) : ++sidx )
 	{
+		GameObject* obj;
+
+		if( obj_i )
+		{
+			nextObj = obj_i->pNextObject;
+			obj = obj_i;
+		}
+		else
+		{
+			if( sidx >= se )
+				break;
+
+			obj = pStaticObjectArray[ sidx ];
+		}
+
 		if(!obj->isActive() || (obj->ObjFlags & OBJFLAG_SkipCastRay) || (obj->ObjFlags & OBJFLAG_Removed))
 			continue;
 
@@ -708,10 +1019,23 @@ GameObject* ObjectManager::CastRay(const r3dPoint3D& vStart, const r3dPoint3D& v
 		r3dBoundBox bbox = obj->GetBBoxWorld();
 		extern int CurHUDID;
 		extern bool g_bEditMode;
-		if(g_bEditMode && CurHUDID==0 && ( obj->isObjType(OBJTYPE_Particle) || obj->isObjType(OBJTYPE_Sound)))	// in editor mode, force small bbox for easier selection
+		if (g_bEditMode && CurHUDID == 0)
 		{
-			bbox.Org = obj->GetPosition() - r3dPoint3D(1,1,1); // PT: particle should be in the center of bbox
-			bbox.Size.Assign(2, 2, 2);
+			if (obj->isObjType(OBJTYPE_Particle) || obj->isObjType(OBJTYPE_Sound))	// in editor mode, force small bbox for easier selection
+			{
+				bbox.Org = obj->GetPosition() - r3dPoint3D(1,1,1); // PT: particle should be in the center of bbox
+				bbox.Size.Assign(2, 2, 2);
+			}
+			#ifndef WO_SERVER
+			else if (obj->isObjType(OBJTYPE_ItemSpawnPoint))
+			{
+				BaseItemSpawnPoint *bisp = static_cast<BaseItemSpawnPoint*>(obj);
+				for (size_t i = 0; i < bisp->m_SpawnPointsV.size(); ++i)
+				{
+					bbox.ExpandTo(bisp->m_SpawnPointsV[i].GetDebugBBox());
+				}
+			}
+			#endif // WO_SERVER
 		}
 
 		// check bound box
@@ -727,8 +1051,11 @@ GameObject* ObjectManager::CastRay(const r3dPoint3D& vStart, const r3dPoint3D& v
 			dst = 999999;
 
 			D3DXMATRIX rotation = obj->GetRotationMatrix();
-			if(!mesh->ContainsRay(vStart, vRay, RayLen, &dst, &mtrl, obj->GetPosition(), rotation, &OutMinFace ) ) 
-				continue;
+			if(!mesh->ContainsRay(vStart, vRay, RayLen, &dst, &mtrl, obj->GetPosition(), rotation, &OutMinFace ) )
+			{
+				if (!CastRayToSpawnPoints(obj, vStart, vRay, RayLen, dst))
+					continue;
+			}
 		}
 		else if(obj->isObjType(OBJTYPE_Road)&& (!bboxonly ) )
 		{
@@ -746,6 +1073,29 @@ GameObject* ObjectManager::CastRay(const r3dPoint3D& vStart, const r3dPoint3D& v
 				continue;
 
 		}
+#ifndef WO_SERVER
+#ifndef FINAL_BUILD
+		else if (obj->isObjType(OBJTYPE_CollectionProxy) && !bboxonly)
+		{
+			CollectionElementObjectProxy *cp = static_cast<CollectionElementObjectProxy*>(obj);
+			r3dMesh *mesh = cp->GetMesh();
+
+			CollectionElement *ce = cp->GetCollectionElement();
+			if (ce)
+			{
+				dst = 999999;
+
+				D3DXMATRIX rotation, scaling;
+				D3DXMatrixRotationY(&rotation, R3D_DEG2RAD(ce->angle));
+				D3DXMatrixScaling(&scaling, ce->scale, ce->scale, ce->scale);
+				D3DXMatrixMultiply(&rotation, &scaling, &rotation);
+
+				if(!mesh->ContainsRay(vStart, vRay, RayLen, &dst, &mtrl, obj->GetPosition(), rotation, &OutMinFace)) 
+					continue;
+			}
+		}
+#endif
+#endif
 #if APEX_ENABLED
 		else if (obj->isObjType(OBJTYPE_ApexDestructible))
 		{
@@ -831,8 +1181,28 @@ GameObject* ObjectManager::CastMeshRay(const r3dPoint3D& vStart, const r3dPoint3
 	int		CFaceN = 0;
 	float 		dst = 999999;
 
-	for(GameObject* obj = pFirstObject; obj; obj = obj->pNextObject)
+	GameObject* obj_i = pFirstObject; 
+	GameObject* nextObj = NULL;
+
+	int sidx = 0, se = NumStaticObjects;
+
+	for( ; ; obj_i ? ( obj_i = nextObj, 0 ) : ++sidx )
 	{
+		GameObject* obj;
+
+		if( obj_i )
+		{
+			nextObj = obj_i->pNextObject;
+			obj = obj_i;
+		}
+		else
+		{
+			if( sidx >= se )
+				break;
+
+			obj = pStaticObjectArray[ sidx ];
+		}
+
 		if(!obj->isActive() || (obj->ObjFlags & OBJFLAG_SkipCastRay) || (obj->ObjFlags & OBJFLAG_Removed))
 			continue;
 
@@ -891,11 +1261,12 @@ GameObject* ObjectManager::CastMeshRay(const r3dPoint3D& vStart, const r3dPoint3
 
 void ObjectManager :: DumpObjects()
 {
- GameObject *obj;
- int Idx = 1;
+	int Idx = 1;
 
-	for(obj = GetFirstObject(); obj; obj = GetNextObject(obj)) 
+	for( ObjectIterator iter = GetFirstOfAllObjects(); iter.current; iter = GetNextOfAllObjects(iter)) 
 	{
+		 GameObject *obj = iter.current;
+
 		if(!obj->isActive())
 			continue;
 
@@ -931,17 +1302,6 @@ int renderable_Comparator( void const * p0, void const* p1 )
 
 
 int _render_World = 1;
-extern int		gob_NumMeshesInMeshFactoryCache;
-
-void ObjectManager::FlushInstancedMeshes(eRenderStageID DrawState)
-{
-	if(DrawState == rsFillGBuffer || DrawState == rsCreateSM)
-	{
-		for(int i=0; i<gob_NumMeshesInMeshFactoryCache; ++i)
-			gob_MeshFactoryCache[i]->DrawMeshInstanced(NULL, DrawState==rsCreateSM, true);
-	}
-}
-
 static r3dVector prevCamPos = r3dVector(0,0,0);
 static r3dVector prevCamDir = r3dVector(0,0,0);
 
@@ -1024,85 +1384,6 @@ static inline D3DXVECTOR2 ToVec2( const D3DXVECTOR4& v )
 static inline r3dPoint3D ToPoint3D( const D3DXVECTOR4& v )
 {
 	return r3dPoint3D( v.x, v.y, v.z );
-}
-
-static inline int IsSphereInsideFrustum( const r3dPoint3D& c, float r, D3DXPLANE (&planes)[ 6 ] )
-{
-	float fDistance;
-
-	int result = 1;
-
-	for(int i = 0; i < 6; ++i) 
-	{
-		fDistance = planes[i].a * c.x + planes[i].b * c.y + planes[i].c * c.z + planes[i].d;
-		if(fDistance < -r)
-			return 0;
-		if(fabs(fDistance) < r)
-			result = 2;
-	}
-
-	return result;
-}
-
-static inline int IsBoxInsideFrustum(	float miX, float miY, float miZ, 
-										float maX, float maY, float maZ, 
-										D3DXPLANE (&planes)[ 6 ] )
-{
-	int res=0;
-
-	r3dPoint3D org( miX, miY, miZ );
-	r3dPoint3D sz( maX - miX, maY - miY, maZ - miZ );
-
-	if( ( res = IsSphereInsideFrustum( org + sz * 0.5f, 0.5f * sqrtf( sz.x * sz.x + sz.y * sz.y + sz.z*sz.z ), planes ) ) == 2 )
-	{
-		BYTE bOutside[8];
-		D3DXVECTOR3 pVecBounds[8];
-
-#define DVX(x,y,z) D3DXVECTOR3(x, y, z)
-
-		pVecBounds[0]	=	DVX( miX, miY, miZ );
-		pVecBounds[1]	=	DVX( maX, miY, miZ );
-		pVecBounds[2]	=	DVX( miX, miY, maZ );
-		pVecBounds[3]	=	DVX( maX, miY, maZ );
-		pVecBounds[4]	=	DVX( miX, maY, miZ );
-		pVecBounds[5]	=	DVX( maX, maY, miZ );
-		pVecBounds[6]	=	DVX( miX, maY, maZ );
-		pVecBounds[7]	=	DVX( maX, maY, maZ );
-
-		ZeroMemory( &bOutside, sizeof(bOutside) );
-
-		// Check boundary vertices against all 6 frustum planes, 
-		// and store result (1 if outside) in a bitfield
-		for( int iPoint = 0; iPoint < 8; iPoint++ )
-		{
-			for( int iPlane = 0; iPlane < 6; iPlane++ )
-			{
-				if( planes[iPlane].a * pVecBounds[iPoint].x +
-					planes[iPlane].b * pVecBounds[iPoint].y +
-					planes[iPlane].c * pVecBounds[iPoint].z +
-					planes[iPlane].d < 0)
-				{
-					bOutside[iPoint] |= (1 << iPlane);
-				}
-			}
-			// If any point is inside all 6 frustum planes, it is inside
-			// the frustum, so the object must be rendered.
-			if( bOutside[iPoint] == 0 )
-				return 1;
-		}
-
-		// If all points are outside any single frustum plane, the object is
-		// outside the frustum
-		if( (bOutside[0] & bOutside[1] & bOutside[2] & bOutside[3] & 
-			bOutside[4] & bOutside[5] & bOutside[6] & bOutside[7]) != 0 )
-		{
-			return 0;
-		}
-
-		return 2;
-	}
-	else
-		return res; // fully inside or outside sphere
 }
 
 static inline float saturate( float val )
@@ -1282,7 +1563,10 @@ int CheckDirShadowVisibility( ShadowExtrusionData& data, bool updateExData, cons
 	if( ResultingExtrude )
 		*ResultingExtrude = extrude - data.MinZ ;
 
-	int res = IsBoxInsideFrustum( data.MinX, data.MinY, data.MinZ, data.MaxX, data.MaxY, data.Extrude, tplanes );
+	r3dBoundBox bb;
+	bb.Org.Assign(data.MinX, data.MinY, data.MinZ);
+	bb.Size.Assign(data.MaxX - data.MinX, data.MaxY - data.MinY, data.Extrude - data.MinZ);
+	int res = r3dRenderer->IsBoxInsideCustomFrustum(bb, tplanes);
 
 #ifndef FINAL_BUILD
 	if( res && r_show_shadow_extrusions->GetBool())
@@ -1429,7 +1713,7 @@ ObjectManager::PrepareSlicedShadowsInterm( const r3dCamera& Cam, D3DXPLANE (&mai
 	}
 
 	// tree hack
-	if( TreeObject && gInstance_Compute_Visibility )
+	if( TreeObject )
 	{
 		TreeObject->AppendShadowRenderables( g_render_arrays[ rsCreateSM + 0 ], Cam );
 		TreeObject->AppendShadowRenderables( g_render_arrays[ rsCreateSM + 1 ], Cam );
@@ -1458,12 +1742,14 @@ ObjectManager::PrepareShadowsInterm( const r3dCamera& Cam )
 		}
 	}
 
+#ifndef WO_SERVER
 	// tree hack
-	if( TreeObject && gInstance_Compute_Visibility )
+	if( TreeObject )
 	{
-		gInstance_Compute_Visibility ( true, false );
+		gCollectionsManager.ComputeVisibility(true, false);
 		TreeObject->AppendShadowRenderables( g_render_arrays[ rsCreateSM ], Cam );
 	}
+#endif
 
 	PrepCamInterm = Cam;
 }
@@ -1483,7 +1769,7 @@ ObjectManager::PrepareTransparentShadowsInterm( const r3dCamera& Cam )
 		draw_s& ds = draw_interm[ n_draw_interm ++ ] ;
 
 		ds.obj	= obj ;
-		ds.dist = 0.f ;
+		ds.distSq = 0.f ;
 		ds.shadow_slice = 0 ;
 
 		obj->AppendTransparentShadowRenderables( g_render_arrays[ rsCreateTransparentSM ], Cam ) ;
@@ -1522,9 +1808,9 @@ void SortDrawSlots()
 			if ( s0.obj->DrawOrder == s1.obj->DrawOrder )
 			{
 				if(s0.obj->DrawOrder != OBJ_DRAWORDER_LAST)
-					return s0.dist < s1.dist;
+					return s0.distSq < s1.distSq;
 				else
-					return s1.dist < s0.dist;
+					return s1.distSq < s0.distSq;
 			}
 			return s0.obj->DrawOrder < s1.obj->DrawOrder;
 		}
@@ -1534,20 +1820,34 @@ void SortDrawSlots()
 
 void AppendSkippOcclusionCheckObject( const r3dCamera& Cam )
 {
+	R3DPROFILE_FUNCTION( "AppendSkippOcclusionCheckRenderables" ) ;
+	
+	float defDrawDistanceSq = r_default_draw_distance->GetFloat() * r_default_draw_distance->GetFloat();
+
+	r3dPoint3D cullRefPos = r3dRenderer->DistanceCullRefPos;
+	
 	ObjectManager& GW = GameWorld();
-	for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
+	std::vector<GameObject*>::iterator it;
+	//for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
+	for(it=gSkipOcclusionCheckGameObjects.begin(); it!=gSkipOcclusionCheckGameObjects.end(); ++it)
 	{
-		if(obj->ObjFlags & OBJFLAG_SkipOcclusionCheck)
+		GameObject* obj = *it;
 		{
 			if(!obj->isActive() || obj->ObjFlags & OBJFLAG_SkipDraw || obj->ObjFlags & OBJFLAG_JustCreated || obj->ObjFlags & OBJFLAG_Removed || !obj->isDetailedVisible())
 				continue;
 
 			int always_draw = obj->ObjFlags & OBJFLAG_AlwaysDraw;
-			if(always_draw || r3dRenderer->IsBoxInsideFrustum(obj->GetBBoxWorld()))
+
+			float cullDistSq = ( cullRefPos - obj->GetPosition() ).LengthSq();
+
+			if(	always_draw 
+						|| 
+					(r3dRenderer->IsBoxInsideFrustum(obj->GetBBoxWorld()) && CheckObjectDistance( obj, cullDistSq, defDrawDistanceSq ))	
+				)
 			{
 				draw_s& d		= draw[ n_draw ++ ];
 				d.obj			= obj ;
-				d.dist			= ( Cam - obj->GetPosition() ).LengthSq();
+				d.distSq		= ( Cam - obj->GetPosition() ).LengthSq();
 				d.shadow_slice	= 0;
 			}
 		}
@@ -1635,23 +1935,26 @@ ObjectManager::Prepare( const r3dCamera& Cam )
 		m_pRootBox->TraverseTree( Cam, draw, n_draw );
 	}
 
+	UpdateSceneTraversalStats();
 #ifndef WO_SERVER
 #if !R3D_NO_BULLET_MGR
 	m_BulletMngr->AppendRenderables(g_render_arrays, Cam);
 #endif
 #endif
 
+#ifndef WO_SERVER
 	// tree hack
-	if( TreeObject && gInstance_Compute_Visibility )
+	if( TreeObject )
 	{
-		gInstance_Compute_Visibility( false, false );
+		gCollectionsManager.ComputeVisibility(false, false);
 
 		draw[ n_draw ].obj = TreeObject;
-		draw[ n_draw ].dist = 10;
+		draw[ n_draw ].distSq = 10;
 		draw[ n_draw ].shadow_slice = 0xff;
 
 		n_draw ++;
 	}
+#endif
 
 	//	Prepare matrices for render. Do it her in parallel manner, to speedup calculation.
 	RecalcObjectMatrices();
@@ -1694,6 +1997,16 @@ ObjectManager::Prepare( const r3dCamera& Cam )
 			draw[ i ].obj->AppendRenderables( g_render_arrays, Cam );
 		}
 
+		if( g_render_arrays[ rsFillGBufferEffects ].Count() )
+		{
+			SortRenderArray( g_render_arrays[ rsFillGBufferEffects ], 0 );
+		}
+
+		if( g_render_arrays[ rsFillGBufferAfterEffects ].Count() )
+		{
+			SortRenderArray( g_render_arrays[ rsFillGBufferAfterEffects ], 0 );
+		}
+
 		r_last_def_rend_count->SetInt( g_render_arrays[ rsFillGBuffer ].Count() ) ;
 
 		if (g_render_arrays[rsDrawTransparents].Count())
@@ -1727,20 +2040,37 @@ static void DrawClear( ObjectManager* manager, eRenderStageID stageID )
 void
 ObjectManager::WarmUp()
 {
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
 	extern r3dCamera gCam ;
 	r3dCamera prevCam = gCam ;
 
 	r3dCamera fakeCam;
 
-	fakeCam.NearClip	= 1.f;
-	fakeCam.FarClip		= 32000.f;
+	fakeCam.NearClip		= 1.f;
+	fakeCam.FarClip			= 32000.f;
 
-	fakeCam.vPointTo	= r3dPoint3D( +0.f, -1.f, +0.f );
-	fakeCam.vUP			= r3dPoint3D( +0.f, +0.f, +1.f );
+	fakeCam.vPointTo		= r3dPoint3D( +0.f, -1.f, +0.f );
+	fakeCam.vUP				= r3dPoint3D( +0.f, +0.f, +1.f );
 
-	fakeCam.FOV			= 90.f;
+	fakeCam.FOV				= 90.f;
 
-	fakeCam.bOrtho	= true;
+	fakeCam.ProjectionType	= r3dCamera::PROJTYPE_ORTHO;
 
 	if( Terrain )
 	{
@@ -1760,11 +2090,13 @@ ObjectManager::WarmUp()
 	extern float __r3dGlobalAspect;
 	fakeCam.Aspect		= __r3dGlobalAspect ;
 
-	r3dRenderer->SetCamera( fakeCam );	
+	r3dRenderer->SetCamera( fakeCam, false );	
 
-	for( GameObject* obj = GetFirstObject(); obj; obj = GetNextObject( obj ) )
+	std::vector<GameObject*>::iterator it;
+	//for(GameObject *obj = GW.GetFirstObject(); obj; obj = GW.GetNextObject(obj))
+	for(it=gSkipOcclusionCheckGameObjects.begin(); it!=gSkipOcclusionCheckGameObjects.end(); ++it)
 	{
-		if( obj->ObjFlags & OBJFLAG_SkipOcclusionCheck )
+		GameObject* obj = *it;
 		{
 			if(!obj->isActive() || obj->ObjFlags & OBJFLAG_SkipDraw || obj->ObjFlags & OBJFLAG_JustCreated || obj->ObjFlags & OBJFLAG_Removed || !obj->isDetailedVisible())
 				continue;
@@ -1785,6 +2117,8 @@ ObjectManager::WarmUp()
 
 	DrawClear( this, rsFillGBuffer					);
 	DrawClear( this, rsFillGBufferFirstPerson	);
+	DrawClear( this, rsFillGBufferEffects	);
+	DrawClear( this, rsFillGBufferAfterEffects	);
 	DrawClear( this, rsDrawComposite1		);
 	DrawClear( this, rsDrawComposite2	);
 	DrawClear( this, rsDrawBloomGlow	);
@@ -1804,7 +2138,7 @@ ObjectManager::WarmUp()
 	query->Release();
 #endif
 
-	r3dRenderer->SetCamera( prevCam );
+	r3dRenderer->SetCamera( prevCam, false );
 }
 
 void
@@ -1962,8 +2296,10 @@ bool ObjectManager::GetSnapPoint( const r3dPoint2D & vCursor, const SnapInfo_t &
 	float fRadiusSq = tInfo.fRadius * tInfo.fRadius;
 
 
-	for( GameObject * pObj = GetFirstObject(); pObj; pObj = GetNextObject( pObj ) )
+	for( ObjectIterator iter = GetFirstOfAllObjects(); iter.current; iter = GetNextOfAllObjects( iter ) )
 	{
+		GameObject* pObj = iter.current;
+
 		if( ! pObj->isActive() || pObj->ObjFlags & ( OBJFLAG_SkipCastRay | OBJFLAG_Removed ) )
 			continue;
 
@@ -2112,6 +2448,11 @@ void ObjectManager::OnGameEnded()
 		obj->OnGameEnded();
 	}
 
+	for( int i = 0, e = NumStaticObjects; i < e; i ++ )
+	{
+		pStaticObjectArray[ i ]->OnGameEnded();
+	}
+
 }
 
 ObjectManagerResourceHelper::ObjectManagerResourceHelper()
@@ -2133,8 +2474,9 @@ void DumpPhysStats()
 	int controversialSleepers = 0 ;
 	int physCount = 0 ;
 
-	for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
 		if( obj->PhysicsObject )
 		{
 			physCount ++ ;

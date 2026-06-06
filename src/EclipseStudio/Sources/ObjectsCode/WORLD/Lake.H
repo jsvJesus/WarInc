@@ -13,7 +13,8 @@ class obj_Lake : public GameObject, public WaterBase
 public:
 	r3dXPSObject<R3D_WATER_VERTEX>*	OceanPlane;
 
-
+	float PlaneScale;
+	float CurrentScale;
 
 	obj_Lake();
 
@@ -22,6 +23,8 @@ public:
 	virtual	BOOL		Update();
 	virtual	void		ReadSerializedData(pugi::xml_node& node);
 	virtual void		WriteSerializedData(pugi::xml_node& node);
+
+	void UpdateGrid();
 
 	void DrawComposite( const r3dCamera& Cam );
 	void DrawDepth( const r3dCamera& Cam );

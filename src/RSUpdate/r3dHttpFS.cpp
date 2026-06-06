@@ -27,8 +27,7 @@ bool r3dHttpFS::OpenFromWeb(const char* baseUrl, updProgress* upd)
   strcpy(baseUrl_, baseUrl);
 
   char url[512];
-  //sprintf(url, "%s_%02d.gz", baseUrl_, 0);
-   sprintf(url, "%s_%02d.bin", baseUrl_, 0);
+  sprintf(url, "%s_%02d.bin", baseUrl_, 0);
 
   CkByteData data;
   HttpDownload http(upd);
@@ -41,8 +40,7 @@ bool r3dHttpFS::OpenFromWeb(const char* baseUrl, updProgress* upd)
 
   // fill basic volume urls
   for(int i=0; i<r3dFileSystem::MAX_VOLUMES; i++)
-    //sprintf(volumeUrl_[i], "%s_%02d.gz", baseUrl_, i + 1);
-	sprintf(volumeUrl_[i], "%s_%02d.bin", baseUrl_, i + 1);
+    sprintf(volumeUrl_[i], "%s_%02d.bin", baseUrl_, i + 1);
     
   // detect max volume file
   int maxVolume = 0;

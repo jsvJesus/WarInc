@@ -32,7 +32,7 @@ void r3dCamera::_Init(const r3dPoint3D& pos)
 	NearClip 	= 0.1f;
 	FarClip 	= 14000;
 
-	bOrtho = false;
+	ProjectionType = PROJTYPE_PRESPECTIVE;
 	Width = 0;
 	Height = 0;
 
@@ -52,14 +52,9 @@ void r3dCamera::PointTo(const r3dPoint3D& p)
 //--------------------------------------------------------------------------------------------------------
 void r3dCamera::SetOrtho( float fWidth, float fHeight )
 {
-	bOrtho = true;
+	ProjectionType = PROJTYPE_ORTHO;
 	Width = fWidth;
 	Height = fHeight;
-}
-
-void r3dCamera::ResetOrtho ()
-{
-	bOrtho = false;
 }
 
 //-------------------------------------------------------------------------

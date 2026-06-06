@@ -25,6 +25,7 @@
 #include <time.h>
 #include <malloc.h>
 #include <assert.h>
+#include <memory>
 
 // RJH Network2: added the following preprocessor defines for the network, 
 // since the game project is compiled for precompiled headers and this pch
@@ -57,7 +58,10 @@
 #include <list>
 #include <map>
 #include <string>
-#include <unordered_map> // old <hash_map>
+#include <sstream>
+#include <hash_map>
+#include <unordered_map>
+#include <unordered_set>
 
 // starsafe
 #define STRSAFE_NO_DEPRECATE 1
@@ -77,6 +81,8 @@
 #include <d3d9.h>
 #include <d3dx9core.h>
 #include <d3dx9.h>
+
+#include "r3dCompileAssert.h"
 
 // disable PIX events in final build
 #ifdef FINAL_BUILD
@@ -112,21 +118,22 @@
 #endif
 
 // physX
-#define WARINC_PHYSX_34 1
 #define APEX_ENABLED 0
-#define VEHICLES_ENABLED 0
-
-#define ENABLE_RECAST_NAVIGATION 1
-#if ENABLE_RECAST_NAVIGATION
-	#ifndef FINAL_BUILD
-		#define ENABLE_ZOMBIES 1
-	#else
-		#define ENABLE_ZOMBIES 0
-	#endif
+#ifdef FINAL_BUILD
+	//#define VEHICLES_ENABLED 0
+#else 
+#ifndef WO_SERVER
+	#define VEHICLES_ENABLED 0 // temp disabled due to new PhysX API changes
 #else
-	#define ENABLE_ZOMBIES 0
+	#define VEHICLES_ENABLED 0
+#endif
 #endif
 
+#ifndef FINAL_BUILD
+#define ENABLE_AUTODESK_NAVIGATION 1
+#else
+#define ENABLE_AUTODESK_NAVIGATION 0
+#endif
 
 #ifdef FINAL_BUILD
 #define R3D_ALLOW_TEMPORAL_SSAO 0
@@ -136,17 +143,15 @@
 
 #ifndef DISABLE_PHYSX  // DISABLE_PHYSX defined for server
 #include "PxPhysicsAPI.h"
-#include "PxControllerManager.h"
+#include "CharacterKinematic/PxControllerManager.h"
 using namespace physx;
 #endif
 
 #define ENABLE_RAGDOLL 1
 
-#ifndef ENABLE_WEB_BROWSER
-#if defined(WARINC_X64) || defined(_WIN64) || defined(WO_SERVER)
-#define ENABLE_WEB_BROWSER 0
-#else
-#define ENABLE_WEB_BROWSER 1
+#ifndef WO_SERVER 
+#ifndef FINAL_BUILD
+	#define ENABLE_WEB_BROWSER 1
 #endif
 #endif
 
@@ -209,5 +214,6 @@ template<> R3D_FORCEINLINE wchar_t* r3dscpy(wchar_t* a, const wchar_t *b)
 {
 	return wcscpy(a, b);
 }
+
 
 #endif	//__ETERNITY_R3DPCH_H

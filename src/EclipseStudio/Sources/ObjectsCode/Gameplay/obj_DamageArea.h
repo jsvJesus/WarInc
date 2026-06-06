@@ -14,13 +14,11 @@ private:
 
 	float m_Radius;
 	float m_Damage;
-	int m_TeamID; // 0 - blue, 1 - red, 2 - disabled
 public:
 	obj_DamageArea();
 	virtual ~obj_DamageArea();
 
 	float	GetRadius() const { return m_Radius; }
-	int		getTeamID() const { return m_TeamID; }
 
 	virtual	BOOL		OnCreate();
 	virtual	BOOL		Load(const char *name);

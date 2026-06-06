@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,15 +32,20 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererInstanceBuffer.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_OPENGL) 
+
+#include "OGLRendererInstanceBuffer.h"
 #include <RendererInstanceBufferDesc.h>
+
+using namespace SampleRenderer;
 
 OGLRendererInstanceBuffer::OGLRendererInstanceBuffer(const RendererInstanceBufferDesc &desc) :
 	RendererInstanceBuffer(desc)
 {
-	m_bufferSize   = (physx::PxU32)(desc.maxInstances * m_stride);
+	m_bufferSize   = (PxU32)(desc.maxInstances * m_stride);
 	m_buffer       = malloc(m_bufferSize);//PX_ALLOC(m_bufferSize);
 	m_maxInstances = desc.maxInstances;
 }
@@ -50,24 +55,25 @@ OGLRendererInstanceBuffer::~OGLRendererInstanceBuffer(void)
 	if(m_buffer) free(m_buffer);//PX_FREE(m_buffer);
 }
 
-physx::PxMat34Legacy OGLRendererInstanceBuffer::getModelMatrix(physx::PxU32 index) const
+physx::PxMat44 OGLRendererInstanceBuffer::getModelMatrix(PxU32 index) const
 {
-	physx::PxMat34Legacy model;
-	model.id();
+	physx::PxMat44 model = PxMat44::createIdentity();
 	if(index < m_maxInstances)
 	{
-		const void *instance = ((physx::PxU8*)m_buffer)+(m_stride*index);
-		model.M.setColumn(0, getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALX]));
-		model.M.setColumn(1, getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALY]));
-		model.M.setColumn(2, getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALZ]));
-		model.t = getInstanceColumn(instance, m_semanticDescs[SEMANTIC_POSITION]);
+		const void *instance = ((PxU8*)m_buffer)+(m_stride*index);
+		PxVec3 column0 = getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALX]);
+		PxVec3 column1 = getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALY]);
+		PxVec3 column2 = getInstanceColumn(instance, m_semanticDescs[SEMANTIC_NORMALZ]);
+		PxVec3 column3 = getInstanceColumn(instance, m_semanticDescs[SEMANTIC_POSITION]);
+
+		model = PxMat44(column0, column1, column2, column3);
 	}
 	return model;
 }
 
-physx::PxVec3 OGLRendererInstanceBuffer::getInstanceColumn(const void *instance, const OGLRendererInstanceBuffer::SemanticDesc &sd) const
+PxVec3 OGLRendererInstanceBuffer::getInstanceColumn(const void *instance, const OGLRendererInstanceBuffer::SemanticDesc &sd) const
 {
-	physx::PxVec3 col = *(physx::PxVec3*)(((physx::PxU8*)instance)+sd.offset);
+	PxVec3 col = *(PxVec3*)(((PxU8*)instance)+sd.offset);
 	return col;
 }
 
@@ -81,12 +87,12 @@ void OGLRendererInstanceBuffer::unlock(void)
 
 }
 
-void OGLRendererInstanceBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstInstance) const
+void OGLRendererInstanceBuffer::bind(PxU32 streamID, PxU32 firstInstance) const
 {
 
 }
 
-void OGLRendererInstanceBuffer::unbind(physx::PxU32 streamID) const
+void OGLRendererInstanceBuffer::unbind(PxU32 streamID) const
 {
 
 }

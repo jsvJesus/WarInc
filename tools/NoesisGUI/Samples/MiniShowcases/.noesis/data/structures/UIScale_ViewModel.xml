@@ -1,3 +1,0 @@
-<Class Name="UIScale_ViewModel">
-  <Property Name="ScaleFactor" Type="Number" NumberMinValue="0" NumberMaxValue="2" NumberDecimalCount="0"/>
-</Class>

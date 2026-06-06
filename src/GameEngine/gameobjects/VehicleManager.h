@@ -10,8 +10,8 @@ class VehicleManager;
 #if VEHICLES_ENABLED
 
 #include "PxBatchQuery.h"
-#include "vehicle/PxVehicle.h"
-#include "vehicle/PxVehicleUtils.h"
+#include "vehicle/PxVehicleDrive.h"
+#include "vehicle/PxVehicleUtilSetup.h"
 
 #include "VehicleDescriptor.h"
 
@@ -71,7 +71,7 @@ public:
 class VehicleManager
 {
 	r3dTL::TArray<VehicleDescriptor*> vehicles;
-	r3dTL::TArray<PxVehicle4W*> physxVehs;
+	r3dTL::TArray<PxVehicleWheels*> physxVehs;
 	//	One result for each wheel in each car.
 	r3dTL::TArray<PxRaycastQueryResult> batchQueryResults;
 	//	One hit for each wheel in each car.
@@ -89,7 +89,9 @@ class VehicleManager
 	physx::PxBatchQuery * SetUpBatchedSceneQuery();
 	void IssueSuspensionRaycasts();
 
-	PxVehicleRawInputData carControlData;
+	PxVehicleDrivableSurfaceToTireFrictionPairs *surfaceTypePairs;
+
+	PxVehicleDrive4WRawInputData carControlData;
 	bool mAtRestUnderBraking;
 	float mTimeElapsedSinceAtRestUnderBraking;
 	bool mInReverseMode;

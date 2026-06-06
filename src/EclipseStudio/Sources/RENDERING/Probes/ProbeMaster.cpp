@@ -2,7 +2,11 @@
 
 #include "r3d.h"
 
+#include "../SF/RenderBuffer.h"
+
 #include "GameObjects/ObjManag.h"
+#include "ObjectsCode/world/Lamp.H"
+
 #include "TrueNature/Sun.h"
 
 #include "TrueNature/ITerrain.h"
@@ -33,6 +37,17 @@ typedef ProbeMaster::Bytes Bytes;
 static const int N_BANDS = 2;
 static const int N_COEFS = 4;
 
+#pragma pack(push,1)
+struct SHProjectVertex
+{
+	float4 coefs;
+	float3 vec;
+	float2 texc;
+};
+#pragma pack(pop)
+
+extern bool g_bEditMode;
+
 static void SetupCamForFace( r3dCamera* oCam, const r3dPoint3D& pos, int f );
 static void CopyPixels( Bytes* oBytes, void* src, int face );
 static void CopyPixelsRGB( Bytes* oBytesR, Bytes* oBytesG, Bytes* oBytesB, void* src, int face );
@@ -48,21 +63,71 @@ static float SampleSpherical( float th, float ph );
 static D3DXVECTOR3 g_HemisphereNormal;
 static float SampleHemisphereLighting( float th, float ph );
 
+template< typename T >
+T ConvertProbeRasterSamplesTo( const ProbeRasterSamples& samples, int idir );
+
 static int g_AccumVS_ID = -1;
 static int g_AccumPS_ID = -1;
+static int g_AccumVPLSH_VS_ID = -1;
+static int g_AccumVPLSH_PS_ID = -1;
+
+float DefaultSHBasis[ 4 ][ 4 ] = { 
+	{ 0.44514418f, 0.0049388288f, 0.51238781f, 0.014295869f		},
+	{ 0.15012246f, 0.0015635064f, 0.17287119f, 0.0055737426f	},
+	{ 0.15016453f, 0.0020139161f, 0.17288868f, 0.0047992305f	},
+	{ 0.15017986f, 0.0016592280f, 0.17289022f, 0.0053043431f	}
+};
+
+struct SHSample
+{ 
+	float3 sph;
+	float3 vec;
+	float coeff[ N_COEFS ];
+
+	int faceIdx;
+};
+
+static const int SQRT_N_SAMPLES = 128;
+static const int N_SAMPLES = SQRT_N_SAMPLES * SQRT_N_SAMPLES;
+
+typedef r3dTL::TArray< SHSample > SHSampleArr;
+typedef r3dTL::TArray< float2 > Float2Arr;
+typedef r3dTL::TFixedArray< Float2Arr, Probe::NUM_DIRS > DirIntegraArr;
+static SHSampleArr g_SHSamples;
+static DirIntegraArr g_DirIntegrateSamples;
+
+//------------------------------------------------------------------------
+
+struct DistanceProbeIdxEntry
+{
+	float distance;
+	ProbeIdx probeIdx;
+};
+
+static r3dTL::TArray< DistanceProbeIdxEntry > g_ProbesIdxesWithDistances;
+
+struct DistanceProbeEntry
+{
+	float distance;
+	Probe* probe;
+};
+
+static r3dTL::TArray< DistanceProbeEntry > g_ProbesWithDistances;
+
+enum
+{
+	VPL_GATHER_TILE_RANGE = 2
+};
 
 //------------------------------------------------------------------------
 
 ProbeProxy::ProbeProxy()
 {
-	ObjFlags = OBJFLAG_SkipDraw | OBJFLAG_SkipDraw ;
+	setSkipOcclusionCheck(true);
 
 	Idx.CombinedIdx = -1;
 
-	r3dBoundBox bbox;
-
-	bbox.Org = r3dPoint3D( -PROBE_DISPLAY_SCALE, -PROBE_DISPLAY_SCALE, -PROBE_DISPLAY_SCALE );
-	bbox.Size = 2.f * r3dPoint3D( PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE );
+	r3dBoundBox bbox = CreateBB();
 
 	SetBBoxLocal( bbox );
 }
@@ -91,6 +156,29 @@ void ProbeProxy::SetPosition( const r3dPoint3D& pos )
 
 //------------------------------------------------------------------------
 
+BOOL ProbeProxy::GetObjStat ( char * sStr, int iLen )
+{
+	char sAddStr [1024];
+	sAddStr[0] = 0;
+	if (GameObject::GetObjStat (sStr, iLen))
+		r3dscpy(sAddStr, sStr);
+
+	if( Idx.CombinedIdx != -1 )
+	{
+		const Probe* probe = g_pProbeMaster->GetProbe( Idx );
+
+		sprintf_s( sStr, iLen, "%sCell:%d %d %d\n", sAddStr, probe->CellX, probe->CellY, probe->CellZ );
+	}
+	else
+	{
+		sprintf_s( sStr, iLen, "%sInvalid probe\n" );
+	}
+
+	return TRUE;
+}
+
+//------------------------------------------------------------------------
+
 void
 ProbeProxy::SetIdx( ProbeIdx idx )
 {
@@ -99,6 +187,96 @@ ProbeProxy::SetIdx( ProbeIdx idx )
 	if( Probe* pr = g_pProbeMaster->GetProbe( idx ) )
 	{
 		GameObject::SetPosition( pr->Position );
+	}
+}
+
+//------------------------------------------------------------------------
+
+r3dBoundBox ProbeProxy::CreateBB()
+{
+	r3dBoundBox bbox;
+
+	bbox.Org = r3dPoint3D( -PROBE_DISPLAY_SCALE, -PROBE_DISPLAY_SCALE, -PROBE_DISPLAY_SCALE );
+	bbox.Size = 2.f * r3dPoint3D( PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE );
+
+	return bbox;
+}
+
+//------------------------------------------------------------------------
+
+struct ProbeProxyRenderable : Renderable
+{
+	void Init()
+	{
+		DrawFunc = Draw;
+	}
+
+	static void Draw( Renderable* RThis, const r3dCamera& Cam )
+	{
+		ProbeProxyRenderable *This = static_cast<ProbeProxyRenderable*>( RThis );
+
+		This->Parent->DoDrawComposite( Cam );
+	}
+
+	ProbeProxy*	Parent;	
+};
+
+/*virtual*/ void ProbeProxy::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam ) /*OVERRIDE*/
+{
+	if( r_hide_icons->GetInt() )
+		return;
+
+	ProbeProxyRenderable rend;
+
+	rend.Init();
+	rend.Parent		= this;
+
+	rend.SortValue	= 7 * RENDERABLE_USER_SORT_VALUE;
+
+	render_arrays[ rsDrawDebugData ].PushBack( rend );
+}
+
+//------------------------------------------------------------------------
+
+void ProbeProxy::DoDrawComposite( const r3dCamera& cam )
+{
+	if( Idx.CombinedIdx != -1 )
+	{
+		if( Probe* probe = g_pProbeMaster->GetProbe( Idx ) )
+		{
+			r3dPoint3D pos0;
+			r3dPoint3D pos1;
+
+			g_pProbeMaster->ConvertCellToCoord( probe->CellX + 0, probe->CellY + 0, probe->CellZ + 0, &pos0 );
+			g_pProbeMaster->ConvertCellToCoord( probe->CellX + 1, probe->CellY + 1, probe->CellZ + 1, &pos1 );
+
+			r3dBoundBox box;
+
+			box.Org = pos0;
+			box.Size = pos1 - pos0;
+
+			r3dDrawUniformBoundBox( box, cam, r3dColor::green );
+
+			int currCellX, currCellY, currCellZ;
+
+			g_pProbeMaster->ConvertCoordToCell( &currCellX, &currCellY, &currCellZ, GetPosition() );
+
+			if( currCellX != probe->CellX 
+					||
+				currCellY != probe->CellY
+					||
+				currCellZ != probe->CellZ
+				)
+			{
+				g_pProbeMaster->ConvertCellToCoord( currCellX + 0, currCellY + 0, currCellZ + 0, &pos0 );
+				g_pProbeMaster->ConvertCellToCoord( currCellX + 1, currCellY + 1, currCellZ + 1, &pos1 );
+
+				box.Org = pos0;
+				box.Size = pos1 - pos0;
+
+				r3dDrawUniformBoundBox( box, cam, r3dColor::red );
+			}
+		}
 	}
 }
 
@@ -118,7 +296,13 @@ Probe::FixedDirArr Probe::UpVecs;
 
 Probe::Probe()
 : Position ( 0, 0, 0 )
-, Flags( FLAG_SKY_DIRTY | FLAG_BOUNCE_DIRTY )
+, Flags( FLAG_SKY_DIRTY | FLAG_BOUNCE_DIRTY | FLAG_LOCAL_BOUNCE_DIRTY )
+, XRadius( 0 )
+, YRadius( 0 )
+, ZRadius( 0 )
+, CellX( 0 )
+, CellY( 0 )
+, CellZ( 0 )
 {
 	for( int i = 0 , e  = Probe::NUM_DIRS; i < e; i ++ )
 	{
@@ -127,11 +311,40 @@ Probe::Probe()
 		SH_BounceB [ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
 	}
 
-	for( int i = 0, e = SkyVisibility.COUNT; i < e; i ++ )
+	SkyVisibility[ 0 ] = 0.f;
+
+	for( int i = 1, e = SkyVisibility.COUNT; i < e; i ++ )
 	{
 		SkyVisibility[ i ] = 1.f;
 	}
-	
+
+	DynamicLightsRGB = D3DXVECTOR3( 0, 0, 0 );
+
+	for( int i = 0, e = SH_LocalVPLProbeIndexes.COUNT; i < e; i ++ )
+	{
+		SH_LocalVPLProbeIndexes[ i ].CombinedIdx = -1;
+
+		SH_LocalVPLsR[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+		SH_LocalVPLsG[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+		SH_LocalVPLsB[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+	}
+}
+
+//------------------------------------------------------------------------
+
+int CountProbeLocalVPLs( const Probe* p )
+{
+	int count = 0;
+
+	for( int i = 0, e = p->SH_LocalVPLProbeIndexes.COUNT; i < e; i ++ )
+	{
+		if( p->SH_LocalVPLProbeIndexes[ i ].CombinedIdx == -1 )
+			break;
+		
+		count ++;
+	}
+
+	return count;
 }
 
 //------------------------------------------------------------------------
@@ -165,6 +378,14 @@ ProbeMaster::Settings::Settings()
 , NominalProbeTileCountX( 32 )
 , NominalProbeTileCountZ( 32 )
 
+, ProbeVolumeOffsetY( 0.f )
+, DefaultBounceColor_Up( 127, 127, 127 )
+, DefaultBounceColor_Down( 127, 127, 127 )
+
+, MaximumProbeRadius( 16 )
+, MaximumProbeYRadius( 2 )
+
+, ProbeRadiusExpansion( 0 )
 {
 
 }
@@ -181,78 +402,684 @@ ProbeMaster::Info::Info()
 , ProbeMapWorldXStart( 0.f )
 , ProbeMapWorldYStart( 0.f )
 , ProbeMapWorldZStart( 0.f )
-, TotalProbeProximityCellsCountX( 256 )
-, TotalProbeProximityCellsCountY( 16 )
-, TotalProbeProximityCellsCountZ( 256 )
-, TileProbeProximityCellsCountX( 8 )
-, TileProbeProximityCellsCountZ( 8 )
-, ProximityCellsInTileX( 16 )
-, ProximityCellsInTileZ( 16 )
+, TotalProbeCellsCountX( 256 )
+, TotalProbeCellsCountY( 16 )
+, TotalProbeCellsCountZ( 256 )
+, ProbeCellsInTileX( 16 )
+, ProbeCellsInTileZ( 16 )
 , CellSizeX( 1.f )
 , CellSizeY( 1.f )
 , CellSizeZ( 1.f )
 , ActualProbeTileCountX( 0 )
 , ActualProbeTileCountZ( 0 )
-, ProximityMapSize( 0 )
+, CamCellX( 0 )
+, CamCellY( 0 )
+, CamCellZ( 0 )
+, ProbeVolumeCamCellX( 0 )
+, ProbeVolumeCamCellY( 0 )
+, ProbeVolumeCamCellZ( 0 )
 {
 
+}
+
+//------------------------------------------------------------------------
+
+ProbeMaster::MemStats::MemStats()
+: ProbeSize( 0 )
+, ProbeVolumeSize( 0 )
+{
+
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::GetCellCoords( int * oCellX, int * oCellY, int * oCellZ, const r3dPoint3D& pos )
+{
+	float offY = m_Settings.ProbeVolumeOffsetY;
+
+	*oCellX = int( ( pos.x - m_Info.ProbeMapWorldXStart			) * m_Info.TotalProbeCellsCountX / m_Info.ProbeMapWorldActualXSize );
+	*oCellY = int( ( pos.y - m_Info.ProbeMapWorldYStart + offY	) * m_Info.TotalProbeCellsCountY / m_Info.ProbeMapWorldActualYSize );
+	*oCellZ = int( ( pos.z - m_Info.ProbeMapWorldZStart			) * m_Info.TotalProbeCellsCountZ / m_Info.ProbeMapWorldActualZSize );
 }
 
 //------------------------------------------------------------------------
 
 R3D_FORCEINLINE ProbeIdx ProbeMaster::GetClosestProbeIdx( int cellX, int cellY, int cellZ )
 {
-	int tileX = cellX / m_Info.ProximityCellsInTileX;
-	int inTileX = cellX % m_Info.ProximityCellsInTileX;
+	int tileX = cellX / m_Info.ProbeCellsInTileX;
+	int inTileX = cellX % m_Info.ProbeCellsInTileX;
 
-	int tileZ = cellZ / m_Info.ProximityCellsInTileZ;
-	int inTileZ = cellZ % m_Info.ProximityCellsInTileZ;
+	int tileZ = cellZ / m_Info.ProbeCellsInTileZ;
+	int inTileZ = cellZ % m_Info.ProbeCellsInTileZ;
+
+	r3dPoint3D realPose(	( cellX + 0.5f ) * m_Info.CellSizeX,
+							( cellY + 0.5f ) * m_Info.CellSizeY,
+							( cellZ + 0.5f ) * m_Info.CellSizeZ );
 
 	ProbeTile& tile = m_ProbeMap.At( tileX, tileZ );
 
-	if( tile.ProximityProbeMap.Count() )
-		return tile.ProximityProbeMap[	inTileX +
-										cellY * m_Info.ProximityCellsInTileX +
-										inTileZ * m_Info.ProximityCellsInTileX * m_Info.TotalProbeProximityCellsCountY ];
-	else
+	float minDist = FLT_MAX;
+	int minDistanceIndex = -1;
+
+	for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+	{
+		float dist = ( tile.TheProbes[ i ].Position - realPose ).Length();
+
+		if( dist < minDist )
+		{
+			minDist = dist;
+			minDistanceIndex = i;
+		}
+	}
+
+	if( minDistanceIndex < 0 )
 	{
 		ProbeIdx empty;
 		empty.CombinedIdx = -1;
 
 		return empty;
 	}
+	else
+	{
+		ProbeIdx idx;
+
+		idx.TileX = tileX;
+		idx.TileZ = tileZ;
+		idx.InTileIdx = minDistanceIndex;
+
+		return idx;
+	}
 }
 
 //------------------------------------------------------------------------
 
-R3D_FORCEINLINE void ProbeMaster::SetClosestProbeIdx( int cellX, int cellY, int cellZ, ProbeIdx idx )
+R3D_FORCEINLINE void ProbeMaster::FillProbeVolumeCellWithProbe(	const D3DLOCKED_BOX (&lboxes)[ Probe::NUM_DIRS ],
+																const D3DBOX& box, int cx, int cy, int cz, const Probe& probe )
 {
-	int tileX = cellX / m_Info.ProximityCellsInTileX;
-	int inTileX = cellX % m_Info.ProximityCellsInTileX;
+	int acx = m_Info.ProbeVolumeCamCellX + ( cx - m_Info.CamCellX );
+	int acy = m_Info.ProbeVolumeCamCellY + ( cy - m_Info.CamCellY );
+	int acz = m_Info.ProbeVolumeCamCellZ + ( cz - m_Info.CamCellZ );
 
-	int tileZ = cellZ / m_Info.ProximityCellsInTileZ;
-	int inTileZ = cellZ % m_Info.ProximityCellsInTileZ;
+	acx %= m_Settings.ProbeTextureWidth;
+	acy %= m_Settings.ProbeTextureDepth;
+	acz %= m_Settings.ProbeTextureHeight;
 
-	ProbeTile& tile = m_ProbeMap.At( tileX, tileZ );
+	if( acx < 0 ) acx += m_Settings.ProbeTextureWidth;
+	if( acy < 0 ) acy += m_Settings.ProbeTextureDepth;
+	if( acz < 0 ) acz += m_Settings.ProbeTextureHeight;
 
-	if( idx.InTileIdx != 0xffff )
+	r3d_assert( acx >= (int)box.Left && acx < (int)box.Right );
+	r3d_assert( acy >= (int)box.Front && acy < (int)box.Back );
+	r3d_assert( acz >= (int)box.Top && acz < (int)box.Bottom );
+
+	acx -= box.Left;
+	acy -= box.Front;
+	acz -= box.Top;
+
+	for( int i = 0; i < Probe::NUM_DIRS; i ++ )
 	{
-		if( !tile.ProximityProbeMap.Count() )
+		const D3DLOCKED_BOX& lbox = lboxes[ i ];
+		((UINT32*)((char*)lbox.pBits + lbox.RowPitch * acz + lbox.SlicePitch * acy ))[ acx ] = probe.BasisColors32[ i ];
+	}
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::RasterizeXSlice( int startTexX, int endTexX, int cellX, int cellY, int cellZ, const Probe& defaultProbe )
+{
+	int tilesInRad = m_Settings.MaximumProbeRadius / m_Info.ProbeCellsInTileX + 1;
+
+	int xStretch = endTexX - startTexX;
+
+	int texYLen2 = m_Settings.ProbeTextureDepth / 2;
+	int texZLen2 = m_Settings.ProbeTextureHeight / 2;
+
+	int xTileStart = cellX / m_Info.ProbeCellsInTileX;
+	int xTileEnd = ( cellX + xStretch ) / m_Info.ProbeCellsInTileX;
+
+	int zTileStart = ( cellZ - texZLen2 ) / m_Info.ProbeCellsInTileZ;
+	int zTileEnd = ( cellZ + texZLen2 ) / m_Info.ProbeCellsInTileZ;
+
+	xTileStart -= tilesInRad;
+	xTileEnd += tilesInRad;
+
+	zTileStart -= tilesInRad;
+	zTileEnd += tilesInRad;
+
+	m_ProbeRasterSamplesVolume.Resize( xStretch * m_Settings.ProbeTextureHeight * m_Settings.ProbeTextureDepth );
+	ResetRasterSamples();
+
+	xTileStart = R3D_MIN( R3D_MAX( xTileStart, 0 ), (int)m_ProbeMap.Width() - 1 );
+	xTileEnd = R3D_MIN( R3D_MAX( xTileEnd, 0 ), (int)m_ProbeMap.Width() - 1 );
+
+	zTileStart = R3D_MIN( R3D_MAX( zTileStart, 0 ), (int)m_ProbeMap.Height() - 1 );
+	zTileEnd = R3D_MIN( R3D_MAX( zTileEnd, 0 ), (int)m_ProbeMap.Height() - 1 );
+
+	D3DBOX box;
+
+	box.Left = startTexX;
+	box.Right = endTexX;
+
+	box.Top = 0;
+	box.Bottom = m_Settings.ProbeTextureHeight;
+
+	box.Front = 0;
+	box.Back = m_Settings.ProbeTextureDepth;
+
+	D3DLOCKED_BOX lboxes[ Probe::NUM_DIRS ];
+
+	UINT32 *locked32[ Probe::NUM_DIRS ];
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->LockBox( 0, &lboxes[ i ], &box, 0 ) );
+
+		locked32[ i ] = (UINT32*)lboxes[ i ].pBits;
+	}
+
+	int lockedSize = lboxes[ 0 ].SlicePitch * ( box.Back - box.Front );
+
+	for( int y = 0, cy = cellY - texYLen2, e = m_Settings.ProbeTextureDepth; y < e; y ++, cy ++ )
+	{
+		for( int z = 0, e = m_Settings.ProbeTextureHeight, cz = cellZ - texZLen2; z < e; z ++, cz ++ )
 		{
-			ProbeIdx empty;
-			empty.CombinedIdx = -1;
-
-			tile.ProximityProbeMap.Resize(	m_Info.ProximityCellsInTileX *
-											m_Info.ProximityCellsInTileZ *
-											m_Info.TotalProbeProximityCellsCountY,
-											empty
-											);
-
+			for( int x = 0, cx = cellX, e = xStretch; x < e; x ++, cx ++ )
+			{
+				FillProbeVolumeCellWithProbe( lboxes, box, cx, cy, cz, defaultProbe );
+			}
 		}
+	}
 
-		tile.ProximityProbeMap[	inTileX +
-								cellY * m_Info.ProximityCellsInTileX +
-								inTileZ * m_Info.ProximityCellsInTileX * m_Info.TotalProbeProximityCellsCountY ] = idx;
+	for( int tz = zTileStart, tze = zTileEnd; tz <= tze ; tz ++ )
+	{
+		for( int tx = xTileStart, txe = xTileEnd; tx <= txe ; tx ++ )
+		{
+			if( tx < 0 || tx >= (int)m_ProbeMap.Width() ||
+				tz < 0 || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			ProbeTile& tile = m_ProbeMap[ tz ][ tx ];
+
+			for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe& probe = tile.TheProbes[ i ];
+
+				if( probe.CellX + probe.XRadius >= cellX
+						&&
+					probe.CellX - probe.XRadius < cellX + xStretch
+						&&
+					probe.CellZ + probe.ZRadius >= cellZ - texZLen2
+						&&
+					probe.CellZ - probe.ZRadius < cellZ + texZLen2
+						&&
+					probe.CellY + probe.YRadius >= cellY - texYLen2
+						&&
+					probe.CellY - probe.YRadius < cellY + texYLen2
+						)
+				{
+					RasterizeProbeIntoVolume( &probe, box, cellX, cellY - texYLen2, cellZ - texZLen2, xStretch, m_Settings.ProbeTextureDepth, m_Settings.ProbeTextureHeight );
+				}
+			}
+		}
+	}
+
+	CopySamplesIntoLockedTextures( locked32, lboxes[ 0 ].RowPitch, lboxes[ 0 ].SlicePitch, xStretch, m_Settings.ProbeTextureDepth, m_Settings.ProbeTextureHeight );
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->UnlockBox( 0 ) );
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::RasterizeYSlice( int startTexY, int endTexY, int cellX, int cellY, int cellZ, const Probe& defaultProbe )
+{
+	int yStretch = endTexY - startTexY;
+
+	int tilesInRad = m_Settings.MaximumProbeRadius / m_Info.ProbeCellsInTileX + 1;
+
+	int texXLen2 = m_Settings.ProbeTextureWidth / 2;
+	int texZLen2 = m_Settings.ProbeTextureHeight / 2;
+
+	int xTileStart = ( cellX - texXLen2 ) / m_Info.ProbeCellsInTileX;
+	int xTileEnd = ( cellX + texXLen2 ) / m_Info.ProbeCellsInTileX;
+
+	int zTileStart = ( cellZ - texZLen2 ) / m_Info.ProbeCellsInTileZ;
+	int zTileEnd = ( cellZ + texZLen2 ) / m_Info.ProbeCellsInTileZ;
+
+	xTileStart -= tilesInRad;
+	xTileEnd += tilesInRad;
+
+	zTileStart -= tilesInRad;
+	zTileEnd += tilesInRad;
+
+	m_ProbeRasterSamplesVolume.Resize( yStretch * m_Settings.ProbeTextureWidth * m_Settings.ProbeTextureHeight );
+	ResetRasterSamples();
+
+	xTileStart = R3D_MIN( R3D_MAX( xTileStart, 0 ), (int)m_ProbeMap.Width() - 1 );
+	xTileEnd = R3D_MIN( R3D_MAX( xTileEnd, 0 ), (int)m_ProbeMap.Width() - 1 );
+
+	zTileStart = R3D_MIN( R3D_MAX( zTileStart, 0 ), (int)m_ProbeMap.Height() - 1 );
+	zTileEnd = R3D_MIN( R3D_MAX( zTileEnd, 0 ), (int)m_ProbeMap.Height() - 1 );
+
+	D3DBOX box;
+
+	box.Left = 0;
+	box.Right = m_Settings.ProbeTextureWidth;
+
+	box.Top = 0;
+	box.Bottom = m_Settings.ProbeTextureHeight;
+
+	box.Front = startTexY;
+	box.Back = endTexY;
+
+	//------------------------------------------------------------------------
+
+	D3DLOCKED_BOX lboxes[ Probe::NUM_DIRS ];
+
+	UINT32 *locked32[ Probe::NUM_DIRS ];
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->LockBox( 0, &lboxes[ i ], &box, 0 ) );
+
+		locked32[ i ] = (UINT32*)lboxes[ i ].pBits;
+	}
+
+	int lockedSize = lboxes[ 0 ].SlicePitch * ( box.Back - box.Front );
+
+	//------------------------------------------------------------------------
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		for( int y = 0, cy = cellY, e = yStretch; y < e; y ++, cy ++ )
+		{
+			for( int z = 0, e = m_Settings.ProbeTextureHeight, cz = cellZ - texZLen2; z < e; z ++, cz ++ )
+			{
+				for( int x = 0, cx = cellX - texXLen2, e = m_Settings.ProbeTextureWidth; x < e; x ++, cx ++ )
+				{
+					FillProbeVolumeCellWithProbe( lboxes, box, cx, cy, cz, defaultProbe );
+				}
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------
+	for( int tz = zTileStart, tze = zTileEnd; tz <= tze ; tz ++ )
+	{
+		for( int tx = xTileStart, txe = xTileEnd; tx <= txe ; tx ++ )
+		{
+			if( tx < 0 || tx >= (int)m_ProbeMap.Width() ||
+				tz < 0 || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			ProbeTile& tile = m_ProbeMap[ tz ][ tx ];
+
+			for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe& probe = tile.TheProbes[ i ];
+
+				if( probe.CellX + probe.XRadius >= cellX - texXLen2
+						&&
+					probe.CellX - probe.XRadius < cellX + texXLen2
+						&&
+					probe.CellZ + probe.ZRadius >= cellZ - texZLen2
+						&&
+					probe.CellZ - probe.ZRadius < cellZ + texZLen2
+						&&
+					probe.CellY + probe.YRadius >= cellY
+						&&
+					probe.CellY - probe.YRadius < cellY + yStretch
+						)
+				{
+					RasterizeProbeIntoVolume( &probe, box, cellX - texXLen2, cellY, cellZ - texZLen2, m_Settings.ProbeTextureWidth, yStretch, m_Settings.ProbeTextureHeight );
+				}
+			}
+		}
+	}
+
+	CopySamplesIntoLockedTextures( locked32, lboxes[ 0 ].RowPitch, lboxes[ 0 ].SlicePitch, m_Settings.ProbeTextureWidth, yStretch, m_Settings.ProbeTextureHeight );
+
+	//------------------------------------------------------------------------
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->UnlockBox( 0 ) );
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::RasterizeZSlice( int startTexZ, int endTexZ, int cellX, int cellY, int cellZ, const Probe& defaultProbe )
+{
+	int tilesInRad = m_Settings.MaximumProbeRadius / m_Info.ProbeCellsInTileX + 1;
+
+	int zStretch = endTexZ - startTexZ;
+
+	int texXLen2 = m_Settings.ProbeTextureWidth / 2;
+	int texYLen2 = m_Settings.ProbeTextureDepth / 2;
+
+	int xTileStart = ( cellX - texXLen2 ) / m_Info.ProbeCellsInTileX;
+	int xTileEnd = ( cellX + texXLen2 ) / m_Info.ProbeCellsInTileX;
+
+	int zTileStart = cellZ / m_Info.ProbeCellsInTileZ;
+	int zTileEnd = ( cellZ + zStretch ) / m_Info.ProbeCellsInTileZ;
+
+	xTileStart -= tilesInRad;
+	xTileEnd += tilesInRad;
+
+	zTileStart -= tilesInRad;
+	zTileEnd += tilesInRad;
+
+	m_ProbeRasterSamplesVolume.Resize( m_Settings.ProbeTextureWidth * m_Settings.ProbeTextureDepth * zStretch );
+	ResetRasterSamples();
+
+	zTileStart = R3D_MIN( R3D_MAX( zTileStart, 0 ), (int)m_ProbeMap.Height() - 1 );
+	zTileEnd = R3D_MIN( R3D_MAX( zTileEnd, 0 ), (int)m_ProbeMap.Height() - 1 );
+
+	xTileStart = R3D_MIN( R3D_MAX( xTileStart, 0 ), (int)m_ProbeMap.Width() - 1 );
+	xTileEnd = R3D_MIN( R3D_MAX( xTileEnd, 0 ), (int)m_ProbeMap.Width() - 1 );
+
+	D3DBOX box;
+
+	box.Left = 0;
+	box.Right = m_Settings.ProbeTextureWidth;
+
+	box.Top = startTexZ;
+	box.Bottom = endTexZ;
+
+	box.Front = 0;
+	box.Back = m_Settings.ProbeTextureDepth;
+
+	D3DLOCKED_BOX lboxes[ Probe::NUM_DIRS ];
+
+	UINT32 *locked32[ Probe::NUM_DIRS ];
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->LockBox( 0, &lboxes[ i ], &box, 0 ) );
+
+		locked32[ i ] = (UINT32*)lboxes[ i ].pBits;
+	}
+
+	int lockedSize = lboxes[ 0 ].SlicePitch * ( box.Back - box.Front );
+
+	for( int y = 0, cy = cellY - texYLen2, e = m_Settings.ProbeTextureDepth; y < e; y ++, cy ++ )
+	{
+		for( int z = 0, cz = cellZ, e = zStretch; z < e; z ++, cz ++ )
+		{
+			for( int x = 0, e = m_Settings.ProbeTextureWidth, cx = cellX - texXLen2; x < e; x ++, cx ++ )
+			{
+				FillProbeVolumeCellWithProbe( lboxes, box, cx, cy, cz, defaultProbe );
+			}
+		}
+	}
+
+	for( int tz = zTileStart, tze = zTileEnd; tz <= tze ; tz ++ )
+	{
+		for( int tx = xTileStart, txe = xTileEnd; tx <= txe ; tx ++ )
+		{
+			if( tx < 0 || tx >= (int)m_ProbeMap.Width() ||
+				tz < 0 || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			ProbeTile& tile = m_ProbeMap[ tz ][ tx ];
+
+			for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe& probe = tile.TheProbes[ i ];
+
+				if( probe.CellX + probe.XRadius >= cellX - texXLen2
+						&&
+					probe.CellX - probe.XRadius < cellX + texXLen2
+						&&
+					probe.CellZ + probe.ZRadius >= cellZ
+						&&
+					probe.CellZ - probe.ZRadius < cellZ + zStretch
+						&&
+					probe.CellY + probe.YRadius >= cellY - texYLen2
+						&&
+					probe.CellY - probe.YRadius < cellY + texYLen2
+					)
+				{
+					RasterizeProbeIntoVolume( &probe, box, cellX - texXLen2, cellY - texYLen2, cellZ, m_Settings.ProbeTextureWidth, m_Settings.ProbeTextureDepth, zStretch );
+				}
+			}
+		}
+	}
+
+	CopySamplesIntoLockedTextures( locked32, lboxes[ 0 ].RowPitch, lboxes[ 0 ].SlicePitch, m_Settings.ProbeTextureWidth, m_Settings.ProbeTextureDepth, zStretch );
+
+	//------------------------------------------------------------------------
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->UnlockBox( 0 ) );
+	}
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::RasterizeDirtyRect( int startTexX, int endTexX, int startTexZ, int endTexZ, int cellX, int cellY, int cellZ, const Probe& defaultProbe )
+{
+	int tilesInRad = m_Settings.MaximumProbeRadius / m_Info.ProbeCellsInTileX + 1;
+
+	int xStretch = endTexX - startTexX;
+	int zStretch = endTexZ - startTexZ;
+
+	int texYLen2 = m_Settings.ProbeTextureDepth / 2;
+
+	int xTileStart = cellX / m_Info.ProbeCellsInTileX;
+	int xTileEnd = ( cellX + xStretch ) / m_Info.ProbeCellsInTileX;
+
+	int zTileStart = cellZ / m_Info.ProbeCellsInTileZ;
+	int zTileEnd = ( cellZ + zStretch ) / m_Info.ProbeCellsInTileZ;
+
+	xTileStart -= tilesInRad;
+	xTileEnd += tilesInRad;
+
+	zTileStart -= tilesInRad;
+	zTileEnd += tilesInRad;
+
+	m_ProbeRasterSamplesVolume.Resize( xStretch * zStretch * m_Settings.ProbeTextureDepth );
+	ResetRasterSamples();
+
+	xTileStart = R3D_MIN( R3D_MAX( xTileStart, 0 ), (int)m_ProbeMap.Width() - 1 );
+	xTileEnd = R3D_MIN( R3D_MAX( xTileEnd, 0 ), (int)m_ProbeMap.Width() - 1 );
+
+	zTileStart = R3D_MIN( R3D_MAX( zTileStart, 0 ), (int)m_ProbeMap.Height() - 1 );
+	zTileEnd = R3D_MIN( R3D_MAX( zTileEnd, 0 ), (int)m_ProbeMap.Height() - 1 );
+
+	D3DBOX box;
+
+	box.Left = startTexX;
+	box.Right = endTexX;
+
+	box.Top = startTexZ;
+	box.Bottom = endTexZ;
+
+	box.Front = 0;
+	box.Back = m_Settings.ProbeTextureDepth;
+
+	D3DLOCKED_BOX lboxes[ Probe::NUM_DIRS ];
+
+	UINT32 *locked32[ Probe::NUM_DIRS ];
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->LockBox( 0, &lboxes[ i ], &box, 0 ) );
+
+		locked32[ i ] = (UINT32*)lboxes[ i ].pBits;
+	}
+
+	int lockedSize = lboxes[ 0 ].SlicePitch * ( box.Back - box.Front );
+
+	for( int y = 0, cy = cellY - texYLen2, e = m_Settings.ProbeTextureDepth; y < e; y ++, cy ++ )
+	{
+		for( int z = 0, cz = cellZ, e = zStretch; z < e; z ++, cz ++ )
+		{
+			for( int x = 0, cx = cellX, e = xStretch; x < e; x ++, cx ++ )
+			{
+				FillProbeVolumeCellWithProbe( lboxes, box, cx, cy, cz, defaultProbe );
+			}
+		}
+	}
+
+	for( int tz = zTileStart, tze = zTileEnd; tz <= tze ; tz ++ )
+	{
+		for( int tx = xTileStart, txe = xTileEnd; tx <= txe ; tx ++ )
+		{
+			if( tx < 0 || tx >= (int)m_ProbeMap.Width() ||
+				tz < 0 || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			ProbeTile& tile = m_ProbeMap[ tz ][ tx ];
+
+			for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe& probe = tile.TheProbes[ i ];
+
+				if( probe.CellX + probe.XRadius >= cellX
+					&&
+					probe.CellX - probe.XRadius < cellX + xStretch
+					&&
+					probe.CellZ + probe.ZRadius >= cellZ
+					&&
+					probe.CellZ - probe.ZRadius < cellZ + zStretch
+					&&
+					probe.CellY + probe.YRadius >= cellY - texYLen2
+					&&
+					probe.CellY - probe.YRadius < cellY + texYLen2
+					)
+				{
+					RasterizeProbeIntoVolume( &probe, box, cellX, cellY - texYLen2, cellZ, xStretch, m_Settings.ProbeTextureDepth, zStretch );
+				}
+			}
+		}
+	}
+
+	CopySamplesIntoLockedTextures( locked32, lboxes[ 0 ].RowPitch, lboxes[ 0 ].SlicePitch, xStretch, m_Settings.ProbeTextureDepth, zStretch );
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+	{
+		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+		D3D_V( volTex->UnlockBox( 0 ) );
+	}
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::AddRasterSample( int idx, const Probe* probe )
+{
+	ProbeRasterSamples& samples = m_ProbeRasterSamplesVolume[ idx ];
+	for( int i = 0, e = Probe::NUM_DIRS; i < e; i ++ )
+	{
+		samples.sumR[ i ] += ( probe->CompositeColors32[ i ] >> 16 ) & 0xff;
+		samples.sumG[ i ] += ( probe->CompositeColors32[ i ] >> 8 )& 0xff;
+		samples.sumB[ i ] += ( probe->CompositeColors32[ i ] >> 0 )& 0xff;
+	}
+
+	samples.count ++;
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::ResetRasterSamples()
+{
+	for( int i = 0, e = m_ProbeRasterSamplesVolume.Count(); i < e; i ++ )
+	{
+		ProbeRasterSamples& samples = m_ProbeRasterSamplesVolume[ i ];
+
+		for( int idir = 0; idir < Probe::NUM_DIRS; idir ++ )
+		{
+			samples.sumR[ idir ] = 0;
+			samples.sumG[ idir ] = 0;
+			samples.sumB[ idir ] = 0;
+			samples.count = 0;
+		}
+	}
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE void ProbeMaster::AvarageRasterSamples()
+{
+	for( int i = 0, e = m_ProbeRasterSamplesVolume.Count(); i < e; i ++ )
+	{
+		ProbeRasterSamples& samples = m_ProbeRasterSamplesVolume[ i ];
+
+		if( samples.count )
+		{
+			for( int idir = 0; idir < Probe::NUM_DIRS; idir ++ )
+			{
+				samples.sumR[ idir ] /= samples.count;
+				samples.sumG[ idir ] /= samples.count;
+				samples.sumB[ idir ] /= samples.count;
+			}
+
+			samples.count = 1;
+		}
+	}
+}
+
+//------------------------------------------------------------------------
+
+template <typename T>
+R3D_FORCEINLINE void ProbeMaster::CopySamplesIntoLockedTextures( T* locked[ Probe::NUM_DIRS ], int pitchX, int pitchXZ, int lockedSizeX, int lockedSizeY, int lockedSizeZ )
+{
+	AvarageRasterSamples();
+
+	int lockedSizeXY = lockedSizeX * lockedSizeY;
+	int elemPitchX = pitchX / sizeof( T );
+	int elemPitchXZ = pitchXZ / sizeof( T );
+	int lockedElemSize = elemPitchXZ * lockedSizeY;
+
+	for( int z = 0, e = lockedSizeZ; z < e; z ++ )
+	{
+		for( int y = 0, e = lockedSizeY; y < e; y ++ )
+		{
+			for( int x = 0, e = lockedSizeX; x < e; x ++ )
+			{
+				const ProbeRasterSamples& samples = m_ProbeRasterSamplesVolume[ x + y * lockedSizeX + z * lockedSizeXY ];
+
+				if( samples.count )
+				{
+					r3d_assert( samples.count == 1 );
+
+					int elemIdx = x + y * elemPitchXZ + z * elemPitchX;
+					r3d_assert( elemIdx < lockedElemSize );
+
+					for( int idir = 0, e = Probe::NUM_DIRS; idir < e; idir ++ )
+					{
+						locked[ idir ][ elemIdx ] = ConvertProbeRasterSamplesTo<T>( samples, idir );
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -262,6 +1089,7 @@ ProbeMaster::ProbeMaster()
 : m_TempRT( NULL )
 , m_BounceDiffuseRT ( NULL )
 , m_BounceNormalRT ( NULL )
+, m_BounceDepthRT ( NULL )
 , m_BounceAccumSHRRT ( NULL )
 , m_BounceAccumSHGRT ( NULL )
 , m_BounceAccumSHBRT ( NULL )
@@ -282,11 +1110,15 @@ ProbeMaster::ProbeMaster()
 , m_SkyVisA( 0.f )
 , m_SkyVisB( 1.f )
 , m_LastInfoFrame( 0.f )
-, m_CamCellX( 0 )
-, m_CamCellY( 0 )
-, m_CamCellZ( 0 )
+, m_PrevCamCellX( 0 )
+, m_PrevCamCellY( 0 )
+, m_PrevCamCellZ( 0 )
 , m_Created( 0 )
-, m_ProximityMapDirty( 0 )
+, m_ProbeRadiusesDirty( 0 )
+, m_ProbeVolumeDirty( 1 )
+, m_DEBUG_EndProbe( -1 )
+, m_RasterizedProbeCount( 0 )
+, m_SHProjectVertexDecl( 0 )
 {
 	for( int i = 0, e = Probe::NUM_DIRS; i < e; i ++ )
 	{
@@ -319,9 +1151,9 @@ void ProbeMaster::Init()
 
 		for( ++ idx; idx < Probe::NUM_DIRS; idx ++, angle += ANGLE_STEP )
 		{
-			Probe::ViewDirs[ idx ] = r3dPoint3D( cos( R3D_DEG2RAD( angle ) ) * cos( VERT_RAD_ANGLE ),
-				sin( VERT_RAD_ANGLE ), 
-				sin( R3D_DEG2RAD( angle ) ) * cos( VERT_RAD_ANGLE ) );
+			Probe::ViewDirs[ idx ] = r3dPoint3D(	cos( R3D_DEG2RAD( angle ) ) * cos( VERT_RAD_ANGLE ),
+													sin( VERT_RAD_ANGLE ), 
+													sin( R3D_DEG2RAD( angle ) ) * cos( VERT_RAD_ANGLE ) );
 
 			Probe::ViewDirs[ idx ].Normalize();
 
@@ -331,10 +1163,10 @@ void ProbeMaster::Init()
 		}
 	}
 
+	SH_setup_spherical_samples();
+
 	// initialize probe basis transfer SH
 	{
-		SH_setup_spherical_samples();
-
 		for( int i = 0, e = Probe::NUM_DIRS; i < e; i ++ )
 		{
 			memcpy( &g_HemisphereNormal, &Probe::ViewDirs[ i ], sizeof g_HemisphereNormal );
@@ -347,12 +1179,7 @@ void ProbeMaster::Init()
 			m_BasisSHArray[ i ].z = coefs[ 2 ];
 			m_BasisSHArray[ i ].w = coefs[ 3 ];
 		}
-
-		SH_free_spherical_samples();
 	}
-
-	// world render resources
-	RecreateVolumeTexes(); 
 }
 
 //------------------------------------------------------------------------
@@ -364,10 +1191,14 @@ void ProbeMaster::InitEditor()
 	g_AccumVS_ID = r3dRenderer->GetShaderIdx( "VS_ACCUM_SH" );
 	g_AccumPS_ID = r3dRenderer->GetShaderIdx( "PS_ACCUM_SH" );
 
+	g_AccumVPLSH_VS_ID = r3dRenderer->GetShaderIdx( "VS_ACCUM_VPLSH" );
+	g_AccumVPLSH_PS_ID = r3dRenderer->GetShaderIdx( "PS_ACCUM_VPLSH" );
+
 	CreateTempRTAndSysMemTex();
 
 	m_BounceDiffuseRT	= r3dScreenBuffer::CreateClass( "ProbeBounceDiffuse", (float)BOUNCE_RT_DIM, (float)BOUNCE_RT_DIM, D3DFMT_A8R8G8B8, r3dScreenBuffer::Z_OWN );
 	m_BounceNormalRT	= r3dScreenBuffer::CreateClass( "ProbeBounceNormal",  (float)BOUNCE_RT_DIM, (float)BOUNCE_RT_DIM, D3DFMT_A8R8G8B8, r3dScreenBuffer::Z_NO_Z );
+	m_BounceDepthRT		= r3dScreenBuffer::CreateClass( "ProbeBounceDepth",  (float)BOUNCE_RT_DIM, (float)BOUNCE_RT_DIM, D3DFMT_R32F, r3dScreenBuffer::Z_NO_Z );
 	m_BounceAccumSHRRT	= r3dScreenBuffer::CreateClass( "ProbeBounceSHR", 1, 1, D3DFMT_A32B32G32R32F, r3dScreenBuffer::Z_NO_Z );
 	m_BounceAccumSHGRT	= r3dScreenBuffer::CreateClass( "ProbeBounceSHG", 1, 1, D3DFMT_A32B32G32R32F, r3dScreenBuffer::Z_NO_Z );
 	m_BounceAccumSHBRT	= r3dScreenBuffer::CreateClass( "ProbeBounceSHB", 1, 1, D3DFMT_A32B32G32R32F, r3dScreenBuffer::Z_NO_Z );
@@ -377,6 +1208,103 @@ void ProbeMaster::InitEditor()
 	D3D_V( r3dRenderer->pd3ddev->CreateTexture( 1, 1, 1, 0, D3DFMT_A32B32G32R32F, D3DPOOL_SYSTEMMEM, &m_BounceSysmemRT_B, NULL ) );	
 
 	SH_setup_spherical_samples();
+
+	//------------------------------------------------------------------------
+
+	D3DVERTEXELEMENT9 VBDecl[] = 
+	{
+		{0,  0, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+		{0, 16, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+		{0, 28, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},
+		D3DDECL_END()
+	};
+
+	D3D_V( r3dRenderer->pd3ddev->CreateVertexDeclaration( VBDecl, &m_SHProjectVertexDecl ) );
+
+	//------------------------------------------------------------------------
+
+	int countsPerDir[ Probe::NUM_DIRS ];
+
+	memset( countsPerDir, 0, sizeof countsPerDir );
+
+	for( int i = 0, e = (int)g_SHSamples.Count(); i < e; i ++ )
+	{
+		const SHSample& s = g_SHSamples[ i ];
+		
+		countsPerDir[ s.faceIdx ] ++;
+	}
+
+	D3DXMATRIX viewMatrices[ Probe::NUM_DIRS ];
+	D3DXMATRIX projMatrices[ Probe::NUM_DIRS ];
+
+	for( int d = 0; d < 4; d ++ )
+	{
+		r3dCamera cam;
+
+		(r3dPoint3D&)cam = r3dPoint3D( 0, 0, 0 );
+
+		r3dPoint3D viewDir = Probe::ViewDirs[ d ];
+
+		cam.vUP = Probe::UpVecs[ d ];
+		cam.PointTo( gCam + viewDir );
+
+		D3DXMATRIX viewMatrix;
+		r3dRenderer->BuildViewMtx( cam, &viewMatrices[ d ], NULL );
+
+		D3DXMATRIX projMatrix;
+		r3dRenderer->BuildPerspectiveMtx( cam, &projMatrices[ d ] );
+	}
+
+
+	for( int d = 0, e = Probe::NUM_DIRS; d < e; d ++ )
+	{
+		r3dVertexBuffer* vbuf = new r3dVertexBuffer( countsPerDir[ d ], sizeof( SHProjectVertex ) );
+
+		m_SHProjectVertexBuffers[ d ] = vbuf;
+
+		SHProjectVertex* data = static_cast< SHProjectVertex* >( vbuf->Lock() );
+		SHProjectVertex* data_start = data;
+
+		for( int i = 0, e = (int)g_SHSamples.Count(); i < e; i ++ )
+		{
+			const SHSample& s = g_SHSamples[ i ];
+
+			if( s.faceIdx == d )
+			{
+				memcpy( &data->coefs, s.coeff, sizeof data->coefs );
+
+				D3DXVECTOR4 d3dProjDir( s.vec.x, s.vec.y, s.vec.z, 1.0f );
+
+				D3DXMATRIX viewProjMatrix = viewMatrices[ d ] * projMatrices[ d ];
+
+				D3DXVec4Transform( &d3dProjDir, &d3dProjDir, &viewProjMatrix );
+
+				d3dProjDir*= 1.0f / d3dProjDir.w;
+
+				data->texc.x = d3dProjDir.x * 0.5f + 0.5f;
+				data->texc.y = d3dProjDir.y * 0.5f + 0.5f;
+
+				D3DXVECTOR3 d3dVec( s.vec.x, s.vec.y, s.vec.z );
+
+				const r3dPoint3D& viewZDir = Probe::ViewDirs[ d ];
+				D3DXVECTOR3 d3dViewZDir( viewZDir.x, viewZDir.y, viewZDir.z );
+
+				float factor = D3DXVec3Dot( &d3dVec, &d3dViewZDir );
+
+				// make Z in view space == 1 for easier conversion in accum ps from
+				// depth value and into real world position
+				d3dVec /= factor;
+
+				data->vec = float3( d3dVec.x, d3dVec.y, d3dVec.z );
+
+				data ++;
+
+				r3d_assert( data - data_start <= vbuf->GetItemCount() );
+			}
+		}
+
+		vbuf->Unlock();
+	}
 
 	FillNormalToSHTex();
 
@@ -397,6 +1325,7 @@ void ProbeMaster::Close()
 
 	SAFE_DELETE( m_BounceDiffuseRT );
 	SAFE_DELETE( m_BounceNormalRT );
+	SAFE_DELETE( m_BounceDepthRT );
 	SAFE_DELETE( m_BounceAccumSHRRT );
 	SAFE_DELETE( m_BounceAccumSHGRT );
 	SAFE_DELETE( m_BounceAccumSHBRT );
@@ -420,10 +1349,13 @@ bool ProbeMaster::IsCreated() const
 #define R3D_PROBE_PATH R3D_PROBE_DIR "/probes.bin"
 
 #define R3D_PROBE_BIN_SIG101 "ProbeZ101"
-#define R3D_PROBE_BIN_SIG "ProbeZ102"
+#define R3D_PROBE_BIN_SIG102 "ProbeZ102"
+#define R3D_PROBE_BIN_SIG "ProbeZ105"
 
 void ProbeMaster::Save( const char* levelDir )
 {
+	SaveXMLSettings( levelDir );
+
 	char fullpath[ MAX_PATH * 2 ];
 	strcpy( fullpath, levelDir );
 	strcat( fullpath, R3D_PROBE_DIR );
@@ -473,8 +1405,17 @@ void ProbeMaster::Save( const char* levelDir )
 		fwrite( &probe.SkyVisibility, sizeof probe.SkyVisibility, 1, fout );
 		fwrite( &probe.Position, sizeof probe.Position, 1, fout );
 
-		fwrite( &probe.BasisColors, sizeof probe.BasisColors, 1, fout );
-		fwrite( &probe.BasisColors32, sizeof probe.BasisColors32, 1, fout );
+		fwrite( &probe.Flags, sizeof probe.Flags, 1, fout );
+
+		INT32 localVPLCount = CountProbeLocalVPLs( &probe );
+
+		fwrite( &localVPLCount, sizeof localVPLCount, 1, fout );
+
+		fwrite( &probe.SH_LocalVPLProbeIndexes[ 0 ], sizeof probe.SH_LocalVPLProbeIndexes[ 0 ] * localVPLCount, 1, fout );
+
+		fwrite( &probe.SH_LocalVPLsR[ 0 ], sizeof probe.SH_LocalVPLsR[ 0 ] * localVPLCount, 1, fout );
+		fwrite( &probe.SH_LocalVPLsG[ 0 ], sizeof probe.SH_LocalVPLsG[ 0 ] * localVPLCount, 1, fout );
+		fwrite( &probe.SH_LocalVPLsB[ 0 ], sizeof probe.SH_LocalVPLsB[ 0 ] * localVPLCount, 1, fout );
 	}
 
 	fclose( fout );
@@ -484,6 +1425,10 @@ void ProbeMaster::Save( const char* levelDir )
 
 int ProbeMaster::Load( const char* levelDir )
 {
+	LoadXMLSettings( levelDir );
+
+	m_ProbeVolumeDirty = 1;
+
 	char fullpath[ MAX_PATH * 2 ];
 
 	strcpy( fullpath, levelDir );
@@ -505,10 +1450,9 @@ int ProbeMaster::Load( const char* levelDir )
 		if( !fread( sig, sizeof sig, 1, fin ) )
 			return 0;
 
-		int newSig = !strcmp( sig, R3D_PROBE_BIN_SIG );
-		int oldSig = !strcmp( sig, R3D_PROBE_BIN_SIG101 );
+		int sigCurr = !strcmp( sig, R3D_PROBE_BIN_SIG );
 
-		if( !newSig && !oldSig )
+		if( !sigCurr )
 		{
 			return 0;
 		}
@@ -557,37 +1501,6 @@ int ProbeMaster::Load( const char* levelDir )
 
 		r3d_assert( sizeof( Probe ) >= structSize );
 
-		if( oldSig )
-		{
-			for( int z = 0, e = height; z < e; z ++ )
-			{
-				for( int x = 0, e = width; x < e; x ++ )
-				{
-					UINT32 count;
-
-					if( !fread( &count, sizeof count, 1, fin ) )
-						return 0;
-					
-					for( int i = 0, e = (int)count; i < e; i ++ )
-					{
-						Probe probe;
-
-						if( !fread( &probe.SH_BounceR, sizeof probe.SH_BounceR, 1, fin ) ) return 0;
-						if( !fread( &probe.SH_BounceG, sizeof probe.SH_BounceG, 1, fin ) ) return 0;
-						if( !fread( &probe.SH_BounceB, sizeof probe.SH_BounceB, 1, fin ) ) return 0;
-
-						if( !fread( &probe.SkyVisibility, sizeof probe.SkyVisibility, 1, fin ) ) return 0;
-						if( !fread( &probe.Position, sizeof probe.Position, 1, fin ) ) return 0;
-
-						if( !fread( &probe.BasisColors, sizeof probe.BasisColors, 1, fin ) ) return 0;
-						if( !fread( &probe.BasisColors32, sizeof probe.BasisColors32, 1, fin ) ) return 0;
-
-						AddProbe( probe );
-					}
-				}
-			}
-		}
-		else
 		{
 			UINT32 count;
 
@@ -605,14 +1518,32 @@ int ProbeMaster::Load( const char* levelDir )
 				if( !fread( &probe.SkyVisibility, sizeof probe.SkyVisibility, 1, fin ) ) return 0;
 				if( !fread( &probe.Position, sizeof probe.Position, 1, fin ) ) return 0;
 
-				if( !fread( &probe.BasisColors, sizeof probe.BasisColors, 1, fin ) ) return 0;
-				if( !fread( &probe.BasisColors32, sizeof probe.BasisColors32, 1, fin ) ) return 0;
+				if( !fread( &probe.Flags, sizeof probe.Flags, 1, fin ) ) return 0;
 
-				AddProbe( probe );
+				INT32 localVPLCount;
+
+				if( !fread( &localVPLCount, sizeof localVPLCount, 1, fin ) ) return 0;
+
+				r3d_assert( localVPLCount <= Probe::NUM_LOCAL_VPL );
+
+				if( localVPLCount )
+				{
+					if( !fread( &probe.SH_LocalVPLProbeIndexes[ 0 ], sizeof probe.SH_LocalVPLProbeIndexes[ 0 ] * localVPLCount, 1, fin ) ) return 0;
+
+					if( !fread( &probe.SH_LocalVPLsR[ 0 ], sizeof probe.SH_LocalVPLsR[ 0 ] * localVPLCount, 1, fin ) ) return 0;
+					if( !fread( &probe.SH_LocalVPLsG[ 0 ], sizeof probe.SH_LocalVPLsG[ 0 ] * localVPLCount, 1, fin ) ) return 0;
+					if( !fread( &probe.SH_LocalVPLsB[ 0 ], sizeof probe.SH_LocalVPLsB[ 0 ] * localVPLCount, 1, fin ) ) return 0;
+				}
+
+				AddProbe( probe, false );
 			}
 		}
 
-		UpdateProbeProximityMap();
+		AdjustProbeRadiuses();
+
+		SetupDefaultLightProbe();
+
+		RelightProbe( &m_DefaultProbe );
 
 		return 1;
 	}
@@ -622,13 +1553,176 @@ int ProbeMaster::Load( const char* levelDir )
 
 //------------------------------------------------------------------------
 
+void ProbeMaster::SaveXMLSettings( const char* levelDir )
+{
+	pugi::xml_document xmlFile;
+	xmlFile.append_child( pugi::node_comment ).set_value("ProbeMaster Settings File");
+	pugi::xml_node xmlRoot = xmlFile.append_child();
+	xmlRoot.set_name( "root" );
+
+	pugi::xml_node xmlSettings = xmlRoot.append_child();
+	xmlSettings.set_name( "settings" );
+
+	xmlSettings.append_attribute( "maximum_probe_radius" ) = m_Settings.MaximumProbeRadius;
+	xmlSettings.append_attribute( "maximum_probe_yradius" ) = m_Settings.MaximumProbeYRadius;
+	xmlSettings.append_attribute( "probe_radius_expansion") = m_Settings.ProbeRadiusExpansion;
+
+	r3dString path = r3dString( levelDir ) + R3D_PROBE_DIR "/" + "Settings.xml";
+
+	xmlFile.save_file( path.c_str() );
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::LoadXMLSettings( const char* levelDir )
+{
+	r3dString path = r3dString( levelDir ) + R3D_PROBE_DIR "/" + "Settings.xml";
+
+	r3dFile* f = r3d_open( path.c_str(), "rb" );
+	if( !f )
+	{
+		return;
+	}
+
+	char* fileBuffer = new char[f->size + 1];
+	fread(fileBuffer, f->size, 1, f);
+	fileBuffer[f->size] = 0;
+
+	pugi::xml_document xmlFile;
+	pugi::xml_parse_result parseResult = xmlFile.load_buffer_inplace(fileBuffer, f->size);
+	if(!parseResult)
+		r3dError( "Failed to parse XML %s, error: %s", path, parseResult.description() );
+
+	pugi::xml_node root = xmlFile.child( "root" );
+	if( !root.empty() )
+	{
+		pugi::xml_node settings = root.child( "settings" );
+		m_Settings.MaximumProbeRadius = settings.attribute( "maximum_probe_radius" ).as_int();
+		m_Settings.MaximumProbeYRadius = settings.attribute( "maximum_probe_yradius" ).as_int();
+		m_Settings.ProbeRadiusExpansion = settings.attribute( "probe_radius_expansion" ).as_int();
+	}
+
+	delete [] fileBuffer;
+
+	fclose( f );
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::UpdateDefaultProbe()
+{
+	SetupDefaultLightProbe();
+
+	RelightProbe( &m_DefaultProbe );
+
+	m_ProbeVolumeDirty = 1;
+
+	UpdateProbeVolumes();
+}
+
+//------------------------------------------------------------------------
+
+int ProbeMaster::UpdateDynamicLights()
+{
+	int startCellX = m_Info.CamCellX - m_Settings.ProbeTextureWidth / 2;
+	int startCellY = m_Info.CamCellY - m_Settings.ProbeTextureDepth / 2;
+	int startCellZ = m_Info.CamCellZ - m_Settings.ProbeTextureHeight / 2;
+
+	int endCellX = m_Info.CamCellX + m_Settings.ProbeTextureWidth / 2;
+	int endCellY = m_Info.CamCellY + m_Settings.ProbeTextureDepth / 2;
+	int endCellZ = m_Info.CamCellZ + m_Settings.ProbeTextureHeight / 2;
+
+	int startTileX = ( startCellX - m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileX;
+	int endTileX = ( endCellX + m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileX;
+
+	int startTileZ = ( startCellZ - m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileZ;
+	int endTileZ = ( endCellZ + m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileZ;
+
+	for( int tz = startTileZ, e = endTileZ; tz <= e ; tz ++ )
+	{
+		for( int tx = startTileX, e = endTileX; tx <= e ; tx ++ )
+		{
+			if( tx < 0 || tx >= (int)m_ProbeMap.Width() ||
+				tz < 0 || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			Probes& probes = m_ProbeMap[ tz ][ tx ].TheProbes;
+
+			for( int i = 0, e = (int)probes.Count() ; i < e ; i ++ )
+			{
+				Probe& probe = probes[ i ];
+
+				probe.DynamicLightsRGB.x = 0;
+				probe.DynamicLightsRGB.y = 0;
+				probe.DynamicLightsRGB.z = 0;
+			}
+		}
+	}
+
+	int hasDirty = 0;
+
+	for (uint32_t i = 0, i_end = WorldLightSystem.Lights.Count(); i != i_end; ++i)
+	{
+		r3dLight *l = WorldLightSystem.Lights[i];
+		if (!l || l->Type != R3D_OMNI_LIGHT ) continue;
+
+		float outerR = l->GetOuterRadius();
+
+		if( l->x + outerR < m_Info.ProbeMapWorldXStart
+				||
+			l->x - outerR > m_Info.ProbeMapWorldXStart + m_Info.ProbeMapWorldActualXSize
+				||
+			l->y + outerR < m_Info.ProbeMapWorldYStart
+				||
+			l->y - outerR > m_Info.ProbeMapWorldYStart + m_Info.ProbeMapWorldNominalYSize
+				||
+			l->z + outerR < m_Info.ProbeMapWorldZStart
+				||
+			l->z - outerR > m_Info.ProbeMapWorldZStart + m_Info.ProbeMapWorldActualZSize			
+			)
+		{
+			l->InProbesVolumeIntensity = -1.0f;
+			continue;
+		}
+
+		hasDirty |= DistributeLightToProbes( l );
+	}
+
+	return hasDirty;
+}
+
+//------------------------------------------------------------------------
+
+static float g_LastTick = -1.f;
+
+void ProbeMaster::Tick()
+{
+	if( g_LastTick < 0 )
+		g_LastTick = r3dGetTime();
+
+	float newTick = r3dGetTime();
+
+	float deltaTick = newTick - g_LastTick;
+
+	g_LastTick = newTick;
+
+	for( int i = 0, e = m_ProbeVolumeDirtyAnimArr.Count(); i < e; i ++ )
+	{
+		int& val = m_ProbeVolumeDirtyAnimArr.AtIndex( i );
+
+		val -= R3D_MAX( int(deltaTick * 256), 1 );
+
+		if( val < 0 ) val = 0;
+	}
+}
+
+//------------------------------------------------------------------------
+
 void ProbeMaster::Test()
 {
 	ClearProbeMap();
 
-	AddProbe( gCam );
-
-	UpdateProbeProximityMap();
+	AddProbe( gCam, true, NULL );
 }
 
 //------------------------------------------------------------------------
@@ -643,25 +1737,35 @@ void ProbeMaster::Create( float startX, float startY, float startZ, float sizeX,
 	m_Info.ProbeMapWorldYStart = startY;
 	m_Info.ProbeMapWorldZStart = startZ;
 
-	UpdateProximityAndSizeParams();
+	UpdateCellsAndSizeParams();
 
 	m_ProbeMap.Resize( m_Info.ActualProbeTileCountX, m_Info.ActualProbeTileCountZ );
 
-	InitProximityGrid();
-
 	ResetProbeMapBBoxes();
+
+	// world render resources
+	RecreateVolumeTexes();
 
 	m_Created = 1;
 }
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::UpdateProximity()
+void ProbeMaster::Reset()
 {
-	if( m_ProximityMapDirty )
+	DeleteAllProbes();
+
+	m_Created = 0;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::UpdateProbeRadiuses()
+{
+	if( m_ProbeRadiusesDirty )
 	{
-		UpdateProbeProximityMap();
-		m_ProximityMapDirty = 0;
+		AdjustProbeRadiuses();
+		m_ProbeRadiusesDirty = 0;
 	}
 }
 
@@ -671,7 +1775,7 @@ void ProbeMaster::UpdateSkyVisibility( int DirtyOnly )
 {
 	StartUpdatingSkyVisibility();
 
-	int total = GetProbeCount();
+	int total = DirtyOnly ? GetDirtyProbeCount( Probe::FLAG_SKY_DIRTY ) : GetProbeCount();
 	int complete = 0;
 
 	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
@@ -680,7 +1784,7 @@ void ProbeMaster::UpdateSkyVisibility( int DirtyOnly )
 		{
 			Probes& probes = m_ProbeMap.At( x, z ).TheProbes;
 
-			for( int i = 0, e = probes.Count(); i < e; i ++, complete ++ )
+			for( int i = 0, e = probes.Count(); i < e; i ++ )
 			{
 				Probe* probe = &probes[ i ];
 
@@ -688,6 +1792,7 @@ void ProbeMaster::UpdateSkyVisibility( int DirtyOnly )
 				{
 					UpdateProbeSkyVisibility( probe );
 					probe->Flags &= ~Probe::FLAG_SKY_DIRTY;
+					complete ++;
 				}
 
 				if( r3dGetTime() - m_LastInfoFrame > 0.033f && total > 1 )
@@ -709,7 +1814,7 @@ void ProbeMaster::UpdateSkyVisibility( int DirtyOnly )
 
 void ProbeMaster::UpdateBounce( int DirtyOnly )
 {
-	int total = GetProbeCount();
+	int total = DirtyOnly ? GetDirtyProbeCount( Probe::FLAG_BOUNCE_DIRTY ) : GetProbeCount();
 	int complete = 0;
 
 	StartUpdatingBounce();
@@ -720,7 +1825,7 @@ void ProbeMaster::UpdateBounce( int DirtyOnly )
 		{
 			Probes& probes = m_ProbeMap.At( x, z ).TheProbes;
 
-			for( int i = 0, e = probes.Count(); i < e; i ++, complete ++ )
+			for( int i = 0, e = probes.Count(); i < e; i ++ )
 			{
 				if( r3dGetTime() - m_LastInfoFrame > 0.033f && total > 1 )
 				{
@@ -736,13 +1841,66 @@ void ProbeMaster::UpdateBounce( int DirtyOnly )
 				if( !DirtyOnly || probe->Flags & Probe::FLAG_BOUNCE_DIRTY )
 				{
 					UpdateProbeBounce( probe );
-					probe->Flags &= ~Probe::FLAG_BOUNCE_DIRTY;
+					complete ++;
 				}
 			}
 		}
 	}
 
 	StopUpdatingBounce();
+
+	//------------------------------------------------------------------------
+
+	total = DirtyOnly ? GetDirtyProbeCount( Probe::FLAG_LOCAL_BOUNCE_DIRTY ) : GetProbeCount();
+
+	StartUpdatingLocalVPLBounce();
+
+	complete = 0;
+
+	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
+	{
+		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
+		{
+			Probes& probes = m_ProbeMap.At( x, z ).TheProbes;
+
+			for( int i = 0, e = probes.Count(); i < e; i ++ )
+			{
+				if( r3dGetTime() - m_LastInfoFrame > 0.033f && total > 1 )
+				{
+					m_LastInfoFrame = r3dGetTime();
+
+					StopUpdatingLocalVPLBounce();
+					OutputBakeProgress( "Local Bounces", total, complete );
+					StartUpdatingLocalVPLBounce();
+				}
+
+				Probe* probe = &probes[ i ];
+
+				if( !DirtyOnly || probe->Flags & Probe::FLAG_LOCAL_BOUNCE_DIRTY )
+				{
+					UpdateLocalVPLBounce( probe );
+					complete ++;
+				}
+			}
+		}
+	}
+
+	StopUpdatingLocalVPLBounce();
+
+	//------------------------------------------------------------------------
+
+	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
+	{
+		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
+		{
+			Probes& probes = m_ProbeMap.At( x, z ).TheProbes;
+
+			for( int i = 0, e = probes.Count(); i < e; i ++ )
+			{
+				probes[ i ].Flags &= ~( Probe::FLAG_BOUNCE_DIRTY | Probe::FLAG_LOCAL_BOUNCE_DIRTY );
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------
@@ -759,30 +1917,6 @@ void ProbeMaster::ShowProbes( ProbeVisualizationMode mode )
 	float lenZ = m_Info.ProbeMapWorldActualZSize / m_ProbeMap.Height();
 
 	float cellLen_x2 = 2 * sqrtf( lenX * lenX + lenZ * lenZ );
-
-	int proximity_x = -1;
-	int proximity_z = -1;
-	int proximity_idx = -1;
-
-	if( r_lp_show_proximity->GetInt() )
-	{
-		int cellx = r_lp_show_proximity_x->GetInt();
-		int celly = r_lp_show_proximity_y->GetInt();
-		int cellz = r_lp_show_proximity_z->GetInt();
-
-		cellx = R3D_MAX( R3D_MIN( cellx, m_Info.TotalProbeProximityCellsCountX - 1 ), 0 );
-		celly = R3D_MAX( R3D_MIN( celly, m_Info.TotalProbeProximityCellsCountY - 1 ), 0 );
-		cellz = R3D_MAX( R3D_MIN( cellz, m_Info.TotalProbeProximityCellsCountZ - 1 ), 0 );
-
-		ProbeIdx idx = GetClosestProbeIdx( cellx, celly, cellz );
-
-		proximity_x = idx.TileX;
-		proximity_z = idx.TileZ;
-		proximity_idx = idx.InTileIdx;
-	}
-
-
-	const Probe* proximity_probe( NULL );
 
 	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
 	{
@@ -807,15 +1941,6 @@ void ProbeMaster::ShowProbes( ProbeVisualizationMode mode )
 			{
 				const Probe* p = &probes[ i ];
 
-				if(	i == proximity_idx
-						&&
-						z == proximity_z 
-							&&
-								x == proximity_x )
-				{
-					proximity_probe = p;
-				}
-
 				if( ( p->Position - gCam ).Length() < r_show_probes_radius->GetFloat() )
 				{
 					VisualizeProbe( p );
@@ -834,10 +1959,10 @@ void ProbeMaster::ShowProbes( ProbeVisualizationMode mode )
 										||
 									mode >= VISUALIZE_BOUNCE_DIR0 && mode <= VISUALIZE_BOUNCE_LAST
 										||
-									mode == VISUALIZE_PROBE_COLORS;
+									mode == VISUALIZE_PROBE_STATIC_COLORS;
 
 	// draw arrows & boxes
-	if( needProbeArrows || r_lp_show_proximity->GetInt() || r_show_probe_boxes->GetInt() )
+	if( needProbeArrows || r_show_probe_boxes->GetInt() )
 	{
 		D3DPERF_BeginEvent( 0, L"ProbeMaster::ShowProbes.Arrows" );
 
@@ -863,20 +1988,10 @@ void ProbeMaster::ShowProbes( ProbeVisualizationMode mode )
 			}
 		}
 
-		if( r_lp_show_proximity->GetInt() )
-		{
-			DrawProximityBox();
-		}
-
-		if( proximity_probe )
-		{
-			DrawProbeProximity( proximity_probe );
-		}
-
 		if( r_show_probe_boxes->GetInt() )
 		{
 			float psConst[ 4 ] = { 0, 1, 0, 1 };
-			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
+			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 			for( int z = 0, e = (int)m_ProbeMap.Height(); z < e; z ++ )
 			{
@@ -911,19 +2026,19 @@ void ProbeMaster::ShowProbeVolumesScheme()
 
 	D3DXMATRIX mtx = r3dRenderer->ViewProjMatrix;
 	D3DXMatrixTranspose( &mtx, &mtx );
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &mtx._11, 4 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &mtx._11, 4 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );
 
 	float vColTr[ 4 ] = { 0.5f, 0.5f, 0.5f, 0.75f };
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vColTr, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vColTr, 1 ) );
 
 	DrawProbeVolumesFrame();
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
 	float vColOp[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vColOp, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vColOp, 1 ) );
 
 	DrawProbeVolumesFrame();
 	
@@ -946,27 +2061,119 @@ r3dScreenBuffer* ProbeMaster::GetBounceRT() const
 
 void ProbeMaster::UpdateProbeVolumes()
 {
-	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+#ifndef FINAL_BUILD
+#if 0
+	struct ShowTime
 	{
-		r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+		ShowTime()
+		{
+			start = r3dGetTime();
+		}
 
-		IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+		~ShowTime()
+		{
+			r3dOutToLog( "ProbeMaster::UpdateProbeVolumesWithRasterization: took %.3f msecs to execute\n", ( r3dGetTime() - start ) * 1000.f );
+		}
 
-		D3DLOCKED_BOX lbox;
-		D3D_V( volTex->LockBox( 0, &lbox, NULL, 0 ) );
+		float start;
+
+	} showTime; (void)showTime;
+#endif
+#endif
+
+	if( abs( m_PrevCamCellX - m_Info.CamCellX ) >= m_Settings.ProbeTextureWidth / 2 
+			||
+		abs( m_PrevCamCellY - m_Info.CamCellY ) >= m_Settings.ProbeTextureDepth / 2 
+			||
+		abs( m_PrevCamCellZ - m_Info.CamCellZ ) >= m_Settings.ProbeTextureHeight / 2 
+			||
+		!r_lp_fast_update->GetInt()
+		)
+	{
+		// no reason to optimize updates if we're that far
+		m_ProbeVolumeDirty = 1;
+	}
+
+	if( m_ProbeVolumeDirty )
+	{
+		memset(	m_ProbeVolumeDirtyArr.GetDataPtr(), 
+				0,
+				m_ProbeVolumeDirtyArr.Count() * sizeof( m_ProbeVolumeDirtyArr[0][0] ) );
+
+		if( m_ProbeVolumeDirtyAnimArr.Count() )
+		{
+			for( int i = 0, e = m_ProbeVolumeDirtyAnimArr.Count(); i < e; i ++ )
+			{
+				m_ProbeVolumeDirtyAnimArr.AtIndex( i ) = 255;
+			}
+		}
+
+		m_Info.ProbeVolumeCamCellX = m_Settings.ProbeTextureWidth / 2;
+		m_Info.ProbeVolumeCamCellY = m_Settings.ProbeTextureDepth / 2;
+		m_Info.ProbeVolumeCamCellZ = m_Settings.ProbeTextureHeight / 2;
+
+		m_PrevCamCellX = m_Info.CamCellX;
+		m_PrevCamCellY = m_Info.CamCellY;
+		m_PrevCamCellZ = m_Info.CamCellZ;
+
+		D3DLOCKED_BOX lboxes[ Probe::NUM_DIRS ];
+
+		UINT32 *locked32[ Probe::NUM_DIRS ];
+
+		for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+		{
+			r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+			IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+			D3D_V( volTex->LockBox( 0, &lboxes[ i ], NULL, 0 ) );
+
+			locked32[ i ] = (UINT32*)lboxes[ i ].pBits;
+		}
+
+		int lockedSize = lboxes[ 0 ].SlicePitch * m_DirectionVolumeTextures[ 0 ]->GetDepth();
+
+		int rasterizedCount = 0;
 
 		{
-			Probe blackProbe;
+			m_ProbeRasterSamplesVolume.Resize( m_Settings.ProbeTextureWidth * m_Settings.ProbeTextureHeight * m_Settings.ProbeTextureDepth );
+			ResetRasterSamples();
 
-			for( int ci = 0, e = blackProbe.BasisColors32.COUNT; ci < e; ci ++ )
-			{
-				blackProbe.BasisColors32[ ci ] = 0x0;
-				blackProbe.BasisColors[ ci ] = 0x0;
-			}
-			
-			int centreCellX = m_CamCellX;
-			int centreCellY = m_CamCellY;
-			int centreCellZ = m_CamCellZ;
+			int centreCellX = m_Info.CamCellX;
+			int centreCellY = m_Info.CamCellY;
+			int centreCellZ = m_Info.CamCellZ;
+
+			int startCellX = centreCellX - m_Settings.ProbeTextureWidth / 2;
+			int startCellY = centreCellY - m_Settings.ProbeTextureDepth / 2;
+			int startCellZ = centreCellZ - m_Settings.ProbeTextureHeight / 2;
+
+			int endCellX = centreCellX + m_Settings.ProbeTextureWidth / 2;
+			int endCellY = centreCellY + m_Settings.ProbeTextureDepth / 2;
+			int endCellZ = centreCellZ + m_Settings.ProbeTextureHeight / 2;
+
+			int startTileX = ( startCellX - m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileX;
+			int endTileX = ( endCellX + m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileX;
+
+			int startTileZ = ( startCellZ - m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileZ;
+			int endTileZ = ( endCellZ + m_Settings.MaximumProbeRadius ) / m_Info.ProbeCellsInTileZ;
+
+			int tilesInRad = m_Settings.MaximumProbeRadius / m_Info.ProbeCellsInTileX + 1;
+
+			startTileX -= tilesInRad;
+			endTileX += tilesInRad;
+
+			startTileZ -= tilesInRad;
+			endTileZ += tilesInRad;
+
+			D3DBOX box;
+
+			box.Left = 0;
+			box.Right = m_Settings.ProbeTextureWidth;
+
+			box.Top = 0;
+			box.Bottom = m_Settings.ProbeTextureHeight;
+
+			box.Front = 0;
+			box.Back = m_Settings.ProbeTextureDepth;
 
 			for( int y = 0, cy = centreCellY - m_Settings.ProbeTextureDepth / 2, e = m_Settings.ProbeTextureDepth; y < e; y ++, cy ++ )
 			{
@@ -974,24 +2181,321 @@ void ProbeMaster::UpdateProbeVolumes()
 				{
 					for( int x = 0, cx = centreCellX - m_Settings.ProbeTextureWidth / 2, e = m_Settings.ProbeTextureWidth; x < e; x ++, cx ++ )
 					{
-						Probe* p = GetClosestProbe( cx, cy, cz );
+						FillProbeVolumeCellWithProbe( lboxes, box, cx, cy, cz, m_DefaultProbe );
+					}
+				}
+			}
 
-						if( !p )
+			for( int tz = startTileZ, te = endTileZ; tz < te; tz ++ )
+			{
+				if( tz < 0 || tz >= (int)m_ProbeMap.Height() )
+					continue;
+
+				for( int tx = startTileX, te = endTileX; tx < te; tx ++ )
+				{
+					if( tx < 0 || tx >= (int)m_ProbeMap.Width() )
+						continue;
+
+					ProbeTile& tile = m_ProbeMap[ tz ][ tx ];
+
+					for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+					{
+						Probe& probe = tile.TheProbes[ i ];
+
+						if( probe.CellX + probe.XRadius > startCellX
+								&&
+							probe.CellX - probe.XRadius <= endCellX
+								&&
+							probe.CellZ + probe.ZRadius > startCellZ
+								&&
+							probe.CellZ - probe.ZRadius <= endCellZ
+								&&
+							probe.CellY + probe.YRadius > startCellY
+								&&
+							probe.CellY - probe.YRadius <= endCellY
+							)
 						{
-							p = &blackProbe;
+							if( m_DEBUG_EndProbe < 0 || rasterizedCount ++ <= m_DEBUG_EndProbe )
+							{
+								RasterizeProbeIntoVolume( &probe, box, startCellX, startCellY, startCellZ, m_Settings.ProbeTextureWidth, m_Settings.ProbeTextureDepth, m_Settings.ProbeTextureHeight );
+							}
 						}
-
-						if( m_Settings.ProbeTextureFmt == D3DFMT_R5G6B5 )
-							((UINT16*)((char*)lbox.pBits + lbox.RowPitch * z + lbox.SlicePitch * y ))[ x ] = p->BasisColors[ i ];
-						else
-							((UINT32*)((char*)lbox.pBits + lbox.RowPitch * z + lbox.SlicePitch * y ))[ x ] = p->BasisColors32[ i ];
 					}
 				}
 			}
 		}
 
-		D3D_V( volTex->UnlockBox( 0 ) );
+		m_RasterizedProbeCount = rasterizedCount;
+
+		//------------------------------------------------------------------------
+
+		CopySamplesIntoLockedTextures( locked32, lboxes[ 0 ].RowPitch, lboxes[ 0 ].SlicePitch, m_Settings.ProbeTextureWidth, m_Settings.ProbeTextureDepth, m_Settings.ProbeTextureHeight );
+
+		//------------------------------------------------------------------------
+
+		for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e; i ++ )
+		{
+			r3dTexture* tex = m_DirectionVolumeTextures[ i ];
+			IDirect3DVolumeTexture9* volTex = tex->AsTexVolume();
+
+			D3D_V( volTex->UnlockBox( 0 ) );
+		}
 	}
+	else
+	{
+		int XUpdateStart;
+		int XUpdateEnd;
+
+		int YUpdateStart;
+		int YUpdateEnd;
+
+		int ZUpdateStart;
+		int ZUpdateEnd;
+
+		int hw = m_Settings.ProbeTextureWidth / 2;
+		int hh = m_Settings.ProbeTextureHeight / 2;
+		int hd = m_Settings.ProbeTextureDepth / 2;
+
+		if( m_Info.CamCellX > m_PrevCamCellX )
+		{				
+			XUpdateStart = m_PrevCamCellX + hw;
+			XUpdateEnd = m_Info.CamCellX + hw;
+		}
+		else
+		{
+			XUpdateStart = m_Info.CamCellX - hw;
+			XUpdateEnd = m_PrevCamCellX - hw;
+		}
+
+		if( m_Info.CamCellY > m_PrevCamCellY )
+		{
+			YUpdateStart = m_PrevCamCellY + hd;
+			YUpdateEnd = m_Info.CamCellY + hd;
+		}
+		else
+		{
+			YUpdateStart = m_Info.CamCellY - hd;
+			YUpdateEnd = m_PrevCamCellY - hd;
+		}
+
+		if( m_Info.CamCellZ > m_PrevCamCellZ )
+		{
+			ZUpdateStart = m_PrevCamCellZ + hh;
+			ZUpdateEnd = m_Info.CamCellZ + hh;
+		}
+		else
+		{
+			ZUpdateStart = m_Info.CamCellZ - hh;
+			ZUpdateEnd = m_PrevCamCellZ - hh;
+		}
+
+		m_Info.ProbeVolumeCamCellX += m_Info.CamCellX - m_PrevCamCellX;
+		m_Info.ProbeVolumeCamCellY += m_Info.CamCellY - m_PrevCamCellY;
+		m_Info.ProbeVolumeCamCellZ += m_Info.CamCellZ - m_PrevCamCellZ;
+
+		m_Info.ProbeVolumeCamCellX %= m_Settings.ProbeTextureWidth;
+		m_Info.ProbeVolumeCamCellY %= m_Settings.ProbeTextureDepth;
+		m_Info.ProbeVolumeCamCellZ %= m_Settings.ProbeTextureHeight;
+
+		if( m_Info.ProbeVolumeCamCellX < 0 ) m_Info.ProbeVolumeCamCellX += m_Settings.ProbeTextureWidth;
+		if( m_Info.ProbeVolumeCamCellY < 0 ) m_Info.ProbeVolumeCamCellY += m_Settings.ProbeTextureDepth;
+		if( m_Info.ProbeVolumeCamCellZ < 0 ) m_Info.ProbeVolumeCamCellZ += m_Settings.ProbeTextureHeight;
+
+		//------------------------------------------------------------------------
+
+		if( XUpdateStart != XUpdateEnd )
+		{
+			int actualXStart = ( XUpdateStart - m_Info.CamCellX + m_Info.ProbeVolumeCamCellX ) % m_Settings.ProbeTextureWidth;
+			int actualXEnd = ( XUpdateEnd - m_Info.CamCellX + m_Info.ProbeVolumeCamCellX ) % m_Settings.ProbeTextureWidth;
+
+			if( actualXStart < 0 ) actualXStart += m_Settings.ProbeTextureWidth;
+			if( actualXEnd < 0 ) actualXEnd += m_Settings.ProbeTextureWidth;
+			else
+				if( !actualXEnd ) actualXEnd = m_Settings.ProbeTextureWidth;
+
+			if( actualXStart > actualXEnd )
+			{
+				RasterizeXSlice( actualXStart, m_Settings.ProbeTextureWidth, XUpdateStart, m_Info.CamCellY, m_Info.CamCellZ, m_DefaultProbe );
+				RasterizeXSlice( 0, actualXEnd, XUpdateStart + m_Settings.ProbeTextureWidth - actualXStart, m_Info.CamCellY, m_Info.CamCellZ, m_DefaultProbe );
+			}
+			else
+			{
+				RasterizeXSlice( actualXStart, actualXEnd, XUpdateStart, m_Info.CamCellY, m_Info.CamCellZ, m_DefaultProbe );
+			}
+		}
+
+		//------------------------------------------------------------------------
+
+		if( YUpdateStart != YUpdateEnd )
+		{
+			int actualYStart = ( YUpdateStart - m_Info.CamCellY + m_Info.ProbeVolumeCamCellY ) % m_Settings.ProbeTextureDepth;
+			int actualYEnd = ( YUpdateEnd - m_Info.CamCellY + m_Info.ProbeVolumeCamCellY ) % m_Settings.ProbeTextureDepth;
+
+			if( actualYStart < 0 ) actualYStart += m_Settings.ProbeTextureDepth;
+			if( actualYEnd < 0 ) actualYEnd += m_Settings.ProbeTextureDepth;
+			else
+				if( !actualYEnd ) actualYEnd = m_Settings.ProbeTextureDepth;
+
+			if( actualYStart > actualYEnd )
+			{
+				RasterizeYSlice( actualYStart, m_Settings.ProbeTextureDepth, m_Info.CamCellX, YUpdateStart, m_Info.CamCellZ, m_DefaultProbe );
+				RasterizeYSlice( 0, actualYEnd, m_Info.CamCellX, YUpdateStart + m_Settings.ProbeTextureDepth - actualYStart, m_Info.CamCellZ, m_DefaultProbe );
+			}
+			else
+			{
+				RasterizeYSlice( actualYStart, actualYEnd, m_Info.CamCellX, YUpdateStart, m_Info.CamCellZ, m_DefaultProbe );
+			}
+		}
+
+		//------------------------------------------------------------------------
+
+		if( ZUpdateStart != ZUpdateEnd )
+		{
+			int actualZStart = ( ZUpdateStart - m_Info.CamCellZ + m_Info.ProbeVolumeCamCellZ ) % m_Settings.ProbeTextureHeight;
+			int actualZEnd = ( ZUpdateEnd - m_Info.CamCellZ + m_Info.ProbeVolumeCamCellZ ) % m_Settings.ProbeTextureHeight;
+
+			if( actualZStart < 0 ) actualZStart += m_Settings.ProbeTextureHeight;
+
+			if( actualZEnd < 0 ) actualZEnd += m_Settings.ProbeTextureHeight;
+			else
+				if( !actualZEnd ) actualZEnd = m_Settings.ProbeTextureHeight;
+
+			if( actualZStart > actualZEnd )
+			{
+				RasterizeZSlice( actualZStart, m_Settings.ProbeTextureHeight, m_Info.CamCellX, m_Info.CamCellY, ZUpdateStart, m_DefaultProbe );
+				RasterizeZSlice( 0, actualZEnd, m_Info.CamCellX, m_Info.CamCellY, ZUpdateStart + m_Settings.ProbeTextureHeight - actualZStart, m_DefaultProbe );
+			}
+			else
+			{
+				RasterizeZSlice( actualZStart, actualZEnd, m_Info.CamCellX, m_Info.CamCellY, ZUpdateStart, m_DefaultProbe );
+			}
+		}
+
+		//------------------------------------------------------------------------
+
+		for( int tz = 0, e = m_ProbeVolumeDirtyArr.Height(); tz < e; tz ++ )
+		{
+			for( int tx = 0, e = m_ProbeVolumeDirtyArr.Width(); tx < e; tx ++ )
+			{
+				int* dirtyFlag = &m_ProbeVolumeDirtyArr[ tz ][ tx ];
+
+				if( *dirtyFlag )
+				{
+					int tileXUpdateStart = m_Info.CamCellX - hw + tx * PROBE_DIRTY_ARR_CELL_SIZE;
+					int tileXUpdateEnd = tileXUpdateStart + PROBE_DIRTY_ARR_CELL_SIZE;
+
+					int tileZUpdateStart = m_Info.CamCellZ - hh + tz * PROBE_DIRTY_ARR_CELL_SIZE;
+					int tileZUpdateEnd = tileZUpdateStart + PROBE_DIRTY_ARR_CELL_SIZE;
+
+					int actualXStart = ( tileXUpdateStart - m_Info.CamCellX + m_Info.ProbeVolumeCamCellX ) % m_Settings.ProbeTextureWidth;
+					int actualXEnd = ( tileXUpdateEnd - m_Info.CamCellX + m_Info.ProbeVolumeCamCellX ) % m_Settings.ProbeTextureWidth;
+
+					if( actualXStart < 0 ) actualXStart += m_Settings.ProbeTextureWidth;
+					if( actualXEnd < 0 ) actualXEnd += m_Settings.ProbeTextureWidth;
+					else
+						if( !actualXEnd ) actualXEnd = m_Settings.ProbeTextureWidth;
+
+					int actualZStart = ( tileZUpdateStart - m_Info.CamCellZ + m_Info.ProbeVolumeCamCellZ ) % m_Settings.ProbeTextureHeight;
+					int actualZEnd = ( tileZUpdateEnd - m_Info.CamCellZ + m_Info.ProbeVolumeCamCellZ ) % m_Settings.ProbeTextureHeight;
+
+					if( actualZStart < 0 ) actualZStart += m_Settings.ProbeTextureHeight;
+
+					if( actualZEnd < 0 ) actualZEnd += m_Settings.ProbeTextureHeight;
+					else
+						if( !actualZEnd ) actualZEnd = m_Settings.ProbeTextureHeight;
+
+					if( actualZStart > actualZEnd 
+							&&
+						actualXStart > actualXEnd
+						)
+					{
+						RasterizeDirtyRect( 
+							actualXStart, m_Settings.ProbeTextureWidth,
+							actualZStart, m_Settings.ProbeTextureHeight,
+							tileXUpdateStart, m_Info.CamCellY, tileZUpdateStart,
+							m_DefaultProbe );
+
+						RasterizeDirtyRect( 
+							0, actualXStart,
+							0, actualZStart,
+							tileXUpdateStart + m_Settings.ProbeTextureWidth - actualXStart,
+							m_Info.CamCellY, 
+							tileZUpdateStart + m_Settings.ProbeTextureHeight - actualZStart,
+							m_DefaultProbe );
+
+						RasterizeDirtyRect( 
+							actualXStart, m_Settings.ProbeTextureWidth,
+							0, actualZStart,
+							tileXUpdateStart,
+							m_Info.CamCellY, 
+							tileZUpdateStart + m_Settings.ProbeTextureHeight - actualZStart,
+							m_DefaultProbe );
+
+						RasterizeDirtyRect( 
+							0, actualXStart,
+							actualZStart, m_Settings.ProbeTextureHeight,
+							tileXUpdateStart + m_Settings.ProbeTextureWidth - actualXStart,
+							m_Info.CamCellY, 
+							tileZUpdateStart,
+							m_DefaultProbe );
+					}
+					else
+					{
+						if( actualZStart > actualZEnd )
+						{
+							RasterizeDirtyRect(
+								actualXStart, actualXEnd,
+								actualZStart, m_Settings.ProbeTextureHeight,
+								tileXUpdateStart, m_Info.CamCellY, tileZUpdateStart,
+								m_DefaultProbe );
+
+							RasterizeDirtyRect(
+								actualXStart, actualXEnd,
+								0, actualZStart,
+								tileXUpdateStart, m_Info.CamCellY, 
+								tileZUpdateStart + m_Settings.ProbeTextureHeight - actualZStart,
+								m_DefaultProbe );
+						}
+						else
+						{
+							if( actualXStart > actualXEnd )
+							{
+								RasterizeDirtyRect( 
+									actualXStart, m_Settings.ProbeTextureWidth,
+									actualZStart, actualZEnd,
+									tileXUpdateStart, m_Info.CamCellY, tileZUpdateStart,
+									m_DefaultProbe );
+
+								RasterizeDirtyRect( 
+									0, actualXStart,
+									actualZStart, actualZEnd,
+									tileXUpdateStart + m_Settings.ProbeTextureWidth - actualXStart,
+									m_Info.CamCellY, 
+									tileZUpdateStart,
+									m_DefaultProbe );
+							}
+							else
+							{
+								RasterizeDirtyRect( 
+									actualXStart, actualXEnd,
+									actualZStart, actualZEnd,
+									tileXUpdateStart, m_Info.CamCellY, tileZUpdateStart,
+									m_DefaultProbe );
+							}
+						}
+					}
+
+					*dirtyFlag = 0;
+				}
+			}
+		}
+	}
+
+	m_PrevCamCellX = m_Info.CamCellX;
+	m_PrevCamCellY = m_Info.CamCellY;
+	m_PrevCamCellZ = m_Info.CamCellZ;
+
+	m_ProbeVolumeDirty = 0;
 }
 
 //------------------------------------------------------------------------
@@ -1043,7 +2547,7 @@ void ProbeMaster::UpdateSkyAndSun()
 
 	for( int f = 0; f < 6; f ++ )
 	{
-		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 );
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, r3dRenderer->GetClearZValue(), 0 ) );
 
 		// let it safely be black
 		if( f == D3DCUBEMAP_FACE_NEGATIVE_Y )
@@ -1051,11 +2555,11 @@ void ProbeMaster::UpdateSkyAndSun()
 
 		SetupCamForFace( &gCam, r3dPoint3D( 0, 0, 0 ), f );
 
-		r3dRenderer->SetCamera( gCam );
+		r3dRenderer->SetCamera( gCam, false );
 
-		void DrawSkyDome( bool drawNormals, float amplify, bool hemisphere );
+		void DrawSkyDome( bool drawNormals, bool hemisphere );
 
-		DrawSkyDome( false, 1.0f, true );
+		DrawSkyDome( false, true );
 		
 		D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_TempRT->GetTex2DSurface(), enterExit.sysMemSurf ) );
 
@@ -1137,6 +2641,28 @@ void ProbeMaster::RelightProbes()
 			}
 		}
 	}
+
+	RelightProbe( &m_DefaultProbe );
+
+	m_ProbeVolumeDirty = 1;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::RelightDynamicProbes()
+{
+	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
+	{
+		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
+		{
+			Probes& probes = m_ProbeMap.At( x, z ).TheProbes;
+
+			for( int i = 0, e = probes.Count(); i < e; i ++ )
+			{
+				RelightDynamicProbe( &probes[ i ] );
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------
@@ -1162,10 +2688,35 @@ const ProbeMaster::Info& ProbeMaster::GetInfo() const
 
 //------------------------------------------------------------------------
 
+ProbeMaster::MemStats ProbeMaster::GetMemStats() const
+{
+	MemStats stats;
+
+	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
+	{
+		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
+		{
+			const ProbeTile& tile = m_ProbeMap[ z ][ x ];
+
+			stats.ProbeSize += tile.TheProbes.Count() * sizeof( Probe );
+		}
+	}
+
+	for( int i = 0, e = m_DirectionVolumeTextures.COUNT; i < e ; i ++ )
+	{
+		stats.ProbeVolumeSize += m_DirectionVolumeTextures[ i ]->GetTextureSizeInVideoMemory();
+	}
+
+	return stats;
+}
+
+//------------------------------------------------------------------------
+
 void ProbeMaster::SetSettings( const Settings& settings )
 {
-	bool needUpdateProximityMap = false;
+	bool needUpdateProbeMap = false;
 	bool needUpdateProbesTextures = false;
+	bool needUpdateProbeRadiuses = false;
 
 	if( m_Settings.ProbeTextureSpanX != settings.ProbeTextureSpanX
 			||
@@ -1173,7 +2724,7 @@ void ProbeMaster::SetSettings( const Settings& settings )
 			||
 		m_Settings.ProbeTextureSpanZ != settings.ProbeTextureSpanZ )
 	{
-		needUpdateProximityMap = true;
+		needUpdateProbeMap = true;
 	}
 
 	if( m_Settings.ProbeTextureWidth != settings.ProbeTextureWidth 
@@ -1187,39 +2738,73 @@ void ProbeMaster::SetSettings( const Settings& settings )
 		r3d_assert( ! ( settings.ProbeTextureHeight & 1 ) );
 		r3d_assert( ! ( settings.ProbeTextureDepth & 1 ) );
 
-		needUpdateProximityMap = true;
+		needUpdateProbeMap = true;
 		needUpdateProbesTextures = true ;
+	}
+
+	if( m_Settings.MaximumProbeRadius != settings.MaximumProbeRadius
+			||
+		m_Settings.MaximumProbeYRadius !=settings.MaximumProbeYRadius )
+	{
+		needUpdateProbeRadiuses = true;
+		needUpdateProbesTextures = true;
 	}
 
 	m_Settings = settings;
 
-	if( needUpdateProximityMap )
+	if( m_Created )
 	{
-		Probes probes;
-
-		FetchAllProbes( &probes );
-
-		UpdateProximityAndSizeParams();
-
-		ClearProbeMap();
-		ResetProbeMapBBoxes();
-
-		for( int i = 0, e = (int)probes.Count(); i < e ; i ++ )
+		if( needUpdateProbeMap )
 		{
-			AddProbe( probes[ i ] );
+			m_ProbeVolumeDirty = 1;
+
+			Probes probes;
+
+			FetchAllProbes( &probes );
+
+			UpdateCellsAndSizeParams();
+
+			m_ProbeMap.Resize( m_Info.ActualProbeTileCountX, m_Info.ActualProbeTileCountZ );
+
+			ClearProbeMap();
+			ResetProbeMapBBoxes();
+
+			for( int i = 0, e = (int)probes.Count(); i < e ; i ++ )
+			{
+				AddProbe( probes[ i ], false );
+			}
+
+			if( !needUpdateProbesTextures )
+				UpdateProbeVolumes();
 		}
 
-		InitProximityGrid();
-		UpdateProbeProximityMap();
+		if( needUpdateProbeRadiuses )
+		{
+			m_ProbeRadiusesDirty = true;
+			UpdateProbeRadiuses();
+		}
 
-		if( !needUpdateProbesTextures )
-			UpdateProbeVolumes();
+		if( needUpdateProbesTextures )
+		{
+			m_ProbeVolumeDirty = 1;
+			RecreateVolumeTexes();
+
+			r_need_update_probes->SetInt( 1 );
+		}
 	}
+}
 
-	if( needUpdateProbesTextures )
+//------------------------------------------------------------------------
+
+void ProbeMaster::ClearProbes()
+{
+	for( int tz = 0, e = m_ProbeMap.Height(); tz < e; tz ++ )
 	{
-		RecreateVolumeTexes();
-		UpdateProbeVolumes();
+		for( int tx = 0, e = m_ProbeMap.Width(); tx < e; tx ++ )
+		{
+			ClearProbeMapTile( tx, tz );
+			ResetProbeMapBBox( tx, tz );
+		}
 	}
 }
 
@@ -1245,8 +2830,8 @@ void ProbeMaster::PopulateProbes( int tileX, int tileZ )
 	float rayCastYStart = m_Info.ProbeMapWorldYStart + m_Info.ProbeMapWorldActualYSize + CAST_DELTA;
 	float rayCastYLength = m_Info.ProbeMapWorldActualYSize + CAST_DELTA * 2.0f;
 
-	float tileSizeX = m_Info.CellSizeX * m_Info.ProximityCellsInTileX;
-	float tileSizeZ = m_Info.CellSizeZ * m_Info.ProximityCellsInTileZ;
+	float tileSizeX = m_Info.CellSizeX * m_Info.ProbeCellsInTileX;
+	float tileSizeZ = m_Info.CellSizeZ * m_Info.ProbeCellsInTileZ;
 
 	int countX = int( tileSizeX / m_Settings.ProbePopulationStepX ) + 1;
 	int countZ = int( tileSizeZ / m_Settings.ProbePopulationStepZ ) + 1;
@@ -1406,25 +2991,10 @@ void ProbeMaster::PopulateProbes( int tileX, int tileZ )
 
 			for( int i = 0, e = verticalArr.Count(); i < e; i ++ )
 			{
-				AddProbe( verticalArr[ i ] );
+				AddProbe( verticalArr[ i ], false, NULL );
 			}
 		}
 	}
-
-	UpdateProximityMapForTile( tileX + 0, tileZ + 0 );
-
-	UpdateProximityMapForTile( tileX - 1, tileZ + 0 );
-	UpdateProximityMapForTile( tileX + 1, tileZ + 0 );
-	UpdateProximityMapForTile( tileX + 0, tileZ - 1 );
-	UpdateProximityMapForTile( tileX + 0, tileZ + 1 );
-
-	UpdateProximityMapForTile( tileX - 1, tileZ - 1 );
-	UpdateProximityMapForTile( tileX + 1, tileZ - 1 );
-	UpdateProximityMapForTile( tileX - 1, tileZ + 1 );
-	UpdateProximityMapForTile( tileX + 1, tileZ + 1 );
-
-	UpdateProximityMapSize();
-
 }
 
 //------------------------------------------------------------------------
@@ -1459,7 +3029,31 @@ int ProbeMaster::GetProbeCount() const
 	}
 
 	return count;
+}
 
+//------------------------------------------------------------------------
+
+int ProbeMaster::GetDirtyProbeCount( int flag )
+{
+	int count = 0;
+
+	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
+	{
+		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
+		{
+			Probes& probes = m_ProbeMap[ z ][ x ].TheProbes;
+
+			for( int i = 0, e = (int)probes.Count(); i < e ; i ++ )
+			{
+				Probe& p = probes[ i ];
+
+				if( p.Flags & flag )
+					count ++;
+			}
+		}
+	}
+
+	return count;
 }
 
 //------------------------------------------------------------------------
@@ -1477,45 +3071,74 @@ void ProbeMaster::SwitchVolumeFormat()
 
 //------------------------------------------------------------------------
 
-r3dPoint3D ProbeMaster::GetProbeTexturePosition() const
+r3dPoint3D ProbeMaster::GetProbeTexturePosition()
 {
-	return r3dPoint3D(	( m_CamCellX + 0.5f ) / m_Info.TotalProbeProximityCellsCountX * m_Info.ProbeMapWorldActualXSize + m_Info.ProbeMapWorldXStart,
-						( m_CamCellY + 0.5f ) / m_Info.TotalProbeProximityCellsCountY * m_Info.ProbeMapWorldActualYSize + m_Info.ProbeMapWorldYStart,
-						( m_CamCellZ + 0.5f ) / m_Info.TotalProbeProximityCellsCountZ * m_Info.ProbeMapWorldActualZSize + m_Info.ProbeMapWorldZStart
+	return r3dPoint3D(	( m_Info.CamCellX + 0.5f ) / m_Info.TotalProbeCellsCountX * m_Info.ProbeMapWorldActualXSize + m_Info.ProbeMapWorldXStart,
+						( m_Info.CamCellY + 0.5f ) / m_Info.TotalProbeCellsCountY * m_Info.ProbeMapWorldActualYSize + m_Info.ProbeMapWorldYStart,
+						( m_Info.CamCellZ + 0.5f ) / m_Info.TotalProbeCellsCountZ * m_Info.ProbeMapWorldActualZSize + m_Info.ProbeMapWorldZStart
 							);
+}
+
+//------------------------------------------------------------------------
+
+r3dPoint3D ProbeMaster::GetProbeTextureWrapPoint()
+{
+	return r3dPoint3D(	float(m_Info.ProbeVolumeCamCellX) / m_Settings.ProbeTextureWidth - 0.5f,
+						float(m_Info.ProbeVolumeCamCellY) / m_Settings.ProbeTextureDepth - 0.5f,
+						float(m_Info.ProbeVolumeCamCellZ) / m_Settings.ProbeTextureHeight - 0.5f );
 }
 
 //------------------------------------------------------------------------
 
 void ProbeMaster::UpdateCamera( const r3dPoint3D& cam )
 {
-	int newCamX = int ( ( cam.x - m_Info.ProbeMapWorldXStart ) * m_Info.TotalProbeProximityCellsCountX / m_Info.ProbeMapWorldActualXSize );
-	int newCamY = int ( ( cam.y - m_Info.ProbeMapWorldYStart ) * m_Info.TotalProbeProximityCellsCountY / m_Info.ProbeMapWorldActualYSize );
-	int newCamZ = int ( ( cam.z - m_Info.ProbeMapWorldZStart ) * m_Info.TotalProbeProximityCellsCountZ / m_Info.ProbeMapWorldActualZSize );
 
-	if( newCamX != m_CamCellX 
-			||
-		newCamY != m_CamCellY
-			||
-		newCamZ != m_CamCellZ
-			)
+	if( UpdateCameraCell( cam ) )
 	{
-		m_CamCellX = newCamX;
-		m_CamCellY = newCamY;
-		m_CamCellZ = newCamZ;
-
 		UpdateProbeVolumes();
 	}
 }
 
+//-----------------------------------------------------------------------
+
+int ProbeMaster::UpdateCameraCell( const r3dPoint3D& cam )
+{
+	if( r_debug_helper->GetInt() )
+	{
+		r_need_update_probes->SetInt( 1 );
+		m_ProbeVolumeDirty = 1;
+		r_debug_helper->SetInt( 0 );
+	}
+
+	int newCamX, newCamY, newCamZ;
+
+	GetCellCoords( &newCamX, &newCamY, &newCamZ, cam );
+
+	if( newCamX != m_Info.CamCellX 
+		||
+		newCamY != m_Info.CamCellY
+		||
+		newCamZ != m_Info.CamCellZ
+		)
+	{
+		m_Info.CamCellX = newCamX;
+		m_Info.CamCellY = newCamY;
+		m_Info.CamCellZ = newCamZ;
+
+		return 1;
+	}
+
+	return 0;
+}
+
 //------------------------------------------------------------------------
 
-int3 ProbeMaster::GetProximityCell() const
+int3 ProbeMaster::GetCameraProbeCell() const
 {
 	int3 res;
-	res.x = m_CamCellX;
-	res.y = m_CamCellY;
-	res.z = m_CamCellZ;
+	res.x = m_Info.CamCellX;
+	res.y = m_Info.CamCellY;
+	res.z = m_Info.CamCellZ;
 
 	return res;
 }
@@ -1525,6 +3148,13 @@ int3 ProbeMaster::GetProximityCell() const
 const ProbeMaster::SkyDirectColors& ProbeMaster::GetSkyDirectColors() const
 {
 	return m_SkyDirColors;
+}
+
+//------------------------------------------------------------------------
+
+const Probe& ProbeMaster::GetDefaultProbe()
+{
+	return m_DefaultProbe;
 }
 
 //------------------------------------------------------------------------
@@ -1668,22 +3298,102 @@ Probe* ProbeMaster::GetProbe( ProbeIdx idx )
 
 ProbeIdx ProbeMaster::MoveProbe( ProbeIdx idx, const r3dPoint3D& newPos )
 {
-	m_ProximityMapDirty = 1;
-
+	m_ProbeRadiusesDirty = 1;
 	Probe* pProbe = GetProbe( idx );
 
 	r3d_assert( pProbe );
+
+	int newCellX, newCellY, newCellZ;
+	
+	GetCellCoords( &newCellX, &newCellY, &newCellZ, newPos );
+
+	int cellChanged = 0;
+
+	if( newCellX != pProbe->CellX
+			||
+		newCellY != pProbe->CellY
+			||
+		newCellZ != pProbe->CellZ
+		)
+	{
+		if( IsOccupied( newPos ) )
+			return idx;
+
+		cellChanged = 1;
+	}
+
+	//------------------------------------------------------------------------
+
+	if( cellChanged )
+	{
+		int tileX = pProbe->CellX / m_Info.ProbeCellsInTileX;
+		int tileZ = pProbe->CellZ / m_Info.ProbeCellsInTileZ;
+
+		for( int z = tileZ - VPL_GATHER_TILE_RANGE, e = tileZ + VPL_GATHER_TILE_RANGE ; z <= e ; z ++ )
+		{
+			for( int x = tileX - VPL_GATHER_TILE_RANGE, e = tileX + VPL_GATHER_TILE_RANGE ; x <= e ; x ++ )
+			{
+				if( x < 0 || z < 0 || x >= (int)m_ProbeMap.Width() || z >= (int)m_ProbeMap.Height() )
+					continue;
+
+				ProbeTile& ptile = m_ProbeMap[ z ][ x ];
+
+				for( int i = 0, e = ptile.TheProbes.Count(); i < e; i ++ )
+				{
+					Probe* probe = &ptile.TheProbes[ i ];
+
+					for( int i = 0, e = Probe::NUM_LOCAL_VPL; i < e; )
+					{
+						ProbeIdx lidx = probe->SH_LocalVPLProbeIndexes[ i ];
+						if(	lidx.TileX == idx.TileX
+								&&
+							lidx.TileZ == idx.TileZ
+								&&
+							// remove consequent once too, because they are going
+							// to be shifted after deletion
+							lidx.InTileIdx >= idx.InTileIdx
+							)
+						{
+							for( int j = i; j < e - 1; j ++ )
+							{
+								probe->Flags |= Probe::FLAG_LOCAL_BOUNCE_DIRTY;
+
+								probe->SH_LocalVPLProbeIndexes[ j ] = probe->SH_LocalVPLProbeIndexes[ j + 1 ];
+								probe->SH_LocalVPLsR[ j ] = probe->SH_LocalVPLsR[ j + 1 ];
+								probe->SH_LocalVPLsG[ j ] = probe->SH_LocalVPLsG[ j + 1 ];
+								probe->SH_LocalVPLsB[ j ] = probe->SH_LocalVPLsB[ j + 1 ];
+							}
+
+							ProbeIdx invalid;
+							invalid.CombinedIdx = -1;
+
+							probe->SH_LocalVPLProbeIndexes[ e - 1 ] = invalid;
+							probe->SH_LocalVPLsR[ e - 1 ] = D3DXVECTOR4( 0, 0, 0, 0 );
+							probe->SH_LocalVPLsG[ e - 1 ] = D3DXVECTOR4( 0, 0, 0, 0 );
+							probe->SH_LocalVPLsB[ e - 1 ] = D3DXVECTOR4( 0, 0, 0, 0 );
+						}
+						else
+						{
+							i ++;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------
 
 	Probe probe = *pProbe;
 
 	DeleteProbe( idx, false );
 
-	ProbeIdx newIdx = AddProbe( newPos );
-
 	probe.Position = newPos;
-	probe.Flags |= Probe::FLAG_SKY_DIRTY | Probe::FLAG_BOUNCE_DIRTY;
+	probe.Flags |= Probe::FLAG_SKY_DIRTY | Probe::FLAG_BOUNCE_DIRTY | Probe::FLAG_LOCAL_BOUNCE_DIRTY;
 
-	*GetProbe( newIdx ) = probe;
+	ProbeIdx newIdx = AddProbe( newPos, true, &probe );
+
+	AddDirtyRadiusTile( newIdx );
 
 	return newIdx;
 }
@@ -1732,12 +3442,11 @@ Probe* ProbeMaster::GetClosestProbe( const r3dPoint3D& pos )
 	}
 
 	return closest;
-
 }
 
 //------------------------------------------------------------------------
 
-ProbeIdx ProbeMaster::AddProbe( const r3dPoint3D& pos )
+ProbeIdx ProbeMaster::AddProbe( const r3dPoint3D& pos, bool markTileDirty, const Probe* savedProbe )
 {
 	int mapXIdx = int( ( pos.x - m_Info.ProbeMapWorldXStart )  * m_ProbeMap.Width() / m_Info.ProbeMapWorldActualXSize );
 	int mapZIdx = int( ( pos.z - m_Info.ProbeMapWorldZStart ) * m_ProbeMap.Height() / m_Info.ProbeMapWorldActualZSize );
@@ -1746,25 +3455,136 @@ ProbeIdx ProbeMaster::AddProbe( const r3dPoint3D& pos )
 	mapZIdx = R3D_MIN( R3D_MAX( mapZIdx, 0 ), (int)m_ProbeMap.Height() - 1 );
 
 	Probe probe;
+
+	if( savedProbe )
+	{
+		probe = *savedProbe;
+	}
+
 	probe.Position = pos;
+
+	GetCellCoords( &probe.CellX, &probe.CellY, &probe.CellZ, pos );
 
 	ProbeIdx res;
 
 	res.TileX = mapXIdx;
 	res.TileZ = mapZIdx;
 
-	res.InTileIdx = AddProbe( mapXIdx, mapZIdx, probe );
+	int inTileIdx = AddProbe( mapXIdx, mapZIdx, probe );
+
+	if( inTileIdx != -1 )
+	{
+		res.InTileIdx = inTileIdx;
+
+		if( markTileDirty )
+		{
+			AddDirtyRadiusTile( res );
+		}
+	}
+	else
+	{
+		res.CombinedIdx = -1;
+	}
 
 	return res;
 }
 
 //------------------------------------------------------------------------
 
-ProbeIdx ProbeMaster::AddProbe( const Probe& probe )
+ProbeIdx ProbeMaster::AddProbe( const Probe& probe, bool markTileDirty )
 {
-	ProbeIdx idx = AddProbe( probe.Position );
-	*GetProbe( idx ) = probe;
-	return idx;
+	return AddProbe( probe.Position, markTileDirty, &probe );
+}
+
+//------------------------------------------------------------------------
+
+bool ProbeMaster::IsOccupied( const r3dPoint3D& pos )
+{
+	int cellX, cellY, cellZ;
+
+	GetCellCoords( &cellX, &cellY, &cellZ, pos );
+
+	int tileX = cellX / m_Info.ProbeCellsInTileX;
+	int tileZ = cellZ / m_Info.ProbeCellsInTileZ;
+
+	if( tileX < 0 || tileX >= (int)m_ProbeMap.Width()
+			||
+		tileZ < 0 || tileZ >= (int)m_ProbeMap.Height() )
+	{
+		return false;
+	}
+
+	ProbeTile& tile = m_ProbeMap[ tileZ ][ tileX ];
+
+	for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+	{
+		const Probe& probe = tile.TheProbes[ i ];
+
+		if( probe.CellX == cellX && probe.CellY == cellY && probe.CellZ == cellZ )
+			return true;
+	}
+
+	return false;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::DeleteAllProbes()
+{
+	ClearProbeMap();
+	ResetProbeMapBBoxes();
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::DeleteProbesInCylinder( const r3dPoint3D& base, float radius, float height )
+{
+	int top, left, bottom, right;
+	ConvertToTileCoords( base.x - radius, base.z - radius, &left, &top );
+	ConvertToTileCoords( base.x + radius, base.z + radius, &right, &bottom );
+
+	left --;
+	top --;
+	right ++;
+	bottom ++;
+
+	left = R3D_MIN( R3D_MAX( left, 0 ), m_Info.ActualProbeTileCountX - 1 );
+	right = R3D_MIN( R3D_MAX( right, 0 ), m_Info.ActualProbeTileCountX - 1 );
+	top = R3D_MIN( R3D_MAX( top, 0 ), m_Info.ActualProbeTileCountZ - 1 );
+	bottom = R3D_MIN( R3D_MAX( bottom, 0 ), m_Info.ActualProbeTileCountZ - 1 );
+
+	float rsq = radius * radius;
+
+	ProbeIdxArray arr;
+
+	for( int z = top; z <= bottom; z ++ )
+	{
+		for( int x = left; x <= right; x ++ )
+		{
+			ProbeTile& tile = m_ProbeMap[ z ][ x ];
+
+			for( int i = 0, e = tile.TheProbes.Count(); i < e; i++ )
+			{
+				Probe& p = tile.TheProbes[ i ];
+
+				float dx = p.Position.x - base.x;
+				float dz = p.Position.Z - base.z;
+
+				if( dx * dx + dz * dz < rsq && p.Position.y > base.y && p.Position.y < base.y + height )
+				{
+					ProbeIdx idx;
+
+					idx.TileX = x;
+					idx.TileZ = z;
+					idx.InTileIdx = i;
+
+					arr.PushBack( idx );
+				}
+			}
+		}
+	}
+
+	DeleteProbes( arr, false );
 }
 
 //------------------------------------------------------------------------
@@ -1805,12 +3625,12 @@ void ProbeMaster::DeleteProbes( const r3dTL::TArray< GameObject* > & objects )
 		}
 	}
 
-	DeleteProbes( parray );
+	DeleteProbes( parray, true );
 }
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::DeleteProbes( const ProbeIdxArray& probeIdxArray )
+void ProbeMaster::DeleteProbes( const ProbeIdxArray& probeIdxArray, bool deleteProxies )
 {
 	if( !probeIdxArray.Count() )
 		return;
@@ -1833,7 +3653,7 @@ void ProbeMaster::DeleteProbes( const ProbeIdxArray& probeIdxArray )
 
 	for( int i = 0, e = (int)sorted.Count(); i < e; i ++ )
 	{
-		DeleteProbe( sorted[ i ], true );
+		DeleteProbe( sorted[ i ], deleteProxies );
 	}
 }
 
@@ -1843,13 +3663,15 @@ void ProbeMaster::DeleteProbe( ProbeIdx idx, bool deleteProxy )
 {
 	if( idx.CombinedIdx != 0xFFFFFFFF )
 	{
-		m_ProximityMapDirty = 1;
+		m_ProbeRadiusesDirty = 1;
 
 		int tileX = idx.TileX;
 		int tileZ = idx.TileZ;
 
 		r3d_assert( tileX >= 0 && tileX < (int)m_ProbeMap.Width() );
 		r3d_assert( tileZ >= 0 && tileZ < (int)m_ProbeMap.Height() );
+
+		AddDirtyRadiusTile( idx );
 
 		ProbeTile& tile = m_ProbeMap[ tileZ ][ tileX ];
 
@@ -1878,6 +3700,39 @@ void ProbeMaster::DeleteProbe( ProbeIdx idx, bool deleteProxy )
 
 //------------------------------------------------------------------------
 
+void ProbeMaster::AdjustProbeRadiuses()
+{
+	float start = r3dGetTime();
+
+	r3dOutToLog( "ProbeMaster::AdjustProbeRadiuses..." );
+
+	for( int tz = 0, tze = m_ProbeMap.Height(); tz < tze ; tz ++ )
+	{
+		for( int tx = 0, txe = m_ProbeMap.Width(); tx < txe ; tx ++ )
+		{
+			AdjustProbeRadiuses( tx, tz );
+		}
+	}
+
+	r3dOutToLog( "done in %.2f seconds\n", r3dGetTime() - start );
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::AdjustProbeRadiuses( int tileX, int tileZ )
+{
+	ProbeTile& tile = m_ProbeMap[ tileZ ][ tileX ];
+
+	for( int i = 0, e = tile.TheProbes.Count(); i < e; i ++ )
+	{
+		Probe& probe = tile.TheProbes[ i ];
+
+		AdjustProbeRadius( &probe, tileX, tileZ );
+	}
+}
+
+//------------------------------------------------------------------------
+
 const r3dBoundBox* ProbeMaster::GetTileBBox( int tileX, int tileZ )
 {
 	if( tileX < 0 || tileX >= m_Info.ActualProbeTileCountX 
@@ -1893,10 +3748,190 @@ const r3dBoundBox* ProbeMaster::GetTileBBox( int tileX, int tileZ )
 
 //------------------------------------------------------------------------
 
+void ProbeMaster::UpdateDirtyTilesRadiuses()
+{
+	for( int i = 0, e = m_DirtyRadiusesTiles.Count(); i < e ; i ++ )
+	{
+		ProbeIdx idx = m_DirtyRadiusesTiles[ i ];
+		AdjustProbeRadiuses( idx.TileX, idx.TileZ );
+	}
+
+	m_DirtyRadiusesTiles.Clear();
+
+	m_ProbeVolumeDirty = 1;
+}
+
+//------------------------------------------------------------------------
+
+int ProbeMaster::GetVisibleProbesNum()
+{
+	return m_RasterizedProbeCount;
+}
+
+//------------------------------------------------------------------------
+
+int ProbeMaster::DistributeLightToProbes( r3dLight* light )
+{
+	int needMarkDirty = 0;
+
+	if( fabs( light->InProbesVolumeIntensity - light->Intensity ) > 0.1f 
+		||
+		fabs( ( light->InProbesVolumePosition - *light ).LengthSq() ) > 0.0625f
+		||
+		fabs( light->InProbesVolumeRadius - light->GetOuterRadius() ) > 0.25f
+		)
+	{
+		light->InProbesVolumeIntensity = light->Intensity;
+		light->InProbesVolumePosition = *light;
+		light->InProbesVolumeRadius = light->GetOuterRadius();
+
+		needMarkDirty = 1;
+	}
+
+	int hasDirty = 0;
+
+	float outerR = light->InProbesVolumeRadius;
+	float outerRSQR = outerR * outerR;
+
+	r3dPoint3D topLeft = *light - r3dPoint3D( outerR, 0, outerR );
+	r3dPoint3D bottomRight = *light + r3dPoint3D( outerR, 0, outerR );
+
+	int csx, csy, csz;
+	int cex, cey, cez;
+
+	GetCellCoords( &csx, &csy, &csz, topLeft );
+	GetCellCoords( &cex, &cey, &cez, bottomRight );
+
+	if( needMarkDirty )
+	{
+		int probeTexStartX = m_Info.CamCellX - m_Settings.ProbeTextureWidth / 2;
+		int probeTexStartZ = m_Info.CamCellZ - m_Settings.ProbeTextureHeight / 2;
+
+		int dsx = ( csx - probeTexStartX ) / PROBE_DIRTY_ARR_CELL_SIZE;
+		int dsz = ( csz - probeTexStartZ ) / PROBE_DIRTY_ARR_CELL_SIZE;
+
+		int dex = ( cex - probeTexStartX ) / PROBE_DIRTY_ARR_CELL_SIZE;
+		int dez = ( cez - probeTexStartZ ) / PROBE_DIRTY_ARR_CELL_SIZE;
+
+		for( int dz = dsz; dz <= dez; dz ++ )
+		{
+			for( int dx = dsx; dx <= dex; dx ++ )
+			{
+				if( dx >= 0 && dx < (int)m_ProbeVolumeDirtyArr.Width()
+					&&
+					dz >= 0 && dz < (int)m_ProbeVolumeDirtyArr.Height()
+					)
+				{
+					m_ProbeVolumeDirtyArr[ dz ][ dx ] = 1;
+
+					if( g_bEditMode )
+					{
+						m_ProbeVolumeDirtyAnimArr[ dz ][ dx ] = 255;
+					}
+
+					hasDirty = 1;
+				}
+			}
+		}
+	}
+
+	enum
+	{
+		MAX_CLOSEST_PROBES = 8
+	};
+
+	DistanceProbeEntry closestProbeEntries[ MAX_CLOSEST_PROBES ];
+
+	int numClosestProbes = GatherClosestProbesForLightDistribution( *light, closestProbeEntries, MAX_CLOSEST_PROBES );
+
+	float wsum = 0.0f;
+
+	for( int i = 0; i < numClosestProbes; i ++ )
+	{
+		DistanceProbeEntry& entry = closestProbeEntries[ i ];
+
+		entry.distance = 1.0f / R3D_MAX( entry.distance * entry.distance, 16.F * FLT_MIN );
+
+		// this distance is now weight
+		wsum += entry.distance;
+	}
+
+	for( int i = 0; i < numClosestProbes; i ++ )
+	{
+		DistanceProbeEntry& entry = closestProbeEntries[ i ];
+
+		entry.distance /= wsum;		
+	}
+
+	float intensity = light->InProbesVolumeIntensity;
+
+	float lightR = light->R / 255.0f * intensity;
+	float lightG = light->G / 255.0f * intensity;
+	float lightB = light->B / 255.0f * intensity;
+
+	for( int i = 0, e = numClosestProbes; i < e; i ++ )
+	{
+		DistanceProbeEntry& entry = closestProbeEntries[ i ];
+
+		entry.probe->DynamicLightsRGB.x += lightR * entry.distance;
+		entry.probe->DynamicLightsRGB.y += lightG * entry.distance;
+		entry.probe->DynamicLightsRGB.z += lightB * entry.distance;
+	}
+
+	return hasDirty;
+}
+
+//------------------------------------------------------------------------
+
+const ProbeMaster::ProbeProxies&
+ProbeMaster::GetSelectedProbes() const
+{
+	return m_ProbeProxies;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::DEBUG_SetEndProbe( int endProbe )
+{
+	if( m_DEBUG_EndProbe != endProbe )
+	{
+		m_ProbeVolumeDirty = 1;
+		r_need_update_probes->SetInt( 1 );
+	}
+
+	m_DEBUG_EndProbe = endProbe;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::ConvertCellToCoord( int cellX, int cellY, int cellZ, r3dPoint3D* oPos )
+{
+	float offY = m_Settings.ProbeVolumeOffsetY;
+
+	oPos->x = cellX * m_Info.ProbeMapWorldActualXSize / m_Info.TotalProbeCellsCountX + m_Info.ProbeMapWorldXStart;
+	oPos->y = cellY * m_Info.ProbeMapWorldActualYSize / m_Info.TotalProbeCellsCountY + m_Info.ProbeMapWorldYStart - offY;
+	oPos->z = cellZ * m_Info.ProbeMapWorldActualZSize / m_Info.TotalProbeCellsCountZ + m_Info.ProbeMapWorldZStart;
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::ConvertCoordToCell( int * oCellX, int * oCellY, int * oCellZ, const r3dPoint3D& pos )
+{
+	GetCellCoords( oCellX, oCellY, oCellZ, pos );
+}
+
+//------------------------------------------------------------------------
+
+const ProbeMaster::ProbeVolumeTileDirtyArr&
+ProbeMaster::GetAnimatedDirtiness() const
+{
+	return m_ProbeVolumeDirtyAnimArr;
+}
+
+//------------------------------------------------------------------------
+
 void ProbeMaster::RelightProbe( Probe* probe )
 {
-	float the16bit_amp = r_lp_16bit_amplify->GetFloat();
-
 	float skyDirCoef = r_lp_sky_direct->GetFloat();
 	float skyBounceCoef = r_lp_sky_bounce->GetFloat();
 	float sunBounceCoef = r_lp_sun_bounce->GetFloat();
@@ -1940,6 +3975,7 @@ void ProbeMaster::RelightProbe( Probe* probe )
 		float finalG = skyDirectG + skyBounceG + sunBounceG;
 		float finalB = skyDirectB + skyBounceB + sunBounceB;
 
+#if 0
 		union
 		{
 			struct
@@ -1954,9 +3990,12 @@ void ProbeMaster::RelightProbe( Probe* probe )
 
 		uint16val = &probe->BasisColors[ i ];
 
+		float the16bit_amp = r_lp_16bit_amplify->GetFloat();
+
 		rgbVal->r = R3D_MAX( R3D_MIN( int( finalR * 31 * the16bit_amp ), 31 ), 0 );
 		rgbVal->g = R3D_MAX( R3D_MIN( int( finalG * 63 * the16bit_amp ), 63 ), 0 );
 		rgbVal->b = R3D_MAX( R3D_MIN( int( finalB * 31 * the16bit_amp ), 31 ), 0 );
+#endif
 
 
 		union
@@ -1974,12 +4013,158 @@ void ProbeMaster::RelightProbe( Probe* probe )
 
 		uint32val = &probe->BasisColors32[ i ];
 
-		rgbaVal->r = R3D_MAX( R3D_MIN( int( finalR * 255 ), 255 ), 0 );
-		rgbaVal->g = R3D_MAX( R3D_MIN( int( finalG * 255 ), 255 ), 0 );
-		rgbaVal->b = R3D_MAX( R3D_MIN( int( finalB * 255 ), 255 ), 0 );
+		int ibr, ibg, ibb;
+
+		rgbaVal->r = ibr = R3D_MAX( R3D_MIN( int( finalR * 255 ), 255 ), 0 );
+		rgbaVal->g = ibg = R3D_MAX( R3D_MIN( int( finalG * 255 ), 255 ), 0 );
+		rgbaVal->b = ibb = R3D_MAX( R3D_MIN( int( finalB * 255 ), 255 ), 0 );
 		rgbaVal->a = 0;
-		
+
+		int idr = ( probe->DynamicColors32[ i ] >> 16 ) & 0xff;
+		int idg = ( probe->DynamicColors32[ i ] >> 8 ) & 0xff;
+		int idb = ( probe->DynamicColors32[ i ] >> 0 ) & 0xff;
+
+		uint32val = &probe->CompositeColors32[ i ];
+
+		rgbaVal->r = R3D_MIN( idr + ibr, 255 );
+		rgbaVal->g = R3D_MIN( idg + ibg, 255 );
+		rgbaVal->b = R3D_MIN( idb + ibb, 255 );
+		rgbaVal->a = 0;
 	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::RelightDynamicProbe( Probe* probe )
+{
+	for( int i = 0, e = Probe::NUM_DIRS; i < e; i ++ )
+	{
+		float dynaR = 0.f;
+		float dynaG = 0.f;
+		float dynaB = 0.f;
+
+		for( int l = 0; l < Probe::NUM_LOCAL_VPL; l ++ )
+		{
+			ProbeIdx srcProbeIdx = probe->SH_LocalVPLProbeIndexes[ l ];
+
+			if( srcProbeIdx.CombinedIdx == -1 )
+				break;
+
+			Probe* srcProbe = GetProbe( srcProbeIdx );
+
+			dynaR += D3DXVec4Dot( &m_BasisSHArray[ i ], &probe->SH_LocalVPLsR[ l ] ) * srcProbe->DynamicLightsRGB.x;
+			dynaG += D3DXVec4Dot( &m_BasisSHArray[ i ], &probe->SH_LocalVPLsG[ l ] ) * srcProbe->DynamicLightsRGB.y;
+			dynaB += D3DXVec4Dot( &m_BasisSHArray[ i ], &probe->SH_LocalVPLsB[ l ] ) * srcProbe->DynamicLightsRGB.z;
+		}
+
+		float dyna_coef = r_lp_dyna_coef->GetFloat();
+
+		float finalR = R3D_MIN( R3D_MAX( dynaR * dyna_coef, 0.f ), 1.f );
+		float finalG = R3D_MIN( R3D_MAX( dynaG * dyna_coef, 0.f ), 1.f );
+		float finalB = R3D_MIN( R3D_MAX( dynaB * dyna_coef, 0.f ), 1.f );
+
+		union
+		{
+			struct
+			{
+				UINT32 b : 8;
+				UINT32 g : 8;
+				UINT32 r : 8;
+				UINT32 a : 8;
+			} * rgbaVal;
+
+			UINT32* uint32val;
+		};
+
+		uint32val = &probe->DynamicColors32[ i ];
+
+		int idr = int( finalR * 255 );
+		int idg = int( finalG * 255 );
+		int idb = int( finalB * 255 );
+
+		rgbaVal->r = R3D_MAX( R3D_MIN( idr, 255 ), 0 );
+		rgbaVal->g = R3D_MAX( R3D_MIN( idg, 255 ), 0 );
+		rgbaVal->b = R3D_MAX( R3D_MIN( idb, 255 ), 0 );
+		rgbaVal->a = 0;
+
+		uint32val = &probe->CompositeColors32[ i ];
+
+		int ibr = ( probe->BasisColors32[ i ] >> 16 ) & 0xff;
+		int ibg = ( probe->BasisColors32[ i ] >> 8 ) & 0xff;
+		int ibb = ( probe->BasisColors32[ i ] >> 0 ) & 0xff;
+
+		rgbaVal->r = R3D_MIN( idr + ibr, 255 );
+		rgbaVal->g = R3D_MIN( idg + ibg, 255 );
+		rgbaVal->b = R3D_MIN( idb + ibb, 255 );
+		rgbaVal->a = 0;
+	}
+}
+
+//------------------------------------------------------------------------
+
+int ProbeMaster::GatherClosestProbesForLightDistribution( const r3dPoint3D& lightPos, DistanceProbeEntry* probeEntries, int maxCount )
+{
+	g_ProbesWithDistances.Clear();
+
+	int cellX, cellY, cellZ;
+
+	GetCellCoords( &cellX, &cellY, &cellZ, lightPos );
+
+	int tileX = cellX / m_Info.ProbeCellsInTileX;
+	int tileZ = cellZ / m_Info.ProbeCellsInTileZ;
+
+	for( int z = tileZ - 1, e = tileZ + 1 ; z <= e ; z ++ )
+	{
+		for( int x = tileX - 1, e = tileX + 1 ; x <= e ; x ++ )
+		{
+			if( x < 0 || x >= (int)m_ProbeMap.Width()
+					||
+				z < 0 || z >= (int)m_ProbeMap.Height()
+				)
+				continue;
+
+			ProbeTile& pt = m_ProbeMap[ z ][ x ];
+
+			for( int i = 0, e = pt.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe* probe = &pt.TheProbes[ i ];
+
+				DistanceProbeEntry dpe;
+
+				dpe.distance = ( probe->Position - lightPos ).Length();
+				dpe.probe = probe;
+
+				g_ProbesWithDistances.PushBack( dpe );
+			}
+		}
+	}
+
+	struct sortfunc
+	{
+		bool operator()( const DistanceProbeEntry& e0, const DistanceProbeEntry& e1 )
+		{
+			return e0.distance < e1.distance;
+		}
+	};
+
+	if( g_ProbesWithDistances.Count() )
+	{
+		std::sort( &g_ProbesWithDistances[ 0 ], &g_ProbesWithDistances[ 0 ] + g_ProbesWithDistances.Count(), sortfunc() );
+	}
+
+	int targetCount = R3D_MIN( (int)g_ProbesWithDistances.Count(), maxCount );
+
+	for( int i = 0, e = targetCount; i < e; i ++ )
+	{
+		probeEntries[ i ] = g_ProbesWithDistances[ i ];
+	}
+
+	for( int i = targetCount, e = maxCount; i < e; i ++ )
+	{
+		probeEntries[ i ].probe = NULL;
+	}
+
+	return targetCount;
 }
 
 //------------------------------------------------------------------------
@@ -1996,7 +4181,7 @@ void ProbeMaster::StartUpdatingBounce()
 
 //------------------------------------------------------------------------
 
-static void ReadTextureSH( D3DXVECTOR4* targ, IDirect3DSurface9* srcSurf )
+static void ReadBounceTextureSH( D3DXVECTOR4* targ, IDirect3DSurface9* srcSurf )
 {
 	D3DLOCKED_RECT lrect;
 	D3D_V( srcSurf->LockRect( &lrect, NULL, D3DLOCK_READONLY ) );
@@ -2013,8 +4198,43 @@ static void ReadTextureSH( D3DXVECTOR4* targ, IDirect3DSurface9* srcSurf )
 	D3D_V( srcSurf->UnlockRect() );
 }
 
+static void ReadPVLTextureSH( D3DXVECTOR4* targ, IDirect3DSurface9* srcSurf )
+{
+	D3DLOCKED_RECT lrect;
+	D3D_V( srcSurf->LockRect( &lrect, NULL, D3DLOCK_READONLY ) );
+
+	memcpy( targ, (float*)lrect.pBits, 16 );
+
+	const float weight = 4.0 * float( M_PI );
+	float factor = weight / N_SAMPLES;
+
+	targ->x *= factor;
+	targ->y *= factor;
+	targ->z *= factor;
+	targ->w *= factor;
+
+	D3D_V( srcSurf->UnlockRect() );
+}
+
 void ProbeMaster::UpdateProbeBounce( Probe* probe )
 {
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
 	for( int i = 0, e = Probe::NUM_DIRS; i < e; i ++ )
 	{
 		wchar_t evname[ 512 ];
@@ -2042,14 +4262,14 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, 1.F, 0 );
+			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, r3dRenderer->GetClearZValue(), 0 ) );
 
-			r3dRenderer->SetCamera( gCam );
+			r3dRenderer->SetCamera( gCam, false );
 
 			void DrawTerrain();
 			DrawTerrain();
 
-			r3dRenderer->SetCamera( gCam );
+			r3dRenderer->SetCamera( gCam, false );
 
 			D3DXMATRIX invViewNoT = r3dRenderer->InvViewMatrix;
 
@@ -2060,14 +4280,17 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			D3DXMATRIX invViewNoTProj = r3dRenderer->InvProjMatrix * invViewNoT;
 
 			D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-			r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+
+			float defSSAO[ 4 ] = { r_ssao_clear_val->GetFloat(), 0.f, 0.f, 0.f };
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_DEF_SSAO, defSSAO, 1);
 
 			r3dRenderer->SetMipMapBias( 0.f );
 
 			for( int ii = 0; ii < 6; ii ++ )
 			{
-				r3dRenderer->SetSamplerState( ii, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-				r3dRenderer->SetSamplerState( ii, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 				r3dSetFiltering( R3D_BILINEAR, ii );
 			}
@@ -2089,18 +4312,18 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ADD | R3D_BLEND_NZ );
 
-			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.F, 0 );
+			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, r3dRenderer->GetClearZValue(), 0 ) );
 
 			r3dRenderer->SetTex( m_BounceDiffuseRT->Tex, 0 );
 			r3dRenderer->SetTex( m_BounceNormalRT->Tex, 1 );
 			r3dRenderer->SetTex( m_NormalToSHTex, 2 );
 
-			D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP ) );
-			D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP ) );
 
 			r3dSetFiltering( R3D_POINT, 0 );
 			r3dSetFiltering( R3D_POINT, 1 );
@@ -2140,7 +4363,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			
 			};
 
-			D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 			// see AccumSH_ps.hls
 			const int SAMPLE_COUNT = 8;
@@ -2166,7 +4389,7 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 						{ ppVec.x, ppVec.y, ppVec.z, 0.f }
 					};
 
-					D3D_V( r3dRenderer->SetPixelShaderConstantF( 4, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 					r3dDrawFullScreenQuad( false );
 				}
@@ -2186,9 +4409,9 @@ void ProbeMaster::UpdateProbeBounce( Probe* probe )
 			D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_BounceAccumSHGRT->GetTex2DSurface(), greenSurf  ) );
 			D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_BounceAccumSHBRT->GetTex2DSurface(), blueSurf  ) );
 
-			ReadTextureSH( &probe->SH_BounceR[ i ], redSurf );
-			ReadTextureSH( &probe->SH_BounceG[ i ], greenSurf );
-			ReadTextureSH( &probe->SH_BounceB[ i ], blueSurf );
+			ReadBounceTextureSH( &probe->SH_BounceR[ i ], redSurf );
+			ReadBounceTextureSH( &probe->SH_BounceG[ i ], greenSurf );
+			ReadBounceTextureSH( &probe->SH_BounceB[ i ], blueSurf );
 
 			SAFE_RELEASE( redSurf );
 			SAFE_RELEASE( greenSurf ); 
@@ -2213,6 +4436,297 @@ void ProbeMaster::StopUpdatingBounce()
 
 //------------------------------------------------------------------------
 
+void ProbeMaster::StartUpdatingLocalVPLBounce()
+{
+	m_SavedCam = gCam;
+	m_SavedUseOQ = r_use_oq->GetInt();
+
+	gCam.FOV = 120;
+
+	r_use_oq->SetInt( 0 );
+
+	D3DPERF_BeginEvent( 0, L"UpdatingLocalVPLBounces" );
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::GatherClosestProbesForVPL( Probe* target, ProbeIdx (&probes)[ Probe::NUM_LOCAL_VPL ] )
+{
+	g_ProbesIdxesWithDistances.Clear();
+
+	int tileX = target->CellX / m_Info.ProbeCellsInTileX;
+	int tileZ = target->CellZ / m_Info.ProbeCellsInTileZ;
+
+	for( int z = tileZ - VPL_GATHER_TILE_RANGE, e = tileZ + VPL_GATHER_TILE_RANGE ; z <= e ; z ++ )
+	{
+		for( int x = tileX - VPL_GATHER_TILE_RANGE, e = tileX + VPL_GATHER_TILE_RANGE ; x <= e ; x ++ )
+		{
+			if( x < 0 || x >= (int)m_ProbeMap.Width()
+				||
+				z < 0 || z >= (int)m_ProbeMap.Height()
+				)
+				continue;
+
+			ProbeTile& pt = m_ProbeMap[ z ][ x ];
+
+			for( int i = 0, e = pt.TheProbes.Count(); i < e; i ++ )
+			{
+				Probe* gegenProbe = &pt.TheProbes[ i ];
+
+				if( gegenProbe == target )
+					continue;
+
+				DistanceProbeIdxEntry dpe;
+
+				dpe.distance = ( gegenProbe->Position - target->Position ).Length();
+
+				dpe.probeIdx.TileX = x;
+				dpe.probeIdx.TileZ = z;
+				dpe.probeIdx.InTileIdx = i;
+
+				g_ProbesIdxesWithDistances.PushBack( dpe );
+			}
+		}
+	}
+
+	struct sortfunc
+	{
+		bool operator()( const DistanceProbeIdxEntry& e0, const DistanceProbeIdxEntry& e1 )
+		{
+			return e0.distance < e1.distance;
+		}
+	};
+
+	if( g_ProbesIdxesWithDistances.Count() )
+	{
+		std::sort( &g_ProbesIdxesWithDistances[ 0 ], &g_ProbesIdxesWithDistances[ 0 ] + g_ProbesIdxesWithDistances.Count(), sortfunc() );
+	}
+
+	int targetCount = R3D_MIN( (int)g_ProbesIdxesWithDistances.Count(), (int)Probe::NUM_LOCAL_VPL );
+
+	for( int i = 0, e = targetCount; i < e; i ++ )
+	{
+		probes[ i ] = g_ProbesIdxesWithDistances[ i ].probeIdx;
+	}
+
+	for( int i = targetCount, e = Probe::NUM_LOCAL_VPL; i < e; i ++ )
+	{
+		probes[ i ].CombinedIdx = -1;
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::UpdateLocalVPLBounce( Probe* probe )
+{
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
+	ProbeIdx closestProbes[ Probe::NUM_LOCAL_VPL ];
+
+	GatherClosestProbesForVPL( probe, closestProbes );
+
+	for( int i = 0, e = Probe::NUM_LOCAL_VPL; i < e; i ++ )
+	{
+		probe->SH_LocalVPLsR[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+		probe->SH_LocalVPLsG[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+		probe->SH_LocalVPLsB[ i ] = D3DXVECTOR4( 0, 0, 0, 0 );
+	}
+
+	for( int d = 0, e = Probe::NUM_DIRS; d < e; d ++ )
+	{
+		wchar_t evname[ 512 ];
+		swprintf( evname, L"ProbeMaster::UpdateLocalVPLBounce: %d", d );
+
+		D3DPERF_BeginEvent( 0, evname );
+		{
+			gCam.x = probe->Position.x;
+			gCam.y = probe->Position.y;
+			gCam.z = probe->Position.z;
+
+			gCam.NearClip = 0.1f;
+			gCam.FarClip = 4096.0f;
+
+			r3dPoint3D viewDir = Probe::ViewDirs[ d ];
+
+			gCam.vUP = Probe::UpVecs[ d ];
+			gCam.PointTo( gCam + viewDir );
+
+			void UpdateTerrain2Atlas();
+			UpdateTerrain2Atlas();
+
+			m_BounceDiffuseRT->Activate( 0 );
+			m_BounceNormalRT->Activate( 1 );
+			m_BounceDepthRT->Activate( 2 );
+
+			r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
+
+			D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x00000000, r3dRenderer->GetClearZValue(), 0 ) );
+
+			r3dRenderer->SetCamera( gCam, false );
+
+			void DrawTerrain();
+			DrawTerrain();
+
+			r3dRenderer->SetCamera( gCam, false );
+
+			D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+
+			float defSSAO[ 4 ] = { r_ssao_clear_val->GetFloat(), 0.f, 0.f, 0.f };
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_DEF_SSAO, defSSAO, 1);
+
+			r3dRenderer->SetMipMapBias( 0.f );
+
+			for( int ii = 0; ii < 6; ii ++ )
+			{
+				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+				r3dRenderer->pd3ddev->SetSamplerState( ii, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+
+				r3dSetFiltering( R3D_BILINEAR, ii );
+			}
+
+			GameWorld().Prepare( gCam );
+			GameWorld().Draw( rsFillGBuffer );
+
+			m_BounceDiffuseRT->Deactivate();
+			m_BounceNormalRT->Deactivate();
+			m_BounceDepthRT->Deactivate();
+
+			r3dRenderer->SetRenderingMode( R3D_BLEND_ADD | R3D_BLEND_NZ );
+
+			r3dRenderer->SetTex( m_BounceDiffuseRT->Tex, 0 );
+			r3dRenderer->SetTex( m_BounceNormalRT->Tex, 1 );
+			r3dRenderer->SetTex( m_BounceDepthRT->Tex, 2 );
+
+			{
+				D3DPERF_BeginEvent( 0, L"Project On SH" );
+
+				for( int i = 0; i < 3; i ++ )
+				{
+					D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+					D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+				}
+
+				for( int i = 0; i < 3; i ++ )
+				{
+					r3dSetFiltering( R3D_POINT, i );
+				}
+
+				//------------------------------------------------------------------------
+
+				{
+					float psConsts[ 1 ][ 4 ] = {
+						// float3 g_CamPos                 : register( c0 );
+						gCam.x, gCam.y, gCam.z, 0.f
+					};
+
+					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+				}
+
+				r3dRenderer->SetVertexShader( g_AccumVPLSH_VS_ID );
+				r3dRenderer->SetPixelShader( g_AccumVPLSH_PS_ID );
+
+				r3dRenderer->SetVertexDecl( m_SHProjectVertexDecl );
+
+				r3dVertexBuffer* targetBuff = m_SHProjectVertexBuffers[ d ];
+				targetBuff->Set( 0 );
+
+				for( int i = 0, e = Probe::NUM_LOCAL_VPL; i < e; i ++ )
+				{
+					if( closestProbes[ i ].CombinedIdx == -1 )
+						continue;
+
+					ProbeIdx pidx = closestProbes[ i ];
+					const Probe* probeForVPL = &m_ProbeMap[ pidx.TileZ ][ pidx.TileX ].TheProbes[ pidx.InTileIdx ];
+
+					float psConsts[ 5 ][ 4 ] = {
+						// float4 g_LightPos   : register( c1 );
+						probeForVPL->Position.x, probeForVPL->Position.y, probeForVPL->Position.z, 0.f
+						// float4x4 g_VPMtx    : register( c2 );
+					};
+
+					D3DXMatrixTranspose( (D3DXMATRIX*)&psConsts[ 1 ][ 0 ], &r3dRenderer->ViewProjMatrix );
+
+					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, psConsts[0], 1 ) );
+
+					m_BounceAccumSHRRT->Activate( 0 );
+					m_BounceAccumSHGRT->Activate( 1 );
+					m_BounceAccumSHBRT->Activate( 2 );
+
+					D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, r3dRenderer->GetClearZValue(), 0 ) );
+
+					r3dRenderer->Draw( D3DPT_POINTLIST, 0, targetBuff->GetItemCount() );
+
+					m_BounceAccumSHRRT->Deactivate();
+					m_BounceAccumSHGRT->Deactivate();
+					m_BounceAccumSHBRT->Deactivate();
+
+					IDirect3DSurface9 *redSurf, *greenSurf, *blueSurf;
+
+					D3D_V( m_BounceSysmemRT_R->GetSurfaceLevel( 0, &redSurf ) );
+					D3D_V( m_BounceSysmemRT_G->GetSurfaceLevel( 0, &greenSurf ) );
+					D3D_V( m_BounceSysmemRT_B->GetSurfaceLevel( 0, &blueSurf ) );
+
+					D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_BounceAccumSHRRT->GetTex2DSurface(), redSurf  ) );
+					D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_BounceAccumSHGRT->GetTex2DSurface(), greenSurf  ) );
+					D3D_V( r3dRenderer->pd3ddev->GetRenderTargetData( m_BounceAccumSHBRT->GetTex2DSurface(), blueSurf  ) );
+
+					D3DXVECTOR4 localVPL_R, localVPL_G, localVPL_B;
+
+					ReadPVLTextureSH( &localVPL_R, redSurf );
+					ReadPVLTextureSH( &localVPL_G, greenSurf );
+					ReadPVLTextureSH( &localVPL_B, blueSurf );
+
+					probe->SH_LocalVPLsR[ i ] += localVPL_R;
+					probe->SH_LocalVPLsG[ i ] += localVPL_G;
+					probe->SH_LocalVPLsB[ i ] += localVPL_B;
+
+					probe->SH_LocalVPLProbeIndexes[ i ] = pidx;
+
+					SAFE_RELEASE( redSurf );
+					SAFE_RELEASE( greenSurf );
+					SAFE_RELEASE( blueSurf );
+				}
+
+				D3DPERF_EndEvent();
+			}
+		}
+		D3DPERF_EndEvent();
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::StopUpdatingLocalVPLBounce()
+{
+	r_use_oq->SetInt( m_SavedUseOQ );
+	gCam = m_SavedCam;
+
+	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
+
+	r3dRenderer->SetVertexShader();
+	r3dRenderer->SetPixelShader();
+
+	D3DPERF_EndEvent();
+}
+
+//------------------------------------------------------------------------
+
 void ProbeMaster::StartUpdatingSkyVisibility()
 {
 	m_SavedUseOQ = r_use_oq->GetInt();
@@ -2226,7 +4740,7 @@ void ProbeMaster::StartUpdatingSkyVisibility()
 	r3dRenderer->SetPixelShader( "PS_FWD_COLOR" );
 
 	float psConst[ 4 ] = { 0.F, 0.F, 0.F, 0.F };
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 }
@@ -2270,11 +4784,10 @@ static void SetupCamForFace( r3dCamera* oCam, const r3dPoint3D& pos, int f )
 	// perspective projection matrix 
 	oCam->FOV		= fov;
 
-	// orthographic projection matrix
-	oCam->bOrtho	= false;
-	oCam->Width		= 0.f;
-	oCam->Height	= 0.f;
-	oCam->Aspect	= 1.0f;
+	oCam->ProjectionType	= r3dCamera::PROJTYPE_PRESPECTIVE;
+	oCam->Width				= 0.f;
+	oCam->Height			= 0.f;
+	oCam->Aspect			= 1.0f;
 }
 
 void ProbeMaster::UpdateProbeSkyVisibility( Probe* probe )
@@ -2315,11 +4828,11 @@ void ProbeMaster::UpdateProbeSkyVisibility( Probe* probe )
 
 		D3DPERF_BeginEvent( 0, msg );
 
-		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0xffffffff, 1.F, 0 );
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0xffffffff, r3dRenderer->GetClearZValue(), 0 ) );
 
 		SetupCamForFace( &gCam, probe->Position, f );
 
-		r3dRenderer->SetCamera( gCam );
+		r3dRenderer->SetCamera( gCam, false );
 
 		void RenderDepthScene();
 		RenderDepthScene();
@@ -2382,7 +4895,9 @@ void ProbeMaster::StartProbesVisualization( ProbeVisualizationMode mode )
 	case VISUALIZE_SKY_SH_MUL_VISIBILITY:
 		r3dRenderer->SetPixelShader( "PS_SPHERICAL_VISUALIZE_RGB_SKY" );
 		break;
-	case VISUALIZE_PROBE_COLORS:
+	case VISUALIZE_PROBE_STATIC_COLORS:
+	case VISUALIZE_PROBE_DYNAMIC_COLORS:
+	case VISUALIZE_PROBE_COMPOSITE_COLORS:
 		r3dRenderer->SetPixelShader( "PS_SPHERICAL_VISUALIZE_LITPROBE" );		
 		break;
 	default:
@@ -2394,7 +4909,7 @@ void ProbeMaster::StartProbesVisualization( ProbeVisualizationMode mode )
 	D3DXMatrixTranspose( &mtx, &r3dRenderer->ViewProjMatrix );
 
 	// float4x4 matVP : register( c3 );
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 3, &mtx._11, 4 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 3, &mtx._11, 4 ) );
 
 }
 
@@ -2412,7 +4927,7 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 	D3DXMatrixTranspose( &mtx, &mtx );
 
 	// float4x3 matW : register( c0 );
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &mtx._11, 3 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &mtx._11, 3 ) );
 
 	float psConsts[ 11 ][ 4 ];
 
@@ -2503,9 +5018,26 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 			UINT32 col32;
 		};
 
+#if 0
 		col = probe->BasisColors[ i ];
-		col32 = probe->BasisColors32[ i ];
+#endif
 
+		switch( m_VisMode )
+		{
+		case VISUALIZE_PROBE_STATIC_COLORS:
+			col32 = probe->BasisColors32[ i ];
+			break;
+
+		case VISUALIZE_PROBE_DYNAMIC_COLORS:
+			col32 = probe->DynamicColors32[ i ];
+			break;
+
+		default:
+			col32 = probe->CompositeColors32[ i ];
+			break;
+		}
+
+#if 0
 		if( m_Settings.ProbeTextureFmt == D3DFMT_R5G6B5 )
 		{
 			float invamp = 1.0f / r_lp_16bit_amplify->GetFloat();
@@ -2515,6 +5047,7 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 			colors[ 2 ] = B / 31.f * invamp;
 		}
 		else
+#endif
 		{
 			colors[ 0 ] = R8 / 255.0f;
 			colors[ 1 ] = G8 / 255.0f;
@@ -2525,7 +5058,7 @@ void ProbeMaster::VisualizeProbe( const Probe* probe )
 		memcpy( psConsts[ 7 + i ], colors, sizeof ( float[4] ) );
 	}
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConsts[0], sizeof psConsts / sizeof( float[4] ) ) );
 
 	r3dDrawGeoSphere();
 }
@@ -2554,13 +5087,13 @@ void ProbeMaster::StartProbeDirections()
 	r3dRenderer->SetPixelShader( "PS_FWD_COLOR" );
 
 	float psConst[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 ) );
 
 	D3DXMATRIX wvp;
 
 	D3DXMatrixTranspose( &wvp, &r3dRenderer->ViewProjMatrix );
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &wvp._11, 4 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &wvp._11, 4 ) );
 }
 
 //------------------------------------------------------------------------
@@ -2606,45 +5139,6 @@ void ProbeMaster::DrawProbeDirections( const Probe* probe )
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::DrawProbeProximity( const Probe* probe )
-{
-	r3dBox3D pbox;
-
-	pbox.Size = 2 * r3dPoint3D( PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE, PROBE_DISPLAY_SCALE );
-	pbox.Org = probe->Position - 0.5f * pbox.Size;
-
-	float psConst[ 4 ] = { 0.f, 0.f, 1.f, 1.f };
-
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
-
-	r3dDrawUniformBoundBox( pbox, gCam, r3dColor::green );
-}
-
-//------------------------------------------------------------------------
-
-void ProbeMaster::DrawProximityBox()
-{
-	r3dBox3D proximityCell;
-
-	float cellSizeX = m_Info.ProbeMapWorldActualXSize / m_Info.TotalProbeProximityCellsCountX;
-	float cellSizeY = m_Info.ProbeMapWorldActualYSize / m_Info.TotalProbeProximityCellsCountY;
-	float cellSizeZ = m_Info.ProbeMapWorldActualZSize / m_Info.TotalProbeProximityCellsCountZ;
-
-	proximityCell.Org.x = r_lp_show_proximity_x->GetInt() * cellSizeX + m_Info.ProbeMapWorldXStart;
-	proximityCell.Org.y = r_lp_show_proximity_y->GetInt() * cellSizeY + m_Info.ProbeMapWorldYStart;
-	proximityCell.Org.z = r_lp_show_proximity_z->GetInt() * cellSizeZ + m_Info.ProbeMapWorldZStart;
-
-	proximityCell.Size = r3dPoint3D( cellSizeX, cellSizeY, cellSizeZ );
-
-	float psConst[ 4 ] = { 0.f, 1.f, 0.f, 1.f };
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 ) );
-
-	r3dDrawUniformBoundBox( proximityCell, gCam, r3dColor24::green );
-
-}
-
-//------------------------------------------------------------------------
-
 void ProbeMaster::StopProbeDirections()
 {
 	r3dRenderer->Flush();
@@ -2652,6 +5146,87 @@ void ProbeMaster::StopProbeDirections()
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::RasterizeProbeIntoVolume( Probe* probe, const D3DBOX& box, int lockedStartX, int lockedStartY, int lockedStartZ, int lockedSizeX, int lockedSizeY, int lockedSizeZ )
+{
+	int px = probe->CellX;
+	int py = probe->CellY;
+	int pz = probe->CellZ;
+
+	int lockedSizeXY = lockedSizeX * lockedSizeY;
+
+	if( probe->XRadius < 1 && probe->YRadius < 1 && probe->ZRadius < 1 )
+	{
+		int acx = m_Info.ProbeVolumeCamCellX + ( px - m_Info.CamCellX );
+		int acy = m_Info.ProbeVolumeCamCellY + ( py - m_Info.CamCellY );
+		int acz = m_Info.ProbeVolumeCamCellZ + ( pz - m_Info.CamCellZ );
+
+		acx %= m_Settings.ProbeTextureWidth;
+		acy %= m_Settings.ProbeTextureDepth;
+		acz %= m_Settings.ProbeTextureHeight;
+
+		if( acx < 0 ) acx += m_Settings.ProbeTextureWidth;
+		if( acy < 0 ) acy += m_Settings.ProbeTextureDepth;
+		if( acz < 0 ) acz += m_Settings.ProbeTextureHeight;
+
+		r3d_assert( acx >= (int)box.Left && acx < (int)box.Right );
+		r3d_assert( acy >= (int)box.Front && acy < (int)box.Back );
+		r3d_assert( acz >= (int)box.Top && acz < (int)box.Bottom );
+
+		acx -= box.Left;
+		acy -= box.Front;
+		acz -= box.Top;
+
+		int idx = acx + acy * lockedSizeX + acz * lockedSizeXY;
+
+		AddRasterSample( idx, probe );
+	}
+	else
+	{
+		for( int z = pz - probe->ZRadius, e = pz + probe->ZRadius; z <= e; z ++ )
+		{
+			for( int y = py - probe->YRadius, e = py + probe->YRadius; y <= e; y ++ )
+			{
+				for( int x = px - probe->XRadius, e = px + probe->XRadius; x <= e; x ++ )
+				{
+					if( x < lockedStartX || 
+						y < lockedStartY || 
+						z < lockedStartZ ||
+						x >= lockedStartX + lockedSizeX || 
+						y >= lockedStartY + lockedSizeY || 
+						z >= lockedStartZ + lockedSizeZ )
+						continue;
+
+					int acx = m_Info.ProbeVolumeCamCellX + ( x - m_Info.CamCellX );
+					int acy = m_Info.ProbeVolumeCamCellY + ( y - m_Info.CamCellY );
+					int acz = m_Info.ProbeVolumeCamCellZ + ( z - m_Info.CamCellZ );
+
+					acx %= m_Settings.ProbeTextureWidth;
+					acy %= m_Settings.ProbeTextureDepth;
+					acz %= m_Settings.ProbeTextureHeight;
+
+					if( acx < 0 ) acx += m_Settings.ProbeTextureWidth;
+					if( acy < 0 ) acy += m_Settings.ProbeTextureDepth;
+					if( acz < 0 ) acz += m_Settings.ProbeTextureHeight;
+
+					r3d_assert( acx >= (int)box.Left && acx < (int)box.Right );
+					r3d_assert( acy >= (int)box.Front && acy < (int)box.Back );
+					r3d_assert( acz >= (int)box.Top && acz < (int)box.Bottom );
+
+					acx -= box.Left;
+					acy -= box.Front;
+					acz -= box.Top;
+
+					int idx = acx + acy * lockedSizeX + acz * lockedSizeXY;
+
+					AddRasterSample( idx, probe );
+				}
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------
@@ -2785,7 +5360,7 @@ void ProbeMaster::ClearProbeMap()
 	{
 		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
 		{
-			ProbeTile& entry = m_ProbeMap.At( z, x );
+			ProbeTile& entry = m_ProbeMap.At( x, z );
 			entry.TheProbes.Clear();
 		}
 	}
@@ -2827,7 +5402,10 @@ void ProbeMaster::UpdateBBox( int x, int z, const r3dPoint3D& pos )
 
 int ProbeMaster::AddProbe( int x, int z, const Probe& probe )
 {
-	m_ProximityMapDirty = 1;
+	if( IsOccupied( probe.Position ) )
+		return -1;
+
+	m_ProbeRadiusesDirty = 1;
 
 	UpdateBBox( x, z, probe.Position );
 
@@ -2891,121 +5469,24 @@ void ProbeMaster::RecreateVolumeTexes()
 		m_DirectionVolumeTextures[ i ] = volumeTex;
 	}
 
-}
-
-//------------------------------------------------------------------------
-
-void ProbeMaster::UpdateProximityMapForTile( int tileX, int tileZ )
-{
-	if( tileX < 0 || tileX >= m_Info.TotalProbeProximityCellsCountX )
-		return ;
-
-	if( tileZ < 0 || tileZ >= m_Info.TotalProbeProximityCellsCountZ )
-		return ;
-
-	float probeStepX = m_Info.ProbeMapWorldActualXSize / m_Info.TotalProbeProximityCellsCountX;
-	float probeStepY = m_Info.ProbeMapWorldActualYSize / m_Info.TotalProbeProximityCellsCountY;
-	float probeStepZ = m_Info.ProbeMapWorldActualZSize / m_Info.TotalProbeProximityCellsCountZ;
-
-	float posZ = m_Info.ProbeMapWorldZStart + tileZ * m_Info.ProximityCellsInTileZ * m_Info.CellSizeZ + probeStepZ * 0.5f;
-	for( int	z = tileZ * m_Info.ProximityCellsInTileZ, 
-				e = ( tileZ + 1 ) * m_Info.ProximityCellsInTileZ; z < e; z ++, posZ += probeStepZ )
+	m_ProbeVolumeDirtyArr.Resize( m_Settings.ProbeTextureWidth / PROBE_DIRTY_ARR_CELL_SIZE, m_Settings.ProbeTextureHeight / PROBE_DIRTY_ARR_CELL_SIZE, 0 );
+	if( g_bEditMode )
 	{
-		float posX = m_Info.ProbeMapWorldXStart + tileX * m_Info.ProximityCellsInTileX * m_Info.CellSizeX + probeStepX * 0.5f;
-		for( int	x = tileX * m_Info.ProximityCellsInTileX, 
-					e = ( tileX + 1 ) * m_Info.ProximityCellsInTileX; x < e; x ++, posX += probeStepX )
-		{
-			int tx, tz;
-			GetProbeTileIndexes( &tx, &tz, posX, posZ );
-
-			float posY = m_Info.ProbeMapWorldYStart + probeStepY * 0.5f;
-			for( int y = 0, e = m_Info.TotalProbeProximityCellsCountY; y < e; y ++, posY += probeStepY )
-			{
-				int best_idx = -1;
-				float best_dist = FLT_MAX;
-
-				int best_tx = tx;
-				int best_tz = tz;
-
-				for( int tzi = tz - 1, e = tz + 1; tzi <= e; tzi ++ )
-				{
-					if( tzi < 0 || tzi >= (int)m_ProbeMap.Height() )
-						continue;
-
-					for( int txi = tx - 1, e = tx + 1; txi <= e; txi ++ )
-					{
-						if( txi < 0 || txi >= (int)m_ProbeMap.Width() )
-							continue;
-
-						int iidx;
-						float idist;
-
-						FindClosestProbe( &iidx, &idist, txi, tzi, posX, posY, posZ );
-
-						if( idist < best_dist )
-						{
-							best_tx = txi;
-							best_tz = tzi;
-							best_idx = iidx;
-							best_dist = idist;
-						}
-					}
-				}
-
-				ProbeIdx pidx ;
-
-				pidx.TileX = best_tx;
-				pidx.TileZ = best_tz;
-				pidx.InTileIdx = best_idx;
-
-				SetClosestProbeIdx( x, y, z, pidx );
-			}
-		}
-	}
-}
-
-//------------------------------------------------------------------------
-
-void ProbeMaster::UpdateProbeProximityMap()
-{
-	r3dOutToLog( "ProbeMaster::UpdateProbeProximityMap: started\n" );
-
-	float updateStart = r3dGetTime();
-
-	for( int z = 0, e = m_Info.ActualProbeTileCountZ ; z < e ; z ++ )
-	{
-		for( int x = 0, e = m_Info.ActualProbeTileCountX ; x < e ; x ++ )
-		{
-			UpdateProximityMapForTile( x, z );
-		}
+		m_ProbeVolumeDirtyAnimArr.Resize( m_ProbeVolumeDirtyArr.Width(), m_ProbeVolumeDirtyArr.Height() );
 	}
 
-	UpdateProximityMapSize();	
-
-	r3dOutToLog( "ProbeMaster::UpdateProbeProximityMap: update took %.2f seconds\n", r3dGetTime() - updateStart );
 }
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::UpdateProximityMapSize()
+void ProbeMaster::FindClosestProbe( int * oIdx, float* oDist, int tileX, int tileZ, Probe* exclude )
 {
-	m_Info.ProximityMapSize = 0;
+	float posX, posY, posZ;
 
-	for( int z = 0, e = m_ProbeMap.Height(); z < e; z ++ )
-	{
-		for( int x = 0, e = m_ProbeMap.Width(); x < e; x ++ )
-		{
-			ProbeTile& tile = m_ProbeMap[ z ][ x ];
+	posX = exclude->Position.x;
+	posY = exclude->Position.y;
+	posZ = exclude->Position.z;
 
-			m_Info.ProximityMapSize += tile.ProximityProbeMap.Count() * sizeof ( ProbeIdx );
-		}
-	}
-}
-
-//------------------------------------------------------------------------
-
-void ProbeMaster::FindClosestProbe( int * oIdx, float* oDist, int tileX, int tileZ, float posX, float posY, float posZ )
-{
 	const ProbeTile& ptile = m_ProbeMap[ tileZ ][ tileX ];
 
 	float minDist = FLT_MAX;
@@ -3016,6 +5497,9 @@ void ProbeMaster::FindClosestProbe( int * oIdx, float* oDist, int tileX, int til
 	for( int i = 0, e = (int) ptile.TheProbes.Count(); i < e; i ++ )
 	{
 		const Probe& p = ptile.TheProbes[ i ];
+
+		if( &p == exclude )
+			continue;
 
 		float dist = ( p.Position - centre ).Length();
 
@@ -3049,9 +5533,9 @@ void ProbeMaster::GetProbeTileIndexes( int * oX, int* oZ, float x, float z ) con
 
 Probe* ProbeMaster::GetClosestProbe( int cellx, int celly, int cellz )
 {
-	cellx = R3D_MAX( R3D_MIN( cellx, m_Info.TotalProbeProximityCellsCountX - 1 ), 0 );
-	celly = R3D_MAX( R3D_MIN( celly, m_Info.TotalProbeProximityCellsCountY - 1 ), 0 );
-	cellz = R3D_MAX( R3D_MIN( cellz, m_Info.TotalProbeProximityCellsCountZ - 1 ), 0 );
+	cellx = R3D_MAX( R3D_MIN( cellx, m_Info.TotalProbeCellsCountX - 1 ), 0 );
+	celly = R3D_MAX( R3D_MIN( celly, m_Info.TotalProbeCellsCountY - 1 ), 0 );
+	cellz = R3D_MAX( R3D_MIN( cellz, m_Info.TotalProbeCellsCountZ - 1 ), 0 );
 
 	ProbeIdx idx =	GetClosestProbeIdx( cellx, celly, cellz );
 
@@ -3094,7 +5578,7 @@ int ProbeMaster::OutputBakeProgress( const char* operationName, int total, int c
 {
 	m_LastInfoFrame = r3dGetTime();
 
-	r3dRenderer->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0 );
+	r3dRenderer->pd3ddev->Clear(0, 0, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), r3dRenderer->GetClearZValue(), 0 );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
@@ -3125,19 +5609,6 @@ int ProbeMaster::OutputBakeProgress( const char* operationName, int total, int c
 	r3dRenderer->StartRender();
 
 	return 1;
-}
-
-//------------------------------------------------------------------------
-
-void ProbeMaster::InitProximityGrid()
-{
-	for( int z = 0, e = m_Info.ActualProbeTileCountZ; z < e ; z ++ )
-	{
-		for( int x = 0, e = m_Info.ActualProbeTileCountX; x < e ; x ++ )
-		{
-			m_ProbeMap[ z ][ x ].ProximityProbeMap.Clear();
-		}
-	}
 }
 
 //------------------------------------------------------------------------
@@ -3210,9 +5681,9 @@ void ProbeMaster::DrawProbeVolumesFrame()
 
 	r3dPoint3D centre;
 
-	centre.x = cellSizeX * m_CamCellX + m_Info.ProbeMapWorldXStart;
-	centre.y = cellSizeY * m_CamCellY + m_Info.ProbeMapWorldYStart;
-	centre.z = cellSizeZ * m_CamCellZ + m_Info.ProbeMapWorldZStart;
+	centre.x = cellSizeX * m_Info.CamCellX + m_Info.ProbeMapWorldXStart;
+	centre.y = cellSizeY * m_Info.CamCellY + m_Info.ProbeMapWorldYStart;
+	centre.z = cellSizeZ * m_Info.CamCellZ + m_Info.ProbeMapWorldZStart;
 
 	r3dBoundBox bbox;
 
@@ -3277,7 +5748,7 @@ void ProbeMaster::DrawProbeVolumesFrame()
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::UpdateProximityAndSizeParams()
+void ProbeMaster::UpdateCellsAndSizeParams()
 {
 	m_Info.CellSizeX = m_Settings.ProbeTextureSpanX / m_Settings.ProbeTextureWidth;
 	m_Info.CellSizeY = m_Settings.ProbeTextureSpanY / m_Settings.ProbeTextureDepth;
@@ -3293,8 +5764,8 @@ void ProbeMaster::UpdateProximityAndSizeParams()
 	numProxyCellsInTileX ++;	
 	numProxyCellsInTileZ ++;
 
-	m_Info.ProximityCellsInTileX = numProxyCellsInTileX;
-	m_Info.ProximityCellsInTileZ = numProxyCellsInTileZ;
+	m_Info.ProbeCellsInTileX = numProxyCellsInTileX;
+	m_Info.ProbeCellsInTileZ = numProxyCellsInTileZ;
 
 	m_Info.ActualProbeTileCountX = numProxyCellsX / numProxyCellsInTileX + 1;
 	m_Info.ActualProbeTileCountZ = numProxyCellsZ / numProxyCellsInTileZ + 1;
@@ -3306,9 +5777,9 @@ void ProbeMaster::UpdateProximityAndSizeParams()
 	m_Info.ProbeMapWorldActualYSize = numProxyCellsY * m_Info.CellSizeY;
 	m_Info.ProbeMapWorldActualZSize = numProxyCellsZ * m_Info.CellSizeZ;
 
-	m_Info.TotalProbeProximityCellsCountX = numProxyCellsX;
-	m_Info.TotalProbeProximityCellsCountY = numProxyCellsY;
-	m_Info.TotalProbeProximityCellsCountZ = numProxyCellsZ;
+	m_Info.TotalProbeCellsCountX = numProxyCellsX;
+	m_Info.TotalProbeCellsCountY = numProxyCellsY;
+	m_Info.TotalProbeCellsCountZ = numProxyCellsZ;
 }
 
 //------------------------------------------------------------------------
@@ -3344,18 +5815,126 @@ void ProbeMaster::FetchAllProbes( Probes* oProbes )
 
 //------------------------------------------------------------------------
 
-void ProbeMaster::AddDirtyProximityTile( ProbeIdx pidx )
+void ProbeMaster::AddDirtyRadiusTile( ProbeIdx pidx )
 {
-	for( int i = 0, e = m_DirtyProximityTiles.Count() ; i < e ; i ++ )
+	for( int z = (int)pidx.TileZ - 1, e = pidx.TileZ + 1 ; z <= e ; z ++ )
 	{
-		const ProbeIdx& comp = m_DirtyProximityTiles[ i ];
-		if( pidx.TileX == comp.TileX
-				&&
-			pidx.TileZ == comp.TileZ )
-			return;
+		for( int x = (int)pidx.TileX - 1, e = pidx.TileX + 1 ; x <= e ; x ++ )
+		{
+			if( x < 0 || (int)x >= m_Info.ActualProbeTileCountX
+				||
+				z < 0 || (int)z >= m_Info.ActualProbeTileCountZ
+				)
+				continue;
+
+			int found = 0;
+
+			for( int i = 0, e = m_DirtyRadiusesTiles.Count() ; i < e ; i ++ )
+			{
+				const ProbeIdx& comp = m_DirtyRadiusesTiles[ i ];
+				if( x == comp.TileX
+						&&
+					z == comp.TileZ )
+				{
+					found = 1;
+					break;
+				}
+			}
+
+			if( found )
+				continue;
+
+			ProbeIdx aidx;
+
+			aidx.TileX = x;
+			aidx.TileZ = z;
+
+			m_DirtyRadiusesTiles.PushBack( aidx );
+		}
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::SetupDefaultLightProbe()
+{
+	float RCoef_Up = m_Settings.DefaultBounceColor_Up.R / 255.f;
+	float GCoef_Up = m_Settings.DefaultBounceColor_Up.G / 255.f;
+	float BCoef_Up = m_Settings.DefaultBounceColor_Up.B / 255.f;
+
+	for( int j = 0, e = 4 ; j < e ; j ++ )
+	{
+		m_DefaultProbe.SH_BounceR[ 0 ][ j ] = DefaultSHBasis[ 0 ][ j ] * RCoef_Up;
+		m_DefaultProbe.SH_BounceG[ 0 ][ j ] = DefaultSHBasis[ 0 ][ j ] * GCoef_Up;
+		m_DefaultProbe.SH_BounceB[ 0 ][ j ] = DefaultSHBasis[ 0 ][ j ] * BCoef_Up;
 	}
 
-	m_DirtyProximityTiles.PushBack( pidx );
+	float RCoef_Down = m_Settings.DefaultBounceColor_Down.R / 255.f;
+	float GCoef_Down = m_Settings.DefaultBounceColor_Down.G / 255.f;
+	float BCoef_Down = m_Settings.DefaultBounceColor_Down.B / 255.f;
+
+	for( int i = 1, e = Probe::NUM_DIRS ; i < e ; i ++ )
+	{
+		for( int j = 0, e = 4 ; j < e ; j ++ )
+		{
+			m_DefaultProbe.SH_BounceR[ i ][ j ] = DefaultSHBasis[ i ][ j ] * RCoef_Down;
+			m_DefaultProbe.SH_BounceG[ i ][ j ] = DefaultSHBasis[ i ][ j ] * GCoef_Down;
+			m_DefaultProbe.SH_BounceB[ i ][ j ] = DefaultSHBasis[ i ][ j ] * BCoef_Down;
+		}
+	}
+}
+
+//------------------------------------------------------------------------
+
+void ProbeMaster::AdjustProbeRadius( Probe* probe, int tileX, int tileZ )
+{
+	int minXRad = m_Settings.MaximumProbeRadius;
+	int minZRad = m_Settings.MaximumProbeRadius;
+	int minYRad = m_Settings.MaximumProbeYRadius;
+
+	int mapXIdx = tileX;
+	int mapZIdx = tileZ;
+
+	for( int tz = mapZIdx - 1, e = mapZIdx + 1; tz <= e; tz ++ )
+	{
+		for( int tx = mapXIdx - 1, e = mapXIdx + 1; tx <= e; tx ++ )
+		{
+			if( tx < 0 || tz < 0 || 
+				tx >= (int)m_ProbeMap.Width() || tz >= (int)m_ProbeMap.Height() )
+				continue;
+
+			const ProbeTile& pt = m_ProbeMap[ tz ][ tx ];
+
+			for( int i = 0, e = pt.TheProbes.Count(); i < e; i ++ )
+			{
+				const Probe& adjProbe = pt.TheProbes[ i ];
+
+				if( &adjProbe == probe )
+					continue;
+
+				int adx = abs( adjProbe.CellX - probe->CellX );
+				int ady = abs( adjProbe.CellY - probe->CellY );
+				int adz = abs( adjProbe.CellZ - probe->CellZ );
+
+				if( adx >= adz )
+					minXRad = R3D_MIN( adx, minXRad );
+				
+				if( adz >= adx )
+					minZRad = R3D_MIN( adz, minZRad );
+
+				if( ady >= adx && ady >= adz )
+				{
+					minYRad = R3D_MIN( ady, minYRad );
+				}
+			}
+		}
+	}
+
+	int expand = m_Settings.ProbeRadiusExpansion;
+
+	probe->XRadius = minXRad + expand;
+	probe->YRadius = minYRad + expand;
+	probe->ZRadius = minZRad + expand;
 }
 
 //------------------------------------------------------------------------
@@ -3408,22 +5987,6 @@ static void CopyPixelsRGB( Bytes* oBytesR, Bytes* oBytesG, Bytes* oBytesB, void*
 }
 
 //------------------------------------------------------------------------
-
-struct SHSample
-{ 
-	float3 sph;
-	float3 vec;
-	float coeff[ N_COEFS ];
-};
-
-static const int SQRT_N_SAMPLES = 128;
-static const int N_SAMPLES = SQRT_N_SAMPLES * SQRT_N_SAMPLES;
-
-typedef r3dTL::TArray< SHSample > SHSampleArr;
-typedef r3dTL::TArray< float2 > Float2Arr;
-typedef r3dTL::TFixedArray< Float2Arr, Probe::NUM_DIRS > DirIntegraArr;
-static SHSampleArr g_SHSamples;
-static DirIntegraArr g_DirIntegrateSamples;
 
 R3D_FORCEINLINE float rnd()
 {
@@ -3523,7 +6086,31 @@ void SH_setup_spherical_samples()
 			g_SHSamples[i].sph = float3(theta,phi,1.0f); 
 			// convert spherical coords to unit vector 
 			float3 vec(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi)); 
-			g_SHSamples[i].vec = vec; 
+			g_SHSamples[i].vec = vec;
+
+			SHSample& sample = g_SHSamples[ i ];
+			sample.faceIdx = -1;
+
+			float maxDot = -1.f;
+			int maxIdx = -1;
+
+			for( int d = 0, e = Probe::NUM_DIRS; d < e; d ++ )
+			{
+				D3DXVECTOR3 faceViewDir = Probe::ViewDirs[ d ];
+
+				D3DXVECTOR3 d3dvec( vec.x, vec.y, vec.z );
+
+				float dot = D3DXVec3Dot( &d3dvec, &faceViewDir );
+
+				if( dot >= maxDot )
+				{
+					maxIdx = d;
+					maxDot = dot;
+				}
+			}
+
+			sample.faceIdx = maxIdx;
+
 			// precompute all SH coefficients for this sample 
 			for(int l=0; l<N_BANDS; ++l) { 
 				for(int m=-l; m<=l; ++m) { 
@@ -3550,7 +6137,7 @@ void SH_setup_spherical_samples()
 
 		dir_xfm._11 = side.x;	dir_xfm._12 = side.y;	dir_xfm._13 = side.z;	dir_xfm._14 = 0.f;
 		dir_xfm._21 = view.x;	dir_xfm._22 = view.y;	dir_xfm._23 = view.z;	dir_xfm._24 = 0.f;
-		dir_xfm._31 = up.x;	dir_xfm._32 = up.y;	dir_xfm._33 = up.z;	dir_xfm._34 = 0.f;
+		dir_xfm._31 = up.x;		dir_xfm._32 = up.y;		dir_xfm._33 = up.z;		dir_xfm._34 = 0.f;
 		dir_xfm._41 = 0.f;		dir_xfm._42 = 0.f;		dir_xfm._43 = 0.f;		dir_xfm._44 = 1.0f;
 
 		Float2Arr& targArr = g_DirIntegrateSamples[ i ];
@@ -3619,12 +6206,16 @@ void ProjectOnSH( float (&oSH)[N_COEFS], float (&fn)( float, float ) )
 	// for each sample 
 	for(int i=0; i < N_SAMPLES; ++i) 
 	{ 
-		float theta = g_SHSamples[i].sph.x; 
-		float phi = g_SHSamples[i].sph.y; 
+		float theta = g_SHSamples[i].sph.x;
+		float phi = g_SHSamples[i].sph.y;
+
+		float fnVal = fn( theta, phi );
+
 		for( int n=0; n < N_COEFS; ++ n ) { 
-			oSH[n] += fn( theta, phi ) * g_SHSamples[i].coeff[n]; 
-		} 
-	} 
+			oSH[n] += fnVal * g_SHSamples[i].coeff[n]; 
+		}
+	}
+
 	// divide the result by weight and number of samples 
 	float factor = weight / N_SAMPLES; 
 	for(int i = 0; i < N_COEFS; ++ i )
@@ -3957,13 +6548,31 @@ void UndoLightProbeCreateDelete::DeleteProbes()
 		parray.PushBack( ui.idx );
 	}
 
-	g_pProbeMaster->DeleteProbes( parray );
+	g_pProbeMaster->DeleteProbes( parray, true );
 }
 
 //------------------------------------------------------------------------
 
 FixedString UndoLightProbeCreateDelete::ms_CreateName = "Add Light Probes";
 FixedString UndoLightProbeCreateDelete::ms_DelName = "Del. Light Probes";
+
+template<> UINT16 ConvertProbeRasterSamplesTo<UINT16>( const ProbeRasterSamples& samples, int idir )
+{
+	return	( samples.sumB[ idir ] )
+				|
+			( samples.sumG[ idir ] << 5 )
+				|
+			( samples.sumR[ idir ] << 11 );
+}
+
+template<> UINT32 ConvertProbeRasterSamplesTo<UINT32>( const ProbeRasterSamples& samples, int idir )
+{
+	return	( samples.sumR[ idir ] << 16 )
+				|
+			( samples.sumG[ idir ] << 8 )
+				|
+			( samples.sumB[ idir ] << 0 );
+}
 
 
 #endif

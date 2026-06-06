@@ -59,9 +59,9 @@ struct r3dSSScatterParams
 	r3dSSScatterParams();
 };
 
-//컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+//
 //	General Light Class
-//컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+//
 class r3dLight : public r3dPoint3D
 {
   public:
@@ -124,6 +124,10 @@ class r3dLight : public r3dPoint3D
 
 	r3dTexture*	ProjectMap ;
 	r3dTexture*	ShadowDepth ;
+
+	r3dPoint3D	InProbesVolumePosition;
+	float		InProbesVolumeRadius;
+	float		InProbesVolumeIntensity;
 
 	bool		m_bQualityDisabled; // if users quality is low, this flag will be set to true to disable this light
 

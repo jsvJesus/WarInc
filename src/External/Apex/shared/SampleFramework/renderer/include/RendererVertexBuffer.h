@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,118 +36,127 @@
 #define RENDERER_VERTEXBUFFER_H
 
 #include <RendererConfig.h>
-#include "PsShare.h"
-#include "PxSimpleTypes.h"
 #include "RendererInteropableBuffer.h"
 
-class RendererVertexBufferDesc;
-
-class RendererVertexBuffer: public RendererInteropableBuffer
+namespace SampleRenderer
 {
-	friend class RendererMesh;
+
+	class RendererVertexBufferDesc;
+
+	class RendererVertexBuffer: public RendererInteropableBuffer
+	{
+		friend class RendererMesh;
+		friend class GLES2Renderer;
 	public:
-		typedef enum Semantic
+		enum Semantic
 		{
 			SEMANTIC_POSITION = 0,
 			SEMANTIC_COLOR,
 			SEMANTIC_NORMAL,
 			SEMANTIC_TANGENT,
-			
+
+			SEMANTIC_DISPLACEMENT_TEXCOORD,
+			SEMANTIC_DISPLACEMENT_FLAGS,
+
 			SEMANTIC_BONEINDEX,
 			SEMANTIC_BONEWEIGHT,
-			
+
 			SEMANTIC_TEXCOORD0,
 			SEMANTIC_TEXCOORD1,
 			SEMANTIC_TEXCOORD2,
 			SEMANTIC_TEXCOORD3,
 			SEMANTIC_TEXCOORDMAX = SEMANTIC_TEXCOORD3,
-			
+
 			NUM_SEMANTICS,
 			NUM_TEXCOORD_SEMANTICS = SEMANTIC_TEXCOORDMAX - SEMANTIC_TEXCOORD0,
-		};
-		
-		typedef enum Format
+		}_Semantic;
+
+		enum Format
 		{
 			FORMAT_FLOAT1 = 0,
 			FORMAT_FLOAT2,
 			FORMAT_FLOAT3,
 			FORMAT_FLOAT4,
-			
+
 			FORMAT_UBYTE4,
 			FORMAT_USHORT4,
-			
-			FORMAT_COLOR, // RendererColor
-			
+
+			FORMAT_COLOR_BGRA, // RendererColor
+			FORMAT_COLOR_RGBA, // OGL format
+			FORMAT_COLOR_NATIVE, // do not convert
+
 			NUM_FORMATS,
-		};
-		
-		typedef enum Hint
+		}_Format;
+
+		enum Hint
 		{
 			HINT_STATIC = 0,
 			HINT_DYNAMIC,
-		};
-	
+		}_Hint;
+
 	public:
-		static physx::PxU32 getFormatByteSize(Format format);
-	
+		static PxU32 getFormatByteSize(Format format);
+
 	protected:
 		RendererVertexBuffer(const RendererVertexBufferDesc &desc);
 		virtual ~RendererVertexBuffer(void);
-	
+
 	public:
 		void release(void) { delete this; }
-		
-		physx::PxU32  getMaxVertices(void) const;
-		
+
+		PxU32  getMaxVertices(void) const;
+
 		Hint   getHint(void) const;
 		Format getFormatForSemantic(Semantic semantic) const;
 
-		void *lockSemantic(Semantic semantic, physx::PxU32 &stride);
+		void *lockSemantic(Semantic semantic, PxU32 &stride);
 		void  unlockSemantic(Semantic semantic);
 
 		//Checks buffer written state for vertex buffers in D3D
 		virtual bool checkBufferWritten() { return true; }
 
 	private:
-		virtual void  swizzleColor(void *colors, physx::PxU32 stride, physx::PxU32 numColors) {}
-		
+		virtual void  swizzleColor(void *colors, PxU32 stride, PxU32 numColors, RendererVertexBuffer::Format inFormat) = 0;
+
 		virtual void *lock(void) = 0;
 		virtual void  unlock(void) = 0;
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstVertex) = 0;
-		virtual void  unbind(physx::PxU32 streamID) = 0;
-		
+
+		virtual void  bind(PxU32 streamID, PxU32 firstVertex) = 0;
+		virtual void  unbind(PxU32 streamID) = 0;
+
 		RendererVertexBuffer &operator=(const RendererVertexBuffer &) { return *this; }
-		
+
 	protected:
 		void prepareForRender(void);
-	
+
 	protected:
 		class SemanticDesc
 		{
-			public:
-				Format format;
-				physx::PxU32  offset;
-				bool   locked;
-			public:
-				SemanticDesc(void)
-				{
-					format = NUM_FORMATS;
-					offset = 0;
-					locked = false;
-				}
+		public:
+			Format format;
+			PxU32  offset;
+			bool   locked;
+		public:
+			SemanticDesc(void)
+			{
+				format = NUM_FORMATS;
+				offset = 0;
+				locked = false;
+			}
 		};
-		
+
 	protected:
 		const Hint   m_hint;
-		physx::PxU32 m_maxVertices;
-		physx::PxU32 m_stride;
+		PxU32        m_maxVertices;
+		PxU32        m_stride;
 		bool         m_deferredUnlock;
 		SemanticDesc m_semanticDescs[NUM_SEMANTICS];
-		
+
 	private:
 		void        *m_lockedBuffer;
-		physx::PxU32 m_numSemanticLocks;
-};
+		PxU32        m_numSemanticLocks;
+	};
+
+} // namespace SampleRenderer
 
 #endif

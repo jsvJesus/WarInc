@@ -200,7 +200,6 @@ namespace fl_filters
     extern const ClassInfo GlowFilterCI;
     extern const ClassInfo GradientBevelFilterCI;
     extern const ClassInfo GradientGlowFilterCI;
-    extern const ClassInfo ShaderFilterCI;
 }
 
 namespace fl_geom
@@ -223,7 +222,6 @@ namespace fl_net
 namespace fl_system
 {
     extern const ClassInfo ApplicationDomainCI;
-    extern const ClassInfo DomainCI;
     extern const ClassInfo CapabilitiesCI;
     extern const ClassInfo LoaderContextCI;
     extern const ClassInfo SecurityCI;
@@ -364,6 +362,7 @@ namespace fl_events
     extern const ClassInfo NativeDragEventCI;
     extern const ClassInfo NativeWindowBoundsEventCI;
     extern const ClassInfo NativeWindowDisplayStateEventCI;
+    extern const ClassInfo OutputProgressEventCI;
     extern const ClassInfo ScreenMouseEventCI;
 }
 
@@ -594,7 +593,6 @@ namespace Classes
         &AS3::fl_filters::GlowFilterCI,
         &AS3::fl_filters::GradientBevelFilterCI,
         &AS3::fl_filters::GradientGlowFilterCI,
-        &AS3::fl_filters::ShaderFilterCI,
         &AS3::fl_geom::ColorTransformCI,
         &AS3::fl_geom::Vector3DCI,
         &AS3::fl_geom::Matrix3DCI,
@@ -605,7 +603,6 @@ namespace Classes
         &AS3::fl_geom::TransformCI,
         &AS3::fl_net::URLRequestCI,
         &AS3::fl_system::ApplicationDomainCI,
-        &AS3::fl_system::DomainCI,
         &AS3::fl_system::CapabilitiesCI,
         &AS3::fl_system::LoaderContextCI,
         &AS3::fl_system::SecurityCI,

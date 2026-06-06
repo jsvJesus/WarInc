@@ -1,54 +1,70 @@
-#include "NxApex.h"
-#ifndef __NX_APEX_SCENE_H__
-#define __NX_APEX_SCENE_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_APEX_SCENE_H
+#define NX_APEX_SCENE_H
 
 /*!
 \file
 \brief classes NxApexScene, NxApexSceneStats, NxApexSceneDesc
 */
 
-class NxScene;
+#include "NxApexDesc.h"
+#include "NxApexRenderable.h"
+#include "NxApexContext.h"
+#include "foundation/PxVec3.h"
+#include <NxApexDefs.h>
 
 namespace physx
 {
-namespace shdfnd2
+namespace pxtask
 {
-class PxIPC;
-};
+class CpuDispatcher;
+class GpuDispatcher;
+class TaskManager;
+class BaseTask;
+}
+}
+
+#if NX_SDK_VERSION_MAJOR == 2
+class NxScene;
+class NxDebugRenderable;
+#elif NX_SDK_VERSION_MAJOR == 3
+#include "PxFiltering.h"
+namespace physx
+{
+class PxScene;
+class PxActor;
+}
+#endif
+
+namespace NxParameterized
+{
+class Interface;
 }
 
 namespace physx
@@ -57,6 +73,23 @@ namespace apex
 {
 
 PX_PUSH_PACK_DEFAULT
+
+#if NX_SDK_VERSION_MAJOR == 3
+/**
+\brief Interface used to call setter function for PhysX 3.0
+*/
+class NxApexPhysX3Interface
+{
+public:
+	/**
+	\brief Set the current contact report pair flags
+
+	User can set the report pair flags to specified actor
+	*/
+	virtual void setContactReportFlags(PxShape* shape, PxPairFlags flags) = 0;
+	virtual physx::PxPairFlags getContactReportFlags(const physx::PxShape* shape) const = 0;
+};
+#endif
 
 /**
 \brief Data used to initialize a new NxApexScene
@@ -76,16 +109,39 @@ public:
 		init();
 	}
 
+#if NX_SDK_VERSION_MAJOR == 2
+
 	/** \brief Give this ApexScene an existing NxScene */
 	NxScene* scene;
 
 	/**
-	\brief Give this ApexScene a user defined TaskManager
+	\brief Give this ApexScene a user defined CpuDispatcher
 
-	If taskManager is NULL, the APEX scene will create a default TaskManager
-	and thread pool.
+	If cpuDispatcher is NULL, the APEX SDK will create and use a default
+	thread pool.
 	*/
-	physx::pxtask::TaskManager* taskManager;
+	physx::pxtask::CpuDispatcher* cpuDispatcher;
+
+	/**
+	\brief Give this ApexScene a user defined GpuDispatcher
+
+	If gpuDispatcher is NULL, this APEX scene will not use any GPU accelerated
+	features.
+	*/
+	physx::pxtask::GpuDispatcher* gpuDispatcher;
+
+#elif NX_SDK_VERSION_MAJOR == 3
+
+	/** \brief Give this ApexScene an existing PxScene
+
+	The ApexScene will use the same CpuDispatcher and GpuDispatcher that were
+	provided to the PxScene when it was created.  There is no need to provide
+	these pointers in the ApexScene descriptor.
+	*/
+	PxScene* scene;
+	NxApexPhysX3Interface*	physX3Interface;
+
+#endif
 
 	/**
 	\brief Toggle the use of a legacy NxDebugRenderable
@@ -103,30 +159,54 @@ public:
 	/**
 	\brief If 'debugVisualizeLocally' is true, then debug visualization which is being transmitted remotely will also be shown locally as well.
 	*/
-	bool			debugVisualizeLocally;
+	bool	debugVisualizeLocally;
+
+#if APEX_USE_GRB || defined (DOXYGEN)
+	/**
+	\brief If 'enableGrbPhysics' is true, then modules which support GPU Rigid Bodies may create a GRB scene for this APEX scene.
+	*/
+	bool	enableGrbPhysics;
+#endif
+
 private:
 	PX_INLINE void init()
 	{
+#if NX_SDK_VERSION_MAJOR == 2
+		cpuDispatcher = 0;
+		gpuDispatcher = 0;
+#elif NX_SDK_VERSION_MAJOR == 3
+		physX3Interface	= 0;
+#endif
 		scene = 0;
-		taskManager = 0;
 		useDebugRenderable = false;
 		debugVisualizeRemotely = false;
 		debugVisualizeLocally = true;
+#if APEX_USE_GRB
+		enableGrbPhysics = true;
+#endif
 	}
 };
 
+
 /**
-\brief data type definitions for stats (derived from openautomate)
+\brief APEX stat struct that contains the type enums
 */
-typedef enum
+struct ApexStatDataType
 {
-	STATS_TYPE_INVALID = 0,
-	STATS_TYPE_STRING  = 1,
-	STATS_TYPE_INT     = 2,
-	STATS_TYPE_FLOAT   = 3,
-	STATS_TYPE_ENUM    = 4,
-	STATS_TYPE_BOOL    = 5
-} ApexStatDataType;
+	/**
+	\brief Enum of the APEX stat types
+	*/
+	enum Enum
+	{
+		INVALID = 0,
+		STRING  = 1,
+		INT     = 2,
+		FLOAT   = 3,
+		ENUM    = 4,
+		BOOL    = 5,
+	};
+};
+
 /**
 \brief data value definitions for stats (derived from openautomate)
 */
@@ -142,11 +222,19 @@ typedef struct oaValueStruct
 	};
 } ApexStatValue;
 
+/**
+\brief data value definitions for stats
+*/
 typedef struct
 {
-	const char*			StatName;
-	ApexStatDataType	StatType;
-	ApexStatValue		StatCurrentValue;
+	///name
+	const char*				StatName;
+
+	///type
+	ApexStatDataType::Enum	StatType;
+
+	///current value
+	ApexStatValue			StatCurrentValue;
 } ApexStatsInfo;
 
 /**
@@ -160,8 +248,8 @@ struct NxApexSceneStats
 //todo remove	physx::PxU32			nbActors;
 	/**\brief The number of ApexStats structures stored.
 	*/
-	physx::pubfnd2::PxU32	numApexStats;
-	/**\brief Array of #ApexStatsInfo structures.
+	physx::PxU32			numApexStats;
+	/**\brief Array of ApexStatsInfo structures.
 	*/
 	ApexStatsInfo*			ApexStatsInfoPtr;
 };
@@ -176,6 +264,9 @@ LOOK_AT_LH: APEX gets the eye direction and eye position based on this kind of m
 */
 struct ViewMatrixType
 {
+	/**
+	\brief Enum of the view matrices types
+	*/
 	enum Enum
 	{
 		USER_CUSTOMIZED = 0,
@@ -192,6 +283,9 @@ USER_CUSTOMIZED : APEX simply uses the projection matrix given. Need to setProjP
 */
 struct ProjMatrixType
 {
+	/**
+	\brief Enum of the projection matrices types
+	*/
 	enum Enum
 	{
 		USER_CUSTOMIZED = 0,
@@ -212,17 +306,25 @@ public:
 	from the previously specified NxScene.  This must be done before the NxScene
 	can be released.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void setPhysXScene(NxScene* s) = 0;
+#else
+	virtual void setPhysXScene(PxScene* s) = 0;
+#endif
 
 	/**
 	\brief Retrieve the NxScene associated with this NxApexScene
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual NxScene* getPhysXScene() = 0;
+#else
+	virtual PxScene* getPhysXScene() = 0;
+#endif
 
 	/**
 	\brief Retrieve scene statistics
 	*/
-	virtual const NxApexSceneStats* getStats(void) = 0;
+	virtual const NxApexSceneStats* getStats(void) const = 0;
 
 	/**
 	\brief D3D(9/10) CUDA Interop synchronization method
@@ -232,16 +334,65 @@ public:
 	*/
 	virtual void prepareRenderResourceContexts() = 0;
 
+#if NX_SDK_VERSION_MAJOR == 2
 	/**
 	\brief Start simulation of the APEX (and PhysX) scene
 
 	Start simulation of the NxApexActors and the NxScene associated with this NxApexScene.
 	No NxApexActors should be added, deleted, or modified until fetchResults() is called.
 
-	finalStep should be left as true, unless your application is manually sub stepping APEX
+	Calls to simulate() should pair with calls to fetchResults():
+ 	Each fetchResults() invocation corresponds to exactly one simulate()
+ 	invocation; calling simulate() twice without an intervening fetchResults()
+ 	or fetchResults() twice without an intervening simulate() causes an error
+ 	condition.
+ 
+	\param[in] elapsedTime Amount of time to advance simulation by. <b>Range:</b> (0,inf)
+
+	\param[in] finalStep should be left as true, unless your application is manually sub stepping APEX
 	(and PhysX) and you do not intend to try to render the output of intermediate steps.
+
+	\param[in] completionTask if non-NULL, this task will have its refcount incremented in simulate(), then
+	decremented when the scene is ready to have fetchResults called. So the task will not run until the
+	application also calls removeReference() after calling simulate.
 	*/
-	virtual void simulate(physx::PxF32 elapsedTime, bool finalStep = true) = 0;
+	virtual void simulate(physx::PxF32 elapsedTime, 
+						  bool finalStep = true, 
+						  physx::pxtask::BaseTask *completionTask = NULL) = 0;
+#else
+
+	/**
+	\brief Start simulation of the APEX (and PhysX) scene
+
+	Start simulation of the NxApexActors and the NxScene associated with this NxApexScene.
+	No NxApexActors should be added, deleted, or modified until fetchResults() is called.
+
+	Calls to simulate() should pair with calls to fetchResults():
+ 	Each fetchResults() invocation corresponds to exactly one simulate()
+ 	invocation; calling simulate() twice without an intervening fetchResults()
+ 	or fetchResults() twice without an intervening simulate() causes an error
+ 	condition.
+ 
+	\param[in] elapsedTime Amount of time to advance simulation by. <b>Range:</b> (0,inf)
+
+	\param[in] finalStep should be left as true, unless your application is manually sub stepping APEX
+	(and PhysX) and you do not intend to try to render the output of intermediate steps.
+
+	\param[in] completionTask if non-NULL, this task will have its refcount incremented in simulate(), then
+	decremented when the scene is ready to have fetchResults called. So the task will not run until the
+	application also calls removeReference() after calling simulate.
+
+	\param[in] scratchMemBlock a memory region for physx to use for temporary data during simulation. This block may be reused by the application
+	after fetchResults returns. Must be aligned on a 16-byte boundary
+
+	\param[in] scratchMemBlockSize the size of the scratch memory block. Must be a multiple of 16K.
+	*/
+	virtual void simulate(physx::PxF32 elapsedTime, 
+						  bool finalStep = true, 
+						  physx::pxtask::BaseTask *completionTask = NULL,
+						  void* scratchMemBlock = 0, 
+						  PxU32 scratchMemBlockSize = 0) = 0;
+#endif
 
 	/**
 	\brief Checks, and optionally blocks, for simulation completion.  Updates scene state.
@@ -254,10 +405,12 @@ public:
 	*/
 	virtual bool fetchResults(bool block, physx::PxU32* errorState) = 0;
 
+#if NX_SDK_VERSION_MAJOR == 2
 	/**
 	\brief Returns an NxDebugRenderable object that contains the data for debug rendering of this scene
 	*/
 	virtual const NxDebugRenderable* getDebugRenderable() = 0;
+#endif
 
 	/**
 	\brief Checks, and optionally blocks, for simulation completion.
@@ -338,7 +491,7 @@ public:
 
 	@see setViewMatrix()
 	*/
-	virtual const physx::PxMat44& 	getViewMatrix(const physx::PxU32 viewID = 0) const = 0;
+	virtual physx::PxMat44			getViewMatrix(const physx::PxU32 viewID = 0) const = 0;
 
 	/**
 	\brief Sets the projection matrix for the given projID. Should be called whenever the projection matrix needs to be updated.
@@ -353,7 +506,7 @@ public:
 
 	@see setProjMatrix()
 	*/
-	virtual const physx::PxMat44& 	getProjMatrix(const physx::PxU32 projID = 0) const = 0;
+	virtual physx::PxMat44			getProjMatrix(const physx::PxU32 projID = 0) const = 0;
 
 	/**
 	\brief Sets the use of the view matrix and projection matrix as identified by their IDs. Should be called whenever either matrices needs to be updated.
@@ -380,7 +533,7 @@ public:
 	@see ViewMatrixType
 	@see setViewMatrix()
 	*/
-	virtual const physx::PxVec3& 	getEyePosition(const physx::PxU32 viewID = 0) const = 0;
+	virtual physx::PxVec3			getEyePosition(const physx::PxU32 viewID = 0) const = 0;
 
 	/**
 	\brief Returns the world space eye direction.
@@ -388,12 +541,12 @@ public:
 	@see ViewMatrixType
 	@see setViewMatrix()
 	*/
-	virtual const physx::PxVec3& 	getEyeDirection(const physx::PxU32 viewID = 0) const = 0;
+	virtual physx::PxVec3			getEyeDirection(const physx::PxU32 viewID = 0) const = 0;
 
 	/**
 	\brief Returns the APEX scene's task manager
 	*/
-	virtual physx::pxtask::TaskManager* getTaskManager() = 0;
+	virtual physx::pxtask::TaskManager* getTaskManager() const = 0;
 
 	/**
 	\brief Toggle the use of a debug renderable
@@ -409,6 +562,29 @@ public:
 	\brief Gets module debug rendering parameters from NxParameterized
 	*/
 	virtual ::NxParameterized::Interface* getModuleDebugRenderParams(const char* name) = 0;
+
+	/**
+	\brief Acquire the PhysX scene lock
+	
+	While a simulation is running, PhysX 3 scenes support read and write access to objects in the scene.
+	Concurrent access from the application and APEX scene (after simulate has returned and before fetchResults is called) 
+	might corrupt the state of the objects or lead to data races or inconsistent views in the simulation code.
+	When accessing the PhysX scene the APEX scene will aquire the PhysX lock, and so should the application.
+	
+	For more information on this PhysX 3 feature, please see the PhysX documentation regarding data access.
+	Note, this method will be deprecated under PhysX 3.3 which will provide a multiple-reader-single-writer mutex
+	instead to co-ordinate access to the PhysX API from multiple threads and multiple libraries.
+	*/
+	virtual void					acquirePhysXLock(void) = 0;
+
+	/**
+	\brief Release the PhysX scene lock
+	*/
+	virtual void					releasePhysXLock(void) = 0;
+
+#ifdef APEX_TEST
+	virtual void setSeed(physx::PxU32 seed) = 0;
+#endif
 };
 
 PX_POP_PACK
@@ -416,4 +592,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif // __NX_APEX_SCENE_H__
+#endif // NX_APEX_SCENE_H

@@ -26,7 +26,7 @@ CSoundSystem::CSoundSystem()
 , m_SoundBank_Streaming(0)
 , m_SoundBank_Weapons(0)
 , m_isSoundDisabled(false)
-, m_rygvol_SoundBank(0)
+, m_WarZ_SoundBank(0)
 {
 	__SND_ListenerPos.Assign(0,0,0);
 
@@ -83,10 +83,10 @@ int CSoundSystem::Open()
 	FMOD_CAPS        caps;
 	char             name[256];
 
-    m_SoundBank00 = NULL;
+	m_SoundBank00 = NULL;
 	m_SoundBank_Streaming = NULL;
 	m_SoundBank_Weapons = NULL;
-	m_rygvol_SoundBank = NULL;
+	m_WarZ_SoundBank = NULL;
 
 	// Create a System object and initialize.
 	result = FMOD::EventSystem_Create(&FMODEventSystem);
@@ -205,6 +205,14 @@ int CSoundSystem::Open()
 int CSoundSystem::Close()
 {
 	m_isSoundDisabled = false;
+
+	while(!m_ManagedSoundsList.empty())
+	{
+		ManagedSoundS handle = m_ManagedSoundsList.front();
+		Release(handle.handle);
+		m_ManagedSoundsList.pop_front();
+	}
+
 	if (soundsProject)
 	{
 		soundsProject->release();
@@ -215,14 +223,13 @@ int CSoundSystem::Close()
 	{
 		FMODEventSystem->unloadFSB("Sounds_bank00.fsb", 0);
 		m_SoundBank00->release();
-		FMODEventSystem->unloadFSB("rygvol_Music.fsb", 0);
+		FMODEventSystem->unloadFSB("WarZ_Music.fsb", 0);
 		m_SoundBank_Streaming->release();
 		FMODEventSystem->unloadFSB("AutomaticWeapons.fsb", 0);
 		m_SoundBank_Weapons->release();
 
-		FMODEventSystem->unloadFSB("rygvol_Sounds.fsb", 0);
-		m_rygvol_SoundBank->release();
-
+		FMODEventSystem->unloadFSB("WarZ_Sounds.fsb", 0);
+		m_WarZ_SoundBank->release();
 
 		FMOD::NetEventSystem_Shutdown();
 		FMODEventSystem->release();
@@ -270,19 +277,19 @@ int CSoundSystem::LoadSoundEffects(const char *basedir, const char *fname)
 	delete [] fileBuffer;
 
 	// preload FSB files, as otherwise we will have lags during gameplay
-    FMOD::System *FMODSystem = 0;
+	FMOD::System *FMODSystem = 0;
 	rv = FMODEventSystem->getSystemObject(&FMODSystem); SND_ERR_CHK(rv);
 	rv = FMODSystem->createSound("Data/Sounds/Sounds_bank00.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_SoundBank00); SND_ERR_CHK(rv);
 	rv = FMODEventSystem->preloadFSB("Sounds_bank00.fsb", 0, m_SoundBank00); SND_ERR_CHK(rv);
 
-	rv = FMODSystem->createSound("Data/Sounds/rygvol_Music.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_SoundBank_Streaming); SND_ERR_CHK(rv);
-	rv = FMODEventSystem->preloadFSB("rygvol_Music.fsb", 0, m_SoundBank_Streaming); SND_ERR_CHK(rv);
+	rv = FMODSystem->createSound("Data/Sounds/WarZ_Music.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_SoundBank_Streaming); SND_ERR_CHK(rv);
+	rv = FMODEventSystem->preloadFSB("WarZ_Music.fsb", 0, m_SoundBank_Streaming); SND_ERR_CHK(rv);
 
 	rv = FMODSystem->createSound("Data/Sounds/AutomaticWeapons.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_SoundBank_Weapons); SND_ERR_CHK(rv);
 	rv = FMODEventSystem->preloadFSB("AutomaticWeapons.fsb", 0, m_SoundBank_Weapons); SND_ERR_CHK(rv);
 
-	rv = FMODSystem->createSound("Data/Sounds/rygvol_Sounds.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_rygvol_SoundBank); SND_ERR_CHK(rv);
-	rv = FMODEventSystem->preloadFSB("rygvol_Sounds.fsb", 0, m_rygvol_SoundBank); SND_ERR_CHK(rv);
+	rv = FMODSystem->createSound("Data/Sounds/WarZ_Sounds.fsb", FMOD_CREATECOMPRESSEDSAMPLE, 0, &m_WarZ_SoundBank); SND_ERR_CHK(rv);
+	rv = FMODEventSystem->preloadFSB("WarZ_Sounds.fsb", 0, m_WarZ_SoundBank); SND_ERR_CHK(rv);
 
 	return 1;
 }
@@ -361,7 +368,31 @@ FMOD::EventReverb* CSoundSystem::createPresetReverb(const char* presetName)
 }
 
 //----------------------------------------------------------------
-void* CSoundSystem::Play(int SampleID, const r3dPoint3D& Pos)
+float CSoundSystem::getEventMax3DDistance(int SampleID)
+{
+	if (!FMODEventSystem || !soundsProject)
+		return -1.0f;
+	if(SampleID == -1)
+		return -1.0f;
+
+	FMOD::Event *e = 0;
+	FMOD_RESULT result;
+	result = soundsProject->getEventByProjectID(SampleID, FMOD_EVENT_INFOONLY, &e);
+	SND_ERR_CHK(result);
+
+	if (!e) return -1.0f;
+
+	FMOD_MODE mode;
+	e->getPropertyByIndex(FMOD_EVENTPROPERTY_MODE, &mode);
+	r3d_assert(mode == FMOD_3D); // should be called only for 3D events
+
+	float dist=0.0f;
+	e->getPropertyByIndex(FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &dist);
+
+	return dist;
+}
+
+void* CSoundSystem::Play(int SampleID, const r3dPoint3D& Pos, bool donotcheckIsAudible)
 {
 	if (!FMODEventSystem || !soundsProject)
 		return NULL;
@@ -374,8 +405,15 @@ void* CSoundSystem::Play(int SampleID, const r3dPoint3D& Pos)
 	SND_ERR_CHK(result);
 
 	if(Is3DSound(e))
-		return Play3D(SampleID, Pos);
+		return Play3D(SampleID, Pos, donotcheckIsAudible);
 	return Play2D(SampleID);
+}
+
+void CSoundSystem::PlayAndForget(int SampleID, const r3dPoint3D& Pos)
+{
+	void* handle = Play(SampleID, Pos);
+	if(handle)
+		m_ManagedSoundsList.push_back(ManagedSoundS(handle));
 }
 
 void * CSoundSystem::Play2D(int SampleID)
@@ -413,7 +451,7 @@ bool CSoundSystem::SetSoundPos(void *handle, const r3dPoint3D& pos)
 	return !paused;
 }
 
-void * CSoundSystem::Play3D(int SampleID, const r3dPoint3D& Pos)
+void * CSoundSystem::Play3D(int SampleID, const r3dPoint3D& Pos, bool donotcheckIsAudible)
 {
 	if (!FMODEventSystem)
 		return NULL;
@@ -426,8 +464,9 @@ void * CSoundSystem::Play3D(int SampleID, const r3dPoint3D& Pos)
 	if (result != FMOD_OK)
 		return 0;
 
-	if (!IsAudible(eInfo, Pos))
-		return 0;
+	if(!donotcheckIsAudible)
+		if (!IsAudible(eInfo, Pos))
+			return 0;
 
 	result = soundsProject->getEventByProjectID(SampleID, FMOD_EVENT_NONBLOCKING, &e); 
 	if (FMOD_OK != result)
@@ -446,6 +485,16 @@ void CSoundSystem::SetPaused(void* handle, bool paused)
 	FMOD::Event *e = reinterpret_cast<FMOD::Event*>(handle);
 	if (e) 
 		e->setPaused(paused);
+}
+
+bool CSoundSystem::GetPaused(void* handle)
+{
+	bool res = false;
+	FMOD::Event *e = reinterpret_cast<FMOD::Event*>(handle);
+	if (e) 
+		e->getPaused(&res);
+
+	return res;
 }
 
 void CSoundSystem::Stop(void *handle)
@@ -500,6 +549,12 @@ int CSoundSystem::GetState(void *handle) const
 	return st;
 }
 
+bool CSoundSystem::isPlaying(void* handle) const
+{
+	int state = GetState(handle);
+	return ((state & FMOD_EVENT_STATE_CHANNELSACTIVE) || (state & FMOD_EVENT_STATE_PLAYING)); 
+}
+
 void CSoundSystem::Update(const r3dPoint3D &pos, const r3dPoint3D &dir, const r3dPoint3D& up)
 {
 	if(!FMODEventSystem)
@@ -512,8 +567,6 @@ void CSoundSystem::Update(const r3dPoint3D &pos, const r3dPoint3D &dir, const r3
 	eventCat->setVolume(s_sound_volume->GetFloat());
 	result = FMODEventSystem->getCategory("music", &eventCat); SND_ERR_CHK(result);
 	eventCat->setVolume(s_music_volume->GetFloat());
-	result = FMODEventSystem->getCategory("master", &eventCat); SND_ERR_CHK(result);
-	eventCat->setVolume(s_comm_volume->GetFloat());
 
 	r3dPoint3D left = up.Cross(dir);
 	left.Normalize();
@@ -525,6 +578,22 @@ void CSoundSystem::Update(const r3dPoint3D &pos, const r3dPoint3D &dir, const r3
 	SND_ERR_CHK(result);
 	result = FMOD::NetEventSystem_Update();
 	SND_ERR_CHK(result);
+
+	std::list<ManagedSoundS>::iterator it;
+	float ft = r3dGetFrameTime();
+	for(it=m_ManagedSoundsList.begin(); it!=m_ManagedSoundsList.end();)
+	{
+		ManagedSoundS& s = *it;
+		if(!isPlaying(s.handle))
+			s.timeNotPlaying += ft;
+		if(s.timeNotPlaying > 5.0f) // wait 5 seconds before release, otherwise when playing a lot of similar sounds, it will cutoff those that are still playing. fmod bug i think.
+		{
+			Release(s.handle);
+			it = m_ManagedSoundsList.erase(it);
+			continue;
+		}
+		++it;
+	}
 
 	/*FMOD::System *s = 0;
 	FMODEventSystem->getSystemObject(&s);
@@ -591,7 +660,7 @@ float CSoundSystem::GetSoundMaxDistance(void *handle) const
 	float maxDist = 0;
 	if (e)
 	{
-		e->getPropertyByIndex(FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &maxDist);
+		e->getPropertyByIndex(FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &maxDist, true); // true here, as when we are calling setPropertyByIndex, we are setting it only for that particular instance
 	}
 	return maxDist;
 }
@@ -689,7 +758,7 @@ bool CSoundSystem::IsAudible(void *handle, const r3dPoint3D &pos) const
 	if(mode == FMOD_3D)
 	{
 		float maxDist = 0;
-		e->getPropertyByIndex(FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &maxDist);
+		e->getPropertyByIndex(FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &maxDist, true);
 
 		r3dPoint3D listenerPos;
 		FMODEventSystem->get3DListenerAttributes(0, reinterpret_cast<FMOD_VECTOR*>(&listenerPos), 0, 0, 0);
@@ -791,6 +860,16 @@ void CSoundSystem::SetProperty(void *handle, FMOD_EVENT_PROPERTY propID, void *v
 	r3d_assert(r == FMOD_OK);
 }
 
+void CSoundSystem::GetProperty(void *handle, FMOD_EVENT_PROPERTY propID, void *value)
+{
+	R3DPROFILE_FUNCTION("CSoundSystem::GetProperty");
+	FMOD::Event *e = reinterpret_cast<FMOD::Event*>(handle);
+	if (!e) return;
+
+	FMOD_RESULT r = e->getPropertyByIndex(propID, value, true);
+	r3d_assert(r == FMOD_OK);
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 // Server Wrapping function
@@ -817,11 +896,6 @@ int snd_UpdateSoundListener(const r3dPoint3D &Pos, const r3dPoint3D &dir, const 
 	return 1;
 }
 
-void * snd_PlaySound(int SampleID, const r3dPoint3D& pos)
-{
-	return SoundSys.Play(SampleID, pos);
-}
-
 void snd_SetGroupVolume(int groupId, int Volume)
 {
 	assert(groupId >= SOUND_GROUP_START && groupId < SOUND_GROUP_START + MAX_SOUND_GROUPS);
@@ -829,7 +903,3 @@ void snd_SetGroupVolume(int groupId, int Volume)
 	sndGroupVolumes[groupId - SOUND_GROUP_START] = Volume;
 }
 
-bool snd_SetSoundPos(void *e, const r3dPoint3D& pos)
-{
-	return SoundSys.SetSoundPos(e, pos);
-}

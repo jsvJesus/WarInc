@@ -1,47 +1,42 @@
-#include "NxApex.h"
-#ifndef __NX_RENDERMESHACTOR_H__
-#define __NX_RENDERMESHACTOR_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_RENDER_MESH_ACTOR_H
+#define NX_RENDER_MESH_ACTOR_H
 
 /*!
 \file
 \brief class NxRenderMeshActor
 */
 
+#include "NxApexActor.h"
+#include "NxApexRenderable.h"
 #include "NxUserRenderResourceManager.h"	// For NxRenderCullMode
+#include "foundation/PxVec3.h"
 
 namespace physx
 {
@@ -50,12 +45,16 @@ namespace apex
 
 PX_PUSH_PACK_DEFAULT
 
+class NxUserRenderInstanceBuffer;
 
 /**
 \brief Flags used for raycasting an NxRenderMeshActor
 */
 struct NxRenderMeshActorRaycastFlags
 {
+	/**
+	\brief Enum of flags used for raycasting an NxRenderMeshActor
+	*/
 	enum Enum
 	{
 		VISIBLE_PARTS =	(1 << 0),
@@ -130,9 +129,9 @@ public:
 	virtual bool					getVisibilities(physx::PxU8* visibilityArray, physx::PxU32 visibilityArraySize) const = 0;
 
 	/**
-	\brief Set the visibility of the indexed part.
+	\brief Set the visibility of the indexed part.  Returns true iff the visibility for the part is changed by this operation.
 	*/
-	virtual void					setVisibility(bool visible, physx::PxU16 partIndex = 0) = 0;
+	virtual bool					setVisibility(bool visible, physx::PxU16 partIndex = 0) = 0;
 
 	/**
 	\brief Returns the visibility of the indexed part.
@@ -151,6 +150,11 @@ public:
 	indices are in an arbitrary order.
 	*/
 	virtual const physx::PxU32*		getVisibleParts() const = 0;
+
+	/**
+	\brief Returns the number of bones used by this render mesh
+	*/
+	virtual physx::PxU32            getBoneCount() const = 0;
 
 	/**
 	\brief Sets the local-to-world transform for the indexed bone.  The transform need not be orthonormal.
@@ -174,7 +178,7 @@ public:
 	/**
 	\brief Returns the local-to-world transform for the indexed bone.
 	*/
-	virtual const physx::PxMat44	getTM(physx::PxU32 partIndex = 0) const = 0;
+	virtual const physx::PxMat44	getTM(physx::PxU32 boneIndex = 0) const = 0;
 
 	/**
 	\brief If the number of visible parts becomes 0, or if instancing and the number of instances
@@ -186,6 +190,11 @@ public:
 	\brief If this set to true, render visibility will not be updated until the user calls syncVisibility().
 	*/
 	virtual void					setBufferVisibility(bool bufferVisibility) = 0;
+
+	/**
+	\brief Sets the override material for the submesh with the given index.
+	*/
+	virtual void					setOverrideMaterial(PxU32 submeshIndex, const char* overrideMaterialName) = 0;
 
 	/**
 	\brief Sync render visibility with that set by the user.  Only
@@ -239,4 +248,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif // __NX_RENDERMESHACTOR_H__
+#endif // NX_RENDER_MESH_ACTOR_H

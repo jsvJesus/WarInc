@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,29 +42,34 @@
 #include <RendererInstanceBuffer.h>
 #include "OGLRenderer.h"
 
-class OGLRendererInstanceBuffer : public RendererInstanceBuffer
+namespace SampleRenderer
 {
+
+	class OGLRendererInstanceBuffer : public RendererInstanceBuffer
+	{
 	public:
 		OGLRendererInstanceBuffer(const RendererInstanceBufferDesc &desc);
 		virtual ~OGLRendererInstanceBuffer(void);
-		
-		physx::PxMat34Legacy getModelMatrix(physx::PxU32 index) const;
-	
+
+		physx::PxMat44 getModelMatrix(PxU32 index) const;
+
 	private:
-		physx::PxVec3 getInstanceColumn(const void *instance, const OGLRendererInstanceBuffer::SemanticDesc &sd) const;
-	
+		PxVec3 getInstanceColumn(const void *instance, const OGLRendererInstanceBuffer::SemanticDesc &sd) const;
+
 	public:
 
 		virtual void *lock(void);
 		virtual void  unlock(void);
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstInstance) const;
-		virtual void  unbind(physx::PxU32 streamID) const;
-	
+
+		virtual void  bind(PxU32 streamID, PxU32 firstInstance) const;
+		virtual void  unbind(PxU32 streamID) const;
+
 	private:
-		physx::PxU32    m_bufferSize;
+		PxU32    m_bufferSize;
 		void    *m_buffer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

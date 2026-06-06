@@ -1,42 +1,37 @@
-#ifndef NX_CLOTHING_USER_RECOMPUTE
-#define NX_CLOTHING_USER_RECOMPUTE
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "NxApex.h"
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
 
-class NxClothConstrainCoefficients;
+#ifndef NX_CLOTHING_USER_RECOMPUTE_H
+#define NX_CLOTHING_USER_RECOMPUTE_H
+
+#include "NxApexUsingNamespace.h"
+#include "NxRenderMeshAsset.h"
+#include "NxAbstractMeshDescription.h"
+#include "NxClothingPhysicalMesh.h"
 
 namespace physx
 {
@@ -65,57 +60,6 @@ public:
 	virtual ~NxClothingUserRecompute() {}
 
 	/**
-	\brief a simplified, temporal container for a mesh with non-interleaved vertex buffers
-	*/
-	struct AbstractMeshDescription
-	{
-		AbstractMeshDescription() : numVertices(0), numIndices(0), numBonesPerVertex(0),
-			pPosition(NULL), pNormal(NULL), pTangent(NULL), pBitangent(NULL),
-			pBoneIndices(NULL), pBoneWeights(NULL), pConstraints(NULL), pIndices(NULL),
-			avgEdgeLength(0.0f), avgTriangleArea(0.0f), pMin(0.0f), pMax(0.0f), centroid(0.0f), radius(0.0f) {}
-
-		/// the number of vertices in the mesh
-		physx::PxU32	numVertices;
-		/// the number of indices in the mesh
-		physx::PxU32	numIndices;
-		/// the number of bones per vertex in the boneIndex and boneWeights buffer. Can be 0
-		physx::PxU32	numBonesPerVertex;
-
-		/// pointer to the positions array
-		physx::PxVec3* __restrict pPosition;
-		/// pointer to the normals array
-		physx::PxVec3* __restrict pNormal;
-		/// pointer to the tangents array
-		physx::PxVec3* __restrict pTangent;
-		/// pointer to the bitangents/binormal array
-		physx::PxVec3* __restrict pBitangent;
-		/// pointer to the bone incides array
-		physx::PxU16* __restrict pBoneIndices;
-		/// pointer to the bone weights array
-		physx::PxF32* __restrict pBoneWeights;
-		/// pointer to the cloth constraints array
-		NxClothConstrainCoefficients* __restrict pConstraints;
-		/// pointer to the indices array
-		physx::PxU32*	__restrict pIndices;
-
-		/// updates the derived data
-		void UpdateDerivedInformation(NxApexRenderDebug* renderDebug);
-
-		/// Derived Data, average Edge Length
-		physx::PxF32 avgEdgeLength;
-		/// Derived Data, average Triangle Area
-		physx::PxF32 avgTriangleArea;
-		/// Derived Data, Bounding Box min value
-		physx::PxVec3 pMin;
-		/// Derived Data, Bounding Box max value
-		physx::PxVec3 pMax;
-		/// Derived Data, Average of pMin and pMax
-		physx::PxVec3 centroid;
-		/// Derived Data, Half the distance between pMin and pMax
-		physx::PxF32 radius;
-	};
-
-	/**
 	\brief A fast inverse square root. Mainly used to normalize vectors more quickly (and less accurately)
 	*/
 	inline static physx::PxF32 invSqrt(physx::PxF32 input)
@@ -132,16 +76,16 @@ public:
 	/**
 	\brief Called whenever only the normals of a mesh need updating
 	*/
-	virtual void recomputeRenderingNormals(AbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 submeshIndex)
+	virtual void recomputeRenderingNormals(NxAbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 submeshIndex)
 	{
 		const physx::PxU32 numGraphicalVertices =			rendermesh->getSubmesh(submeshIndex).getVertexBuffer().getVertexCount();
 		const physx::PxU32 numGraphicalVertexIndices =		rendermesh->getSubmesh(submeshIndex).getIndexCount(0);
 		const physx::PxU32* indices =					rendermesh->getSubmesh(submeshIndex).getIndexBuffer(0);
-		assert(numGraphicalVertices == destMesh.numVertices);
-		assert(destMesh.pPosition != NULL);
-		assert(destMesh.pNormal != NULL);
-		assert(destMesh.pTangent == NULL);
-		assert(destMesh.pBitangent == NULL);
+		PX_ASSERT(numGraphicalVertices == destMesh.numVertices);
+		PX_ASSERT(destMesh.pPosition != NULL);
+		PX_ASSERT(destMesh.pNormal != NULL);
+		PX_ASSERT(destMesh.pTangent == NULL);
+		PX_ASSERT(destMesh.pBitangent == NULL);
 
 		memset(destMesh.pNormal, 0, sizeof(physx::PxVec3) * destMesh.numVertices);
 
@@ -172,7 +116,7 @@ public:
 	/**
 	\brief Called whenever only the tangent and binormal needs recomputing. This is the case when the normals are built from skinning already
 	*/
-	virtual void recomputeRenderingTangents(AbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 uvChannel, physx::PxU32 submeshIndex)
+	virtual void recomputeRenderingTangents(NxAbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 uvChannel, physx::PxU32 submeshIndex)
 	{
 		const physx::PxU32 numGraphicalVertices =		rendermesh->getSubmesh(submeshIndex).getVertexBuffer().getVertexCount();
 		const physx::PxU32 numGraphicalVertexIndices =	rendermesh->getSubmesh(submeshIndex).getIndexCount(0);
@@ -207,13 +151,13 @@ public:
 			return;    // Only handling (float,float) uvs for now
 		}
 
-		assert(uvs != NULL);
+		PX_ASSERT(uvs != NULL);
 
-		assert(numGraphicalVertices == destMesh.numVertices);
-		assert(destMesh.pPosition != NULL);
-		assert(destMesh.pNormal == NULL);
-		assert(destMesh.pTangent != NULL);
-		assert(destMesh.pBitangent != NULL);
+		PX_ASSERT(numGraphicalVertices == destMesh.numVertices);
+		PX_ASSERT(destMesh.pPosition != NULL);
+		PX_ASSERT(destMesh.pNormal == NULL);
+		PX_ASSERT(destMesh.pTangent != NULL);
+		PX_ASSERT(destMesh.pBitangent != NULL);
 
 		memset(destMesh.pTangent, 0, sizeof(physx::PxVec3) * destMesh.numVertices);
 		memset(destMesh.pBitangent, 0, sizeof(physx::PxVec3) * destMesh.numVertices);
@@ -277,7 +221,7 @@ public:
 	/**
 	\brief Called whenever all components of the tangent space needs recomputing.
 	*/
-	virtual void recomputeRenderingTangentSpace(AbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 uvChannel, physx::PxU32 submeshIndex)
+	virtual void recomputeRenderingTangentSpace(NxAbstractMeshDescription& destMesh, const NxRenderMeshAsset* rendermesh, physx::PxU32 uvChannel, physx::PxU32 submeshIndex)
 	{
 		const physx::PxU32 numGraphicalVertices =		rendermesh->getSubmesh(submeshIndex).getVertexBuffer().getVertexCount();
 		const physx::PxU32 numGraphicalVertexIndices =	rendermesh->getSubmesh(submeshIndex).getIndexCount(0);
@@ -313,13 +257,13 @@ public:
 			return;	// Only handling (float,float) uvs for now
 		}
 
-		assert(uvs != NULL);
+		PX_ASSERT(uvs != NULL);
 
-		assert(numGraphicalVertices == destMesh.numVertices);
-		assert(destMesh.pPosition != NULL);
-		assert(destMesh.pNormal != NULL);
-		assert(destMesh.pTangent != NULL);
-		assert(destMesh.pBitangent != NULL);
+		PX_ASSERT(numGraphicalVertices == destMesh.numVertices);
+		PX_ASSERT(destMesh.pPosition != NULL);
+		PX_ASSERT(destMesh.pNormal != NULL);
+		PX_ASSERT(destMesh.pTangent != NULL);
+		PX_ASSERT(destMesh.pBitangent != NULL);
 
 		memset(destMesh.pNormal, 0, sizeof(physx::PxVec3) * destMesh.numVertices);
 
@@ -404,4 +348,4 @@ PX_POP_PACK
 }
 } // namespace physx::apex
 
-#endif
+#endif // NX_CLOTHING_USER_RECOMPUTE_H

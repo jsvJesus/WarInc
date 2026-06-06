@@ -71,7 +71,7 @@ void Ammo::Fire(const r3dPoint3D& hitPos, const r3dPoint3D& muzzlerPos, const D3
 		return;
 
 	r3d_assert(owner->isObjType(OBJTYPE_Human));
-	const obj_AI_Player* plr = (obj_AI_Player*)owner;
+	const obj_Player* plr = (obj_Player*)owner;
 
 	r3dPoint3D spawnPos = muzzlerPos;
 	r3dPoint3D spawnRot = r3dPoint3D(0, 0, 0);
@@ -81,24 +81,13 @@ void Ammo::Fire(const r3dPoint3D& hitPos, const r3dPoint3D& muzzlerPos, const D3
 	{
 		// cast ray down and find where we should place mine. should be in front of character, facing away from him
 		PxRaycastHit hit;
-		PxSceneQueryFilterData filter(
-			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
-			PxSceneQueryFilterFlag::eSTATIC
-		);
-
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
 		// muzzlePos is the correct position for the hands.
-		if(g_pPhysicsWorld->raycastSingle(
-			PxVec3(muzzlerPos.x, muzzlerPos.y + 1.0f, muzzlerPos.z),
-			PxVec3(0.0f, -1.0f, 0.0f),
-			50.0f,
-			PxSceneQueryFlag::ePOSITION,
-			hit,
-			filter
-		))
+		if(g_pPhysicsWorld->raycastSingle(PxVec3(muzzlerPos.x, muzzlerPos.y+1, muzzlerPos.z), PxVec3(0, -1, 0), 50.0f, PxSceneQueryFlag::eIMPACT, hit, filter))
 		{
-			spawnPos.x = hit.position.x;
-			spawnPos.y = hit.position.y;
-			spawnPos.z = hit.position.z;
+			spawnPos.x = hit.impact.x;
+			spawnPos.y = hit.impact.y;
+			spawnPos.z = hit.impact.z;
 		}
 			
 		spawnRot.x = (plr->m_fPlayerRotation) + R3D_RAD2DEG(plr->bodyAdjust_x) + 180;
@@ -119,32 +108,11 @@ void Ammo::Fire(const r3dPoint3D& hitPos, const r3dPoint3D& muzzlerPos, const D3
 		spawnRot = rot;
 	}
 
-#ifndef FINAL_BUILD
-	extern bool g_bEditMode;
-	if(!g_bEditMode) // in editor mode just create mine
-#endif
-	{
-		if(isMine)
-		{
-			// send request to server from local player only
-			if(owner->NetworkLocal && owner->isObjType(OBJTYPE_Human))
-			{
-				PKT_C2S_PlayerCreateMine_s n;
-				n.wid = plr->m_SelectedWeapon;
-				n.pos = spawnPos;
-				n.rot = spawnRot;
-				p2pSendToHost(owner, &n, sizeof(n));
-			}
-
-			// exit, do not create anything until server will sent confirmation
-			return;
-		}
-	}
-
 	AmmoShared* ammoSh = (AmmoShared*)srv_CreateGameObject(m_BulletClass, "bullet", spawnPos);
 	ammoSh->m_Ammo = this;
 	ammoSh->m_Weapon = weapon;
 	ammoSh->ownerID = owner->GetSafeID();
+	ammoSh->m_MuzzlerStartPos = muzzlerPos;
 	ammoSh->m_FireDirection = (hitPos-muzzlerPos).NormalizeTo();
 	ammoSh->m_AddedDelay = added_delay;
 	ammoSh->SetRotationVector(spawnRot);

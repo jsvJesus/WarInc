@@ -479,6 +479,7 @@ void EternityWebBrowser::SetURL(const char *url)
 void EternityWebBrowser::Update()
 {
 	if (!wnd || !(tex->GetFlags() & r3dTexture::fCreated) || !d_show_browser->GetBool()) return;
+	R3DPROFILE_FUNCTION("EternityWebBrowser::Update");
 
 	//	Send input events to the web browser
 	int x = 0, y = 0;
@@ -638,7 +639,7 @@ void EternityWebBrowser::ClearURLHandler(const char *urlPrefix)
 	UrlHandler *h = FindURLHandler(urlPrefix);
 	if (h)
 	{
-		uint32_t idx = static_cast<uint32_t>(h - &urlHandlers.GetFirst());
+		uint32_t idx = h - &urlHandlers.GetFirst();
 		urlHandlers.Erase(idx);
 	}
 }
@@ -651,11 +652,7 @@ EternityWebBrowser::D3DCreateResource() /*OVERRIDE*/
 {
 	if( texWidth && texHeight )
 	{
-		extern D3DPOOL r3dDefaultTexturePool;
-		D3DPOOL origPool = r3dDefaultTexturePool;
-		r3dDefaultTexturePool = D3DPOOL_DEFAULT;
-		tex->Create(texWidth, texHeight, D3DFMT_A8R8G8B8, 1);
-		r3dDefaultTexturePool = origPool;
+		tex->Create(texWidth, texHeight, D3DFMT_A8R8G8B8, 1, D3DPOOL_DEFAULT);
 
 		//	Clear texture
 		void *data = tex->Lock(true);

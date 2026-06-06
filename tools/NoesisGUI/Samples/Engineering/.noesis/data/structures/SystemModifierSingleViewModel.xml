@@ -1,3 +1,0 @@
-    <Class Name="SystemModifierSingleViewModel" Base="NoesisStudioInternals.SystemModifierViewModel">
-      <Property Name="Value" Type="Number" NumberMinValue="0" NumberMaxValue="1"/>
-    </Class>

@@ -96,13 +96,6 @@ BOOL obj_Bullet::OnDestroy()
 	return parent::OnDestroy();
 }
 
-
-
-void obj_Bullet::OnCollide(PhysicsCallbackObject *tobj, CollisionInfo &trace)
-{
-	return;
-}
-
 void MatrixGetYawPitchRoll ( const D3DXMATRIX & , float &, float &, float & );
 
 BOOL obj_Bullet::Update()
@@ -137,34 +130,21 @@ BOOL obj_Bullet::Update()
 	PxSphereGeometry sphere(0.0025f); // Make it tiny. 5 milimeter diameter
 	PxTransform pose(PxVec3(GetPosition().x, GetPosition().y, GetPosition().z), PxQuat(0,0,0,1));
 
-	PxSweepBuffer hit;
-	PxSceneQueryFilterData filter(
-		PxFilterData(collisionFlag, 0, 0, 0),
-		PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
-	);
-
-	PxSceneQueryFlags hitFlags =
-		PxSceneQueryFlag::ePOSITION |
-		PxSceneQueryFlag::eNORMAL |
-		PxSceneQueryFlag::eFACE_INDEX;
-
-	if(g_pPhysicsWorld->PhysXScene->sweep(
-		sphere,
-		pose,
-		PxVec3(motion.x, motion.y, motion.z),
-		motionLen,
-		hit,
-		hitFlags,
-		filter
-	))
+	PxSweepHit hit;
+	PxSceneQueryFilterData filter(PxFilterData(collisionFlag, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
+	
+	
+	if(g_pPhysicsWorld->PhysXScene->sweepSingle(sphere, pose, PxVec3(motion.x, motion.y, motion.z), motionLen, PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eNORMAL, hit, filter))
 	{
-		if(OnHit(hit.block))
-		{
+
+		// if the hit is the final stop. 
+		if ( OnHit(hit) ) {
 			return false;
 		}
 	}
-	else
+	else 
 	{
+		// perform movement
 		SetPosition(GetPosition() + m_AppliedVelocity * r3dGetFrameTime());
 	}
 
@@ -182,22 +162,20 @@ bool obj_Bullet::OnHit( PxSweepHit &hit )
 	if(!owner || (owner->NetworkLocal == false ) )
 		return true;
 
-	obj_AI_Player* ownerPlayer = (obj_AI_Player*)owner;
+	obj_Player* ownerPlayer = (obj_Player*)owner;
 
 	GameObject* shootTarget = NULL; 
 	r3dMaterial* shootMaterial = NULL;
 	PhysicsCallbackObject* target = NULL;
 	const char * hitActorName = NULL;
 
-	r3dVector hitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
+	r3dVector hitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
 	r3dVector hitNormal = r3dPoint3D(hit.normal.x, hit.normal.y, hit.normal.z);
-
-	PxRigidActor* hitActor = hit.shape ? hit.shape->getActor() : NULL;
-
-	if(hitActor && (target = static_cast<PhysicsCallbackObject*>(hitActor->userData)))
+	if( hit.shape && (target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData)))
 	{
-		hitActorName = hitActor->getName();
-		shootTarget = target->isGameObject();
+
+		hitActorName = hit.shape->getActor().getName(); 
+		shootTarget= target->isGameObject();
 
 		if( shootTarget)
 		{
@@ -213,7 +191,7 @@ bool obj_Bullet::OnHit( PxSweepHit &hit )
 
 	}
 
-	if ( ProcessBulletHit( m_DamageFromPiercable, ownerPlayer, hitPoint, hitNormal, shootTarget, shootMaterial, hitActorName,  m_Weapon )  == false ) 
+	if ( ProcessBulletHit( m_DamageFromPiercable, ownerPlayer, hitPoint, hitNormal, shootTarget, shootMaterial, hitActorName,  m_Weapon, m_MuzzlerStartPos )  == false ) 
 	{
 		// the bullet is still live. 
 		SetPosition( hitPoint + m_AppliedVelocity * 0.1f);

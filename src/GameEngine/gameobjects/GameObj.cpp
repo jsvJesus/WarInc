@@ -13,9 +13,19 @@
 
 extern bool g_bEditMode;
 
+std::vector<GameObject*> gSkipOcclusionCheckGameObjects;
+
 IMPLEMENT_CLASS(GameObject, "GameObject", "Object");
 AUTOREGISTER_CLASS(GameObject);
 
+void GameObject::setSkipOcclusionCheck(bool set)
+{
+	if(!wasSetSkipOcclusionCheck && set)
+		gSkipOcclusionCheckGameObjects.push_back(this);
+	else if(wasSetSkipOcclusionCheck && !set)
+		gSkipOcclusionCheckGameObjects.erase(std::find(gSkipOcclusionCheckGameObjects.begin(), gSkipOcclusionCheckGameObjects.end(), this));
+	wasSetSkipOcclusionCheck = set;
+}
 
 //
 // GameObject
@@ -27,6 +37,8 @@ GameObject::GameObject()
 	, vLoadTimePos(0 ,0, 0)
 	, m_isActive(1)
 	, ShadowExDirty(1)
+	, DrawDistanceSq( 0 )
+	, wasSetSkipOcclusionCheck(false)
 {
 	m_bEnablePhysics = true;
 	m_isSerializable = true;
@@ -85,6 +97,13 @@ GameObject::~GameObject()
 #endif
 
 	if(PhysicsObject) delete PhysicsObject;
+
+	setSkipOcclusionCheck(false);	
+
+	if(NetworkID>0)
+	{
+		GameWorld().NetworkIDMap.erase(NetworkID);
+	}
 }
 
 void MatrixGetYawPitchRoll ( const D3DXMATRIX & mat, float & fYaw, float & fPitch, float & fRoll );
@@ -199,6 +218,26 @@ const r3dPoint3D& GameObject::GetVelocity() const
 {
 	return Velocity;
 }
+
+bool GameObject::SetNetworkID(DWORD id)
+{
+	r3d_assert(NetworkID == 0);
+	
+	NetworkID = id;
+	std::pair<ObjectManager::NetMapType::iterator, bool> result = GameWorld().NetworkIDMap.insert(std::pair<DWORD, GameObject*>(NetworkID, this));
+	r3d_assert(result.second);
+
+	return true;
+}
+
+#ifdef WO_SERVER
+INetworkHelper* GameObject::GetNetworkHelper()
+{
+	r3dError("implement GameObject::GetNetworkHelper() for object class %s", Class->Name.c_str());
+	return NULL;
+}
+#endif	
+
 
 void
 GameObject::AppendSlicedShadowRenderables( RenderArray ( & render_arrays )[ rsCount ], int inMainFrustum, const r3dCamera& Cam )
@@ -341,9 +380,7 @@ BOOL GameObject::Load(const char* fname)
 		sprintf_s(hash_string, sizeof(hash_string), "%s_%d_%d%d%d_%d:%d:%d_%d", fname, counter, date->tm_year, date->tm_mon, date->tm_mday, date->tm_hour, date->tm_min, date->tm_sec, rnd);
 		hashID = r3dHash::MakeHash(hash_string);
 		if(hashID == 0x7FFFFFFF)
-		{
-			// x64: old "__asm nop" was a no-op. Keep behavior unchanged.
-		}
+			__asm nop;
 	}
 
 	if( !( ObjFlags & OBJFLAG_AsyncLoading ) )
@@ -447,7 +484,8 @@ void GameObject::ReadSerializedData(pugi::xml_node& node)
 		ObjFlags |= OBJFLAG_DisableShadows;
 	if (!gameObjNode.attribute("CollisionPlayerOnly").empty() && gameObjNode.attribute("CollisionPlayerOnly").as_bool())
 	{
-		ObjFlags |= OBJFLAG_PlayerCollisionOnly | OBJFLAG_SkipOcclusionCheck;
+		setSkipOcclusionCheck( true );
+		ObjFlags |= OBJFLAG_PlayerCollisionOnly;
 		if(!g_bEditMode)
 			ObjFlags |= OBJFLAG_SkipDraw;
 	}
@@ -563,19 +601,24 @@ void GameObject::SavePhysicsData()
 	xmlPhysics.append_attribute("mass") = PhysicsConfig.mass;
 	xmlPhysics.append_attribute("dynamic") = PhysicsConfig.isDynamic;
 	xmlPhysics.append_attribute("explMesh") = PhysicsConfig.needExplicitCollisionMesh;
+	xmlPhysics.append_attribute("fastMoving") = PhysicsConfig.isFastMoving;
 
 	xmlFile.save_file(physicsFilename);
 }
 
-PhysicsObjectConfig GameObject::LoadPhysicsConfig(r3dMesh* mesh)
+void GameObject::LoadPhysicsConfig(const char* meshName, PhysicsObjectConfig& result)
 {
-	r3d_assert(mesh);
-
-	PhysicsObjectConfig PhysicsConfig;
+	r3d_assert(meshName);
+	
+	if(strlen(meshName) < 3)
+	{
+		r3dArtBug("meshName '%s' is too small in LoadPhysicsConfig", meshName);
+		return;
+	}
 
 	// not sure about this, it might be slow to do that for each game object
 	char physicsFilename[256];
-	r3dscpy(physicsFilename, mesh->FileName.c_str());
+	r3dscpy(physicsFilename, meshName);
 	int len = strlen(physicsFilename);
 	r3dscpy(&physicsFilename[len-3], "phx");
 	if(r3d_access(physicsFilename, 0) == 0)
@@ -593,34 +636,45 @@ PhysicsObjectConfig GameObject::LoadPhysicsConfig(r3dMesh* mesh)
 		pugi::xml_node xmlPhysics = xmlFile.child("physics");
 		if(xmlPhysics.attribute("collision_group").empty())
 		{
-			PhysicsConfig.group = PHYSCOLL_COLLISION_GEOMETRY;
+			result.group = PHYSCOLL_COLLISION_GEOMETRY;
 			int group = xmlPhysics.attribute("group").as_uint();
 			if(group == 1)
-				PhysicsConfig.isDynamic = true;
+				result.isDynamic = true;
 		}
 		else
 		{
-			PhysicsConfig.group = (PHYSICS_COLLISION_GROUPS)xmlPhysics.attribute("collision_group").as_uint();
-			PhysicsConfig.isDynamic = xmlPhysics.attribute("dynamic").as_bool();
+			result.group = (PHYSICS_COLLISION_GROUPS)xmlPhysics.attribute("collision_group").as_uint();
+			result.isDynamic = xmlPhysics.attribute("dynamic").as_bool();
 		}
 		if(!xmlPhysics.attribute("explMesh").empty())
-			PhysicsConfig.needExplicitCollisionMesh = xmlPhysics.attribute("explMesh").as_bool();
+			result.needExplicitCollisionMesh = xmlPhysics.attribute("explMesh").as_bool();
+		if(!xmlPhysics.attribute("fastMoving").empty())
+			result.isFastMoving = xmlPhysics.attribute("fastMoving").as_bool();
 		
-		PhysicsConfig.type = (PHYSICS_TYPE)xmlPhysics.attribute("type").as_uint();
-		PhysicsConfig.mass = xmlPhysics.attribute("mass").as_float();
-		PhysicsConfig.ready = true;
+		result.type = (PHYSICS_TYPE)xmlPhysics.attribute("type").as_uint();
+		result.mass = xmlPhysics.attribute("mass").as_float();
+		result.ready = true;
+		r3d_assert(result.meshFilename==NULL);
+		result.meshFilename = strdup(meshName); 
 
 		delete [] fileBuffer;
 	}
-
-	return PhysicsConfig;
 }
 
 void GameObject::ReadPhysicsConfig()
 {
-	r3dMesh* mesh = GetObjectMesh();
-	if(mesh && PhysicsObject == NULL)
-		PhysicsConfig = LoadPhysicsConfig(mesh);
+	if(PhysicsObject == NULL)
+	{
+#ifndef WO_SERVER
+		r3dMesh* mesh = GetObjectMesh();
+		if(mesh) 
+			 LoadPhysicsConfig(mesh->FileName.c_str(), PhysicsConfig);
+#else // WO_SERVER
+		// on server, load physics without mesh. mesh->FileName is equal to FileName of the object. 
+		// todo: maybe it will be a good idea to rewrite this fn and use only object's FileName, but as of this time I don't want to break anything on client side
+		 LoadPhysicsConfig(FileName.c_str(), PhysicsConfig);
+#endif
+	}
 
 	if(ObjFlags & OBJFLAG_PlayerCollisionOnly)
 		PhysicsConfig.group = PHYSCOLL_PLAYER_ONLY_GEOMETRY;
@@ -628,6 +682,7 @@ void GameObject::ReadPhysicsConfig()
 
 void GameObject::CreatePhysicsData()
 {
+	UpdateTransform();
 	if(PhysicsConfig.ready && PhysicsObject == 0 && m_bEnablePhysics)
 	{
 		if(PhysicsConfig.isDynamic || PhysicsConfig.isKinematic)
@@ -679,9 +734,15 @@ void GameObject::UpdateCollisionOnly( const int& newCollisionOnly )
 	if(collisionOnly != newCollisionOnly)
 	{
 		if(newCollisionOnly)
-			ObjFlags |= OBJFLAG_PlayerCollisionOnly | OBJFLAG_SkipOcclusionCheck;
+		{
+			setSkipOcclusionCheck(true);
+			ObjFlags |= OBJFLAG_PlayerCollisionOnly;
+		}
 		else
-			ObjFlags &= ~(OBJFLAG_PlayerCollisionOnly | OBJFLAG_SkipOcclusionCheck);
+		{
+			ObjFlags &= ~(OBJFLAG_PlayerCollisionOnly);
+			setSkipOcclusionCheck(false);
+		}
 
 		// now we also need to recreate our physics data to update collision
 		if(m_bEnablePhysics)
@@ -779,16 +840,9 @@ float GameObject::DrawPropertyEditor(float scrx, float scry, float scrw, float s
 		imgui_Static(scrx, starty, "Minimum Quality: ", 100);
 		starty += imgui_Static(scrx+100, starty, quality_level_str[(int)m_MinQualityLevel-1], 50);
 
-		if(PhysicsObject) // no scale on physics objects!!! PhysX doesn't support scale
-		{
-			scale.Assign(1.0f, 1.0f, 1.0f);
-		}
-		else
-		{
-			starty += imgui_Value_Slider(scrx, starty, "Scale X", &scale.x,	0.001f, 200.0f,	"%3.2f", 1);
-			starty += imgui_Value_Slider(scrx, starty, "Scale Y", &scale.y,	0.001f, 200.0f,	"%3.2f", 1);
-			starty += imgui_Value_Slider(scrx, starty, "Scale Z", &scale.z,	0.001f, 200.0f,	"%3.2f", 1);
-		}
+		starty += imgui_Value_Slider(scrx, starty, "Scale X", &scale.x,	0.001f, 200.0f,	"%3.2f", 1);
+		starty += imgui_Value_Slider(scrx, starty, "Scale Y", &scale.y,	0.001f, 200.0f,	"%3.2f", 1);
+		starty += imgui_Value_Slider(scrx, starty, "Scale Z", &scale.z,	0.001f, 200.0f,	"%3.2f", 1);
 
 		starty += imgui_Value_Slider(scrx, starty, "Rotation X", &vRotation.x,	0.0f, 360.0f,	"%3.2f", 1);
 		starty += imgui_Value_Slider(scrx, starty, "Rotation Y", &vRotation.y,	0.0f, 360.0f,	"%3.2f", 1);
@@ -869,7 +923,27 @@ void GameObject::PrecalculateMatrices()
 		texcScale = 0 ;
 	}
 
-	r3dPrepareMeshVSConsts(preparedVSConsts, GetTransformMatrix(), scale, texcScale );
+	r3dPrepareMeshVSConsts(preparedVSConsts, GetTransformMatrix(), scale, texcScale, r3dRenderer->ViewMatrix, r3dRenderer->ViewProjMatrix );
+}
+
+void GameObject::PrecalculateMatricesIgnoreSkinning( PrecalculatedMeshVSConsts* oConsts )
+{
+	r3dMesh *m = GetObjectLodMesh() ;
+	r3dPoint3D *scale ;
+	r3dPoint2D *texcScale ;
+
+	if( m )
+	{
+		scale = &m->unpackScale;
+		texcScale = &m->texcUnpackScale ;
+	}
+	else
+	{
+		scale = 0 ;
+		texcScale = 0 ;
+	}
+
+	r3dPrepareMeshVSConsts(*oConsts, GetTransformMatrix(), scale, texcScale, r3dRenderer->ViewMatrix, r3dRenderer->ViewProjMatrix );
 }
 
 void
@@ -886,6 +960,17 @@ GameObject::SetTransparentShadowCasting( bool enabled )
 		// first provoke removal, then clear flag
 		GameWorld().UpdateTransparentShadowCaster( this ) ;
 		PrivateFlags &= ~PRIVFLAG_TransparentShadowCaster ;
+	}
+}
+
+void GameObject::SetScale(const r3dPoint3D &v)
+{
+	vScl = v;
+	ShadowExDirty = true;
+	UpdateTransform();
+	if (PhysicsObject)
+	{
+		PhysicsObject->SetScale(v);
 	}
 }
 

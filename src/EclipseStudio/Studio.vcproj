@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="Eclipse Studio"
 	ProjectGUID="{22AD274B-9E09-431E-94D7-41780F91B239}"
 	RootNamespace="Studio"
@@ -55,7 +55,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks"
+				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;..\External\Apex\framework\public;..\External\Apex\public;..\External\Apex\framework\public\PhysX3;..\External\Apex\NxParameterized\public;..\External\Apex;..\External\Kynapse\sdk\include;..\External\AutodeskNav\sdk\include;..\External\AutodeskNav\integration"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				ExceptionHandling="1"
 				RuntimeLibrary="0"
@@ -84,11 +84,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/MACHINE:I386"
+				AdditionalOptions="/MACHINE:I386 /largeaddressaware"
 				AdditionalDependencies="dbghelp.lib winmm.lib ws2_32.lib strsafe.lib d3dx9.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib iphlpapi.lib fmodex_vc.lib fmod_event.lib fmod_event_net.lib libjpeg.lib ChilkatRel.lib rpcrt4.lib dnsapi.lib crypt32.lib Shlwapi.lib odbc32.lib odbccp32.lib wbemuuid.lib"
 				OutputFile="$(SolutionDir)\..\..\bin\Studio.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/PhysX/lib/Win32;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static&quot;;../External/Scaleform/Lib;../External/VMProtect"
+				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/PhysX/lib/Win32;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static&quot;;../External/Scaleform/Lib;../External/VMProtect;../External/Apex/lib"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
@@ -156,7 +156,7 @@
 				AdditionalOptions="/MP"
 				Optimization="0"
 				InlineFunctionExpansion="0"
-				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks"
+				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;..\External\Apex\framework\public;..\External\Apex\public;..\External\Apex\framework\public\PhysX3;..\External\Apex\NxParameterized\public;..\External\Apex;..\External\Kynapse\sdk\include;..\External\AutodeskNav\sdk\include;..\External\AutodeskNav\integration"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -185,7 +185,7 @@
 				AdditionalDependencies="dbghelp.lib winmm.lib ws2_32.lib strsafe.lib d3dx9d.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib iphlpapi.lib fmodex_vc.lib fmod_event.lib fmod_event_net.lib ChilkatDbg.lib rpcrt4.lib dnsapi.lib crypt32.lib Shlwapi.lib odbc32.lib odbccp32.lib wbemuuid.lib"
 				OutputFile="$(SolutionDir)\..\..\bin\Studio_d.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Debug_Static&quot;;../External/VMProtect"
+				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Debug_Static&quot;;../External/VMProtect;../External/Apex/lib"
 				ManifestFile="$(IntDir)\$(TargetFileName)_d.intermediate.manifest"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -256,7 +256,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\PxTask\include;.\..\External\PhysX\PxFoundation;.\..\External\PhysX\PxFoundation\internal\include;.\..\External\PhysX\PhysXProfileSDK\sdk\include;.\..\External\PhysX\PhysXVisualDebuggerSDK\PVDCommLayer\Public;.\..\External\PhysX\PhysXAPI;.\..\External\PhysX\GeomUtils\headers;.\..\External\PhysX\RepX/include;.\..\External\PhysX\PhysXAPI\characterkinematic;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks"
+				AdditionalIncludeDirectories=".\..\External;.\..\External\dxsdk\Include;.\..\External\PhysX\include;.\Sources;..\eternity\include;..\GameEngine;..\External\Scaleform\Include;..\External\Scaleform\Src;..\External\ChilKat\Include;..\External\SteamWorks;..\External\Apex\framework\public;..\External\Apex\public;..\External\Apex\framework\public\PhysX3;..\External\Apex\NxParameterized\public;..\External\Apex;..\External\Kynapse\sdk\include;..\External\AutodeskNav\sdk\include;..\External\AutodeskNav\integration"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;FINAL_BUILD"
 				ExceptionHandling="1"
 				RuntimeLibrary="0"
@@ -285,11 +285,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="dbghelp.lib CrashRptLIB.lib winmm.lib ws2_32.lib strsafe.lib d3dx9.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib iphlpapi.lib fmodex_vc.lib fmod_event.lib fmod_event_net.lib libjpeg.lib ChilkatRel.lib rpcrt4.lib dnsapi.lib crypt32.lib Shlwapi.lib odbc32.lib odbccp32.lib wbemuuid.lib"
-				OutputFile="$(SolutionDir)\..\..\bin\WarInc.exe"
+				AdditionalOptions="/MACHINE:I386 /largeaddressaware"
+				AdditionalDependencies="dbghelp.lib winmm.lib ws2_32.lib strsafe.lib d3dx9.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib iphlpapi.lib fmodex_vc.lib fmod_event.lib fmod_event_net.lib libjpeg.lib ChilkatRel.lib rpcrt4.lib dnsapi.lib crypt32.lib Shlwapi.lib odbc32.lib odbccp32.lib wbemuuid.lib"
+				OutputFile="$(SolutionDir)\..\..\bin\WarZ.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static&quot;;../External/VMProtect"
+				AdditionalLibraryDirectories=".\..\External\dxsdk\lib;../External/dbghelp/lib;../External/CrashRpt/Lib;../External/fmod;../External/PhysX/lib/Win32;../External/Scaleform/Lib;../External/Chilkat/Libs;&quot;../External/jpeg-6b/lib/Win32/Msvc80/Release_Static&quot;;../External/VMProtect;../External/Apex/lib"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -447,6 +447,22 @@
 						>
 					</File>
 					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\Barricade.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\Barricade.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\BaseItemConfig.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\BaseItemConfig.h"
+						>
+					</File>
+					<File
 						RelativePath=".\Sources\ObjectsCode\WEAPONS\Bullet.cpp"
 						>
 					</File>
@@ -463,43 +479,19 @@
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedLootbox.cpp"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\ChemLight.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedLootbox.h"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\ChemLight.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedMedKit.cpp"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\ClientWeaponArmory.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedMedKit.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedMotionSensor.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedMotionSensor.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedRespawnBeacon.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedRespawnBeacon.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedWeapon.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\DroppedWeapon.h"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\ClientWeaponArmory.h"
 						>
 					</File>
 					<File
@@ -508,6 +500,14 @@
 					</File>
 					<File
 						RelativePath=".\Sources\ObjectsCode\WEAPONS\ExplosionVisualController.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\Flare.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\Flare.h"
 						>
 					</File>
 					<File
@@ -527,6 +527,14 @@
 						>
 					</File>
 					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\GearConfig.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\GearConfig.h"
+						>
+					</File>
+					<File
 						RelativePath=".\Sources\ObjectsCode\WEAPONS\Grenade.cpp"
 						>
 					</File>
@@ -535,35 +543,11 @@
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\Mine.cpp"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\HeroConfig.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\Mine.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\obj_AutoTurret.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\obj_AutoTurret.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\obj_RiotShield.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\obj_RiotShield.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\Rocket.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\WEAPONS\Rocket.h"
+						RelativePath=".\Sources\ObjectsCode\WEAPONS\HeroConfig.h"
 						>
 					</File>
 					<File
@@ -831,19 +815,19 @@
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\BaseControlPoint.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\BaseItemSpawnPoint.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\BaseControlPoint.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\BaseItemSpawnPoint.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\BattleZone.CPP"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\BasePlayerSpawnPoint.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\BattleZone.H"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\BasePlayerSpawnPoint.h"
 						>
 					</File>
 					<File
@@ -855,19 +839,19 @@
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_BombPlacement.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\MusicTriggerArea.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_BombPlacement.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\MusicTriggerArea.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ControlPoint.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\NPCObject.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ControlPoint.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\NPCObject.h"
 						>
 					</File>
 					<File
@@ -879,43 +863,67 @@
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_DroppedBomb.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_DroppedItem.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_DroppedBomb.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_DroppedItem.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PermWeaponDrop.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ItemSpawnPoint.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PermWeaponDrop.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ItemSpawnPoint.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_SiegeObjective.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_Note.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_SiegeObjective.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_Note.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_SupplyCrate.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PermanentNote.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_SupplyCrate.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PermanentNote.h"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_UAV.cpp"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PlayerSpawnPoint.cpp"
 						>
 					</File>
 					<File
-						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_UAV.h"
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PlayerSpawnPoint.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PostBox.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_PostBox.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_StoreNPC.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_StoreNPC.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_VaultNPC.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\obj_VaultNPC.h"
 						>
 					</File>
 					<File
@@ -924,6 +932,22 @@
 					</File>
 					<File
 						RelativePath=".\Sources\ObjectsCode\Gameplay\ReverbZone.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\ReverbZoneBox.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\ReverbZoneBox.h"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\SharedUsableItem.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\ObjectsCode\Gameplay\SharedUsableItem.h"
 						>
 					</File>
 					<File
@@ -946,6 +970,14 @@
 							>
 						</File>
 						<File
+							RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ZombieDummy.cpp"
+							>
+						</File>
+						<File
+							RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ZombieDummy.h"
+							>
+						</File>
+						<File
 							RelativePath=".\Sources\ObjectsCode\Gameplay\obj_ZombieSpawn.cpp"
 							>
 						</File>
@@ -963,46 +995,10 @@
 						</File>
 					</Filter>
 				</Filter>
-				<Filter
-					Name="Dynamic Battlefield"
-					>
-					<File
-						RelativePath=".\Sources\ObjectsCode\Battlefield\obj_DBFMasterControl.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\Battlefield\obj_DBFMasterControl.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="AirStrikes"
-					>
-					<File
-						RelativePath=".\Sources\ObjectsCode\AIRSTRIKES\Airstrike.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\AIRSTRIKES\Airstrike.h"
-						>
-					</File>
-					<File
-						RelativePath=".\Sources\ObjectsCode\AIRSTRIKES\AirstrikeShared.cpp"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="Rendering"
 				>
-				<File
-					RelativePath=".\Sources\RENDERING\GrannyTestSkeleton.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\RENDERING\GrannyTestSkeleton.h"
-					>
-				</File>
 				<File
 					RelativePath="..\..\bin\Data\Shaders\DX9_P1\SYSTEM\LibSM\shadow_config.h"
 					>
@@ -1026,6 +1022,14 @@
 				<Filter
 					Name="Deffered HLSL"
 					>
+					<File
+						RelativePath=".\Sources\RENDERING\Deffered\D3DMiscFunctions.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\Sources\RENDERING\Deffered\D3DMiscFunctions.h"
+						>
+					</File>
 					<File
 						RelativePath=".\Sources\RENDERING\Deffered\DeferredHelpers.cpp"
 						>
@@ -1183,6 +1187,14 @@
 						</File>
 						<File
 							RelativePath=".\Sources\RENDERING\Deffered\PFX_Combine.h"
+							>
+						</File>
+						<File
+							RelativePath=".\Sources\RENDERING\Deffered\PFX_ComposeMultibloom.cpp"
+							>
+						</File>
+						<File
+							RelativePath=".\Sources\RENDERING\Deffered\PFX_ComposeMultibloom.h"
 							>
 						</File>
 						<File
@@ -1501,6 +1513,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Sources\MeshPropertyLib.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Sources\MeshPropertyLib.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Sources\r3dAtmosphere.cpp"
 				>
 			</File>
@@ -1576,15 +1596,19 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDBattleZone.cpp"
+					RelativePath=".\Sources\UI\HUDActionUI.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDCameraDrone.cpp"
+					RelativePath=".\Sources\UI\HUDActionUI.h"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDCameraDrone.h"
+					RelativePath=".\Sources\UI\HUDAttachments.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\HUDAttachments.h"
 					>
 				</File>
 				<File
@@ -1596,14 +1620,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDCommCalls.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\HUDCommCalls.h"
-					>
-				</File>
-				<File
 					RelativePath=".\Sources\UI\HUDDisplay.cpp"
 					>
 				</File>
@@ -1612,19 +1628,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDLaserDesignator.cpp"
+					RelativePath=".\Sources\UI\HUDGeneralStore.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDLaserDesignator.h"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\HUDMinimap.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\HUDMinimap.h"
+					RelativePath=".\Sources\UI\HUDGeneralStore.h"
 					>
 				</File>
 				<File
@@ -1636,19 +1644,31 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDRespawn.cpp"
+					RelativePath=".\Sources\UI\HUDVault.cpp"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDRespawn.h"
+					RelativePath=".\Sources\UI\HUDVault.h"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDScoreboard.cpp"
+					RelativePath=".\Sources\UI\UIAsync.h"
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\HUDScoreboard.h"
+					RelativePath=".\Sources\UI\UIItemInventory.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\UIItemInventory.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\UIMarket.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\UIMarket.h"
 					>
 				</File>
 				<File
@@ -1669,6 +1689,42 @@
 				</File>
 				<File
 					RelativePath=".\Sources\Editors\CameraSpotsManager.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionElement.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionElement.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionElementProxyObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionElementProxyObject.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionsManager.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionsManager.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionsUtils.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionType.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\Editors\CollectionType.h"
 					>
 				</File>
 				<File
@@ -1701,18 +1757,6 @@
 				</File>
 				<File
 					RelativePath=".\Sources\Editors\LevelEditor_Collections.h"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\Editors\LevelEditor_Collections_Brush_Logic.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\Editors\LevelEditor_Collections_Grid.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\Editors\LevelEditor_Collections_Misc.cpp"
 					>
 				</File>
 				<File
@@ -1780,19 +1824,19 @@
 				Name="Menus"
 				>
 				<File
-					RelativePath=".\Sources\UI\FrontEndNew.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\FrontEndNew.h"
-					>
-				</File>
-				<File
 					RelativePath=".\Sources\UI\FrontEndShared.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\Sources\UI\FrontEndShared.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\FrontEndWarZ.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\UI\FrontEndWarZ.h"
 					>
 				</File>
 				<File
@@ -1804,14 +1848,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\m_EndRound.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\m_EndRound.h"
-					>
-				</File>
-				<File
 					RelativePath=".\Sources\UI\m_LoadingScreen.cpp"
 					>
 				</File>
@@ -1820,35 +1856,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\Sources\UI\m_Login.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\m_Login.h"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\m_LoginGNA.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\m_LoginGNA.h"
-					>
-				</File>
-				<File
 					RelativePath=".\Sources\Menus\m_Main.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\Sources\Menus\m_Main.h"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\WelcomePackage.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\Sources\UI\WelcomePackage.h"
 					>
 				</File>
 			</Filter>
@@ -1885,6 +1897,14 @@
 				</File>
 				<File
 					RelativePath=".\Sources\GameCode\UserRewards.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\GameCode\UserSettings.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Sources\GameCode\UserSettings.h"
 					>
 				</File>
 				<File
@@ -1985,6 +2005,930 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="GameEngine"
+			>
+			<File
+				RelativePath="..\GameEngine\CamouflageDataManager.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\GameEngine\CamouflageDataManager.h"
+				>
+			</File>
+			<File
+				RelativePath="..\GameEngine\DebugHelpers.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\GameEngine\DebugHelpers.h"
+				>
+			</File>
+			<Filter
+				Name="ai"
+				>
+				<File
+					RelativePath="..\GameEngine\ai\NavGenerationHelpers.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\ai\NavGenerationHelpers.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\ai\NavRegionManager.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\ai\NavRegionManager.h"
+					>
+				</File>
+				<Filter
+					Name="AutodeskNav"
+					>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskCustomBridges.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskCustomBridges.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskNavAgent.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskNavAgent.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskNavMesh.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\ai\AutodeskNav\AutodeskNavMesh.h"
+						>
+					</File>
+				</Filter>
+			</Filter>
+			<Filter
+				Name="fmod"
+				>
+				<File
+					RelativePath="..\GameEngine\fmod\SoundSys.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\fmod\SoundSys.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="gameobjects"
+				>
+				<File
+					RelativePath="..\GameEngine\gameobjects\AObject.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\AObject.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexActor.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexActor.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexCommon.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexFileStream.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexFileStream.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexRenderer.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexRenderer.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexWorld.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ApexWorld.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\CollFunc.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\CollMain.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\CollMain.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\EventTransport.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\GameObj.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\GameObj.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\GenericQuadTree.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\GenericQuadTree.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Apex.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Apex.hpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Dummy.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Dummy.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Mesh.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Mesh.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Sprite.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Sprite.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Vehicle.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\obj_Vehicle.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ObjectRegistration.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ObjManag.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\ObjManag.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysObj.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysObj.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysXRepXHelpers.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysXRepXHelpers.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysXWorld.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\PhysXWorld.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\sceneBox.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\sceneBox.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\VehicleDescriptor.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\VehicleDescriptor.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\VehicleManager.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\gameobjects\VehicleManager.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Scaleform"
+				>
+				<File
+					RelativePath="..\GameEngine\APIScaleformGfx.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\APIScaleformGfx.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_HAL.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_HALSetup.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_MeshCache.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_Shader.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderBinary.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_ShaderDescs.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\Scaleform\Src\Render\D3D9\D3D9_Texture.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+				</File>
+			</Filter>
+			<Filter
+				Name="TrueNature"
+				>
+				<File
+					RelativePath="..\GameEngine\TrueNature\cubemap.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\HeightNormalVert.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\HoffmanScatter.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\HoffmanScatter.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\ITerrain.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\ITerrain.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\SkyDome.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\SkyDome.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\Sun.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\Sun.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\Terrain.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\Terrain.h"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature\Terrain_Erosion.cpp"
+					>
+				</File>
+				<Filter
+					Name="CloudPlane"
+					>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Cloud.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Cloud.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\CloudGrid.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\CloudGrid.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\CloudPlane.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\CloudPlane.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\SceneParameter.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\SceneParameter.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Shader.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Shader.h"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Shaders.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\GameEngine\TrueNature\CloudPlane\Shaders.h"
+						>
+					</File>
+				</Filter>
+			</Filter>
+			<Filter
+				Name="TrueNature2"
+				>
+				<File
+					RelativePath="..\GameEngine\TrueNature2\Terrain2.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\GameEngine\TrueNature2\Terrain2.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="PhysX Character Controller"
+				>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctBoxController.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctBoxController.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCapsuleController.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCapsuleController.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCharacterController.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCharacterController.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCharacterControllerCallbacks.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCharacterControllerManager.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctCharacterControllerManager.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctController.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctController.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctInternalStructs.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctObstacleContext.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctObstacleContext.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptBox.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptBox.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptCapsule.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptCapsule.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptVolume.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+							UsePrecompiledHeader="0"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Final|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=".\..\External\PhysX\Source\Common\src;.\..\External\PhysX\Source\foundation\include;.\..\External\PhysX\Source\GeomUtils\src;.\..\External\PhysX\Source\GeomUtils\headers;.\..\External\PhysX\include\common;.\..\External\PhysX\include\foundation;.\..\External\PhysX\include\extensions;.\..\External\PhysX\include\geometry;.\..\External\PhysX\include\characterkinematic"
+							PreprocessorDefinitions="PX_PHYSX_CHARACTER_STATIC_LIB"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctSweptVolume.h"
+					>
+				</File>
+				<File
+					RelativePath="..\External\PhysX\Source\PhysXCharacterKinematic\src\CctUtils.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
 		<File
 			RelativePath=".\Sources\ObjectsCode\WORLD\DecalChief.cpp"
 			>
@@ -2002,31 +2946,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\Sources\DrvVer.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\..\firestorm.ico"
-			>
-		</File>
-		<File
 			RelativePath=".\Sources\ObjectsCode\Nature\GrassEditorPlanes.cpp"
 			>
 		</File>
 		<File
 			RelativePath=".\Sources\ObjectsCode\Nature\GrassEditorPlanes.h"
-			>
-		</File>
-		<File
-			RelativePath=".\Sources\UI\HUD_ShootingGallery.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\Sources\UI\HUD_ShootingGallery.h"
-			>
-		</File>
-		<File
-			RelativePath=".\Sources\icon1.ico"
 			>
 		</File>
 		<File
@@ -2074,14 +2998,6 @@
 			>
 		</File>
 		<File
-			RelativePath=".\Sources\ObjectsCode\Gameplay\ReverbZoneBox.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\Sources\ObjectsCode\Gameplay\ReverbZoneBox.h"
-			>
-		</File>
-		<File
 			RelativePath=".\Sources\SteamHelper.cpp"
 			>
 		</File>
@@ -2098,11 +3014,7 @@
 			>
 		</File>
 		<File
-			RelativePath=".\Sources\WarIncBattleZoneIcon.ico"
-			>
-		</File>
-		<File
-			RelativePath=".\Sources\widu.bmp"
+			RelativePath=".\Sources\WarZIcon.ico"
 			>
 		</File>
 	</Files>

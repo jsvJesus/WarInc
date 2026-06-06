@@ -93,26 +93,29 @@ class ShaderInterface : public ShaderInterfaceBase<Uniform,ShaderPair>
 public:
     typedef const ShaderPair Shader;
 
-    ShaderInterface(Render::HAL* phal): pHal((HAL*)phal), pLastVS(0), pLastDecl(0), pLastFS(0) { }
+    ShaderInterface(HAL* phal): pHal(phal), pLastVS(0), pLastDecl(0), pLastFS(0) { }
 
-    void                BeginScene();
+    void                BeginScene()
+    {
+        pLastVS = 0;
+        pLastDecl = 0;
+        pLastFS = 0;
+    }
 
     const Shader&       GetCurrentShaders() const { return CurShaders; }
-    bool                SetStaticShader(ShaderDesc::ShaderType shader, const VertexFormat* pvf);
+    bool                SetStaticShader(VertexShaderDesc::ShaderType vshader, FragShaderDesc::ShaderType shader, const VertexFormat* pvf);
 
     void                SetTexture(Shader, unsigned stage, Render::Texture* ptexture, ImageFillMode fm, unsigned index = 0);
 
     void                Finish(unsigned meshCount);
 };
 
-class ShaderManager : public StaticShaderManager<ShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture>
+class ShaderManager : public StaticShaderManager<FragShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture>
 {
-    friend class ShaderInterface;
 public:
-    typedef StaticShaderManager<ShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture> Base;
-    typedef Uniform UniformType;
+    typedef StaticShaderManager<FragShaderDesc, VertexShaderDesc, Uniform, ShaderInterface, Texture> Base;
 
-    ShaderManager(ProfileViews* prof);
+    ShaderManager(ProfileViews* prof) : StaticShaderManager(prof), pDevice(0) { }
 
     // *** StaticShaderManager
     void    MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
@@ -127,15 +130,8 @@ public:
     void    BeginScene();
     void    EndScene();
 
-    ShaderDesc::ShaderVersion GetShaderVersion() const { return ShaderModel; }
-    static unsigned GetDrawableImageFlags() { return 0; }
-
 private:
-    FragShader                      StaticFShaders[FragShaderDesc::FSI_Count];
-    VertexShader                    StaticVShaders[VertexShaderDesc::VSI_Count];
-
-    Ptr<ID3D1x(Device)>             pDevice;        // Pointer to the D3D device.
-    ShaderDesc::ShaderVersion       ShaderModel;    // Holds which ShaderModel version should be used.
+    Ptr<ID3D1x(Device)> pDevice;
 };
 
 }}}

@@ -14,7 +14,7 @@ CLoginSessionPoller	gLoginSessionPoller;
 
 CLoginSessionPoller::CLoginSessionPoller()
 {
-	POLL_INTERVAL	= 30; //@ check every N sec
+	POLL_INTERVAL	= 120; //@ check every N sec
 	
 	CustomerID_     = 0;
 	SessionID_      = 0;
@@ -72,13 +72,8 @@ DWORD CLoginSessionPoller::PollingThread()
 
 bool CLoginSessionPoller::UpdateLoginSession()
 {
-	__int64 gameSessionId = gClientLogic().GetGameSessionID();
-	char strGameSessionID[128];
-	sprintf(strGameSessionID, "%I64d", gameSessionId);
-
 	CWOBackendReq req("api_LoginSessionPoller.aspx");
 	req.AddSessionInfo(CustomerID_, SessionID_);
-	req.AddParam("GSID", strGameSessionID);
 	req.Issue();
 	
 	// result codes from CWOBackendReq 
@@ -97,7 +92,8 @@ bool CLoginSessionPoller::UpdateLoginSession()
 			return true;
 	}
 
-	//r3dOutToLog("%d: %s\n", CustomerID_, req.bodyStr_);
+/*
+	__int64 gameSessionId = gClientLogic().GetGameSessionID();
 	if(gameSessionId != 0)
 		return true;
 
@@ -116,6 +112,7 @@ bool CLoginSessionPoller::UpdateLoginSession()
 	{
 		// failed to parse XML or something else happens
 	}
+*/	
 	
 	return true;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,34 +35,39 @@
 #include <RendererVertexBuffer.h>
 #include <RendererVertexBufferDesc.h>
 
-physx::PxU32 RendererVertexBuffer::getFormatByteSize(Format format)
+using namespace SampleRenderer;
+
+PxU32 RendererVertexBuffer::getFormatByteSize(Format format)
 {
-	physx::PxU32 size = 0;
+	PxU32 size = 0;
 	switch(format)
 	{
-		case FORMAT_FLOAT1:   size = sizeof(float) * 1; break;
-		case FORMAT_FLOAT2:   size = sizeof(float) * 2; break;
-		case FORMAT_FLOAT3:   size = sizeof(float) * 3; break;
-		case FORMAT_FLOAT4:   size = sizeof(float) * 4; break;
-		case FORMAT_UBYTE4:   size = sizeof(physx::PxU8)  * 4; break;
-		case FORMAT_USHORT4:  size = sizeof(physx::PxU16) * 4; break;
-		case FORMAT_COLOR:    size = sizeof(physx::PxU8)  * 4; break;
+	case FORMAT_FLOAT1:   		size = sizeof(float) * 1; break;
+	case FORMAT_FLOAT2:   		size = sizeof(float) * 2; break;
+	case FORMAT_FLOAT3:   		size = sizeof(float) * 3; break;
+	case FORMAT_FLOAT4:   		size = sizeof(float) * 4; break;
+	case FORMAT_UBYTE4:   		size = sizeof(PxU8)  * 4; break;
+	case FORMAT_USHORT4:  		size = sizeof(PxU16) * 4; break;
+	case FORMAT_COLOR_BGRA:		size = sizeof(PxU8)  * 4; break;
+	case FORMAT_COLOR_RGBA:		size = sizeof(PxU8)  * 4; break;
+	case FORMAT_COLOR_NATIVE:	size = sizeof(PxU8)  * 4; break;
+	default: break;
 	}
 	RENDERER_ASSERT(size, "Unable to determine size of Format.");
 	return size;
 }
 
 RendererVertexBuffer::RendererVertexBuffer(const RendererVertexBufferDesc &desc) :
-	RendererInteropableBuffer(desc.registerInCUDA, desc.interopContext),	
+RendererInteropableBuffer(desc.registerInCUDA, desc.interopContext),	
 	m_hint(desc.hint),
-	m_deferredUnlock(true)
+	m_deferredUnlock(desc.interopContext == NULL)
 {
 	m_maxVertices      = 0;
 	m_stride           = 0;
 	m_lockedBuffer     = 0;
 	m_numSemanticLocks = 0;
-	
-	for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+
+	for(PxU32 i=0; i<NUM_SEMANTICS; i++)
 	{
 		Format format = desc.semanticFormats[i];
 		if(format < NUM_FORMATS)
@@ -80,7 +85,7 @@ RendererVertexBuffer::~RendererVertexBuffer(void)
 	RENDERER_ASSERT(m_numSemanticLocks==0, "VertexBuffer had outstanding locks during destruction!");
 }
 
-physx::PxU32 RendererVertexBuffer::getMaxVertices(void) const
+PxU32 RendererVertexBuffer::getMaxVertices(void) const
 {
 	return m_maxVertices;
 }
@@ -96,7 +101,7 @@ RendererVertexBuffer::Format RendererVertexBuffer::getFormatForSemantic(Semantic
 	return m_semanticDescs[semantic].format;
 }
 
-void *RendererVertexBuffer::lockSemantic(Semantic semantic, physx::PxU32 &stride)
+void *RendererVertexBuffer::lockSemantic(Semantic semantic, PxU32 &stride)
 {
 	void *semanticBuffer = 0;
 	RENDERER_ASSERT(semantic < NUM_SEMANTICS, "Invalid VertexBuffer Semantic!");
@@ -116,14 +121,10 @@ void *RendererVertexBuffer::lockSemantic(Semantic semantic, physx::PxU32 &stride
 			{
 				m_numSemanticLocks++;
 				sm.locked        = true;
-				semanticBuffer   = ((physx::PxU8*)m_lockedBuffer) + sm.offset;
+				semanticBuffer   = ((PxU8*)m_lockedBuffer) + sm.offset;
 				stride           = m_stride;
 			}
 		}
-	}
-	if(semanticBuffer && semantic == SEMANTIC_COLOR)
-	{
-		swizzleColor(semanticBuffer, stride, m_maxVertices);
 	}
 	return semanticBuffer;
 }
@@ -139,7 +140,7 @@ void RendererVertexBuffer::unlockSemantic(Semantic semantic)
 		{
 			if(m_lockedBuffer && semantic == SEMANTIC_COLOR)
 			{
-				swizzleColor(((physx::PxU8*)m_lockedBuffer)+sm.offset, m_stride, m_maxVertices);
+				swizzleColor(((PxU8*)m_lockedBuffer)+sm.offset, m_stride, m_maxVertices, sm.format);
 			}
 			sm.locked = false;
 			m_numSemanticLocks--;

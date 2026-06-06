@@ -57,6 +57,7 @@ public:
 	virtual void		WriteSerializedData(pugi::xml_node& node);
 
 	virtual void		UpdateDestructionData();
+	virtual int			IsStatic() OVERRIDE;
 
 protected:
 	void PostCloneParamsCopy(obj_Building *pNew);

@@ -105,7 +105,7 @@ public:
         RTCommand* cmd = (RTCommand*)data;
         Size = cmd->Size;
         SF_ASSERT(Size <= RTCommand::MaxCommandSize);
-        memcpy(Data, (void*)cmd, Size);
+        memcpy(Data, cmd, Size);
     }
 
     void    Execute(RTCommandQueue& data)

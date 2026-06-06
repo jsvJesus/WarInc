@@ -188,8 +188,6 @@ public:
         bool waitForCache,
         const VertexFormat* pDestFormat);
 
-    virtual bool    PreparePrimitive(PrimitiveBatch* pbatch, MeshCacheItem::MeshContent &mc, bool waitForCache);
-
     RenderSync*     GetRenderSync() const { return pRenderSync; }
 
     virtual void    GetStats(Stats* stats);

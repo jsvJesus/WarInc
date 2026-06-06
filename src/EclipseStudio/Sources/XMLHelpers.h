@@ -15,7 +15,7 @@ int GetXMLCmdVarI( const char* Name, pugi::xml_node& node, CmdVar * oVar );
 int GetXMLCurve3f( const char* Name, pugi::xml_node& node, class r3dTimeGradient2* oTimeGradient );
 int GetXMLCurve3f( const char* Name, pugi::xml_node& node, class r3dBezierGradient* oBezGradient );
 
-int SetXMLVal( const char* Name, pugi::xml_node& node, float* val );
+int SetXMLVal( const char* Name, pugi::xml_node& node, const float* val );
 int SetXMLVal( const char* Name, pugi::xml_node& node, int* val );
 int SetXMLVal( const char* Name, pugi::xml_node& node, r3dString* val );
 int SetXMLVal( const char* Name, pugi::xml_node& node, std::string* val );

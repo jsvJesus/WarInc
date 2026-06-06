@@ -1,8 +1,3 @@
-#ifndef RENDER_DEBUG_DATA_H
-
-#define RENDER_DEBUG_DATA_H
-
-
 /*
  * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
  *
@@ -38,23 +33,25 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 
+#ifndef PX_RENDER_DEBUG_DATA_H
+#define PX_RENDER_DEBUG_DATA_H
+
 /*!
 \file
 \brief debug rendering classes and structures
 */
 
-#include "PxVec3.h"
-#include "PxQuat.h"
-#include "PxMat44.h"
-#include "PxBounds3.h"
-#include "PsString.h"
+#include "foundation/PxVec3.h"
+#include "foundation/PxVec2.h"
+#include "foundation/PxQuat.h"
+#include "foundation/PxMat44.h"
+#include "foundation/PxBounds3.h"
 #include <new>
 
 namespace physx
 {
-	namespace shdfnd2
+	namespace general_renderdebug4
 	{
-
 
 PX_PUSH_PACK_DEFAULT
 
@@ -80,6 +77,8 @@ struct DebugGraphDesc;
 				DEBUG_TEXT,					// display 3d text
 				DEBUG_BOUND,				// display a bounding box
 				DEBUG_POINT,				// highlight a point
+				DEBUG_POINT_SCALE,			// Debug a point with different scale on x/y/z
+				DEBUG_QUAD,					// Debug a scaled and oriented screen facing quad
 				DEBUG_RECT2D,				// display a 2d rectangle
 				DEBUG_GRADIENT_LINE,		// draw a line segment with a unique color for each point.
 				DEBUG_RAY,					// draw a ray (line with arrow on the end)
@@ -92,6 +91,7 @@ struct DebugGraphDesc;
 				DEBUG_GRADIENT_TRI,			// debug visualize a solid shaded triangle with unique vertex colors
 				DEBUG_GRADIENT_TRI_NORMALS,	// debug visualize a solid shaded triangle with unique vertex normals and vertex colors
 				DEBUG_SPHERE,				// debug visualize a coarse sphere
+				DEBUG_SQUASHED_SPHERE,		// debug visualize a sphere that has been squashed
 				DEBUG_CAPSULE,				// debug visualize a capsule (assumed PhysX SDK orientation) i.e. Y up is 'height'
 				DEBUG_AXES,					// debug visualize a set of axes using thick-rays.
 				DEBUG_ARC,					// debug visualize an arc.
@@ -99,6 +99,7 @@ struct DebugGraphDesc;
 				DEBUG_DETAILED_SPHERE,		// debug visualize a highly detailed sphere
 				DEBUG_BLOCK_INFO,			// used internally only.
 				DEBUG_GRAPH,                // display a graph
+				DEBUG_CAPSULE_TAPERED,		// debug visualize a capsule with y-up as height
 				LAST
 			};
 			static PX_INLINE PxU32 getPrimtiveSize(const DebugPrimitive &p); // returns the size of the data associated with a particular primitive type.
@@ -192,14 +193,14 @@ struct DebugGraphDesc;
 				mPosition(position),
 				mPose(pose)
 			{
-				size_t textLen = strlen(text);
-				if(textLen >= MAX_DEBUG_TEXT_STRING)
+				const char *source = text;
+				char *dest = mText;
+				char *stop = &mText[MAX_DEBUG_TEXT_STRING-1];
+				while ( *source && dest < stop )
 				{
-					text += (textLen-(MAX_DEBUG_TEXT_STRING-1));
-					textLen = (MAX_DEBUG_TEXT_STRING-1);
-
+					*dest++ = *source++;
 				}
-				physx::string::strncpy_s(mText,MAX_DEBUG_TEXT_STRING,text,textLen);
+				*dest = 0;
 			}
 			PxVec3	mPosition; // relative offset from the pose
 			PxMat44	mPose;
@@ -233,6 +234,39 @@ struct DebugGraphDesc;
 			PxVec3	mPos;
 			PxF32	mSize;
 		};
+
+
+		struct DebugQuad : public DebugPrimitive
+		{
+			DebugQuad(void) {};
+			DebugQuad(const PxVec3 &point,const PxVec2 &scale,PxF32 rotation) :
+			DebugPrimitive(DebugCommand::DEBUG_QUAD),
+				mPos(point),
+				mScale(scale),
+				mRotation(rotation)
+			{
+			}
+
+			PxVec3	mPos;
+			PxVec2 mScale;
+			PxF32  mRotation;
+		};
+
+
+		struct DebugPointScale : public DebugPrimitive
+		{
+			DebugPointScale(void) {};
+			DebugPointScale(const PxVec3 &point,PxVec3 size) :
+			DebugPrimitive(DebugCommand::DEBUG_POINT_SCALE),
+				mPos(point),
+				mSize(size)
+			{
+			}
+
+			PxVec3	mPos;
+			PxVec3	mSize;
+		};
+
 
 		// Defines a primitive to display 2d rectangle in screenspace.
 		struct DebugRect2d : public DebugPrimitive
@@ -291,7 +325,7 @@ struct DebugGraphDesc;
 		struct DebugThickRay : public DebugPrimitive
 		{
 			DebugThickRay(void) { };
-			DebugThickRay(const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 raySize) :
+			DebugThickRay(const PxVec3 &p1,const PxVec3 &p2,PxF32 raySize) :
 			DebugPrimitive(DebugCommand::DEBUG_THICK_RAY),
 				mP1(p1),
 				mP2(p2),
@@ -308,7 +342,7 @@ struct DebugGraphDesc;
 		struct DebugPlane : public DebugPrimitive
 		{
 			DebugPlane(void) { };
-			DebugPlane(const physx::PxVec3 &normal,PxF32 dCoff,PxF32 radius1,PxF32 radius2) :
+			DebugPlane(const PxVec3 &normal,PxF32 dCoff,PxF32 radius1,PxF32 radius2) :
 			DebugPrimitive(DebugCommand::DEBUG_PLANE),
 				mNormal(normal),
 				mD(dCoff),
@@ -327,7 +361,7 @@ struct DebugGraphDesc;
 		struct DebugTri : public DebugPrimitive
 		{
 			DebugTri(void) { };
-			DebugTri(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3) :
+			DebugTri(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3) :
 			DebugPrimitive(DebugCommand::DEBUG_TRI),
 				mP1(p1),
 				mP2(p2),
@@ -343,7 +377,7 @@ struct DebugGraphDesc;
 		struct DebugTriNormals : public DebugPrimitive
 		{
 			DebugTriNormals(void) { };
-			DebugTriNormals(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const physx::PxVec3 &n1,const physx::PxVec3 &n2,const physx::PxVec3 &n3) :
+			DebugTriNormals(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxVec3 &n1,const PxVec3 &n2,const PxVec3 &n3) :
 			DebugPrimitive(DebugCommand::DEBUG_TRI_NORMALS),
 				mP1(p1),mP2(p2),mP3(p3),
 				mN1(n1),mN2(n2),mN3(n3)
@@ -361,7 +395,7 @@ struct DebugGraphDesc;
 		struct DebugGradientTri : public DebugPrimitive
 		{
 			DebugGradientTri(void) { };
-			DebugGradientTri(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) :
+			DebugGradientTri(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) :
 			DebugPrimitive(DebugCommand::DEBUG_GRADIENT_TRI),
 				mP1(p1),mP2(p2),mP3(p3),
 				mC1(c1),mC2(c2),mC3(c3)
@@ -379,7 +413,7 @@ struct DebugGraphDesc;
 		struct DebugGradientTriNormals : public DebugPrimitive
 		{
 			DebugGradientTriNormals(void) { };
-			DebugGradientTriNormals(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const physx::PxVec3 &n1,const physx::PxVec3 &n2,const physx::PxVec3 &n3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) :
+			DebugGradientTriNormals(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxVec3 &n1,const PxVec3 &n2,const PxVec3 &n3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) :
 			DebugPrimitive(DebugCommand::DEBUG_GRADIENT_TRI_NORMALS),
 				mP1(p1),mP2(p2),mP3(p3),
 				mN1(n1),mN2(n2),mN3(n3),
@@ -402,16 +436,31 @@ struct DebugGraphDesc;
 		struct DebugSphere : public DebugPrimitive
 		{
 			DebugSphere(void) { };
-			DebugSphere(const physx::PxVec3 &pos,PxF32 radius) :
+			DebugSphere(PxF32 radius, PxU32 subdivision) :
 			DebugPrimitive(DebugCommand::DEBUG_SPHERE),
-				mPos(pos),
-				mRadius(radius)
+				mRadius(radius),
+				mSubdivision(subdivision)
 			{
 			};
 
-			PxVec3	mPos;
 			PxF32	mRadius;
+			PxU32	mSubdivision;
 		};
+
+		struct DebugSquashedSphere : public DebugPrimitive
+		{
+			DebugSquashedSphere(void) { };
+			DebugSquashedSphere(const PxVec3 &radius, PxU32 subdivision) :
+			DebugPrimitive(DebugCommand::DEBUG_SQUASHED_SPHERE),
+				mRadius(radius),
+				mSubdivision(subdivision)
+			{
+			};
+
+			PxVec3	mRadius;
+			PxU32	mSubdivision;
+		};
+
 
 		struct DebugCapsule : public DebugPrimitive
 		{
@@ -427,6 +476,24 @@ struct DebugGraphDesc;
 			PxF32	mRadius;
 			PxF32	mHeight;
 			PxU32	mSubdivision;
+		};
+
+		struct DebugTaperedCapsule : public DebugPrimitive
+		{
+			DebugTaperedCapsule() {}
+			DebugTaperedCapsule(PxF32 radius1, PxF32 radius2, PxF32 height, PxU32 subdivision) :
+			DebugPrimitive(DebugCommand::DEBUG_CAPSULE_TAPERED),
+				mRadius1(radius1),
+				mRadius2(radius2),
+				mHeight(height),
+				mSubdivision(subdivision)
+			{
+			}
+
+			PxF32 mRadius1;
+			PxF32 mRadius2;
+			PxF32 mHeight;
+			PxU32 mSubdivision;
 		};
 
 		struct DebugPointCylinder : public DebugPrimitive
@@ -451,14 +518,26 @@ struct DebugGraphDesc;
 			DebugCylinder(void) { };
 			DebugCylinder(PxF32 radius,PxF32 height,PxU32 subdivision,bool closeSides) :
 			DebugPrimitive(DebugCommand::DEBUG_CYLINDER),
-				mRadius(radius),
+				mRadius1(radius),
+				mRadius2(radius),
 				mHeight(height),
 				mSubdivision(subdivision),
 				mCloseSides(closeSides)
 			{
 			};
 
-			PxF32	mRadius;
+			DebugCylinder(PxF32 radius1, PxF32 radius2, PxF32 height, PxU32 subdivision, bool closeSides) :
+			DebugPrimitive(DebugCommand::DEBUG_CYLINDER),
+				mRadius1(radius1),
+				mRadius2(radius2),
+				mHeight(height),
+				mSubdivision(subdivision),
+				mCloseSides(closeSides)
+			{
+			};
+
+			PxF32	mRadius1;
+			PxF32	mRadius2;
 			PxF32	mHeight;
 			PxU32	mSubdivision;
 			bool	mCloseSides;
@@ -483,7 +562,7 @@ struct DebugGraphDesc;
 		struct DebugArc : public DebugPrimitive
 		{
 			DebugArc(void) { };
-			DebugArc(const physx::PxVec3 &center,const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 arrowSize,bool showRoot) :
+			DebugArc(const PxVec3 &center,const PxVec3 &p1,const PxVec3 &p2,PxF32 arrowSize,bool showRoot) :
 			DebugPrimitive(DebugCommand::DEBUG_ARC),
 				mCenter(center),
 				mP1(p1),
@@ -503,7 +582,7 @@ struct DebugGraphDesc;
 		struct DebugThickArc : public DebugPrimitive
 		{
 			DebugThickArc(void) { };
-			DebugThickArc(const physx::PxVec3 &center,const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 thickness=0.02f,bool showRoot=false) :
+			DebugThickArc(const PxVec3 &center,const PxVec3 &p1,const PxVec3 &p2,PxF32 thickness=0.02f,bool showRoot=false) :
 			DebugPrimitive(DebugCommand::DEBUG_THICK_ARC),
 				mCenter(center),
 				mP1(p1),
@@ -523,7 +602,7 @@ struct DebugGraphDesc;
 		struct DebugDetailedSphere : public DebugPrimitive
 		{
 			DebugDetailedSphere(void) { };
-			DebugDetailedSphere(const physx::PxVec3 &pos,PxF32 radius,PxU32 stepCount) :
+			DebugDetailedSphere(const PxVec3 &pos,PxF32 radius,PxU32 stepCount) :
 			DebugPrimitive(DebugCommand::DEBUG_DETAILED_SPHERE),
 				mPos(pos),
 				mRadius(radius),
@@ -554,9 +633,9 @@ struct DebugGraphDesc;
 			DebugGraphStream(const DebugGraphDesc &d);
 			~DebugGraphStream(void);
 
-			physx::PxU32 getSize(void) const { return mSize; };
-			physx::PxU32 mSize;
-			physx::PxU8 *mBuffer;
+			PxU32 getSize(void) const { return mSize; };
+			PxU32 mSize;
+			PxU8 *mBuffer;
 		private:
 			bool mAllocated;
 		};
@@ -610,12 +689,12 @@ class RenderState
 {
 public:
 
-	RenderState(void)
+	RenderState()
 	{
 		mStates = 0;
-		mColor = 0xFFFFFF;
+		mColor = 0xcfcfcfcf; // needs to be symmetric to be platform independent.
 		mDisplayTime = 0.0001f;
-		mArrowColor = 0xFF0000;
+		mArrowColor = 0x5f5f5f5f; // needs to be symmetric to be platform independent.
 		mArrowSize = 0.1f;
 		mRenderScale = 1;
 		mTextScale = 1;
@@ -624,7 +703,7 @@ public:
 		mPose = NULL;
 		mBlockInfo = NULL;
 		mChangeCount = 0;
-		mCurrentPose = PxMat44::getIdentity();
+		mCurrentPose = PxMat44::createIdentity();
 	}
 
 	RenderState(PxU32 s,PxU32 c,PxF32 d,PxU32 a,PxF32 as,PxF32 rs,PxF32 ts)
@@ -639,7 +718,7 @@ public:
 		mUserPtr = 0;
 		mUserId = 0;
 		mPose = NULL;
-		mCurrentPose = PxMat44::getIdentity();
+		mCurrentPose = PxMat44::createIdentity();
 		mBlockInfo = NULL;
 		mChangeCount = 0;
 	}
@@ -690,7 +769,7 @@ public:
 		return (state&mStates) ? true : false;
 	}
 
-	PX_INLINE void setCurrentColor(physx::PxU32 c1,physx::PxU32 c2)
+	PX_INLINE void setCurrentColor(PxU32 c1,PxU32 c2)
 	{
 		mColor = c1;
 		mArrowColor = c2;
@@ -865,6 +944,9 @@ PX_INLINE PxU32 DebugCommand::getPrimtiveSize(const DebugPrimitive &p)
 	case DEBUG_TEXT:
 		ret = sizeof(DebugText);
 		break;
+	case DEBUG_QUAD:
+		ret = sizeof(DebugQuad);
+		break;
 	case DEBUG_POINT:
 		ret = sizeof(DebugPoint);
 		break;
@@ -904,6 +986,9 @@ PX_INLINE PxU32 DebugCommand::getPrimtiveSize(const DebugPrimitive &p)
 	case DEBUG_SPHERE:
 		ret = sizeof(DebugSphere);
 		break;
+	case DEBUG_SQUASHED_SPHERE:
+		ret = sizeof(DebugSquashedSphere);
+		break;
 	case DEBUG_CAPSULE:
 		ret = sizeof(DebugCapsule);
 		break;
@@ -928,6 +1013,12 @@ PX_INLINE PxU32 DebugCommand::getPrimtiveSize(const DebugPrimitive &p)
 			ret = d->getSize();
 		}
 		break;
+	case DEBUG_CAPSULE_TAPERED:
+		ret = sizeof(DebugTaperedCapsule);
+		break;
+	case DEBUG_POINT_SCALE:
+		ret = sizeof(DebugPointScale);
+		break;
 	default:
 		PX_ALWAYS_ASSERT();
 		ret = 0;
@@ -936,13 +1027,10 @@ PX_INLINE PxU32 DebugCommand::getPrimtiveSize(const DebugPrimitive &p)
 	return ret;
 }
 
-
-
-
 PX_POP_PACK
 
 }; // end of namespace
+using namespace general_renderdebug4;
 }; // end of namespace
 
-
-#endif
+#endif // PX_RENDER_DEBUG_DATA_H

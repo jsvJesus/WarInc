@@ -1,41 +1,35 @@
-#ifndef __NX_EXPLOSION_ACTOR_H__
-#define __NX_EXPLOSION_ACTOR_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_EXPLOSION_ACTOR_H
+#define NX_EXPLOSION_ACTOR_H
+
 #include "NxApex.h"
-#include "NxForceFieldShared.h"
+#include "NxFieldBoundaryShared.h"
 
 
 namespace physx
@@ -50,7 +44,11 @@ class NxExplosionAsset;
 class NxFieldBoundaryActor;
 class ExplosionAssetParam;
 
+#if NX_SDK_VERSION_MAJOR == 2
 class NxExplosionActor : public NxApexActor, public NxApexActorSource
+#elif NX_SDK_VERSION_MAJOR == 3
+class NxExplosionActor : public NxApexActor
+#endif
 {
 protected:
 	virtual ~NxExplosionActor() {}
@@ -72,12 +70,20 @@ public:
 	Returns the NxActor the Explosion has been attached to.
 	Returns NULL if the Explosion is static.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual NxActor*				getAttachedNxActor() const = 0;
+//#elif NX_SDK_VERSION_MAJOR == 3
+//	virtual PxActor*				getAttachedPxActor() const = 0;
+#endif
 
 	/**
 	Attach Explosion actor to a NxActor
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void					setAttachedNxActor(NxActor* actor) = 0;
+//#elif NX_SDK_VERSION_MAJOR == 3
+//	virtual void					setAttachedPxActor(PxActor* actor) = 0;
+#endif
 
 	/**
 	Gets location and orientation of the Explosion.
@@ -96,7 +102,7 @@ public:
 	/**
 	Gets the explosion actor's scale
 	*/
-	virtual physx::PxF32					getScale() const = 0;
+	virtual physx::PxF32			getScale() const = 0;
 
 	/**
 	Sets the explosion actor's scale
@@ -116,12 +122,16 @@ public:
 	/**
 	Adds a field boundary actor to the explosion actor to define its volume of activity.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void					addFieldBoundary(NxFieldBoundaryActor& bound) = 0;
+#endif
 
 	/**
 	Removes a field boundary actor from the explosion actor.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void					removeFieldBoundary(NxFieldBoundaryActor& bound) = 0;
+#endif
 
 	/**
 	Returns the asset the actor has been created from.
@@ -137,22 +147,30 @@ public:
 	/**
 	Returns the outer radius (far distance) the explosion has been confined.
 	*/
-	virtual physx::PxF32					getOuterBoundRadius() const = 0;
+#if NX_SDK_VERSION_MAJOR == 2
+	virtual physx::PxF32			getOuterBoundRadius() const = 0;
+#endif
 
 	/**
 	Set the outer radius (far distance) the explosion will be confined.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2	
 	virtual void					setOuterBoundRadius(physx::PxF32) = 0;
+#endif
 
 	/**
 	Returns the inner radius (near distance) the explosion has been confined.
 	*/
-	virtual physx::PxF32					getInnerBoundRadius() const = 0;
+#if NX_SDK_VERSION_MAJOR == 2
+	virtual physx::PxF32			getInnerBoundRadius() const = 0;
+#endif
 
 	/**
 	Set the inner radius (near distance) the explosion will be confined.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void					setInnerBoundRadius(physx::PxF32) = 0;
+#endif
 };
 
 PX_POP_PACK
@@ -160,5 +178,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif
-
+#endif // NX_EXPLOSION_ACTOR_H

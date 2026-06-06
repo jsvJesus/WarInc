@@ -791,7 +791,6 @@ public:
     void AddCaptureNotify(ContextCaptureNotify* notify);
     void RemoveCaptureNotify(ContextCaptureNotify* notify);
 
-    MemoryHeap* GetHeap() const { return pHeap; }
 
     // *** Render Thread API
 

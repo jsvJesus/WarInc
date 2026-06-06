@@ -56,11 +56,8 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 	void		RequestGameList();
 	int		WaitForGameList();
 
-	void		SendJoinGame(int gameNum, const char* pwd = "");
+	void		SendJoinGame(DWORD gameServerId, const char* pwd = "");
 	void		SendJoinQuickGame(const NetPacketsGameBrowser::GBPKT_C2M_QuickGameReq_s& n);
-	void		SendFriendJoinGame(const NetPacketsGameBrowser::GBPKT_C2M_JoinFriendGameReq_s& n);
-	void		SendNextRoundReq(const NetPacketsGameBrowser::GBPKT_C2M_NextRoundReq_s& n);
-	void		SendCreateGame(const NetPacketsGameBrowser::GBPKT_C2M_CreateGame_s& n);
 	int		WaitForGameJoin();
 	void		GetJoinedGameServer(char* out_ip, int* out_port, __int64* out_sessionId);
 	

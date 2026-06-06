@@ -59,8 +59,8 @@ void PhysicsHUD::Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -70,8 +70,8 @@ void PhysicsHUD::Draw()
 		ProcessPhysicsEditor();
 	}
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 }
 
 float impulse_power = 1.0f;
@@ -86,7 +86,7 @@ void PhysicsHUD::Process()
 	float	glb_MouseSens    = 0.5f;	// in range (0.1 - 1.0)
 	float  glb_MouseSensAdj = 1.0f;	// in range (0.1 - 1.0)
 
-	enablemouselook = (Mouse->IsPressed(r3dMouse::mRightButton));
+	enablemouselook = (Mouse->IsPressed(r3dMouse::mRightButton)) && !g_imgui_LockRbr;
 
 	if(Mouse->IsPressed(r3dMouse::mLeftButton))
 	{
@@ -356,12 +356,10 @@ void PhysInitCategories()
 	}
 }
 
-extern int DrawPhysicsDebug;
-
 void PhysicsHUD::ProcessPhysicsEditor()
 {
 #ifndef FINAL_BUILD
-	DrawPhysicsDebug = true;
+	d_physx_debug->SetInt(1);
 #endif
 
 	imgui_Update();
@@ -488,6 +486,14 @@ void PhysicsHUD::ProcessPhysicsEditor()
 		if(prevexplMesh != explMesh)
 			PhysicsObject->RecreatePhysicsObject = true;
 
+		int prevIsFastMoving = PhysicsObject->PhysicsConfig.isFastMoving;
+		int isFastMoving = PhysicsObject->PhysicsConfig.isFastMoving;
+		starty += imgui_Checkbox(scrx, starty, "Is fast moving or very small", &isFastMoving, 1);
+		PhysicsObject->PhysicsConfig.isFastMoving = isFastMoving!=0?true:false;
+		if(prevIsFastMoving != isFastMoving)
+			PhysicsObject->RecreatePhysicsObject = true;
+
+
 		float prev_mass = PhysicsObject->PhysicsConfig.mass;
 		starty += imgui_Value_Slider(scrx, starty, "Mass", &PhysicsObject->PhysicsConfig.mass, 0.1f, 10000.0f, "%.2f");
 		if(prev_mass != PhysicsObject->PhysicsConfig.mass)
@@ -504,6 +510,9 @@ void PhysicsHUD::ProcessPhysicsEditor()
 					delete PhysicsObject->PhysicsObject; 
 				PhysicsObject->PhysicsObject = 0;
 				
+                if(PhysicsObject->PhysicsConfig.meshFilename)
+                    free(PhysicsObject->PhysicsConfig.meshFilename);
+                PhysicsObject->PhysicsConfig.meshFilename = strdup(PhysicsObject->FileName.c_str());
 				if(PhysicsObject->PhysicsConfig.isDynamic || PhysicsObject->PhysicsConfig.isKinematic)
 					PhysicsObject->PhysicsObject = BasePhysicsObject::CreateDynamicObject(PhysicsObject->PhysicsConfig, PhysicsObject);
 				else

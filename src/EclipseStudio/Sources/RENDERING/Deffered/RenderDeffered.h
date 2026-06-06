@@ -70,6 +70,9 @@ virtual	void		Close() OVERRIDE;
 
 virtual	void		PreRender() OVERRIDE;
 virtual	void		Render() OVERRIDE;
+
+virtual void		AppendPostFXes() OVERRIDE;
+
 virtual	void		PostProcess() OVERRIDE;
 
 virtual void		CreateResolutionBoundResources() OVERRIDE;
@@ -112,9 +115,9 @@ void AppendShadowOptimizations( ShadowMapOptimizationData* oSMO, float miX, floa
 
 
 void GetCCLUT3DTextureFullPath( char (&buffer)[512], const char* name );
-bool IsCCLUT3DTextureUsedAsGlobal( const char* name );
+int IsCCLUT3DTextureUsedAsGlobal( const char* name );
 void RestoreCCLUT3DTexture ();
-void ReloadCCLUT3DTexture( const char* newName, HUDFilters filter );
+void ReloadCCLUT3DTexture( const char* newName, r3dAtmosphere::SkyPhase phase, HUDFilters filter );
 
 enum StencilCheckMode
 {
@@ -128,8 +131,6 @@ void SetupLightMaskStencilStates( StencilCheckMode scm );
 void SetupMaskWriteStencilStates( int Ref );
 void RenderShadowScheme( float sx, float sy, float width, float height );
 void RenderTransparentShadowScheme( float sx, float sy, float width, float height );
-void UpdateD3DAntiCheat();
-bool NeedD3DCheatPunishment();
 
 void ResetShadowCache();
 void UpdateHWSchadowScheme();
@@ -175,7 +176,7 @@ extern SunHDRLightPSIds gSunHDRLightPSIds ;
 
 //------------------------------------------------------------------------
 
-typedef r3dTL::TFixedArray< int, 64 > PointLightPSIds ;
+typedef r3dTL::TFixedArray< int, 128 > PointLightPSIds ;
 
 struct PointLightPShaderId
 {
@@ -183,27 +184,27 @@ struct PointLightPShaderId
 	{
 		struct
 		{
-			UINT32 sss : 1 ;
-			UINT32 diffuse_only : 1 ;
-			UINT32 ssao : 1 ;
-			UINT32 proj_texture : 1 ;
-			UINT32 shadow_mode : 2 ;
+			UINT32 sss : 1;
+			UINT32 diffuse_only : 1;
+			UINT32 ssao : 1;
+			UINT32 proj_texture : 1;
+			UINT32 shadow_mode : 3;
 		};
 
-		UINT32 Id ;
+		UINT32 Id;
 	};
 
-	PointLightPShaderId() ;
+	PointLightPShaderId();
 
-	void ToString( char* str ) ;
-	void FillMacros( ShaderMacros& defines ) ;
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
 };
 
-extern PointLightPSIds gPointLightPSIds ;
+extern PointLightPSIds gPointLightPSIds;
 
 //------------------------------------------------------------------------
 
-typedef r3dTL::TFixedArray< int, 8 > SpotLightPSIds ;
+typedef r3dTL::TFixedArray< int, 16 > SpotLightPSIds ;
 
 struct SpotLightPShaderId
 {
@@ -211,17 +212,18 @@ struct SpotLightPShaderId
 	{
 		struct
 		{
-			UINT32 aux_enabled : 1 ;
-			UINT32 shadow_mode : 2 ;
+			UINT32 aux_enabled	: 1;
+			UINT32 shadow_mode	: 2;
+			UINT32 proj_texture	: 1;
 		};
 
-		UINT32 Id ;
+		UINT32 Id;
 	};
 
-	SpotLightPShaderId() ;
+	SpotLightPShaderId();
 
-	void ToString( char* str ) ;
-	void FillMacros( ShaderMacros& defines ) ;
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
 };
 
 extern SpotLightPSIds gSpotLightPSIds ;
@@ -257,6 +259,120 @@ typedef r3dTL::TFixedArray< int, 64 > SSAOPSIds ;
 
 extern SSAOPSIds gSSAOPSIds ;
 
+struct StaticSkyPShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 twoTextures			: 1;
+			UINT32 outputNormals		: 1;
+			UINT32 scatterSun			: 1;
+			UINT32 hdr					: 1;
+		};
+
+		UINT32 Id;
+	};
+
+	StaticSkyPShaderID() ;
+
+	void ToString( char* str ) ;
+	void FillMacros( ShaderMacros& defines ) ;
+};
+
+typedef r3dTL::TFixedArray< int, 16 > StaticSkyPSIds;
+
+extern StaticSkyPSIds gStaticSkyPSIds;
+
+//------------------------------------------------------------------------
+
+struct GrassVShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 masked		: 1;
+			UINT32 has_normals	: 1;
+		};
+
+		UINT32 Id;
+	};
+
+	GrassVShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 4 > GrassVSIds;
+
+extern GrassVSIds gGrassVSIds;
+
+//------------------------------------------------------------------------
+
+struct GrassPShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 do_clip		: 1;
+			UINT32 aux			: 1;
+			UINT32 output_depth	: 1;
+		};
+
+		UINT32 Id;
+	};
+
+	GrassPShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 8 > GrassPSIds;
+
+extern GrassPSIds gGrassPSIds;
+
+//------------------------------------------------------------------------
+
+enum ShadowAccumLightType
+{
+	SHADOWACCUM_LIGHT_DIRECT,
+	SHADOWACCUM_LIGHT_POINT,
+	SHADOWACCUM_LIGHT_SPOT,
+	SHADOWACCUM_LIGHT_TYPE_COUNT
+};
+
+struct AccumShadowsPShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 light_type		: 2;
+			UINT32 fxaa_blur		: 1;
+			UINT32 hw_shadowmaps	: 1;
+			UINT32 recticular_warp	: 1;
+		};
+
+		UINT32 Id;
+	};
+
+	AccumShadowsPShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 32 > AccumShadowsPShaderIDs;
+
+extern AccumShadowsPShaderIDs gAccumShadowsPShaderIDs;
+
+//------------------------------------------------------------------------
+
 void GetDesiredRTDimmensions( float* oWidth, float* oHeight ) ;
 
 void SetupFilmToneConstants( int reg ) ;
+

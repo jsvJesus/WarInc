@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,18 +35,23 @@
 #ifndef RENDERER_TARGET_H
 #define RENDERER_TARGET_H
 
-class RendererTarget
+namespace SampleRenderer
 {
-	friend class Renderer;
+
+	class RendererTarget
+	{
+		friend class Renderer;
 	public:
 		RendererTarget(void);
 		virtual ~RendererTarget(void);
-		
+
 		void release(void) { delete this; }
-	
+
 	private:
 		virtual void bind(void)=0;
 		virtual void unbind(void)=0;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

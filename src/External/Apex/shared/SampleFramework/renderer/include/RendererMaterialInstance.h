@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -39,25 +39,34 @@
 
 #include <RendererMaterial.h>
 
-class RendererMaterialInstance
+namespace SampleRenderer
 {
-	friend class RendererMaterial;
+
+	class RendererMaterialInstance
+	{
+		friend class RendererMaterial;
 	public:
 		RendererMaterialInstance(RendererMaterial &material);
+		RendererMaterialInstance(const RendererMaterialInstance& other);
 		~RendererMaterialInstance(void);
-		
-		RendererMaterial &getMaterial(void) { return m_material; }
-		
-		const RendererMaterial::Variable *findVariable(const char *name, RendererMaterial::VariableType varType);
-		
+
+		PX_FORCE_INLINE RendererMaterial &getMaterial(void) { return m_material; }
+
+		PX_FORCE_INLINE const RendererMaterial::Variable *findVariable(const char *name, RendererMaterial::VariableType varType)
+		{
+			return m_material.findVariable(name, varType);
+		}
+
 		void writeData(const RendererMaterial::Variable &var, const void *data);
-	
+
 		RendererMaterialInstance &operator=(const RendererMaterialInstance&);
-		
+
 	private:
 		RendererMaterial &m_material;
-		physx::PxU8             *m_data;
-		
-};
+		PxU8             *m_data;
+
+	};
+
+} // namespace SampleRenderer
 
 #endif

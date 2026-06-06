@@ -71,7 +71,7 @@ public:
 
     virtual void ShutDown()
     {
-        CandListVal.SetUndefined(); pMovie = 0;
+        CandListVal.SetUndefined();
     };
     virtual UInt32 Init(Log* plog){ plog = 0; return 1;};
 
@@ -79,7 +79,7 @@ public:
 
     virtual bool Invoke(const char* pmethodName, GFx::Value *presult, const GFx::Value* pargFmt, unsigned numArgs)
     {
-        if (!pMovie || CandListVal.IsUndefined() || CandListVal.IsNull()) 
+        if (CandListVal.IsUndefined() || CandListVal.IsNull()) 
             return false;
 
         char *result	= NULL;

@@ -3147,6 +3147,19 @@ namespace pugi
 	#endif
 	}
 
+	__int64 xml_attribute::as_int64() const
+	{
+		if (!_attr || !_attr->value) return 0;
+
+		__int64 var = 0;
+	#ifdef PUGIXML_WCHAR_MODE
+		swscanf_s(_attr->value, L"%I64d", &var);
+	#else
+		sscanf_s(_attr->value, "%I64d", &var);
+	#endif
+		return var;
+	}
+
 	double xml_attribute::as_double() const
 	{
 		if (!_attr || !_attr->value) return 0;

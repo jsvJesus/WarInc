@@ -8,12 +8,15 @@
 #include "HttpDownload.h"
 #include "UPDATER_CONFIG.h"
 
+#include "LauncherConfig.h"
+
 namespace
 {
 	CkByteData	eulaData;
 	LONG		eulaReaded = 0;
 	UINT_PTR	eulaTimer = 0;
-	int		eulaTicks = 0;
+	
+	int		whatToShow = 0;
 };
 
 static DWORD CALLBACK EditStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)
@@ -35,10 +38,12 @@ static DWORD CALLBACK EditStreamCallback(DWORD dwCookie, LPBYTE pbBuff, LONG cb,
 static void setEulaData(HWND hwnd)
 {
   int type = SF_RTF;
+
+  eulaReaded = 0;
   
   HttpDownload http;
-  if(!http.Get(EULA_URL, eulaData)) {
-    static const char* failed = "Failed to get TOS";
+  if(!http.Get(whatToShow ? gLauncherConfig.ToSURL.c_str() : gLauncherConfig.EULAURL.c_str(), eulaData)) {
+    static const char* failed = "Failed to get data";
     eulaData.borrowData((BYTE*)failed, strlen(failed));
     type = SF_TEXT;
   }
@@ -67,8 +72,8 @@ static INT_PTR CALLBACK EulaDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, L
       return TRUE;
       
     case WM_COMMAND:
-      if(wParam == IDOK) {
-        EndDialog(hwndDlg, IDOK);
+      if(wParam == IDOK || wParam == IDCANCEL) {
+        EndDialog(hwndDlg, wParam);
         return TRUE;
       }
       break;
@@ -96,22 +101,26 @@ static INT_PTR CALLBACK EulaDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, L
 
       setEulaData(GetDlgItem(hwndDlg, IDC_RICHEDIT_EULA));
       EnableWindow(GetDlgItem(hwndDlg, IDOK), TRUE);
+      SetFocus(GetDlgItem(hwndDlg, IDCANCEL));
       break;
   }
 
   return FALSE;
 }
 
-int eulaShowDialog()
+int eulaShowDialog(int mode)
 {
+  whatToShow = mode;
+  
   // this calls needed for rich text control inside dialog
   LoadLibraryA("RICHED32.DLL");
   LoadLibraryA("RICHED20.DLL");
 
-  int r = DialogBox(win::hInstance, MAKEINTRESOURCE(IDD_DIALOG_EULA), win::hWnd, &EulaDialogProc);
+  int r = ::DialogBox(win::hInstance, MAKEINTRESOURCE(IDD_DIALOG_EULA), win::hWnd, &EulaDialogProc);
   if(r == 0 || r == -1) {
-    MessageBox(NULL, "Failed to display TOS", "Error", MB_OK | MB_ICONEXCLAMATION);
+    MessageBox(NULL, "Failed to display", "Error", MB_OK | MB_ICONEXCLAMATION);
     r = IDOK;
   }
+
   return r;
 }

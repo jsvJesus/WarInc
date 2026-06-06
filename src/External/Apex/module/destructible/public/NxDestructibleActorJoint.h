@@ -1,43 +1,40 @@
-#ifndef __NX_DESTRUCTIBLEACTORJOINT_H__
-#define __NX_DESTRUCTIBLEACTORJOINT_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "NxApex.h"
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_DESTRUCTIBLE_ACTOR_JOINT_H
+#define NX_DESTRUCTIBLE_ACTOR_JOINT_H
+
 #include "NxModuleDestructible.h"
 
+#if NX_SDK_VERSION_MAJOR == 2
 class NxJointDesc;
+#elif NX_SDK_VERSION_MAJOR == 3
+#include "extensions/PxJoint.h"
+#endif
 
 namespace physx
 {
@@ -68,11 +65,36 @@ public:
 	*/
 	PX_INLINE bool	isValid() const;
 
+#if (NX_SDK_VERSION_MAJOR == 2) || defined(DOXYGEN)
 	/**
+		PhysX SDK 2.8.X only.
 		The PhysX SDK joint descriptor.  Note - localAnchor[i], localAxis[i], and localNormal[i]
 		are not used if actor[i] is part of an NxDestructibleActor.
 	*/
 	NxJointDesc*			jointDesc;
+#endif
+#if (NX_SDK_VERSION_MAJOR == 3) || defined(DOXYGEN)
+	/**
+		PhysX SDK 3.X only.
+	*/
+	PxJointType::Enum		type;
+	/**
+		PhysX SDK 3.X only.
+	*/
+	PxRigidActor*			actor[2];
+	/**
+		PhysX SDK 3.X only.
+	*/
+	PxVec3					localAxis[2];
+	/**
+		PhysX SDK 3.X only.
+	*/
+	PxVec3					localAnchor[2];
+	/**
+		PhysX SDK 3.X only.
+	*/
+	PxVec3					localNormal[2];
+#endif
 
 	/**
 		If destructible[i] is not NULL, it will effectively replace the actor[i] in jointDesc.
@@ -122,23 +144,35 @@ PX_INLINE NxDestructibleActorJointDesc::NxDestructibleActorJointDesc() : NxApexD
 PX_INLINE void NxDestructibleActorJointDesc::setToDefault()
 {
 	NxApexDesc::setToDefault();
+#if NX_SDK_VERSION_MAJOR == 2
 	jointDesc = NULL;
+#elif NX_SDK_VERSION_MAJOR == 3
+	for (int i=0; i<2; i++)
+	{
+		actor[i] = 0;
+		localAxis[i]	= PxVec3(0,0,1);
+		localNormal[i]	= PxVec3(1,0,0);
+		localAnchor[i]	= PxVec3(0);
+	}
+#endif
 	for (int i = 0; i < 2; ++i)
 	{
 		destructible[i] = NULL;
 		attachmentChunkIndex[i] = NxModuleDestructibleConst::INVALID_CHUNK_INDEX;
-		globalAnchor[i] = physx::PxVec3::zero();
-		globalAxis[i].set(0, 0, 1);
-		globalNormal[i].set(1, 0, 0);
+		globalAnchor[i] = physx::PxVec3(0.0f);
+		globalAxis[i] = physx::PxVec3(0.0f, 0.0f, 1.0f);
+		globalNormal[i] = physx::PxVec3(1.0f, 0.0f, 0.0f);
 	}
 }
 
 PX_INLINE bool NxDestructibleActorJointDesc::isValid() const
 {
+#if NX_SDK_VERSION_MAJOR == 2
 	if (jointDesc == NULL)
 	{
 		return false;
 	}
+#endif
 
 	if (destructible[0] == NULL && destructible[1] == NULL)
 	{
@@ -174,15 +208,30 @@ class NxDestructibleActorJoint : public NxApexInterface
 {
 public:
 
+#if (NX_SDK_VERSION_MAJOR == 2) || defined(DOXYGEN)
 	/**
-	Access to the NxJoint represented by the NxDestructibleActorJoint.  This is a temporary interface,
-	and there are some shortcomings and restrictions:
+		PhysX SDK 2.8.X
+		Access to the NxJoint represented by the NxDestructibleActorJoint.  This is a temporary interface,
+		and there are some shortcomings and restrictions:
 		1) The user will have to upcast the result of joint() to the correct joint type in order
 		to access the interface for derived joints.
 		2) The user must never delete the joint using the PhysX SDK.  To release this joint, simply
 		use the release() method of this object (defined in the NxApexInterface base class).
 	*/
 	virtual	NxJoint*	joint()	= 0;
+#endif
+#if (NX_SDK_VERSION_MAJOR == 3) || defined(DOXYGEN)
+	/**
+		PhysX SDK 3.X
+		Access to the {xJoint represented by the NxDestructibleActorJoint.  This is a temporary interface,
+		and there are some shortcomings and restrictions:
+		1) The user will have to upcast the result of joint() to the correct joint type in order
+		to access the interface for derived joints.
+		2) The user must never delete the joint using the PhysX SDK.  To release this joint, simply
+		use the release() method of this object (defined in the NxApexInterface base class).
+	*/
+	virtual	PxJoint*	joint()	= 0;
+#endif
 
 protected:
 	virtual				~NxDestructibleActorJoint() {}
@@ -193,4 +242,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif // __NX_DESTRUCTIBLEACTORJOINT_H__
+#endif // NX_DESTRUCTIBLE_ACTOR_JOINT_H

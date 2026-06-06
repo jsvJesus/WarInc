@@ -634,28 +634,26 @@ template <typename T>
 void
 r3dMesh::RemapComponent( T* comp, const std::vector<int>& compMap )
 {
-	const size_t count = compMap.size();
-	const size_t reqTempSize = sizeof(T) * count;
+	size_t reqTempSize = sizeof( T ) * compMap.size() ;
 
 	if( reqTempSize > tempGenericMemSize )
 	{
-		free( tempGenericMem );
-		tempGenericMem		= malloc( reqTempSize );
-		tempGenericMemSize	= reqTempSize;
+		free( tempGenericMem ) ;
+		tempGenericMem		= malloc( reqTempSize ) ;
+		tempGenericMemSize	= reqTempSize ;
 	}
 
-	T* tmp = (T*)tempGenericMem;
+	T* tmp = (T*) tempGenericMem ;
 
-	memcpy( tmp, comp, reqTempSize );
+	memcpy( tmp, comp, reqTempSize ) ;
 
-	for( size_t i = 0; i < count; i++ )
+	for( int i = 0, e = compMap.size() ; i < e ; i ++ )
 	{
-		const int idx = compMap[ i ];
+		int idx = compMap[ i ] ;
 
-		r3d_assert( idx >= 0 );
-		r3d_assert( static_cast<size_t>( idx ) < count );
+		r3d_assert( idx < e ) ;
 
-		comp[ i ] = tmp[ idx ];
+		comp[ i ] = tmp[ idx ] ;
 	}
 }
 
@@ -934,7 +932,8 @@ void r3dMesh::DoFillBuffersMainThread()
 
 void r3dMesh::DoFillBuffers()
 {
-	r3d_assert( m_Loaded ) ;
+	if(!m_Loaded)
+		return;
 
 	if(r3dMeshObject_SkipFillBuffers)
 		return;
@@ -1156,16 +1155,25 @@ void r3dMesh::ResetXForm()
 }
 //-----------------------------------------------------------------------
 
-void r3dMeshSetVSConsts( const D3DXMATRIX& world, const r3dPoint3D* ScaleBox, const r3dPoint2D* TexcUnpackScale )
+void r3dMeshSetVSConsts( const D3DXMATRIX& world, const r3dPoint3D* UnpackScale, const r3dPoint2D* TexcUnpackScale )
 {
 	PrecalculatedMeshVSConsts pm;
-	r3dPrepareMeshVSConsts(pm, world, ScaleBox, TexcUnpackScale);
+	r3dPrepareMeshVSConsts(pm, world, UnpackScale, TexcUnpackScale, r3dRenderer->ViewMatrix, r3dRenderer->ViewProjMatrix);
+	r3dApplyPreparedMeshVSConsts(pm);
+}
+
+//------------------------------------------------------------------------
+
+void r3dMeshSetVSConsts_Localized( const D3DXMATRIX& world, const r3dPoint3D* UnpackScale, const r3dPoint2D* TexcUnpackScale )
+{
+	PrecalculatedMeshVSConsts pm;
+	r3dPrepareMeshVSConsts(pm, world, UnpackScale, TexcUnpackScale, r3dRenderer->ViewMatrix_Localized, r3dRenderer->ViewProjMatrix_Localized);
 	r3dApplyPreparedMeshVSConsts(pm);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &world, const r3dPoint3D* ScaleBox, const r3dPoint2D* TexcUnpackScale )
+void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &world, const r3dPoint3D* ScaleBox, const r3dPoint2D* TexcUnpackScale, const D3DXMATRIX& viewMtx, const D3DXMATRIX& viewProjMtx )
 {
 	D3DXMATRIX scale;
 	if (ScaleBox)
@@ -1180,14 +1188,14 @@ void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &wo
 	D3DXMATRIX scaledWorld = scale * world;
 
 	D3DXMATRIX ShaderMat;
-	ShaderMat =  scaledWorld * r3dRenderer->ViewProjMatrix;
+	ShaderMat =  scaledWorld * viewProjMtx;
 	D3DXMatrixTranspose(&ShaderMat, &ShaderMat );
 
-	memcpy( out.worldViewProj, &ShaderMat, sizeof out.worldViewProj ) ;
+	memcpy( out.worldViewProj, &ShaderMat, sizeof out.worldViewProj );
 
 	ShaderMat =  scaledWorld;
 	D3DXMatrixTranspose(&ShaderMat, &ShaderMat);
-	memcpy( &out.scaledWorld, &ShaderMat, sizeof out.scaledWorld ) ;
+	memcpy( &out.scaledWorld, &ShaderMat, sizeof out.scaledWorld );
 
 	D3DXMATRIX UnpackNormal(
 		2.f,   0.f,  0.f, 0.f,
@@ -1195,7 +1203,7 @@ void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &wo
 		0.f,   0.f,  2.f, 0.f,
 		-1.f, -1.f, -1.f, 1.f	);
 
-	D3DXMATRIX world_noT = world ;
+	D3DXMATRIX world_noT = world;
 
 	world_noT._41 = 0.f;
 	world_noT._42 = 0.f;
@@ -1208,13 +1216,13 @@ void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &wo
 	D3DXMatrixTranspose(&ShaderMat, &ShaderMat);
 	memcpy( out.normalWorld, &ShaderMat, sizeof out.normalWorld ) ;
 
-	ShaderMat =  scaledWorld * r3dRenderer->ViewMatrix;
+	ShaderMat =  scaledWorld * viewMtx;
 	D3DXMatrixTranspose(&ShaderMat, &ShaderMat);
 	memcpy( out.scaledWorldView, &ShaderMat, sizeof out.scaledWorldView ) ;
 
 	// float4x4 NormalViewMatrix		: register (c16);
 
-	D3DXMATRIX cam_noT = r3dRenderer->ViewMatrix;
+	D3DXMATRIX cam_noT = viewMtx;
 
 	cam_noT._41 = 0.f;
 	cam_noT._42 = 0.f;
@@ -1243,19 +1251,19 @@ void r3dMeshSetVSTexcUnpackScale( r3dPoint2D unpackScale )
 		unpackScale.x, unpackScale.y, 0.f, 0.f
 	} ;
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 16, vConst, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 16, vConst, 1 ) );
 }
 
 //------------------------------------------------------------------------
 
 void r3dApplyPreparedMeshVSConsts(const PrecalculatedMeshVSConsts &vsc)
 {
-	D3D_V( r3dRenderer->SetVertexShaderConstantF(0, (float*)&vsc, sizeof vsc / 16 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&vsc, sizeof vsc / 16 ) );
 }
 
 void r3dApplyPreparedMeshVSConsts_DepthPrepass(const PrecalculatedMeshVSConsts &vsc)
 {
-	D3D_V( r3dRenderer->SetVertexShaderConstantF(0, (float*)&vsc, 4 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)&vsc, 4 ) );
 }
 
 //------------------------------------------------------------------------
@@ -1302,6 +1310,12 @@ void r3dMesh::SetVSConsts(const D3DXMATRIX& world)
 	r3dMeshSetVSConsts( world, &unpackScale, &texcUnpackScale );
 }
 
+//------------------------------------------------------------------------
+
+void r3dMesh::SetVSConsts_Localized(const D3DXMATRIX& world)
+{
+	r3dMeshSetVSConsts_Localized( world, &unpackScale, &texcUnpackScale );
+}
 
 
 
@@ -1350,10 +1364,10 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
 	AC[2] = float(r3dRenderer->AmbientColor.B)/255.0f;
 	AC[3] = 1;
 
-	r3dRenderer->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
-	r3dRenderer->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
-	r3dRenderer->SetVertexShaderConstantF(  7, AC,  1 );
-	r3dRenderer->SetPixelShaderConstantF(  7, AC,  1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  5, (float *)&VL,  1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  6, (float *)&LC,  1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  7, AC,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  7, AC,  1 );
 	*/
 
 	float PPos[16][4]; 
@@ -1373,7 +1387,7 @@ void SetObjLightsConstants(r3dLightSystem *WL, r3dBoundBox &BBox)
 		PPos[i+8][3] = 1;
 	}
 
-	r3dRenderer->SetVertexShaderConstantF(  30, PPos[0],  16 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  30, PPos[0],  16 );
 }
 
 extern int VS_SMDEPTHPASS_ORTHO_ID;
@@ -1426,7 +1440,7 @@ void r3dMesh::DrawMeshInstanced(const D3DXMATRIX* world, int ShadowMap, bool for
 
 			D3DXMATRIX mViewProjT ;
 			D3DXMatrixTranspose(&mViewProjT, &r3dRenderer->ViewProjMatrix );
-			r3dRenderer->SetVertexShaderConstantF( 0, (float*)&mViewProjT, 4 );
+			r3dRenderer->pd3ddev->SetVertexShaderConstantF ( 0, (float*)&mViewProjT, 4 );
 
 			d3dc._SetDecl( r3dInstancedUnionMeshVertex::getDecl() );
 
@@ -1506,6 +1520,48 @@ MeshDeferredRenderable::Draw( Renderable* RThis, const r3dCamera& Cam )
 	Mesh->DrawMeshDeferredBatch( This->BatchIdx, 0 );
 
 	Mesh->DrawMeshEnd();
+}
+
+//------------------------------------------------------------------------
+
+void MeshDeferredHighlightRenderable::DoDraw( Renderable* RThis, float distance, const r3dCamera& Cam )
+{
+	D3DPERF_BeginEvent( 0, L"MeshDeferredHighlightRenderable::Draw" );
+
+	MeshDeferredHighlightRenderable * This = static_cast<MeshDeferredHighlightRenderable*>( RThis );
+	r3dMesh* Mesh = This->Mesh;
+
+	r3dColor color( r3dColor::white );	
+
+	r3dRenderer->SetVertexShader( VS_FILLGBUFFER_EXTRUDE_ID );
+
+	float factor = r_highlight_thickness->GetFloat();
+
+	const float LINE_SATURATE = 2.0f;
+
+	if( distance < LINE_SATURATE )
+		factor *= distance / LINE_SATURATE;
+
+	float vsConst[ 4 ] = { factor / Mesh->unpackScale.x, factor / Mesh->unpackScale.y, factor / Mesh->unpackScale.z, 0 };
+
+	// float4x3 vExtrudeMatrix         : register( c17 );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 17, vsConst, 1 ) );
+
+	r3dPoint3D normal( 0, 1, 0 );
+
+	normal.Normalize();
+
+	SetFillGBufferConstantPixelShader( r3dColor::blue, 1.0f, normal, 0.0f, 0.0f, r_highlight_glow->GetFloat(), 0.f );
+
+	Mesh->DrawMeshSimple( 0 );
+
+	D3DPERF_EndEvent();
+}
+
+void MeshDeferredHighlightRenderable::Init( r3dMesh* mesh )
+{
+	DrawFunc = NULL;
+	Mesh = mesh;
 }
 
 //------------------------------------------------------------------------
@@ -1664,7 +1720,7 @@ r3dMesh::DrawMeshStart( const r3dColor* objectColor )
 						texcUnpackScale.x, texcUnpackScale.y, ExtrudeAmmount, 0.f
 					};
 
-		D3D_V( r3dRenderer->SetVertexShaderConstantF( 22, vConst, 2 ) );
+		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 22, vConst, 2 ) );
 
 		d3dc._SetDecl( r3dSkinnedMeshVertex::getDecl() );
 	}
@@ -1756,7 +1812,23 @@ void r3dMesh::DrawMeshShadowsBatch( int batchIdx )
 	else
 		r3dRenderer->SetTex( __r3dShadeTexture[2]);
 
-	r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex,NumVertices,buffers.startIndex + batch.StartIndex,(batch.EndIndex-batch.StartIndex)/3);
+	UINT startIndex = buffers.startIndex + batch.StartIndex;
+	UINT primCount = (batch.EndIndex-batch.StartIndex)/3;
+
+	if( r3dRenderer->DoubleDepthShadowPath )
+	{
+		r3dRenderer->SetCullMode( D3DCULL_CW );
+		r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
+		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,0,buffers.minVertexIndex,NumVertices,startIndex,primCount );
+		
+		r3dRenderer->SetCullMode( D3DCULL_CCW );
+		r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE );
+		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,0,buffers.minVertexIndex,NumVertices,startIndex,primCount );
+	}
+	else
+	{
+		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,0,buffers.minVertexIndex,NumVertices,startIndex,primCount );
+	}
 }
 
 //-----------------------------------------------------------------------
@@ -1807,7 +1879,30 @@ void r3dMesh::DrawMeshShadows()
 	{
 		r3dMaterial::SetShadowVertexShader( pWeights ? R3D_MATVS_SKIN : R3D_MATVS_DEFAULT );
 		r3dRenderer->SetTex( __r3dShadeTexture[2]);
-		r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex, NumVertices, buffers.startIndex, NumIndices/3);
+
+		if( r3dRenderer->DoubleDepthShadowPath )
+		{
+			if( Flags & obfPlayerMesh )
+			{
+				r3dRenderer->SetCullMode( D3DCULL_CCW );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
+				r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex, NumVertices, buffers.startIndex, NumIndices/3);
+			}
+			else
+			{
+				r3dRenderer->SetCullMode( D3DCULL_CW );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
+				r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex, NumVertices, buffers.startIndex, NumIndices/3);
+
+				r3dRenderer->SetCullMode( D3DCULL_CCW );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE );
+				r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex, NumVertices, buffers.startIndex, NumIndices/3);
+			}
+		}
+		else
+		{
+			r3dRenderer->DrawIndexed(D3DPT_TRIANGLELIST,0, buffers.minVertexIndex, NumVertices, buffers.startIndex, NumIndices/3);
+		}
 	}
 
 	DrawMeshEnd();

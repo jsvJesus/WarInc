@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,22 +38,30 @@
 #include <RendererConfig.h>
 #include <Renderer.h>
 
-class RendererWindow;
-
-class RendererDesc
+namespace SampleRenderer
 {
-public:
-	Renderer::DriverType driver;
 
-	physx::pubfnd2::PxU64	windowHandle;
+	class RendererWindow;
 
-	/* optional output stream */
-	physx::PxUserOutputStream *outputStream;
+	class RendererDesc
+	{
+	public:
+		Renderer::DriverType	driver;
 
-public:
-	RendererDesc(void);
-	
-	bool isValid(void) const;
-};
+		/* optional error callback */
+		PxErrorCallback*		errorCallback;
+		physx::PxU64	        windowHandle;
+
+		bool					vsync;
+
+		/* enable depth bias for multipass rendering */
+		bool					multipassDepthBias;
+	public:
+		RendererDesc(void);
+
+		bool isValid(void) const;
+	};
+
+} // namespace SampleRenderer
 
 #endif

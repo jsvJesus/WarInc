@@ -5,13 +5,31 @@
 
 #pragma once
 
-#if ENABLE_ZOMBIES
+class EZombieStates
+{
+  public:
+	// global (game wide) zombie state
+	enum EGlobalStates
+	{
+		ZState_Dead = 0,
+		ZState_Sleep,
+		ZState_Waking,
+		ZState_Idle,
+		ZState_Walk,
+		ZState_Pursue,
+		ZState_Attack,
+		ZState_BarricadeAttack,
 
+		ZState_NumStates,
+	};
+};
+
+/*
 #include "../ai/StateMachine.h"
 #include "obj_Zombie.h"
 
 //////////////////////////////////////////////////////////////////////////
-
+class obj_Zombie;
 class ZombieLookForTargetState: public r3dState<obj_Zombie>
 {
 public:
@@ -70,4 +88,4 @@ extern ZombieGlobalState gZombieGlobalState;
 
 //////////////////////////////////////////////////////////////////////////
 
-#endif // ENABLE_ZOMBIES
+*/

@@ -99,6 +99,7 @@ public:
     virtual float           GetHeight() const           { return 1; }
     virtual bool            DefPointTestLocal
         (const Render::PointF &pt, bool testShape = 0, const DisplayObjectBase *pinst = 0) const;
+    //virtual RectF        GetBoundsLocal() const                                      { return RectF(0); }   
     virtual unsigned        GetFrameCount() const       { return FrameCount; }
     virtual float           GetFrameRate() const        { return pMovieDef->GetFrameRate(); }
     virtual RectF           GetFrameRect() const        { return RectF(0,0,1,1); }

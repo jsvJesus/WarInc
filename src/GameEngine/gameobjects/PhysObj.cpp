@@ -5,77 +5,35 @@
 #include "GameObj.h"
 #include "PhysObj.h"
 
-#include "PxController.h"
-#include "PxCapsuleController.h"
-#include "PxBoxController.h"
-#include "PxRigidActor.h"
-#include "PxRigidBody.h"
-#include "PxRigidDynamic.h"
-#include "PxRigidStatic.h"
-#include "PxScene.h"
-#include "PxQueryReport.h"
+#include "characterkinematic/PxController.h"
+#include "characterkinematic/PxCapsuleController.h"
+#include "characterkinematic/PxBoxController.h"
 #include "extensions/PxRigidBodyExt.h"
-
-static inline PxRigidStatic* WarInc_AsRigidStatic(PxActor* actor)
-{
-	return actor ? actor->is<PxRigidStatic>() : NULL;
-}
-
-static inline PxRigidDynamic* WarInc_AsRigidDynamic(PxActor* actor)
-{
-	return actor ? actor->is<PxRigidDynamic>() : NULL;
-}
-
-static inline PxRigidActor* WarInc_AsRigidActor(PxActor* actor)
-{
-	return actor ? actor->is<PxRigidActor>() : NULL;
-}
-
-static inline const PxRigidActor* WarInc_AsRigidActor(const PxActor* actor)
-{
-	return actor ? actor->is<PxRigidActor>() : NULL;
-}
-
-static inline PxRigidBody* WarInc_AsRigidBody(PxActor* actor)
-{
-	return actor ? actor->is<PxRigidBody>() : NULL;
-}
-
-static inline const PxRigidBody* WarInc_AsRigidBody(const PxActor* actor)
-{
-	return actor ? actor->is<PxRigidBody>() : NULL;
-}
-
-static inline bool WarInc_IsKinematic(const PxRigidDynamic* actor)
-{
-	return actor && actor->getRigidBodyFlags().isSet(PxRigidBodyFlag::eKINEMATIC);
-}
-
-#ifndef WO_SERVER
-#if VEHICLES_ENABLED
-#include "vehicle/PxVehicleUtil.h"
-#endif
-#endif
 
 #include "../TrueNature/Terrain.h"
 
 bool g_bAllowPhysObjCreation = true;
 
-class ControllerCallback : public PxUserControllerHitReport
+//////////////////////////////////////////////////////////////////////////
+
+class CtrlBehaviorCallback: public PxControllerBehaviorCallback
 {
 public:
-	virtual void onShapeHit(const PxControllerShapeHit& hit)
+	virtual PxU32 getBehaviorFlags(const PxObstacle& obst)
 	{
+		return PxControllerBehaviorFlag::eCCT_SLIDE;
 	}
+	virtual PxU32 getBehaviorFlags(const PxShape& shape)
+	{
+		return PxControllerBehaviorFlag::eCCT_SLIDE;
+	}
+	virtual PxU32 getBehaviorFlags(const PxController& ctl)
+	{
+		return PxControllerBehaviorFlag::eCCT_SLIDE;
+	}
+} gCtrlBehaviorCallback;
 
-	virtual void onControllerHit(const PxControllersHit& hit)
-	{
-	}
-
-	virtual void onObstacleHit(const PxControllerObstacleHit& hit)
-	{
-	}
-} myControllerCallback;
+//////////////////////////////////////////////////////////////////////////
 
 BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObjectConfig& params, PhysicsCallbackObject* physCallbackObj, const r3dVector* optionalPos, const r3dVector* optionalSize, const r3dMesh* optionalMesh, const D3DXMATRIX* optionalRotation)
 {
@@ -83,17 +41,14 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 
 	R3DPROFILE_FUNCTION("BasePhysicsObject::CreateCharacterController");
 	r3dPoint3D objectPos, objectSize;
-	const r3dMesh* objectMesh = 0;
 	D3DXMATRIX objectRotation;
 	if(physCallbackObj==0 || optionalPos != 0)
 	{
 		r3d_assert(optionalPos);
 		r3d_assert(optionalSize);
-		r3d_assert(optionalMesh);
 		r3d_assert(optionalRotation);
 		objectPos = *optionalPos;
 		objectSize = *optionalSize;
-		objectMesh = optionalMesh;
 		objectRotation = *optionalRotation;
 	}
 	else
@@ -101,7 +56,6 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 		r3d_assert(physCallbackObj->isGameObject());
 		objectPos = physCallbackObj->isGameObject()->GetPosition();
 		objectSize = physCallbackObj->isGameObject()->GetBBoxLocal().Size;
-		objectMesh = physCallbackObj->isGameObject()->GetObjectMesh();
 		objectRotation = physCallbackObj->isGameObject()->GetRotationMatrix();
 	}
 
@@ -111,7 +65,7 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 	}
 
 #ifdef _DEBUG
-	r3dOutToLog("Creating character controller obj at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
+//	r3dOutToLog("Creating character controller obj at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
 #endif
 	
 	if(!(r3d_float_isFinite(objectRotation._11) && r3d_float_isFinite(objectRotation._12) && r3d_float_isFinite(objectRotation._13) &&
@@ -121,7 +75,7 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 		r3dError("CreateCharacterController: objectRotation is invalid!"); 
 	}
 
-	r3d_assert(params.type == PHYSICS_TYPE_CONTROLLER);
+	r3d_assert(params.type == PHYSICS_TYPE_CONTROLLER || params.type == PHYSICS_TYPE_CONTROLLER_ZOMBIE);
 
 	PxCapsuleControllerDesc desc;
 	desc.setToDefault();
@@ -130,17 +84,18 @@ BasePhysicsObject* BasePhysicsObject::CreateCharacterController(const PhysicsObj
 	desc.climbingMode	= PxCapsuleClimbingMode::eCONSTRAINED;
 
 	desc.position = PxExtendedVec3(objectPos.x, objectPos.y, objectPos.z);
-	desc.upDirection = PxVec3(0.0f, 1.0f, 0.0f);
-	desc.slopeLimit = cosf(R3D_DEG2RAD(45.0f));
+	desc.slopeLimit = 0.707f;
 	desc.invisibleWallHeight = 0.0f;
 	desc.maxJumpHeight = 0.0f;
 	desc.contactOffset = 0.01f;
 	desc.stepOffset = 0.5f;
-	desc.reportCallback = &myControllerCallback;
+	desc.interactionMode = PxCCTInteractionMode::eUSE_FILTER;
 	desc.material = g_pPhysicsWorld->PhysXSDK->createMaterial(0.5f, 0.5f, 0.1f);
 	desc.userData = (void*)physCallbackObj;
-
-	PxController* Controller = g_pPhysicsWorld->CharacterManager->createController(desc);
+	desc.nonWalkableMode = PxCCTNonWalkableMode::ePREVENT_CLIMBING;
+	desc.groupsBitmask = 1<<params.type;
+	
+	PxController* Controller = g_pPhysicsWorld->CharacterManager->createController(*g_pPhysicsWorld->PhysXSDK, g_pPhysicsWorld->PhysXScene, desc);
 	r3d_assert(Controller);
 
 	PxRigidDynamic* actor = Controller->getActor();
@@ -170,7 +125,6 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 	{
 		r3d_assert(optionalPos);
 		r3d_assert(optionalSize);
-		r3d_assert(optionalMesh);
 		r3d_assert(optionalRotation);
 		objectPos = *optionalPos;
 		objectSize = *optionalSize;
@@ -192,13 +146,13 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 	}
 
 #ifdef _DEBUG
-	{
-		GameObject* temp = physCallbackObj->isGameObject();
-		if(temp)
-			r3dOutToLog("Creating dynamic phys obj (%s) at: %.2f, %.2f, %.2f\n", temp->Class->Name.c_str(), objectPos.x, objectPos.y, objectPos.z);
-		else
-			r3dOutToLog("Creating dynamic phys obj (unknown) at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
-	}
+// 	{
+// 		GameObject* temp = physCallbackObj->isGameObject();
+// 		if(temp)
+// 			r3dOutToLog("Creating dynamic phys obj (%s) at: %.2f, %.2f, %.2f\n", temp->Class->Name.c_str(), objectPos.x, objectPos.y, objectPos.z);
+// 		else
+// 			r3dOutToLog("Creating dynamic phys obj (unknown) at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
+// 	}
 #endif
 
 	if(!(r3d_float_isFinite(objectRotation._11) && r3d_float_isFinite(objectRotation._12) && r3d_float_isFinite(objectRotation._13) &&
@@ -234,22 +188,27 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 
 	if(params.type == PHYSICS_TYPE_BOX)
 	{
-		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 	}
 	else if(params.type == PHYSICS_TYPE_SPHERE)
 	{
-		shape = actor->createShape(PxSphereGeometry(R3D_MAX(R3D_MAX(objectSize.x*0.5f, objectSize.y*0.5f), objectSize.z*0.5f)), *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(PxSphereGeometry(R3D_MAX(R3D_MAX(objectSize.x*0.5f, objectSize.y*0.5f), objectSize.z*0.5f)), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 	}
 	else if(params.type == PHYSICS_TYPE_MESH)
 	{
-		r3d_assert(objectMesh);
+		r3d_assert(params.meshFilename);
 		char cookedMeshFilename[256];
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		int len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-3], "mpx");
 
 		if(!r3dFileExists(cookedMeshFilename))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
+			r3d_assert(objectMesh);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookMesh(objectMesh))
 			{
@@ -259,21 +218,25 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 		}
 
 		PxTriangleMeshGeometry geom(g_pPhysicsWorld->getCookedMesh(cookedMeshFilename));
-		shape = actor->createShape(geom, *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(geom, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 
 		// check for player only collision
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-4], "_playerOnly.mpx");
 
 		char rawMeshFilenamePlayerOnly[256];
-		r3dscpy(rawMeshFilenamePlayerOnly, objectMesh->FileName.c_str());
+		r3dscpy(rawMeshFilenamePlayerOnly, params.meshFilename);
 		len = strlen(rawMeshFilenamePlayerOnly);
 		r3dscpy(&rawMeshFilenamePlayerOnly[len-4], "_playerOnly.sco");
 
 		// auto cook
 		if(!r3dFileExists(cookedMeshFilename) && r3dFileExists(rawMeshFilenamePlayerOnly))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
 			r3dMesh* playerOnlyMesh = r3dGOBAddMesh(rawMeshFilenamePlayerOnly, false);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookMesh(playerOnlyMesh))
@@ -287,7 +250,7 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 		if(r3dFileExists(cookedMeshFilename))
 		{
 			PxTriangleMeshGeometry geom_player(g_pPhysicsWorld->getCookedMesh(cookedMeshFilename));
-			PxShape* playerShape = actor->createShape(geom_player, *(g_pPhysicsWorld->defaultMaterial));
+			PxShape* playerShape = actor->createShape(geom_player, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 			PxFilterData filterData(PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
 			playerShape->setSimulationFilterData(filterData);
 			PxFilterData qfilterData(1<<PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
@@ -297,14 +260,19 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 	}
 	else if(params.type == PHYSICS_TYPE_CONVEX)
 	{
-		r3d_assert(objectMesh);
+		r3d_assert(params.meshFilename);
 		char cookedMeshFilename[256]; 
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		int len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-3], "cpx");
 
 		if(!r3dFileExists(cookedMeshFilename))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
+			r3d_assert(objectMesh);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookConvexMesh(objectMesh))
 			{
@@ -314,21 +282,25 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 		}
 
 		PxConvexMeshGeometry geom(g_pPhysicsWorld->getConvexMesh(cookedMeshFilename));
-		shape = actor->createShape(geom, *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(geom, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 
 		// check for player only collision
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-4], "_playerOnly.cpx");
 
 		char rawMeshFilenamePlayerOnly[256];
-		r3dscpy(rawMeshFilenamePlayerOnly, objectMesh->FileName.c_str());
+		r3dscpy(rawMeshFilenamePlayerOnly, params.meshFilename);
 		len = strlen(rawMeshFilenamePlayerOnly);
 		r3dscpy(&rawMeshFilenamePlayerOnly[len-4], "_playerOnly.sco");
 
 		// auto cook
 		if(!r3dFileExists(cookedMeshFilename) && r3dFileExists(rawMeshFilenamePlayerOnly))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
 			r3dMesh* playerOnlyMesh = r3dGOBAddMesh(rawMeshFilenamePlayerOnly, false);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookConvexMesh(playerOnlyMesh))
@@ -343,7 +315,7 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 		if(r3dFileExists(cookedMeshFilename))
 		{
 			PxConvexMeshGeometry geom_player(g_pPhysicsWorld->getConvexMesh(cookedMeshFilename));
-			PxShape* playerShape = actor->createShape(geom_player, *(g_pPhysicsWorld->defaultMaterial));
+			PxShape* playerShape = actor->createShape(geom_player, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 			PxFilterData filterData(PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
 			playerShape->setSimulationFilterData(filterData);
 			PxFilterData qfilterData(1<<PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
@@ -353,12 +325,12 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 	}
 	else if( params.type == PHYSICS_TYPE_RAYCAST_BOX )
 	{
-		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 
 		//boxDesc.shapeFlags		|= NX_SF_VISUALIZATION | NX_SF_DISABLE_RESPONSE | NX_SF_DISABLE_COLLISION;
 		//actorDesc.flags			|= NX_AF_DISABLE_COLLISION | NX_AF_DISABLE_RESPONSE;
 
-		actor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		actor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, true);
 
 		nowWhoIsTheDummy = true;
 	}
@@ -370,8 +342,10 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 
 	PxU32 filter2 = 0;
 
-	//if(params.isFastMoving)
-	//	filter2 = PHYSCOLL2_FAST_MOVING_OBJECT;
+#if PHYSX_USE_CCD
+	if(params.isFastMoving)
+		filter2 = PHYSCOLL2_FAST_MOVING_OBJECT;
+#endif
 
     PxFilterData filterData(filter, filter2, 0, 0);
 	shape->setSimulationFilterData(filterData);
@@ -379,20 +353,22 @@ BasePhysicsObject* BasePhysicsObject::CreateDynamicObject(const PhysicsObjectCon
 	shape->setQueryFilterData(qfilterData);
 	shape->userData = (void*)physCallbackObj;
 
-	//if(params.isFastMoving)
-	//	shape->setFlag(PxShapeFlag::eUSE_SWEPT_BOUNDS, true);
+#if PHYSX_USE_CCD
+	if(params.isFastMoving)
+		shape->setFlag(PxShapeFlag::eUSE_SWEPT_BOUNDS, true);
+#endif
 
 	if(params.isTrigger)
 		shape->setFlags(PxShapeFlag::eTRIGGER_SHAPE);
 
 	if(params.needBoxCollision)
 	{
-		actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), *(g_pPhysicsWorld->defaultMaterial));
+		actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 	}
 
 	if(params.isKinematic)
 	{
-		actor->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		actor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, true);
 	}
 
 	PxRigidBodyExt::setMassAndUpdateInertia(*actor, params.mass);
@@ -426,11 +402,11 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 	r3dPoint3D objectPos, objectSize;
 	const r3dMesh* objectMesh = 0;
 	D3DXMATRIX objectRotation;
+	PxMeshScale optionalScale;
 	if(physCallbackObj==0 || optionalPos != 0)
 	{
 		r3d_assert(optionalPos);
 		r3d_assert(optionalSize);
-		r3d_assert(optionalMesh);
 		r3d_assert(optionalRotation);
 		objectPos = *optionalPos;
 		objectSize = *optionalSize;
@@ -444,15 +420,16 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 		objectSize = physCallbackObj->isGameObject()->GetBBoxLocal().Size;
 		objectMesh = physCallbackObj->isGameObject()->GetObjectMesh();
 		objectRotation = physCallbackObj->isGameObject()->GetRotationMatrix();
+		r3dPoint3D scale = physCallbackObj->isGameObject()->GetScale();
+		optionalScale.scale = PxVec3(scale.x, scale.y, scale.z);
 	}
-
 	if(!(r3d_float_isFinite(objectPos.x) && r3d_float_isFinite(objectPos.y) && r3d_float_isFinite(objectPos.z)))
 	{
 		r3dError("CreateStaticObject: objectPos is invalid!"); 
 	}
 
 #ifdef _DEBUG
-	r3dOutToLog("Creating static phys obj at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
+//	r3dOutToLog("Creating static phys obj at: %.2f, %.2f, %.2f\n", objectPos.x, objectPos.y, objectPos.z);
 #endif
 
 	if(!(r3d_float_isFinite(objectRotation._11) && r3d_float_isFinite(objectRotation._12) && r3d_float_isFinite(objectRotation._13) &&
@@ -486,27 +463,31 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 
 	if(params.type == PHYSICS_TYPE_BOX)
 	{
-		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 	}
 	else if(params.type == PHYSICS_TYPE_SPHERE)
 	{
-		shape = actor->createShape(PxSphereGeometry(R3D_MAX(R3D_MAX(objectSize.x*0.5f, objectSize.y*0.5f), objectSize.z*0.5f)), *(g_pPhysicsWorld->defaultMaterial));
+		shape = actor->createShape(PxSphereGeometry(R3D_MAX(R3D_MAX(objectSize.x*0.5f, objectSize.y*0.5f), objectSize.z*0.5f)), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 	}
 	// workaround for a crash with CCD sweeping against static convex mesh, so convert them to use static meshes instead
 	else if(params.type == PHYSICS_TYPE_MESH || (params.type == PHYSICS_TYPE_CONVEX && !params.isTrigger))
 	{
-		r3d_assert(objectMesh);
+		r3d_assert(params.meshFilename);
 		char cookedMeshFilename[256];
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		int len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-3], "mpx");
 
 		if(!r3dFileExists(cookedMeshFilename))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
 			if(params.needExplicitCollisionMesh)
 			{
 				char MeshFilenameCollision[256];
-				r3dscpy(MeshFilenameCollision, objectMesh->FileName.c_str());
+				r3dscpy(MeshFilenameCollision, params.meshFilename);
 				len = strlen(MeshFilenameCollision);
 				r3dscpy(&MeshFilenameCollision[len-4], "_collision.sco");
 
@@ -515,7 +496,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 				{
 					r3dMesh* CollisionMesh = r3dGOBAddMesh(MeshFilenameCollision, false);
 					// auto bake it
-					if(!g_pPhysicsWorld->CookMesh(CollisionMesh, objectMesh->FileName.c_str()))
+					if(!g_pPhysicsWorld->CookMesh(CollisionMesh, params.meshFilename))
 					{
 						r3dArtBug("Failed to auto cook collision mesh: %s\n", CollisionMesh->FileName.c_str());
 						return NULL;
@@ -529,6 +510,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 			}
 			else
 			{
+				r3d_assert(objectMesh);
 				// auto bake it
 				if(!g_pPhysicsWorld->CookMesh(objectMesh))
 				{
@@ -538,22 +520,26 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 			}
 		}
 
-		PxTriangleMeshGeometry geom(g_pPhysicsWorld->getCookedMesh(cookedMeshFilename));
-		shape = actor->createShape(geom, *(g_pPhysicsWorld->defaultMaterial));
+		PxTriangleMeshGeometry geom(g_pPhysicsWorld->getCookedMesh(cookedMeshFilename), optionalScale);
+		shape = actor->createShape(geom, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 
 		// check for player only collision
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-4], "_playerOnly.mpx");
 
 		char rawMeshFilenamePlayerOnly[256];
-		r3dscpy(rawMeshFilenamePlayerOnly, objectMesh->FileName.c_str());
+		r3dscpy(rawMeshFilenamePlayerOnly, params.meshFilename);
 		len = strlen(rawMeshFilenamePlayerOnly);
 		r3dscpy(&rawMeshFilenamePlayerOnly[len-4], "_playerOnly.sco");
 
 		// auto cook
 		if(!r3dFileExists(cookedMeshFilename) && r3dFileExists(rawMeshFilenamePlayerOnly))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
 			r3dMesh* playerOnlyMesh = r3dGOBAddMesh(rawMeshFilenamePlayerOnly, false);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookMesh(playerOnlyMesh))
@@ -568,7 +554,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 		if(r3dFileExists(cookedMeshFilename))
 		{
 			PxTriangleMeshGeometry geom_player(g_pPhysicsWorld->getCookedMesh(cookedMeshFilename));
-			PxShape* playerShape = actor->createShape(geom_player, *(g_pPhysicsWorld->defaultMaterial));
+			PxShape* playerShape = actor->createShape(geom_player, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 			PxFilterData filterData(PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
 			playerShape->setSimulationFilterData(filterData);
 			PxFilterData qfilterData(1<<PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
@@ -578,9 +564,9 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 	}
 	else if(params.type == PHYSICS_TYPE_CONVEX)
 	{
-		r3d_assert(objectMesh);
+		r3d_assert(params.meshFilename);
 		char cookedMeshFilename[256]; 
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		int len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-3], "cpx");
 
@@ -589,16 +575,20 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 			if(params.needExplicitCollisionMesh)
 			{
 				char MeshFilenameCollision[256];
-				r3dscpy(MeshFilenameCollision, objectMesh->FileName.c_str());
+				r3dscpy(MeshFilenameCollision, params.meshFilename);
 				len = strlen(MeshFilenameCollision);
 				r3dscpy(&MeshFilenameCollision[len-4], "_collision.sco");
 
 				// auto cook
 				if(r3dFileExists(MeshFilenameCollision))
 				{
+#ifdef WO_SERVER
+					r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+					return NULL;
+#endif
 					r3dMesh* CollisionMesh = r3dGOBAddMesh(MeshFilenameCollision, false);
 					// auto bake it
-					if(!g_pPhysicsWorld->CookConvexMesh(CollisionMesh, objectMesh->FileName.c_str()))
+					if(!g_pPhysicsWorld->CookConvexMesh(CollisionMesh, params.meshFilename))
 					{
 						r3dArtBug("Failed to auto cook collision convex mesh: %s\n", CollisionMesh->FileName.c_str());
 						return NULL;
@@ -612,6 +602,11 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 			}
 			else
 			{
+#ifdef WO_SERVER
+				r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+				return NULL;
+#endif
+				r3d_assert(objectMesh);
 				// auto bake it
 				if(!g_pPhysicsWorld->CookConvexMesh(objectMesh))
 				{
@@ -621,22 +616,26 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 			}
 		}
 
-		PxConvexMeshGeometry geom(g_pPhysicsWorld->getConvexMesh(cookedMeshFilename));
-		shape = actor->createShape(geom, *(g_pPhysicsWorld->defaultMaterial));
+		PxConvexMeshGeometry geom(g_pPhysicsWorld->getConvexMesh(cookedMeshFilename), optionalScale);
+		shape = actor->createShape(geom, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 
 		// check for player only collision
-		r3dscpy(cookedMeshFilename, objectMesh->FileName.c_str());
+		r3dscpy(cookedMeshFilename, params.meshFilename);
 		len = strlen(cookedMeshFilename);
 		r3dscpy(&cookedMeshFilename[len-4], "_playerOnly.cpx");
 
 		char rawMeshFilenamePlayerOnly[256];
-		r3dscpy(rawMeshFilenamePlayerOnly, objectMesh->FileName.c_str());
+		r3dscpy(rawMeshFilenamePlayerOnly, params.meshFilename);
 		len = strlen(rawMeshFilenamePlayerOnly);
 		r3dscpy(&rawMeshFilenamePlayerOnly[len-4], "_playerOnly.sco");
 
 		// auto cook
 		if(!r3dFileExists(cookedMeshFilename) && r3dFileExists(rawMeshFilenamePlayerOnly))
 		{
+#ifdef WO_SERVER
+			r3dOutToLog("!!!! no cooked mesh for '%s', server cannot build those!\n", cookedMeshFilename);
+			return NULL;
+#endif
 			r3dMesh* playerOnlyMesh = r3dGOBAddMesh(rawMeshFilenamePlayerOnly, false);
 			// auto bake it
 			if(!g_pPhysicsWorld->CookConvexMesh(playerOnlyMesh))
@@ -650,7 +649,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 		if(r3dFileExists(cookedMeshFilename))
 		{
 			PxConvexMeshGeometry geom_player(g_pPhysicsWorld->getConvexMesh(cookedMeshFilename));
-			PxShape* playerShape = actor->createShape(geom_player, *(g_pPhysicsWorld->defaultMaterial));
+			PxShape* playerShape = actor->createShape(geom_player, params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 			PxFilterData filterData(PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
 			playerShape->setSimulationFilterData(filterData);
 			PxFilterData qfilterData(1<<PHYSCOLL_PLAYER_ONLY_GEOMETRY, 0, 0, 0); // new geometry is player only
@@ -668,7 +667,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 	shape->setSimulationFilterData(filterData);
 	PxFilterData qfilterData(1<<filter, 0, 0, 0);
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 	shape->setQueryFilterData(qfilterData);
 	shape->userData = (void*)physCallbackObj;
@@ -678,7 +677,7 @@ BasePhysicsObject* BasePhysicsObject::CreateStaticObject(const PhysicsObjectConf
 
 	if(params.needBoxCollision)
 	{
-		PxShape* boxCollisionShape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), *(g_pPhysicsWorld->defaultMaterial));
+		PxShape* boxCollisionShape = actor->createShape(PxBoxGeometry(objectSize.x*0.5f, objectSize.y*0.5f, objectSize.z*0.5f), params.requireNoBounceMaterial?*(g_pPhysicsWorld->noBounceMaterial):*(g_pPhysicsWorld->defaultMaterial));
 		
 		PxFilterData filterData2(params.group, 0, 0, 0);
 		boxCollisionShape->setSimulationFilterData(filterData2);
@@ -711,8 +710,12 @@ PhysObj::PhysObj()
 bool
 BasePhysicsObject::IsStatic()
 {
-	PxActor* actor = getPhysicsActor();
-	return WarInc_AsRigidStatic(actor) ? true : false;
+	if( PxActor* actor = getPhysicsActor() )
+	{
+		return actor->isRigidStatic() ? true : false ;
+	}
+
+	return false ;
 }
 
 PhysObj::~PhysObj()
@@ -720,7 +723,7 @@ PhysObj::~PhysObj()
 	if(Actor)
 	{
         r3d_assert(g_bAllowPhysObjCreation);
-		Actor->userData = NULL;
+		Actor->userData = NULL; // pt: not sure, but I keep getting physics objects that have a pointers to dead game object
 		Actor->release();
 		Actor = NULL;
 	}
@@ -728,27 +731,29 @@ PhysObj::~PhysObj()
 
 void PhysObj::AddImpulseAtPos(const r3dPoint3D& impulse, const r3dPoint3D& pos)
 {
-	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
-	if(dyn && !WarInc_IsKinematic(dyn))
+	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
 	{
+		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
 
 void PhysObj::AddImpulseAtLocalPos(const r3dPoint3D& impulse, const r3dPoint3D& pos)
 {
-	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
-	if(dyn && !WarInc_IsKinematic(dyn))
+	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
 	{
+		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
 
+
+
 void PhysObj::Move(const r3dPoint3D& move, float sharpness)
 {
-	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
-	if(dyn)
+	if(Actor->isRigidActor())
 	{
+		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.p.x += move.x;
 		trans.p.y += move.y;
@@ -760,10 +765,9 @@ void PhysObj::Move(const r3dPoint3D& move, float sharpness)
 void PhysObj::SetPosition(const r3dPoint3D& pos)
 {
 	r3dPoint3D correctPos = pos + m_PositionDifference;
-
-	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
-	if(dyn)
+	if(Actor->isRigidActor())
 	{
+		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.p.x = correctPos.x;
 		trans.p.y = correctPos.y;
@@ -776,16 +780,13 @@ void PhysObj::SetRotation(const r3dVector& Angles)
 {
 	D3DXMATRIX rotation;
 	D3DXMatrixRotationYawPitchRoll(&rotation, R3D_DEG2RAD(Angles.X), R3D_DEG2RAD(Angles.Y), R3D_DEG2RAD(Angles.Z));
-
-	PxMat33 orientation(
-		PxVec3(rotation._11, rotation._12, rotation._13),
+	PxMat33 orientation(PxVec3(rotation._11, rotation._12, rotation._13),
 		PxVec3(rotation._21, rotation._22, rotation._23),
-		PxVec3(rotation._31, rotation._32, rotation._33)
-	);
+		PxVec3(rotation._31, rotation._32, rotation._33));
 
-	PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
-	if(dyn)
+	if(Actor->isRigidActor())
 	{
+		PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		trans.q = PxQuat(orientation);
 		dyn->setGlobalPose(trans);
@@ -794,36 +795,63 @@ void PhysObj::SetRotation(const r3dVector& Angles)
 
 void PhysObj::SetVelocity(const r3dPoint3D& vel)
 {
-	PxRigidBody* dyn = WarInc_AsRigidBody(Actor);
-	if(dyn)
+	if(Actor && Actor->isRigidBody())
 	{
+		PxRigidBody* dyn = Actor->isRigidBody();
 		dyn->setLinearVelocity(*(PxVec3*)&vel);
+	}
+}
+
+void PhysObj::SetScale(const r3dPoint3D& scale)
+{
+	if (Actor && Actor->isRigidActor())
+	{
+		PxRigidActor *ra = Actor->isRigidActor();
+		PxShape *s = 0;
+		ra->getShapes(&s, 1);
+		if (s)
+		{
+			PxGeometryHolder g = s->getGeometry();
+			PxMeshScale *meshScale = 0;
+
+			switch (g.getType())
+			{
+			case PxGeometryType::eCONVEXMESH:
+				meshScale = &g.convexMesh().scale;
+			case PxGeometryType::eTRIANGLEMESH:
+				meshScale = &g.triangleMesh().scale;
+			}
+
+			if (meshScale)
+			{
+				meshScale->scale = PxVec3(scale.x, scale.y, scale.z);
+				//	Update scale
+				s->setGeometry(g.any());
+			}
+		}
 	}
 }
 
 r3dPoint3D PhysObj::GetPosition() const
 {
-	const PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
-	if(dyn)
+	if(Actor->isRigidActor())
 	{
+		const PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		r3dPoint3D correctPos = r3dPoint3D(trans.p.x, trans.p.y, trans.p.z);
 		correctPos -= m_PositionDifference;
 		return correctPos;
 	}
-
 	r3d_assert(false);
-	return r3dPoint3D(0, 0, 0);
+	return r3dPoint3D(0,0,0);
 }
 
 D3DXMATRIX PhysObj::GetRotation() const
 {
-	D3DXMATRIX res;
-	D3DXMatrixIdentity(&res);
-
-	const PxRigidActor* dyn = WarInc_AsRigidActor(Actor);
-	if(dyn)
+	D3DXMATRIX res; D3DXMatrixIdentity(&res);
+	if(Actor->isRigidActor())
 	{
+		const PxRigidActor* dyn = Actor->isRigidActor();
 		PxTransform trans = dyn->getGlobalPose();
 		PxMat33 mat(trans.q);
 
@@ -841,46 +869,79 @@ D3DXMATRIX PhysObj::GetRotation() const
 
 		return res;
 	}
-
 	r3d_assert(false);
 	return res;
 }
 
 r3dPoint3D PhysObj::GetVelocity() const
 {
-	const PxRigidBody* dyn = WarInc_AsRigidBody(Actor);
-	if(dyn)
+	if(Actor && Actor->isRigidBody())
 	{
+		const PxRigidBody* dyn = Actor->isRigidBody();
 		PxVec3 vel = dyn->getLinearVelocity();
-		return r3dPoint3D(vel.x, vel.y, vel.z);
+		return r3dPoint3D(vel.x,vel.y,vel.z);
 	}
-
-	return r3dPoint3D(0, 0, 0);
+	else
+		return r3dPoint3D(0,0,0);
 }
 
-bool PhysObj::IsSleeping()
+r3dPoint3D PhysObj::GetScale() const
 {
-	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
-	if(dyn)
-		return dyn->isSleeping();
+	if(Actor && Actor->isRigidActor())
+	{
+		PxRigidActor *ra = Actor->isRigidActor();
+		PxShape *s = 0;
+		ra->getShapes(&s, 1);
+		if (s)
+		{
+			PxGeometryHolder g = s->getGeometry();
+			PxMeshScale *meshScale = 0;
 
-	return true;
+			switch (g.getType())
+			{
+			case PxGeometryType::eCONVEXMESH:
+				meshScale = &g.convexMesh().scale;
+			case PxGeometryType::eTRIANGLEMESH:
+				meshScale = &g.triangleMesh().scale;
+			}
+
+			if (meshScale)
+			{
+				return r3dPoint3D(meshScale->scale.x, meshScale->scale.y, meshScale->scale.z);
+			}
+		}
+	}
+	return r3dPoint3D(1.0f, 1.0f, 1.0f);
+}
+
+bool PhysObj::IsSleeping() 
+{ 
+	if(Actor && Actor->isRigidDynamic())
+		return Actor->isRigidDynamic()->isSleeping(); 
+
+	return true; // static
+}
+
+void PhysObj::ForceToSleep() 
+{ 
+	if(Actor && Actor->isRigidDynamic())
+		Actor->isRigidDynamic()->putToSleep(); 
 }
 
 void PhysObj::addSmoothVelocity(const r3dVector& vel)
 {
-	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
-	if(dyn && !WarInc_IsKinematic(dyn))
+	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
 	{
+		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&vel, PxForceMode::eIMPULSE);
 	}
 }
 
 void PhysObj::addImpulse(const r3dVector& impulse)
 {
-	PxRigidDynamic* dyn = WarInc_AsRigidDynamic(Actor);
-	if(dyn && !WarInc_IsKinematic(dyn))
+	if(Actor && Actor->isRigidDynamic() && Actor->isRigidDynamic()->getRigidDynamicFlags()!=PxRigidDynamicFlag::eKINEMATIC)
 	{
+		PxRigidDynamic* dyn = Actor->isRigidDynamic();
 		dyn->addForce(*(PxVec3*)&impulse, PxForceMode::eIMPULSE);
 	}
 }
@@ -973,95 +1034,81 @@ ControllerPhysObj::~ControllerPhysObj()
 
 void ControllerPhysObj::Move(const r3dPoint3D& move, float sharpness)
 {
-	static PxVec3 prevFramePos;
+	//r3dOutToLog("move: %.2f, %.2f, %.2f\n", move.x, move.y, move.z);
 
 	PxVec3 d(move.x, move.y, move.z);
 
 	PxVec3 old_pos;
 	PxVec3 new_pos;
+	old_pos.x = (float)Controller->getPosition().x;
+	old_pos.y = (float)Controller->getPosition().y;
+	old_pos.z = (float)Controller->getPosition().z;
 
-	const PxExtendedVec3 oldControllerPos = Controller->getPosition();
-	old_pos.x = (float)oldControllerPos.x;
-	old_pos.y = (float)oldControllerPos.y;
-	old_pos.z = (float)oldControllerPos.z;
+	static PxVec3 prevFramePos = old_pos;
 
-	PxFilterData controllerFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0);
-	PxControllerFilters controllerFilters(&controllerFilterData);
-
-	const float elapsedTime = r3dGetFrameTime();
-	const float minMoveDistance = 0.001f;
-
+	// iterate movement by 0.2meter steps
 	const int steps = int(move.Length() / 0.2f) + 1;
 	PxVec3 dstep = d / (float)steps;
-
-	for(int cur_step = 0; cur_step < steps; cur_step++)
+	for(int cur_step=0; cur_step<steps; cur_step++) 
 	{
-		Controller->move(dstep, minMoveDistance, elapsedTime, controllerFilters);
+		{
+			PxFilterData filterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0); //COLLIDABLE_PLAYER_COLLIDABLE_MASK
+			PxControllerFilters cf;
+			cf.mFilterData = &filterData;
+			cf.mFilterFlags = PxSceneQueryFilterFlag::eSTATIC;
+			cf.mActiveGroups = 1<<PHYSICS_TYPE_CONTROLLER; // collide only with players
+#ifdef WO_SERVER
+			Controller->move(dstep, 0.001f, r3dGetFrameTime(), cf, NULL);
+#else
+			Controller->move(dstep, 0.001f, r3dGetFrameTime(), cf, g_pPhysicsWorld->m_PlayerObstaclesManager);
+#endif
+		}
+	
+		// SPECIAL CODE TO PREVENT PLAYER FROM GOING THROUGH WALLS
+		new_pos.x = static_cast<float>(Controller->getPosition().x); //getDebugPosition will return new updated position from Controller->move. getPosition() returns previous frame position
+		new_pos.y = static_cast<float>(Controller->getPosition().y);
+		new_pos.z = static_cast<float>(Controller->getPosition().z);
 
-		const PxExtendedVec3 currentControllerPos = Controller->getPosition();
-		new_pos.x = (float)currentControllerPos.x;
-		new_pos.y = (float)currentControllerPos.y;
-		new_pos.z = (float)currentControllerPos.z;
-
-		float heightOffset = 0.8f;
-		if(((PxCapsuleController*)Controller)->getHeight() < 0.5f)
-			heightOffset = 0.4f;
-
-		PxBoxGeometry bbox(0.05f, heightOffset, 0.05f);
-		PxTransform pose(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxQuat(0, 0, 0, 1));
-
-		PxOverlapBuffer overlapHit;
-		PxQueryFilterData overlapFilter(
-			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
-			PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::eANY_HIT
-		);
-
-		if(!g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, overlapFilter))
+		// check if for any reason we fell through geometry (that will check terrain too)
+		float heighOffset = 0.8f;
+		if(((PxCapsuleController*)Controller)->getHeight()<0.5f)
+			heighOffset = 0.4f;
+		PxBoxGeometry bbox(0.05f, heighOffset, 0.05f);
+		PxTransform pose(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxQuat(0,0,0,1));
+		PxShape* hit = NULL;
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
+		if(!g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, hit, filter)) 
 		{
 			continue;
 		}
-
+			
+		// player somehow ended up in geometry, move him back
 		Controller->setPosition(PxExtendedVec3(old_pos.x, old_pos.y, old_pos.z));
 
+		// after returning him back to his previous position, try to add some gravity to prevent player being stuck to geometry, but check that previously we have any horizontal movement
 		PxVec3 dd = d;
-		dd.y = 0.0f;
-
-		if(dd.magnitudeSquared() > 0.0f)
+		dd.y = 0;
+		if(dd.magnitudeSquared() > 0)
 		{
-			dd = PxVec3(0.0f, -9.81f * r3dGetFrameTime(), 0.0f);
-			Controller->move(dd, minMoveDistance, elapsedTime, controllerFilters);
+			dd = PxVec3(0.0f, -9.81f*r3dGetFrameTime(), 0.0f);
+			PxControllerFilters cf;
+			cf.mActiveGroups = COLLIDABLE_PLAYER_COLLIDABLE_MASK;
+			Controller->move(dd, 0.001f, r3dGetFrameTime(), cf);
 		}
-
 		break;
 	}
 
-	const PxExtendedVec3 finalControllerPos = Controller->getPosition();
-	new_pos.x = (float)finalControllerPos.x;
-	new_pos.y = (float)finalControllerPos.y;
-	new_pos.z = (float)finalControllerPos.z;
+	new_pos.x = (float)(Controller)->getPosition().x; //getDebugPosition()
+	new_pos.y = (float)(Controller)->getPosition().y;
+	new_pos.z = (float)(Controller)->getPosition().z;
 
+	// check if player fell through world and don't allow him to do this
 	{
-		PxRaycastBuffer rayHit;
-		PxQueryFilterData rayFilter(
-			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
-			PxQueryFlag::eSTATIC | PxQueryFlag::eANY_HIT
-		);
-
-		if(!g_pPhysicsWorld->PhysXScene->raycast(
-			PxVec3(new_pos.x, new_pos.y, new_pos.z),
-			PxVec3(0.0f, -1.0f, 0.0f),
-			1000.0f,
-			rayHit,
-			PxHitFlag::eDEFAULT,
-			rayFilter
-		))
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK,0,0,0), PxSceneQueryFilterFlag::eSTATIC);
+		PxSceneQueryHit hit;
+		if(!g_pPhysicsWorld->PhysXScene->raycastAny(PxVec3(new_pos.x, new_pos.y, new_pos.z), PxVec3(0,-1,0), 1000.0f, hit, filter)) // nothing below our feet?
 		{
-			r3dOutToLog(
-				"Player falling through world. Auto correcting. Current pos: %.2f, %.2f, %.2f, Corrected Pos: %.2f, %.2f, %2.f\n",
-				new_pos.x, new_pos.y, new_pos.z,
-				prevFramePos.x, prevFramePos.y, prevFramePos.z
-			);
-
+			r3dOutToLog("Player falling through world. Auto correcting. Current pos: %.2f, %.2f, %.2f, Corrected Pos: %.2f, %.2f, %2.f\n", new_pos.x, new_pos.y, new_pos.z, prevFramePos.x, prevFramePos.y, prevFramePos.z);
 			Controller->setPosition(PxExtendedVec3(prevFramePos.x, prevFramePos.y, prevFramePos.z));
 		}
 	}
@@ -1082,6 +1129,10 @@ void ControllerPhysObj::SetVelocity(const r3dPoint3D& vel)
 {
 }
 
+void ControllerPhysObj::SetScale(const r3dPoint3D& scale)
+{
+}
+
 r3dPoint3D ControllerPhysObj::GetPosition() const
 {
 	PxExtendedVec3 pos = Controller->getPosition();
@@ -1097,6 +1148,11 @@ D3DXMATRIX ControllerPhysObj::GetRotation() const
 r3dPoint3D ControllerPhysObj::GetVelocity() const
 {
 	return r3dPoint3D(0,0,0);
+}
+
+r3dPoint3D ControllerPhysObj::GetScale() const
+{
+	return r3dPoint3D(1.0f, 1.0f, 1.0f);
 }
 
 bool ControllerPhysObj::IsSleeping()

@@ -2290,7 +2290,7 @@ bool RakPeer::IsLocalIP( const char *ip )
 			return true;
 	}
 #else
-	if (strcmp(ip, "528783108")==0) // 127.0.0.1 big endian
+	if (strcmp(ip, "2130706433")==0) // 127.0.0.1 big endian
 		return true;
 #endif
 	return false;

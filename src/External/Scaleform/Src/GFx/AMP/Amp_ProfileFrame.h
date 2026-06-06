@@ -292,8 +292,6 @@ public:
     UInt64  TimeStamp;
 
     UInt32  FramesPerSecond;
-    UInt32  ProfilingLevel;
-    bool    DetailedMemReport;
 
     // CPU graph
     UInt32  AdvanceTime;

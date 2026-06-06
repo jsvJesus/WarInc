@@ -44,6 +44,7 @@ enum PHYSICS_TYPE
 	// make sure those are last for now:
 	PHYSICS_TYPE_RAYCAST_BOX,
 	PHYSICS_TYPE_CONTROLLER, // special type for player controller
+	PHYSICS_TYPE_CONTROLLER_ZOMBIE,
 };
 
 struct PhysicsObjectConfig
@@ -60,6 +61,9 @@ struct PhysicsObjectConfig
 	bool			needExplicitCollisionMesh; // for static meshes only for now
 	bool			ready;
 
+	bool			requireNoBounceMaterial; // for objects that shouldn't slide or move to much after impact (like dropped objects from server)
+	char*			meshFilename;
+
 	PhysicsObjectConfig() // set to default, if you try to create object with those params it will fail!
 	{
 		group = PHYSCOLL_COLLISION_GEOMETRY;
@@ -73,7 +77,32 @@ struct PhysicsObjectConfig
 		needBoxCollision = 0;
 		needExplicitCollisionMesh = 0;
 		ready = 0; // set to true once config is ready
+		requireNoBounceMaterial = false;
+		meshFilename = NULL;
 	}
+
+	~PhysicsObjectConfig()
+	{
+		free(meshFilename);
+	}
+
+	// copy constructor due to meshFilename
+	PhysicsObjectConfig(const PhysicsObjectConfig& rhs)
+	{
+		memcpy(this, &rhs, sizeof(PhysicsObjectConfig));
+		meshFilename = NULL;
+		if(rhs.meshFilename)
+			meshFilename = strdup(rhs.meshFilename);
+	}
+	PhysicsObjectConfig& operator=(const PhysicsObjectConfig& rhs)
+	{
+		free(this->meshFilename);
+		memcpy(this, &rhs, sizeof(PhysicsObjectConfig));
+		meshFilename = NULL;
+		if(rhs.meshFilename)
+			meshFilename = strdup(rhs.meshFilename);
+	}
+
 };
 
 // used as interface
@@ -85,9 +114,11 @@ public:
 	virtual void 			SetPosition(const r3dPoint3D& pos)=0;
 	virtual void 			SetRotation(const r3dVector& Angles)=0;
 	virtual void 			SetVelocity(const r3dPoint3D& vel)=0;
+	virtual void			SetScale(const r3dPoint3D& scale)=0;
 	virtual r3dPoint3D 		GetPosition() const =0;
 	virtual D3DXMATRIX 		GetRotation() const =0;
 	virtual r3dPoint3D 		GetVelocity() const =0;
+	virtual r3dPoint3D		GetScale() const = 0;
 
 	// physics object position is in a center of object. 
 	// in engine, center of object is in pivot.
@@ -95,6 +126,7 @@ public:
 	virtual void			SetPositionCorrection(const r3dPoint3D& diff)=0;
 
 	virtual bool			IsSleeping() = 0;	
+	virtual void			ForceToSleep() = 0;
 
 	virtual void			addSmoothVelocity(const r3dVector& vel) {};
 	virtual void			addImpulse(const r3dVector& impulse) {};
@@ -130,10 +162,13 @@ public:
 	virtual void 			SetPosition(const r3dPoint3D& pos);
 	virtual void 			SetRotation(const r3dVector& Angles);
 	virtual void 			SetVelocity(const r3dPoint3D& vel);
+	virtual void 			SetScale(const r3dPoint3D& scale);
 	virtual r3dPoint3D 		GetPosition() const;
 	virtual D3DXMATRIX 		GetRotation() const;
 	virtual r3dPoint3D 		GetVelocity() const;
+	virtual r3dPoint3D 		GetScale() const;
 	virtual bool			IsSleeping();
+	virtual void			ForceToSleep();
 
 	virtual void			SetPositionCorrection(const r3dPoint3D& diff) { m_PositionDifference = diff; }
 
@@ -190,10 +225,13 @@ public:
 	virtual void 			SetPosition(const r3dPoint3D& pos);
 	virtual void 			SetRotation(const r3dVector& Angles);
 	virtual void 			SetVelocity(const r3dPoint3D& vel);
+	virtual void 			SetScale(const r3dPoint3D& vel);
 	virtual r3dPoint3D 		GetPosition() const;
 	virtual D3DXMATRIX 		GetRotation() const;
 	virtual r3dPoint3D 		GetVelocity() const;
+	virtual r3dPoint3D 		GetScale() const;
 	virtual bool			IsSleeping();
+	virtual void			ForceToSleep() {};
 
 	virtual void			AdjustControllerSize(float new_radius, float new_height, float offset);
 

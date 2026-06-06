@@ -1,45 +1,43 @@
-#include "NxApex.h"
-#ifndef __NX_RENDERMESHASSET_H__
-#define __NX_RENDERMESHASSET_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_RENDER_MESH_ASSET_H
+#define NX_RENDER_MESH_ASSET_H
 
 /*!
 \file
 \brief APEX RenderMesh Asset
 */
+
+#include "NxApexUsingNamespace.h"
+#include "NxVertexFormat.h"
+#include "NxApexAsset.h"
+#include "NxApexRenderBufferData.h"
+#include "NxRenderMesh.h"
 
 namespace physx
 {
@@ -74,6 +72,9 @@ struct NxRenderMeshAssetStats
 */
 struct NxRenderMeshAssetInstanceMode
 {
+	/**
+	\brief Enum of instance buffer data.
+	*/
 	enum Enum
 	{
 		POSE_SCALE = 0,
@@ -91,13 +92,20 @@ struct NxVertexColor
 {
 public:
 
-	PX_INLINE					NxVertexColor()												{}
+	PX_INLINE					NxVertexColor()	{}
+
+	/**
+	\brief Constructor
+	*/
 	PX_INLINE					NxVertexColor(const PxColorRGBA c)
 	{
 		const physx::PxF32 recip255 = 1 / (PxReal)255;
 		set((physx::PxF32)c.r * recip255, (physx::PxF32)c.g * recip255, (physx::PxF32)c.b * recip255, (physx::PxF32)c.a * recip255);
 	}
 
+	/**
+	\brief Copy assignment operator
+	*/
 	PX_INLINE	NxVertexColor&	operator = (const NxVertexColor& c)
 	{
 		r = c.r;
@@ -138,40 +146,63 @@ public:
 struct NxVertexUV
 {
 	NxVertexUV() {}
+
+	/**
+	\brief Constructor
+	*/
 	NxVertexUV(physx::PxF32 _u, physx::PxF32 _v)
 	{
 		set(_u, _v);
 	}
+
+	/**
+	\brief Constructor
+	*/
 	NxVertexUV(const physx::PxF32 uv[])
 	{
 		set(uv);
 	}
 
+	/**
+	\brief Set coordinates
+	*/
 	void			set(physx::PxF32 _u, physx::PxF32 _v)
 	{
 		u = _u;
 		v = _v;
 	}
 
+	/**
+	\brief Set coordinates
+	*/
 	void			set(const physx::PxF32 uv[])
 	{
 		u = uv[0];
 		v = uv[1];
 	}
 
+	/**
+	\brief operator []
+	*/
 	physx::PxF32&			operator [](int i)
 	{
 		PX_ASSERT(i >= 0 && i <= 1);
 		return (&u)[i];
 	}
 
+	/**
+	\brief const operator []
+	*/
 	const physx::PxF32&	operator [](int i) const
 	{
 		PX_ASSERT(i >= 0 && i <= 1);
 		return (&u)[i];
 	}
 
-	physx::PxF32	u, v;
+	/// coordinate
+	physx::PxF32	u;
+	/// coordinate
+	physx::PxF32	v;
 };
 
 
@@ -188,7 +219,11 @@ struct NxVertex
 	NxVertexColor	color;			//!< Color ar this position
 	physx::PxU16	boneIndices[NxVertexFormat::MAX_BONE_PER_VERTEX_COUNT]; //!< Bones which are attached to this vertex
 	physx::PxF32	boneWeights[NxVertexFormat::MAX_BONE_PER_VERTEX_COUNT]; //!< Per bone wieght, 0.0 if no bone
+	physx::PxU16	displacementFlags; //!< Flags for vertex displacement
 
+	/**
+	\brief Constructor which clears the entire structure
+	*/
 	NxVertex()
 	{
 		memset(this, 0, sizeof(NxVertex));
@@ -205,17 +240,16 @@ struct NxExplicitRenderTriangle
 	physx::PxI32	submeshIndex;		//!< The submesh to which this triangle belongs
 	physx::PxU32	smoothingMask;		//!< Smoothing mask
 	physx::PxU32	extraDataIndex;		//!< Index of extra data
+
+	/**
+	\brief Returns an unnormalized normal, in general
+	*/
+	physx::PxVec3	calculateNormal() const
+	{
+		return (vertices[1].position - vertices[0].position).cross(vertices[2].position - vertices[0].position);
+	}
 };
 
-
-/**
-\brief User-defined callback for creating render triangles
-*/
-class NxRenderMeshBuilder
-{
-public:
-	virtual void createTriangles(NxExplicitRenderTriangle* triangleBuffer, const NxApexCustomBufferIterator& customBufferData, physx::PxU32 triangleCount, void* userData) = 0;
-};
 
 
 /**
@@ -224,6 +258,10 @@ public:
 struct NxRenderMeshPartData
 {
 	NxRenderMeshPartData() : triangleCount(0), userData(NULL) {}
+
+	/**
+	\brief Constructor
+	*/
 	NxRenderMeshPartData(physx::PxU32 _triCount, void* _data) : triangleCount(_triCount), userData(_data) {}
 
 	physx::PxU32	triangleCount;	//!< Number of triangles in this mesh part
@@ -234,15 +272,18 @@ struct NxRenderMeshPartData
 /**
 \brief Authoring interface for an NxRenderMeshAsset
 */
-class NxRenderMeshAssetAuthoring : public NxApexAssetAuthoring, public NxApexInterface
+class NxRenderMeshAssetAuthoring : public NxApexAssetAuthoring
 {
 public:
 	/** \brief Vertex buffer class used for mesh creation */
-	typedef NxApexRenderBufferData<NxRenderVertexSemantic, NxRenderVertexSemantic::Enum> VertexBuffer;
+	class VertexBuffer : public NxApexRenderBufferData<NxRenderVertexSemantic, NxRenderVertexSemantic::Enum> {};
 
 	/** \brief How the geometry is stored.  Currently only supporting triangles. */
 	struct Primitive
 	{
+		/**
+		\brief Enum of geometry stored types.
+		*/
 		enum Enum
 		{
 			TRIANGLE_LIST,
@@ -256,6 +297,9 @@ public:
 	/** What kind of integer is used for indices. */
 	struct IndexType
 	{
+		/**
+		\brief Enum of integers types using for indices.
+		*/
 		enum Enum
 		{
 			UINT,
@@ -270,18 +314,41 @@ public:
 	class SubmeshDesc
 	{
 	public:
-		const char*				m_materialName;		/** Name of material associated with this geometry. */
-		const VertexBuffer*		m_vertexBuffers;	/** Vertex buffers for this submesh.  One may pass in the same buffers for each submesh. */
-		physx::PxU32			m_numVertexBuffers;	/** Number of vertex buffers in m_VertexBuffers array. */
-		physx::PxU32			m_numVertices;		/** Number of vertices.  Each vertex buffer in m_VertexBuffers must have this many vertices. */
-		Primitive::Enum			m_primitive;		/** How the geometry is represented.  See the Primitive enum. */
-		IndexType::Enum			m_indexType;		/** Type of the indices used in m_VertexIndices.  See the IndexType enum. */
-		const void*				m_vertexIndices;	/** Buffer of vertex indices, stored as described by primitive and indexSize.  If NULL, m_vertexIndices = {0,1,2,...} is implied. */
-		physx::PxU32			m_numIndices;		/** Size (in indices) of m_VertexIndices. */
-		physx::PxU32			m_firstVertex;		/** Vertex index offset. */
-		const void*				m_partIndices;		/** If not NULL, an array (of m_IndexType-sized indices) into m_VertexIndices, at the start of each part. */
-		physx::PxU32			m_numParts;			/** If m_PartIndices is not NULL, the number of parts. */
-		NxRenderCullMode::Enum	m_cullMode;			/** Winding order of the submesh */
+		/** Name of material associated with this geometry. */
+		const char*				m_materialName;
+
+		/** Vertex buffers for this submesh. One may pass in the same buffers for each submesh. */
+		const VertexBuffer*		m_vertexBuffers;
+
+		/** Number of vertex buffers in m_VertexBuffers array. */
+		physx::PxU32			m_numVertexBuffers;
+
+		/** Number of vertices.  Each vertex buffer in m_VertexBuffers must have this many vertices. */
+		physx::PxU32			m_numVertices;
+
+		/** How the geometry is represented.  See the Primitive enum. */
+		Primitive::Enum			m_primitive;
+
+		/** Type of the indices used in m_VertexIndices. See the IndexType enum. */
+		IndexType::Enum			m_indexType;
+
+		/** Buffer of vertex indices, stored as described by primitive and indexSize. If NULL, m_vertexIndices = {0,1,2,...} is implied. */
+		const void*				m_vertexIndices;
+
+		/** Size (in indices) of m_VertexIndices. */
+		physx::PxU32			m_numIndices;
+
+		/** Vertex index offset. */
+		physx::PxU32			m_firstVertex;
+
+		/** If not NULL, an array (of m_IndexType-sized indices) into m_VertexIndices, at the start of each part. */
+		const void*				m_partIndices;
+
+		/** If m_PartIndices is not NULL, the number of parts. */
+		physx::PxU32			m_numParts;
+
+		/** Winding order of the submesh */
+		NxRenderCullMode::Enum	m_cullMode;
 
 		/** Constructor sets default values. */
 		SubmeshDesc()
@@ -308,14 +375,19 @@ public:
 	class MeshDesc
 	{
 	public:
-		const SubmeshDesc*	m_submeshes;	/** Array of descriptors for the submeshes in this mesh. */
-		physx::PxU32		m_numSubmeshes;	/** The number of elements in m_submeshes. */
+		/** Array of descriptors for the submeshes in this mesh. */
+		const SubmeshDesc*		m_submeshes;
+
+		/** The number of elements in m_submeshes. */
+		physx::PxU32			m_numSubmeshes;
+
+		/** Texture UV direction. */
+		NxTextureUVOrigin::Enum	m_uvOrigin;
+
+
 
 		/** Constructor sets default values. */
-		MeshDesc()
-		{
-			memset(this, 0, sizeof(MeshDesc));
-		}
+		MeshDesc() : m_submeshes(NULL), m_numSubmeshes(0), m_uvOrigin(NxTextureUVOrigin::ORIGIN_TOP_LEFT) {}
 
 		/** Validity check, returns true if this descriptor contains valid fields. */
 		bool	isValid() const
@@ -354,68 +426,6 @@ public:
 	Old mesh-building interface follows (DEPRECATED, to be removed by beta release):
 	*/
 
-	/**
-	\brief (DEPRECATED, to be removed by beta release) User-defined callback for creating mesh triangles.
-	*/
-	virtual void			setMeshBuilder(NxRenderMeshBuilder* meshBuilder) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) If true, will attempt to eliminate redundant vertices.  (Default = true.)
-	*/
-	virtual void			setReduce(bool reduce) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Set scale position tolerance
-
-	If reducing (see setReduce) and this is true, position tolerance in x, y and z will be positionTolerance
-	(see setPositionTolerance) multiplied by the bounding box extents of the mesh part.  (Default = true.)
-	*/
-	virtual void			setScalePositionTolerance(bool scalePositionTolerance) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Set position tolerance
-
-	If reducing (see setReduce) vertices will not be merged if they are separated by more than this distance.
-	*/
-	virtual void			setPositionTolerance(physx::PxF32 positionTolerance) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Set normal tolerance
-
-	If reducing (see setReduce) vertices will not be merged if the difference between their normals exceeds this magnitude.
-	*/
-	virtual void			setNormalTolerance(physx::PxF32 normalTolerance) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Set UV tolerance
-
-	If reducing (see setReduce) vertices will not be merged if their u or v texture coordinates differ by more than this amount.
-	*/
-	virtual void			setUVTolerance(physx::PxF32 UVTolerance) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Tells which corner of the texture is at (0,0)
-	*/
-	virtual void			setTextureUVOrigin(NxTextureUVOrigin::Enum origin) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Adds one part descriptor, which will create one more part per submesh.
-	*/
-	virtual physx::PxU32	addPart(const NxRenderMeshPartData&) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Adds one submesh with the material name given by the function argument.
-	\return a pointer to the submesh's vertex format, which the user may modify.
-	*/
-	virtual NxVertexFormat*	addSubmesh(const char* materialName) = 0;
-
-	/**
-	\brief (DEPRECATED, to be removed by beta release) Trigger the build process of the render mesh asset.
-
-	This essentially replaces the now defunct descriptor based render mesh asset creation method.
-	*/
-	virtual void			buildRenderMesh(bool forceTangentChannel = true) = 0;
-
 	/* Public access to NxRenderMeshAsset get methods */
 
 	/// \brief Return the number of submeshes
@@ -435,7 +445,7 @@ public:
 	/// \brief Return a mutable submesh
 	virtual NxRenderSubmesh&		getSubmeshWritable(physx::PxU32 submeshIndex) = 0;
 	/// \brief Return the bounds of a mesh part
-	virtual physx::PxBounds3		getBounds(physx::PxU32 partIndex = 0) const = 0;
+	virtual const physx::PxBounds3&	getBounds(physx::PxU32 partIndex = 0) const = 0;
 	/// \brief Get the asset statistics
 	virtual void					getStats(NxRenderMeshAssetStats& stats) const = 0;
 };
@@ -446,7 +456,7 @@ public:
 
 To render a mesh asset, you must create an instance
 */
-class NxRenderMeshAsset : public NxApexAsset, public NxApexInterface
+class NxRenderMeshAsset : public NxApexAsset
 {
 public:
 
@@ -494,7 +504,7 @@ public:
 
 	Valid range of partIndex is {0..partCount()-1}
 	*/
-	virtual physx::PxBounds3		getBounds(physx::PxU32 partIndex = 0) const = 0;
+	virtual const physx::PxBounds3&	getBounds(physx::PxU32 partIndex = 0) const = 0;
 
 	/**
 	\brief Returns stats (sizes, counts) for the asset.
@@ -512,4 +522,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif // __NX_RENDERMESHASSET_H__
+#endif // NX_RENDER_MESH_ASSET_H

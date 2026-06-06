@@ -1,11 +1,11 @@
 #include "r3dPCH.h"
 
-#include <functional>
-
 #define R3D_PROBEUNDO_ENABLE 0
 
 #ifndef FINAL_BUILD
 #include <ShellAPI.h>
+#include <psapi.h>
+#pragma comment(lib,"Psapi.lib")
 #endif
 
 #include "r3d.h"
@@ -36,7 +36,6 @@
 #include "../ObjectsCode/WORLD/tree.h"
 #include "../ObjectsCode/AI/AI_Player.h"
 #include "../ObjectsCode/WORLD/obj_DebugTexture.h"
-#include "../ObjectsCode/Gameplay/BattleZone.h"
 #include "../ObjectsCode/effects/obj_ParticleSystem.h"
 #include "../ObjectsCode/Nature/wind.h"
 #include "../ui/FrontendShared.h"
@@ -53,6 +52,8 @@
 #include "ObjectsCode\world\DecalChief.h"
 #include "ObjectsCode\world\MaterialTypes.h"
 #include "ObjectsCode\weapons\ExplosionVisualController.h"
+#include "ObjectsCode\weapons\HeroConfig.h"
+#include "ObjectsCode\weapons\WeaponArmory.h"
 
 #include "Rendering\Deffered\VisibilityGrid.h"
 #include "Rendering/Probes/ProbeMaster.h"
@@ -77,11 +78,16 @@
 #include "TrueNature2\Terrain2.h"
 
 #include "Terrain2Editor.h"
-#include "../../../GameEngine/ai/NavMesh.h"
-#include "../../../GameEngine/ai/NavMeshActor.h"
+#include "../../../GameEngine/ai/NavGenerationHelpers.h"
+#include "../../../GameEngine/ai/AutodeskNav/AutodeskNavMesh.h"
+#include "../../../GameEngine/ai/AutodeskNav/AutodeskNavAgent.h"
 #include "../ObjectsCode/Gameplay/obj_Zombie.h"
+#include "CollectionsManager.h"
+
+#include "../MeshPropertyLib.h"
 
 #include "Helper.hpp"
+#include "r3dBackgroundTaskDispatcher.h"
 
 bool g_bEditMode = false;
 
@@ -99,6 +105,10 @@ struct SerializableSettingSet
 	PFX_GodRays::Settings				GodRaysSettings;
 	PFX_SeedSunThroughStencil::Settings SunThroughStencilSettings;
 
+#if R3D_ALLOW_LIGHT_PROBES
+	ProbeMaster::Settings			ProbeSettings;
+#endif
+
 	float ExplosionMaxStrength ;
 	float ExplosionDuration ;
 	float ExplosionMaxDistance ;
@@ -110,6 +120,7 @@ static r3dTexture* ScopeTest_Normal ;
 static r3dTexture* ScopeTest_Mask ;
 static r3dTexture* ScopeTest_BlurMask ;
 
+DecalGameObjectProxy *gDecalProxyObj = 0;
 r3dTerrainPaintBoundControl g_TerraPaintBoundCtrl ;
 
 float _ColorGrading_Levels_midlights[4] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -121,22 +132,31 @@ int _ColorGrading_Levels_high_output[4] = {255, 255, 255, 255};
 static int g_EditedTerrain2Data ;
 static int Terrain2EditMode ;
 
+const static char* terrain2PaintList[  ] =	{ "ERASER",		"BRUSH"		};
+enum										{ TE2_ERASE,	TE2_BRUSH	};
+
+
+static int Terrain2PaintMode = TE2_BRUSH ;
+static int Terrain2Editor_EraseAll = 0;
+
 float g_ShowSaveSign ;
 
 float g_fWaterPlaneBrushRadius = 150.0f;
 
 int g_RoadEditingSwtichedOffTerrain2RoadBaking = 0 ;
 
-extern int g_DrawProbePlane ;
+extern int g_DrawProbePlane;
 
-extern int g_ProbePaint_Active ;
+extern int g_ProbePaint_Active;
 
-extern float g_ProbePaint_BrushRadius ;
-extern float g_ProbePaint_BrushHeight ;
-extern float g_ProbePaint_HorizontalDensity ;
-extern float g_ProbePaint_VerticalDensity ;
+extern int g_ProbePaint_AddOrDelete;
 
-extern float g_ProbePaint_Y ;
+extern float g_ProbePaint_BrushRadius;
+extern float g_ProbePaint_BrushHeight;
+extern float g_ProbePaint_HorizontalDensity;
+extern float g_ProbePaint_VerticalDensity;
+
+extern float g_ProbePaint_Y;
 
 enum ProbePaintFollowMode
 {
@@ -150,9 +170,16 @@ extern ProbePaintFollowMode g_ProbePaint_FollowMode ;
 
 extern class UndoLightProbeCreateDelete* g_pPaintProbesUndo ;
 
-void AddPaintProbe( const r3dPoint3D& pos ) ;
+void PaintProbeAdd( const r3dPoint3D& pos );
+void PaintProbeRemove( const r3dPoint3D& pos );
 
 void ProbePaint() ;
+
+void VisualizeSlice( r3dTexture* tex, float slice );
+
+static int g_DoSliceVisualize;
+static float g_SliceToVisualize;
+static r3dTexture* g_3DTexForVisualizeSlice;
 
 static void ProbeDropCallback() ;
 static void ProbeSelectCallback( PickerSelectType pst, int left, int right, int top, int bottom ) ;
@@ -164,6 +191,7 @@ void SerializeBloom( pugi::xml_node node, PFX_ExtractBloom::Settings* settings, 
 
 	SerializeXMLVal<W>( "glow_amplify"				, node, &settings->GlowAmplify			);
 	SerializeXMLVal<W>( "glow_tint"					, node, &settings->GlowTint				);
+	SerializeXMLVal<W>( "glow_threshold"			, node, &settings->GlowThreshold		);	
 
 	SerializeXMLVal<W>( "bloom_threshold"			, node, &settings->Threshold			);
 	SerializeXMLVal<W>( "bloom_power"				, node, &settings->Power				);
@@ -202,17 +230,6 @@ void SerializeCommonSettings( pugi::xml_node root )
 		}		
 	}
 #endif
-
-	if( pugi::xml_node camoNode = SerializeXMLNode<W>( root, "tcamo" ) )
-	{
-		SerializeXMLVal<W>( "tex_scale",			camoNode, &gCamoSettings.texScale			);
-		SerializeXMLVal<W>( "distort_scale",		camoNode, &gCamoSettings.distortScale		);
-		SerializeXMLVal<W>( "reflection_ammount",	camoNode, &gCamoSettings.reflectionAmmount	);		
-		SerializeXMLVal<W>( "anim_speed",			camoNode, &gCamoSettings.animSpeed			);
-
-		SerializeXMLVal<W>( "color0",				camoNode, &gCamoSettings.color0				);
-		SerializeXMLVal<W>( "color1",				camoNode, &gCamoSettings.color1				);
-	}
 }
 
 template < bool Write >
@@ -312,9 +329,7 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 	extern float g_DoubleDepthSSAO_BlurSens;
 
 	const bool W = Write ;
-	r3dOutToLog( "SerializeLevelSettingsXML: enter\n" );
 
-	r3dOutToLog( "SerializeLevelSettingsXML: misc begin\n" );
 	if( pugi::xml_node miscNode = SerializeXMLNode<W>( root, "misc" ) )
 	{
 		if(g_level_settings_ver->GetInt() <= 2)
@@ -333,17 +348,8 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 
 		SerializeXMLCmdVarF<W>( "detail_radius"			, miscNode, r_level_detail_radius		);
 		SerializeXMLCmdVarF<W>( "grass_radius"			, miscNode, r_grass_view_dist			);
-	}
-	r3dOutToLog( "SerializeLevelSettingsXML: misc ok\n" );
 
-	if( pugi::xml_node uavNode = SerializeXMLNode<W>( root, "uav" ) )
-	{
-		extern float uav_LevelBounds[5];
-		SerializeXMLVal<W>( "minX",	uavNode,	&uav_LevelBounds[0]);
-		SerializeXMLVal<W>( "maxX",	uavNode,	&uav_LevelBounds[1]);
-		SerializeXMLVal<W>( "minZ",	uavNode,	&uav_LevelBounds[2]);
-		SerializeXMLVal<W>( "maxZ",	uavNode,	&uav_LevelBounds[3]);
-		SerializeXMLVal<W>( "maxY",	uavNode,	&uav_LevelBounds[4]);
+		SerializeXMLCmdVarF<W>( "default_draw_distance"	, miscNode, r_default_draw_distance		);
 	}
 
 	if( pugi::xml_node sssNode = SerializeXMLNode<W> ( root, "sss" ) )
@@ -351,13 +357,30 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		Serialize<W>( sssNode, &gSSSParams );
 	}
 
+#if R3D_ALLOW_LIGHT_PROBES
 	if( pugi::xml_node probesNode = SerializeXMLNode<W>( root, "light_probes" ) )
 	{
-		SerializeXMLCmdVarF<W>( "r_lp_out_sky",		probesNode, r_lp_out_sky	);
-		SerializeXMLCmdVarF<W>( "r_lp_sky_direct",	probesNode, r_lp_sky_direct );
-		SerializeXMLCmdVarF<W>( "r_lp_sky_bounce",	probesNode, r_lp_sky_bounce );
-		SerializeXMLCmdVarF<W>( "r_lp_sun_bounce",	probesNode, r_lp_sun_bounce );
+		SerializeXMLCmdVarF<W>( "r_lp_sky_direct",		probesNode, r_lp_sky_direct );
+		SerializeXMLCmdVarF<W>( "r_lp_sky_bounce",		probesNode, r_lp_sky_bounce );
+		SerializeXMLCmdVarF<W>( "r_lp_sun_bounce",		probesNode, r_lp_sun_bounce );
+		SerializeXMLCmdVarF<W>( "r_lp_dyna_coef",		probesNode, r_lp_dyna_coef );
+
+		SerializeXMLVal<W>( "default_bounce_color_up",		probesNode, &ssSet->ProbeSettings.DefaultBounceColor_Up );
+		SerializeXMLVal<W>( "default_bounce_color_down",	probesNode, &ssSet->ProbeSettings.DefaultBounceColor_Down );
+
+		SerializeXMLVal<W>( "volume_offset_y",		probesNode, &ssSet->ProbeSettings.ProbeVolumeOffsetY );
+		SerializeXMLVal<W>( "tiles_x",				probesNode, &ssSet->ProbeSettings.NominalProbeTileCountX );
+		SerializeXMLVal<W>( "tiles_z",				probesNode, &ssSet->ProbeSettings.NominalProbeTileCountZ );
+
+		SerializeXMLVal<W>( "span_x",				probesNode, &ssSet->ProbeSettings.ProbeTextureSpanX );
+		SerializeXMLVal<W>( "span_y",				probesNode, &ssSet->ProbeSettings.ProbeTextureSpanY );
+		SerializeXMLVal<W>( "span_z",				probesNode, &ssSet->ProbeSettings.ProbeTextureSpanZ );
+
+		SerializeXMLVal<W>( "volume_width",			probesNode, &ssSet->ProbeSettings.ProbeTextureWidth );
+		SerializeXMLVal<W>( "volume_height",		probesNode, &ssSet->ProbeSettings.ProbeTextureHeight );
+		SerializeXMLVal<W>( "volume_depth",			probesNode, &ssSet->ProbeSettings.ProbeTextureDepth );
 	}
+#endif
 
 	if( pugi::xml_node shadowNode = SerializeXMLNode<W>( root, "shadows" ) )
 	{
@@ -376,12 +399,14 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLCmdVarF<W>( "blur_sense"					, shadowNode, r_shadows_blur_sense			);
 		SerializeXMLCmdVarF<W>( "blur_radius"					, shadowNode, r_shadows_blur_radius			);
 
+		SerializeXMLCmdVarF<W>( "spot_light_shadow_bias_hw"	,	shadowNode, r_spot_light_shadow_bias_hw		);
+		SerializeXMLCmdVarF<W>( "spot_light_shadow_bias_pcf",	shadowNode, r_spot_light_shadow_bias_pcf	);
+
 		SerializeXMLShadowSlice<W>( shadowNode, 0 );
 		SerializeXMLShadowSlice<W>( shadowNode, 1 );
 		SerializeXMLShadowSlice<W>( shadowNode, 2 );
 	}
 
-	r3dOutToLog( "SerializeLevelSettingsXML: postfx begin\n" );
 	if( pugi::xml_node pfxNode = SerializeXMLNode<W>( root, "postfx" ) )
 	{
 		HUDFilterSettings &nwHfs = gHUDFilterSettings[HUDFilter_NightVision];
@@ -396,10 +421,22 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 			SerializeFG<W>( nwFGNode, &nwHfs.filmGrainSettings);
 		}
 
-		SerializeXMLVal<W>( "nw_lut3d_tex"					, pfxNode, nwHfs.colorCorrectionTextureName );
+		SerializeXMLVal<W>( "nw_lut3d_tex", pfxNode, &nwHfs.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_DAY ] );
+
+		if( !W )
+		{
+			for( int i = 0, e = r3dAtmosphere::SKY_PHASE_COUNT; i < e; i ++ )
+			{
+				nwHfs.colorCorrectionTextureNames[ i ] = nwHfs.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_DAY ];
+			}
+		}
 
 		SerializeXMLVal<W>( "nw_override_hdr"				, pfxNode, &nwHfs.overrideHDRControls );
 		SerializeXMLVal<W>( "nw_hdr_exposure_bias"			, pfxNode, &nwHfs.hdrExposureBias );
+
+		SerializeXMLVal<W>( "nw_override_ambient_and_int"	, pfxNode, &nwHfs.overrideAmbientAndIntensity );
+		SerializeXMLVal<W>( "nw_override_ambient"			, pfxNode, &nwHfs.overrideAmbient );
+		SerializeXMLVal<W>( "nw_override_intensity"			, pfxNode, &nwHfs.overrideIntensity );
 
 		SerializeXMLVal<W>( "dof_enable"					, pfxNode, &LevelDOF			);
 		SerializeXMLVal<W>( "dof_near"						, pfxNode, &_NEAR_DOF				);
@@ -498,8 +535,21 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		{
 			SerializeXMLVal<W>( "enable"		, ccNode, &defaultHfs.enableColorCorrection			);
 
-			SerializeXMLVal<W>( "scheme"		, ccNode, (int*)&g_ColorCorrectionSettings.scheme	);
-			SerializeXMLVal<W>( "lut3d_tex"		, ccNode, gHUDFilterSettings[HUDFilter_Default].colorCorrectionTextureName );
+			SerializeXMLVal<W>( "scheme"			, ccNode, (int*)&g_ColorCorrectionSettings.scheme	);
+
+			HUDFilterSettings& sts = gHUDFilterSettings[HUDFilter_Default];
+
+			if( !W )
+			{
+				r3dString oneToMany;
+				SerializeXMLVal<W>( "lut3d_tex", ccNode, &oneToMany );
+				sts.SetAllColorCorrectionTexturesTo( oneToMany );
+			}
+
+			SerializeXMLVal<W>( "lut3d_tex_dawn"	, ccNode, &sts.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_DAWN ]	);
+			SerializeXMLVal<W>( "lut3d_tex_day"		, ccNode, &sts.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_DAY ]	);
+			SerializeXMLVal<W>( "lut3d_tex_dusk"	, ccNode, &sts.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_DUSK ]	);
+			SerializeXMLVal<W>( "lut3d_tex_night"	, ccNode, &sts.colorCorrectionTextureNames[ r3dAtmosphere::SKY_PHASE_NIGHT ]	);
 
 			SerializeXMLCurve3f<W>( "r_curve"	, ccNode, &g_ColorCorrectionSettings.RGBCurves[ 0 ]	);
 			SerializeXMLCurve3f<W>( "g_curve"	, ccNode, &g_ColorCorrectionSettings.RGBCurves[ 1 ]	);
@@ -536,7 +586,6 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLVal<W>( "fxaa_edge_threshold"			, pfxNode, &gPFX_FXAA.edgeThreshold					);
 		SerializeXMLVal<W>( "fxaa_edge_threshold_min"		, pfxNode, &gPFX_FXAA.edgeThresholdMin				);
 	}
-	r3dOutToLog( "SerializeLevelSettingsXML: postfx ok\n" );
 
 	if( pugi::xml_node ssaoNode = SerializeXMLNode<W>( root, "double_depth" ) )
 	{
@@ -544,10 +593,11 @@ void SerializeLevelSettingsXML( pugi::xml_node root, SerializableSettingSet* ssS
 		SerializeXMLVal<W>( "ao_double_depth_ssao_blur"			, ssaoNode, &g_DoubleDepthSSAO_Blur			);
 		SerializeXMLVal<W>( "ao_double_depth_ssao_blur_sens"	, ssaoNode, &g_DoubleDepthSSAO_BlurSens		);
 	}
-	r3dOutToLog( "SerializeLevelSettingsXML: ok\n" );
 }
 
 void SaveXMLSettings( const char* targetDir );
+void SaveEnvironmentToXML( const char* fileName );
+int LoadEnvironmentFromXML( const char* fileName );
 
 int _ColorGrading = 0;
 int _Motionblur = 0;
@@ -725,197 +775,121 @@ void UpdateColorCorrectionTextures()
 
 int LoadLevelSettingsXML( pugi::xml_node root )
 {
-	r3dOutToLog( "LoadLevelSettingsXML: enter\n" );
+	SerializableSettingSet ssSet ;	
 
-	if( root.empty() )
-	{
-		r3dOutToLog( "LoadLevelSettingsXML FAILED: empty root\n" );
-		return 0;
-	}
+	SerializeLevelSettingsXML< false >( root, &ssSet ) ;
 
-	SerializableSettingSet ssSet;
-	memset( &ssSet, 0, sizeof( ssSet ) );
+	// only SSM_HQ supports detail path
+	g_SSAOSettings[ SSM_DEFAULT ].DetailPathEnable = 0 ;
 
-	ssSet.ExplosionMaxStrength = 1.0f;
-	ssSet.ExplosionDuration = 1.0f;
-	ssSet.ExplosionMaxDistance = 100.0f;
-	ssSet.ExplosionBrightThreshold = 1.0f;
-
-	r3dOutToLog( "LoadLevelSettingsXML: SerializeLevelSettingsXML begin\n" );
-	SerializeLevelSettingsXML< false >( root, &ssSet );
-	r3dOutToLog( "LoadLevelSettingsXML: SerializeLevelSettingsXML ok\n" );
-
-	g_SSAOSettings[ SSM_DEFAULT ].DetailPathEnable = 0;
-
-	r3dOutToLog( "LoadLevelSettingsXML: RestoreCCLUT3DTexture begin\n" );
 	RestoreCCLUT3DTexture();
-	r3dOutToLog( "LoadLevelSettingsXML: RestoreCCLUT3DTexture ok\n" );
 
-	r3dOutToLog( "LoadLevelSettingsXML: UpdateColorCorrectionTextures begin\n" );
 	UpdateColorCorrectionTextures();
-	r3dOutToLog( "LoadLevelSettingsXML: UpdateColorCorrectionTextures ok\n" );
 
 	if( g_ColorCorrectionSettings.scheme == ColorCorrectionSettings::CCS_USE_RGB_HSV_CURVES )
 		g_ColorCorrectionSettings.uiScheme = 0;
 	else
 		g_ColorCorrectionSettings.uiScheme = g_ColorCorrectionSettings.scheme;
 
-	r3dOutToLog( "LoadLevelSettingsXML: RadialBlurSettings.Restrict begin\n" );
 	ssSet.RadialBlurSettings.Restrict();
-	r3dOutToLog( "LoadLevelSettingsXML: RadialBlurSettings.Restrict ok\n" );
 
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ExtractGlow.SetSettings begin\n" );
 	gPFX_ExtractGlow.SetSettings( ssSet.GlowSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ExtractGlow.SetSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_CameraMotionBlur.SetSettings begin\n" );
 	gPFX_CameraMotionBlur.SetSettings( ssSet.CamMotionBlurSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_CameraMotionBlur.SetSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_RadialBlur.SetDefaultSettings begin\n" );
 	gPFX_RadialBlur.SetDefaultSettings( ssSet.RadialBlurSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_RadialBlur.SetDefaultSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ObjectMotionBlur.SetSettings begin\n" );
 	gPFX_ObjectMotionBlur.SetSettings( ssSet.ObjMotionBlurSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_ObjectMotionBlur.SetSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_GodRays.SetSettings begin\n" );
 	gPFX_GodRays.SetSettings( ssSet.GodRaysSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_GodRays.SetSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SeedSunThroughStencil.SetSettings begin\n" );
 	gPFX_SeedSunThroughStencil.SetSettings( ssSet.SunThroughStencilSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SeedSunThroughStencil.SetSettings ok\n" );
-
-	if( SG_SlicesNum < 0 )
-		SG_SlicesNum = 0;
-
-	if( SG_SlicesNum > MAX_SUNGLARES )
-		SG_SlicesNum = MAX_SUNGLARES;
 
 	ssSet.SunGlareSettings.NumSunglares = SG_SlicesNum;
-
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SunGlare.SetSettings begin, SG_SlicesNum=%d\n", SG_SlicesNum );
 	gPFX_SunGlare.SetSettings( ssSet.SunGlareSettings );
-	r3dOutToLog( "LoadLevelSettingsXML: gPFX_SunGlare.SetSettings ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: UpdateLowShadowSplitDistances begin\n" );
 	UpdateLowShadowSplitDistances();
-	r3dOutToLog( "LoadLevelSettingsXML: UpdateLowShadowSplitDistances ok\n" );
 
-	r3dOutToLog( "LoadLevelSettingsXML: SSAO restrict begin\n" );
 	g_SSAOConstraints[ SSM_DEFAULT ].Restrict( g_SSAOSettings[ SSM_DEFAULT ] );
 	g_SSAOConstraints[ SSM_HQ ].Restrict( g_SSAOSettings[ SSM_HQ ] );
-	r3dOutToLog( "LoadLevelSettingsXML: SSAO restrict ok\n" );
 
-	r3dOutToLog( "LoadLevelSettingsXML: ExplosionVisualController begin\n" );
-	gExplosionVisualController.SetDefaultMaxStrength( ssSet.ExplosionMaxStrength );
-	gExplosionVisualController.SetDefaultDuration( ssSet.ExplosionDuration );
-	gExplosionVisualController.SetMaxVisibleDistance( ssSet.ExplosionMaxDistance );
-	gExplosionVisualController.SetDefaultBrightThreshold( ssSet.ExplosionBrightThreshold );
-	r3dOutToLog( "LoadLevelSettingsXML: ExplosionVisualController ok\n" );
+	gExplosionVisualController.SetDefaultMaxStrength( ssSet.ExplosionMaxStrength ) ;
+	gExplosionVisualController.SetDefaultDuration( ssSet.ExplosionDuration ) ;
+	gExplosionVisualController.SetMaxVisibleDistance( ssSet.ExplosionMaxDistance ) ;
+	gExplosionVisualController.SetDefaultBrightThreshold( ssSet.ExplosionBrightThreshold ) ;
 
-	r3dOutToLog( "LoadLevelSettingsXML: SyncLightingAndSSAO begin\n" );
+#if R3D_ALLOW_LIGHT_PROBES
+	g_pProbeMaster->SetSettings( ssSet.ProbeSettings );
+#endif
+
 	void SyncLightingAndSSAO();
 	SyncLightingAndSSAO();
-	r3dOutToLog( "LoadLevelSettingsXML: SyncLightingAndSSAO ok\n" );
-
-	r3dOutToLog( "LoadLevelSettingsXML: ok\n" );
 
 	return 1;
-}
+};
 
 int LoadXMLSettings()
 {
-	char FName[ 512 ];
+	char FName[ 512 ] ;
+
 	FName[ sizeof FName - 1 ] = 0;
 
-	_snprintf( FName, sizeof FName - 1, LEVEL_SETTINGS_FILE, r3dGameLevel::GetHomeDir() );
+	_snprintf( FName, sizeof FName - 1, LEVEL_SETTINGS_FILE, r3dGameLevel::GetHomeDir() ) ;
 
-	r3dOutToLog( "LoadXMLSettings: begin '%s'\n", FName );
+	bool XMLExists = false;
 
 	Bytes xmlFileBuffer;
+
 	pugi::xml_document xmlLevelFile;
-	pugi::xml_node xmlRoot;
+	pugi::xml_node xmlRoot ;
 
 	r3dFile* f = r3d_open( FName, "rb" );
-
-	if( !f )
+	if ( f )
 	{
-		r3dOutToLog( "LoadXMLSettings FAILED: cannot open '%s'\n", FName );
-		return 0;
-	}
+		r3dOutToLog( "Loading '%s'\n", FName ) ;
+		XMLExists = true ;
 
-	r3dOutToLog( "LoadXMLSettings: opened '%s', size=%u\n", FName, (unsigned int)f->size );
+		if( !ParseXMLInMemory( f, &xmlFileBuffer, &xmlLevelFile ) )
+		{
+			fclose( f );
+			return 0 ;
+		}
 
-	if( !ParseXMLInMemory( f, &xmlFileBuffer, &xmlLevelFile ) )
-	{
-		r3dOutToLog( "LoadXMLSettings FAILED: ParseXMLInMemory failed for '%s'\n", FName );
+		xmlRoot = xmlLevelFile.root().child( "root" ) ;
+
 		fclose( f );
-		return 0;
 	}
-
-	fclose( f );
-
-	xmlRoot = xmlLevelFile.root().child( "root" );
-
-	if( xmlRoot.empty() )
+	else
 	{
-		r3dOutToLog( "LoadXMLSettings FAILED: xml root node <root> not found in '%s'\n", FName );
-		return 0;
+		r3dOutToLog( "Couldn't open '%s'\n", FName ) ;
 	}
 
-	int xmlVersion = xmlRoot.attribute( "version" ).as_int();
 
-	r3dOutToLog( "LoadXMLSettings: root version=%d\n", xmlVersion );
+	int levelXmlLoadSuccess = 0 ;
 
-	if( xmlVersion < 2 )
+	if( XMLExists && xmlRoot.attribute("version").as_int() >= 2 )
 	{
-		r3dOutToLog( "LoadXMLSettings FAILED: unsupported LevelSettings.xml version=%d, need >= 2\n", xmlVersion );
-		return 0;
+		g_level_settings_ver->SetInt( xmlRoot.attribute("version").as_int() ) ;
+
+		levelXmlLoadSuccess = LoadLevelSettingsXML( xmlRoot );
+
+		if( !levelXmlLoadSuccess )
+			r3dOutToLog( "LoadLevelSettingsXML failed.\n" ) ;
+
+		r3dGameLevel::Environment.LoadFromXML( xmlRoot );
 	}
-
-	g_level_settings_ver->SetInt( xmlVersion );
-
-	r3dOutToLog( "LoadXMLSettings: LoadLevelSettingsXML begin\n" );
-
-	int levelXmlLoadSuccess = LoadLevelSettingsXML( xmlRoot );
-
-	if( !levelXmlLoadSuccess )
-	{
-		r3dOutToLog( "LoadXMLSettings FAILED: LoadLevelSettingsXML failed\n" );
-		return 0;
-	}
-
-	r3dOutToLog( "LoadXMLSettings: Environment.LoadFromXML begin\n" );
-
-	r3dGameLevel::Environment.LoadFromXML( xmlRoot );
-
-	r3dOutToLog( "LoadXMLSettings: LoadCommonSettings begin\n" );
 
 	int LoadCommonSettings();
 	int commXmlLoadSuccess = LoadCommonSettings();
 
 	if( !commXmlLoadSuccess )
-	{
-		r3dOutToLog( "LoadXMLSettings FAILED: LoadCommonSettings failed\n" );
-		return 0;
-	}
-
-	r3dOutToLog( "LoadXMLSettings: UpdateHUDFilterSettings begin\n" );
+		r3dOutToLog( "LoadCommonSettings failed.\n" ) ;
 
 	void UpdateHUDFilterSettings( int*, int* );
 	UpdateHUDFilterSettings( 0, 0 );
 
-	r3dOutToLog( "LoadXMLSettings: ok\n" );
-
-	return 1;
+	return levelXmlLoadSuccess && commXmlLoadSuccess ;
 }
 
-int LoadLevel()
+int LoadLevel( float startLoadingProgress )
 {
-	float LoadProgress = PROGRESS_LOAD_LEVEL_START;
+	float LoadProgress = startLoadingProgress;
+
+	g_MeshPropertyLib->Load( r3dGameLevel::GetHomeDir() );
 
 	r3dPurgeArtBugs() ;
 
@@ -948,16 +922,11 @@ int LoadLevel()
 
 	extern bool gNewLevelCreated ;
 
-	if( !LoadXMLSettings() && !gNewLevelCreated )
+	if ( !LoadXMLSettings() && !gNewLevelCreated )
 	{
-		r3dOutToLog( "LoadLevel WARNING: Failed to load XML settings, continuing without fatal crash.\n" );
-
-		// временно не валим редактор, пока переводим SDK/x64
-		// r3dError("Failed to load XML settings!");
-
-		// если нужны старые ini-настройки, можно потом вернуть:
-		// r3dGameLevel::Environment.Load(r3dGameLevel::GetHomeDir());
-		// LoadPostprocessSettingsINI();
+		r3dError("Failed to load XML settings!");
+		//r3dGameLevel::Environment.Load(r3dGameLevel::GetHomeDir());
+		//LoadPostprocessSettingsINI();
 	}
 
 	SetLoadingProgress( LoadProgress += 0.015f );
@@ -967,8 +936,6 @@ int LoadLevel()
 	g_pMaterialTypes->Load();
 
 	SetLoadingProgress( LoadProgress += 0.015f );
-
-	g_BattleZone.LoadBattleZoneGrid( r3dGameLevel::GetHomeDir() );
 
 	SetLoadingProgress( LoadProgress += 0.015f );
 
@@ -1006,12 +973,12 @@ int LoadLevel()
 
 	//------------------------------------------------------------------------	
 
-#if ENABLE_RECAST_NAVIGATION
+#if ENABLE_AUTODESK_NAVIGATION
 	{
-		r3dOutToLog( "gNavMesh.Load...\n" );
-		gNavMesh.Load(r3dGameLevel::GetHomeDir());
+		r3dOutToLog( "gAutodeskNavMesh.Load...\n" );
+		gAutodeskNavMesh.Init();
 	}
-#endif // ENABLE_RECAST_NAVIGATION
+#endif // ENABLE_AUTODESK_NAVIGATION
 
 	//------------------------------------------------------------------------	
 
@@ -1069,11 +1036,14 @@ int LoadLevel()
 #if R3D_ALLOW_LIGHT_PROBES
 	if( g_pProbeMaster )
 	{
-		g_pProbeMaster->Load( r3dGameLevel::GetHomeDir() ) ;
+		g_pProbeMaster->Load( r3dGameLevel::GetHomeDir() );
 
-		r_need_update_probes->SetInt( 1 ) ;
+		r_need_update_sky_sun_sh->SetInt( 1 );
+		r_need_update_probes->SetInt( 1 );
 	}
 #endif
+
+	GameWorld().JustLoaded = 1;
 
 	return 1;
 }
@@ -1110,6 +1080,9 @@ int LoadCommonSettings( )
 #endif
 
 	r_need_reset_exporue->SetInt( 1 ) ;
+
+	if( !r3dGameLevel::Environment.bStaticSkyEnable )
+		r3dGameLevel::Environment.EnableStaticSky();
 
 	return 1 ;
 }
@@ -1227,7 +1200,7 @@ namespace
 		r3dRenderer->SetCullMode( D3DCULL_CCW );
 
 		float data[ 4 ] = { 0.0f, 1.0f, 0.0f, 1.0f };
-		D3D_V ( r3dRenderer->SetPixelShaderConstantF( 0, data, 1 ) );
+		D3D_V ( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, data, 1 ) );
 
 		r3dRenderer->SetPixelShader( g_FwdColorPS );
 		r3dRenderer->SetVertexShader( g_FwdColorVS );
@@ -1436,6 +1409,8 @@ namespace
 	int g_GrassTypeSelected				= -1;
 	float g_GrassTypeOffset				= 0.f;
 
+	r3dTL::TArray<int> g_PaintGrassTypeIdxes;
+
 	int g_GrassChunkSelected			= -1;
 	float g_GrassChunkOffset			= 0.f;
 
@@ -1476,8 +1451,10 @@ namespace
 		g_dObjects.clear();
 		g_dObjectNames.clear();
 
-		for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject( obj ) )
+		for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 		{
+			GameObject* obj = iter.current;
+
 			if( obj->Class->Name == sSelectedType )
 			{
 				char objName [256];
@@ -1487,21 +1464,16 @@ namespace
 			}
 		}
 	}
-//------------------------------------------------------------------------
 
-	static float g_fBattleZoneHeightOnTerrain = 1.0f;
-	static float g_fBattleZoneCellSize = 50.0f;
-	static float g_fBattleZoneBrushRadius = 150.0f;
-	static int   g_iBattleZoneEditMode = 0;
+	//------------------------------------------------------------------------
 
-//------------------------------------------------------------------------
-	float g_fWaterPlaneHeight = 100.0f;
-	float g_fWaterPlaneHeightOnTerrain = 1.0f;
-	float g_fWaterPlaneCellSize = 50.0f;
-	int g_iWaterPlaneCoastSmoothLevels = 2;
+	obj_WaterPlane::Settings g_WaterPlaneSettings;
+
+	float g_NominalWaterPlaneWidth;
+	float g_NominalWaterPlaneHeight;
+
 	r3dTL::T2DArray<r3dVector> g_dWaterPlaneGrid;
 
-	int g_iWaterEditFollowTerrainMode = 0;
 	int g_iWaterEditMode = 0;
 	int g_iWaterPropertiesShown = 0;
 
@@ -1535,36 +1507,68 @@ namespace
 		return -1;
 	}
 
-	void UpdateWaterPlaneGrids ( float fCellSize )
+	void UpdateWaterPlaneGrids( obj_WaterPlane::Settings* sts )
 	{
+		float cellSize = sts->CellGridSize;
+
 		if( Terrain && Terrain->IsLoaded() )
 		{
 			const r3dTerrainDesc& desc = Terrain->GetDesc() ;
 
-			int iCellCountW = int( desc.XSize / fCellSize ) + 1;
-			int iCellCountH = int( desc.ZSize / fCellSize ) + 1;
+			float expandedSizeX = sts->PlaneXSize;
+			float expandedSizeZ = sts->PlaneZSize;
+
+			if( expandedSizeX < desc.XSize )
+				expandedSizeX = desc.XSize;
+
+			if( expandedSizeZ < desc.ZSize )
+				expandedSizeZ = desc.ZSize;
+
+			sts->PlaneXSize = expandedSizeX;
+			sts->PlaneZSize = expandedSizeZ;
+
+			g_NominalWaterPlaneWidth	= desc.XSize;
+			g_NominalWaterPlaneHeight	= desc.ZSize;
+
+			sts->PlaneCentreX = desc.XSize * 0.5f;
+			sts->PlaneCentreZ = desc.ZSize * 0.5f;
+
+			float offsetX = ( desc.XSize - expandedSizeX ) * 0.5f;
+			float offsetZ = ( desc.ZSize - expandedSizeZ ) * 0.5f;
+
+			int iCellCountW = int( expandedSizeX / cellSize ) + 1;
+			int iCellCountH = int( expandedSizeZ / cellSize ) + 1;
 
 			g_dWaterPlaneGrid.Resize(iCellCountW, iCellCountH);
 			for ( int i = 0; i < iCellCountW; i++ )
 			{
 				for ( int j = 0; j < iCellCountH; j++ )
 				{
-					float fH = terra_GetH(r3dVector (i*fCellSize, 0.0f, j*fCellSize));
-					g_dWaterPlaneGrid[j][i] = r3dVector (i*fCellSize, fH, j*fCellSize);
-			
+					float x = i*cellSize + offsetX;
+					float z = j*cellSize + offsetZ;
+
+					float fH = terra_GetH(r3dVector (x, 0.0f, z));
+					g_dWaterPlaneGrid[j][i] = r3dVector (x, fH, z);
 				}
 			}
 		}
 		else // use minimap size instead of terrain
 		{
-			int iCellCountW = int(GameWorld().m_MinimapSize.x / fCellSize) + 1;
-			int iCellCountH = int(GameWorld().m_MinimapSize.z / fCellSize) + 1;
+			int iCellCountW = int(GameWorld().m_MinimapSize.x / cellSize) + 1;
+			int iCellCountH = int(GameWorld().m_MinimapSize.z / cellSize) + 1;
+
+			g_NominalWaterPlaneWidth	= GameWorld().m_MinimapSize.x;
+			g_NominalWaterPlaneHeight	= GameWorld().m_MinimapSize.z;
+
+			sts->PlaneCentreX = GameWorld().m_MinimapSize.x * 0.5f;
+			sts->PlaneCentreZ = GameWorld().m_MinimapSize.z * 0.5f;
+
 			g_dWaterPlaneGrid.Resize(iCellCountW, iCellCountH);
 			for ( int i = 0; i < iCellCountW; i++ )
 			{
 				for ( int j = 0; j < iCellCountH; j++ )
 				{
-					g_dWaterPlaneGrid[j][i] = r3dVector (GameWorld().m_MinimapOrigin.x + i*fCellSize, 100.0f, GameWorld().m_MinimapOrigin.z + j*fCellSize);
+					g_dWaterPlaneGrid[j][i] = r3dVector (GameWorld().m_MinimapOrigin.x + i*cellSize, 100.0f, GameWorld().m_MinimapOrigin.z + j*cellSize);
 				}
 			}
 		}
@@ -1697,6 +1701,11 @@ namespace
 		for (GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
 		{
 			ModifyShadowsFlagForTransparentObject(obj);
+		}
+
+		for( int i = 0, e = GameWorld().GetStaticObjectCount(); i < e; i ++ )
+		{
+			ModifyShadowsFlagForTransparentObject( GameWorld().GetStaticObject( i ) );
 		}
 	}
 
@@ -2291,231 +2300,28 @@ void CopyRecursive ( const char * szFrom, const char * szTo, const char **dIgnor
 	}
 }
 
-void TransferToPS3 ()
-{
-	void SaveCollectionsToPS3();
-	SaveCollectionsToPS3();
-
-	if ( !*d_ps3_bin_dir->GetString () )
-	{
-		r3dOutToLog ( "Need to setup 'd_ps3_bin_dir' cvar for TransferToPS3. for example 'C:/work/ps3_A10/bin'.\n" );
-		return;
-	}
-	const char * g_dIgnoreFiles [] = { ".sco", ".scb", "_svn", NULL };
-	
-	const char * g_dCopyDirectories [] = 
-		{ 
-			"data/clouds", 
-			"data/collections", 
-			//"data/grass", 
-			"data/projectiontextures", 
-			"data/roads", 
-			"data/sounds", 
-			"data/particles", 
-			NULL 
-		};
-	
-	const char * g_dCopyFiles [] = 
-		{ 
-			"data/clouds.cld", 
-			"data/clouds.tcld", 
-			NULL 
-		};
-
-	const char * szLevelDir = r3dGameLevel::GetHomeDir ();
-	char szPS3Dir[MAX_PATH];
-	r3dscpy ( szPS3Dir, d_ps3_bin_dir->GetString() );// "C:/work/new/ps3_A10/bin";
-
-	r3dOutToLog ( "Transfer level '%s' to PS3\n", szLevelDir );
-	
-	char szPS3LevelDir [MAX_PATH];
-	sprintf ( szPS3LevelDir, "%s/%s", szPS3Dir, szLevelDir );
-
-	VFS_CreateDirectoryRecursive ( szPS3LevelDir );
-	// copy level files
-	CopyRecursive ( szLevelDir, szPS3LevelDir, g_dIgnoreFiles );
-
-	// copy specifed folders
-	int iCntr = 0;
-	while ( g_dCopyDirectories [iCntr] )
-	{
-		char szCopyTo [MAX_PATH];
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, g_dCopyDirectories [iCntr] );
-		VFS_CreateDirectoryRecursive ( szCopyTo );
-		CopyRecursive ( g_dCopyDirectories [iCntr], szCopyTo, g_dIgnoreFiles );
-		iCntr++;
-	}
-
-	// copy specifed files
-	iCntr = 0;
-	while ( g_dCopyFiles [iCntr] )
-	{
-		char szCopyTo [MAX_PATH];
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, g_dCopyFiles [iCntr] );
-		VFS_CreateDirectoryRecursive ( szCopyTo, false );
-		CopyFile ( g_dCopyFiles [iCntr], szCopyTo, FALSE );
-		iCntr++;
-	}
-
-
-	// statistic
-	int iNotDDSCount = 0;
-	int iNotPower2Count = 0;
-	int iNotFoundCount = 0;
-
-	// copy textures for this level
-	r3dTexture * pTexIter = r3dRenderer->FirstTexture;
-	while ( pTexIter )
-	{
-		// not a loaded texture
-		if ( pTexIter->getFileLoc().FileName[0] == 0 || ( pTexIter->GetFlags() & r3dTexture::fCreated ) )
-		{
-			pTexIter = pTexIter->pNext;
-			continue;
-		}
-
-		char szFileName [MAX_PATH];
-		FixFileName ( pTexIter->getFileLoc().FileName, szFileName );
-		char szCopyTo [MAX_PATH];
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, szFileName );
-
-		if ( _stricmp ( (char*)szFileName + r3dTL::Max ( 0, (int)strlen ( szFileName ) - 4 ), ".dds" )!=0 )
-		{
-			r3dOutToLog ( "texture '%s' need to be dds texture.\n", szFileName );
-			iNotDDSCount++;
-			pTexIter = pTexIter->pNext;
-			continue;
-		}
-
-		if ( !IsPower2 ( pTexIter->GetWidth() ) || !IsPower2 ( pTexIter->GetHeight() ) || ( pTexIter->GetDepth() > 1 && !IsPower2 ( pTexIter->GetDepth() ) ) )
-		{
-			r3dOutToLog ( "texture '%s' need to be power of 2. dim = ( %i x %i ), depth = %i\n", szFileName, pTexIter->GetWidth(), pTexIter->GetHeight(), pTexIter->GetDepth() );
-			iNotPower2Count++;
-			pTexIter = pTexIter->pNext;
-			continue;
-		}
-
-		//r3dOutToLog("copy '%s' to '%s'\n", szFileName, szCopyTo );
-		VFS_CreateDirectoryRecursive ( szCopyTo, false );
-		CopyFile ( szFileName, szCopyTo, FALSE );
-		pTexIter = pTexIter->pNext;
-	}
-
-	// copy models for this level
-	for ( RegisteredMeshes_t::const_iterator pIt = g_dRegisteredMeshes.begin (); pIt != g_dRegisteredMeshes.end (); pIt++ )
-	{
-		char szFileName [MAX_PATH];
-		FixFileName ( pIt->first.c_str (), szFileName );
-		int len = strlen(szFileName);
-		r3dscpy(&szFileName[len-4], ".sc3"); // copy ps3 meshes only
-
-		char szCopyTo [MAX_PATH];
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, szFileName );
-		
-		//r3dOutToLog("copy '%s' to '%s'\n", szFileName, szCopyTo );
-		VFS_CreateDirectoryRecursive ( szCopyTo, false );
-		CopyFile ( szFileName, szCopyTo, FALSE );
-
-		// copy physics files
-		r3dscpy(&szFileName[len-4], ".phx"); 
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, szFileName );
-		CopyFile ( szFileName, szCopyTo, FALSE );
-		r3dscpy(&szFileName[len-4], ".mpx"); 
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, szFileName );
-		CopyFile ( szFileName, szCopyTo, FALSE );
-		r3dscpy(&szFileName[len-4], ".cpx"); 
-		sprintf ( szCopyTo, "%s/%s", szPS3Dir, szFileName );
-		CopyFile ( szFileName, szCopyTo, FALSE );
-	}
-
-	// FIX ME!!! do it correct
-	// copy destroyed meshes and particles
-	std::map < std::string, bool > dCopiedFiles;
-	for(GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
-	{
-		if((obj->ObjTypeFlags & OBJTYPE_Building) == 0)
-			continue;
-
-		obj_Building* pBuild = (obj_Building*)obj;
-		if ( pBuild )
-		{
-			if ( pBuild->m_pDamageLibEntry && pBuild->m_pDamageLibEntry->MeshName[ 0 ] )
-			{
-				char szCopyFrom [MAX_PATH];
-				FixFileName ( pBuild->m_pDamageLibEntry->MeshName.c_str(), szCopyFrom );
-				int len = strlen(szCopyFrom);
-				r3dscpy(&szCopyFrom[len-4], ".sc3"); // copy ps3 meshes only
-
-				// if this file copied later
-				if ( dCopiedFiles.find ( szCopyFrom ) == dCopiedFiles.end () )
-				{	
-					dCopiedFiles.insert ( std::pair <std::string, bool> (szCopyFrom, true ) );
-
-					if ( r3dFileExists ( szCopyFrom ) )
-					{
-						char szCopyTo [MAX_PATH];
-						sprintf ( szCopyTo, "%s/%s", szPS3Dir, szCopyFrom );
-				
-						VFS_CreateDirectoryRecursive ( szCopyTo, false );
-						CopyFile ( szCopyFrom, szCopyTo, FALSE );	
-					}
-					else
-					{
-						r3dOutToLog ( "Cant find file '%s'.\n", pBuild->m_pDamageLibEntry->MeshName.c_str() );
-						iNotFoundCount++;
-					}
-				}
-			}
-
-			if ( pBuild->m_pDamageLibEntry && pBuild->m_pDamageLibEntry->HasParicles )
-			{
-				char szParticleFullName [MAX_PATH];
-				sprintf(szParticleFullName,"Data/Particles/%s.prt", pBuild->m_pDamageLibEntry->ParticleName.c_str() );
-				
-				// if this file copied later
-				if ( dCopiedFiles.find ( szParticleFullName ) == dCopiedFiles.end () )
-				{	
-					dCopiedFiles.insert ( std::pair <std::string, bool> (szParticleFullName, true ) );
-
-					if ( r3dFileExists ( szParticleFullName ) )
-					{
-						char szCopyTo [MAX_PATH];
-						sprintf ( szCopyTo, "%s/%s", szPS3Dir, szParticleFullName );
-						VFS_CreateDirectoryRecursive ( szCopyTo, false );
-						CopyFile ( szParticleFullName, szCopyTo, FALSE );	
-					}
-					else
-					{
-						r3dOutToLog ( "Cant find file '%s'.\n", szParticleFullName );
-						iNotFoundCount++;
-					}
-				}
-			}
-		}
-	}
-
-	// save terrain hieghtmap
-	if( Terrain1 )
-	{
-		r3dOutToLog("Save terrain vertex data...\n", szPS3LevelDir );
-		Terrain1->SaveDataPS3( szPS3LevelDir );
-	}
-	
-	if ( iNotDDSCount > 0 || iNotPower2Count > 0 || iNotFoundCount > 0 )
-	{
-		char buf [MAX_PATH];
-		sprintf ( buf, "%i textures not in DDS format\n%i textures not in power of 2\n%i files not found\nSee log file for details.", iNotDDSCount, iNotPower2Count, iNotFoundCount );
-		MessageBox(win::hWnd, buf, "Achtung!", MB_OK);
-	}
-
-	r3dOutToLog ( "Transfer complete\n" );
-}
-
 void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName);
 
 bool g_bIsMinimapRendering = false;
 void RenderLevelMinimap ( const char* TargetFile )
 {
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
 	g_bIsMinimapRendering = true;
 	extern int g_bTerrainUseLightHack;
 
@@ -2555,7 +2361,6 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 			PrevView			= r3dRenderer->ViewMatrix;
 			PrevProj			= r3dRenderer->ProjMatrix;
-			PrevCamPosition		= r3dRenderer->CameraPosition;
 			PrevNear			= r3dRenderer->NearClip;
 			PrevFar				= r3dRenderer->FarClip;			
 
@@ -2580,14 +2385,14 @@ void RenderLevelMinimap ( const char* TargetFile )
 			r3dRenderer->SetDSS( PrevDepth ) ;
 			r3dRenderer->SetViewport( (float)PrevVP.X, (float)PrevVP.Y, (float)PrevVP.Width, (float)PrevVP.Height ) ;
 
-			r3dRenderer->SetCameraEx( PrevView, PrevProj, PrevCamPosition, PrevNear, PrevFar );
+			r3dRenderer->SetCameraEx( PrevView, PrevProj, PrevNear, PrevFar, false );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_POP  );
 
 			r3dRenderer->RestoreCullMode();
 
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
 		}
 
 		IDirect3DSurface9*	PrevRTs[ 4 ];
@@ -2596,7 +2401,6 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 		D3DXMATRIX	PrevView;
 		D3DXMATRIX	PrevProj;
-		r3dPoint3D	PrevCamPosition;
 		float		PrevNear;
 		float		PrevFar;
 		DWORD		PrevScissor;
@@ -2618,7 +2422,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetDSS( depth ) ;
 
-	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.F, 0 );
+	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, r3dRenderer->GetClearZValue(), 0 ) );
 
 	D3DVIEWPORT9 viewport;
 
@@ -2634,9 +2438,9 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	r3dPoint3D worldOrigin = GameWorld().m_MinimapOrigin;
 	r3dPoint3D worldSize = GameWorld().m_MinimapSize;
@@ -2645,7 +2449,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 	float farClip = 30000.0f;
 
 	D3DXMATRIX proj;
-	D3DXMatrixOrthoOffCenterLH( &proj, 0, worldSize.x, 0, worldSize.z, nearClip, farClip );
+	r3dRenderer->BuildMatrixOrthoOffCenterLH( &proj, 0, worldSize.x, 0, worldSize.z, nearClip, farClip );
 
 	D3DXMATRIX view;
 	D3DXVECTOR3 vEye( worldOrigin.x, 10000, worldOrigin.z );
@@ -2654,7 +2458,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	D3DXMatrixLookAtLH( &view, &vEye, &vAt, &vUp );
 
-	r3dRenderer->SetCameraEx( view, proj, r3dPoint3D(0,0,0), nearClip, farClip );
+	r3dRenderer->SetCameraEx( view, proj, nearClip, farClip, false );
 
 	r3dCamera cam ( r3dPoint3D( vEye.x, vEye.y, vEye.z ) );
 
@@ -2666,10 +2470,10 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	cam.FOV			= 90;
 
-	cam.bOrtho	= true;
-	cam.Width	= worldSize.x;
-	cam.Height	= worldSize.z;
-	cam.Aspect		= 1.f;
+	cam.ProjectionType	= r3dCamera::PROJTYPE_ORTHO;
+	cam.Width			= worldSize.x;
+	cam.Height			= worldSize.z;
+	cam.Aspect			= 1.f;
 
 	extern r3dSun		*Sun;
 	const r3dVector& sunDir = Sun->SunLight.Direction;
@@ -2678,7 +2482,7 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_PUSH | R3D_BLEND_ZC | R3D_BLEND_ZW | R3D_BLEND_NOALPHA);
 
-	r3dRenderer->SetPixelShaderConstantF( 20,(float *)&vSun, 1);
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 20,(float *)&vSun, 1);
 
 	r3dRenderer->SetMipMapBias( -2 );
 
@@ -2694,7 +2498,10 @@ void RenderLevelMinimap ( const char* TargetFile )
 	key.flags.low_q = 1 ;
 	SetFillGBufferPixelShader( key ) ;
 	D3DXVECTOR4 CamVec = D3DXVECTOR4(cam.x, cam.y, cam.z, 1);
-	r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+
+	float defSSAO[ 4 ] = { r_ssao_clear_val->GetFloat(), 0.f, 0.f, 0.f };
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_DEF_SSAO, defSSAO, 1);
 
 	int old_OQ = r_use_oq->GetInt() ;
 	int old_LQ = r_lighting_quality->GetInt() ;
@@ -2709,10 +2516,10 @@ void RenderLevelMinimap ( const char* TargetFile )
 
 	for( int i = 0; i < 8; i ++ )
 	{
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, dbias ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, dbias ) );
 
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
 	}
 
 	GameWorld().Draw( rsFillGBuffer );
@@ -2838,6 +2645,10 @@ int SaveLevelSettingsXML( pugi::xml_node root )
 	ssSet.ExplosionMaxDistance			= gExplosionVisualController.GetMaxVisibleDistance() ;
 	ssSet.ExplosionBrightThreshold		= gExplosionVisualController.GetDefaultBrightThreshold() ;
 
+#if R3D_ALLOW_LIGHT_PROBES
+	ssSet.ProbeSettings					= g_pProbeMaster->GetSettings();
+#endif
+
 	SerializeLevelSettingsXML< true >( root, &ssSet );
 
 	return 1 ;
@@ -2875,8 +2686,10 @@ std::vector<r3dMaterial*> GetUsedMaterials ()
 	std::vector<r3dMaterial*> usedMats;
 
 	// collect all used materials in all static mesh objects
-	for(GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
+
 		if( obj->ObjTypeFlags & OBJTYPE_Mesh )
 		{
 			for(int iMesh = 0; iMesh < 4; ++iMesh)
@@ -2969,14 +2782,17 @@ void SaveLevelObjects ( pugi::xml_node & curNode, r3dTL::TArray < GameObject * >
 
 void SaveLevelData ( pugi::xml_node & curNode )
 {
-	typedef std::map< std::string, int > MissingMap ;
-	MissingMap missingMeshes ;
+	typedef std::map< std::string, int > MissingMap;
+	MissingMap missingMeshes;
 
-	GameObject* next ;
-	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = next )
+	ObjectIterator next;
+
+	for(ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current; iter = next )
 	{
 		// bcoz we can delete object right here in case of missing mesh
-		next = GameWorld().GetNextObject(obj) ;
+		next = GameWorld().GetNextOfAllObjects(iter) ;
+
+		GameObject* obj = iter.current;
 
 		if (!obj->CompoundID )
 		{
@@ -3096,6 +2912,55 @@ void SaveXMLSettings( const char* targetDir )
 	xmlFile.save_file( XMLFilePath );
 }
 
+void SaveEnvironmentToXML( const char* filePath )
+{
+	pugi::xml_document xmlFile;
+	xmlFile.append_child( pugi::node_comment ).set_value("Environment Settings File");
+	pugi::xml_node xmlRoot = xmlFile.append_child();
+	xmlRoot.set_name( "root" );
+
+	r3dGameLevel::Environment.SaveToXML( xmlRoot );
+
+	xmlFile.save_file( filePath );
+}
+
+int LoadEnvironmentFromXML( const char* fileName )
+{
+	bool XMLExists = false;
+
+	Bytes xmlFileBuffer;
+
+	pugi::xml_document xmlLevelFile;
+	pugi::xml_node xmlRoot;
+
+	r3dFile* f = r3d_open( fileName, "rb" );
+	if ( f )
+	{
+		r3dOutToLog( "Loading environment from '%s'\n", fileName );
+		XMLExists = true;
+
+		if( !ParseXMLInMemory( f, &xmlFileBuffer, &xmlLevelFile ) )
+		{
+			fclose( f );
+			return 0;
+		}
+
+		xmlRoot = xmlLevelFile.root().child( "root" );
+
+		fclose( f );
+	}
+	else
+	{
+		r3dOutToLog( "Couldn't open '%s'\n", fileName );
+	}
+
+	if( !xmlRoot.empty() )
+	{
+		return r3dGameLevel::Environment.LoadFromXML( xmlRoot );
+	}
+
+	return 0;
+}
 
 void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSave )
 {
@@ -3119,6 +2984,8 @@ void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSav
 		}
 
 	} setRestoreDir( targetDir ) ;
+
+	g_MeshPropertyLib->Save( r3dGameLevel::GetSaveDir() );
 
 
 #if 0
@@ -3156,17 +3023,14 @@ void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSav
 
 	g_pDecalChief->SaveLevel( targetDir );
 
-	g_BattleZone.SaveBattleZoneGrid( targetDir );
-
 	// save this as well cause people will forgEt
 	g_DamageLib->Save();
 
 	SaveLevelData( FName );
 
-	{
-		sprintf(FName, "Data\\ObjectsDepot\\LevelGroups.xml", targetDir );
-		obj_Group::SaveToFile ( FName );
-	}
+#if 0
+	obj_Group::Save();
+#endif
 
 	if( Terrain1 && Terrain1->bLoaded ) 
 	{
@@ -3188,17 +3052,11 @@ void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSav
 		GetGrassPlaneManager()->Save( targetDir );
 	}
 
-	// 
-	if( autoSave )
-	{
-		void Save_Instance_Map( bool ) ;
-		Save_Instance_Map( true ) ;
-	}
-	else
-	{
-		extern void CheckedCollectionsSave();
-		CheckedCollectionsSave();
-	}
+#if R3D_ALLOW_LIGHT_PROBES
+	g_pProbeMaster->Save( targetDir );
+#endif
+
+	gCollectionsManager.Save();
 
 	SaveXMLSettings( targetDir );
 	
@@ -3206,7 +3064,7 @@ void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSav
 	{
 		if (obj->ObjTypeFlags & OBJTYPE_Human)
 		{
-			obj_AI_Player *aip = static_cast<obj_AI_Player*>(obj);
+			obj_Player *aip = static_cast<obj_Player*>(obj);
 			aip->lifeProperties.SaveAISettingsXML();
 		}
 	}
@@ -3218,6 +3076,10 @@ void Editor_Level::SaveLevel( const char* targetDir, bool showSign, bool autoSav
 	CreateLevelMatLib();
 	
 	r3dMaterialLibrary::UpdateDepotMaterials();
+
+#if ENABLE_AUTODESK_NAVIGATION
+	gAutodeskNavMesh.SaveBuildConfig();
+#endif
 }
 
 void
@@ -3238,8 +3100,10 @@ void RepositionObjectsOnTerrain( const r3dPoint3D &vPos, float fRadius )
 
 	float fRadiusSq = fRadius * fRadius;
 
-	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current; iter = GameWorld().GetNextOfAllObjects(iter) )
 	{
+		GameObject *obj = iter.current;
+
 		r3dPoint3D v = obj->GetPosition();
 
 
@@ -3275,8 +3139,9 @@ void RepositionAllObjectsOnTerrain()
 	if (!__RepositionObjectsOnTerrain) 
 		return;
 
-	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
 		r3dPoint3D v = obj->GetPosition();
 		obj->SetPosition( v );
 	}
@@ -3285,43 +3150,6 @@ void RepositionAllObjectsOnTerrain()
 void MatrixGetYawPitchRoll ( const D3DXMATRIX & mat, float & fYaw, float & fPitch, float & fRoll );
 
 //--------------------------------------------------------------------------------------------------------
-
-static void PlaceObjectBBoxBottomOnPoint(GameObject* obj, const r3dPoint3D& targetPos)
-{
-	if (!obj)
-		return;
-
-	r3dPoint3D pos = targetPos;
-
-	obj->SetPosition(pos);
-
-	r3dBoundBox bbox = obj->GetBBoxWorld();
-
-	float bottomY = bbox.Org.y;
-	float deltaY = targetPos.y - bottomY;
-
-	if (fabsf(deltaY) > 0.0001f)
-	{
-		pos.y += deltaY;
-		obj->SetPosition(pos);
-	}
-
-	obj->OnPickerMoved();
-}
-
-static void PlaceObjectOnTerrainPoint(GameObject* obj, const r3dPoint3D& targetPos)
-{
-	if (!obj)
-		return;
-
-	r3dPoint3D pos = targetPos;
-
-	if (Terrain)
-		pos.y = Terrain->GetHeight(pos);
-
-	PlaceObjectBBoxBottomOnPoint(obj, pos);
-}
-
 void LandscapeCorrect( GameObject& object, const r3dPoint3D& vTargetPos )
 {
 	if(!Terrain)
@@ -3515,8 +3343,10 @@ void DEBUG_DrawSceneBoxes()
 {
 	if( r_show_bbox->GetInt() )
 	{
-		for( GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+		for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 		{
+			GameObject* obj = iter.current;
+
 			const r3dBoundBox& bbox = obj->GetBBoxWorld() ;
 
 			r3dPoint3D v0( bbox.Org + bbox.Size );
@@ -3584,6 +3414,14 @@ void DEBUG_DrawSceneBoxes()
 
 		debug_SceneBox.Clear();
 		debug_SceneBoxColors.Clear();
+
+		const SceneTraversalStats& stats = GetSceneTraversalStats();
+
+		char sceneBoxMsg[ 256 ];
+
+		sprintf( sceneBoxMsg, "Traversed %d( max %d )", stats.NumTraversedNodes, stats.MaxTraversedNodes );
+		
+		_r3dSystemFont->PrintF( 10, 220, r3dColor24::white, sceneBoxMsg );
 	}
 }
 
@@ -3596,7 +3434,7 @@ void DEBUG_Player()
 		{
 			if( obj->ObjTypeFlags & OBJTYPE_Human )
 			{
-				obj_AI_Player* aip = static_cast< obj_AI_Player* > ( obj );
+				obj_Player* aip = static_cast< obj_Player* > ( obj );
 
 				PushCross3D( aip->GetMuzzlerPosition(), 0.165f ) ;
 			}
@@ -3612,17 +3450,17 @@ void DEBUG_DrawZombieModHelpers()
 	if (g_ZombieModDebugVisFlags == 0)
 		return;
 
-	obj_AI_Player* aip = 0;
+	obj_Player* aip = 0;
 	for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
 	{
 		if( obj->ObjTypeFlags & OBJTYPE_Human )
 		{
-			aip = static_cast< obj_AI_Player* > ( obj );
+			aip = static_cast< obj_Player* > ( obj );
 		}
 		if (obj->ObjTypeFlags & OBJTYPE_Zombie)
 		{
 			obj_Zombie *z = static_cast<obj_Zombie*>(obj);
-			z->DrawDebugInfo();
+			//z->DrawDebugInfo();
 		}
 	}
 
@@ -3771,9 +3609,43 @@ void UpdateLightProbeEditingExit()
 #endif
 }
 
+int g_DrawSunPath;
+int g_DrawMoonPath;
+
 void Editor_Level :: Process(bool enable)
 {
 	R3DPROFILE_FUNCTION( "Editor_Level::Process" );
+
+#if ENABLE_AUTODESK_NAVIGATION
+	enable &= Nav::gNavMeshBuildComplete != 0;
+#endif
+
+	if( g_DrawSunPath )
+	{
+		void DrawSunPath();
+		DrawSunPath();
+
+		if( enable )
+		{
+			g_DrawSunPath = 0;
+		}
+	}
+
+	if( g_DrawMoonPath )
+	{
+		void DrawMoonSpot();
+		DrawMoonSpot();
+
+		if( enable )
+		{
+			g_DrawMoonPath = 0;
+		}
+	}
+
+	if( g_DoSliceVisualize )
+	{
+		VisualizeSlice( g_3DTexForVisualizeSlice, g_SliceToVisualize );
+	}
 
 	if( r_show_luma->GetInt() )
 	{
@@ -3853,12 +3725,6 @@ void Editor_Level :: Process(bool enable)
 	DEBUG_Draw_Instance_Wind() ;
 	DEBUG_DrawZombieModHelpers();
 
-	if( r_show_collection_grid->GetInt() )
-	{
-		void DEBUG_DrawCollectionCells() ;
-		DEBUG_DrawCollectionCells() ;
-	}
-
 	void DrawPreGUIHelpers ();
 	DrawPreGUIHelpers();
 
@@ -3904,19 +3770,83 @@ void Editor_Level :: Process(bool enable)
 
 	if( !r_hide_editor_statusbar->GetBool() )
 	{
+		
+		HANDLE hProcess;
+		PROCESS_MEMORY_COUNTERS pmc;
+
+		ZeroMemory( &pmc, sizeof pmc );
+		pmc.cb = sizeof pmc;
+
+		hProcess = GetCurrentProcess();
+
+		GetProcessMemoryInfo( hProcess, &pmc, sizeof(pmc) );
+
 		r3dDrawBox2D(5, r3dRenderer->ScreenH-30, r3dRenderer->ScreenW-10, 25, imgui_bkgDlg);
-		Font_Label->PrintF(	10, r3dRenderer->ScreenH-25,r3dColor(255,255,255), 
-						"%s FPS %3.1f[%02.2fms] Objs:[%d] Cam:[%3.1f|%3.1f|%3.1f] Tri:%d Draw:%d TerraDraw:%d (%d tri)", 
-						LevelName, r3dGetAvgFPS(), 1000.0f / r3dGetAvgFPS(), numObjects , gCam.x, gCam.y, gCam.z, 
-						r3dRenderer->Stats.GetNumTrianglesRendered(), gBudgeter.currentData.values[NumDraws], 
-						r3dRenderer->Stats.GetNumTerrainDraws(), r3dRenderer->Stats.GetNumTerrainTris() );
+
+#if ENABLE_AUTODESK_NAVIGATION
+		if (Nav::gNavMeshBuildComplete == 0)
+		{
+			Nav::gDrawBuildInfo.Draw();
+		}
+		else
+#endif
+		{
+			char text[ 1024 ];
+
+			sprintf( text, "%s FPS %3.1f[%02.2fms] Objs:[%d] Cam:[%3.1f|%3.1f|%3.1f] Tri:%d ", LevelName, r3dGetAvgFPS(), 1000.0f / r3dGetAvgFPS(), numObjects , gCam.x, gCam.y, gCam.z, r3dRenderer->Stats.GetNumTrianglesRendered() );
+
+			SIZE sz;
+			Font_Label->GetTextExtent( text, &sz );
+
+			int widthaccum = sz.cx + 5;
+
+			Font_Label->PrintF(	10, r3dRenderer->ScreenH-25, r3dColor(255,255,255), "%s", text );
+
+			int numDraws = gBudgeter.currentData.values[NumDraws];
+
+			r3dColor drawsColor = r3dColor(255,255,255);
+
+			if( numDraws > 3000 )
+			{
+				drawsColor = r3dColor::red;
+			}
+			else
+			if( numDraws > 2000 )
+			{
+				drawsColor = r3dColor::yellow;
+			}
+
+			sprintf( text, "Draw:%d", numDraws );
+
+			Font_Label->GetTextExtent( text, &sz );
+
+			Font_Label->PrintF(	10 + widthaccum, r3dRenderer->ScreenH-25, drawsColor, "%s", text );
+
+			widthaccum += sz.cx + 5;
+
+			Font_Label->PrintF(	
+				10 + widthaccum, r3dRenderer->ScreenH-25,600, 22, r3dColor(255,255,255), 
+				"TerraDraw:%d (%d tri) Mem:%.2f(%.2f)GB PF:%.2f(%.2f)GB", 												
+				r3dRenderer->Stats.GetNumTerrainDraws(), r3dRenderer->Stats.GetNumTerrainTris(), 
+				float(pmc.WorkingSetSize)/1024.f/1024.f/1024.f,
+				float(pmc.PeakWorkingSetSize)/1024.f/1024.f/1024.f,
+				float(pmc.PagefileUsage)/1024.f/1024.f/1024.f,
+				float(pmc.PeakPagefileUsage)/1024.f/1024.f/1024.f
+				);
+		}
 	}
+
+	gCollectionsManager.DEBUG_Draw();
 
 	if( g_ShowSaveSign > r3dGetTime() )
 	{
 		const float WI = 220.f ;
 		imgui_Static( r3dRenderer->ScreenW2 - WI * 0.5f, r3dRenderer->ScreenH2, "Saved!", WI, false, 22, false ) ;
 	}
+
+#if ENABLE_AUTODESK_NAVIGATION
+	Nav::gDrawBuildInfo.Draw();
+#endif
 
 	if( !enable )
 		return ;
@@ -3999,7 +3929,7 @@ void Editor_Level :: Process(bool enable)
 
 
 
-	imgui_Button(r3dRenderer->ScreenW-10-150, r3dRenderer->ScreenH-28, 100, 20, "TRANSFER TO", 0, false);
+	//imgui_Button(r3dRenderer->ScreenW-10-150, r3dRenderer->ScreenH-28, 100, 20, "TRANSFER TO", 0, false);
 
 	float oldTime = r3dGameLevel::Environment.__CurTime ;
 
@@ -4014,6 +3944,7 @@ void Editor_Level :: Process(bool enable)
 
 	//  //Font_Label->PrintF(10, r3dRenderer->ScreenH-35+5,r3dColor(255,255,255), "fps %3.1f[%02.2f]   POS: %.2f %.2f %.2f", 1.0f/r3dGetFrameTime(), r3dGetFrameTime()*1000.0f,FPS_Position.X, FPS_Position.Y, FPS_Position.Z);
 
+	/*
 	if ( imgui_Button(r3dRenderer->ScreenW-10-35, r3dRenderer->ScreenH-28, 40, 20, "PS3", 0, false) )
 	{
 		if( MessageBox( r3dRenderer->HLibWin, "Export for ps3?", "Confirm", MB_YESNO ) == IDYES )
@@ -4022,6 +3953,7 @@ void Editor_Level :: Process(bool enable)
 			TransferToPS3 ();
 		}
 	}
+*/
 
 	float fStatisticYStart = r3dRenderer->ScreenH - 200;
 	float fStatisticHeight = 120;
@@ -4110,21 +4042,10 @@ void Editor_Level :: Process(bool enable)
 			r3dScreenTo3D(mx, my, &dir);
 
 			PxRaycastHit hit;
-			PxSceneQueryFilterData filter(
-				PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
-				PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
-			);
-
-			if(g_pPhysicsWorld->raycastSingle(
-				PxVec3(pos.x, pos.y, pos.z),
-				PxVec3(dir.x, dir.y, dir.z),
-				20000.0f,
-				PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
-				hit,
-				filter
-			))
+			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
+			if(g_pPhysicsWorld->raycastSingle(PxVec3(pos.x, pos.y, pos.z), PxVec3(dir.x, dir.y, dir.z), 20000, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
 			{
-				gExplosionVisualController.AddExplosion(r3dVector(hit.position.x, hit.position.y, hit.position.z), 20.0f);
+				gExplosionVisualController.AddExplosion(r3dVector(hit.impact.x, hit.impact.y, hit.impact.z), 20.0f);
 			}
 		}
 	}
@@ -4186,7 +4107,6 @@ void Editor_Level :: Process(bool enable)
 				ProcessDamageLib();
 				break;
 			case OBEM_TCAMO:
-				ProcessTCamo();
 				break;
 			case OBEM_UTILS:
 				ProcessUtils();
@@ -4240,10 +4160,6 @@ void Editor_Level :: Process(bool enable)
 				case 3:	ProcessParticleGun();
 					break;
 				case 4: 
-					{
-						void ProcessBattleZoneEditor ();
-						ProcessBattleZoneEditor ();
-					}
 					break;
 
 				case 5: 
@@ -4266,10 +4182,6 @@ void Editor_Level :: Process(bool enable)
 					break;
 
 				case 8: // Dynamic Battlefield
-					{
-						void ProcessBattlefieldEditor();
-						ProcessBattlefieldEditor();
-					}
 					break;
 				case 9: // Navigation mesh
 					{
@@ -4349,7 +4261,7 @@ void Editor_Level :: ProcessSettings()
 
 					// near plane
 					near_plane = r_near_plane->GetFloat();
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Camera Z Near", &near_plane, 0.1f, 32.f, "%.2f", 1 );
+					SliderY += imgui_Value_Slider( SliderX, SliderY, "Camera Z Near", &near_plane, 0.2f, 32.f, "%.2f", 1 );
 					r_near_plane->SetFloat( near_plane );
 
 					// far plane
@@ -4387,7 +4299,7 @@ void Editor_Level :: ProcessSettings()
 					}
 #endif
 
-					extern int DrawPhysicsDebug;
+					int DrawPhysicsDebug = d_physx_debug->GetInt();
 					extern int DisablePhysXSimulation;
 					extern int g_DrawCollisionMeshes;
 					SliderY += imgui_Checkbox(SliderX, SliderY, "Draw Collision Meshes",	    &g_DrawCollisionMeshes, 1);
@@ -4395,6 +4307,8 @@ void Editor_Level :: ProcessSettings()
 					SliderY += imgui_Checkbox(SliderX, SliderY, "Draw Player Only Collision Meshes",	    &g_DrawPlayerOnlyCollisionMeshes, 1);
 					SliderY += imgui_Checkbox(SliderX, SliderY, "Enable Physics Debug",	    &DrawPhysicsDebug, 1);
 					SliderY += imgui_Checkbox(SliderX, SliderY, "Disable physics",			&DisablePhysXSimulation, 1);
+
+					d_physx_debug->SetInt(DrawPhysicsDebug);
 
 					static int use_oq;
 
@@ -4413,8 +4327,11 @@ void Editor_Level :: ProcessSettings()
 						SliderY += imgui_Value_Slider(SliderX, SliderY, "Move Level in Z", &moveZ, -100000, 100000, "%f", false);
 						if(moveX || moveZ)
 						{
-							for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+							for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
+							{
+								GameObject* obj = iter.current;
 								obj->SetPosition(obj->GetPosition() + r3dPoint3D(moveX, 0, moveZ));
+							}
 						}
 					}
 
@@ -4425,10 +4342,6 @@ void Editor_Level :: ProcessSettings()
 					SliderY += imgui_Checkbox(SliderX, SliderY, "Enable grass",	&nGrassVal, 1 );
 					r_grass_draw->SetBool( nGrassVal );
 
-					extern int g_bEnableSoundRadiusDraw;
-					SliderY += imgui_Checkbox(SliderX, SliderY, "Show sound radius", &g_bEnableSoundRadiusDraw, 1 );
-
-					
 					if( nGrassVal )
 					{
 						int SplitGrass = r_split_grass_render->GetInt() ? 1 : 0 ;
@@ -4472,6 +4385,14 @@ void Editor_Level :: ProcessSettings()
 					}
 
 					SliderY += 30;
+					
+extern float	DayDuration;
+extern int		bDaySim;
+
+					SliderY += imgui_Checkbox( SliderX, SliderY, "Simulate Day/Night", &bDaySim, 1 );
+					SliderY += imgui_Value_Slider(SliderX, SliderY, "Day Length (SEC )", &DayDuration, 10.0f, 600.0f, "%-02.2f");
+
+
 				}
 				break ;
 
@@ -4605,8 +4526,9 @@ void Editor_Level :: ProcessSettings()
 					r_shadow_extrusion_limit->SetFloat(shadowExtusionLimitHeight);
 					if (prevLimit != shadowExtusionLimitHeight)
 					{
-						for (GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+						for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 						{
+							GameObject* obj = iter.current;
 							if (obj) obj->ShadowExDirty = true;
 						}
 					}
@@ -4664,19 +4586,32 @@ void Editor_Level :: ProcessSettings()
 			case SS_MISC:
 				{
 					//------------------------------------------------------------------------
+					// distance cull setting
+					{
+						static float val = 0.f;
+
+						val = r_default_draw_distance->GetFloat();
+
+						SliderY += imgui_Static( SliderX, SliderY, "Distance object culling" );
+						SliderY += imgui_Value_Slider( SliderX, SliderY, "Default Distance", &val, 0.f, 4096.f, "%.0f" );
+
+						r_default_draw_distance->SetFloat( val );
+					}
+
+					//------------------------------------------------------------------------
 					// z prepass settings
 					{
 						SliderY += imgui_Static(SliderX, SliderY, "Depth prepass");
 
 						const int PREPASS_LIST_HEIGHT = 110;
 
-						stringlist_t methodNames ;
+						stringlist_t methodNames;
 
 						methodNames.push_back( "NONE" );
 						methodNames.push_back( "DISTANCE" );
 						methodNames.push_back( "AREA" );
 
-						static int prepassMethod = 0 ;
+						static int prepassMethod = 0;
 						static float offset = 0.f;
 
 						prepassMethod = r_z_prepass_method->GetInt() ;
@@ -5947,7 +5882,7 @@ void Editor_Level :: ProcessTerrain()
 							char CheckBoxName[] = "Material 0";
 
 							// otherwise update name code
-							TL_STATIC_ASSERT( TERRAIN_MAT_COUNT < 10 );
+							COMPILE_ASSERT( TERRAIN_MAT_COUNT < 10 );
 
 							CheckBoxName[ sizeof CheckBoxName - 2 ] += matIdx;
 
@@ -6063,11 +5998,11 @@ void Editor_Level :: ProcessTerrain()
 
 							sprintf( sStatStr, "%s texture\n%s\n%dx%d", g_iTerrainNormalMapEditMode ? "Normal" : "Diffuse", tex->getFileLoc().FileName + toAdd, tex->GetWidth(), tex->GetHeight() );
 
-							D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+							D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
 							imgui_Static ( 370, fStatisticYStart, sStatStr, 360, false, fStatisticHeight );
 
-							D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+							D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
 
 							if (imgui_Button(SliderX+10+2+110+106,SliderY+42+2, 60, 20, "EDIT", 0))
 							{
@@ -6248,9 +6183,9 @@ Editor_Level::ProcessTerrain2_Settings( float SliderX, float SliderY )
 		r_texture_quality->GetInt() < 3
 		)
 	{
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 		imgui_Static( r3dRenderer->ScreenW2 - 350, r3dRenderer->ScreenH2, "Please set Terrain Quality and Texture Quality to 3 in Game Options to modify Terrain Settings",700, false, 22, true ) ;
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 		return SliderY ;
 	}
 #endif
@@ -6947,12 +6882,7 @@ Editor_Level::ProcessTerrain2_Paint( float SliderX, float SliderY, int editMode 
 {
 	SliderY += 10;
 	SliderY += imgui_Static(SliderX, SliderY, "PAINT");
-
-	const static char* listpaint[  ] = { "ERASER",		"BRUSH"		};
-
-	enum								{ TE2_ERASE,	TE2_BRUSH	};
-
-	static int Terrain2PaintMode = TE2_BRUSH ;
+	
 	static int CurrentPaintLayerIdx2 = 0 ;
 
 	if( CurrentPaintLayerIdx2 >= Terrain2->GetDesc().LayerCount )
@@ -6961,7 +6891,7 @@ Editor_Level::ProcessTerrain2_Paint( float SliderX, float SliderY, int editMode 
 		CurrentPaintLayerIdx2 = 0 ;
 	}
 
-	SliderY += imgui_Toolbar(SliderX, SliderY, 360, 45, &Terrain2PaintMode, 0, listpaint, sizeof listpaint / sizeof listpaint[ 0 ] );
+	SliderY += imgui_Toolbar(SliderX, SliderY, 360, 45, &Terrain2PaintMode, 0, terrain2PaintList, sizeof terrain2PaintList / sizeof terrain2PaintList[ 0 ] );
 
 	SliderY += imgui_Checkbox( SliderX, SliderY, "Show Material Heaviness", &DrawTerrainMatHeaviness, 1 );		
 
@@ -7041,186 +6971,194 @@ Editor_Level::ProcessTerrain2_Paint( float SliderX, float SliderY, int editMode 
 		Terrain2->SetNormalDetailTexture( "" ) ;
 	}
 
+	if( Terrain2PaintMode == TE2_ERASE )
+	{
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360.0f, 22.f, "Erase All", &Terrain2Editor_EraseAll, 1 );
+	}
 
 	bool bChangedVal = false;
 
 	r3dTerrainLayer* CurrentLayer = NULL ;
 
-	SliderY += imgui_Static( SliderX, SliderY, "Layers" ) ;
-
 	int insertLayerAt = - 1 ;
 	int removeLayerIdx = - 1 ;
 
-	for( int i = 0, e = desc.LayerCount; i < e; i ++ )
+	static char MatFName[64];
+
+	if( Terrain2PaintMode != TE2_ERASE || !Terrain2Editor_EraseAll )
 	{
-		if( imgui_Button( SliderX + 10, SliderY+1, 250, 20, layers[ i ].Name.c_str(), i == CurrentPaintLayerIdx2 ) )
-		{
-			CurrentPaintLayerIdx2 = i ;
-			bChangedVal = true ;
-		}
+		SliderY += imgui_Static( SliderX, SliderY, "Layers" );
 
-		if( imgui_Button( SliderX + 265, SliderY + 1, 33, 20, "+" ) )
+		for( int i = 0, e = desc.LayerCount; i < e; i ++ )
 		{
-			insertLayerAt = i ;
-		}
-
-		if( i )
-		{
-			if( imgui_Button( SliderX + 265 + 44, SliderY + 1, 22, 20, "-" ) )
+			if( imgui_Button( SliderX + 10, SliderY+1, 250, 20, layers[ i ].Name.c_str(), i == CurrentPaintLayerIdx2 ) )
 			{
-				if( insertLayerAt < 0 )
+				CurrentPaintLayerIdx2 = i ;
+				bChangedVal = true ;
+			}
+
+			if( imgui_Button( SliderX + 265, SliderY + 1, 33, 20, "+" ) )
+			{
+				insertLayerAt = i ;
+			}
+
+			if( i )
+			{
+				if( imgui_Button( SliderX + 265 + 44, SliderY + 1, 22, 20, "-" ) )
 				{
-					removeLayerIdx = i ;
+					if( insertLayerAt < 0 )
+					{
+						removeLayerIdx = i ;
+					}
 				}
 			}
+
+			if( CurrentPaintLayerIdx2 >= 0 && CurrentPaintLayerIdx2 < desc.LayerCount )
+			{
+				CurrentLayer = &layers[ CurrentPaintLayerIdx2 ] ;
+			}
+			else
+			{
+				CurrentLayer = NULL;
+			}
+
+			SliderY += 22;
 		}
 
-		if( CurrentPaintLayerIdx2 >= 0 && CurrentPaintLayerIdx2 < desc.LayerCount )
+		SliderY += 11;
+
+		static char FullName[ 256 ];
+
+		if( CurrentLayer )
 		{
-			CurrentLayer = &layers[ CurrentPaintLayerIdx2 ] ;
+			r3dscpy( FullName, CurrentLayer->Name.c_str() );
 		}
 		else
 		{
-			CurrentLayer = NULL;
+			r3dscpy( FullName, "Dummy Layer" ) ;
 		}
 
-		SliderY += 22;
-	}
-
-	SliderY += 11;
-
-	static char FullName[ 256 ];
-
-	if( CurrentLayer )
-	{
-		r3dscpy( FullName, CurrentLayer->Name.c_str() );
-	}
-	else
-	{
-		r3dscpy( FullName, "Dummy Layer" ) ;
-	}
-
-	// skip name setup for base layer
-	if( CurrentLayer && CurrentPaintLayerIdx2 )
-	{
-		imgui2_StringValueEx( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, "Layer Name: ", FullName ) ;
-
-		CurrentLayer->Name = FullName ;
-
-		SliderY += 22 ;
-	}
-
-	float prevTileFactor ;
-	prevTileFactor = *MatScaleArray[ CurrentPaintLayerIdx2 ] ;
-
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Tile Factor",	MatScaleArray[ CurrentPaintLayerIdx2 ], 1, 2048, "%-02.0f", 1 ) ;
-
-	if( prevTileFactor != *MatScaleArray[ CurrentPaintLayerIdx2 ] )
-	{
-		needUpdateTilesWithCurLayer = 1 ;
-	}
-
-	r3dDrawBox2D(SliderX - Desktop().GetX(),SliderY - Desktop().GetY(), 360, 120, imgui_bkgDlg);
-
-	static char MatFName[64];
-
-	if ( imgui_Button(SliderX+10,SliderY+10, 100, 100, NULL, g_iTerrainNormalMapEditMode == 0 ) )
-	{
-		g_iTerrainNormalMapEditMode = 0;
-		bChangedVal = true;
-	}
-
-	r3dDrawBox2D(SliderX+10+5 - Desktop().GetX(),SliderY+10+5- Desktop().GetY(), 100-8, 100-8, r3dColor(255,255,255), *MatTexArray[ CurrentPaintLayerIdx2 ]);
-
-	if ( imgui_Button(SliderX+10+110,SliderY+10, 100, 100, NULL, g_iTerrainNormalMapEditMode == 1 ) )
-	{
-		g_iTerrainNormalMapEditMode = 1;
-		bChangedVal = true;
-	}
-
-	if( CurrentPaintLayerIdx2 >= 0 )
-	{
-		if( r3dTexture* tex = *( g_iTerrainNormalMapEditMode ? MatTexNormalArray : MatTexArray ) [ CurrentPaintLayerIdx2 ] )
+		// skip name setup for base layer
+		if( CurrentLayer && CurrentPaintLayerIdx2 )
 		{
-			float fStatisticYStart = r3dRenderer->ScreenH - 200;
-			float fStatisticHeight = 80;
+			imgui2_StringValueEx( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, "Layer Name: ", FullName ) ;
 
-			char sStatStr[ MAX_PATH * 2 ];
+			CurrentLayer->Name = FullName ;
 
-			strcpy( sStatStr, tex->getFileLoc().FileName );
-			strlwr( sStatStr );
+			SliderY += 22 ;
+		}
 
-			for( size_t i = 0, e = strlen( sStatStr ) ; i < e; i ++ )
+		float prevTileFactor ;
+		prevTileFactor = *MatScaleArray[ CurrentPaintLayerIdx2 ] ;
+
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Tile Factor",	MatScaleArray[ CurrentPaintLayerIdx2 ], 1, 4096, "%-02.0f", 1 ) ;
+
+		if( prevTileFactor != *MatScaleArray[ CurrentPaintLayerIdx2 ] )
+		{
+			needUpdateTilesWithCurLayer = 1 ;
+		}
+
+		r3dDrawBox2D(SliderX - Desktop().GetX(),SliderY - Desktop().GetY(), 360, 120, imgui_bkgDlg);
+
+		if ( imgui_Button(SliderX+10,SliderY+10, 100, 100, NULL, g_iTerrainNormalMapEditMode == 0 ) )
+		{
+			g_iTerrainNormalMapEditMode = 0;
+			bChangedVal = true;
+		}
+
+		r3dDrawBox2D(SliderX+10+5 - Desktop().GetX(),SliderY+10+5- Desktop().GetY(), 100-8, 100-8, r3dColor(255,255,255), *MatTexArray[ CurrentPaintLayerIdx2 ]);
+
+		if ( imgui_Button(SliderX+10+110,SliderY+10, 100, 100, NULL, g_iTerrainNormalMapEditMode == 1 ) )
+		{
+			g_iTerrainNormalMapEditMode = 1;
+			bChangedVal = true;
+		}
+
+		if( CurrentPaintLayerIdx2 >= 0 )
+		{
+			if( r3dTexture* tex = *( g_iTerrainNormalMapEditMode ? MatTexNormalArray : MatTexArray ) [ CurrentPaintLayerIdx2 ] )
 			{
-				if( sStatStr[ i ] == '/' )
-					sStatStr[ i ] = '\\' ;
-			}
+				float fStatisticYStart = r3dRenderer->ScreenH - 200;
+				float fStatisticHeight = 80;
 
-			int toAdd = 0 ;
-			
-			if( char* subs = strstr( sStatStr, "data\\terraindata\\materials"  ) )
-			{
-				toAdd = sizeof "data\\terraindata\\materials" ;
-			}
+				char sStatStr[ MAX_PATH * 2 ];
 
-			sprintf( sStatStr, "%s texture\n%s\n%dx%d", g_iTerrainNormalMapEditMode ? "Normal" : "Diffuse", tex->getFileLoc().FileName + toAdd, tex->GetWidth(), tex->GetHeight() );
+				strcpy( sStatStr, tex->getFileLoc().FileName );
+				strlwr( sStatStr );
 
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
-
-			imgui_Static ( 370, fStatisticYStart, sStatStr, 360, false, fStatisticHeight );
-
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
-
-			if (imgui_Button(SliderX+10+2+110+106,SliderY+42+2, 60, 20, "EDIT", 0))
-			{
-#ifndef FINAL_BUILD
-				const char* name = tex->getFileLoc().FileName ;
-
-				char fullPath[ 4096 ] ;
-				GetCurrentDirectory( sizeof fullPath - 2, fullPath ) ;
-				strcat( fullPath, "\\" ) ;
-				strcat( fullPath, name ) ;
-
-				for( int i = 0, e = strlen( fullPath) ; i < e ; i ++ )
+				for( size_t i = 0, e = strlen( sStatStr ) ; i < e; i ++ )
 				{
-					if( fullPath[ i ] == '/' )
-						fullPath[ i ] = '\\' ;
+					if( sStatStr[ i ] == '/' )
+						sStatStr[ i ] = '\\' ;
 				}
 
-				const char* execStr = g_texture_edit_cmd->GetString() ;
+				int toAdd = 0 ;
+				
+				if( char* subs = strstr( sStatStr, "data\\terraindata\\materials"  ) )
+				{
+					toAdd = sizeof "data\\terraindata\\materials" ;
+				}
 
-				ShellExecute( NULL, "open", execStr, fullPath, NULL, SW_SHOWNORMAL ) ;
+				sprintf( sStatStr, "%s texture\n%s\n%dx%d", g_iTerrainNormalMapEditMode ? "Normal" : "Diffuse", tex->getFileLoc().FileName + toAdd, tex->GetWidth(), tex->GetHeight() );
+
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+
+				imgui_Static ( 370, fStatisticYStart, sStatStr, 360, false, fStatisticHeight );
+
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+
+				if (imgui_Button(SliderX+10+2+110+106,SliderY+42+2, 60, 20, "EDIT", 0))
+				{
+#ifndef FINAL_BUILD
+					const char* name = tex->getFileLoc().FileName ;
+
+					char fullPath[ 4096 ] ;
+					GetCurrentDirectory( sizeof fullPath - 2, fullPath ) ;
+					strcat( fullPath, "\\" ) ;
+					strcat( fullPath, name ) ;
+
+					for( int i = 0, e = strlen( fullPath) ; i < e ; i ++ )
+					{
+						if( fullPath[ i ] == '/' )
+							fullPath[ i ] = '\\' ;
+					}
+
+					const char* execStr = g_texture_edit_cmd->GetString() ;
+
+					ShellExecute( NULL, "open", execStr, fullPath, NULL, SW_SHOWNORMAL ) ;
 #endif
+				}
 			}
 		}
-	}
 
-	r3dDrawBox2D(SliderX+10+5+110-Desktop().GetX(),SliderY+10+5- Desktop().GetY(), 100-8, 100-8, r3dColor(255,255,255), *MatTexNormalArray[ CurrentPaintLayerIdx2 ]);
+		r3dDrawBox2D(SliderX+10+5+110-Desktop().GetX(),SliderY+10+5- Desktop().GetY(), 100-8, 100-8, r3dColor(255,255,255), *MatTexNormalArray[ CurrentPaintLayerIdx2 ]);
 
-	SliderY += 122 ;
+		SliderY += 122 ;
 
-	if ( CurrentPaintLayerIdx2 >= 0 )
-	{
-		r3dTexture * pTex = g_iTerrainNormalMapEditMode ? *MatTexNormalArray[ CurrentPaintLayerIdx2 ] : *MatTexArray[ CurrentPaintLayerIdx2 ];
-		if ( pTex )
+		if ( CurrentPaintLayerIdx2 >= 0 )
 		{
-			FixedString s( pTex->getFileLoc().FileName );
-			FixedString sName = s.GetName() + s.GetExt();
-			r3dscpy( MatFName, sName.c_str() );
+			r3dTexture * pTex = g_iTerrainNormalMapEditMode ? *MatTexNormalArray[ CurrentPaintLayerIdx2 ] : *MatTexArray[ CurrentPaintLayerIdx2 ];
+			if ( pTex )
+			{
+				FixedString s( pTex->getFileLoc().FileName );
+				FixedString sName = s.GetName() + s.GetExt();
+				r3dscpy( MatFName, sName.c_str() );
+			}
 		}
-	}
 
-	if( CurrentLayer )
-	{
-		char MatTypeName[ 2048 ] ;
-
-		strncpy( MatTypeName, CurrentLayer->MaterialTypeName.c_str(), sizeof MatTypeName - 1 ) ;
-
-		SliderY = DrawMaterialTypeSelection( SliderX, SliderY, MatTypeName );
-
-		if( strcmp( MatTypeName, CurrentLayer->MaterialTypeName.c_str() ) != 0 )
+		if( CurrentLayer )
 		{
-			CurrentLayer->MaterialTypeName = MatTypeName ;
+			char MatTypeName[ 2048 ] ;
+
+			strncpy( MatTypeName, CurrentLayer->MaterialTypeName.c_str(), sizeof MatTypeName - 1 ) ;
+
+			SliderY = DrawMaterialTypeSelection( SliderX, SliderY, MatTypeName );
+
+			if( strcmp( MatTypeName, CurrentLayer->MaterialTypeName.c_str() ) != 0 )
+			{
+				CurrentLayer->MaterialTypeName = MatTypeName;
+				Terrain2->RecalcLayerVars();
+			}
 		}
 	}
 
@@ -7273,22 +7211,42 @@ Editor_Level::ProcessTerrain2_Paint( float SliderX, float SliderY, int editMode 
 
 	if ( editMode && imgui_lbp )
 	{
-		if ( CurrentPaintLayerIdx2 )
+		if( Terrain2Editor_EraseAll )
 		{
 			g_EditedTerrain2Data = 1 ;
 
-			if ( ! g_pTerrain2Editor->IsUndoRecord() )
+			if( !g_pTerrain2Editor->IsUndoRecord() )
 			{				
-				g_pTerrain2Editor->BeginUndoRecord( Terrain2PaintMode ? "Paint mask" : "Erase mask", UA_TERRAIN2_MASK_PAINT );
-				g_pTerrain2Editor->StartLayerBrush( CurrentPaintLayerIdx2 ) ;
+				g_pTerrain2Editor->BeginUndoRecord( "Terrain2 Erase All Layers", UA_TERRAIN2_MASK_ERASEALL );
+				g_pTerrain2Editor->StartEraseAllBrush();
 			}
 
 			if( r3dGetTime() - _LastTimeBrush > 0.025 )
 			{
-
-				g_pTerrain2Editor->ApplyLayerBrush( g_TerraPaintBoundCtrl, UI_TerraTargetPos, Terrain2PaintMode, CurrentPaintLayerIdx2, 255.f * Terrain2BrushStrengthVal[Terrain2EditMode], Terrain2BrushRadiusVal[Terrain2EditMode], Terrain2BrushHardnessVal[Terrain2EditMode] ) ;
+				g_pTerrain2Editor->ApplyEraseAllBrush( g_TerraPaintBoundCtrl, UI_TerraTargetPos, 255.f * Terrain2BrushStrengthVal[Terrain2EditMode], Terrain2BrushRadiusVal[Terrain2EditMode], Terrain2BrushHardnessVal[Terrain2EditMode] ) ;
 
 				_LastTimeBrush = r3dGetTime();
+			}
+		}
+		else
+		{
+			if ( CurrentPaintLayerIdx2 )
+			{
+				g_EditedTerrain2Data = 1 ;
+
+				if( ! g_pTerrain2Editor->IsUndoRecord() )
+				{				
+					g_pTerrain2Editor->BeginUndoRecord( Terrain2PaintMode ? "Paint mask" : "Erase mask", UA_TERRAIN2_MASK_PAINT );
+					g_pTerrain2Editor->StartLayerBrush( CurrentPaintLayerIdx2 ) ;
+				}
+
+				if( r3dGetTime() - _LastTimeBrush > 0.025 )
+				{
+
+					g_pTerrain2Editor->ApplyLayerBrush( g_TerraPaintBoundCtrl, UI_TerraTargetPos, Terrain2PaintMode, CurrentPaintLayerIdx2, 255.f * Terrain2BrushStrengthVal[Terrain2EditMode], Terrain2BrushRadiusVal[Terrain2EditMode], Terrain2BrushHardnessVal[Terrain2EditMode] ) ;
+
+					_LastTimeBrush = r3dGetTime();
+				}
 			}
 		}
 	}
@@ -7569,6 +7527,9 @@ Editor_Level::ProcessTerrain2()
 	{
 		if( editMode && imgui_lbp )
 		{
+#if ENABLE_AUTODESK_NAVIGATION
+			Nav::ResetCachedLevelGeometry();
+#endif
 			if ( ! g_pTerrain2Editor->IsUndoRecord() )
 			{
 				gTerrainHeightDirtiness.Reset( 128, 128 );
@@ -7622,7 +7583,15 @@ Editor_Level::ProcessTerrain2()
 		switch( Terrain2EditMode )
 		{
 		case TE2_PAINT:
-			g_pTerrain2Editor->EndLayerBrush() ;
+
+			if( Terrain2PaintMode == TE2_ERASE && Terrain2Editor_EraseAll )
+			{
+				g_pTerrain2Editor->EndEraseAllBrush() ;
+			}
+			else
+			{
+				g_pTerrain2Editor->EndLayerBrush() ;
+			}
 			break ;
 		case TE2_COLOR:
 			g_pTerrain2Editor->EndColorBrush() ;
@@ -8007,43 +7976,6 @@ r3dSkeleton* GetDefaultSkeleton( const char* MeshName )
 
 int ObjectEditMove = 1;
 
-static r3dPoint3D GetEditorPlacementPoint()
-{
-	r3dPoint3D pos = UI_TargetPos;
-
-	if (Terrain)
-	{
-		pos = UI_TerraTargetPos;
-		pos.y = Terrain->GetHeight(pos);
-	}
-
-	return pos;
-}
-
-static void PlaceObjectBBoxOnPoint(GameObject* obj, const r3dPoint3D& targetPos)
-{
-	if (!obj)
-		return;
-
-	obj->SetPosition(targetPos);
-
-	r3dBoundBox bbox = obj->GetBBoxWorld();
-
-	r3dPoint3D pos = obj->GetPosition();
-	pos.y += targetPos.y - bbox.Org.y;
-
-	obj->SetPosition(pos);
-	obj->OnPickerMoved();
-}
-
-static void PlaceObjectOnEditorGround(GameObject* obj)
-{
-	if (!obj)
-		return;
-
-	PlaceObjectBBoxOnPoint(obj, GetEditorPlacementPoint());
-}
-
 void Editor_Level :: ProcessObjects()
 {
 	static char CategoryName[64] = "";
@@ -8190,34 +8122,30 @@ void Editor_Level :: ProcessObjects()
 				if (*ClassName == 0)
 					break;
 
-				if (!EditObject)
+				if (!EditObject )
 				{
-					r3dPoint3D SpawnPos = GetEditorPlacementPoint();
-
-					if (classNameID == 0)
-						EditObject = srv_CreateGameObject(ClassName, Str, SpawnPos);
+					if(classNameID==0)
+						EditObject = srv_CreateGameObject(ClassName, Str, UI_TargetPos);
 					else
-						EditObject = srv_CreateGameObject(ClassNames[classNameID].c_str(), Str, SpawnPos);
-
+						EditObject = srv_CreateGameObject(ClassNames[classNameID].c_str(), Str, UI_TargetPos);
 					ModifyShadowsFlagForTransparentObject(EditObject);
 				}
 
-				if (EditObject)
+				if (EditObject )
 				{
-					EditObject->ObjFlags |= OBJFLAG_SkipCastRay;
-
-					if (!_objRotate)
+					EditObject->SetObjFlags(OBJFLAG_SkipCastRay);
+					if (!_objRotate) 
 					{
-						if (EditObject->ObjTypeFlags & OBJTYPE_Particle)
+						if(EditObject->ObjTypeFlags & OBJTYPE_Particle)
 						{
-							EditObject->m_isSerializable = true;
-							((obj_ParticleSystem*)EditObject)->bKeepAlive = true;
-							EditObject->SetPosition(GetEditorPlacementPoint());
+							EditObject->m_isSerializable = true; // if partilce placed in editor - then save it by default
+							((obj_ParticleSystem*)EditObject)->bKeepAlive = true; // and keep it alive
+							EditObject->SetPosition(UI_TargetPos);
 						}
 						else
 						{
 							if (ObjectEditMove)
-								PlaceObjectOnEditorGround(EditObject);
+								LandscapeCorrect( *EditObject, UI_TargetPos );
 							else
 								EditObject->SetPosition(UI_TargetPos);
 						}
@@ -8246,36 +8174,24 @@ void Editor_Level :: ProcessObjects()
 
 				if (imgui_lbr)
 				{
-					if(r3dGetTime() - _LastTimeBrush > 0.1f)
+					if(r3dGetTime() - _LastTimeBrush > 0.1)
 					{
-						GameObject* PlacedObject = EditObject;
+						EditObject->ObjFlags &= ~OBJFLAG_SkipCastRay;
+						_LastTimeBrush = r3dGetTime();
 
-						if (PlacedObject)
+						UndoEntityAddDel * pUndo = ( UndoEntityAddDel * ) g_pUndoHistory->CreateUndoItem( UA_ENT_ADDDEL );
+						assert( pUndo );
+						if ( pUndo )
 						{
-							PlacedObject->ObjFlags &= ~OBJFLAG_SkipCastRay;
-							PlacedObject->OnPickerMoved();
+							EntAddDel_t st;
 
-							_LastTimeBrush = r3dGetTime();
+							st.bDelete = false;
+							st.pEnt = EditObject;
 
-							UndoEntityAddDel * pUndo = ( UndoEntityAddDel * ) g_pUndoHistory->CreateUndoItem( UA_ENT_ADDDEL );
-							assert( pUndo );
-
-							if ( pUndo )
-							{
-								EntAddDel_t st;
-
-								st.bDelete = false;
-								st.pEnt = PlacedObject;
-
-								pUndo->Create( st );
-							}
-
-							g_Manipulator3d.PickerResetPicked();
-							g_Manipulator3d.PickerAddToPicked(PlacedObject);
-
-							EditObject = NULL;
-							ObjectEditMode = 1;
+							pUndo->Create( st );
 						}
+
+						EditObject = NULL;
 					}
 				}
 			}
@@ -8355,8 +8271,10 @@ void Editor_Level :: ProcessGroups()
 
 	g_Manipulator3d.TypeFilterSet("");
 
-	for(GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj)) 
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
+
 		if(!(obj->Class->Name == "obj_Depot")) {
 			continue;
 		}
@@ -8470,9 +8388,54 @@ void Editor_Level :: ProcessGroups()
 
 	SliderY += DEFAULT_LIST_HEIGHT;
 
+	static int dropMode = 0;
+
+	if( Terrain )
+		SliderY += imgui_Checkbox( SliderX, SliderY, "Drop on Ground", &dropMode, 1 );
+	else
+		dropMode = 0;
+
 	obj_Group * pCurGroup = NULL;
 	if ( g_iGroupListCurSel >= 0 && g_iGroupListCurSel < (int)obj_Group::m_dGroups.Count () )
 		pCurGroup = obj_Group::m_dGroups[g_iGroupListCurSel];
+	else
+		pCurGroup = NULL;
+
+	if( pCurGroup )
+	{
+		if( imgui_Button( SliderX, SliderY, 360, 22, "Inject into map" ) )
+		{
+			if( !pCurGroup->GetPreviewMode() )
+			{
+				pCurGroup->LoadGroupObjects();
+			}
+
+			for ( uint32_t i = 0; i < pCurGroup->m_dObjects.Count (); i++ )
+			{
+				GameObject * pObj = pCurGroup->m_dObjects[i]->Clone ();
+
+				if ( pObj )
+				{
+					pObj->ObjFlags &= ~OBJFLAG_SkipCastRay;
+					pObj->bPersistent = 1;
+				}
+			}
+
+			if( !pCurGroup->GetPreviewMode() )
+			{
+				pCurGroup->UnloadGroupObjects();
+			}
+		}
+
+		SliderY += 22;
+	}
+
+	if( imgui_Button( SliderX, SliderY, 360, 22, "Save Groups" ) )
+	{
+		obj_Group::Save();
+	}
+
+	SliderY += 22;
 
 	for ( uint32_t i = 0; i < obj_Group::m_dGroups.Count (); i++ )
 	{
@@ -8513,20 +8476,26 @@ void Editor_Level :: ProcessGroups()
 			else
 			{
 				r3dBoundBox tBoxUnion;
-				r3dPoint3D vCenter;
-				if ( pCurGroup->m_dObjects.Count () > 0 )
+
+				r3dPoint3D vCenter = r3dPoint3D( 0, 0, 0 );
+
+				if( pCurGroup->m_dObjects.Count() )
 				{
-					vCenter = pCurGroup->m_dObjects[0]->GetPosition();
-					tBoxUnion = pCurGroup->m_dObjects[0]->GetBBoxWorld();
+					tBoxUnion.Org = r3dPoint3D( FLT_MAX, FLT_MAX, FLT_MAX );
+					tBoxUnion.Size = r3dPoint3D( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+
+					for ( uint32_t i = 0; i < pCurGroup->m_dObjects.Count (); i++ )
+					{
+						tBoxUnion.ExpandTo(pCurGroup->m_dObjects[i]->GetBBoxWorld());
+					}
+				}
+				else
+				{
+					tBoxUnion.Org = r3dPoint3D( 0, 0, 0 );
+					tBoxUnion.Size = r3dPoint3D( 0, 0, 0 );
 				}
 
-				for ( uint32_t i = 0; i < pCurGroup->m_dObjects.Count (); i++ )
-				{
-					vCenter += pCurGroup->m_dObjects[i]->GetPosition();
-					tBoxUnion.ExpandTo(pCurGroup->m_dObjects[i]->GetBBoxWorld());
-				}
-
-				vCenter /= (float)pCurGroup->m_dObjects.Count ();
+				vCenter = tBoxUnion.Center();
 
 				if ( imgui_lbr )
 				{
@@ -8535,13 +8504,20 @@ void Editor_Level :: ProcessGroups()
 					for ( uint32_t i = 0; i < pCurGroup->m_dObjects.Count (); i++ )
 					{
 						GameObject * pObj = pCurGroup->m_dObjects[i]->Clone ();
+
 						if ( pObj )
 						{
-							if (ObjectEditMove)
-								PlaceObjectOnEditorGround(pObj);
-							else
-								pObj->SetPosition(UI_TargetPos);
-							
+							r3dPoint3D pos;
+
+							pos = UI_TargetPos + pObj->GetPosition() -  vCenter + r3dPoint3D( 0, tBoxUnion.Size.y / 2, 0 );
+
+							if( dropMode )
+							{
+								pos.y = Terrain->GetHeight( pos )- pObj->GetBBoxLocal().Org.y;
+							}
+
+							pObj->SetPosition ( pos );
+							pObj->ObjFlags &= ~OBJFLAG_SkipCastRay;
 							pObj->bPersistent = 1;
 							g_Manipulator3d.PickerAddToPicked ( pObj );
 						}
@@ -8550,7 +8526,7 @@ void Editor_Level :: ProcessGroups()
 				else
 				{
 					pCurGroup->SetPreviewMode ( true );
-					pCurGroup->SetPreviewObjectsPos ( UI_TargetPos );
+					pCurGroup->SetPreviewObjectsPos ( UI_TargetPos + r3dPoint3D( 0, tBoxUnion.Size.y / 2, 0 ), dropMode ? true : false );
 					
 					tBoxUnion.Org = UI_TargetPos - r3dVector(tBoxUnion.Size.x,0,tBoxUnion.Size.z)*0.5f;
 					r3dDrawBoundBox(tBoxUnion, gCam, r3dColor::white, 1 );
@@ -8585,8 +8561,10 @@ void UpdateDestructionMeshSettings( const char* target )
 		strlwr( TargetLWR );
 	}
 
-	for( GameObject* obj = GameWorld().GetFirstObject(); obj ; obj = GameWorld().GetNextObject( obj ) )
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
+
 		if( obj->isObjType( OBJTYPE_Mesh ) )
 		{
 			MeshGameObject* mgo = static_cast< MeshGameObject* > ( obj );
@@ -8951,63 +8929,6 @@ Editor_Level::ProcessDamageLib()
 
 }
 
-void Editor_Level::ProcessTCamo()
-{
-	float SliderX = r3dRenderer->ScreenW - 365 ;
-	float SliderY = 45 ;
-
-	SliderY += imgui_Static( SliderX, SliderY, "Transparent Camo" );
-
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Texture Scale", &gCamoSettings.texScale, 0.125f, 4.0f, "%.3f" );
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Distort Scale", &gCamoSettings.distortScale, 0.125f, 4.0f, "%.3f" );
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Reflection Ammount", &gCamoSettings.reflectionAmmount, 0.0f, 1.0f, "%.2f" );	
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Anim Speed", &gCamoSettings.animSpeed, 0.125f, 4.0f, "%.3f" );
-
-	SliderY += imgui_DrawColorPicker( SliderX, SliderY, "Color0", &gCamoSettings.color0, 360, false ) ;
-
-	SliderY += imgui_DrawColorPicker( SliderX, SliderY, "Color1", &gCamoSettings.color1, 360, true ) ;
-
-	static obj_AI_Player *player = 0 ;
-
-	if( !player )
-	{
-		for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
-		{
-			if( obj->isObjType(OBJTYPE_Human) )
-			{
-				player = static_cast< obj_AI_Player* >( obj );
-				break ;
-			}
-		}
-	}
-
-	static float camoTransp = 0.f ;
-
-	if( player )
-	{
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Transparency", &camoTransp, 0.0f, 0.99f, "%.3f" );
-
-		if( player->camoTimeLine.GetTarget() < 1.0f )
-		{
-			player->camoTimeLine.SetNewCamoTarget( camoTransp ) ;
-		}
-	}
-
-	if ( imgui_Button( SliderX, SliderY, 100, 22, "ToggleCamo", 0, false ) ) 
-	{
-		g_pCmdProc->Execute( "tcamo" ) ;
-	}
-
-	SliderY += 33 ;
-
-	if ( imgui_Button( SliderX, SliderY, 100, 35, "SAVE GLOBAL", 0, false ) ) 
-	{
-		SaveCommonSettings();
-		MessageBoxA( 0, "Saved!", "Alright", MB_OK ) ;
-	}
-
-}
-
 //------------------------------------------------------------------------
 
 r3dString ExtractFileName( const char* path )
@@ -9142,8 +9063,10 @@ void Editor_Level::ProcessUtils()
 			float miX = +FLT_MAX,	miY = +FLT_MAX,		miZ = +FLT_MAX;
 			float maX = -FLT_MAX,	maY = -FLT_MAX,		maZ = -FLT_MAX;
 
-			for( GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
+			for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 			{
+				GameObject* obj = iter.current;
+
 				if( !VisibiltyGrid::IsVisGridObj( obj ) )
 					continue ;
 
@@ -9241,28 +9164,6 @@ void Editor_Level::ProcessUtils()
 	int highlightCasters = !!r_highlight_casters->GetInt() ;
 	SliderY += imgui_Checkbox( SliderX, SliderY, 360.f, 22.f, "Highlight Shadow Casters", &highlightCasters, 1 ) ;
 	r_highlight_casters->SetInt( highlightCasters ) ;
-
-	SliderY += 22.f ;
-
-	SliderY += imgui_Static( SliderX, SliderY, "UAV Bounds" );
-	{
-		extern float uav_LevelBounds[5];
-
-		static int showUavBbox = 0;
-		SliderY += imgui_Checkbox( SliderX, SliderY, "Show Bounds", &showUavBbox, 1) ;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "MinX", &uav_LevelBounds[0], -2000.f, 2000.f, "%2.2f" ) ;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "MaxX", &uav_LevelBounds[1], -2000.f, 2000.f, "%2.2f" ) ;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "MinZ", &uav_LevelBounds[2], -2000.f, 2000.f, "%2.2f" ) ;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "MaxZ", &uav_LevelBounds[3], -2000.f, 2000.f, "%2.2f" ) ;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "MaxY", &uav_LevelBounds[4], 0.f, 2000.f, "%2.2f" ) ;
-		
-		if(showUavBbox)	
-		{
-			r3dPoint3D w = r3dPoint3D(uav_LevelBounds[1] - uav_LevelBounds[0], uav_LevelBounds[4], uav_LevelBounds[3] - uav_LevelBounds[2]);
-			r3dPoint3D c = r3dPoint3D(uav_LevelBounds[0] + w.x/2, 0+w.y/2, uav_LevelBounds[2]+w.z/2);
-			r3dDrawBox3D(c.x, c.y, c.z, w.x, w.y, w.z, r3dColor(0, 255, 0, 100));
-		}
-	}
 
 	SliderY += 22.0f;
 	bool isPressed = imgui_Button( SliderX, SliderY, 360.f, 22.f, "Dump profile data" ) ;
@@ -9370,8 +9271,49 @@ void DumpTextures()
 	FILE* out = fopen( "TexStats.txt", "wt" ) ;
 
 	typedef std::multimap< int, r3dTexture* > TexesBySize ;
+	typedef std::map< int, int > TexCountsByID ;
 
-	TexesBySize texesBySize ;
+	TexesBySize texesBySize;
+	TexCountsByID texCountsByID;
+
+	struct AddTexture
+	{
+		void operator() ( r3dTexture* tex )
+		{
+			if( tex )
+			{
+				(*targIds)[ tex->GetID() ] ++;
+			}
+		}
+
+		TexCountsByID* targIds;
+	} addTexture = { &texCountsByID };
+
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
+	{
+		GameObject* obj = iter.current;
+
+		if( r3dMesh* mesh = obj->GetObjectMesh() )
+		{
+			for( int i = 0, e = mesh->NumMatChunks; i < e ; i ++ )
+			{
+				const r3dTriBatch& batch = mesh->MatChunks[ i ];
+
+				addTexture( batch.Mat->Texture				);
+				addTexture( batch.Mat->BumpTexture			);
+				addTexture( batch.Mat->GlossTexture 		);
+				addTexture( batch.Mat->imgEnvPower			);
+				addTexture( batch.Mat->IBLTexture			);
+
+				addTexture( batch.Mat->DensityTexture		);
+				addTexture( batch.Mat->CamouflageMask		);
+				addTexture( batch.Mat->DistortionTexture	);
+
+				addTexture( batch.Mat->DetailNormalTexture	);
+				addTexture( batch.Mat->SpecularPowTexture	);
+			}
+		}
+	}
 
 	for( r3dTexture* tex = r3dRenderer->FirstTexture ; tex ; tex = tex->pNext )
 	{
@@ -9386,25 +9328,200 @@ void DumpTextures()
 
 	int total = 0 ;
 
+	fprintf( out, "%9s - %9s - %4s(%4s) - %8s - %s\n", "Size", "Dims", "Objs", "Refs", "Format", "File" );
+
+	int objectTextureSize = 0;
+	int objectTextureCount = 0;
+
 	for( TexesBySize::const_reverse_iterator i = texesBySize.rbegin(), e = texesBySize.rend() ; i != e ; ++ i )
 	{
-		r3dTexture* tex = i -> second ;
+		r3dTexture* tex = i -> second;
 
-		char fmtName[ 64 ] ;
+		char fmtName[ 64 ];
 
 		void ToString( D3DFORMAT fmt, char* szBuffer );
-		ToString( tex->GetD3DFormat(), fmtName ) ;
+		ToString( tex->GetD3DFormat(), fmtName );
 
-		fprintf( out, "%9d - %4dx%4d - %8s - %s\n", i -> first, tex->GetWidth(), tex->GetHeight(), fmtName, tex->GetFlags() & r3dTexture::fCreated ? "PROCEDURAL" : tex->getFileLoc().FileName ) ;
+		fprintf( out, "%9d - %4dx%4d - %4d(%4d) - %8s - %s\n", i -> first, tex->GetWidth(), tex->GetHeight(), texCountsByID[ tex->GetID() ], tex->Instances, fmtName, tex->GetFlags() & r3dTexture::fCreated ? "PROCEDURAL" : tex->getFileLoc().FileName );
 
-		total += i -> first ;
+		if( !( tex->GetFlags() & r3dTexture::fCreated ) )
+		{
+			if( stristr( tex->getFileLoc().FileName, "ObjectsDepot" ) )
+			{
+				objectTextureCount ++;
+				objectTextureSize += i->first;
+			}
+		}
+
+		total += i -> first;
 	}
 
-	fprintf( out, "\nTotal: %.2f MB in %d textures\n", total / 1024.f / 1024.f, (int)texesBySize.size() ) ;
+	fprintf( out, "\nObjects: %.2f MB in %d textures\n", objectTextureSize / 1024.f / 1024.f, objectTextureCount );
 
-	fclose( out ) ;
+	fprintf( out, "\nTotal: %.2f MB in %d textures\n", total / 1024.f / 1024.f, (int)texesBySize.size() );
 
-	system( "notepad TexStats.txt" ) ;
+	fclose( out );
+
+	system( "notepad TexStats.txt" );
+}
+
+void DumpObjects()
+{
+	typedef std::map< std::string, int > string_to_int;
+
+	string_to_int objectMap;
+
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
+	{
+		GameObject* obj = iter.current;
+		objectMap[ std::string( obj->Class->Name.c_str() ) ] ++;		
+	}
+
+	int total = 0;
+
+	void ConPrint( const char* fmt, ... );
+
+	FILE* fout = fopen( "dumpobj.txt", "wt" );
+
+	for( string_to_int::const_iterator i = objectMap.begin(), e = objectMap.end(); i != e; ++i )
+	{
+		ConPrint( "%s - %d\n", i->first.c_str(), i->second );
+		fprintf( fout, "%s - %d\n", i->first.c_str(), i->second );
+
+		total += i->second;
+	}
+
+	ConPrint( "Total: %d\n", total );
+	fprintf( fout, "Total: %d\n", total );
+
+	fclose( fout );
+	
+}
+
+void MemCrash( bool vmem )
+{
+	r3dOutToLog( "MemCrash: trying to crash the game...\n" );
+
+	HRESULT hr;
+
+	for( int i = 0; ; i ++ )
+	{
+		IDirect3DTexture9* tex( NULL );
+		hr = r3dRenderer->pd3ddev->CreateTexture( 8192, 8192, 0, 0, D3DFMT_A8R8G8B8, vmem ? D3DPOOL_DEFAULT : D3DPOOL_SYSTEMMEM, &tex, NULL );
+		D3D_V( hr );
+
+		if( hr == S_OK )
+			r3dOutToLog( "MemCrash: texture %d still no crash\n", i );
+		else
+			break;
+	}
+}
+
+void DumpHeaps()
+{
+	HANDLE heaps[ 256 ];
+	DWORD c = ::GetProcessHeaps (100, heaps);
+
+	FILE* fout = fopen( "heaps.txt", "wt" );
+
+	fprintf ( fout, "The process has %d heaps.\n", c);
+
+	//get the default heap and the CRT heap (both are among
+	//those retrieved above)
+	const HANDLE default_heap = ::GetProcessHeap ();
+
+	const HANDLE crt_heap = (HANDLE) _get_heap_handle ();
+
+	INT64 crtTotal = 0;
+	INT64 crtCount = 0;
+
+	for (unsigned int i = 0; i < c; i++)
+	{
+		//query the heap attributes
+		ULONG heap_info = 0;
+
+		SIZE_T ret_size = 0;
+
+		int iscrt = 0;
+
+		BOOL res = HeapLock( heaps[ i ] );
+		r3d_assert( res );
+
+		if (::HeapQueryInformation (heaps [i],
+			HeapCompatibilityInformation,
+			&heap_info,
+			sizeof (heap_info),
+			&ret_size))
+		{
+			//show the heap attributes
+
+			switch (heap_info)
+			{
+
+			case 0:
+				fprintf ( fout, "Heap %d is a regular heap.\n", (i + 1));
+				break;
+
+			case 1:
+				fprintf ( fout, "Heap %d is a heap with look-asides (fast heap).\n", (i + 1));
+				break;
+
+			case 2:
+				fprintf ( fout, "Heap %d is a LFH (low-fragmentation) heap.\n", (i + 1));
+				break;
+
+			default:
+				fprintf ( fout, "Heap %d is of unknown type.\n", (i + 1));
+				break;
+			}
+
+			if (heaps [i] == default_heap)
+			{
+				fprintf( fout, " This the DEFAULT process heap.\n");
+			}
+
+			if (heaps [i] == crt_heap)
+			{
+				fprintf( fout, " This the heap used by the CRT.\n");  
+				iscrt = 1;
+			}
+
+			//walk the heap and show each allocated block inside it
+			//(the attributes of each entry will differ between
+			//DEBUG and RELEASE builds)
+
+			PROCESS_HEAP_ENTRY entry;
+
+			memset (&entry, 0, sizeof (entry));
+
+			int count = 0;
+
+			while (::HeapWalk (heaps [i], &entry))
+			{
+				if (entry.wFlags & PROCESS_HEAP_ENTRY_BUSY)
+				{
+					fprintf(fout, " Allocated entry %d: size: %d, overhead: %d.\n", ++count, entry.cbData, entry.cbOverhead);
+
+					if( iscrt )
+					{
+						crtTotal += entry.cbData;
+						crtCount ++;
+					}
+				}
+			}
+		}
+
+		res = HeapUnlock( heaps[ i ] );
+		r3d_assert( res );
+	}
+
+	void ConPrint( const char* fmt, ... );
+
+	ConPrint( "CRT total: %lld", crtTotal );
+	ConPrint( "CRT count: %lld", crtCount );
+	ConPrint( "CRT avg: %lld", crtTotal / crtCount );
+
+	fclose( fout );
 }
 
 static bool MeshPolyComp( GameObject* obj1, GameObject* obj2 )
@@ -9415,14 +9532,18 @@ static bool MeshPolyComp( GameObject* obj1, GameObject* obj2 )
 void Editor_Level::ProcessMeshes()
 {
 	std::vector< GameObject* > objects;
-	typedef std::unordered_map<std::string, int> TObjectsList;
+	typedef stdext::hash_map< std::string, int > TObjectsList;
 	TObjectsList tmpObjectNames;
-	GameObject* pObject = GameWorld().GetFirstObject();
+
+	ObjectIterator obIter = GameWorld().GetFirstOfAllObjects();
+
+	GameObject* pObject = obIter.current;
 	while ( pObject )
 	{
 		if ( !pObject->GetObjectMesh() )
 		{
-			pObject = GameWorld().GetNextObject( pObject );
+			obIter = GameWorld().GetNextOfAllObjects( obIter );
+			pObject = obIter.current;
 			continue;
 		}
 		std::string sName( pObject->Name.c_str() );
@@ -9434,7 +9555,9 @@ void Editor_Level::ProcessMeshes()
 		}
 		else
 			iter->second++;
-		pObject = GameWorld().GetNextObject( pObject );
+
+		obIter = GameWorld().GetNextOfAllObjects( obIter );
+		pObject = obIter.current;
 	}
 
 	std::sort( objects.begin(), objects.end(), MeshPolyComp );
@@ -9728,7 +9851,7 @@ void ProcessCloudsShadows()
 
 //////////////////////////////////////////////////////////////////////////
 
-void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGameObjectProxy *mDecalProxyObj)
+void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY)
 {
 	static int DecalEditMode = 0;
 
@@ -9814,6 +9937,18 @@ void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGame
 			{
 				//g_pDecalChief->LoadLib();
 				g_pDecalChief->SaveLib(r3dGameLevel::GetHomeDir());
+			}
+
+			if (globalLib)
+			{
+				if( imgui_Button( SliderX + 180.0f, SliderY, 180.f, 22.f, "Copy To Local" ) )
+				{
+					DecalType t = g_pDecalChief->GetTypeByIdx(g_iSelectedDecalType);
+					t.Name += "(L)";
+					t.globalDecal = false;
+					t.LifeTime = 0;
+					g_pDecalChief->AddType(t);
+				}
 			}
 
 			SliderY += 24.f;
@@ -10091,14 +10226,8 @@ void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGame
 				{
 					if( const DecalParams* pparms = g_pDecalChief->GetStaticDecal( g_iSelectedDecalType, SelectedDecal ) )
 					{
-
-						if (!mDecalProxyObj)
-						{
-							mDecalProxyObj = (DecalGameObjectProxy*)srv_CreateGameObject("DecalGameObjectProxy", "objDecalGameObjectProxy", r3dPoint3D(0,0,0));
-							g_Manipulator3d.AddImmortal( mDecalProxyObj ) ;
-						}
-
-						mDecalProxyObj->SelectDecal(g_iSelectedDecalType, SelectedDecal);
+						if (gDecalProxyObj)
+							gDecalProxyObj->SelectDecal(g_iSelectedDecalType, SelectedDecal);
 
 						DecalParams parms = *pparms;
 
@@ -10145,24 +10274,6 @@ void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGame
 					g_pDecalChief->RemoveStaticDecalsOfType( g_iSelectedDecalType );
 				}
 
-				if( SelectedDecal >= 0 && SelectedDecal < (int)count )
-				{
-					if( const DecalParams* parms = g_pDecalChief->GetStaticDecal( g_iSelectedDecalType, SelectedDecal ) )
-					{
-						r3dBoundBox bbox;
-
-						const DecalType& dt = g_pDecalChief->GetTypeByIdx( parms->TypeID ) ;
-
-						float s = sqrtf( dt.ScaleX * dt.ScaleX + dt.ScaleY * dt.ScaleY ) * 0.5f * parms->ScaleCoef ;
-
-						bbox.Org	= parms->Pos - r3dPoint3D( s, s, s );
-						bbox.Size.x	= s * 2;
-						bbox.Size.y	= s * 2;
-						bbox.Size.z	= s * 2;
-						PushBoundingBox( bbox );
-					}
-				}
-
 				SliderY += 22.f;
 			}
 
@@ -10186,6 +10297,7 @@ void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGame
 					g_iSelectedDecalType = g_pDecalChief->GetDecal( picked ).TypeID;
 					g_iDecalListSelectedItem = -1;
 
+					g_Manipulator3d.PickerResetPicked();
 					if( g_iSelectedDecalType == INVALID_DECAL_ID )
 					{
 						SelectedDecal = -1;
@@ -10193,6 +10305,16 @@ void ProcessDecalsEditor(bool globalLib, float SliderX, float SliderY, DecalGame
 					else
 					{
 						SelectedDecal = g_pDecalChief->GetDecalIdxInType( picked );
+
+						if (!gDecalProxyObj)
+						{
+							gDecalProxyObj = (DecalGameObjectProxy*)srv_CreateGameObject("DecalGameObjectProxy", "objDecalGameObjectProxy", r3dPoint3D(0,0,0));
+							g_Manipulator3d.AddImmortal( gDecalProxyObj ) ;
+						}
+
+						g_Manipulator3d.PickerAddToPicked(gDecalProxyObj);
+						g_Manipulator3d.ScaleEnable();
+						g_Manipulator3d.Enable();
 					}
 				}
 			}
@@ -10219,7 +10341,7 @@ void ProcessWaterEditor ()
 	g_iProcessWaterPlanesTicked = 2;
 	
 	if ( bJustStarted )
-		UpdateWaterPlaneGrids ( g_fWaterPlaneCellSize );
+		UpdateWaterPlaneGrids ( &g_WaterPlaneSettings );
 /*
 	g_Manipulator3d.TypeFilterSet("obj_WaterPlane");
 
@@ -10302,16 +10424,22 @@ void ProcessWaterEditor ()
 	// restore editor params from water plane
 	if(pWaterSelected)
 	{
-		float fWaterPlaneCellSizeOld = g_fWaterPlaneCellSize;
-		g_fWaterPlaneCellSize = pWaterSelected->GetCellGridSize();
-		g_fWaterPlaneHeight = pWaterSelected->GetWaterPlaneHeight ();
-		g_iWaterPlaneCoastSmoothLevels = pWaterSelected->GetWaterPlaneCoastSmoothLevels ();
-		g_fWaterPlaneHeightOnTerrain = pWaterSelected->GetWaterPlaneHeightOnTerrain ();
-		g_iWaterEditFollowTerrainMode = pWaterSelected->GetWaterPlaneFollowTerrainFlag();
 
-		if ( fabsf(fWaterPlaneCellSizeOld - g_fWaterPlaneCellSize) > FLT_EPSILON )
-			UpdateWaterPlaneGrids( g_fWaterPlaneCellSize );
+		obj_WaterPlane::Settings oldSettings = g_WaterPlaneSettings;
+		g_WaterPlaneSettings = pWaterSelected->GetSettings();
 
+
+		if (	fabsf(oldSettings.CellGridSize - g_WaterPlaneSettings.CellGridSize) > FLT_EPSILON 
+					||
+				fabsf(oldSettings.PlaneXSize - g_WaterPlaneSettings.PlaneXSize ) > FLT_EPSILON 
+					||
+				fabsf(oldSettings.PlaneZSize - g_WaterPlaneSettings.PlaneZSize ) > FLT_EPSILON 
+				)
+		{
+			UpdateWaterPlaneGrids( &g_WaterPlaneSettings );
+
+			pWaterSelected->SetSettings( g_WaterPlaneSettings );
+		}
 	}
 
 	const static char* listwateredit[2] = { "PAINT", "ERASER" };
@@ -10319,25 +10447,25 @@ void ProcessWaterEditor ()
 
 	SliderY += imgui_Value_Slider(SliderX, SliderY, "Brush Radius", &g_fWaterPlaneBrushRadius, 0.1f, 500.0f, "%-02.2f");
 
-	float fWaterPlaneCellSizeLast = g_fWaterPlaneCellSize;
-	SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell Size", &g_fWaterPlaneCellSize, 10.0f, 500.0f, "%-02.0f");
+	float fWaterPlaneCellSizeLast = g_WaterPlaneSettings.CellGridSize;
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell Size", &g_WaterPlaneSettings.CellGridSize, 10.0f, 500.0f, "%-02.2f");
 
-	if(fWaterPlaneCellSizeLast!= g_fWaterPlaneCellSize)
-		UpdateWaterPlaneGrids ( g_fWaterPlaneCellSize );
+	float fWaterPlaneWidthLast = g_WaterPlaneSettings.PlaneXSize;
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "Width", &g_WaterPlaneSettings.PlaneXSize, g_NominalWaterPlaneWidth, 8.0f * g_NominalWaterPlaneWidth, "%-02.2f");
 
-	SliderY+= imgui_Checkbox(SliderX, SliderY, "Follow Terrain", &g_iWaterEditFollowTerrainMode, 1 );
+	float fWaterPlaneHeightLast = g_WaterPlaneSettings.PlaneZSize;
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "Height", &g_WaterPlaneSettings.PlaneZSize, g_NominalWaterPlaneHeight, 8.0f * g_NominalWaterPlaneHeight, "%-02.2f");
 
-	if ( g_iWaterEditFollowTerrainMode )
+	if(	fWaterPlaneCellSizeLast != g_WaterPlaneSettings.CellGridSize
+			||
+		fWaterPlaneWidthLast != g_WaterPlaneSettings.PlaneXSize
+			||
+		fWaterPlaneHeightLast != g_WaterPlaneSettings.PlaneZSize )
 	{
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Height On Tertain", &g_fWaterPlaneHeightOnTerrain, 0.1f, 500.0f, "%-02.2f");
-
-		int iLast = g_iWaterPlaneCoastSmoothLevels;
-		float fCoastSmooth = (float)g_iWaterPlaneCoastSmoothLevels;
-		SliderY += imgui_Value_Slider (SliderX, SliderY, "Coast Smooth Levels", &fCoastSmooth, 0.0f, 5.0f, "%02.0f" );
-		g_iWaterPlaneCoastSmoothLevels = (int)fCoastSmooth;
+		UpdateWaterPlaneGrids ( &g_WaterPlaneSettings );
 	}
-	else
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Plane Height", &g_fWaterPlaneHeight, 0.0f, 1000.0f, "%-02.2f");
+
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "Plane Height", &g_WaterPlaneSettings.WaterPlaneHeight, 0.0f, 1000.0f, "%-02.2f");
 
 	bool bValidIndex = ( g_iWaterListCur >= 0 && g_iWaterListCur < (int)obj_WaterPlane::m_dWaterPlanes.Count () );
 	/*
@@ -10356,26 +10484,15 @@ void ProcessWaterEditor ()
 
 	// controls
 	bool bCanEditWaterPlane = true;
-	if(!g_iWaterEditFollowTerrainMode && Keyboard->IsPressed(kbsLeftAlt) && (Mouse->IsPressed(r3dMouse::mLeftButton)))
+	if( Keyboard->IsPressed(kbsLeftAlt) && (Mouse->IsPressed(r3dMouse::mLeftButton)))
 	{
-		g_fWaterPlaneHeight = UI_TargetPos.y;
+		g_WaterPlaneSettings.WaterPlaneHeight = UI_TargetPos.y;
 		bCanEditWaterPlane = false;
 	}
 	
 	if ( pWaterSelected )
 	{
-		pWaterSelected->SetCellGridSize(g_fWaterPlaneCellSize);
-		uint32_t w, h;
-		pWaterSelected->GetGridDimensions (w, h);
-		pWaterSelected->SetGridDimensions ( g_dWaterPlaneGrid.Width(), g_dWaterPlaneGrid.Height() );
-		if (w != g_dWaterPlaneGrid.Width() || h != g_dWaterPlaneGrid.Height())
-		{
-			pWaterSelected->UpdateWaterPlane();
-		}
-		pWaterSelected->SetWaterPlaneHeight (g_fWaterPlaneHeight);
-		pWaterSelected->SetWaterPlaneCoastSmoothLevels (g_iWaterPlaneCoastSmoothLevels);
-		pWaterSelected->SetWaterPlaneHeightOnTerrain (g_fWaterPlaneHeightOnTerrain);
-		pWaterSelected->SetWaterPlaneFollowTerrainFlag(g_iWaterEditFollowTerrainMode);
+		pWaterSelected->SetSettings( g_WaterPlaneSettings );
 
 		SliderY+= 10;
 
@@ -10390,7 +10507,7 @@ void ProcessWaterEditor ()
 
 		int32_t iGridW = (int32_t)g_dWaterPlaneGrid.Width();
 		int32_t iGridH = (int32_t)g_dWaterPlaneGrid.Height();
-		r3dVector vWaterPlaneOffset = r3dVector(0,g_iWaterEditFollowTerrainMode?g_fWaterPlaneHeightOnTerrain:g_fWaterPlaneHeight,0);
+		r3dVector vWaterPlaneOffset = r3dVector(0,g_WaterPlaneSettings.WaterPlaneHeight,0);
 
 		// draw grid
 		for ( int32_t i = 0; i < iGridW - 1; i++ )
@@ -10411,8 +10528,9 @@ void ProcessWaterEditor ()
 				r3dVector v0 = g_dWaterPlaneGrid[j][i];
 				r3dVector v1 = g_dWaterPlaneGrid[j][i+1];
 				r3dVector v2 = g_dWaterPlaneGrid[j+1][i];
-				if (!g_iWaterEditFollowTerrainMode)
-					v0.y = v1.y = v2.y = 0.0f;
+
+				v0.y = v1.y = v2.y = 0.0f;
+
 				PushUniformLine3D(v0+vWaterPlaneOffset, v1+vWaterPlaneOffset, iGrid1 ? r3dColor::red : r3dColor::white);
 				PushUniformLine3D(v0+vWaterPlaneOffset, v2+vWaterPlaneOffset, iGrid2 ? r3dColor::red : r3dColor::white);
 			}
@@ -10424,8 +10542,9 @@ void ProcessWaterEditor ()
 
 			r3dVector v0 = g_dWaterPlaneGrid[iGridH-1][i];
 			r3dVector v1 = g_dWaterPlaneGrid[iGridH-1][i+1];
-			if (!g_iWaterEditFollowTerrainMode)
-				v0.y = v1.y = 0.0f;
+
+			v0.y = v1.y = 0.0f;
+
 			PushUniformLine3D(v0+vWaterPlaneOffset, v1+vWaterPlaneOffset, iGrid ? r3dColor::red : r3dColor::white);
 		}
 		for ( int32_t j = 0; j < iGridH - 1; j++ )
@@ -10434,21 +10553,15 @@ void ProcessWaterEditor ()
 
 			r3dVector v0 = g_dWaterPlaneGrid[j][iGridW-1];
 			r3dVector v1 = g_dWaterPlaneGrid[j+1][iGridW-1];
-			if (!g_iWaterEditFollowTerrainMode)
-				v0.y = v1.y = 0.0f;
+
+			v0.y = v1.y = 0.0f;
+
 			PushUniformLine3D(v0+vWaterPlaneOffset, v1+vWaterPlaneOffset, iGrid ? r3dColor::red : r3dColor::white);
 		}
 
 		// draw brush
 		bool bBrushVisible = false;
 		r3dVector vBrushPos(0,0,0);
-		if ( g_iWaterEditFollowTerrainMode )
-		{
-			vBrushPos = UI_TerraTargetPos;
-			vBrushPos.y += g_fWaterPlaneHeightOnTerrain;
-			bBrushVisible = true;
-		}
-		else
 		{
 			int mx, my;
 			Mouse->GetXY(mx,my);
@@ -10457,7 +10570,7 @@ void ProcessWaterEditor ()
 
 			if ( fabsf ( dir.y ) > 0.01f )
 			{
-				float fL = -(gCam.y - g_fWaterPlaneHeight) / dir.y;
+				float fL = -(gCam.y - g_WaterPlaneSettings.WaterPlaneHeight) / dir.y;
 				if ( fL >= 0.0f )
 				{
 					vBrushPos = gCam + fL*dir;
@@ -10468,14 +10581,7 @@ void ProcessWaterEditor ()
 
 		if(bBrushVisible && Keyboard->IsPressed(kbsLeftControl))
 		{
-			//r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-			if ( g_iWaterEditFollowTerrainMode )
-				r3dDrawUniformCircle3DT(vBrushPos, g_fWaterPlaneBrushRadius, gCam, g_fWaterPlaneHeightOnTerrain, r3dColor::red);
-			else
-				//r3dDrawUniformCircle3D(vBrushPos, g_fWaterPlaneBrushRadius, gCam, r3dColor::red );
-				PushWaterBrush(vBrushPos, g_fWaterPlaneBrushRadius);
-			//PushBoundingSphere(vBrushPos, g_fWaterPlaneBrushRadius);
-			//r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+			PushWaterBrush(vBrushPos, g_fWaterPlaneBrushRadius);
 		}
 
 		if(bCanEditWaterPlane && Keyboard->IsPressed(kbsLeftControl) && (Mouse->IsPressed(r3dMouse::mLeftButton)) && !imgui_IsCursorOver2d() && !imgui2_IsCursorOver2d())
@@ -10484,9 +10590,9 @@ void ProcessWaterEditor ()
 
 			r3dVector vBrushPos2D = vBrushPos;
 			vBrushPos2D.y = 0.0f;
-			int iX = int(vBrushPos.x / g_fWaterPlaneCellSize);
-			int iZ = int(vBrushPos.z / g_fWaterPlaneCellSize);
-			int iCount = int(g_fWaterPlaneBrushRadius / g_fWaterPlaneCellSize) + 3;
+			int iX = int( ( vBrushPos.x - g_dWaterPlaneGrid[ 0 ][ 0 ].x ) / g_WaterPlaneSettings.CellGridSize);
+			int iZ = int( ( vBrushPos.z - g_dWaterPlaneGrid[ 0 ][ 0 ].z ) / g_WaterPlaneSettings.CellGridSize);
+			int iCount = int(g_fWaterPlaneBrushRadius / g_WaterPlaneSettings.CellGridSize) + 3;
 
 			bool bAnyCellChanged = false;
 			for ( int i = iX - iCount; i < iX + iCount; i++ )
@@ -10498,7 +10604,7 @@ void ProcessWaterEditor ()
 					if ( j < 0 || j >= (int)g_dWaterPlaneGrid.Height () - 1 )
 						continue;
 
-					r3dVector vCellCenter = g_dWaterPlaneGrid[j][i] + 0.5f * r3dVector(g_fWaterPlaneCellSize, 0.0f, g_fWaterPlaneCellSize);
+					r3dVector vCellCenter = g_dWaterPlaneGrid[j][i] + 0.5f * r3dVector(g_WaterPlaneSettings.CellGridSize, 0.0f, g_WaterPlaneSettings.CellGridSize);
 					vCellCenter.y = 0.0f;
 
 					if ((vCellCenter-vBrushPos2D).LengthSq() < g_fWaterPlaneBrushRadius*g_fWaterPlaneBrushRadius )
@@ -10515,157 +10621,6 @@ void ProcessWaterEditor ()
 			{
 				pWaterSelected->UpdateWaterPlane ();
 				WaterCellsTrackUndoEnd(pWaterSelected);
-			}
-		}
-	}
-
-	g_pDesktopManager->End ();
-}
-
-void ProcessBattleZoneEditor ()
-{
-	float SliderX = r3dRenderer->ScreenW-375;
-	float SliderY = 85;
-
-	bool bJustStarted = g_iProcessBattleZoneTicked == 0;
-
-	g_iProcessBattleZoneTicked = 2;
-
-	if ( bJustStarted )
-		UpdateWaterPlaneGrids ( g_fBattleZoneCellSize );
-
-	g_pDesktopManager->Begin( "ed_env" );
-
-	SliderY += imgui_Static( SliderX, SliderY, "BATTLE ZONE EDITOR" );
-
-	// restore editor params from battle zone
-	float fBattleZoneCellSizeOld = g_fBattleZoneCellSize;
-	g_fBattleZoneCellSize = g_BattleZone.GetCellGridSize();
-	if ( fabsf(fBattleZoneCellSizeOld - g_fBattleZoneCellSize) > FLT_EPSILON )
-		UpdateWaterPlaneGrids( g_fBattleZoneCellSize );
-
-	const static char* listbattleedit[2] = { "PAINT", "ERASER" };
-	SliderY += imgui_Toolbar(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, 35, &g_iBattleZoneEditMode, 0, listbattleedit, 2);
-
-	SliderY += imgui_Value_Slider(SliderX, SliderY, "Brush Radius", &g_fBattleZoneBrushRadius, 0.1f, 500.0f, "%-02.2f");
-
-	float fBattleZoneCellSizeLast = g_fBattleZoneCellSize;
-	float minCellSize = 5.0f;
-	if(Terrain == NULL)
-		minCellSize = 0.5f;
-	SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell Size", &g_fBattleZoneCellSize, minCellSize, 500.0f, "%-02.0f");
-
-	if(fBattleZoneCellSizeLast!= g_fBattleZoneCellSize)
-		UpdateWaterPlaneGrids ( g_fBattleZoneCellSize );
-
-	SliderY += imgui_Value_Slider(SliderX, SliderY, "Height On Tertain", &g_fBattleZoneHeightOnTerrain, -1000.0f, 1000.0f, "%-02.2f");
-
-	// set params to battle zone
-	g_BattleZone.SetCellGridSize(g_fBattleZoneCellSize);
-	g_BattleZone.SetGridDimensions ( g_dWaterPlaneGrid.Width(), g_dWaterPlaneGrid.Height() );
-	
-	SliderY+= 10;
-
-	// draw grid
-	{
-		uint32_t iGridW = g_dWaterPlaneGrid.Width();
-		uint32_t iGridH = g_dWaterPlaneGrid.Height();
-		r3dVector vBattleZoneOffset = r3dVector(0,g_fBattleZoneHeightOnTerrain,0);
-
-		for ( uint32_t i = 0; i < iGridW - 1; i++ )
-		{
-			for ( uint32_t j = 0; j < iGridH - 1; j++ )
-			{
-				uint8_t iGrid = g_BattleZone.GetBattleZoneGridValue(i,j);
-				uint8_t iGrid1, iGrid2;
-				iGrid1 = iGrid2 = iGrid;
-				if(!iGrid)
-				{
-					if(j>0)
-						iGrid1 = g_BattleZone.GetBattleZoneGridValue(i,j-1);
-					if(i>0)
-						iGrid2 = g_BattleZone.GetBattleZoneGridValue(i-1,j);
-				}
-
-				r3dVector const & v0 = g_dWaterPlaneGrid[j][i];
-				r3dVector const & v1 = g_dWaterPlaneGrid[j][i+1];
-				r3dVector const & v2 = g_dWaterPlaneGrid[j+1][i];
-				r3dVector const & v3 = g_dWaterPlaneGrid[j+1][i+1];
-				// do a quick and dirty check if vertex is visible
-				if(r3dRenderer->IsSphereInsideFrustum(v0, 1.0f))
-				{
-					PushUniformLine3D(v0+vBattleZoneOffset, v1+vBattleZoneOffset, iGrid1 ? r3dColor::white : r3dColor::red);
-					PushUniformLine3D(v0+vBattleZoneOffset, v2+vBattleZoneOffset, iGrid2 ? r3dColor::white : r3dColor::red);
-					if(!iGrid)
-					{
-						PushUniformLine3D(v0+vBattleZoneOffset, v3+vBattleZoneOffset, r3dColor::red);
-						PushUniformLine3D(v1+vBattleZoneOffset, v2+vBattleZoneOffset, r3dColor::red);
-					}
-				}
-			}
-		}
-
-		for ( uint32_t i = 0; i < iGridW - 1; i++ )
-		{
-			uint8_t iGrid = g_BattleZone.GetBattleZoneGridValue(i,iGridH-2);
-
-			r3dVector const & v0 = g_dWaterPlaneGrid[iGridH-1][i];
-			r3dVector const & v1 = g_dWaterPlaneGrid[iGridH-1][i+1];
-			PushUniformLine3D(v0+vBattleZoneOffset, v1+vBattleZoneOffset, !iGrid ? r3dColor::red : r3dColor::white);
-		}
-		for ( uint32_t j = 0; j < iGridH - 1; j++ )
-		{
-			uint8_t iGrid = g_BattleZone.GetBattleZoneGridValue(iGridW-2,j);
-
-			r3dVector const & v0 = g_dWaterPlaneGrid[j][iGridW-1];
-			r3dVector const & v1 = g_dWaterPlaneGrid[j+1][iGridW-1];
-			PushUniformLine3D(v0+vBattleZoneOffset, v1+vBattleZoneOffset, !iGrid ? r3dColor::red : r3dColor::white);
-		}
-
-		// draw brush
-		r3dVector vBrushPos = UI_TerraTargetPos;
-		if(Terrain == NULL)
-			vBrushPos = UI_TargetPos;
-		vBrushPos.y += g_fBattleZoneHeightOnTerrain;
-		
-		if(Keyboard->IsPressed(kbsLeftControl))
-		{
-			r3dDrawUniformCircle3DT(vBrushPos, g_fBattleZoneBrushRadius, gCam, g_fBattleZoneHeightOnTerrain, r3dColor::red);
-		}
-
-		if(Keyboard->IsPressed(kbsLeftControl) && (Mouse->IsPressed(r3dMouse::mLeftButton)) && !imgui_IsCursorOver2d() && !imgui2_IsCursorOver2d())
-		{
-			r3dVector vBrushPos2D = vBrushPos;
-			vBrushPos2D.y = 0.0f;
-			int iX = int(vBrushPos.x / g_fBattleZoneCellSize);
-			int iZ = int(vBrushPos.z / g_fBattleZoneCellSize);
-			if(Terrain == NULL)
-			{
-				iX = int((vBrushPos.x-GameWorld().m_MinimapOrigin.x) / g_fBattleZoneCellSize);
-				iZ = int((vBrushPos.z-GameWorld().m_MinimapOrigin.z) / g_fBattleZoneCellSize);
-			}
-			int iCount = int(g_fBattleZoneBrushRadius / g_fBattleZoneCellSize) + 3;
-
-			for ( int i = iX - iCount; i < iX + iCount; i++ )
-			{
-				if ( i < 0 || i >= (int)g_dWaterPlaneGrid.Width() - 1 )
-					continue;
-				for ( int j = iZ - iCount; j < iZ + iCount; j++ )
-				{
-					if ( j < 0 || j >= (int)g_dWaterPlaneGrid.Height () - 1 )
-						continue;
-
-					r3dVector vCellCenter = g_dWaterPlaneGrid[j][i] + 0.5f * r3dVector(g_fBattleZoneCellSize, 0.0f, g_fBattleZoneCellSize);
-					vCellCenter.y = 0.0f;
-
-					if ((vCellCenter-vBrushPos2D).LengthSq() < g_fBattleZoneBrushRadius*g_fBattleZoneBrushRadius )
-					{
-						if(g_iBattleZoneEditMode == 0)
-							g_BattleZone.FillBattleZoneGrid (i,j);
-						else
-							g_BattleZone.EraseBattleZoneGrid (i,j);
-					}
-				}
 			}
 		}
 	}
@@ -10780,7 +10735,484 @@ r3dVector GetMouseAndGrassPlanesIntersection()
 
 int g_GrassPlaneDrawState = 0;
 
-float ProcessGrassPlanes(float SliderX, float SliderY)
+float ProcessGrassConfigure( float SliderX, float SliderY )
+{
+	float grassViewDistance = r_grass_view_dist->GetFloat();
+	SliderY += imgui_Value_Slider( SliderX, SliderY, "Grass View Distance", &grassViewDistance, 4.0f, 512.f, "%-02.2f" );
+	r_grass_view_dist->SetFloat( grassViewDistance );
+
+	static int showGrassPlanes = 0;
+	SliderY += imgui_Checkbox(SliderX, SliderY, "Show planes", &showGrassPlanes, 1);
+	if (showGrassPlanes)
+	{
+		GetGrassPlaneManager()->DrawPlanes();
+	}
+
+	if( imgui_Button( SliderX, SliderY, 180.0f, 22.f, "Recalc Grass Height" ) )
+	{
+		g_pGrassMap->UpdateHeight();
+	}
+
+	if( Terrain )
+	{
+		if( imgui_Button( SliderX + 180.0, SliderY, 180.f, 22.f, "Update Grass Modulation" ) )
+		{
+			Terrain->SetOrthoDiffuseTextureDirty() ;
+		}
+	}
+
+	SliderY += 24.f;
+
+	if( imgui_Button( SliderX, SliderY, 180.0, 22.f, "Clear All Grass" ) )
+	{
+		g_pGrassMap->ClearCells();
+	}
+
+	stringlist_t grassTypes;
+	g_pGrassGen->FillTypes( grassTypes );
+
+	if( imgui_Button( SliderX + 180.f, SliderY, 180.f, 22.f, "Clear Sel. Grass" ) )
+	{
+		if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
+		{
+			g_pGrassMap->ClearGrassType( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+		}
+		else
+		{
+			MessageBox( 0, "Error", "No selected grass type to clear!", MB_OK ) ;
+		}				
+	}
+
+	SliderY += 33.f;
+
+	if( imgui_Button( SliderX, SliderY, 360, 22.f, "Optimize masks" ) )
+	{
+		g_pGrassMap->OptimizeMasks();
+	}			
+
+	SliderY += 24.f;
+
+	const int GRASS_LIST = 333;
+
+	if ( imgui_DrawList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, GRASS_LIST, grassTypes, &g_GrassTypeOffset, &g_GrassTypeSelected ) )
+	{
+	}
+
+	SliderY += GRASS_LIST;
+
+	if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
+	{
+		GrassPatchGenSettings sts = g_pGrassGen->GetPatchSettings( g_GrassTypeSelected );
+
+		stringlist_t chunkNamez;
+
+		for( uint32_t i = 0, e = sts.ChunkSettings.Count(); i < e; i ++ )
+		{
+			chunkNamez.push_back( sts.ChunkSettings[ i ].MeshName.c_str() );
+		}
+
+		if( imgui_Button( SliderX, SliderY, 180, 22, "Generate Selected" ) )
+		{
+			if( !g_pGrassGen->Generate( g_GrassTypeSelected ) )
+			{
+				MessageBox( NULL, g_LastGrassGenError, "Error", MB_ICONEXCLAMATION );
+			}
+
+			g_pGrassLib->Save();
+		}
+
+		if( imgui_Button( SliderX + 180, SliderY, 180.f, 22.f, "Save Selected" ) )
+		{
+			g_pGrassGen->Save( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+		}
+
+		SliderY += 22;
+
+		if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Save All" ) )
+		{
+			g_pGrassGen->Save();
+		}
+
+		SliderY += 22;
+
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Master Density", &sts.Density, 0.01f, 16.f, "%-02.2f", 1 ) ;
+
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Fade Distance", &sts.FadeDistance, 0.05f, R3D_MAX_GRASS_PATCH_DISTANCE_COEF, "%-02.2f", 1 ) ;
+
+		for( int i = 0, e = g_pGrassLib->GetEntryCount() ; i < e ; i ++ )
+		{
+			const GrassLibEntry& ge = g_pGrassLib->GetEntry( i ) ;
+
+			if( ge.Name == sts.Name )
+			{
+				GrassLibEntry cge = ge ;
+				cge.FadeDistance = sts.FadeDistance ;
+				g_pGrassLib->MildUpdateExistingEntry( cge ) ;
+			}
+		}
+
+		SliderY += imgui_Static( SliderX, SliderY, "Available Meshes" );
+
+		static char SelectedMesh[ MAX_PATH ];
+
+		static bool meshSelected = false ;
+
+		if( imgui_FileList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, 133, GetGrassPath( "*.sco" ).c_str(), SelectedMesh, &g_GrassAvailableMeshOffset) )
+		{
+			meshSelected = true ;
+		}
+
+		SliderY += 133;
+
+		if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Add" ) )
+		{
+			if( meshSelected )
+			{
+
+				GrassChunkGenSettings csts;
+
+				csts.MeshName		= SelectedMesh;
+
+				WIN32_FIND_DATA fd;
+
+				HANDLE h = FindFirstFile( GetGrassPath("*.dds").c_str(), &fd );
+
+				if( h != INVALID_HANDLE_VALUE )
+				{
+					csts.TextureName = fd.cFileName;
+					FindClose( h );
+				}
+
+				sts.ChunkSettings.PushBack( csts );
+
+				g_GrassChunkSelected = -1;
+			}
+		}
+
+		SliderY += 23.f;
+
+		SliderY += imgui_Static( SliderX, SliderY, "Assigned Meshes" );
+		SliderY --;
+
+		const int GRASS_CHUNK_LIST = 88;
+
+		if ( imgui_DrawList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, GRASS_CHUNK_LIST, chunkNamez, &g_GrassChunkOffset, &g_GrassChunkSelected ) )
+		{
+			g_GrassTextureOffset	= -1;
+			g_GrassTextureSelected	= -1;
+		}
+
+		SliderY += GRASS_CHUNK_LIST + 1;
+
+		if( g_GrassChunkSelected >= 0 && g_GrassChunkSelected < (int)sts.ChunkSettings.Count() )
+		{
+			GrassChunkGenSettings& csts = sts.ChunkSettings[ g_GrassChunkSelected ];
+
+			if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Remove" ) )
+			{
+				sts.ChunkSettings.Erase( g_GrassChunkSelected );
+
+				g_GrassChunkSelected = -1;
+
+				SliderY += 22.f;
+			}
+			else
+			{
+				SliderY += 22.f;
+
+				char SelectedTex[ MAX_PATH ];
+
+				r3dscpy( SelectedTex, csts.TextureName.c_str() );
+
+				SliderY += imgui_Static( SliderX, SliderY, "Textures" );
+				SliderY --;
+
+				if( imgui_FileList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, 87, GetGrassPath( "*.dds" ).c_str(), SelectedTex, &g_GrassTextureOffset ) )
+				{
+					csts.TextureName = SelectedTex;
+
+					if( (size_t)g_GrassTypeSelected < grassTypes.size() )
+					{
+						int libIdx = g_pGrassLib->GetEntryIdxByName( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+
+						if( libIdx >= 0 )
+						{
+							GrassLibEntry gle = g_pGrassLib->GetEntry( libIdx );
+
+							if( g_GrassChunkSelected < (int)gle.Chunks.Count() )
+							{
+								gle.Chunks[ g_GrassChunkSelected ].Texture = r3dRenderer->LoadTexture( GetGrassPath( SelectedTex ).c_str() );
+								g_pGrassLib->MildUpdateExistingEntry( gle );
+							}
+						}
+
+					}
+				}
+
+				static r3dTexture* DisplayTexture( NULL );
+				static char CurrentTexName[ MAX_PATH ] = {};
+
+				r3dString CurrentTexPath = GetGrassPath( sts.ChunkSettings[ g_GrassChunkSelected ].TextureName.c_str() );
+
+				if( stricmp( CurrentTexName, CurrentTexPath.c_str()) )
+				{
+					DisplayTexture = r3dRenderer->LoadTexture( CurrentTexPath.c_str() );
+					r3dscpy( CurrentTexName, CurrentTexPath.c_str() );
+				}
+
+				SliderY += 88;
+
+				if( DisplayTexture )
+				{
+					int DIM = 132;
+
+					float sx = SliderX + 180 - DIM / 2 ;
+					float sy = SliderY + 20;
+
+					sx -= Desktop().GetX();
+					sy -= Desktop().GetY();
+
+					imgui_Static( SliderX, SliderY, "Current Texture" , 360, true, DIM + 24, true );
+
+					r3dDrawBox2D( sx, sy, DIM, DIM, r3dColor(255,255,255) );
+					r3dSetFiltering( R3D_BILINEAR, 0 );
+					r3dDrawBox2D( sx+2, sy+2, DIM-2, DIM-2, r3dColor(255,255,255), DisplayTexture );
+
+					SliderY += DIM + 25;
+				}
+
+				float numVars = csts.NumVariations;
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Variations",			&numVars,					1.f,	GrassChunk::MAX_VARIATIONS, 
+					"%-02.0f", 1 );
+				csts.NumVariations = (int)numVars;
+
+				float density = csts.Density;
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Density",				&density,					1.f,	GrassGen::MAX_MESHES_PER_BATCH, 
+					"%-02.0f", 1 );
+				csts.Density = (int)density;
+
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Mesh Scale",			&csts.MeshScale,			0.01f,	8.f,		"%-02.2f", 1 );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Min Mesh Scl.",		&csts.MinMeshScaling,		0.1f,	1.f,		"%-02.2f", 1 );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Max Mesh Scl.",		&csts.MaxMeshScaling,		0,		1.f,		"%-02.2f", 1 );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Rotation Variation",	&csts.RotationVariation,	0,		1.f,		"%-02.2f", 1 );
+
+				bool needUpdate = false ;
+
+				static float alphaRef ;
+				alphaRef = csts.AlphaRef * 255.f;
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Alpha Ref",			&alphaRef,					0,		255.f,		"%-02.0f", 1 );
+
+				alphaRef /= 255.f ;
+
+				if( alphaRef != csts.AlphaRef )
+					needUpdate = true ;
+
+				csts.AlphaRef = alphaRef ;
+
+				static float tintStrength ;
+				tintStrength = csts.TintStrength ;
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Tint Strength",		&tintStrength,				0,		1.f,		"%-01.2f", 1 );
+
+				if( tintStrength != csts.TintStrength )
+					needUpdate = true ;
+
+				csts.TintStrength = tintStrength ;
+
+				if( needUpdate )
+				{
+					if( (size_t)g_GrassTypeSelected < grassTypes.size() )
+					{
+						int libIdx = g_pGrassLib->GetEntryIdxByName( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+
+						if( libIdx >= 0 )
+						{
+							GrassLibEntry gle = g_pGrassLib->GetEntry( libIdx );
+
+							if( g_GrassChunkSelected < (int)gle.Chunks.Count() )
+							{
+								GrassGenSettingsToChunkSettings( gle.Chunks[ g_GrassChunkSelected ], csts );
+								g_pGrassLib->MildUpdateExistingEntry( gle );
+							}
+						}
+					}
+				}
+			}
+		}
+
+		g_pGrassGen->SetPatchSettings( g_GrassTypeSelected, sts );
+	}
+
+	SliderY += 50;
+
+	static float CellScale = g_pGrassLib->GetSettings().CellScale;
+
+	char CurrentPatchSizeText[ 128 ];
+	sprintf( CurrentPatchSizeText, "Current Patch Size: %.2f", g_pGrassLib->GetSettings().CellScale );
+
+	SliderY += imgui_Static( SliderX, SliderY, CurrentPatchSizeText );
+
+	static int MaintainDensity = 1;
+	SliderY += imgui_Checkbox( SliderX, SliderY, "Maintain density", &MaintainDensity, 1 );
+
+	if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Apply New Patch Size" ) )
+	{
+		GrassLib::Settings settings = g_pGrassLib->GetSettings();
+
+		if( MaintainDensity )
+		{
+			float densityCoef = CellScale / settings.CellScale ;
+
+			densityCoef *= densityCoef;
+
+			for( uint32_t i = 0, e = g_pGrassGen->GetTypeCount(); i < e; i ++ )
+			{
+				GrassPatchGenSettings settings = g_pGrassGen->GetPatchSettings( i );
+				settings.Density *= densityCoef;
+				g_pGrassGen->SetPatchSettings( i, settings );
+			}
+		}
+
+		settings.CellScale = CellScale;
+		g_pGrassLib->UpdateSettings( settings );
+	}
+
+	SliderY += 24.f ;
+
+	if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Show used types" ) )
+	{
+		MessageBox( 0, g_pGrassMap->GetUsedTypes().c_str(), "Used Grass Types", MB_OK ) ;
+	}
+
+	SliderY += 24.f ;
+
+	int grazBox = !!r_grass_show_boxes->GetInt() ;
+
+	SliderY += imgui_Checkbox( SliderX, SliderY, 180, 22, "Show batches", &grazBox, 1 ) ;
+
+	if( grazBox )
+	{
+		if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
+		{
+			char buf[ 512 ] ;
+			sprintf( buf, "Showing for %s", grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+			SliderY += imgui_Static( SliderX, SliderY, buf ) ;
+			g_pGrassMap->SetDebugType( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
+		}
+		else
+		{
+			SliderY += imgui_Static( SliderX, SliderY, "Please select grass type to show!" ) ;
+		}
+	}
+
+	r_grass_show_boxes->SetInt( grazBox ) ;
+
+	if( Terrain )
+	{
+		SliderY += imgui_Static( SliderX, SliderY, " " );
+
+		int DrawTint = !!r_show_grass_tint->GetInt() ;
+		SliderY += imgui_Checkbox( SliderX, SliderY, "Show Tint Texture", &DrawTint, 1 );
+		r_show_grass_tint->SetInt( DrawTint );
+
+		static float GrassTintScale = 0.f ;
+		GrassTintScale = r_show_grass_tint_scale->GetFloat() ;
+
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Tint Tex Scale", &GrassTintScale, 1.f, 16.f, "%-2.2f" );
+
+		r_show_grass_tint_scale->SetFloat( GrassTintScale );
+	}
+
+	// debug grass tile coverage
+	if( r_grass_show_debug->GetBool() )
+	{
+		r3dPoint3D pos;
+		pos.x = gCam.x;
+		pos.y = 0.f;
+		pos.z = gCam.z;
+		PushGrassBrush( GrassMap::GetVisRad(), 1.0f, pos );
+	}
+
+	return SliderY;
+}
+
+float ProcessPaintErase( float SliderX, float SliderY, int bPaint )
+{
+	static float radius = 32.f;
+
+	static float grassTypeOffset;
+
+	const int GRASS_LIST = 433;
+
+	stringlist_t grassTypes;
+	g_pGrassGen->FillTypes( grassTypes );
+
+	if ( imgui_DrawList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, GRASS_LIST, grassTypes, &grassTypeOffset, &g_PaintGrassTypeIdxes ) )
+	{
+	}
+
+	SliderY += GRASS_LIST;
+
+	SliderY += 3.f;
+
+	float cellSize = g_pGrassMap->GetTextureCellSize();
+
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "Radius", &radius, cellSize / GrassMap::CELL_MASK_TEX_DIM, cellSize, "%-02.2f", 1 );
+
+	if( Keyboard->IsPressed(kbsLeftControl) && !imgui_IsCursorOver2d() )
+	{
+		r3dPoint3D brushPT = GetMouseAndGrassPlanesIntersection();
+		if (Terrain)
+			brushPT = brushPT.y > UI_TerraTargetPos.y ? brushPT : UI_TerraTargetPos;
+		PushGrassBrush( radius, 1.0f,  brushPT );
+
+		if ( imgui_lbp && g_PaintGrassTypeIdxes.Count() )
+		{
+			if( r3dGetTime() - _LastTimeBrush > 0.05f )
+			{
+				for( int i = 0, e = (int)g_PaintGrassTypeIdxes.Count(); i < e; i ++ )
+				{
+					int selectionIdx = g_PaintGrassTypeIdxes[ i ];
+
+					const std::string& grassType = grassTypes[ selectionIdx ] ;
+					int idx = g_pGrassLib->GetEntryIdxByName( grassType.c_str() ) ;
+
+					int doable = false ;
+
+					if( idx < 0 )
+					{
+						if( !g_pGrassGen->Generate( selectionIdx ) )
+						{
+							MessageBoxA( r3dRenderer->HLibWin, "Couldn't generate selected grass type! Adjust density settings down!", "Error", MB_ICONERROR ) ;
+						}
+						else
+						{
+							doable = true ;
+						}
+					}
+					else
+					{
+						doable = true ;
+					}
+
+					if( doable )
+					{
+						g_pGrassMap->Paint( UI_TargetPos.x, UI_TargetPos.z, radius, bPaint ? 1.0f : -1.0f, grassTypes[ g_PaintGrassTypeIdxes[ i ] ].c_str() );
+					}
+				}
+
+				_LastTimeBrush = r3dGetTime();
+			}
+		}
+		else
+		{
+			imgui_Static( r3dRenderer->ScreenH2, r3dRenderer->ScreenW2 - 200, "Please add grass types to paint/erase with!", 400, false, 22, true ) ;
+		}
+	}
+
+	return SliderY;
+}
+
+float ProcessGrassPlanes( float SliderX, float SliderY )
 {
 	GrassPlanesManager *gpm = GetGrassPlaneManager();
 	if (!g_GrassPlaneProxyObj)
@@ -10840,6 +11272,19 @@ float ProcessGrassPlanes(float SliderX, float SliderY)
 		{
 			resizeMode = (resizeMode + 1) % 2;
 			g_GrassPlaneProxyObj->SetResizeMode(!!resizeMode);
+		}
+
+		SliderY += DEFAULT_CONTROLS_HEIGHT + 2;
+
+		if( !Terrain )
+		{
+			if( imgui_Button( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, DEFAULT_CONTROLS_HEIGHT, "Reset Grass Bounds" ) )
+			{
+				if( MessageBoxA( r3dRenderer->HLibWin, "This will erase all grass on the level. Are you sure?", "WARNING", MB_YESNO ) == IDYES )
+				{
+					g_pGrassMap->ResetBounds();
+				}
+			}
 		}
 	}
 	else
@@ -10935,8 +11380,8 @@ void Editor_Level :: ProcessEnvironment()
 	const static char* list[] =		{ "OCEAN",		"SKY/SUN",		"CLOUD PLANE",	"ATMOSPHERE",		"SIMPLE CLOUDS",	"ENVMAP PROBES",	"GRASS",	"WATER PLANES",		"DECALS",	"SSS",		"RAIN"					};
 	enum							{ PE_WATER,		PE_SKY_SUN,		PE_CLOUDPLANE,	PE_ATMSOSPHERE,		PE_SIMPLE_CLOUDS,	PE_ENVMAPPROBE,		PE_GRASS,	PE_WATER_EDITOR,	PE_DECALS,	PE_SSS,		PE_RAIN,	PE_COUNT	};
 #else
-	const static char* list[] =		{ "OCEAN",		"SKY/SUN",		"ATMOSPHERE",		"CLOUD PLANE",	"ENVMAP PROBES",	"LIGHT PROBES",		"GRASS",	"WATER PLANES",		"DECALS",	"SSS",		"RAIN"					};
-	enum							{ PE_WATER,		PE_SKY_SUN,		PE_ATMSOSPHERE,		PE_CLOUDPLANE,	PE_ENVMAPPROBE,		PE_LIGHT_PROBES,	PE_GRASS,	PE_WATER_EDITOR,	PE_DECALS,	PE_SSS,		PE_RAIN,	PE_COUNT	};
+	const static char* list[] =		{ "OCEAN",		"LIGHT SETUP",		"ATMOSPHERE",		"CLOUD PLANE",	"ENVMAP PROBES",	"LIGHT PROBES",		"GRASS",	"WATER PLANES",		"DECALS",	"SSS",		"RAIN"					};
+	enum							{ PE_WATER,		PE_LIGHT_SETUP,		PE_ATMSOSPHERE,		PE_CLOUDPLANE,	PE_ENVMAPPROBE,		PE_LIGHT_PROBES,	PE_GRASS,	PE_WATER_EDITOR,	PE_DECALS,	PE_SSS,		PE_RAIN,	PE_COUNT	};
 #endif
 
 	imgui_Toolbar( 5, 45, PE_COUNT * 120, 35, &EnvironmentEditMode, 0, list, PE_COUNT, false );
@@ -10966,8 +11411,13 @@ void Editor_Level :: ProcessEnvironment()
 
 				SliderY += imgui_Value_Slider(SliderX, SliderY, "Ocean Level",			&LakePlaneY,	0,500,	"%-02.2f",1);
 
+				// NOTE : offsets are OFF because they currently spoil reflection - have to fix that first
+#if 0
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "OffsetX", &objOceanPlane->PlaneOffsetX, -1000, 1000, "%-2.2f" ) ;
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "OffsetZ", &objOceanPlane->PlaneOffsetZ, -1000, 1000, "%-2.2f" ) ;
+#endif
+
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Plane Scale", &objOceanPlane->PlaneScale, 1.0f, 8.0f, "%.2f" );
 
 				SliderY += objOceanPlane->DrawPropertyEditorWater(SliderX, SliderY, 300, 200, DEFAULT_CONTROLS_WIDTH, DEFAULT_CONTROLS_HEIGHT);
 
@@ -10989,12 +11439,14 @@ void Editor_Level :: ProcessEnvironment()
 		{
 			g_pDesktopManager->Begin( "ed_env" );
 
+			float atmoT = r3dGameLevel::Environment.__CurTime / 24.0f ;
+
 			SliderY += imgui_Checkbox(SliderX, SliderY, "VOLUME FOG",	&r3dGameLevel::Environment.bVolumeFog, 1);
 
 			if(r3dGameLevel::Environment.bVolumeFog)
 			{
 
-				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Fog Color", &r3dGameLevel::Environment.Fog_Color, 360);
+				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Fog Color", &r3dGameLevel::Environment.Fog_Color, 360, r3dGameLevel::Environment.__CurTime / 24.0f );
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sky Fog End", &r3dGameLevel::Environment.SkyFog_End, r3dGameLevel::Environment.SkyFog_Start, 200.0f,	"%-02.2f",1 );
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sky Fog Start", &r3dGameLevel::Environment.SkyFog_Start, 5.0f, r3dGameLevel::Environment.SkyFog_End,	"%-02.2f",1 );
 
@@ -11002,21 +11454,21 @@ void Editor_Level :: ProcessEnvironment()
 
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Fog Max Height", &r3dGameLevel::Environment.Fog_MaxHeight, 0.0f, 4000.f,	"%-02.2f",1 );
 
-				SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Fog Height", &r3dGameLevel::Environment.Fog_Height, 360, 200, 0, r3dGameLevel::Environment.Fog_MaxHeight);
+				SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Fog Height", &r3dGameLevel::Environment.Fog_Height, 360, 200, 0, r3dGameLevel::Environment.Fog_MaxHeight, 10, 10, 2, 2, atmoT );
 
 				r3dTimeGradient2* thicknessGradient = &r3dGameLevel::Environment.Fog_Range;
-				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Thickness of fade zone(%%)", thicknessGradient, 360, 200, 1.0f, 99.0f);
+				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Thickness of fade zone(%%)", thicknessGradient, 360, 200, 1.0f, 99.0f, 10, 10, 2, 2, atmoT );
 
 				r3dTimeGradient2* densityGradient = &r3dGameLevel::Environment.Fog_Density;
-				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Fog Density", densityGradient, 360, 200, 0, 1);
+				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Fog Density", densityGradient, 360, 200, 0, 1, 10, 10, 2, 2, atmoT );
 				r3dTimeGradient2* rangeGradient = &r3dGameLevel::Environment.Fog_Distance;
-				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Fog distance", rangeGradient, 360, 200, 0.1f, 3.0f);
+				SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Fog distance", rangeGradient, 360, 200, 0.1f, 3.0f, 10, 10, 2, 2, atmoT );
 
 				SliderY+= 5;
 			}
 
-			SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Aerial Density", &r3dGameLevel::Environment.Aerial_Density, 360, 200, 0.0f, 1.0f);
-			SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Aerial Distance", &r3dGameLevel::Environment.Aerial_Distance, 360, 200, 0.5f, 1.5f);
+			SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Aerial Density", &r3dGameLevel::Environment.Aerial_Density, 360, 200, 0.0f, 1.0f, 10, 10, 2, 2, atmoT );
+			SliderY += imgui_DrawFloatGradient( SliderX, SliderY, "Aerial Distance", &r3dGameLevel::Environment.Aerial_Distance, 360, 200, 0.5f, 1.5f, 10, 10, 2, 2, atmoT );
 		
 			g_pDesktopManager->End();
 		}
@@ -11334,173 +11786,12 @@ void Editor_Level :: ProcessEnvironment()
 		}
 		break;
 
-	case	PE_SKY_SUN:
-		{	
-			g_bSkyDomeNeedFullUpdate = true;
-
-			static int HoffmanParamID = 0;
-
-			const static char* list2[] =	{ "HG g"	, "Inscatter M"		, "Ray M"	, "Mie M"	, "Sun Int"	, "Turbidity"	, "Static Sky"	};
-			enum							{ HG_g		, Inscatter_M		, Ray_M		, Mie_M		, Sun_Int	, Turbidity		, Static_Sky	};
-
-			imgui_Toolbar(5, 80, 770, 35, &HoffmanParamID, 0, list2, R3D_ARRAYSIZE( list2 ), false );
-
-
-			SliderY += imgui_Value_Slider(SliderX, SliderY, "ParticlesShading Coeff", &r3dGameLevel::Environment.ParticleShadingCoef , 0, 1, "%-02.2f", 1, false);
-
-			r3dGameLevel::Environment.SunLightOn = !!r3dGameLevel::Environment.SunLightOn ;
-			SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Sun Light", &r3dGameLevel::Environment.SunLightOn, 1 ) ;
-
-			static float sky_intensity = 0.f ;
-			sky_intensity = r_sky_intensity->GetFloat() ;
-
-			SliderY += imgui_Value_Slider(SliderX, SliderY, "Sky Intensity", &sky_intensity, 0.0f, 10.f, "%-02.1f", 1, false );
-
-			r_sky_intensity->SetFloat( sky_intensity ) ;
-		
-			if( HoffmanParamID != Static_Sky )
-			{
-				static float bloom_coef = 0.f ;
-
-				SliderY += imgui_Static( SliderX, SliderY, "SUN LIGHT PARAMETERS", 360);
-
-				SliderY += imgui_Value_Slider(SliderX, SliderY, "Sun Elevation", &r3dGameLevel::Environment.SunElevationAngle, -90, 90, "%-02.0f", 1, false);
-				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Sun color", &r3dGameLevel::Environment.SunColor, 360);
-				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sun Intensity", &r3dGameLevel::Environment.SunIntensity, 1.0f, 16.0f, "%-02.2f" );
-
-				SliderY += imgui_Static( SliderX, SliderY, "BACKLIGHTING PARAMETERS", 360);
-
-				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Backlight color", &r3dGameLevel::Environment.BacklightColor, 360);
-				SliderY += imgui_Value_Slider( SliderX, SliderY, "Backlight Power", &r3dGameLevel::Environment.BacklightIntensity, 0.0f, 1.0f, "%-02.2f" );
-
-				SliderY += imgui_Static( SliderX, SliderY, "PROCEDURAL SKYDOME", 360);
-				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Skydome color", &r3dGameLevel::Environment.SkyColor, 360);
-				SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Lambda", &r3dGameLevel::Environment.LambdaCol, 360);
-			}
-
-			extern float fLambda[3];
-
-			r3dColor LCol = r3dGameLevel::Environment.LambdaCol.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
-
-			fLambda[0] = float(LCol.R) / 256.0f;
-			fLambda[1] = float(LCol.G) / 256.0f;
-			fLambda[2] = float(LCol.B) / 256.0f;
-	
-			g_pDesktopManager->Begin( "ed_env" );
-			SliderY += 10;
-
-			if (HoffmanParamID == HG_g )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "HG g",			&r3dGameLevel::Environment.HGg,					360, 300, 0.99f,1.0f); 
-			if (HoffmanParamID == Inscatter_M )	SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Inscatter M",		&r3dGameLevel::Environment.InscatteringMultiplier,360, 300, 0.0f,4.0f); 
-			if (HoffmanParamID == Ray_M )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Ray",				&r3dGameLevel::Environment.BetaRayMultiplier,		360, 300, 0.0f,20.0f);
-			if (HoffmanParamID == Mie_M )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Mie",				&r3dGameLevel::Environment.BetaMieMultiplier,		360, 300, 0.0f,0.05f);
-			if (HoffmanParamID == Sun_Int )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Int",			&r3dGameLevel::Environment.SunIntensityCoef,			360, 300, 0.0f,3.0f);
-			if (HoffmanParamID == Turbidity )	SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Turbidity",		&r3dGameLevel::Environment.Turbitity,				360, 300, 0.0f,20.0f); 
-			if (HoffmanParamID == Static_Sky )
-			{
-				r3dGameLevel::Environment.bStaticSkyEnable = !!r3dGameLevel::Environment.bStaticSkyEnable ;
-
-				int StaticSkyEnable = r3dGameLevel::Environment.bStaticSkyEnable ;
-				int StaticCustomMeshEnable = r3dGameLevel::Environment.bCustomStaticMeshEnable ;
-				
-				SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Enable Static Sky", &StaticSkyEnable, 1 ) ;
-				SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Use Custom Skydome Mesh", &StaticCustomMeshEnable, 1 ) ;
-
-				if( r3dGameLevel::Environment.bStaticSkyEnable ^ StaticSkyEnable )
-				{
-					if( StaticSkyEnable )
-						r3dGameLevel::Environment.EnableStaticSky();
-					else
-						r3dGameLevel::Environment.DisableStaticSky();
-				}
-
-				r3dGameLevel::Environment.bCustomStaticMeshEnable = !!StaticCustomMeshEnable ;
-
-				static char SkyTexName[ MAX_PATH ] ;
-				static char SkyMeshName[ MAX_PATH ] ;
-
-#define STATICSKY_PATH "Data/SkyDome/"
-const int FILE_LIST_HEIGHT = 330 ;
-
-				if( !StaticCustomMeshEnable )
-				{
-					int PlanarMapping = !!r3dGameLevel::Environment.bStaticSkyPlanarMapping ;
-
-					SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Planar Mapping", &PlanarMapping, 1 ) ;
-
-					r3dGameLevel::Environment.bStaticSkyPlanarMapping = !!PlanarMapping ;
-
-					if( PlanarMapping )
-					{
-						static float TexScale = 0.f ; 
-						static float TexOffset = 0.f ; 
-
-						const float UPSCALE = 100000.f ;
-
-						TexScale	= r3dGameLevel::Environment.StaticTexGenScaleX * UPSCALE ;
-						TexOffset	= r3dGameLevel::Environment.StaticTexGetOffsetX ;
-
-						SliderY += imgui_Value_Slider(SliderX, SliderY, "Texcoord Scale", &TexScale, 0.001f, 16.f, "%-02.3f", 1, false);
-						SliderY += imgui_Value_Slider(SliderX, SliderY, "Texcoord Offset", &TexOffset, -1.f, 1.f, "%-02.2f", 1, false);
-
-						r3dGameLevel::Environment.StaticTexGenScaleX = TexScale / UPSCALE ;
-						r3dGameLevel::Environment.StaticTexGenScaleY = r3dGameLevel::Environment.StaticTexGenScaleX ;
-
-						r3dGameLevel::Environment.StaticTexGetOffsetX = TexOffset ;
-						r3dGameLevel::Environment.StaticTexGetOffsetY = r3dGameLevel::Environment.StaticTexGetOffsetX ;
-					}
-				}
-				else
-				{
-					static float offset = 0.f ;
-
-					SliderY += imgui_Static( SliderX, SliderY, "Mesh List:", 360);
-
-					char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
-
-					_splitpath( r3dGameLevel::Environment.StaticSkyMeshName.c_str(), drive, dir, name, ext ) ;
-
-					strcpy( SkyMeshName, name ) ;
-					strcat( SkyMeshName, ext ) ;
-
-					if( imgui_FileList( SliderX, SliderY, 360, FILE_LIST_HEIGHT, STATICSKY_PATH "*.sco", SkyMeshName, &offset, false ) )
-					{
-						char SS1[ MAX_PATH ];
-
-						sprintf( SS1, STATICSKY_PATH"%s", SkyMeshName ) ;
-
-						r3dGameLevel::Environment.SetStaticSkyMesh( SS1 );
-					}
-
-					SliderY += FILE_LIST_HEIGHT ;
-				}
-
-				{
-					SliderY += imgui_Static( SliderX, SliderY, "Texture List:", 360);
-
-					static float offset = 0.f ;
-
-					char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
-
-					_splitpath( r3dGameLevel::Environment.StaticSkyTexName.c_str(), drive, dir, name, ext ) ;
-
-					strcpy( SkyTexName, name ) ;
-					strcat( SkyTexName, ext ) ;
-
-					if( imgui_FileList( SliderX, SliderY, 360, FILE_LIST_HEIGHT, STATICSKY_PATH "*.dds", SkyTexName, &offset, false ) )
-					{
-						char SS1[ MAX_PATH ];
-
-						sprintf( SS1, STATICSKY_PATH"%s", SkyTexName ) ;
-
-						r3dGameLevel::Environment.SetStaticSkyTexture( SS1 ) ;
-					}
-				}
-
-
-			}
-
-			g_pDesktopManager->End();
-		}
+	case	PE_LIGHT_SETUP:
+#if 0
+		SliderY = ProcessSkySun( SliderX, SliderY );
+#else
+		SliderY = ProcessLightSetup( SliderX, SliderY );
+#endif
 		break;
 
 	case	PE_SSS:
@@ -11671,11 +11962,12 @@ const int FILE_LIST_HEIGHT = 330 ;
 	case PE_GRASS:
 		if( r_decoration_quality->GetInt() > 1 )
 		{
-			const char* list[] = { "Paint", "Erase", "Planes" };
+			const char* list[] = { "Configure", "Paint", "Erase", "Planes" };
 			static int EditMode = 0;
 
 			enum
 			{
+				EG_CONFIGURE,
 				EG_PAINT,
 				EG_ERASE,
 				EG_PLANES
@@ -11712,452 +12004,33 @@ const int FILE_LIST_HEIGHT = 330 ;
 			imgui_Toolbar( 5, 80, 633, 35, &EditMode, 0, list, sizeof list / sizeof list[0] );
 
 			g_pDesktopManager->Begin( "ed_env" );
-			if (EditMode == EG_PLANES)
+
+			if( g_pGrassMap )
 			{
-				SliderY += ProcessGrassPlanes(SliderX, SliderY);
+				const GrassMap::Settings& sts = g_pGrassMap->GetSettings();
+
+				r3dBoundBox bbox;
+
+				bbox.Org = r3dPoint3D( sts.XOffset, sts.YMin, sts.ZOffset );
+				bbox.Size = r3dPoint3D( sts.XLength, sts.YMax - sts.YMin, sts.ZLength );
+
+				PushBoundingBox( bbox, r3dColor::green, true );
 			}
-			else
+
+			switch( EditMode )
 			{
-				float grassViewDistance = r_grass_view_dist->GetFloat();
-				SliderY += imgui_Value_Slider( SliderX, SliderY, "Grass View Distance", &grassViewDistance, 4.0f, 512.f, "%-02.2f" );
-				r_grass_view_dist->SetFloat( grassViewDistance );
-
-				static int showGrassPlanes = 0;
-				SliderY += imgui_Checkbox(SliderX, SliderY, "Show planes", &showGrassPlanes, 1);
-				if (showGrassPlanes)
-				{
-					GetGrassPlaneManager()->DrawPlanes();
-				}
-
-				if( imgui_Button( SliderX, SliderY, 180.0, 22.f, "Recal Grass Height" ) )
-				{
-					g_pGrassMap->UpdateHeight();
-				}
-
-				if( Terrain )
-				{
-					if( imgui_Button( SliderX + 180.0, SliderY, 180.f, 22.f, "Update Grass Modulation" ) )
-					{
-						Terrain->SetOrthoDiffuseTextureDirty() ;
-					}
-				}
-
-				SliderY += 24.f;
-
-				if( imgui_Button( SliderX, SliderY, 180.0, 22.f, "Clear All Grass" ) )
-				{
-					g_pGrassMap->ClearCells();
-				}
-
-				stringlist_t grassTypes;
-				g_pGrassGen->FillTypes( grassTypes );
-
-				if( imgui_Button( SliderX + 180.f, SliderY, 180.f, 22.f, "Clear Sel. Grass" ) )
-				{
-					if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
-					{
-						g_pGrassMap->ClearGrassType( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-					}
-					else
-					{
-						MessageBox( 0, "Error", "No selected grass type to clear!", MB_OK ) ;
-					}				
-				}
-
-				SliderY += 33.f;
-
-				if( imgui_Button( SliderX, SliderY, 360, 22.f, "Optimize masks" ) )
-				{
-					g_pGrassMap->OptimizeMasks();
-				}			
-
-				SliderY += 24.f;
-
-				const int GRASS_LIST = 333;
-
-				if ( imgui_DrawList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, GRASS_LIST, grassTypes, &g_GrassTypeOffset, &g_GrassTypeSelected ) )
-				{
-				}
-
-				SliderY += GRASS_LIST;
-
-				static float radius = 32.f;
-				float cellSize = Terrain ? Terrain->GetDesc().CellSize : 1.0f;
-
-				SliderY += imgui_Value_Slider(SliderX, SliderY, "Radius",	&radius, cellSize, cellSize*100, "%-02.2f", 1 );
-
-				if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
-				{
-					GrassPatchGenSettings sts = g_pGrassGen->GetPatchSettings( g_GrassTypeSelected );
-
-					stringlist_t chunkNamez;
-
-					for( uint32_t i = 0, e = sts.ChunkSettings.Count(); i < e; i ++ )
-					{
-						chunkNamez.push_back( sts.ChunkSettings[ i ].MeshName.c_str() );
-					}
-
-					if( imgui_Button( SliderX, SliderY, 180, 22, "Generate Selected" ) )
-					{
-						if( !g_pGrassGen->Generate( g_GrassTypeSelected ) )
-						{
-							MessageBox( NULL, g_LastGrassGenError, "Error", MB_ICONEXCLAMATION );
-						}
-
-						g_pGrassLib->Save();
-					}
-
-					if( imgui_Button( SliderX + 180, SliderY, 180.f, 22.f, "Save Selected" ) )
-					{
-						g_pGrassGen->Save( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-					}
-
-					SliderY += 22;
-
-					if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Save All" ) )
-					{
-						g_pGrassGen->Save();
-					}
-
-					SliderY += 22;
-
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Master Density", &sts.Density, 0.01f, 16.f, "%-02.2f", 1 ) ;
-
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Fade Distance", &sts.FadeDistance, 0.05f, R3D_MAX_GRASS_PATCH_DISTANCE_COEF, "%-02.2f", 1 ) ;
-
-					for( int i = 0, e = g_pGrassLib->GetEntryCount() ; i < e ; i ++ )
-					{
-						const GrassLibEntry& ge = g_pGrassLib->GetEntry( i ) ;
-
-						if( ge.Name == sts.Name )
-						{
-							GrassLibEntry cge = ge ;
-							cge.FadeDistance = sts.FadeDistance ;
-							g_pGrassLib->MildUpdateExistingEntry( cge ) ;
-						}
-					}
-
-					SliderY += imgui_Static( SliderX, SliderY, "Available Meshes" );
-
-					static char SelectedMesh[ MAX_PATH ];
-
-					static bool meshSelected = false ;
-
-					if( imgui_FileList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, 133, GetGrassPath( "*.sco" ).c_str(), SelectedMesh, &g_GrassAvailableMeshOffset) )
-					{
-						meshSelected = true ;
-					}
-
-					SliderY += 133;
-
-					if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Add" ) )
-					{
-						if( meshSelected )
-						{
-
-							GrassChunkGenSettings csts;
-
-							csts.MeshName		= SelectedMesh;
-
-							WIN32_FIND_DATA fd;
-
-							HANDLE h = FindFirstFile( GetGrassPath("*.dds").c_str(), &fd );
-
-							if( h != INVALID_HANDLE_VALUE )
-							{
-								csts.TextureName = fd.cFileName;
-								FindClose( h );
-							}
-
-							sts.ChunkSettings.PushBack( csts );
-
-							g_GrassChunkSelected = -1;
-						}
-					}
-
-					SliderY += 23.f;
-
-					SliderY += imgui_Static( SliderX, SliderY, "Assigned Meshes" );
-					SliderY --;
-
-					const int GRASS_CHUNK_LIST = 88;
-
-					if ( imgui_DrawList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, GRASS_CHUNK_LIST, chunkNamez, &g_GrassChunkOffset, &g_GrassChunkSelected ) )
-					{
-						g_GrassTextureOffset	= -1;
-						g_GrassTextureSelected	= -1;
-					}
-
-					SliderY += GRASS_CHUNK_LIST + 1;
-
-					if( g_GrassChunkSelected >= 0 && g_GrassChunkSelected < (int)sts.ChunkSettings.Count() )
-					{
-						GrassChunkGenSettings& csts = sts.ChunkSettings[ g_GrassChunkSelected ];
-
-						if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Remove" ) )
-						{
-							sts.ChunkSettings.Erase( g_GrassChunkSelected );
-
-							g_GrassChunkSelected = -1;
-
-							SliderY += 22.f;
-						}
-						else
-						{
-							SliderY += 22.f;
-
-							char SelectedTex[ MAX_PATH ];
-
-							r3dscpy( SelectedTex, csts.TextureName.c_str() );
-
-							SliderY += imgui_Static( SliderX, SliderY, "Textures" );
-							SliderY --;
-
-							if( imgui_FileList( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, 87, GetGrassPath( "*.dds" ).c_str(), SelectedTex, &g_GrassTextureOffset ) )
-							{
-								csts.TextureName = SelectedTex;
-
-								if( (size_t)g_GrassTypeSelected < grassTypes.size() )
-								{
-									int libIdx = g_pGrassLib->GetEntryIdxByName( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-
-									if( libIdx >= 0 )
-									{
-										GrassLibEntry gle = g_pGrassLib->GetEntry( libIdx );
-
-										if( g_GrassChunkSelected < (int)gle.Chunks.Count() )
-										{
-											gle.Chunks[ g_GrassChunkSelected ].Texture = r3dRenderer->LoadTexture( GetGrassPath( SelectedTex ).c_str() );
-											g_pGrassLib->MildUpdateExistingEntry( gle );
-										}
-									}
-
-								}
-							}
-
-							static r3dTexture* DisplayTexture( NULL );
-							static char CurrentTexName[ MAX_PATH ] = {};
-
-							r3dString CurrentTexPath = GetGrassPath( sts.ChunkSettings[ g_GrassChunkSelected ].TextureName.c_str() );
-
-							if( stricmp( CurrentTexName, CurrentTexPath.c_str()) )
-							{
-								DisplayTexture = r3dRenderer->LoadTexture( CurrentTexPath.c_str() );
-								r3dscpy( CurrentTexName, CurrentTexPath.c_str() );
-							}
-
-							SliderY += 88;
-
-							if( DisplayTexture )
-							{
-								int DIM = 132;
-
-								float sx = SliderX + 180 - DIM / 2 ;
-								float sy = SliderY + 20;
-
-								sx -= Desktop().GetX();
-								sy -= Desktop().GetY();
-
-								imgui_Static( SliderX, SliderY, "Current Texture" , 360, true, DIM + 24, true );
-
-								r3dDrawBox2D( sx, sy, DIM, DIM, r3dColor(255,255,255) );
-								r3dSetFiltering( R3D_BILINEAR, 0 );
-								r3dDrawBox2D( sx+2, sy+2, DIM-2, DIM-2, r3dColor(255,255,255), DisplayTexture );
-
-								SliderY += DIM + 25;
-							}
-
-							float numVars = csts.NumVariations;
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Variations",			&numVars,					1.f,	GrassChunk::MAX_VARIATIONS, 
-								"%-02.0f", 1 );
-							csts.NumVariations = (int)numVars;
-
-							float density = csts.Density;
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Density",				&density,					1.f,	GrassGen::MAX_MESHES_PER_BATCH, 
-								"%-02.0f", 1 );
-							csts.Density = (int)density;
-
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Mesh Scale",			&csts.MeshScale,			0.01f,	8.f,		"%-02.2f", 1 );
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Min Mesh Scl.",		&csts.MinMeshScaling,		0.1f,	1.f,		"%-02.2f", 1 );
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Max Mesh Scl.",		&csts.MaxMeshScaling,		0,		1.f,		"%-02.2f", 1 );
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Rotation Variation",	&csts.RotationVariation,	0,		1.f,		"%-02.2f", 1 );
-
-							bool needUpdate = false ;
-
-							static float alphaRef ;
-							alphaRef = csts.AlphaRef * 255.f;
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Alpha Ref",			&alphaRef,					0,		255.f,		"%-02.0f", 1 );
-
-							alphaRef /= 255.f ;
-
-							if( alphaRef != csts.AlphaRef )
-								needUpdate = true ;
-
-							csts.AlphaRef = alphaRef ;
-
-							static float tintStrength ;
-							tintStrength = csts.TintStrength ;
-							SliderY += imgui_Value_Slider( SliderX, SliderY, "Tint Strength",		&tintStrength,				0,		1.f,		"%-01.2f", 1 );
-
-							if( tintStrength != csts.TintStrength )
-								needUpdate = true ;
-
-							csts.TintStrength = tintStrength ;
-
-							if( needUpdate )
-							{
-								if( (size_t)g_GrassTypeSelected < grassTypes.size() )
-								{
-									int libIdx = g_pGrassLib->GetEntryIdxByName( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-
-									if( libIdx >= 0 )
-									{
-										GrassLibEntry gle = g_pGrassLib->GetEntry( libIdx );
-
-										if( g_GrassChunkSelected < (int)gle.Chunks.Count() )
-										{
-											GrassGenSettingsToChunkSettings( gle.Chunks[ g_GrassChunkSelected ], csts );
-											g_pGrassLib->MildUpdateExistingEntry( gle );
-										}
-									}
-								}
-							}
-						}
-					}
-
-					g_pGrassGen->SetPatchSettings( g_GrassTypeSelected, sts );
-				}
-
-				SliderY += 50;
-
-				static float CellScale = g_pGrassLib->GetSettings().CellScale;
-
-				char CurrentPatchSizeText[ 128 ];
-				sprintf( CurrentPatchSizeText, "Current Patch Size: %.2f", g_pGrassLib->GetSettings().CellScale );
-
-				SliderY += imgui_Static( SliderX, SliderY, CurrentPatchSizeText );
-
-				static int MaintainDensity = 1;
-				SliderY += imgui_Checkbox( SliderX, SliderY, "Maintain density", &MaintainDensity, 1 );
-
-				if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Apply New Patch Size" ) )
-				{
-					GrassLib::Settings settings = g_pGrassLib->GetSettings();
-
-					if( MaintainDensity )
-					{
-						float densityCoef = CellScale / settings.CellScale ;
-
-						densityCoef *= densityCoef;
-
-						for( uint32_t i = 0, e = g_pGrassGen->GetTypeCount(); i < e; i ++ )
-						{
-							GrassPatchGenSettings settings = g_pGrassGen->GetPatchSettings( i );
-							settings.Density *= densityCoef;
-							g_pGrassGen->SetPatchSettings( i, settings );
-						}
-					}
-
-					settings.CellScale = CellScale;
-					g_pGrassLib->UpdateSettings( settings );
-				}
-
-				SliderY += 24.f ;
-
-				if( imgui_Button( SliderX, SliderY, 180.f, 22.f, "Show used types" ) )
-				{
-					MessageBox( 0, g_pGrassMap->GetUsedTypes().c_str(), "Used Grass Types", MB_OK ) ;
-				}
-
-				SliderY += 24.f ;
-
-				int grazBox = !!r_grass_show_boxes->GetInt() ;
-
-				SliderY += imgui_Checkbox( SliderX, SliderY, 180, 22, "Show batches", &grazBox, 1 ) ;
-
-				if( grazBox )
-				{
-					if ( g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
-					{
-						char buf[ 512 ] ;
-						sprintf( buf, "Showing for %s", grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-						SliderY += imgui_Static( SliderX, SliderY, buf ) ;
-						g_pGrassMap->SetDebugType( grassTypes[ g_GrassTypeSelected ].c_str() ) ;
-					}
-					else
-					{
-						SliderY += imgui_Static( SliderX, SliderY, "Please select grass type to show!" ) ;
-					}
-				}
-
-				r_grass_show_boxes->SetInt( grazBox ) ;
-
-				if( Terrain )
-				{
-					SliderY += imgui_Static( SliderX, SliderY, " " );
-
-					int DrawTint = !!r_show_grass_tint->GetInt() ;
-					SliderY += imgui_Checkbox( SliderX, SliderY, "Show Tint Texture", &DrawTint, 1 );
-					r_show_grass_tint->SetInt( DrawTint );
-
-					static float GrassTintScale = 0.f ;
-					GrassTintScale = r_show_grass_tint_scale->GetFloat() ;
-
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Tint Tex Scale", &GrassTintScale, 1.f, 16.f, "%-2.2f" );
-
-					r_show_grass_tint_scale->SetFloat( GrassTintScale );
-				}
-
-				// debug grass tile coverage
-				if( r_grass_show_debug->GetBool() )
-				{
-					r3dPoint3D pos;
-					pos.x = gCam.x;
-					pos.y = 0.f;
-					pos.z = gCam.z;
-					PushGrassBrush( GrassMap::GetVisRad(), 1.0f, pos );
-				}
-
-				if( Keyboard->IsPressed(kbsLeftControl) )
-				{
-					r3dPoint3D brushPT = GetMouseAndGrassPlanesIntersection();
-					if (Terrain)
-						brushPT = brushPT.y > UI_TerraTargetPos.y ? brushPT : UI_TerraTargetPos;
-					PushGrassBrush( radius, 1.0f,  brushPT );
-
-					if ( imgui_lbp && g_GrassTypeSelected >= 0 && g_GrassTypeSelected < (int)grassTypes.size() )
-					{
-						if( r3dGetTime() - _LastTimeBrush > 0.05f )
-						{
-							const std::string& grassType = grassTypes[ g_GrassTypeSelected ] ;
-							int idx = g_pGrassLib->GetEntryIdxByName( grassType.c_str() ) ;
-
-							int doable = false ;
-
-							if( idx < 0 )
-							{
-								if( !g_pGrassGen->Generate( g_GrassTypeSelected ) )
-								{
-									MessageBoxA( r3dRenderer->HLibWin, "Couldn't generate selected grass type! Adjust density settings down!", "Error", MB_ICONERROR ) ;
-								}
-								else
-								{
-									doable = true ;
-								}
-							}
-							else
-							{
-								doable = true ;
-							}
-
-							if( doable )
-							{
-								g_pGrassMap->Paint( UI_TargetPos.x, UI_TargetPos.z, radius, EditMode == EG_PAINT ? 1.0f : -1.0f, grassType.c_str() );
-							}
-							_LastTimeBrush = r3dGetTime();
-						}
-					}
-				}
+			case EG_CONFIGURE:
+				SliderY = ProcessGrassConfigure( SliderX, SliderY );
+				break;
+			case EG_PAINT:
+			case EG_ERASE:
+				SliderY += ProcessPaintErase(SliderX, SliderY, EditMode == EG_PAINT );
+				break;
+
+			case EG_PLANES:
+				SliderY += ProcessGrassPlanes(SliderX, SliderY);
+				break;
+			
 			}
 		}
 
@@ -12192,161 +12065,60 @@ const int FILE_LIST_HEIGHT = 330 ;
 				g_iDecalListSelectedItem = -1;
 			}
 
-			ProcessDecalsEditor(decalType == 1, SliderX, SliderY, mDecalProxyObj);
+			ProcessDecalsEditor(decalType == 1, SliderX, SliderY);
 		}
 		break;
 
-	case PE_RAIN:
-	{
-		g_pDesktopManager->Begin( "ed_env" );
-
-		static bool InSelectParticleMode = false;
-
-		SliderY += imgui_Static( SliderX, SliderY, "Weather / Rain State", 360 );
-
-		float rainStrength = r3dGameLevel::Environment.GetRainStrength();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Rain Strength", &rainStrength, 0.0f, 1.0f, "%.2f" );
-		r3dGameLevel::Environment.SetRainStrength( rainStrength );
-
-		float wetness = r3dGameLevel::Environment.GetWetness();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Wetness", &wetness, 0.0f, 1.0f, "%.2f" );
-		r3dGameLevel::Environment.SetWetness( wetness );
-
-		r_weather_rain_intensity->SetFloat( r3dGameLevel::Environment.GetRainStrength() );
-		r_weather_wetness->SetFloat( r3dGameLevel::Environment.GetWetness() );
-
-		SliderY += 10;
-
-		int screenDropsEnabled = r_screen_rain_drops->GetInt();
-		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Screen Rain Drops Enabled", &screenDropsEnabled, 1 );
-		r_screen_rain_drops->SetInt( screenDropsEnabled ? 1 : 0 );
-
-		SliderY += 10;
-		SliderY += imgui_Static( SliderX, SliderY, "Puddle Settings", 360 );
-
-		int puddlesEnabled = r_weather_puddles->GetInt();
-		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Puddles Enabled", &puddlesEnabled, 1 );
-		r_weather_puddles->SetInt( puddlesEnabled ? 1 : 0 );
-
-		float puddleDensity = r_weather_puddles_density->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Density", &puddleDensity, 0.0f, 1.0f, "%.2f" );
-		r_weather_puddles_density->SetFloat( puddleDensity );
-
-		float puddleSpawnRate = r_weather_puddles_spawn_rate->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Spawn Rate", &puddleSpawnRate, 0.0f, 128.0f, "%.1f" );
-		r_weather_puddles_spawn_rate->SetFloat( puddleSpawnRate );
-
-		int puddleMaxCount = r_weather_puddles_max_count->GetInt();
-		SliderY += imgui_Value_SliderI( SliderX, SliderY, "Puddle Max Count", &puddleMaxCount, 0, 512, "%d" );
-		r_weather_puddles_max_count->SetInt( puddleMaxCount );
-
-		float puddleRadius = r_weather_puddles_radius->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Radius", &puddleRadius, 4.0f, 160.0f, "%.1f" );
-		r_weather_puddles_radius->SetFloat( puddleRadius );
-
-		float puddleMinWetness = r_weather_puddles_min_wetness->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Min Wetness", &puddleMinWetness, 0.0f, 1.0f, "%.2f" );
-		r_weather_puddles_min_wetness->SetFloat( puddleMinWetness );
-
-		float puddleMinNormalY = r_weather_puddles_min_normal_y->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Terrain Slope", &puddleMinNormalY, 0.0f, 1.0f, "%.2f" );
-		r_weather_puddles_min_normal_y->SetFloat( puddleMinNormalY );
-
-		float puddleReflection = r_weather_puddles_reflection->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Puddle Reflection", &puddleReflection, 0.0f, 1.0f, "%.2f" );
-		r_weather_puddles_reflection->SetFloat( puddleReflection );
-
-		SliderY += 10;
-		SliderY += imgui_Static( SliderX, SliderY, "Wet Weapon Settings", 360 );
-
-		int wetWeaponEnabled = r3dGameLevel::Environment.WetWeaponEnabled;
-		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Wet Weapon Enabled", &wetWeaponEnabled, 1 );
-		r3dGameLevel::Environment.WetWeaponEnabled = wetWeaponEnabled ? 1 : 0;
-		r_wet_weapon->SetInt( wetWeaponEnabled ? 1 : 0 );
-
-		float wetWeaponAmount = r3dGameLevel::Environment.WetWeaponAmount;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Wet Amount", &wetWeaponAmount, 0.0f, 2.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponAmount = wetWeaponAmount;
-		r_wet_weapon_amount->SetFloat( wetWeaponAmount );
-
-		float wetWeaponDark = r3dGameLevel::Environment.WetWeaponDark;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Dark Diffuse", &wetWeaponDark, 0.25f, 1.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponDark = wetWeaponDark;
-		r_wet_weapon_dark->SetFloat( wetWeaponDark );
-
-		float wetWeaponGloss = r3dGameLevel::Environment.WetWeaponGlossBoost;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Gloss Boost", &wetWeaponGloss, 0.0f, 1.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponGlossBoost = wetWeaponGloss;
-		r_wet_weapon_gloss_boost->SetFloat( wetWeaponGloss );
-
-		float wetWeaponSpec = r3dGameLevel::Environment.WetWeaponSpecMul;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Spec Power", &wetWeaponSpec, 1.0f, 4.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponSpecMul = wetWeaponSpec;
-		r_wet_weapon_spec_mul->SetFloat( wetWeaponSpec );
-
-		float wetWeaponStreaks = r3dGameLevel::Environment.WetWeaponStreaks;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Rain Streaks", &wetWeaponStreaks, 0.0f, 2.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponStreaks = wetWeaponStreaks;
-		r_wet_weapon_streaks->SetFloat( wetWeaponStreaks );
-
-		float wetWeaponStreakScale = r3dGameLevel::Environment.WetWeaponStreakScale;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Scale", &wetWeaponStreakScale, 4.0f, 128.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponStreakScale = wetWeaponStreakScale;
-		r_wet_weapon_streak_scale->SetFloat( wetWeaponStreakScale );
-
-		float wetWeaponStreakSpeed = r3dGameLevel::Environment.WetWeaponStreakSpeed;
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Weapon Streak Speed", &wetWeaponStreakSpeed, 0.0f, 4.0f, "%.2f" );
-		r3dGameLevel::Environment.WetWeaponStreakSpeed = wetWeaponStreakSpeed;
-		r_wet_weapon_streak_speed->SetFloat( wetWeaponStreakSpeed );
-
-		r3dGameLevel::Environment.ClampWeatherState();
-
-		SliderY += 10;
-
-		if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
-		{
-			InSelectParticleMode = !InSelectParticleMode;
-		}
-		SliderY += 24.f;
-
-		static char ParticlePath[ MAX_PATH ] = "";
-
-		if( r3dGameLevel::Environment.RainParticleSystemName[ 0 ] )
-			strcpy( ParticlePath, r3dGameLevel::Environment.RainParticleSystemName );
-
-		if( InSelectParticleMode )
-		{
-			static float offset = 0.f;
-
-			if( imgui_FileList( SliderX, SliderY, 360, 200, "Data\\Particles\\*.prt", ParticlePath, &offset, true ) )
+		case PE_RAIN:
 			{
-				char* dot = strrchr( ParticlePath, '.' );
+				static bool InSelectParticleMode = false ;
 
-				if( dot )
-					*dot = 0;
+				bool valueChanged = false ;
 
-				r3dGameLevel::Environment.SetRainParticle( ParticlePath );
-				InSelectParticleMode = false;
+				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Select Rain Particle", InSelectParticleMode ) )
+				{
+					InSelectParticleMode = true ;
+					valueChanged = true ;
+				}
+				SliderY += 22.f ;
+
+				static char ParticlePath[ MAX_PATH ] ;
+
+				strcpy( ParticlePath, r3dGameLevel::Environment.RainParticleSystemName ) ;
+
+				if( InSelectParticleMode )
+				{
+					static float offset = 0.f ;
+
+					if (imgui_FileList(5, 80, 300, 380, "Data/Particles/*.prt", ParticlePath, &offset, false, valueChanged ))
+					{
+						for( int i = strlen( ParticlePath ) ; i >= 0 ; i -- )
+						{
+							if( ParticlePath[ i ] == '.' )
+							{
+								ParticlePath[ i ] = 0 ;
+								break ;
+							}
+						}
+
+						r3dGameLevel::Environment.SetRainParticle( ParticlePath ) ;
+
+						InSelectParticleMode = 0 ;
+					}
+				}
+
+				char InfoLine[ 256 ] ;
+
+				sprintf( InfoLine, "Selected Particle: %s", ParticlePath ) ;
+
+				SliderY += imgui_Static( SliderX, SliderY, InfoLine ) ;
+
+				if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Clear Rain Particle" ) )
+				{
+					r3dGameLevel::Environment.ClearRainParticle();
+				}
 			}
-
-			SliderY += 205.f;
-		}
-
-		char infoLine[ 256 ];
-		sprintf( infoLine, "Selected Particle: %s", r3dGameLevel::Environment.RainParticleSystemName );
-
-		SliderY += imgui_Static( SliderX, SliderY, infoLine, 360 );
-
-		if( imgui_Button( SliderX, SliderY, 360.f, 22.f, "Clear Rain Particle" ) )
-		{
-			r3dGameLevel::Environment.ClearRainParticle();
-			ParticlePath[ 0 ] = 0;
-		}
-		SliderY += 24.f;
-
-		g_pDesktopManager->End();
-	}
-	break;
+			break ;
 
 	} //switch edit mode
 }
@@ -12566,7 +12338,6 @@ void	Editor_Level :: ProcessPost_Glow()
 	if ( LevelBloom )
 	{
 		// need to be static cause imgui doesn't support temps
-
 		SliderY = FillBloomSettings( &gHUDFilterSettings[HUDFilter_Default].bloomSettings, &gHUDFilterSettings[HUDFilter_Default].bloomBlurPasses, &gHUDFilterSettings[HUDFilter_Default].bloomBlurTaps, SliderX, SliderY, true );
 	}
 
@@ -12706,11 +12477,10 @@ void	Editor_Level :: ProcessPost_Lighting()
 
 		ssaoNames.push_back( "DEFAULT" );
 		ssaoNames.push_back( "HQ" );
-		ssaoNames.push_back( "HBAO+" );
 
 		static float fOffset = 0.f ;
 
-		const int SSAO_LIST_HEIGHT = 80;
+		const int SSAO_LIST_HEIGHT = 60;
 
 		if ( imgui_DrawList(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, SSAO_LIST_HEIGHT, ssaoNames, &fOffset, &newSSAOMethod ) )
 		{
@@ -12846,65 +12616,6 @@ void	Editor_Level :: ProcessPost_Lighting()
 #endif
 	}
 
-	// ── HBAO+ parameters (when HBAO+ method selected) ──────────
-	if( r_ssao_method->GetInt() == SSM_HBAO_PLUS )
-	{
-		SliderY += imgui_Static( SliderX, SliderY, "HBAO+ Parameters" );
-
-		float hbaoRadius = r_hbao_radius->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Radius", &hbaoRadius, 0.1f, 3.0f, "%-02.2f", 1 );
-		r_hbao_radius->SetFloat( hbaoRadius );
-
-		float hbaoBias = r_hbao_bias->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Bias", &hbaoBias, 0.0f, 0.5f, "%-02.3f", 1 );
-		r_hbao_bias->SetFloat( hbaoBias );
-
-		float hbaoPower = r_hbao_power->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "HBAO+ Power", &hbaoPower, 1.0f, 8.0f, "%-02.2f", 1 );
-		r_hbao_power->SetFloat( hbaoPower );
-
-		float hbaoBlurSharp = r_hbao_blur_sharpness->GetFloat();
-		SliderY += imgui_Value_Slider( SliderX, SliderY, "Blur Sharpness", &hbaoBlurSharp, 0.0f, 32.0f, "%-02.1f", 1 );
-		r_hbao_blur_sharpness->SetFloat( hbaoBlurSharp );
-	}
-
-	// ── SSS (Subsurface Scattering) ────────────────────────────
-	{
-		SliderY += imgui_Static( SliderX, SliderY, "Subsurface Scattering" );
-
-		int sssOn = r_sss->GetBool() ? 1 : 0;
-		SliderY += imgui_Checkbox( SliderX, SliderY, "SSS Enable", &sssOn, 1 );
-		r_sss->SetBool( sssOn != 0 );
-
-		if( r_sss->GetBool() )
-		{
-			float sssDist = r_sss_distortion->GetFloat();
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Distortion", &sssDist, 0.0f, 1.0f, "%-02.2f", 1 );
-			r_sss_distortion->SetFloat( sssDist );
-
-			float sssPower = r_sss_power->GetFloat();
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Power", &sssPower, 0.0f, 5.0f, "%-02.2f", 1 );
-			r_sss_power->SetFloat( sssPower );
-
-			float sssScale = r_sss_scale->GetFloat();
-			SliderY += imgui_Value_Slider( SliderX, SliderY, "SSS Scale", &sssScale, 0.0f, 5.0f, "%-02.2f", 1 );
-			r_sss_scale->SetFloat( sssScale );
-		}
-	}
-
-	// ── PBR / ACES toggles ─────────────────────────────────────
-	{
-		SliderY += imgui_Static( SliderX, SliderY, "Rendering Features" );
-
-		int pbrOn = r_pbr_enabled->GetBool() ? 1 : 0;
-		SliderY += imgui_Checkbox( SliderX, SliderY, "PBR (GGX/Smith/Fresnel)", &pbrOn, 1 );
-		r_pbr_enabled->SetBool( pbrOn != 0 );
-
-		int acesOn = r_aces_tonemap->GetBool() ? 1 : 0;
-		SliderY += imgui_Checkbox( SliderX, SliderY, "ACES Tonemapping", &acesOn, 1 );
-		r_aces_tonemap->SetBool( acesOn != 0 );
-	}
-
 }
 
 
@@ -12940,19 +12651,19 @@ void Editor_Level :: ProcessPost_NightVision()
 
 	static float offset = 0.f ;
 
-	const char* GetCCLUT3DTextureName( HUDFilters filter );
+	const r3dString& GetCCLUT3DTextureName( HUDFilters filter, r3dAtmosphere::SkyPhase phase );
 
 	char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
 
-	_splitpath( GetCCLUT3DTextureName( HUDFilter_NightVision ), drive, dir, name, ext ) ;
+	_splitpath( GetCCLUT3DTextureName( HUDFilter_NightVision, r3dAtmosphere::SKY_PHASE_DAY ).c_str(), drive, dir, name, ext );
 
-	strcpy( textureName, name ) ;
-	strcat( textureName, ext ) ;
+	strcpy( textureName, name );
+	strcat( textureName, ext );
 
 	if ( imgui_FileList(SliderX, SliderY, 360, CC_FILE_LIST_SIZE, fullPath, textureName, &offset ) )
 	{
-		void ReloadCCLUT3DTexture( const char*, HUDFilters );
-		ReloadCCLUT3DTexture( textureName, HUDFilter_NightVision );
+		void ReloadAllCCLUT3DTextures( const char* newName, HUDFilters filter );
+		ReloadAllCCLUT3DTextures( textureName, HUDFilter_NightVision );
 	}
 
 	SliderY += CC_FILE_LIST_SIZE;
@@ -12964,6 +12675,16 @@ void Editor_Level :: ProcessPost_NightVision()
 	if( overrideHDR )
 	{
 		SliderY += imgui_Value_Slider( SliderX, SliderY, "HDR Exposure Bias", &gHUDFilterSettings[ HUDFilter_NightVision ].hdrExposureBias, -10.0f, 10.f, "%.2f" );
+	}
+
+	int overrideAmbientAndIntensity = !!gHUDFilterSettings[ HUDFilter_NightVision ].overrideAmbientAndIntensity;
+	SliderY += imgui_Checkbox( SliderX, SliderY, "Override Ambient & Intensity", &overrideAmbientAndIntensity, 1 ) ;
+	gHUDFilterSettings[ HUDFilter_NightVision ].overrideAmbientAndIntensity = !!overrideAmbientAndIntensity;
+
+	if( overrideAmbientAndIntensity )
+	{
+		SliderY += imgui_DrawColorPicker( SliderX, SliderY, "Override Ambient", &gHUDFilterSettings[ HUDFilter_NightVision ].overrideAmbient, 360.0f, false );
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Override intensity", &gHUDFilterSettings[ HUDFilter_NightVision ].overrideIntensity, 0.0f, 10.0f, "%.2f" );
 	}
 }
 
@@ -13143,7 +12864,7 @@ IDirect3DVolumeTexture9* Generate3DLut( const char* Source, const int SOURCE_DIM
 	{
 		explicit LocalObjs( const char* Source )
 		{
-			SourceTex = r3dRenderer->LoadTexture( Source, D3DFMT_A8R8G8B8, false, 1, 1, 1 ) ;
+			SourceTex = r3dRenderer->LoadTexture( Source, D3DFMT_A8R8G8B8, false, 1, 1, D3DPOOL_SYSTEMMEM ) ;
 		}
 
 		~LocalObjs()
@@ -13518,34 +13239,10 @@ void Editor_Level :: ProcessColorGrading()
 	case CCEM_GLOBAL:
 		{
 			g_ColorCorrectionSettings.scheme = ColorCorrectionSettings::CCS_CUSTOM_3DLUT;
-			const HUDFilterSettings &hfs = gHUDFilterSettings[HUDFilter_Default];
+			HUDFilterSettings &hfs = gHUDFilterSettings[HUDFilter_Default];
 			if ( hfs.enableColorCorrection )
 			{
-				char buf[512];
-				sprintf(buf, "Texture: %s", hfs.colorCorrectionTextureName);
-				SliderY += imgui_Static(SliderX, SliderY, buf);
-
-				char fullPath[ 512 ];
-				GetCCLUT3DTextureFullPath( fullPath, "*.dds" );
-
-				static float offset = 0.f ;
-
-				const char* GetCCLUT3DTextureName( HUDFilters filter );
-
-				char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
-
-				_splitpath( GetCCLUT3DTextureName( HUDFilter_Default ), drive, dir, name, ext ) ;
-
-				strcpy( textureName, name ) ;
-				strcat( textureName, ext ) ;
-
-
-				if ( imgui_FileList(SliderX, SliderY, 360, CC_FILE_LIST_SIZE, fullPath, textureName, &offset ) )
-				{
-					ReloadCCLUT3DTexture( textureName, HUDFilter_Default );
-				}
-
-				SliderY += CC_FILE_LIST_SIZE;
+				SliderY = ProcessColorCorrectionMenu( hfs, SliderX, SliderY );
 			}
 
 			break;
@@ -13900,8 +13597,8 @@ void Editor_Level :: ProcessColorGrading()
 
 				GetCCRefTexParams( CC_TEX_SOURCE_DIM, iwidth, numCellsPerLine, extraHeight );
 
-				tempTex->Create( (int)GrabbedPreCCScreen->Width, (int)GrabbedPreCCScreen->Height + extraHeight, D3DFMT_A8R8G8B8, 1, 1 );
-				targetTex->Create( (int)GrabbedPreCCScreen->Width, (int)GrabbedPreCCScreen->Height, D3DFMT_A8R8G8B8, 1, 1 );
+				tempTex->Create( (int)GrabbedPreCCScreen->Width, (int)GrabbedPreCCScreen->Height + extraHeight, D3DFMT_A8R8G8B8, 1, D3DPOOL_SYSTEMMEM );
+				targetTex->Create( (int)GrabbedPreCCScreen->Width, (int)GrabbedPreCCScreen->Height, D3DFMT_A8R8G8B8, 1, D3DPOOL_SYSTEMMEM );
 
 				IDirect3DSurface9 *targetSurf( NULL ), *tempSurf ( NULL ), *GrabbedPreCCScreenSurf(NULL) ;
 
@@ -14123,11 +13820,6 @@ void Editor_Level :: ProcessColorGrading()
 			SliderY += imgui_Value_Slider( SliderX, SliderY, "Adapt Speed (+):", &AdaptSpeedPos, 0.0f, 5.f, "%.2f", 1 );
 			SliderY += imgui_Value_Slider( SliderX, SliderY, "Adapt Speed (-):", &AdaptSpeedNeg, 0.0f, 5.f, "%.2f", 1 );
 
-			SliderY += 30.0f;
-			int v = d_show_scene_luma->GetInt();
-			SliderY += imgui_Checkbox( SliderX, SliderY, "Show scene luma info", &v, 1 );
-			d_show_scene_luma->SetInt(v);
-
 			r_exposure_minl->SetFloat(MinLuma);
 			r_exposure_maxl->SetFloat(MaxLuma);
 			r_exposure_targetl->SetFloat(MedLuma);
@@ -14150,6 +13842,76 @@ void Editor_Level :: ProcessColorGrading()
 	};
 
 	g_pDesktopManager->End();
+}
+
+float Editor_Level::ProcessColorCorrectionMenu( HUDFilterSettings &hfs, float SliderX, float SliderY )
+{
+	r3dAtmosphere::SkyPhase phase0, phase1;
+	float lerpT;
+
+	GetAdjecantSkyPhasesAndLerpT( &phase0, &phase1, &lerpT );
+
+	char CurrPhase[ 256 ];
+
+	if( phase0 == phase1 )
+	{
+		sprintf( CurrPhase, "Current phase: %s", SkyPhaseToName( phase0 ) );
+	}
+	else
+	{
+		sprintf( CurrPhase, "Current phase: %s->%s", SkyPhaseToName( phase0 ), SkyPhaseToName( phase1 ) );
+	}
+
+	SliderY += imgui_Static( SliderX, SliderY, CurrPhase );
+
+	stringlist_t phaseList;
+
+	phaseList.push_back( "Dawn" );
+	phaseList.push_back( "Day" );
+	phaseList.push_back( "Dusk" );
+	phaseList.push_back( "Night" );
+
+	static float listOffset;
+	static int selectedPhase;
+
+	const float PHASE_LIST_HEIGHT = 88.f;
+
+	imgui_DrawList( SliderX, SliderY, 360.f, PHASE_LIST_HEIGHT, phaseList, &listOffset, &selectedPhase );
+
+	selectedPhase = R3D_MAX( R3D_MIN( selectedPhase, r3dAtmosphere::SKY_PHASE_COUNT - 1 ), 0 );
+
+	SliderY += PHASE_LIST_HEIGHT;
+
+	char buf[512];
+	sprintf(buf, "Texture: %s", hfs.colorCorrectionTextureNames[ selectedPhase ] );
+	SliderY += imgui_Static(SliderX, SliderY, buf);
+
+	char fullPath[ 512 ];
+	GetCCLUT3DTextureFullPath( fullPath, "*.dds" );
+
+	static float offset = 0.f ;
+
+	const r3dString& GetCCLUT3DTextureName( HUDFilters filter, r3dAtmosphere::SkyPhase phase );
+
+	char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
+
+	_splitpath( GetCCLUT3DTextureName( HUDFilter_Default, (r3dAtmosphere::SkyPhase)selectedPhase ).c_str(), drive, dir, name, ext ) ;
+
+	static char textureName[ 256 ] = {0};
+
+	strcpy( textureName, name ) ;
+	strcat( textureName, ext ) ;
+
+	const int CC_FILE_LIST_SIZE = 300;
+
+	if ( imgui_FileList(SliderX, SliderY, 360, CC_FILE_LIST_SIZE, fullPath, textureName, &offset ) )
+	{
+		ReloadCCLUT3DTexture( textureName, r3dAtmosphere::SkyPhase( selectedPhase ), HUDFilter_Default );
+	}
+
+	SliderY += CC_FILE_LIST_SIZE;
+
+	return SliderY;
 }
 
 void ToString( D3DFORMAT fmt, char* szBuffer )
@@ -14565,7 +14327,7 @@ void Editor_Level::ProcessAssets()
 						camera.PointTo( r3dPoint3D( vPos + vDir ) );
 						camera.vUP = r3dPoint3D( vUp );
 
-						r3dRenderer->SetCamera( camera );
+						r3dRenderer->SetCamera( camera, false );
 						D3DXMatrixIdentity( &m );
 						mesh.SetVSConsts( m );
 
@@ -14573,7 +14335,7 @@ void Editor_Level::ProcessAssets()
 
 						m_pPreviewBuffer->zType = r3dScreenBuffer::Z_SYSTEM;
 						m_pPreviewBuffer->Activate();
-						r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
+						r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), r3dRenderer->GetClearZValue(), 0 );
 						r3dRenderer->SetVertexShader( r3dRenderer->AddVertexShaderFromFile( "FORVARD_VS", "forward_vs.hls" ) );
 						r3dRenderer->SetPixelShader( r3dRenderer->AddPixelShaderFromFile( "FORVARD_PS", "forward_ps.hls" ) );
 						mesh.DrawMeshSimple( 1 );
@@ -14641,8 +14403,8 @@ void Editor_Level::ProcessAssets()
 				r3dRenderer->pd3ddev->GetSamplerState( 0, D3DSAMP_ADDRESSU, &dwOldStateU);
 				r3dRenderer->pd3ddev->GetSamplerState( 0, D3DSAMP_ADDRESSV, &dwOldStateV);
 
-				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
-				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
+				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER );
+				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER );
 				
 				float fSize;
 				if ( bDragPreview )
@@ -14651,8 +14413,8 @@ void Editor_Level::ProcessAssets()
 					fSize = g_EditorPreviewSize;
 				r3dDrawBox2D( fX, fY, fSize, fSize, r3dColor( 255, 255, 255 ), pTex, TC );
 				
-				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, dwOldStateU );
-				r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, dwOldStateV );
+				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, dwOldStateU );
+				r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, dwOldStateV );
 
 				if ( !bDragPreview )
 				{
@@ -14756,7 +14518,7 @@ void Editor_Level::ProcessAssets()
 				camera.SetPosition( r3dPoint3D( vPos ) );
 				camera.PointTo( r3dPoint3D( vPos + vDir ) );
 				camera.vUP = r3dPoint3D( vUp );
-				r3dRenderer->SetCamera( camera );
+				r3dRenderer->SetCamera( camera, false );
 
 				if ( !bDragPreview )
 				{
@@ -14776,13 +14538,13 @@ void Editor_Level::ProcessAssets()
 				extern int VS_CLEAR_FLOAT_ID;
 				r3dRenderer->SetPixelShader( VS_CLEAR_FLOAT_ID );
 				r3dRenderer->SetPixelShader( PS_CLEAR_FLOAT_ID );
-				r3dRenderer->SetPixelShaderConstantF( 0, D3DXVECTOR4( r3dRenderer->FarClip, 0, 0, 0 ), 1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, D3DXVECTOR4( r3dRenderer->FarClip, 0, 0, 0 ), 1 );
 				r3dDrawBoxFS( r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::white );
 				r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
 				DepthBuffer->Deactivate();
 
 				m_pPreviewBuffer->Activate();
-				r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), 1.0f, 0 );
+				r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, D3DCOLOR_ARGB( 0, 0, 0, 0 ), r3dRenderer->GetClearZValue(), 0 );
 				pPartSys->Draw( camera, false );
 				m_pPreviewBuffer->Deactivate();
 
@@ -14819,42 +14581,34 @@ r3dPoint3D Navigation_GetWorldCursorPos()
 
 void Editor_Level::ProcessNavigation()
 {
-#if ENABLE_RECAST_NAVIGATION
 	float SliderX = r3dRenderer->ScreenW-375;
 	float SliderY = 85;
 
-	static int selectedRegion = 0;
-	//	0 - normal mode, 1 - create agent mode, 2 - navigate agent mode
-	//	3 - create convex region
-	static int uiMode = 0;
+	const static char* listpaint[] = { "REGIONS", "NAVMESH" };
 
-	static float minAccel = 100.0f;
-	static float maxAccel = 100.0f;
-	static float minSpeed = 10.0f;
-	static float maxSpeed = 10.0f;
+	static int navEditTab = 1;
+	int prev = navEditTab;
+	SliderY += imgui_Toolbar(SliderX, SliderY, 360, 45, &navEditTab, 0, listpaint, sizeof listpaint / sizeof listpaint[0]);
+
+	switch (navEditTab)
+	{
+	case 1:
+		ProcessAutodeskNavigation(SliderX, SliderY);
+		break;
+	case 0:
+		ProcessNavigationRegions(SliderX, SliderY);
+		break;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor_Level::ProcessNavigationRegions(float SliderX, float SliderY)
+{
+	static int uiMode = 0;
+	static int selectedRegion = 0;
 
 	if (uiMode == 1)
-	{
-		SliderY += imgui_Static(SliderX, SliderY, "Click on map to place test navigation agent");
-		if (imgui_lbp)
-		{
-			r3dNavAgentParams p;
-			p.maxSpeed = static_cast<float>(rand()) / RAND_MAX * (maxSpeed - minSpeed) + minSpeed;
-			p.maxAcceleration = static_cast<float>(rand()) / RAND_MAX * (maxAccel - minAccel) + minAccel;
-			gNavMeshActorsManager.CreateAgent(Navigation_GetWorldCursorPos(), p);
-			uiMode = 0;
-		}
-	}
-	else if (uiMode == 2)
-	{
-		SliderY += imgui_Static(SliderX, SliderY, "Click on map to define navigation target");
-		if (imgui_lbp)
-		{
-			gNavMeshActorsManager.NavigateAllTo(Navigation_GetWorldCursorPos());
-			uiMode = 0;
-		}
-	}
-	else if (uiMode == 3)
 	{
 		static bool wasPressed = false;
 		if (!imgui_lbp)
@@ -14870,111 +14624,240 @@ void Editor_Level::ProcessNavigation()
 		else if (imgui_lbr && !wasPressed)
 		{
 			wasPressed = true;
-			gNavMesh.GetRegionsMgr().AddPointToRegion(Navigation_GetWorldCursorPos(), selectedRegion);
+			Nav::gConvexRegionsManager.AddPointToRegion(Navigation_GetWorldCursorPos(), selectedRegion);
 		}
 
 	}
+	else if (uiMode == 2)
+	{
+		// add seed point
+		SliderY += imgui_Static(SliderX, SliderY, "Click on map to define seed point.");
+		if (imgui_lbr)
+		{
+			Nav::ConvexRegionsManager::Convex& c = Nav::gConvexRegionsManager.regions[selectedRegion];
+			c.haveSeed  = true;
+			c.seedPoint = Navigation_GetWorldCursorPos();
+			
+			uiMode = 0;
+		}
+	}
 	else
 	{
-		static int visNavMesh = 1;
 		static int visNavRegions = 1;
-
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell size", &gNavMesh.buildConfig.cs, 0.1f, 5.0f, "%-02.02f");
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell heigth", &gNavMesh.buildConfig.ch, 0.1f, 5.0f, "%-02.02f");
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Walkable slope", &gNavMesh.buildConfig.walkableSlopeAngle, 0, 90.0f, "%-02.02f");
-
-		extern float gNavAgentHeight;
-		extern float gNavAgentRadius;
-		extern float gNavAgentMaxClimb;
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Agent height", &gNavAgentHeight, 0.1f, 3.0f, "%-02.02f");
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Agent radius", &gNavAgentRadius, 0.1f, 1.0f, "%-02.02f");
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Agent max climb", &gNavAgentMaxClimb, 0.1f, 2.0f, "%-02.02f");
-
-		SliderY += imgui_Checkbox(SliderX, SliderY, "Visualize Navigation Mesh", &visNavMesh, 1);
 		SliderY += imgui_Checkbox(SliderX, SliderY, "Visualize Regions", &visNavRegions, 1);
-
-		int flags = r3dNavigationMesh::dvtNone;
-		flags |= visNavMesh ? r3dNavigationMesh::dvtMesh : 0;
-		flags |= visNavRegions ? r3dNavigationMesh::dvtRegions : 0;
-
-		gNavMesh.VisualizeNavMesh(flags);
+		Nav::gConvexRegionsManager.doDebugDraw = visNavRegions != 0;
 
 		static stringlist_t regionNames;
 		regionNames.clear();
 
-		for (uint32_t i = 0; i < gNavMesh.GetRegionsMgr().GetNumRegions(); ++i)
+		for (uint32_t i = 0; i < Nav::gConvexRegionsManager.GetNumRegions(); ++i)
 		{
 			char buf[5] = {0};
 			regionNames.push_back(std::string("Region") + itoa(i, buf, 10));
 		}
 
 		SliderY += imgui_Static(SliderX, SliderY, "Navigation regions:");
-		float listHeight = 100.0f;
+		float listHeight = 400.0f;
 		static float selectedOffset = 0.0f;
 		imgui_DrawList(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, listHeight, regionNames, &selectedOffset, &selectedRegion);
-		gNavMesh.GetRegionsMgr().HightlightRegion(selectedRegion);
-		
+		Nav::gConvexRegionsManager.HightlightRegion(selectedRegion);
+
 		SliderY += listHeight;
 		float buttonW = DEFAULT_CONTROLS_WIDTH / 3;
 		if (imgui_Button(SliderX, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Add new region"))
 		{
-			gNavMesh.GetRegionsMgr().CreateNewRegion();
+			Nav::gConvexRegionsManager.CreateNewRegion();
 		}
 		if (imgui_Button(SliderX + buttonW, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Delete region"))
 		{
-			gNavMesh.GetRegionsMgr().DeleteRegion(selectedRegion);
+			Nav::gConvexRegionsManager.DeleteRegion(selectedRegion);
 		}
 		if (imgui_Button(SliderX + buttonW * 2, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Modify region"))
+		{
+			uiMode = 1;
+		}
+
+		if(selectedRegion < (int)Nav::gConvexRegionsManager.GetNumRegions())
+		{
+			SliderY += DEFAULT_CONTROLS_HEIGHT + 5;
+			SliderY += imgui_Static(SliderX, SliderY, "Region config:");
+			Nav::ConvexRegionsManager::Convex& c = Nav::gConvexRegionsManager.regions[selectedRegion];
+			if (imgui_Button(SliderX, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Go To Region"))
+			{
+				r3dPoint3D pos = r3dPoint3D((c.maxPt.x + c.minPt.x) / 2, 0, (c.maxPt.y + c.minPt.y) / 2);
+				if(Terrain) pos.y = Terrain->GetHeight(pos) + 30.0f;
+			
+				if(Hud)	Hud->SetCamPos(pos);
+				else	gCam = pos;
+			}
+			if(c.haveSeed)
+			{
+				if (imgui_Button(SliderX + buttonW, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Remove Seed"))
+				{
+					c.haveSeed = false;
+				}
+			}
+			else
+			{
+				if (imgui_Button(SliderX + buttonW, SliderY, buttonW, DEFAULT_CONTROLS_HEIGHT, "Set Seed"))
+				{
+					uiMode = 2;
+				}
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void Editor_Level::ProcessAutodeskNavigation(float SliderX, float SliderY)
+{
+#if ENABLE_AUTODESK_NAVIGATION
+
+	static int selectedRegion = 0;
+	//	0 - normal mode, 1 - create agent mode, 2 - navigate agent mode
+	//	3 - create obstacle
+	//	4 - create 100 agents around the point
+	//	5 - define seed point
+	static int uiMode = 0;
+
+	static bool doReinit = false;
+	static r3dTL::TArray<AutodeskNavAgent *> testAgents;
+
+	if (uiMode == 1)
+	{
+		SliderY += imgui_Static(SliderX, SliderY, "Click on map to place test navigation agent");
+		if (imgui_lbr)
+		{
+ 			AutodeskNavAgent *a = gAutodeskNavMesh.CreateNavAgent(Navigation_GetWorldCursorPos());
+ 			testAgents.PushBack(a);
+ 			uiMode = 0;
+		}
+	}
+	else if (uiMode == 2)
+	{
+		SliderY += imgui_Static(SliderX, SliderY, "Click on map to define navigation target");
+		if (imgui_lbr)
+		{
+			r3dPoint3D target = Navigation_GetWorldCursorPos();
+			for (uint32_t i = 0; i < testAgents.Count(); ++i)
+			{
+				testAgents[i]->StartMove(target);
+				if(Keyboard->IsPressed(kbsLeftShift)) break;
+			}
+			uiMode = 0;
+		}
+	}
+	else if (uiMode == 3)
+	{
+		SliderY += imgui_Static(SliderX, SliderY, "Click on map to define obstacle position");
+		if (imgui_lbr)
+		{
+			r3dPoint3D target = Navigation_GetWorldCursorPos();
+			r3dBoundBox bb;
+			bb.Org  = target;
+			bb.Size = r3dVector(4.0f, 4.0f, 4.0f);
+			bb.Org.x -= bb.Size.x / 2;
+			bb.Org.z -= bb.Size.z / 2;
+			
+			float rot = 0;
+			gAutodeskNavMesh.AddObstacle(bb, rot);
+			uiMode = 0;
+		}
+	}
+	else if (uiMode == 4)
+	{
+		SliderY += imgui_Static(SliderX, SliderY, "Click on map to define area of agents spawn");
+		if (imgui_lbr)
+		{
+			for (uint32_t i = 0; i < 100; ++i)
+			{
+				PxVec3 randomVec(r3dRandomFloat(), 0, r3dRandomFloat());
+				randomVec.normalize();
+				PxVec3 tp(UI_TargetPos.x, UI_TargetPos.y, UI_TargetPos.z);
+				randomVec = tp + randomVec * random(RAND_MAX) / static_cast<float>(RAND_MAX) * 20;
+				randomVec.y += 1000.0f;
+
+				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC|PxSceneQueryFilterFlag::eSTATIC));
+				PxSceneQueryFlags queryFlags(PxSceneQueryFlag::eIMPACT);
+				PxRaycastHit hit;
+				if (g_pPhysicsWorld->raycastSingle(randomVec, PxVec3(0, -1, 0), 20000.0f, queryFlags, hit, filter))
+				{
+					randomVec.y = hit.impact.y;
+				}
+
+				AutodeskNavAgent *a = gAutodeskNavMesh.CreateNavAgent(r3dPoint3D(randomVec.x, randomVec.y, randomVec.z));
+				testAgents.PushBack(a);
+			}
+			uiMode = 0;
+		}
+	}
+	else
+	{
+		Kaim::GeneratorParameters &gc = gAutodeskNavMesh.buildGlobalConfig;
+
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Entity Height (m)", &gc.m_entityHeight, 0.5f, 2.5f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Entity Radius (m)", &gc.m_entityRadius, 0.1f, 0.7f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Step Max (m)", &gc.m_stepMax, 0.1f, 1.5f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Slope Max (deg)", &gc.m_slopeMax, 0.1f, 90.0f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Raster Precision (m)", &gc.m_rasterPrecision, 0.01f, 1.0f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell size (m)", &gc.m_cellSize, 1.0f, 40.0f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Alt. Precision (m)", &gc.m_altitudeTolerance, 0.05f, 2.0f, "%-02.02f");
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "V. Sample Step (m)", &gc.m_advancedParameters.m_altitudeToleranceSamplingStep, 0.01f, 0.7f, "%-02.02f");
+
+		static int visNavMesh = 1;
+		SliderY += imgui_Checkbox(SliderX, SliderY, "Visualize Navigation Mesh", &visNavMesh, 1);
+		gAutodeskNavMesh.doDebugDraw = visNavMesh != 0;
+
+		float button2W = DEFAULT_CONTROLS_WIDTH / 2;
+		if (imgui_Button(SliderX, SliderY, button2W, DEFAULT_CONTROLS_HEIGHT, "Build Navigation Mesh"))
+		{
+			gAutodeskNavMesh.BuildForCurrentLevel();
+			doReinit = true;
+		}
+		if (imgui_Button(SliderX + button2W, SliderY, button2W, DEFAULT_CONTROLS_HEIGHT, "Export level to obj"))
+		{
+			gAutodeskNavMesh.ExportToObj();
+		}
+		SliderY += DEFAULT_CONTROLS_HEIGHT;
+		SliderY += imgui_Static(SliderX, SliderY, "Navigation test:");
+		float button3W = DEFAULT_CONTROLS_WIDTH / 3;
+
+		if (imgui_Button(SliderX, SliderY, button3W, DEFAULT_CONTROLS_HEIGHT, "Create agent"))
+		{
+			uiMode = 1;
+		}
+		if (imgui_Button(SliderX + button3W, SliderY, button3W, DEFAULT_CONTROLS_HEIGHT, "Navigate to"))
+		{
+			uiMode = 2;
+		}
+		if (imgui_Button(SliderX + button3W * 2, SliderY, button3W, DEFAULT_CONTROLS_HEIGHT, "Create obstacle"))
 		{
 			uiMode = 3;
 		}
 		SliderY += DEFAULT_CONTROLS_HEIGHT;
-		if (imgui_Button(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, DEFAULT_CONTROLS_HEIGHT, "Build Navigation Mesh"))
+		if (imgui_Button(SliderX, SliderY, button2W, DEFAULT_CONTROLS_HEIGHT, "Create 100 agents"))
 		{
-			gNavMesh.BuildForCurrentLevel();
-			gNavMeshActorsManager.Init(gNavMesh);
+			uiMode = 4;
 		}
-
-		SliderY += DEFAULT_CONTROLS_HEIGHT * 2;
-
-		if (imgui_Button(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, DEFAULT_CONTROLS_HEIGHT, "Save navigation data"))
+		if (imgui_Button(SliderX + button2W, SliderY, button2W, DEFAULT_CONTROLS_HEIGHT, "Remove all agents"))
 		{
-			gNavMesh.Save(r3dGameLevel::GetHomeDir());
+			for (uint32_t i = 0; i < testAgents.Count(); ++i)
+			{
+				gAutodeskNavMesh.DeleteNavAgent(testAgents[i]);
+			}
+			testAgents.Clear();
 		}
-		SliderY += DEFAULT_CONTROLS_HEIGHT * 2;
-
-		SliderY += imgui_Static(SliderX, SliderY, "Navigation test:");
-		if (imgui_Button(SliderX, SliderY, DEFAULT_CONTROLS_WIDTH / 3, DEFAULT_CONTROLS_HEIGHT, "Create agent"))
-		{
-			uiMode = 1;
-		}
-		if (imgui_Button(SliderX + DEFAULT_CONTROLS_WIDTH / 3, SliderY, DEFAULT_CONTROLS_WIDTH / 3, DEFAULT_CONTROLS_HEIGHT, "Navigate to"))
-		{
-			uiMode = 2;
-		}
-		if (imgui_Button(SliderX + DEFAULT_CONTROLS_WIDTH * 2 / 3, SliderY, DEFAULT_CONTROLS_WIDTH / 3, DEFAULT_CONTROLS_HEIGHT, "Remove all"))
-		{
-			gNavMeshActorsManager.RemoveAllAgents();
-		}
-
-		SliderY += DEFAULT_CONTROLS_HEIGHT;
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Min accel", &minAccel, 0.0f, 500.0f, "%-02.02f", 1);
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Max accel", &maxAccel, 0.0f, 500.0f, "%-02.02f", 1);
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Min speed", &minSpeed, 0.0f, 100.0f, "%-02.02f", 1);
-		SliderY += imgui_Value_Slider(SliderX, SliderY, "Max speed", &maxSpeed, 0.0f, 100.0f, "%-02.02f", 1);
-
-		float a1 = std::min(minAccel, maxAccel);
-		float s1 = std::min(minSpeed, maxSpeed);
-		float a2 = std::max(minAccel, maxAccel);
-		float s2 = std::max(minSpeed, maxSpeed);
-
-		minAccel = a1;
-		maxAccel = a2;
-		minSpeed = s1;
-		maxSpeed = s2;
-
 	}
-#endif // ENABLE_RECAST_NAVIGATION
+	
+	if (doReinit && Nav::gNavMeshBuildComplete != 0)
+	{
+		gAutodeskNavMesh.Init();
+		doReinit = false;
+		testAgents.Clear();
+	}
+
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -15086,19 +14969,6 @@ void Editor_Level::ProcessLightProbesCreate()
 
 	PushUniformGrid( bbox.Org + r3dPoint3D( bbox.Size.x / 2, bbox.Size.y, bbox.Size.z / 2 ), bbox.Size.x, bbox.Size.z, r3dColor( 0, 191, 0 ) ) ;
 
-	INT64 estimeted_memory = INT64( (xend - xstart) * 0.25f ) * INT64( (yend - ystart) * 0.25f ) * INT64( (zend - zstart) * 0.25f ) * 8;
-
-	char msg[ 256 ];
-	sprintf( msg, "Estimated memory requirement: %.1f MB",  float( estimeted_memory / 1024 / 1024 ) );
-
-	SliderY += imgui_Static( SliderX, SliderY, msg );
-
-	if( estimeted_memory > 512 * 1024 * 1024 )
-	{
-		SliderY += imgui_Static( SliderX, SliderY, "Please shrink light probe area" );
-		SliderY += imgui_Static( SliderX, SliderY, "until memory requirment is less than 512 MB" );
-	}
-	else
 	{
 		if( imgui_Button( SliderX, SliderY, 360, 22, "CREATE" ) )
 		{
@@ -15117,8 +14987,8 @@ void Editor_Level::ProcessLightProbesEdit()
 	float SliderX = r3dRenderer->ScreenW-375;
 	float SliderY = 85;
 
-	const static char* lpbarnames[] =	{ "Populate"	, "Review"		, "Paint"		} ;
-	enum								{ LP_POPULATE	, LP_REVIEW		, LP_PAINT		} ;
+	const static char* lpbarnames[] =	{ "Populate"	, "Review"		, "Paint"		};
+	enum								{ LP_POPULATE	, LP_REVIEW		, LP_PAINT		};
 
 	static int lpBarIndex = 1 ;
 
@@ -15132,7 +15002,7 @@ void Editor_Level::ProcessLightProbesEdit()
 	{
 		if( lastPaintActive )
 		{
-			g_pProbeMaster->UpdateProximity();
+			g_pProbeMaster->UpdateProbeRadiuses();
 		}
 	}
 
@@ -15184,7 +15054,7 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			info = g_pProbeMaster->GetInfo();
 
-			sts = g_pProbeMaster->GetSettings() ;
+			sts = g_pProbeMaster->GetSettings();
 
 			static float selectedTileX = 0.f;
 			static float selectedTileZ = 0.f;
@@ -15197,8 +15067,8 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			r3dBoundBox bbox;
 
-			float tileSizeX = info.CellSizeX * info.ProximityCellsInTileX;
-			float tileSizeZ = info.CellSizeZ * info.ProximityCellsInTileZ;
+			float tileSizeX = info.CellSizeX * info.ProbeCellsInTileX;
+			float tileSizeZ = info.CellSizeZ * info.ProbeCellsInTileZ;
 
 			bbox.Org.x = (int)selectedTileX * tileSizeX + info.ProbeMapWorldXStart;
 			bbox.Org.z = (int)selectedTileZ * tileSizeZ + info.ProbeMapWorldZStart;
@@ -15213,7 +15083,7 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			g_pProbeMaster->SetSettings( sts );
 
-			if( imgui_Button( SliderX, SliderY, 360, 22, "Repopulate Probes" ) )
+			if( imgui_Button( SliderX, SliderY, 360, 22, "Repopulate Tile Probes" ) )
 			{
 				int canceled = false ;
 
@@ -15233,7 +15103,69 @@ void Editor_Level::ProcessLightProbesEdit()
 				}
 			}
 
-			SliderY += 24 ;
+			SliderY += 33;
+
+			if( imgui_Button( SliderX, SliderY, 360, 22, "Repopulate Level Probes" ) )
+			{
+				int canceled = false;
+
+				ProbeMaster::Info info = g_pProbeMaster->GetInfo();
+
+				int count = 0;
+
+				for( int z = 0, e = info.ActualProbeTileCountZ; z < e; z ++ )
+				{
+					for( int x = 0, e = info.ActualProbeTileCountX; x < e; x ++ )
+					{
+						count += g_pProbeMaster->GetProbeCount( x, z );
+					}
+				}
+
+				if( count && IDYES != MessageBoxA( r3dRenderer->HLibWin, "Warning: this will delete all probes on the level. Proceed?", "Warning", MB_YESNO ) )
+				{
+					canceled = true ;
+				}
+
+				if( !canceled )
+				{
+					for( int z = 0, e = info.ActualProbeTileCountZ; z < e; z ++ )
+					{
+						for( int x = 0, e = info.ActualProbeTileCountX; x < e; x ++ )
+						{
+							g_pProbeMaster->PopulateProbes( x, z );
+						}
+					}
+				}
+			}
+			SliderY += 24;
+
+			if( imgui_Button( SliderX, SliderY, 360, 22, "Clear Level Probes" ) )
+			{
+				int canceled = false ;
+
+				ProbeMaster::Info info = g_pProbeMaster->GetInfo();
+
+				int count = 0;
+
+				for( int z = 0, e = info.ActualProbeTileCountZ; z < e; z ++ )
+				{
+					for( int x = 0, e = info.ActualProbeTileCountX; x < e; x ++ )
+					{
+						count += g_pProbeMaster->GetProbeCount( x, z );
+					}
+				}
+
+				if( count && IDYES != MessageBoxA( r3dRenderer->HLibWin, "Warning: this will delete all probes on the level. Proceed?", "Warning", MB_YESNO ) )
+				{
+					canceled = true ;
+				}
+
+				if( !canceled )
+				{
+					g_pProbeMaster->ClearProbes();
+				}
+			}
+			SliderY += 24;
 		}
 		break ;
 
@@ -15242,7 +15174,7 @@ void Editor_Level::ProcessLightProbesEdit()
 			{
 				const ProbeMaster::Info& info = g_pProbeMaster->GetInfo();
 
-				r3dBoundBox bbox ;
+				r3dBoundBox bbox;
 
 				bbox.Org = r3dPoint3D(	info.ProbeMapWorldXStart, 
 										info.ProbeMapWorldYStart,
@@ -15255,29 +15187,43 @@ void Editor_Level::ProcessLightProbesEdit()
 				PushBoundingBox( bbox, r3dColor( 0, 0, 191 ) );
 			}
 
-			if( imgui_Button( SliderX, SliderY, 360, 22, "Test" ) )
-			{
-				g_pProbeMaster->Test() ;
-				r_need_recalc_probes->SetInt( 1 ) ;
-			}
-
-			SliderY += 24 ;
 
 			if( imgui_Button( SliderX, SliderY, 360, 22, "Update All" ) )
 			{
-				r_need_recalc_probes->SetInt( 1 ) ;
+				r_need_recalc_probes->SetInt( 1 );
 			}
 
-			SliderY += 24 ;
+			SliderY += 24;
 
 			if( imgui_Button( SliderX, SliderY, 360, 22, "Update Dirty" ) )
 			{
 				r_need_recalc_probes->SetInt( 2 ) ;
 			}
 
-			SliderY += 24 ;
+			SliderY += 33;
 
-			int rgb16 = g_pProbeMaster->GetSettings().ProbeTextureFmt == D3DFMT_R5G6B5 ;
+			if( imgui_Button( SliderX, SliderY, 360, 22, "Delete All Probes" ) )
+			{
+				if( IDYES == MessageBoxA( r3dRenderer->HLibWin, "Warning: this will delete all probes on the level. Proceed?", "Warning", MB_YESNO ) )
+				{
+					g_pProbeMaster->DeleteAllProbes();
+				}
+			}
+
+			SliderY += 24;
+
+			if( imgui_Button( SliderX, SliderY, 360, 22, "Reset Probe Area" ) )
+			{
+				if( IDYES == MessageBoxA( r3dRenderer->HLibWin, "Warning: this will delete all probes on the level. Proceed?", "Warning", MB_YESNO ) )
+				{
+					g_pProbeMaster->Reset();
+				}
+			}
+
+			SliderY += 33;
+
+#if 0
+			int rgb16 = g_pProbeMaster->GetSettings().ProbeTextureFmt == D3DFMT_R5G6B5;
 
 			const char* Name = rgb16 ? "Switch to 32 bit volume texture" : "Switch to 16 bit volume texture" ;
 
@@ -15288,7 +15234,7 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			SliderY += 24 ;
 
-			rgb16 = g_pProbeMaster->GetSettings().ProbeTextureFmt == D3DFMT_R5G6B5 ;
+			rgb16 = g_pProbeMaster->GetSettings().ProbeTextureFmt == D3DFMT_R5G6B5;
 
 			if( rgb16 )
 			{
@@ -15303,6 +15249,7 @@ void Editor_Level::ProcessLightProbesEdit()
 					r_need_update_probes->SetInt( 1 ) ;
 				}
 			}
+#endif
 
 			//------------------------------------------------------------------------
 
@@ -15340,31 +15287,68 @@ void Editor_Level::ProcessLightProbesEdit()
 				static float lp_skybounce = 0;
 				static float lp_skydirect = 0;
 				static float lp_sunbounce = 0;
-				static float lp_outsky = 0;
+				static float lp_dyna_coef = 0;
 
 				lp_skybounce = r_lp_sky_bounce->GetFloat();
 				lp_skydirect = r_lp_sky_direct->GetFloat();
 				lp_sunbounce = r_lp_sun_bounce->GetFloat();
-				lp_outsky = r_lp_out_sky->GetFloat();
+				lp_dyna_coef = r_lp_dyna_coef->GetFloat();
+
+				ProbeMaster::Settings sts = g_pProbeMaster->GetSettings();
+
+				SliderY += imgui_DrawColorPicker( SliderX, SliderY, "Default Bounce Up", &sts.DefaultBounceColor_Up, 360, false );
+				SliderY += imgui_DrawColorPicker( SliderX, SliderY, "Default Bounce Down", &sts.DefaultBounceColor_Down, 360, false );
+
+				if( memcmp( &sts, &g_pProbeMaster->GetSettings(), sizeof sts ) )
+				{
+					g_pProbeMaster->UpdateDefaultProbe();
+				}
 
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sky Bounce", &lp_skybounce, 0.f, 4.f, "%.2f" );
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sky Direct", &lp_skydirect, 0.f, 4.f, "%.2f" );
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Sun Bounce", &lp_sunbounce, 0.f, 4.f, "%.2f" );
-				SliderY += imgui_Value_Slider( SliderX, SliderY, "Out Sky Direct", &lp_outsky, 0.f, 4.f, "%.2f" );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Dyn. Lights Bounce", &lp_dyna_coef, 0.f, 8.f, "%.2f" );
 
-				r_lp_out_sky->SetFloat( lp_outsky );
+				static float MAX_XZRadius;
+				static float MAX_YRadius;
+				static float RadiusExpansion;
+
+				MAX_XZRadius = sts.MaximumProbeRadius;
+				MAX_YRadius = sts.MaximumProbeYRadius;
+				RadiusExpansion = sts.ProbeRadiusExpansion;
+
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Max Probe XZ Radius", &MAX_XZRadius, 4.0f, 32.0f, "%.0f" );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Max Probe Y Radius", &MAX_YRadius, 2.0f, 16.0f, "%.0f" );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Radius Expansion", &RadiusExpansion, 0.0f, 2.0f, "%.0f" );
+
+				int needAdjustRadius = RadiusExpansion != (int)sts.ProbeRadiusExpansion;
+
+				sts.ProbeRadiusExpansion = (int)RadiusExpansion;
+				sts.MaximumProbeRadius = (int)MAX_XZRadius;
+				sts.MaximumProbeYRadius = (int)MAX_YRadius;
+
+				g_pProbeMaster->SetSettings( sts );
 
 				if( lp_skybounce != r_lp_sky_bounce->GetFloat()
 						||
 					lp_skydirect != r_lp_sky_direct->GetFloat()
 						||
 					lp_sunbounce != r_lp_sun_bounce->GetFloat()
+						||
+					lp_dyna_coef != r_lp_dyna_coef->GetFloat()
 					)
 				{
 					r_lp_sky_bounce->SetFloat( lp_skybounce );
 					r_lp_sky_direct->SetFloat( lp_skydirect );
 					r_lp_sun_bounce->SetFloat( lp_sunbounce );
+					r_lp_dyna_coef->SetFloat( lp_dyna_coef );
 
+					r_need_update_probes->SetInt( 1 );
+				}
+
+				if( needAdjustRadius )
+				{
+					g_pProbeMaster->AdjustProbeRadiuses();
 					r_need_update_probes->SetInt( 1 );
 				}
 			}
@@ -15383,6 +15367,38 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			if( needShowProbes )
 			{
+				// show neighboring dynamic VPLs
+				{
+					static int doVisualize = 0;
+
+					SliderY += imgui_Checkbox( SliderX, SliderY, "Show Dynamic VPLs", &doVisualize, 1 );
+
+					if( doVisualize )
+					{
+						const ProbeMaster::ProbeProxies& proxies = g_pProbeMaster->GetSelectedProbes();
+
+						for( int i = 0, e = (int)proxies.Count(); i < e; i ++ )
+						{
+							const Probe& probe = *g_pProbeMaster->GetProbe( proxies[ i ]->Idx );
+
+							for( int l = 0, e = (int)Probe::NUM_LOCAL_VPL; l < e; l ++ )
+							{
+								ProbeIdx vplIdx = probe.SH_LocalVPLProbeIndexes[ l ];
+								if( vplIdx.CombinedIdx == -1 )
+									break;
+
+								const Probe& vpl = *g_pProbeMaster->GetProbe( vplIdx );
+
+								r3dBoundBox bb = ProbeProxy::CreateBB();
+
+								bb.Org += vpl.Position;
+
+								PushBoundingBox( bb, r3dColor::green );
+							}
+						}
+					}
+				}
+
 				static float showRad = 0.f ;
 				showRad = r_show_probes_radius->GetFloat() ;
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Show Radius", &showRad, 16.f, 2048.f, "%.1f" ) ;
@@ -15399,9 +15415,11 @@ void Editor_Level::ProcessLightProbesEdit()
 				showModeNames.push_back( "Bounce Side 0" ) ;
 				showModeNames.push_back( "Bounce Side 1" ) ;
 				showModeNames.push_back( "Bounce Side 2" ) ;
-				showModeNames.push_back( "Final Colors" ) ;
+				showModeNames.push_back( "Static Colors" ) ;
+				showModeNames.push_back( "Dynamic Colors" ) ;
+				showModeNames.push_back( "Composite Colors" ) ;
 
-				const float LIST_HEIGHT = 177.f ;
+				const float LIST_HEIGHT = 220.f ;
 
 				float offset = 0.f ;
 
@@ -15434,37 +15452,13 @@ void Editor_Level::ProcessLightProbesEdit()
 						SliderY += imgui_Static( SliderX, SliderY, " " ) ;
 					}
 				}
-
-				int debug_proximity = !!r_lp_show_proximity->GetInt() ;
-				SliderY += imgui_Checkbox( SliderX, SliderY, "Debug Proximity", &debug_proximity, 1 ) ;
-				r_lp_show_proximity->SetInt( !!debug_proximity ) ;
-
-				if( debug_proximity )
-				{
-					const ProbeMaster::Info& info = g_pProbeMaster->GetInfo();
-
-					static float deb_cell_x ;
-					deb_cell_x = r_lp_show_proximity_x->GetInt() ;
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Cell X", &deb_cell_x, 0.f, info.TotalProbeProximityCellsCountX - 1, "%.0f" ) ;
-					r_lp_show_proximity_x->SetInt( (int) deb_cell_x ) ;
-
-					static float deb_cell_y ;
-					deb_cell_y = r_lp_show_proximity_y->GetInt() ;
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Cell Y", &deb_cell_y, 0.f, info.TotalProbeProximityCellsCountY - 1, "%.0f" ) ;
-					r_lp_show_proximity_y->SetInt( (int) deb_cell_y ) ;
-
-					static float deb_cell_z ;
-					deb_cell_z = r_lp_show_proximity_z->GetInt() ;
-					SliderY += imgui_Value_Slider( SliderX, SliderY, "Cell Z", &deb_cell_z, 0.f, info.TotalProbeProximityCellsCountZ - 1, "%.0f" ) ;
-					r_lp_show_proximity_z->SetInt( (int) deb_cell_z ) ;
-				}
 			}
 
-			char probeCoordMsg[ 128 ] ;
-			int3 proxCell = g_pProbeMaster->GetProximityCell() ;
-			sprintf( probeCoordMsg, "Prox. cell: [%4d,%4d,%4d]", proxCell.x, proxCell.y, proxCell.z ) ;
+			char probeCoordMsg[ 128 ];
+			int3 probeCell = g_pProbeMaster->GetCameraProbeCell();
+			sprintf( probeCoordMsg, "Prox. cell: [%4d,%4d,%4d]", probeCell.x, probeCell.y, probeCell.z );
 
-			SliderY += imgui_Static( SliderX, SliderY, probeCoordMsg ) ;
+			SliderY += imgui_Static( SliderX, SliderY, probeCoordMsg );
 
 			// probe volume
 			{
@@ -15472,19 +15466,22 @@ void Editor_Level::ProcessLightProbesEdit()
 
 				SliderY += imgui_Static( SliderX, SliderY, "Probe volume span" );
 
-				static float xspan, yspan, zspan;
+				static float xspan, yspan, zspan, offy;
 
 				xspan = settings.ProbeTextureSpanX;
 				yspan = settings.ProbeTextureSpanY;
 				zspan = settings.ProbeTextureSpanZ;
+				offy = settings.ProbeVolumeOffsetY;
 
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "X Span", &xspan, 16.f, 512.f, "%.0fm" );
-				SliderY += imgui_Value_Slider( SliderX, SliderY, "Y Span", &yspan, 4.f, 64.f, "%.0fm" );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Y Span", &yspan, 4.f, 128.f, "%.0fm" );
 				SliderY += imgui_Value_Slider( SliderX, SliderY, "Z Span", &zspan, 16.f, 512.f, "%.0fm" );
+				SliderY += imgui_Value_Slider( SliderX, SliderY, "Y Offset", &offy, 0.f, yspan * 0.5f, "%.1fm" );
 
 				settings.ProbeTextureSpanX = xspan;
 				settings.ProbeTextureSpanY = yspan;
 				settings.ProbeTextureSpanZ = zspan;
+				settings.ProbeVolumeOffsetY = offy;
 
 				g_pProbeMaster->SetSettings( settings );
 			}
@@ -15544,17 +15541,85 @@ void Editor_Level::ProcessLightProbesEdit()
 
 			}
 
-			ProbeMaster::Info inf = g_pProbeMaster->GetInfo();
+			// visualize volume texture
+			{
+				static int doVisualize = 0;
+
+				SliderY += imgui_Checkbox( SliderX, SliderY, "Show Probe Volume Texture", &doVisualize, 1 );
+
+				if( doVisualize )
+				{
+					static float direction = 0;
+					SliderY += imgui_Value_Slider( SliderX, SliderY, "Direction", &direction, 0, Probe::NUM_DIRS - 0.75f, "%.0f" );
+
+					direction = fmodf( direction, 1.0f ) >= 0.5f ? ceilf( direction ) : floorf( direction );
+
+					int idir = R3D_MIN( R3D_MAX( (int)direction, 0 ), Probe::NUM_DIRS - 1 );
+
+					r3dTexture* tex = g_pProbeMaster->GetProbeTexture( idir );
+
+					int probeTexDepth = g_pProbeMaster->GetSettings().ProbeTextureDepth;
+
+					static float slice = 0;
+					SliderY += imgui_Value_Slider( SliderX, SliderY, "Slice", &slice, 0.0f, probeTexDepth - 0.75f, "%.0f" );
+
+					g_DoSliceVisualize = 1;
+					g_SliceToVisualize = ((int)slice + 0.5f) / probeTexDepth;
+					g_3DTexForVisualizeSlice = tex;
+
+					static int debugRasterization = 0;
+
+					int prevDebugRasterization = debugRasterization;
+
+					SliderY += imgui_Checkbox( SliderX, SliderY, "Debug Rasterization", &debugRasterization, 1 );
+
+					if( debugRasterization )
+					{
+						static float endProbe = 0.f;					
+						SliderY += imgui_Value_Slider( SliderX, SliderY, "End Probe", &endProbe, 0.0f, g_pProbeMaster->GetVisibleProbesNum() - 0.75f, "%.0f" );
+
+						int iEndProbe = (int)endProbe;
+
+						g_pProbeMaster->DEBUG_SetEndProbe( iEndProbe );
+					}
+					else
+					{
+						g_pProbeMaster->DEBUG_SetEndProbe( -1 );
+					}
+				}
+				else
+				{
+					g_DoSliceVisualize = 0;
+				}
+			}
+
+			ProbeMaster::MemStats stats = g_pProbeMaster->GetMemStats();
+
+			int totalSize = 0;
 
 			char memmsg[ 512 ];
-			sprintf( memmsg, "Proximity map size: %0.1f MB", inf.ProximityMapSize / 1024.f / 1024.f );
 
+			sprintf( memmsg, "Probes: %0.1f MB", stats.ProbeSize / 1024.f / 1024.f );
+			totalSize += stats.ProbeSize;
+			SliderY += imgui_Static( SliderX, SliderY, memmsg );
+
+			sprintf( memmsg, "Total system memory: %0.1f MB", totalSize / 1024.f / 1024.f );
+			SliderY += imgui_Static( SliderX, SliderY, memmsg );
+
+			sprintf( memmsg, "Probe volume GPU memory: %0.1f MB", stats.ProbeVolumeSize / 1024.f / 1024.f );
 			SliderY += imgui_Static( SliderX, SliderY, memmsg );
 
 		}
 		break ;
 	case LP_PAINT:
 		{
+			const static char* paintBarNames[] =	{ "Add"		, "Remove"		} ;
+			enum									{ PPB_ADD	, PPB_REMOVE	} ;
+
+			imgui_Toolbar( SliderX, SliderY, 360, 33, &g_ProbePaint_AddOrDelete, 0, paintBarNames, R3D_ARRAYSIZE( paintBarNames ), false );
+
+			SliderY += 33;
+
 			if( !r_show_probes->GetInt() )
 			{
 				r_show_probes->SetInt( 1 ) ;
@@ -15614,17 +15679,531 @@ void Editor_Level::ProcessLightProbesEdit()
 #endif
 }
 
+//------------------------------------------------------------------------
+
+float Editor_Level::ProcessStaticSky( float SliderX, float SliderY )
+{
+	int StaticCustomMeshEnable = r3dGameLevel::Environment.bCustomStaticMeshEnable ;
+	int StaticSkyEnable = r3dGameLevel::Environment.bStaticSkyEnable;
+
+	if( StaticSkyEnable )
+	{
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Skydome Rot Y", &r3dGameLevel::Environment.SkyDomeRotationY, 0.f, 360.f, "%.1f" );
+
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Use Custom Skydome Mesh", &StaticCustomMeshEnable, 1 ) ;
+		r3dGameLevel::Environment.bCustomStaticMeshEnable = !!StaticCustomMeshEnable ;
+
+		static char SkyTexName[ MAX_PATH ] ;
+		static char SkyGlowTexName[ MAX_PATH ] ;
+		static char SkyMeshName[ MAX_PATH ] ;
+
+#define STATICSKY_PATH "Data/SkyDome/"
+		const int FILE_LIST_HEIGHT = 330 ;
+
+		if( !StaticCustomMeshEnable )
+		{
+			int PlanarMapping = !!r3dGameLevel::Environment.bStaticSkyPlanarMapping ;
+
+			SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Planar Mapping", &PlanarMapping, 1 ) ;
+
+			r3dGameLevel::Environment.bStaticSkyPlanarMapping = !!PlanarMapping ;
+
+			if( PlanarMapping )
+			{
+				static float TexScale = 0.f ; 
+				static float TexOffset = 0.f ; 
+
+				const float UPSCALE = 100000.f ;
+
+				TexScale	= r3dGameLevel::Environment.StaticTexGenScaleX * UPSCALE ;
+				TexOffset	= r3dGameLevel::Environment.StaticTexGetOffsetX ;
+
+				SliderY += imgui_Value_Slider(SliderX, SliderY, "Texcoord Scale", &TexScale, 0.001f, 16.f, "%-02.3f", 1, false);
+				SliderY += imgui_Value_Slider(SliderX, SliderY, "Texcoord Offset", &TexOffset, -1.f, 1.f, "%-02.2f", 1, false);
+
+				r3dGameLevel::Environment.StaticTexGenScaleX = TexScale / UPSCALE ;
+				r3dGameLevel::Environment.StaticTexGenScaleY = r3dGameLevel::Environment.StaticTexGenScaleX ;
+
+				r3dGameLevel::Environment.StaticTexGetOffsetX = TexOffset ;
+				r3dGameLevel::Environment.StaticTexGetOffsetY = r3dGameLevel::Environment.StaticTexGetOffsetX ;
+			}
+		}
+		else
+		{
+			static float offset = 0.f ;
+
+			SliderY += imgui_Static( SliderX, SliderY, "Mesh List:", 360);
+
+			char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
+
+			_splitpath( r3dGameLevel::Environment.StaticSkyMeshName.c_str(), drive, dir, name, ext ) ;
+
+			strcpy( SkyMeshName, name ) ;
+			strcat( SkyMeshName, ext ) ;
+
+			if( imgui_FileList( SliderX, SliderY, 360, FILE_LIST_HEIGHT, STATICSKY_PATH "*.sco", SkyMeshName, &offset ) )
+			{
+				char SS1[ MAX_PATH ];
+
+				sprintf( SS1, STATICSKY_PATH"%s", SkyMeshName ) ;
+
+				r3dGameLevel::Environment.SetStaticSkyMesh( SS1 );
+			}
+
+			SliderY += FILE_LIST_HEIGHT ;
+		}
+
+		// phases
+		{
+			SliderY += imgui_Static( SliderX, SliderY, "Phases", 360 );
+
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Dawn Start", &r3dGameLevel::Environment.DawnStart, 0.f, r3dGameLevel::Environment.DawnEnd - 0.5f, "%.2f" );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Dawn End", &r3dGameLevel::Environment.DawnEnd, r3dGameLevel::Environment.DawnStart + 0.5f, r3dGameLevel::Environment.DuskStart - 0.5f, "%.2f" );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Dusk Start", &r3dGameLevel::Environment.DuskStart, r3dGameLevel::Environment.DawnEnd + 0.5f, r3dGameLevel::Environment.DuskEnd - 0.5f, "%.2f" );
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Dusk End", &r3dGameLevel::Environment.DuskEnd, r3dGameLevel::Environment.DuskStart + 0.5f, 24.f, "%.2f" );
+
+			// current phase
+			{
+				char CurrPhase[ 256 ];
+
+				r3dAtmosphere::SkyPhase phase0, phase1;
+				float lerpT;
+
+				GetAdjecantSkyPhasesAndLerpT( &phase0, &phase1, &lerpT );			
+
+				if( phase0 == phase1 )
+				{
+					sprintf( CurrPhase, "Current phase: %s", SkyPhaseToName( phase0 ) );
+				}
+				else
+				{
+					sprintf( CurrPhase, "Current phase: %s->%s", SkyPhaseToName( phase0 ), SkyPhaseToName( phase1 ) );
+				}
+
+				SliderY += imgui_Static( SliderX, SliderY, CurrPhase );
+			}
+
+			SliderY += imgui_Static( SliderX, SliderY, "Set parameters for:", 360 );
+
+			stringlist_t phaseNames;
+
+			phaseNames.push_back( "Dawn" );
+			phaseNames.push_back( "Day" );
+			phaseNames.push_back( "Dusk" );
+			phaseNames.push_back( "Night" );
+
+			static float phases_offset;
+			static int index;
+
+			const int HEIGHT = 88;
+
+			imgui_DrawList( SliderX, SliderY, 360 - 22, HEIGHT, phaseNames, &phases_offset, &index );
+
+			SliderY += HEIGHT;
+
+			index = R3D_MIN( R3D_MAX( index, 0 ), r3dAtmosphere::SKY_PHASE_COUNT - 1 );
+
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Sky Intensity", &r3dGameLevel::Environment.StaticSkyIntensities[ index ], 0, 20.f, "%.2f" );
+
+			SliderY += imgui_Static( SliderX, SliderY, "Sky Texture:", 360);
+
+			static float sky_tex_offset = 0.f, sky_glow_tex_offset = 0.0f;
+
+			// get sky texture names without path
+			{
+				char drive[ 16 ], dir[ 512 ], name[ 512 ], ext[ 16 ] ;
+
+				_splitpath( r3dGameLevel::Environment.StaticSkyTextureNames[ index ].c_str(), drive, dir, name, ext ) ;
+
+				strcpy( SkyTexName, name );
+				strcat( SkyTexName, ext );
+
+				_splitpath( r3dGameLevel::Environment.StaticSkyGlowTextureNames[ index ].c_str(), drive, dir, name, ext ) ;
+
+				strcpy( SkyGlowTexName, name );
+				strcat( SkyGlowTexName, ext );
+			}
+
+			bool texesChanged = false;
+
+			r3dAtmosphere::SkyPhaseTextureNames skyTexNames = r3dGameLevel::Environment.StaticSkyTextureNames;
+			r3dAtmosphere::SkyPhaseTextureNames skyGlowTexNames = r3dGameLevel::Environment.StaticSkyGlowTextureNames;
+
+			const float TEX_FILE_LIST_HEIGHT = 200.0f;
+
+			if( imgui_FileList( SliderX, SliderY, 360, TEX_FILE_LIST_HEIGHT, STATICSKY_PATH "*.dds", SkyTexName, &sky_tex_offset ) )
+			{
+				char SS1[ MAX_PATH ];
+
+				sprintf( SS1, STATICSKY_PATH"%s", SkyTexName );
+
+				skyTexNames[ index ] = SS1;
+
+				texesChanged = true;				
+			}
+
+			SliderY += TEX_FILE_LIST_HEIGHT;
+
+			float delta = imgui_Static( SliderX, SliderY, "Glow Texture:", 360);
+
+			if( imgui_Button( SliderX + 95, SliderY + 6, 80, 16, "Clear" ) )
+			{
+				SkyGlowTexName[ 0 ] = 0;
+				skyGlowTexNames[ index ] = SkyGlowTexName;
+				texesChanged = true;
+			}
+
+			SliderY += delta;
+
+			if( imgui_FileList( SliderX, SliderY, 360, TEX_FILE_LIST_HEIGHT, STATICSKY_PATH "*.dds", SkyGlowTexName, &sky_glow_tex_offset ) )
+			{
+				char SS1[ MAX_PATH ];
+
+				sprintf( SS1, STATICSKY_PATH"%s", SkyGlowTexName );
+
+				skyGlowTexNames[ index ] = SS1;
+
+				texesChanged = true;			
+			}
+
+			SliderY += TEX_FILE_LIST_HEIGHT;
+
+			if( texesChanged )
+			{
+				r3dGameLevel::Environment.SetStaticSkyTextures( skyTexNames, skyGlowTexNames );
+			}
+
+			SliderY += imgui_Static( SliderX, SliderY, "", 360);
+		}
+	}
+
+	return SliderY;
+}
+
+//------------------------------------------------------------------------
+
+float Editor_Level::ProcessSkySun( float SliderX, float SliderY )
+{
+	extern int g_DrawSunPath;
+	g_DrawSunPath = 1;
+
+	g_bSkyDomeNeedFullUpdate = true;
+
+	static int HoffmanParamID = 0;
+
+	const static char* list2[] =	{ "HG g"	, "Inscatter M"		, "Ray M"	, "Mie M"	, "Sun Int"	, "Turbidity"	, "Static Sky"	};
+	enum							{ HG_g		, Inscatter_M		, Ray_M		, Mie_M		, Sun_Int	, Turbidity		, Static_Sky	};
+
+	imgui_Toolbar(5, 80, 770, 35, &HoffmanParamID, 0, list2, R3D_ARRAYSIZE( list2 ), false );
+
+	g_pDesktopManager->Begin( "ed_env" );
+
+	SliderY += imgui_Value_Slider(SliderX, SliderY, "ParticlesShading Coeff", &r3dGameLevel::Environment.ParticleShadingCoef , 0, 1, "%-02.2f" );
+
+	r3dGameLevel::Environment.SunLightOn = !!r3dGameLevel::Environment.SunLightOn ;
+	SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Sun Light", &r3dGameLevel::Environment.SunLightOn, 1 ) ;
+
+	if( HoffmanParamID != Static_Sky )
+	{
+		static float bloom_coef = 0.f ;
+
+		SliderY += imgui_Static( SliderX, SliderY, "SUN LIGHT PARAMETERS", 360);
+
+		float dayT = EnvGetDayT();
+
+		float lastDirectionAngle = r3dGameLevel::Environment.SunDirectionAngle;
+		float lastSunElevationAngle = r3dGameLevel::Environment.SunElevationAngle;
+
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "Sun Direction", &r3dGameLevel::Environment.SunDirectionAngle, -180, 180, "%-02.0f" );
+		SliderY += imgui_Value_Slider(SliderX, SliderY, "North<->South", &r3dGameLevel::Environment.SunElevationAngle, -90, 90, "%-02.0f" );
+
+		if( lastDirectionAngle != r3dGameLevel::Environment.SunDirectionAngle 
+				||
+			lastSunElevationAngle != r3dGameLevel::Environment.SunElevationAngle )
+		{
+			ResetShadowCache();
+		}
+
+		SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Sun color", &r3dGameLevel::Environment.SunColor, 360, dayT );
+
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Sun Intensity", &r3dGameLevel::Environment.SunIntensity, 1.0f, 16.0f, "%-02.2f" );
+
+		SliderY += imgui_Static( SliderX, SliderY, "BACKLIGHTING PARAMETERS", 360);
+
+		SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Backlight color", &r3dGameLevel::Environment.BacklightColor, 360, dayT );
+		SliderY += imgui_Value_Slider( SliderX, SliderY, "Backlight Power", &r3dGameLevel::Environment.BacklightIntensity, 0.0f, 1.0f, "%-02.2f" );
+
+		SliderY += imgui_Static( SliderX, SliderY, "PROCEDURAL SKYDOME", 360);
+		SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Skydome color", &r3dGameLevel::Environment.SunAmbientColor, 360, dayT );
+		SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Lambda", &r3dGameLevel::Environment.LambdaCol, 360, dayT);
+	}
+
+	extern float fLambda[3];
+
+	r3dColor LCol = r3dGameLevel::Environment.GetCurrentLambdaColor();
+
+	fLambda[0] = float(LCol.R) / 256.0f;
+	fLambda[1] = float(LCol.G) / 256.0f;
+	fLambda[2] = float(LCol.B) / 256.0f;
+
+	SliderY += 10;
+
+	float dayT = EnvGetDayT();
+
+	if (HoffmanParamID == HG_g )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "HG g",			&r3dGameLevel::Environment.HGg,					360, 300, 0.9f,0.999f, 10, 10, 2, 2, dayT ); 
+	if (HoffmanParamID == Inscatter_M )	SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Inscatter M",		&r3dGameLevel::Environment.InscatteringMultiplier,360, 300, 0.0f,0.5f, 10, 10, 2, 2, dayT); 
+	if (HoffmanParamID == Ray_M )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Ray",				&r3dGameLevel::Environment.BetaRayMultiplier,		360, 300, 0.0f,20.0f, 10, 10, 2, 2, dayT);
+	if (HoffmanParamID == Mie_M )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Mie",				&r3dGameLevel::Environment.BetaMieMultiplier,		360, 300, 0.0f,0.05f, 10, 10, 2, 2, dayT);
+	if (HoffmanParamID == Sun_Int )		SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Int",			&r3dGameLevel::Environment.SunIntensityCoef,			360, 300, 0.0f,3.0f, 10, 10, 2, 2, dayT);
+	if (HoffmanParamID == Turbidity )	SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Turbidity",		&r3dGameLevel::Environment.Turbitity,				360, 300, 0.0f,20.0f, 10, 10, 2, 2, dayT); 
+	if (HoffmanParamID == Static_Sky )
+	{
+		r3dGameLevel::Environment.bStaticSkyEnable = !!r3dGameLevel::Environment.bStaticSkyEnable ;
+
+		int StaticSkyEnable = r3dGameLevel::Environment.bStaticSkyEnable ;
+
+		SliderY += imgui_Checkbox( SliderX, SliderY, 360, 22, "Enable Static Sky", &StaticSkyEnable, 1 ) ;
+
+		if( r3dGameLevel::Environment.bStaticSkyEnable ^ StaticSkyEnable )
+		{
+			if( StaticSkyEnable )
+				r3dGameLevel::Environment.EnableStaticSky();
+			else
+				r3dGameLevel::Environment.DisableStaticSky();
+		}
+
+		SliderY = ProcessStaticSky( SliderX, SliderY );
+	}
+
+	g_pDesktopManager->End();
+
+	return SliderY;
+}
+
+//------------------------------------------------------------------------
+
+static void FixPresetExt( char* preset )
+{
+	char drive[ 16 ], folder[ MAX_PATH ], name[ MAX_PATH ], ext[ MAX_PATH ];
+
+	_splitpath( preset, drive, folder, name, ext );
+
+	if( stricmp( ext, ".xml" ) )
+	{
+		strcpy( preset, drive );
+		strcat( preset, folder );
+		strcat( preset, name );
+		strcat( preset, ext );
+		strcat( preset, ".xml" );
+	}
+}
+
+float Editor_Level::ProcessLightSetup( float SliderX, float SliderY )
+{
+	const static char* tablist[]	=	{ "Presets"	, "Sun Setup"	,	"Moon Setup",	"Sky Setup"	};
+	enum								{ PRESETS	, SUN_SETUP		,	MOON_SETUP,		SKY_SETUP	};
+
+	static int SelectedTab;
+
+	imgui_Toolbar( 5, 80, 770, 35, &SelectedTab, 0, tablist, R3D_ARRAYSIZE( tablist ), false );
+
+	g_pDesktopManager->Begin( "ed_env" );
+
+	float dayT = EnvGetDayT();
+	float nightT = EnvGetNightT();
+
+	switch( SelectedTab )
+	{
+	case PRESETS:
+		{
+			static char PresetName[ 512 ];
+			static float offset = 0.f;
+
+			static bool listValueChanged = false;
+
+			int needReload = 0;
+
+			const float FL_HEIGHT = 200.f;
+
+#define R3D_ENV_PRESET_PATH "Data\\EnvPresets\\"
+
+			if( imgui_FileList( SliderX, SliderY, 360, FL_HEIGHT, R3D_ENV_PRESET_PATH"*.xml", PresetName, &offset, true, listValueChanged ) )
+			{
+				needReload = 1;
+			}
+
+			SliderY += FL_HEIGHT;
+
+			listValueChanged = false;
+
+			if( imgui2_StringValueEx( SliderX, SliderY, DEFAULT_CONTROLS_WIDTH, "Preset Name: ", PresetName ) )
+			{
+				listValueChanged = true;
+			}
+
+			SliderY += 22.f;
+
+			const float BTN_HEIGHT = 22.f;
+
+			if( imgui_Button( SliderX, SliderY, 180, BTN_HEIGHT, "Load" ) )
+			{
+				char fullPath[ MAX_PATH * 2 ];
+				sprintf( fullPath, R3D_ENV_PRESET_PATH"%s", PresetName );
+				LoadEnvironmentFromXML( fullPath );
+			}
+
+			if( imgui_Button( SliderX + 180, SliderY, 180, BTN_HEIGHT, "Save" ) )
+			{
+				char fullPath[ MAX_PATH * 2 ];
+				FixPresetExt( PresetName );
+				sprintf( fullPath, R3D_ENV_PRESET_PATH"%s", PresetName );
+				mkdir( R3D_ENV_PRESET_PATH );
+				SaveEnvironmentToXML( fullPath );
+			}
+
+			SliderY += BTN_HEIGHT + 1;
+		}
+		break;
+
+	case SUN_SETUP:
+		{
+			extern int g_DrawSunPath;
+			g_DrawSunPath = 1;
+
+			SliderY += imgui_Static(SliderX, SliderY, "SUN LIGHT PARAMETERS", 360);
+
+			float lastDirectionAngle = r3dGameLevel::Environment.SunDirectionAngle;
+			float lastSunElevationAngle = r3dGameLevel::Environment.SunElevationAngle;
+
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Sun Direction", &r3dGameLevel::Environment.SunDirectionAngle, -180, 180, "%-02.0f");
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "North<->South", &r3dGameLevel::Environment.SunElevationAngle, -90, 90, "%-02.0f");
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Sun Angle Range", &r3dGameLevel::Environment.SunMovementAngleRange, 160.f, 220.f, "%.1f" );
+
+			if( lastDirectionAngle != r3dGameLevel::Environment.SunDirectionAngle 
+				||
+			lastSunElevationAngle != r3dGameLevel::Environment.SunElevationAngle )
+			{
+				ResetShadowCache();
+			}
+
+			SliderY += imgui_Static( SliderX, SliderY, "Sun Color" );
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Sun color", &r3dGameLevel::Environment.SunColor, 360, dayT );
+
+			if( imgui_Button( SliderX, SliderY, 220.f, 22.f, "Sync Sun Color with Night Settings" ) )
+			{
+				memcpy( r3dGameLevel::Environment.SunColor.Values[ 0 ].val, 
+						r3dGameLevel::Environment.MoonLightColor.Values[ r3dGameLevel::Environment.MoonLightColor.NumValues - 1 ].val,
+						sizeof r3dTimeGradient2::val_s().val );
+				memcpy( r3dGameLevel::Environment.SunColor.Values[ r3dGameLevel::Environment.SunColor.NumValues - 1 ].val,
+						r3dGameLevel::Environment.MoonLightColor.Values[ 0 ].val,
+						sizeof r3dTimeGradient2::val_s().val );
+			}
+
+			SliderY += 24.f;
+
+			SliderY += imgui_Static( SliderX, SliderY, "Sun Spot Color" );
+			char lamdaformecmp[ sizeof r3dGameLevel::Environment.LambdaCol ];
+			memcpy( lamdaformecmp, &r3dGameLevel::Environment.LambdaCol, sizeof lamdaformecmp );
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Lambda", &r3dGameLevel::Environment.LambdaCol, 360, dayT);
+			if( memcmp( lamdaformecmp, &r3dGameLevel::Environment.LambdaCol, sizeof lamdaformecmp ) )
+			{
+				g_bSkyDomeNeedFullUpdate = 1;
+			}
+
+
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Sun Light Intensity", &r3dGameLevel::Environment.SunIntensity, 1.0f, 16.0f, "%-02.2f");
+
+			SliderY += imgui_Static( SliderX, SliderY, "BACKLIGHTING PARAMETERS");
+
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Backlight color", &r3dGameLevel::Environment.BacklightColor, 360, dayT);
+			SliderY += imgui_Value_Slider( SliderX, SliderY, "Backlight Power", &r3dGameLevel::Environment.BacklightIntensity, 0.0f, 1.0f, "%-02.2f" );
+
+			SliderY += imgui_Static( SliderX, SliderY, "Ambient Color");
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Ambient Color", &r3dGameLevel::Environment.SunAmbientColor, 360, dayT);
+
+			if( imgui_Button( SliderX, SliderY, 220.f, 22.f, "Sync Ambient with Night Settings" ) )
+			{
+				memcpy(	r3dGameLevel::Environment.SunAmbientColor.Values[ 0 ].val, 
+						r3dGameLevel::Environment.MoonAmbientColor.Values[ r3dGameLevel::Environment.MoonAmbientColor.NumValues - 1 ].val,
+						sizeof r3dTimeGradient2::val_s().val );
+
+				memcpy(	r3dGameLevel::Environment.SunAmbientColor.Values[ r3dGameLevel::Environment.SunAmbientColor.NumValues - 1 ].val, 
+						r3dGameLevel::Environment.MoonAmbientColor.Values[ 0 ].val,
+						sizeof r3dTimeGradient2::val_s().val );
+			}
+
+			SliderY += 24.f;
+
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "HG g",			&r3dGameLevel::Environment.HGg,						360, 300, 0.90f,0.999f, 10, 10, 2, 2, dayT); 
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Inscatter M",		&r3dGameLevel::Environment.InscatteringMultiplier,	360, 300, 0.0f,0.5f, 10, 10, 2, 2, dayT); 
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Ray",				&r3dGameLevel::Environment.BetaRayMultiplier,		360, 300, 0.0f,20.0f, 10, 10, 2, 2, dayT);
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Mie",				&r3dGameLevel::Environment.BetaMieMultiplier,		360, 300, 0.0f,0.05f, 10, 10, 2, 2, dayT);
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Int",			&r3dGameLevel::Environment.SunIntensityCoef,		360, 300, 0.0f,3.0f, 10, 10, 2, 2, dayT);
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Turbidity",		&r3dGameLevel::Environment.Turbitity,				360, 300, 0.0f,20.0f, 10, 10, 2, 2, dayT); 
+#if 0
+			SliderY += imgui_Static( SliderX, SliderY, "Sun Spot Color");
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Sun Spot Color", &r3dGameLevel::Environment.SunSpotColor, 36, dayT0);
+			
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Spot Size",	&r3dGameLevel::Environment.SunSpotAmplify, 360, 300, 10.0f, 16.0f );
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Spot Falloff",	&r3dGameLevel::Environment.SunSpotPow, 360, 300, 0.25f, 256.0f );
+			SliderY += imgui_DrawFloatGradient(SliderX, SliderY, "Sun Spot Intensity",	&r3dGameLevel::Environment.SunSpotIntensity, 360, 300, 0.25f, 16.0f );
+#endif
+		}
+		break;
+
+	case MOON_SETUP:
+		{
+			g_DrawMoonPath = 1;
+
+			int needReset = 0;
+
+			float prevVal = r3dGameLevel::Environment.MoonLongitude;
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Moon Longitude", &r3dGameLevel::Environment.MoonLongitude, -180, +180, "%-02.0f");
+			if( prevVal != r3dGameLevel::Environment.MoonLongitude )
+				needReset = 1;
+
+			prevVal = r3dGameLevel::Environment.MoonLatitude;
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Moon Latitude", &r3dGameLevel::Environment.MoonLatitude, 0, 90, "%-02.0f");
+			if( prevVal != r3dGameLevel::Environment.MoonLatitude )
+				needReset = 1;
+
+			SliderY += imgui_Value_Slider(SliderX, SliderY, "Moon Light Intensity", &r3dGameLevel::Environment.MoonIntensity, 0.0f, 16.0f, "%-02.2f");
+
+			SliderY += imgui_Static( SliderX, SliderY, "Moon Light Color" );
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Moon Light Color", &r3dGameLevel::Environment.MoonLightColor, 360, nightT);
+
+			SliderY += imgui_Static( SliderX, SliderY, "Moon Ambient Color" );
+			SliderY += imgui_DrawColorGradient(SliderX, SliderY, "Moon Ambient Color", &r3dGameLevel::Environment.MoonAmbientColor, 360, nightT);
+
+			if( needReset )
+			{
+				ResetShadowCache();
+			}
+		}
+		break;
+
+	case SKY_SETUP:
+		{
+			SliderY = ProcessStaticSky( SliderX, SliderY );
+		}
+		break;
+	}
+
+	g_pDesktopManager->End();
+
+	return SliderY;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 void ProcessZombieMod()
 {
-#if ENABLE_ZOMBIES
-	obj_AI_Player* plr = 0;
+	obj_Player* plr = 0;
 	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
 	{
 		if( obj->isObjType(OBJTYPE_Human) )
 		{
-			plr = static_cast< obj_AI_Player* >( obj );
+			plr = static_cast< obj_Player* >( obj );
 			break;
 		}
 	}
@@ -15662,9 +16241,8 @@ void ProcessZombieMod()
 	v1 ? g_ZombieModDebugVisFlags |= 1 : g_ZombieModDebugVisFlags &= ~1;
 	if (g_ZombieModDebugVisFlags & 1)
 	{
-		SliderY += imgui_Static(SliderX, SliderY, "Blue � visibility, green � sound, yellow � smell");
+		SliderY += imgui_Static(SliderX, SliderY, "Blue ?visibility, green ?sound, yellow ?smell");
 	}
-#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -15693,7 +16271,6 @@ float DrawMaterialTypeSelection( float SliderX, float SliderY, char (&TypeName)[
 	if(!foundMat)
 	{
 		SelectedType = -1;
-		SelectedOffset = 0;
 	}
 
 	const float HEIGHT = 180.f ;
@@ -15772,23 +16349,24 @@ void Editor_Level :: ProcessMaterials()
 			obj->Class->Name == "obj_Road" ||
 			obj->Class->Name == "obj_LightMesh" ||
 			obj->Class->Name == "obj_ApexDestructible" ||
-			obj->Class->Name == "obj_Sprite"
+			obj->Class->Name == "obj_Sprite" ||
+			obj->Class->Name == "CollectionElementObjectProxy"
 		)
 		{
 			if (UI_TargetMaterial)
 			{
 				Font_Label->PrintF(20,90,r3dColor(255,255,255), "MAT: %s [%s]", UI_TargetMaterial->Name, UI_TargetMaterial->DepotName);
+			}
 
-				if (Keyboard->IsPressed(kbsLeftControl)) 
+			if (Keyboard->IsPressed(kbsLeftControl)) 
+			{
+				if (EditMaterial != UI_TargetMaterial && UI_TargetMaterial)
 				{
-					if (EditMaterial != UI_TargetMaterial && UI_TargetMaterial)
-					{
-						InitValueTrackers();
-					}
-
-					EditMaterial = UI_TargetMaterial;
-					if(EditMaterial) EditMaterial->WasEdited = 1;
+					InitValueTrackers();
 				}
+
+				EditMaterial = UI_TargetMaterial;
+				if(EditMaterial) EditMaterial->WasEdited = 1;
 			}
 		}
 	}
@@ -16205,9 +16783,6 @@ namespace
 		SerializeXMLVal<W>( "collections_brush_radius"	, root, &BrushRadius					);
 		SerializeXMLVal<W>( "water_brush_radius"		, root, &g_fWaterPlaneBrushRadius		);
 		SerializeXMLVal<W>( "water_edit_mode"			, root, &g_iWaterEditMode				);
-		SerializeXMLVal<W>( "battle_brush_radius"		, root, &g_fBattleZoneBrushRadius		);
-		SerializeXMLVal<W>( "battle_height_on_terrain"	, root, &g_fBattleZoneHeightOnTerrain	);
-		SerializeXMLVal<W>( "battle_edit_mode"			, root, &g_iBattleZoneEditMode			);
 
 		for(int i=0; i<TE_NUM; ++i)
 		{
@@ -16445,8 +17020,6 @@ void Editor_Level::Release()
 	g_bEditMode = false;
 	SaveSettings( r3dGameLevel::GetHomeDir() );
 
-	Unload_Collections();
-
 	SAFE_DELETE( m_pPreviewBuffer );
 
 	r3dRenderer->DeleteTexture( ScopeTest_Reticle ) ;
@@ -16630,36 +17203,12 @@ void DebugCyclePlayerAura()
 		if( obj->isObjType(OBJTYPE_Human) )
 		{
 
-			obj_AI_Player::AuraType& at = static_cast< obj_AI_Player* >( obj )->m_AuraType ;
+			obj_Player::AuraType& at = static_cast< obj_Player* >( obj )->m_AuraType ;
 
-			at = obj_AI_Player::AuraType( at + 1 );
-			if( at >= obj_AI_Player::AT_COUNT )
+			at = obj_Player::AuraType( at + 1 );
+			if( at >= obj_Player::AT_COUNT )
 			{
-				at = obj_AI_Player::AuraType( 0 );
-			}
-		}
-	}
-}
-
-void DebugTransparrentCamo( float alpha, int ToggleOrOn )
-{
-	static bool on = true;
-	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj) )
-	{
-		if( obj->isObjType(OBJTYPE_Human) )
-		{
-			obj_AI_Player *pl = static_cast< obj_AI_Player* >( obj );
-
-			if( ToggleOrOn )
-			{
-				pl->SetTransparentCamouflage( alpha );
-			}
-			else
-			{
-				if( pl->camoTimeLine.currentTimeSpot < 1.0f )
-					pl->SetTransparentCamouflage( 1.0f );
-				else
-					pl->SetTransparentCamouflage( alpha );
+				at = obj_Player::AuraType( 0 );
 			}
 		}
 	}
@@ -16673,7 +17222,7 @@ void DebugPlayerDie()
 		{
 			if( obj->isObjType(OBJTYPE_Human) )
 			{
-				static_cast< obj_AI_Player* >( obj )->DoDeath( 0, true, storecat_INVALID );
+				static_cast< obj_Player* >( obj )->DoDeath( 0, true, storecat_INVALID );
 			}
 		}
 	}
@@ -16699,7 +17248,7 @@ void DebugPlayerRagdoll()
 				force.y = u_GetRandom(-1, 1);
 				force.z = u_GetRandom(-1, 1);
 				force *= 100;
-				static_cast< obj_AI_Player* >( obj )->DoRagdoll(ragdoll, 255, &force);
+				static_cast< obj_Player* >( obj )->DoRagdoll(ragdoll, 255, &force);
 				ragdoll = !ragdoll;
 			}
 		}
@@ -16808,7 +17357,9 @@ void DumpRTStats()
 				ztype = "Z_SHADOW" ;
 			}
 
-			sprintf( buffer, "%-32s = %-5dx%-5d - %-5dkb %s\n", sb->GetDebugName(), (int)sb->Width, (int)sb->Height, bytes / 1024, ztype ) ;
+			const char* dbgName = sb->GetDebugName();
+
+			sprintf( buffer, "%-32s = %-5dx%-5d - %-5dkb %s\n", dbgName ? dbgName : "(unknown)", (int)sb->Width, (int)sb->Height, bytes / 1024, ztype ) ;
 		}
 		else
 		{
@@ -16842,13 +17393,16 @@ void DumpRTStats()
 	fclose( fout ) ;
 }
 
-int g_ProbePaint_Active ;
-int g_DrawProbePlane ;
+int g_ProbePaint_Active;
 
-float g_ProbePaint_BrushRadius = 4.f ;
-float g_ProbePaint_BrushHeight = 5.f ;
-float g_ProbePaint_HorizontalDensity = 2.f ;
-float g_ProbePaint_VerticalDensity = 2.5f ;
+int g_ProbePaint_AddOrDelete;
+
+int g_DrawProbePlane;
+
+float g_ProbePaint_BrushRadius = 4.f;
+float g_ProbePaint_BrushHeight = 5.f;
+float g_ProbePaint_HorizontalDensity = 2.f;
+float g_ProbePaint_VerticalDensity = 2.5f;
 
 float g_ProbePaint_Y = -FLT_MAX ;
 
@@ -16876,7 +17430,7 @@ void ProbePaint()
 
 	r3dPoint3D lower ;
 
-	const r3dColor BRUSH_COLOR = r3dColor(255,255,100) ;
+	const r3dColor BRUSH_COLOR = g_ProbePaint_AddOrDelete ? r3dColor( 255, 0, 0 ) : r3dColor(255,255,100);
 
 	const int SEGMENTS = 48 ;
 	const int VERTICAL_SEGMENT_STEP = 3 ;
@@ -17001,6 +17555,8 @@ void ProbePaint()
 
 	const float PROBE_ELEVATION = g_pProbeMaster->GetSettings().ProbeElevation ;
 
+	ProbeMaster::Info info = g_pProbeMaster->GetInfo();
+
 	if( Mouse->IsPressed( r3dMouse::mLeftButton ) )
 	{
 		for( float z = lower.z - g_ProbePaint_BrushRadius, e = lower.z + g_ProbePaint_BrushRadius ; z < e ; z +=  g_ProbePaint_HorizontalDensity )
@@ -17011,18 +17567,18 @@ void ProbePaint()
 				float dz = z - lower.z ;
 
 				if( dx * dx + dz * dz > SQR_R )
-					continue ;
+					continue;
 
-				for( float y = lower.y, e = upper.y ; y < e ; y +=  g_ProbePaint_VerticalDensity )
+				if( !g_ProbePaint_AddOrDelete )
 				{
-					float ay = y ;
+					float startY = lower.y;
 
 					switch( g_ProbePaint_FollowMode )
 					{
 					case PP_TERRAIN:
 						{
-							float th = terra_GetH( r3dPoint3D( x, y, z ) ) ;
-							ay = R3D_MAX( th + PROBE_ELEVATION, ay ) ;
+							float th = terra_GetH( r3dPoint3D( x, startY, z ) );
+							startY = R3D_MAX( th + PROBE_ELEVATION, startY );
 						}
 						break ;
 
@@ -17033,27 +17589,48 @@ void ProbePaint()
 
 							if( target )
 							{
-								ay = R3D_MAX( CL.NewPosition.y + PROBE_ELEVATION, y ) ;
+								startY = R3D_MAX( CL.NewPosition.y + PROBE_ELEVATION, startY ) ;
 							}
 
-							float th = terra_GetH( r3dPoint3D( x, y, z ) ) ;
-							ay = R3D_MAX( th + PROBE_ELEVATION, ay ) ;
+							float th = terra_GetH( r3dPoint3D( x, startY, z ) ) ;
+							startY = R3D_MAX( th + PROBE_ELEVATION, startY ) ;
 						}
 						break ;
 					}
 
-					r3dPoint3D curPos = r3dPoint3D( x, ay, z ) ;
-
-					if( Probe* lp = g_pProbeMaster->GetClosestProbe( curPos ) )
+					for( float y = lower.y, e = upper.y ; y < e ; y +=  g_ProbePaint_VerticalDensity )
 					{
-						float len = ( lp->Position - curPos ).Length() ;
-						if( len < g_ProbePaint_HorizontalDensity * SQRT_2 
-								||
-							len < g_ProbePaint_VerticalDensity * SQRT_2 )
-							continue ;
-					}
+						if( y < startY - g_ProbePaint_VerticalDensity )
+							continue;
 
-					AddPaintProbe( curPos ) ;
+						float ay = R3D_MAX( y, startY );
+
+						r3dPoint3D curPos = r3dPoint3D( x, ay, z ) ;
+
+						if( curPos.x < info.ProbeMapWorldXStart || curPos.x >= info.ProbeMapWorldXStart + info.ProbeMapWorldNominalXSize 
+								||
+							curPos.y < info.ProbeMapWorldYStart || curPos.y >= info.ProbeMapWorldYStart + info.ProbeMapWorldNominalYSize
+								||
+							curPos.z < info.ProbeMapWorldZStart || curPos.z >= info.ProbeMapWorldZStart + info.ProbeMapWorldNominalZSize )
+						{
+							continue;
+						}
+
+						if( Probe* lp = g_pProbeMaster->GetClosestProbe( curPos ) )
+						{
+							float len = ( lp->Position - curPos ).Length() ;
+							if( len < g_ProbePaint_HorizontalDensity * SQRT_2 
+								||
+								len < g_ProbePaint_VerticalDensity * SQRT_2 )
+								continue ;
+						}
+
+						PaintProbeAdd( curPos );
+					}
+				}
+				else
+				{
+					PaintProbeRemove( r3dPoint3D( x, lower.y, z ) );
 				}
 			}
 		}
@@ -17113,13 +17690,16 @@ void DeleteSelectedProbes()
 	}
 
 	g_pProbeMaster->DeleteProbes( pickedObjs );
-	g_pProbeMaster->UpdateProximity();
+	g_pProbeMaster->UpdateProbeRadiuses();
 	g_Manipulator3d.PickerResetPicked();
 #endif
 }
 
-void AddPaintProbe( const r3dPoint3D& pos )
+void PaintProbeAdd( const r3dPoint3D& pos )
 {
+	if( g_pProbeMaster->IsOccupied( pos ) )
+		return;
+
 #if R3D_ALLOW_LIGHT_PROBES
 #if R3D_PROBEUNDO_ENABLE
 	if( !g_pPaintProbesUndo )
@@ -17128,12 +17708,23 @@ void AddPaintProbe( const r3dPoint3D& pos )
 	}
 #endif
 
-	ProbeIdx pidx = g_pProbeMaster->AddProbe( pos ) ;
+	ProbeIdx pidx = g_pProbeMaster->AddProbe( pos, true, NULL ) ;
 
 	if( g_pPaintProbesUndo )
 	{
 		g_pPaintProbesUndo->AddItem( pidx, *g_pProbeMaster->GetProbe( pidx ) ) ;
 	}
+#endif
+}
+
+void PaintProbeRemove( const r3dPoint3D& pos )
+{
+#if R3D_ALLOW_LIGHT_PROBES
+#if R3D_PROBEUNDO_ENABLE
+	r3d_assert( "Implement me!" );
+#endif
+
+	g_pProbeMaster->DeleteProbesInCylinder( pos, g_ProbePaint_BrushRadius, g_ProbePaint_BrushHeight );
 #endif
 }
 
@@ -17187,5 +17778,262 @@ void DisplayLumaInfo()
 	imgui_Static( 5, r3dRenderer->ScreenH-235, exp_val ) ;
 }
 
+void DrawSunPath()
+{
+	extern r3dSun* Sun;
+
+	if( Sun )
+	{
+		const float DISPLAY_RAD = 5000.f;
+
+		const float step = 0.05f;
+		for( float t = 0 ; t < 1.0f ; t += step )
+		{
+			r3dPoint3D vec0 = Sun->GetSunVecAtNormalizedTime( t );
+			r3dPoint3D vec1 = Sun->GetSunVecAtNormalizedTime( t + step );
+
+			vec0 = gCam + vec0 * DISPLAY_RAD;
+			vec1 = gCam + vec1 * DISPLAY_RAD;
+
+			r3dDrawUniformLine3D( vec0, vec1, gCam, r3dColor::green );
+		}
+
+		r3dPoint3D curVec = Sun->GetCurrentSunVec();
+
+		r3dPoint3D perp = curVec.Cross( r3dPoint3D(1,0,0) );
+
+		if( perp.Length() < 0.00001f )
+			perp = curVec.Cross( r3dPoint3D(0,1,0) );
+
+		perp.Normalize();
+
+		r3dPoint3D perp2 = perp.Cross( curVec );
+
+		perp2.Normalize();
+
+		r3dPoint3D centre = gCam + curVec * DISPLAY_RAD;
+
+		perp *= DISPLAY_RAD * 0.03125f;
+		perp2 *= DISPLAY_RAD * 0.03125f;
+
+		r3dDrawUniformLine3D( centre - perp, centre + perp, gCam, r3dColor::yellow );
+		r3dDrawUniformLine3D( centre - perp2, centre + perp2, gCam, r3dColor::yellow );
+
+		r3dRenderer->Flush();
+	}
+}
+
+void DrawMoonSpot()
+{
+	const float DISPLAY_RAD = 5000.f;
+
+	r3dPoint3D curVec = GetMoonVec();
+
+	r3dPoint3D perp = curVec.Cross( r3dPoint3D(1,0,0) );
+
+	if( perp.Length() < 0.00001f )
+		perp = curVec.Cross( r3dPoint3D(0,1,0) );
+
+	perp.Normalize();
+
+	r3dPoint3D perp2 = perp.Cross( curVec );
+
+	perp2.Normalize();
+
+	r3dPoint3D centre = gCam + curVec * DISPLAY_RAD;
+
+	perp *= DISPLAY_RAD * 0.03125f;
+	perp2 *= DISPLAY_RAD * 0.03125f;
+
+	r3dDrawUniformLine3D( centre - perp, centre + perp, gCam, r3dColor::yellow );
+	r3dDrawUniformLine3D( centre - perp2, centre + perp2, gCam, r3dColor::yellow );
+
+	r3dRenderer->Flush();
+}
+
+void VisualizeSlice( r3dTexture* tex, float slice )
+{
+	D3DPERF_BeginEvent( 0, L"VisualizeSlice" );
+
+	r3dRenderer->SetVertexShader( "VS_VISUALIZE_3DSLICE" );
+	r3dRenderer->SetPixelShader( "PS_VISUALIZE_3DSLICE" );
+
+	float xScale = 0.85f * r3dRenderer->ScreenH / r3dRenderer->ScreenW;
+	float yScale = 0.85f;
+
+	float vsConsts[ 2 ][ 4 ] = 
+	{
+		// float4 g_PosXfm : register( c0 );
+		xScale, yScale, 0.0f, 0.0f,
+		// float4 g_Slice  : register( c1 );
+		slice, 0, 0, 0 
+	};
+
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, vsConsts[0], 2 ) );
+
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+
+	r3dSetFiltering( R3D_POINT, 0 );
+
+	r3dRenderer->SetTex( tex );
+
+	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
+
+	{
+		r3dSetRestoreFSQuadVDecl setRestoreVDECL; (void)setRestoreVDECL;
+		r3dDrawFullScreenQuad( false );
+	}
+
+	r3dSetFwdColorShaders( r3dColor::red );
+	r3dRenderer->SetVertexShader();
+
+	const ProbeMaster::Info& info = g_pProbeMaster->GetInfo();
+	const ProbeMaster::Settings& settings = g_pProbeMaster->GetSettings();
+
+	float xLine = (float)info.ProbeVolumeCamCellX / settings.ProbeTextureWidth;
+	float zLine = (float)info.ProbeVolumeCamCellZ / settings.ProbeTextureHeight;
+
+	float xStart = ( 1.0f - xScale ) * r3dRenderer->ScreenW2;
+	float yStart = ( 1.0f - yScale ) * r3dRenderer->ScreenH2;
+
+	float xEnd = ( 1.0f + xScale ) * r3dRenderer->ScreenW2;
+	float yEnd = ( 1.0f + yScale ) * r3dRenderer->ScreenH2;
+
+	float W = xEnd - xStart;
+	float H = yEnd - yStart;
+
+	float xLine2D = xLine * ( xEnd - xStart ) + xStart;
+	float yLine2D = zLine * ( yEnd - yStart ) + yStart;
+
+	r3dDrawLine2D( xLine2D, yStart, xLine2D, yEnd, 2.0f, r3dColor::red );
+	r3dDrawLine2D( xStart, yLine2D, xEnd, yLine2D, 2.0f, r3dColor::red );
+
+	r3dRenderer->Flush();
+
+	//------------------------------------------------------------------------
+	// visualize dynamic updates
+	if( r_lp_fast_update->GetInt() )
+	{
+		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );
+
+		const ProbeMaster::ProbeVolumeTileDirtyArr& dirtiness = g_pProbeMaster->GetAnimatedDirtiness();
+
+		const ProbeMaster::Info& info = g_pProbeMaster->GetInfo();
+		const ProbeMaster::Settings& sts = g_pProbeMaster->GetSettings();
+
+		float sx0 = xStart;
+		float sy0 = yStart;
+
+		for( int tz = 0, te = dirtiness.Height(); tz < te; tz ++ )
+		{
+			for( int tx = 0, te = dirtiness.Width(); tx < te; tx ++ )
+			{
+				int dirt = dirtiness[ tz ][ tx ];
+
+				if( dirt )
+				{
+					int actualX = info.ProbeVolumeCamCellX - sts.ProbeTextureWidth / 2 + tx * ProbeMaster::PROBE_DIRTY_ARR_CELL_SIZE;
+					int actualZ = info.ProbeVolumeCamCellZ - sts.ProbeTextureHeight / 2 + tz * ProbeMaster::PROBE_DIRTY_ARR_CELL_SIZE;
+
+					float fsx = float(actualX) / sts.ProbeTextureWidth;
+					float fex = fsx + float( ProbeMaster::PROBE_DIRTY_ARR_CELL_SIZE ) / sts.ProbeTextureWidth;
+
+					float fsy = float(actualZ) / sts.ProbeTextureHeight;
+					float fey = fsy + float( ProbeMaster::PROBE_DIRTY_ARR_CELL_SIZE ) / sts.ProbeTextureHeight;
+
+					if( fsx < 0.0f ) fsx += 1.0f;
+					if( fsx > 1.0f ) fsx -= 1.0f;
+
+					if( fex < 0.0f ) fex += 1.0f;
+					if( fex > 1.0f ) fex -= 1.0f;
+
+					if( fsy < 0.0f ) fsy += 1.0f;
+					if( fsy > 1.0f ) fsy -= 1.0f;
+
+					if( fey < 0.0f ) fey += 1.0f;
+					if( fey > 1.0f ) fey -= 1.0f;
+
+					float scrXStart = fsx * W;
+					float scrXEnd = fex * W;
+
+					float scrYStart = fsy * H;
+					float scrYEnd = fey * H;
+
+					r3dColor paintClr = r3dColor( 255, 0, 0, dirt / 4 );
+
+					r3dSetFwdColorShaders( paintClr );
+					r3dRenderer->SetVertexShader();
+
+					if( fsx > fex && fsy > fey )
+					{
+						r3dDrawBox2D( scrXStart + sx0, scrYStart + sy0, W - scrXStart, H - scrYStart, paintClr );
+						r3dDrawBox2D( scrXStart + sx0, 0.0f + sy0, W - scrXStart, scrYEnd, paintClr );
+						r3dDrawBox2D( 0.0f + sx0, scrYStart + sy0, scrXEnd, H - scrYStart, paintClr );
+						r3dDrawBox2D( 0.0f + sx0, 0.0f + sy0, scrXEnd, scrYEnd, paintClr );
+					}
+					else
+					if( fsx > fex )
+					{
+						r3dDrawBox2D( scrXStart + sx0, scrYStart + sy0, W - scrXStart, scrYEnd - scrYStart, paintClr );
+						r3dDrawBox2D( 0.0f + sx0, scrYStart + sy0, scrXEnd, scrYEnd - scrYStart, paintClr );
+					}
+					else
+					if( fsy > fey )
+					{
+						r3dDrawBox2D( scrXStart + sx0, scrYStart + sy0, scrXEnd - scrXStart, H - scrYStart, paintClr );
+						r3dDrawBox2D( scrXStart + sx0, sy0, scrXEnd - scrXStart, scrYEnd, paintClr );
+					}
+					else
+					{
+						r3dDrawBox2D( scrXStart + sx0, scrYStart + sy0, scrXEnd - scrXStart, scrYEnd - scrYStart, paintClr );
+					}
+
+					r3dRenderer->Flush();
+				}
+			}
+		}
+	}
+
+	r3dRenderer->SetPixelShader();
+
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+
+	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
+
+	D3DPERF_EndEvent();
+}
+
+void SpawnZombie()
+{
+	r3dPoint3D spawnPos = UI_TargetPos;
+
+	obj_Zombie* z = static_cast<obj_Zombie *>( srv_CreateGameObject( "obj_Zombie", "obj_Zombie", spawnPos ) );
+
+	z->SetZombieState( EZombieStates::ZState_Sleep, true );
+
+	PKT_S2C_CreateZombie_s czs;
+
+	int heroId = 20183;
+
+	const HeroConfig* heroConfig = g_pWeaponArmory->getHeroConfig( heroId );
+
+	czs.FromID			= 575;
+	czs.spawnID			= 0;
+	czs.spawnPos		= spawnPos;
+	czs.spawnDir		= 0;
+	czs.moveCell		= r3dPoint3D( 0, 0, 0 );	// cell position from PKT_C2C_MoveSetCell
+	czs.HeroItemID		= 20183; // ItemID of base character
+	czs.HeadIdx			= rand() % heroConfig->getNumHeads();
+	czs.BodyIdx			= rand() % heroConfig->getNumBodys();
+	czs.LegsIdx			= rand() % heroConfig->getNumLegs();
+	czs.State			= rand() % 2 ? EZombieStates::ZState_Sleep : EZombieStates::ZState_Idle;
+	czs.FastZombie		= 0;
+	czs.WalkSpeed		= 2;
+	czs.RunSpeed		= 4;
+
+	memcpy(&z->CreateParams, &czs, sizeof(czs));
+
+	z->OnCreate();
+}
 
 #endif // FINAL_BUILD

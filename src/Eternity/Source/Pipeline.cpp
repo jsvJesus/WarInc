@@ -28,6 +28,11 @@ void r3dRenderPipeline::Render()
 {
 }
 
+void r3dRenderPipeline::AppendPostFXes()
+{
+
+}
+
 void r3dRenderPipeline::PostProcess()
 {
 }

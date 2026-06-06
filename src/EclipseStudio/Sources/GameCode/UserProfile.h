@@ -1,8 +1,5 @@
 #pragma once
 
-static const uint32_t MAX_NUM_RANKS = 60;
-extern int g_RanksPoints[MAX_NUM_RANKS];
-
 /// STATS TRACKING ///
 struct wiStatsTracking
 {
@@ -11,18 +8,17 @@ struct wiStatsTracking
 
 	int GD; // game dollars
 	int GP; // game points
-	int HP; // XP
+	int XP; // XP
 	wiStatsTracking& operator+=(const wiStatsTracking& rhs) 
 	{ 
-		HP+=rhs.HP; 
+		XP+=rhs.XP;
 		GP+=rhs.GP; 
 		GD+=rhs.GD;
 		return *this;
 	}
 	wiStatsTracking() { memset(this, 0, sizeof(*this)); }
-	wiStatsTracking(int rewardId, int gd, int gp, int hp)
-		: RewardID(rewardId), HP(hp), GP(gp), GD(gd) {}
-	int getTotalHP() const { return HP;}
+	wiStatsTracking(int rewardId, int gd, int gp, int xp)
+		: RewardID(rewardId), XP(xp), GP(gp), GD(gd) {}
 };
 
 // Items categories
@@ -32,58 +28,43 @@ enum STORE_CATEGORIES
 	storecat_INVALID	= 0,
 	storecat_Account	= 1,
 	storecat_Boost		= 2,
-	storecat_MysteryBox	= 3,
-	storecat_Items		= 4,
-	storecat_Abilities	= 5,
-	storecat_Airstrike	= 6,	// special type for artillery strikes, not visible in shop
-	storecat_LootBox	= 7,	// same as mystery box, but can not see content and can sell it
-	storecat_Package	= 9,	// special type for multiple items package
+	storecat_LootBox	= 7,
 
-	storecat_Characters	= 10,
-	storecat_Gear		= 11,
-	storecat_Heads		= 12,
-	storecat_HeadGear	= 13,
-	storecat_Camo		= 14,
-	storecat_Voice		= 15,
-	storecat_Heroes		= 16,
-	
+	storecat_Armor		= 11,
+	storecat_Backpack	= 12,	
+	storecat_Helmet		= 13,
+	storecat_HeroPackage	= 16,
+
 	storecat_FPSAttachment  = 19,
 
 	storecat_ASR		= 20,	// Assault Rifles
 	storecat_SNP		= 21,	// Sniper rifles
 	storecat_SHTG		= 22,	// Shotguns
-	storecat_MG		= 23,	// Machine guns
-	storecat_SUPPORT	= 24,	// grenade launchers, other heavy items
-	storecat_HG		= 25,	// handguns
+	storecat_MG			= 23,	// Machine guns
+	storecat_HG			= 25,	// handguns
 	storecat_SMG		= 26,	// submachineguns
-	storecat_GRENADES	= 27,   // special items like grenades, that goes into item slots
-	storecat_UsableItem     = 28,	// usable items, but not a weapon
-	storecat_MELEE			=29, // melee items (knifes, etc)
-	
+	storecat_GRENADE	= 27,	// grenades and everything that you can throw. Mines shouldn't be in this group!!!
+	storecat_UsableItem  = 28,	// usable items
+	storecat_MELEE		 =29,   // melee items (knifes, etc)
+	storecat_Food		= 30,	// food 
+	storecat_Water		= 33,	// water
+
 	storecat_NUM_ITEMS, // should be the last one!!
 };
 extern const char* STORE_CATEGORIES_NAMES[storecat_NUM_ITEMS];
-bool isWeaponCategory(STORE_CATEGORIES cat);
-bool isGearCategory(STORE_CATEGORIES cat);
-bool isItemCategory(STORE_CATEGORIES cat);
 
 struct wiStoreItem
 {
 	uint32_t itemID;
-	uint32_t price1day;
-	uint32_t price7day;
-	uint32_t price30day;
+
 	uint32_t pricePerm;
-	
-	// gold dollars price
-	uint32_t gd_price1day;
-	uint32_t gd_price7day;
-	uint32_t gd_price30day;
 	uint32_t gd_pricePerm;
+	
+	bool	isNew;
 
 	bool hasAnyPrice()
 	{
-		return price1day>0 || price7day>0 || price30day > 0 || pricePerm > 0 || gd_price1day > 0 || gd_price7day > 0 || gd_price30day > 0 || gd_pricePerm > 0;
+		return pricePerm > 0 || gd_pricePerm > 0;
 	}
 };
 
@@ -91,61 +72,49 @@ static const uint32_t MAX_NUM_STORE_ITEMS = 10000; // fixed at 10000 for now
 extern wiStoreItem g_StoreItems[MAX_NUM_STORE_ITEMS]; 
 extern uint32_t g_NumStoreItems;
 
-struct	wiStats
+namespace ReputationPoints
 {
-// NOTE: you MUST increase P2PNET_VERSION if you change this structure
+	enum Enum
+	{
+		Paragon = 1000,
+		Vigilante = 500,
+		Guardian = 250,
+		Lawman = 80,
+		Deputy = 20,
+		Constable = 10,
+		Civilian = -4,
+		Thug = -5,
+		Outlaw = -20,
+		Bandit = -100,
+		Hitman = -300,
+		Assassin = -600,
+		Villain = -1000,
+	};
+}
 
-	int	GamePoints;
-	int GameDollars;
-	int	HonorPoints;		// Your ranking points
-	int	SkillPoints;
+struct wiStats
+{
+	// character stats
+	int		XP;
+	int		TimePlayed;
+	int		Reputation;
+	int		SkillXPPool;
 
-	int	Kills;
-	int	Deaths;
+	// generic trackable stats
+	int		KilledZombies;	// normal zombie kills
+	int		KilledSurvivors;
+	int		KilledBandits;
 
-	int	Headshots;
-	int	AssistKills;
-
-	int	ShotsFired;
-	int	ShotsHits;
-
-	int	Wins;
-	int	Losses;
-	int	CaptureNeutralPoints;  // how many control points you've taken
-	int	CaptureEnemyPoints;  // how many control points you've taken
-
-	int	TimePlayed;	// time played in seconds
+	// not used stats, here for fun.
+	int		Kills;
+	int		Deaths;
+	int		ShotsFired;
+	int		ShotsHits;
 	
 	wiStats()
 	{
-		Reset();
-	}
-
-	void Reset()
-	{
 		memset(this, 0, sizeof(*this));
 	}
-
-	void operator +=(const wiStats& rhs)
-	{
-		GamePoints += rhs.GamePoints;
-		GameDollars += rhs.GameDollars;
-		HonorPoints += rhs.HonorPoints;
-		SkillPoints += rhs.SkillPoints;
-		Kills += rhs.Kills;
-		Deaths += rhs.Deaths;
-		Headshots += rhs.Headshots;
-		AssistKills += rhs.AssistKills;
-		ShotsFired += rhs.ShotsFired;
-		ShotsHits += rhs.ShotsHits;
-		Wins += rhs.Wins;
-		Losses += rhs.Losses;
-		CaptureNeutralPoints += rhs.CaptureNeutralPoints;
-		CaptureEnemyPoints += rhs.CaptureEnemyPoints;
-		TimePlayed += rhs.TimePlayed;
-	}
-
-	int getRankLevel() const;
 };
 
 enum WeaponAttachmentTypeEnum
@@ -159,8 +128,6 @@ enum WeaponAttachmentTypeEnum
 	WPN_ATTM_RECEIVER=5, // not visual
 	WPN_ATTM_STOCK=6, // not visual
 	WPN_ATTM_BARREL=7, // not visual
-	WPN_ATTM_PAINT=8,
-
 	WPN_ATTM_MAX
 };
 
@@ -180,159 +147,138 @@ struct wiWeaponAttachment
 	bool operator!=(const wiWeaponAttachment& rhs) { return !((*this)==rhs); }
 };
 
-struct wiWeaponAttachments
-{
-	// NOTE: you MUST increase P2PNET_VERSION if you change this structure
-	wiWeaponAttachment primary_attachments;
-	wiWeaponAttachment secondary_attachments;
-	wiWeaponAttachment sidearm_attachments;
-
-	wiWeaponAttachments() { Reset(); }
-	void Reset() {memset(this, 0, sizeof(*this)); }
-
-	bool operator==(const wiWeaponAttachments& rhs)
-	{
-		bool res = (primary_attachments==rhs.primary_attachments)
-			&& (secondary_attachments==rhs.secondary_attachments)
-			&& (sidearm_attachments==rhs.sidearm_attachments);
-		return res;
-	}
-	bool operator!=(const wiWeaponAttachments& rhs) { return !((*this)==rhs); }
-};
-
-struct	wiLoadoutSlot
-{
-// NOTE: you MUST increase P2PNET_VERSION if you change this structure
-	uint32_t LoadoutID;
-	int	Class;		// CUserSkills::EClassID
-	int	HonorPoints;
-	int	TimePlayed;
-
-	int	BodyMeshID;
-	int	BodyHeadID;
-	int	BodyHeadGearID;
-	int	BodyArmorID;
-	int	BodySkinID;
-	int	BodyVoiceID;
-
-	int	PrimaryWeaponID;
-	int	SecondaryWeaponID;
-	int	SidearmWeaponID;
-
-	// can be an item that you can use, can be a passibe ability
-	int	Item1;
-	int	Item2;
-	int	Item3;	
-	int	Item4;
-	
-	// skills data. NOTE: we don't need SpendSP here, it should be somewhere in CClientUserProfile
-	BYTE	SpendSP[3];	//SPs spend on all tiers
-	BYTE	Skills[30];	//CUserSkills::NUM_SKILLS_PER_TIER * CUserSkills::NUM_TIERS];
-
-	wiLoadoutSlot()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-
-	bool isEquipped(int itemID)
-	{
-		if(itemID == BodyMeshID) return true;
-		else if(itemID == BodyHeadID) return true;
-		else if(itemID == BodyHeadGearID) return true;
-		else if(itemID == BodyArmorID) return true;
-		else if(itemID == BodySkinID) return true;
-		else if(itemID == BodyVoiceID) return true;
-		else if(itemID == PrimaryWeaponID) return true;
-		else if(itemID == SecondaryWeaponID) return true;
-		else if(itemID == SidearmWeaponID) return true;
-		else if(itemID == Item1) return true;
-		else if(itemID == Item2) return true;
-		else if(itemID == Item3) return true;
-		else if(itemID == Item4) return true;
-		else
-			return false;
-	}
-
-	bool hasItem(int id) const
-	{
-		return (id == Item1 || id == Item2 || id == Item3 || id == Item4);
-	}
-	
-	int getSkillLevel(int SkillID) const 
-	{
-		int skillClass = SkillID / 100; //CUserSkills::SKILL_CLASS_MULT;
-		if(Class != skillClass)
-			return 0;
-		int skillIdx = SkillID % 100; //CUserSkills::SKILL_CLASS_MULT;
-
-		r3d_assert(skillIdx >= 0 && skillIdx < R3D_ARRAYSIZE(Skills));
-		return Skills[skillIdx];
-	}
-};
-
 struct wiInventoryItem
 {
-	uint32_t	itemID;
-	uint32_t	expiration; // in minutes
-	uint32_t	quantity;
+	__int64		InventoryID;	// unique identifier for that inventory slot
+	uint32_t	itemID;		// ItemID inside that slot
+	int		quantity;
+	int		Var1;		// inventory specific vars. -1 for default
+	int		Var2;		//
 	
   public:
-	wiInventoryItem();
-	~wiInventoryItem();
+	wiInventoryItem() 
+	{
+		Reset();
+	}
+	
+	void		Reset()
+	{
+		InventoryID = 0;
+		itemID   = 0;
+		quantity = 0;
+		Var1     = -1;
+		Var2     = -1;
+	}
+
+	bool operator==(const wiInventoryItem& rhs) const
+	{
+		if(InventoryID != rhs.InventoryID) return false;
+		if(itemID != rhs.itemID) return false;
+		if(quantity != rhs.quantity) return false;
+		if(Var1 != rhs.Var1) return false;
+		if(Var2 != rhs.Var2) return false;
+		return true;
+	}
+	bool operator!=(const wiInventoryItem& rhs) const { return !((*this)==rhs); }
 };
 
-struct wiAchievement
+struct wiCharDataFull
 {
-	uint32_t	ID; // achievement ID
-	uint32_t	value; // current value
-	uint32_t	unlocked; // if it is unlocked achievement
-	bool		dirty; // only save the dirty.
-};
+// NOTE: you MUST increase P2PNET_VERSION if you change this structure
+	uint32_t	LoadoutID;
 
-struct wiUserProfile
-{
-	int			isDevAccount;
+	// character stats
+	char		Gamertag[32*2];
+	int		Hardcore;
+
+	// defined on char creation, can't be modified
+	uint32_t	HeroItemID;		// ItemID of base character
+	int		HeadIdx;
+	int		BodyIdx;
+	int		LegsIdx;
+	uint32_t	BackpackID; // itemID of backpack to render
+
+	// vars that is used only on client/server
+	int		Alive;	// 0 - dead, 1 - alive, 2 - revived, 3 - new character
+	__int64		DeathUtcTime;
+	int		SecToRevive;
+	float		Health; // 0..100; 0-dead. 100 - healthy
+	float		Hunger; // 0..100; 0-not hungry, 100 - starving
+	float		Thirst; // 0..100; 0-not thirsty, 100 - super thirsty!
+	float		Toxic; // 0..100; 0-no toxic, 100 - high toxicity, slowly dying
+
+	enum
+	{
+	  GAMEFLAG_NearPostBox = (1 << 0),
+	};
+
+	// current game data
+	int		GameMapId;
+	DWORD		GameServerId;
+	r3dPoint3D	GamePos;
+	float		GameDir;
+	DWORD		GameFlags;
 
 	wiStats		Stats;
 
-	enum { MAX_LOADOUT_SLOTS = 6, };
-	wiLoadoutSlot	ArmorySlots[MAX_LOADOUT_SLOTS];
-	int		NumSlots;
-
-	enum{ MAX_POTENTIAL_ACHIEVEMENTS = 512 };
-	wiAchievement	Achievements[MAX_POTENTIAL_ACHIEVEMENTS ];	// current achievements. this list will contain only in progress and unlocked achievements
-
-	int		FactionScores[5];
-
-	wiInventoryItem	Inventory[512];
-	uint32_t	NumItems;
-	bool		hasExpiringItems; // set to true if has items in inventory with expiration less than 1 day
-	
-	struct temp_fps_attach
-	{
-		temp_fps_attach() {memset(this, 0, sizeof(*this));}
-		temp_fps_attach(uint32_t wpnID, uint32_t attmID, uint32_t exp, int equipped) : WeaponID(wpnID), AttachmentID(attmID), expiration(exp), isEquipped(equipped) {}
-	  uint32_t	WeaponID;
-	  uint32_t	AttachmentID;
-	  uint32_t	expiration;	 // in minutes
-	  int		isEquipped;
-	};
-	temp_fps_attach	FPSAttachments[2048];
-	uint32_t	NumFPSAttachments;
-	
+	// clan info
 	int		ClanID;
 	int		ClanRank;
 	char		ClanTag[5*2]; //utf8
 	int		ClanTagColor;
-	
-	int		IsFPSEnabled;
 
-	wiAchievement* getAchievementDataByID( int achievementID );
-	wiAchievement* addAchievement( int achievementID );
-	wiUserProfile()
+	// backpack content, including loadout
+	enum {
+	  // indices of equipped items inside backpack
+	  CHAR_LOADOUT_WEAPON1   = 0,
+	  CHAR_LOADOUT_WEAPON2,
+	  CHAR_LOADOUT_ITEM1,
+	  CHAR_LOADOUT_ITEM2,
+	  CHAR_LOADOUT_ITEM3,
+	  CHAR_LOADOUT_ITEM4,
+	  CHAR_LOADOUT_ARMOR,
+	  CHAR_LOADOUT_HEADGEAR,
+	  CHAR_REAL_BACKPACK_IDX_START,
+	  
+	  CHAR_MAX_BACKPACK_SIZE = 64 + CHAR_REAL_BACKPACK_IDX_START
+	};
+	int		BackpackSize;
+	wiInventoryItem Items[CHAR_MAX_BACKPACK_SIZE];
+
+	// installed attachments for weapon.
+	wiWeaponAttachment Attachment[2];
+	
+	wiCharDataFull()
 	{
 		memset(this, 0, sizeof(*this));
 	}
+
+	bool hasItem(uint32_t itemID)
+	{
+		for(int i=0; i<BackpackSize; ++i)
+			if(Items[i].itemID == itemID && Items[i].quantity > 0)
+				return true;
+		return false;
+	}
+
+	float getTotalWeight() const;
+};
+
+struct wiUserProfile
+{
+	int		isDevAccount;
+	int		AccountType; // 0 - legend, 1 - pioneer, 2 - survivor, 3 - guest
+
+	int		GamePoints;
+	int		GameDollars;
+
+	enum { MAX_LOADOUT_SLOTS = 5, };
+	wiCharDataFull	ArmorySlots[MAX_LOADOUT_SLOTS];
+	int		NumSlots;
+
+	enum { MAX_INVENTORY_SIZE = 2048, };
+	uint32_t	NumItems;
+	wiInventoryItem	Inventory[MAX_INVENTORY_SIZE];
 };
 
 class CUserProfile
@@ -343,39 +289,10 @@ class CUserProfile
 	DWORD		CustomerID;
 	DWORD		SessionID;
 	int		AccountStatus;
-	char		AuthToken[512];
-	char		ScreenName[64];
-	wchar_t		ScreenNameW[64];
-
-	// new items in store
-	int		NewItemsInStore[256];
-	int		NumNewItems;
-	
-	// struct used to track daily/weekly reward
-	struct PlayedStats_s
-	{
-	  int		GamesPlayed;
-	  int		Kills;
-	  int		Headshots;
-	  int		CaptureFlags;
-	  int		MatchesCQ;
-	  int		MatchesDM;
-	  int		MatchesSB;
-
-	  int		getNumMatches() { return MatchesCQ + MatchesDM + MatchesSB; }
-	  PlayedStats_s() 
-	  {
-		memset(this, 0, sizeof(*this));
-	  }
-	};
-	PlayedStats_s	DailyStats;
-	PlayedStats_s	WeeklyStats;
 
 	struct tm	ServerTime;
+	int		ProfileDataDirty; // seconds after last game update with not closed game session
 
-	int		ShopUnlockLoadoutCost;
-	int		ShopResetLoadoutCost;
-	BYTE		ShopSkillCosts2[400][5]; //[MAX_SKILL_ID][CUserSkills::CUserSkills::NUM_RANKS]. Price can be negative!!! So before using this variable, convert to signed!
 	int		ShopClanCreate;
 	int		ShopClanAddMembers_GP[6];	// price for adding clan members
 	int		ShopClanAddMembers_Num[6];	// number of adding members
@@ -385,22 +302,14 @@ class CUserProfile
 	CUserProfile();
 	virtual ~CUserProfile();
 
-	int 		GetProfile(bool fromServer = false);
+	int 		GetProfile(int CharID = 0);
 	void		 ParseLoadouts(pugi::xml_node& xmlItem);
 	void		 ParseInventory(pugi::xml_node& xmlItem);
-	void		 ParseFPSAttachments(pugi::xml_node& xmlItem);
-	void		 ParseAchievements(pugi::xml_node& xmlItem);
-	void		 ParseNewItemsInStore(pugi::xml_node& xmlItem);
-	void		 ParseStatistics(pugi::xml_node& xmlStat, PlayedStats_s& stat);
-	int		getInventoryItemByID(uint32_t id) const;
-	bool	isValidInventoryItem(uint32_t id) const;
+	void		 ParseBackpacks(pugi::xml_node& xmlItem);
+
+	wiInventoryItem* getInventorySlot(__int64 InventoryID);
 
 	int		ApiGetShopData();
-
-	virtual bool    MarkAchievementComplete( int whichAchievement );
-	bool CheckAchievementByValue( int whichAchievement, int value);
-	bool IncrementAchievement( int whichAchievement, int value);
-
 };
 
 #ifndef WO_SERVER	
@@ -414,6 +323,7 @@ class CClientUserProfile : public CUserProfile
   public:
 	void		GenerateSessionKey(char* outKey);
 	
+	int		SelectedCharID;	// currently selected INDEX inside of ArmorySlots
 	CUserFriends*	friends;
 
   public:
@@ -421,18 +331,19 @@ class CClientUserProfile : public CUserProfile
 	~CClientUserProfile();
 	
 	int		ApiGetItemsInfo();
-	int		ApiUnlockLoadoutSlot2(int Class);
-	int		ApiResetLoadoutSlot(int SlotID, int Class);
-	int		ApiSkillLearn(int SlotID, int SkillID, int SkillLevel);
-	int		ApiSkillReset(int SlotID);
-	int		ApiModifyLoadoutSlot(int SlotID);
-	int		ApiBuyItem(int itemId, int buyIdx);
-	int		ApiChangeGamertag(int itemId, int buyIdx, const char* gametag); // returns <0 if not enough money, 0 - server error, 1 - success
-	int		ApiGetCreateGameKey(int serverId, DWORD* out_createGameKey, int isBasicGame);
-	int		ApiGNAGetBalance();
+	int		ApiBuyItem(int itemId, int buyIdx, __int64* out_InventoryID);
 
-	bool		WelcomePackageProcess(int specID);
-	
+	int		ApiCharCreate(const char* Gamertag, int Hardcore, int HeroItemID, int HeadIdx, int BodyIdx, int LegsIdx);
+	int		ApiCharDelete();
+	int		ApiCharRevive();
+
+	// client backpack APIs
+	int		ApiBackpackToInventory(int GridFrom, int amount);
+	int		ApiBackpackFromInventory(__int64 InventoryID, int GridTo/* or -1 for FREE slot*/, int amount);
+	int		ApiBackpackGridSwap(int GridFrom, int GridTo);
+	int		ApiBackpackGridJoin(int GridFrom, int GridTo);
+	int		ApiChangeBackpack(__int64 InventoryID);
+
 	// friends APIs
 	int		ApiFriendAddReq(const char* gamertag, int* outFriendStatus);
 	int		ApiFriendAddAns(DWORD friendId, bool allow);
@@ -443,21 +354,13 @@ class CClientUserProfile : public CUserProfile
 	struct LBEntry_s
 	{
 	  char		gamertag[64];
-	  bool		havePremium;
-	  wiStats	stats;
+	  int		alive;
+	  int		data;
 	};
-	std::vector<LBEntry_s> m_lbData[4];
-	int		ApiGetLeaderboard(int TableID, int StartPos, int* out_CurPos);
+	std::vector<LBEntry_s> m_lbData[7];
+	int		ApiGetLeaderboard(int hardcore, int type, int page, int& out_startPos, int& out_pageCount);
 	
 	// mystery box
-	struct MysteryWin_s
-	{
-	  uint32_t	ItemID;
-	  int		ExpDays;
-	  int		GD;
-	};
-	MysteryWin_s	lastMysteryWin_;	// last winning from ApiMysteryBoxBuy/ApiLootBoxUnlock/ApiLootBoxSell
-
 	struct MysteryLoot_s
 	{
 	  uint32_t	ItemID;	// 0 for GD
@@ -473,32 +376,11 @@ class CClientUserProfile : public CUserProfile
 	};
 	std::vector<MysteryBox_s> mysteryBoxes_;	// we'll live with copy overhead of struct...
 	int		ApiMysteryBoxGetContent(int itemId, const MysteryBox_s** out_box);
-	int		ApiLootBoxBuy(int itemId, int buyIdx);
-	int		ApiLootBoxSell(int itemId);
-	
-	//
-	// weapon attachment API
-	//
-	int		ApiWeaponAttachBuy(int WeaponID, int AttachID, int slot, int buyIdx);
-	int		ApiWeaponAttachEquip(int WeaponID, int AttachID, int slot);
-	int		ApiWeaponAttachFixDefaults(int WeaponID);
-	
-	// Achievements API
-	int		ApiUpdateAchievements(int numAchs, wiAchievement* achs);
-	
-	//
-	// daily retention API
-	//
-	std::vector<int> retentionBonusByDays_;
-	int		curRetentionDays_;
-	int		minutesToNextRetDay_;	// minutes left to next retention day switch
-	int		ApiRetBonusGetInfo();	// fill curRetentionDays_ and retentionBonusByDays_
-	int		ApiRetBonusClaim();
 	
 	//
 	// Clans API is inside this class
 	//
-	CUserClans*	clans;
+	CUserClans*	clans[wiUserProfile::MAX_LOADOUT_SLOTS];
 
 	//
 	// steam APIs
@@ -524,9 +406,6 @@ class CClientUserProfile : public CUserProfile
 	int		ApiSteamStartBuyGP(int gpItemId);
 
 	int		ApiSteamFinishBuyGP(__int64 orderId);
-
-	void RecordFrontEndAchievements();
-
 };
 
 // gUserProfile should be defined only in game mode, server must not use this global

@@ -26,10 +26,12 @@ enum UndoAction_e
 	UA_BOOL_CHANGE,
 	UA_TERRAIN2_HEIGHT,
 	UA_TERRAIN2_MASK_PAINT,
+	UA_TERRAIN2_MASK_ERASEALL,
 	UA_TERRAIN2_COLOR_PAINT,
 	UA_TERRAIN2_DESTROY_LAYER,
 	UA_TERRAIN2_INSERT_LAYER,
 	UA_LIGHTPROBES_CREATE_DELETE,
+	UA_WATERPLANE_SETTINGS_CHANGE
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

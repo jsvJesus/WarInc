@@ -52,21 +52,15 @@ void CamouflageDataManager::UpdateCamouflageData(const GameObject &o)
 
 	for (int i = 0; i < _countof(dirs); ++i)
 	{
-		PxSceneQueryFilterData filter(
-			PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
-		PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC)
-		);
-		if(g_pPhysicsWorld->raycastSingle(orig, dirs[i], 5.0f, PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION), hit, filter))
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK,0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC));
+		if(g_pPhysicsWorld->raycastSingle(orig, dirs[i], 5.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter))
 		{
-			r3dVector hitPos(hit.position.x, hit.position.y, hit.position.z);
+			r3dVector hitPos(hit.impact.x, hit.impact.y, hit.impact.z);
 			float dist = (hitPos - pos).LengthSq();
-
 			if (dist < closest)
 			{
 				r3d_assert(hit.shape);
-				r3d_assert(hit.actor);
-
-				target = static_cast<PhysicsCallbackObject*>(hit.actor->userData);
+				target = static_cast<PhysicsCallbackObject*>(hit.shape->getActor().userData);
 				faceId = hit.faceIndex;
 				closest = dist;
 				impactPos = hitPos;

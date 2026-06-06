@@ -492,8 +492,7 @@ void r3dParticleSystemClose()
 	gInitialized = false;
 
 	if(_r3d_ParticleActiveSystems) {
-		r3dOutToLog("there is active particle systems\n");
-		r3d_assert(false);
+		r3dError("there is active particle systems\n");
 	}
 
 	SAFE_DELETE(partTrailCache);
@@ -1130,6 +1129,9 @@ r3dParticleData::r3dParticleData()
 	EmitTime	 = -1;
 
 	HasLight = 0;
+	LightCastsShadows = 0;
+	LightSSShadowBlur = 0;
+
 	LightFunctionID = 0;
 	LightLifetime = 1800.0f;
 	LightIntensity = 1.0f;
@@ -1233,6 +1235,15 @@ int r3dParticleData::Load(const char* FName)
 	FixSubEmitters();
 
 	HasLight = r3dReadCFG_I(FName, "System", "HasLight", 0);
+
+	LightCastsShadows = r3dReadCFG_I(FName, "System", "LightCastsShadows", 0);
+	LightSSShadowBlur = r3dReadCFG_I(FName, "System", "LightShadowsBlur", 0);
+
+	SSSBParams.PhysRange	= r3dReadCFG_F(FName, "System", "ShadowBlur_PhysRange", SSSBParams.PhysRange );
+	SSSBParams.Bias			= r3dReadCFG_F(FName, "System", "ShadowBlur_Bias", SSSBParams.Bias );
+	SSSBParams.Sense		= r3dReadCFG_F(FName, "System", "ShadowBlur_Sense", SSSBParams.Sense );
+	SSSBParams.Radius		= r3dReadCFG_F(FName, "System", "ShadowBlur_Radius", SSSBParams.Radius );
+
 	LightFunctionID = r3dReadCFG_I(FName, "System", "LightFunctionID", 0);
 	LightLifetime = r3dReadCFG_F(FName, "System", "LightLifetime", 0);
 	LightIntensity = r3dReadCFG_F(FName, "System", "LightIntensity", 1.0f);
@@ -1384,6 +1395,15 @@ void r3dParticleData::Save(const char* FName)
 
 
 	r3dWriteCFG_I(FName, "System", "HasLight", HasLight);
+
+	r3dWriteCFG_I(FName, "System", "LightCastsShadows", LightCastsShadows );
+	r3dWriteCFG_I(FName, "System", "LightShadowsBlur", LightSSShadowBlur);
+
+	r3dWriteCFG_F(FName, "System", "ShadowBlur_PhysRange", SSSBParams.PhysRange );
+	r3dWriteCFG_F(FName, "System", "ShadowBlur_Bias", SSSBParams.Bias );
+	r3dWriteCFG_F(FName, "System", "ShadowBlur_Sense", SSSBParams.Sense );
+	r3dWriteCFG_F(FName, "System", "ShadowBlur_Radius", SSSBParams.Radius );
+
 	r3dWriteCFG_I(FName, "System", "LightFunctionID", LightFunctionID);
 	r3dWriteCFG_F(FName, "System", "LightLifetime", LightLifetime);
 	r3dWriteCFG_F(FName, "System", "LightIntensity", LightIntensity);
@@ -1457,8 +1477,10 @@ r3dParticleSystem::r3dParticleSystem(const r3dParticleData* data)
 
 r3dParticleSystem::~r3dParticleSystem() 
 {
-//	if (PD->HasLight) 
-    WorldLightSystem.Remove(&ParticleLight);
+	if( ParticleLight.pLightSystem )
+	{
+		TurnLightOff();
+	}
 
 	r3d_assert(_r3d_ParticleActiveSystems);
 	r3d_assert(PD->NumInstances);
@@ -1519,8 +1541,7 @@ void r3dParticleSystem::Init(float CurTime)
 	// VERY VERY BAD IDEA !!!!
 	if (PD->HasLight) 
 	{
-		ParticleLight.TurnOn();
-	    WorldLightSystem.Add(&ParticleLight);
+		TurnLightOn();
 	}
 
 	Update(CurTime, 0);
@@ -1630,14 +1651,15 @@ void r3dParticleSystem::Restart(float CurTime)
 	NumAliveQuads     = 0;
 	PrevPosition      = Position;
 
-	// WTF - why it's crashing !!!!
-    WorldLightSystem.Remove(&ParticleLight);
-	if ( PD->HasLight)
-	{	
-		ParticleLight.TurnOn();
-		WorldLightSystem.Add(&ParticleLight);
+	if ( ParticleLight.pLightSystem )
+	{
+		TurnLightOff();
 	}
 
+	if( PD->HasLight )
+	{
+		TurnLightOn();
+	}
 
 	for(int i=0;i<r3dParticleData::MAX_EMITTER_SLOTS;i++)
 	{
@@ -2410,9 +2432,29 @@ void r3dParticleSystem::Update(float CurTime, bool bUpdate)
 	PrevPosition  = Position; 
 	NumTrisToDraw = 0;
 
+#ifndef FINAL_BUILD
+	// HasLight property can be switched only in editor
+	{
+		if( ParticleLight.pLightSystem && !PD->HasLight )
+		{
+			TurnLightOff();
+		}
+
+		if( !ParticleLight.pLightSystem && PD->HasLight )
+		{
+			TurnLightOn();
+		}
+	}
+#endif
+
 
 	float LightT = (CurTime - StartTime)/ PD->LightLifetime;
 	if (LightT >1) ParticleLight.TurnOff();
+
+	ParticleLight.bCastShadows = PD->LightCastsShadows;
+	ParticleLight.bUseGlobalSSSBParams = false;
+	ParticleLight.bSSShadowBlur = PD->LightSSShadowBlur;
+	ParticleLight.SSSBParams = PD->SSSBParams;
 
 	ParticleLight.SetColor(PD->LightColor.GetColorValue(LightT));
 	ParticleLight.Intensity = PD->LightIntensity;
@@ -2957,11 +2999,11 @@ namespace
 
 /*static*/ void r3dParticleSystem::DoFillBuffers( void* Data, size_t Start, size_t Count )
 {
-	r3dRenderer->Stats.AddNumParticlesRendered( static_cast<int>( Count ) );
+	r3dRenderer->Stats.AddNumParticlesRendered ( Count ) ;
 
 	ParticleFillParams* params = ( ParticleFillParams* )Data;
 
-	r3dSingleParticle* Array		= params->Array ;
+	r3dSingleParticle* Array	= params->Array ;
 	PARTICLE_INDEX* LockArea	= params->LockArea ;
 	const r3dParticleData* PD	= params->PD ;
 	r3dParticleSystem* This		= params->This ;
@@ -2969,7 +3011,7 @@ namespace
 	PARTICLE_INDEX* ptr = LockArea + Start ;
 	PARTICLE_INDEX* vertStart = ptr ;
 
-	for( size_t i = Start, e = Start + Count ; i < e; i ++ )
+	for( uint32_t i = Start, e = Start + Count ; i < e; i ++ )
 	{
 		const r3dSingleParticle& pt = Array[ gPartIdxArr [ i ] ];
 		const r3dParticleEmitter& PE = *PD->PType[ pt.Type ];
@@ -3111,9 +3153,9 @@ namespace
 		}
 	}
 
-	LONG CountDone = static_cast<LONG>(ptr - vertStart);
+	LONG CountDone = ptr - vertStart ;
 
-	InterlockedExchangeAdd(&params->FillCount, CountDone);
+	InterlockedExchangeAdd( &params->FillCount, CountDone );
 }
 
 void r3dParticleSystem::FillBuffersNew( const r3dCamera& cam, int bOnlyShadowCasters )
@@ -3245,8 +3287,8 @@ void r3dParticleSystem::DrawMeshParticles()
 				};
 				D3DXVECTOR4 UVSpeed(UVScroll, pot.BlendMode, 1.f / PD->DepthBlendValue, 0);
 
-				r3dRenderer->SetVertexShaderConstantF(29, &vConsts[0].x, _countof(vConsts));
-				r3dRenderer->SetPixelShaderConstantF(18,(float *)&UVSpeed, 1);
+				r3dRenderer->pd3ddev->SetVertexShaderConstantF(29, &vConsts[0].x, _countof(vConsts));
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(18,(float *)&UVSpeed, 1);
 
 				D3DXMATRIX mr;
 				if(PE.bDirectionOriented)
@@ -3490,7 +3532,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	}
 
 	// ParticleLight lights[ MAX_LIGHTS ] : register( c40 ) ;
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 40, &lightParams->x, R3D_ARRAYSIZE( lightParams ) ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 40, &lightParams->x, R3D_ARRAYSIZE( lightParams ) ) ) ;
 
 
 	IsVisible = true;
@@ -3549,8 +3591,8 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	invDepthW = 1.0f / invDepthW;
 	invDepthH = 1.0f / invDepthH;
 
-	r3dColor cAmbient = r3dGameLevel::Environment.SkyColor.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	r3dColor cSun = r3dGameLevel::Environment. SunColor.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
+	r3dColor cAmbient = r3dRenderer->AmbientColor;
+	r3dColor cSun = r3dGameLevel::Environment.GetCurrentSunColor();
 
 	D3DXVECTOR4 vAmbient( float(cAmbient.R)/255.f, float(cAmbient.G)/255.f,float(cAmbient.B)/255.f, 0.f ) ;
 
@@ -3586,14 +3628,14 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 		D3DXVECTOR4( 1.0f / g_ShadowMap->Width, 0.0f, 0.f, 1.0f / g_ShadowMap->Height )
 	};
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
-	r3dRenderer->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
-	r3dRenderer->SetVertexShaderConstantF( 27,(float *)&vNormal_BumpPower, 1);
-	r3dRenderer->SetVertexShaderConstantF( 28,(float *)&vLight, 1);	
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 27,(float *)&vNormal_BumpPower, 1);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 28,(float *)&vLight, 1);	
 	D3DXVECTOR4 halfDepthUVOffset(vConsts[0] * 0.5f);
-	r3dRenderer->SetVertexShaderConstantF( 29,(float *)&halfDepthUVOffset, 1);	
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 29,(float *)&halfDepthUVOffset, 1);	
 
-	r3dRenderer->SetPixelShaderConstantF( 0,(float *)vConsts, R3D_ARRAYSIZE(vConsts) );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0,(float *)vConsts, R3D_ARRAYSIZE(vConsts) );
 
 	// First draw mesh particles
 	// shadow map is filled in other call for mesh particles.
@@ -3602,8 +3644,8 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	{
 		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
 
-		r3dRenderer->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
-		r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_ONE);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 		r3dRenderer->SetVertexShader(ParticleVShaderMesh_ID);
 
 		if( r_distort->GetInt() )
@@ -3624,7 +3666,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	if(NumTrisToDraw==0)	return;
 
 	// someone is overwriting this constant after rendering meshes
- 	r3dRenderer->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
+ 	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15,(float *)&FogCamVec, 1);
 
 	D3DXMATRIX matTexScale1;
 	D3DXMATRIX VP = r3dRenderer->ViewProjMatrix ;
@@ -3652,18 +3694,18 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	D3DXMatrixMultiply(&mat, &VP, &matTexScale1);
 	D3DXMatrixTranspose(&mat, &mat);
 
-	r3dRenderer->SetVertexShaderConstantF(20 ,(float *)&mat,  4);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(20 ,(float *)&mat,  4);
 
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
-	r3dRenderer->SetVertexShaderConstantF( 12,(float *)&FogCamVec, 1);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&mWVP, 4);
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 12,(float *)&FogCamVec, 1);
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_ZC);
-	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ONE);
-	r3dRenderer->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_INVSRCALPHA);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, 		D3DBLEND_ONE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND,		D3DBLEND_INVSRCALPHA);
 
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	if(!bRenderUntextured)
 		r3dRenderer->SetTex(PD->Texture);
@@ -3702,9 +3744,9 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 		r3dSetFiltering( R3D_BILINEAR, 2 );
 
 		// TODO : eliminate.
-		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, 	FALSE);
-		r3dRenderer->SetRenderState(D3DRS_ALPHAREF,        	5);
-		r3dRenderer->SetRenderState(D3DRS_ALPHAFUNC, 			D3DCMP_GREATEREQUAL);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, 	FALSE);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAREF,        	5);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHAFUNC, 			D3DCMP_GREATEREQUAL);
 
 		extern void SetVolumeFogParams();
 		SetVolumeFogParams();
@@ -3748,25 +3790,25 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 
 			r3d_assert( VSConstCount <= R3D_ARRAYSIZE( vConsts ) ) ;
 
-			D3D_V( r3dRenderer->SetVertexShaderConstantF( 30, (float*)vConsts, VSConstCount ) );
+			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 30, (float*)vConsts, VSConstCount ) );
 
 		}
 
 		if(PD->Atlas.count>0)
 		{
-			D3D_V( r3dRenderer->SetVertexShaderConstantF(64, &PD->Atlas.rects[0].minX, PD->Atlas.count) );
+			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(64, &PD->Atlas.rects[0].minX, PD->Atlas.count) );
 		}
 		else
 		{
 			D3DXVECTOR4 temp = D3DXVECTOR4(0.0f, 0.0f, 1.0f, 1.0f);
-			r3dRenderer->SetVertexShaderConstantF(41, &temp.x, 1);
+			r3dRenderer->pd3ddev->SetVertexShaderConstantF(41, &temp.x, 1);
 		}
 
 		if( bShadowMap )
 		{
 			// float vWriteShadowParams : register( c52 ) ;
 			D3DXVECTOR4 vsConst ( r_transp_shadow_coef->GetFloat(), 0.f, 0.f, 0.f ) ;
-			D3D_V( r3dRenderer->SetVertexShaderConstantF( 52, (float*)vsConst, 1 ) ) ;
+			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 52, (float*)vsConst, 1 ) ) ;
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_MIN ) ;
 
@@ -3870,8 +3912,8 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	r3dRenderer->Stats.AddNumDraws( 1 );
 	r3dRenderer->RestoreCullMode();
 
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(0, 7); // remove skydome cubemap texture
 	r3dRenderer->SetVertexShader(-1);
@@ -3880,7 +3922,7 @@ void r3dParticleSystem::Draw( const r3dCamera &cam, bool bShadowMap )
 	r3dSetFiltering( R3D_BILINEAR, 1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_COPY_ZCW);
-	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE,	FALSE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE,	FALSE);
 
 	{ // reset world transform
 		D3DXMATRIX  mWorld;
@@ -3904,16 +3946,16 @@ void r3dParticleSystem::DrawDefferedMeshes(const r3dCamera &Cam, bool bShadowMap
 
 	D3DXVECTOR4 B;
 	B = D3DXVECTOR4(0.0f,0.0f,0.5f,1.0f);
-	r3dRenderer->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)&B,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)&B,  1 );
 
 	B = D3DXVECTOR4( -0.5f, 0.5f, 1.0f, 1.0f );
-	r3dRenderer->SetPixelShaderConstantF( MC_MAT_GLOW, (float*)&B, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MAT_GLOW, (float*)&B, 1 );
 
 	B = D3DXVECTOR4(Cam.x,Cam.y,Cam.z,1.0f);
-	r3dRenderer->SetPixelShaderConstantF(  MC_CAMVEC, (float *)&B,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_CAMVEC, (float *)&B,  1 );
 
 	B =  D3DXVECTOR4 ( 0.0f, r3dRenderer->ProjMatrix._43, r3dRenderer->ProjMatrix._33, 0.0f );
-	r3dRenderer->SetPixelShaderConstantF( MC_DDEPTH, (float *)&B, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DDEPTH, (float *)&B, 1 );
 
 
 	for(int i=NumAliveParticles-1;i>=0;i--)
@@ -3935,9 +3977,9 @@ void r3dParticleSystem::DrawDefferedMeshes(const r3dCamera &Cam, bool bShadowMap
 			if(PE.Mesh)
 			{
 				B = D3DXVECTOR4 (float(pot.Color.R)/255.0f, float(pot.Color.G)/255.0f, float(pot.Color.B)/255.0f, float(pot.Color.A)/255.0f);
-				r3dRenderer->SetPixelShaderConstantF(  MC_MAT_DIFFUSE, (float *)&B,  1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MAT_DIFFUSE, (float *)&B,  1 );
 				B = D3DXVECTOR4 (0.0f, 0.0f, 0.0f, 0.0f);
-				r3dRenderer->SetPixelShaderConstantF(  MC_MAT_SPECULAR, (float *)&B,  1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MAT_SPECULAR, (float *)&B,  1 );
 
 				D3DXMATRIX mr;
 				if(PE.bDirectionOriented)
@@ -4021,9 +4063,29 @@ r3dParticleSystem::ClearParticlesOfType( BYTE type )
 
 //------------------------------------------------------------------------
 
+void r3dParticleSystem::TurnLightOff()
+{
+	r3d_assert( ParticleLight.pLightSystem );
+
+	ParticleLight.TurnOff();
+	WorldLightSystem.Remove( &ParticleLight );
+}
+
+//------------------------------------------------------------------------
+
+void r3dParticleSystem::TurnLightOn()
+{
+	r3d_assert( !ParticleLight.pLightSystem );
+
+	ParticleLight.TurnOn();
+	WorldLightSystem.Add(&ParticleLight);
+}
+
+//------------------------------------------------------------------------
+
 r3dParticleTrailData::r3dParticleTrailData()
 {
-	TL_STATIC_ASSERT( r3dTL::IsPOD<r3dParticleTrailData>::Value );
+	COMPILE_ASSERT( r3dTL::IsPOD<r3dParticleTrailData>::Value );
 	memset( this, 0, sizeof(*this) );
 }
 

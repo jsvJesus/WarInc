@@ -108,10 +108,21 @@ BOOL obj_LightHelper::OnCreate()
 
  r3dBoundBox bboxLocal ;
 
- bboxLocal.Size = r3dPoint3D(2,2,2);
- bboxLocal.Org = -bboxLocal.Size * 0.5f;
+ if( g_bEditMode )
+ {
+  bboxLocal.Size = r3dPoint3D(2,2,2);
+  bboxLocal.Org = -bboxLocal.Size * 0.5f;
+ }
+ else
+ {
+  bboxLocal.Size = r3dPoint3D( 0.f, 0.f, 0.f );
+  bboxLocal.Org	= -r3dPoint3D( .0f, .0f, .0f );
+ }
 
- SetBBoxLocal( bboxLocal ) ;
+ SetBBoxLocal( bboxLocal );
+
+ // prevent scaling cause it's not obvious with light object yet can distort scene box significantly
+ SetScale( r3dPoint3D( 1.f, 1.f, 1.f ) );
 
  GameObject::UpdateTransform();
 
@@ -424,38 +435,62 @@ float	obj_LightHelper :: DrawPropertyEditor(float scrx, float scry, float scrw, 
 			starty += imgui_Checkbox( scrx, starty, "Casts Shadow", &check, 1 );
 			PropagateChange( check, &obj_LightHelper::LT, &r3dLight::bCastShadows, this, selected ) ;
 
+			if( IsAllLightOfType( selected, R3D_SPOT_LIGHT ) )
+			{
+				if( r_hardware_shadow_method->GetFloat() == HW_SHADOW_METHOD_R32F 
+						||
+					LT.bFrozenShadowDepth )
+				{
+					static float val = 0.f;
+					val = r_spot_light_shadow_bias_pcf->GetFloat();
+					starty += imgui_Static( scrx, starty, "PCF Shadow Offset(Global)" );
+					starty += imgui_Value_Slider( scrx, starty, "Value", &val, 0, 0.5f, "%.5f" );
+					r_spot_light_shadow_bias_pcf->SetFloat( val );
+				}
+				else
+				{
+					static float val = 0.f;
+					val = r_spot_light_shadow_bias_hw->GetFloat();
+					starty += imgui_Static( scrx, starty, "HW Shadow Offset(Global)" );
+					starty += imgui_Value_Slider( scrx, starty, "Value", &val, 0, 0.125f, "%.5f" );
+					r_spot_light_shadow_bias_hw->SetFloat( val );
+				}
+
+				starty += 7;
+			}
+
 			check = LT.bSSShadowBlur ;
 			starty += imgui_Checkbox( scrx, starty, "Blur Shadows", &check, 1 );
-			PropagateChange( check, &obj_LightHelper::LT, &r3dLight::bSSShadowBlur, this, selected ) ;		
-		}
+			PropagateChange( check, &obj_LightHelper::LT, &r3dLight::bSSShadowBlur, this, selected );
 
-		if( LT.bSSShadowBlur )
-		{
-			check = LT.bUseGlobalSSSBParams ;
-			starty += imgui_Checkbox( scrx + 5, starty, "Use Global SSSB", &check, 1 );
-			PropagateChange( check, &obj_LightHelper::LT, &r3dLight::bUseGlobalSSSBParams, this, selected ) ;
-
-			if( !LT.bUseGlobalSSSBParams )
+			if( LT.bSSShadowBlur )
 			{
-				static float biasVal ;
-				biasVal = LT.SSSBParams.Bias ;
-				starty += imgui_Value_Slider( scrx + 5, starty, "Blur Bias",	&biasVal,		0.0f,	0.5f,		"%-02.2f", 1 );
-				PropagateChange( biasVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Bias , this, selected ) ;
+				check = LT.bUseGlobalSSSBParams ;
+				starty += imgui_Checkbox( scrx + 5, starty, "Use Global SSSB", &check, 1 );
+				PropagateChange( check, &obj_LightHelper::LT, &r3dLight::bUseGlobalSSSBParams, this, selected ) ;
 
-				static float physRangeVal ;
-				physRangeVal = LT.SSSBParams.PhysRange ;
-				starty += imgui_Value_Slider( scrx + 5, starty, "Physicality",	&physRangeVal,	0.0f,	1024.0f,	"%-02.2f", 1 );
-				PropagateChange( physRangeVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::PhysRange , this, selected ) ;
+				if( !LT.bUseGlobalSSSBParams )
+				{
+					static float biasVal ;
+					biasVal = LT.SSSBParams.Bias ;
+					starty += imgui_Value_Slider( scrx + 5, starty, "Blur Bias",	&biasVal,		0.0f,	0.5f,		"%-02.2f", 1 );
+					PropagateChange( biasVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Bias , this, selected ) ;
 
-				static float senseVal ;
-				senseVal =  LT.SSSBParams.Sense ;
-				starty += imgui_Value_Slider( scrx + 5, starty, "Depth Sens.",	&senseVal,		0.0f,	1024.0f,	"%-02.2f", 1 );
-				PropagateChange( senseVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Sense , this, selected ) ;
-				
-				static float radiusVal ;
-				radiusVal =  LT.SSSBParams.Radius ;
-				starty += imgui_Value_Slider( scrx + 5, starty, "Radius",		&radiusVal,		0.0f,	12.0f,		"%-02.2f", 1 );
-				PropagateChange( radiusVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Radius , this, selected ) ;
+					static float physRangeVal ;
+					physRangeVal = LT.SSSBParams.PhysRange ;
+					starty += imgui_Value_Slider( scrx + 5, starty, "Physicality",	&physRangeVal,	0.0f,	1024.0f,	"%-02.2f", 1 );
+					PropagateChange( physRangeVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::PhysRange , this, selected ) ;
+
+					static float senseVal ;
+					senseVal =  LT.SSSBParams.Sense ;
+					starty += imgui_Value_Slider( scrx + 5, starty, "Depth Sens.",	&senseVal,		0.0f,	1024.0f,	"%-02.2f", 1 );
+					PropagateChange( senseVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Sense , this, selected ) ;
+
+					static float radiusVal ;
+					radiusVal =  LT.SSSBParams.Radius ;
+					starty += imgui_Value_Slider( scrx + 5, starty, "Radius",		&radiusVal,		0.0f,	12.0f,		"%-02.2f", 1 );
+					PropagateChange( radiusVal, &obj_LightHelper::LT, &r3dLight::SSSBParams, &r3dSSSBParams::Radius , this, selected ) ;
+				}
 			}
 		}
 
@@ -864,9 +899,6 @@ BOOL obj_LightHelper::Update()
 		LT.m_bQualityDisabled = (lightQuality > r_lighting_quality->GetInt());
 	}
 
- // prevent scaling cause it's not obvious with light object yet can distort scene box significantly
- SetScale( r3dPoint3D( 1.f, 1.f, 1.f ) );
-
  LT.Assign(GetPosition().X,GetPosition().Y,GetPosition().Z);
  LT.SetRadius(innerRadius, outerRadius + fRes);
  LT.SetColor( vColor.x, vColor.y, vColor.z );
@@ -874,6 +906,9 @@ BOOL obj_LightHelper::Update()
 #ifndef FINAL_BUILD
  if( g_bEditMode )
  {
+   // prevent scaling cause it's not obvious with light object yet can distort scene box significantly
+   SetScale( r3dPoint3D( 1.f, 1.f, 1.f ) );
+
    float sx = 1.0f;
    float sy = 1.0f;
    float sz = 1.0f;
@@ -894,19 +929,11 @@ BOOL obj_LightHelper::Update()
    bboxLocal.Size = r3dPoint3D( sx, sy, sz );
    bboxLocal.Org = -bboxLocal.Size * 0.5f;
 
-   SetBBoxLocal( bboxLocal ) ;
+   SetBBoxLocal( bboxLocal );
+
+   GameObject::UpdateTransform();
  }
- else
 #endif
- {
-   r3dBoundBox bboxLocal ;
-   bboxLocal.Size	= r3dPoint3D( 0.f, 0.f, 0.f );
-   bboxLocal.Org	= -r3dPoint3D( .0f, .0f, .0f );
-
-   SetBBoxLocal( bboxLocal ) ;
- }
-
- GameObject::UpdateTransform();
 
  return TRUE;
 }
@@ -983,6 +1010,12 @@ obj_LightHelper::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ],
 
 	if( r_hide_icons->GetInt() )
 		return ;
+
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
 
 	extern int CurHUDID;
 	if(CurHUDID !=0)
@@ -1073,7 +1106,7 @@ obj_LightHelper::DoDraw()
 
 				r3dDrawGeoSpheresStart();
 
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );						
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1083,7 +1116,7 @@ obj_LightHelper::DoDraw()
 				r3dSetFwdColorShaders( r3dColor( 0xff, 0x33, 0x33, 0xff ) );
 				r3dDrawGeoSphere();	
 
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawGeoSpheresEnd();						
 			}
@@ -1098,7 +1131,7 @@ obj_LightHelper::DoDraw()
 
 				r3dDrawGeoSpheresStart();
 
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );						
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1108,7 +1141,7 @@ obj_LightHelper::DoDraw()
 				r3dSetFwdColorShaders( r3dColor( 0xff, 0x33, 0x33, 0xff ) );
 				r3dDrawGeoSphere();	
 
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawGeoSpheresEnd();
 
@@ -1154,7 +1187,7 @@ obj_LightHelper::DoDraw()
 				r3dDrawChamferBoxStart();
 
 				r3dRenderer->SetCullMode( D3DCULL_NONE );
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 
 				r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ );
 				r3dSetFwdColorShaders( r3dColor( 0x7f, 0x7f, 0x7f, 0x55 ) );
@@ -1165,7 +1198,7 @@ obj_LightHelper::DoDraw()
 				r3dDrawChamferBox();
 
 				r3dRenderer->RestoreCullMode();
-				r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
+				r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_SOLID );
 
 				r3dDrawChamferBoxEnd();
 			}

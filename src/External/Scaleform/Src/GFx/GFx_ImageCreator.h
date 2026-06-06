@@ -160,18 +160,9 @@ class ImageFileHandlerRegistry : public State, public Render::ImageFileHandlerRe
     friend class ImageCreator;
 public:
 
-    enum InitType 
-    { 
-        // No handlers are added when the ImageFileHandlerRegistry is created (default).
-        NoInit, 
-
-        // Adds all image handlers provided in GFx to the ImageFileHandlerRegistry. The actual handlers 
-        // added are dependent on platform support, but may include any of SIF, DDS, TGA, PVR, PNG, KTX, 
-        // JPEG, GTX, GXT.
-        AddDefaultHandlers, 
-    };
-
-    ImageFileHandlerRegistry(InitType init = NoInit);
+    ImageFileHandlerRegistry()
+    : State(State_ImageFileHandlerRegistry), Render::ImageFileHandlerRegistry(0)
+    { }
 
     void AddHandler(ImageFileHandler* handler);
 };

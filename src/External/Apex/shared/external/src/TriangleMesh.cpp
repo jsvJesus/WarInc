@@ -1,41 +1,33 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+#include <MeshImport.h>
+
 #include "TriangleMesh.h"
 #include "SkeletalAnim.h"
-#include "MeshImport.h"
-#include "Shader.h"
 #include "PsMathUtils.h"
 #include "NxFromPx.h"
 #include "NxRenderMeshAsset.h"
@@ -43,9 +35,11 @@
 #include "PxFileBuffer.h"
 #include "NxClothingIsoMesh.h"
 
+#include "foundation/PxStrideIterator.h"
+
 #include "PsShare.h"
 #include "PsString.h"
-#include "PxIntrinsics.h"
+#include "foundation/PxIntrinsics.h"
 #include "PsFile.h"
 
 #include <algorithm>
@@ -53,10 +47,35 @@
 
 #if defined(PX_PS3)
 #include "RendererConfig.h"
-void std::exception::_Raise() const {};
 #endif
 
 #include <NxApexRenderDebug.h>
+#include <NxResourceCallback.h>
+#include <NxApexNameSpace.h>
+#include <NxClothingPhysicalMesh.h>
+#include <NxUserRenderer.h>
+#include <NxUserRenderBoneBuffer.h>
+#include <NxUserRenderBoneBufferDesc.h>
+#include <NxUserRenderVertexBuffer.h>
+#include <NxUserRenderVertexBufferDesc.h>
+#include <NxUserRenderIndexBuffer.h>
+#include <NxUserRenderIndexBufferDesc.h>
+#include <NxUserRenderResourceDesc.h>
+#include <NxApexRenderContext.h>
+
+#ifdef USE_SAMPLE_RENDERER
+#include <Renderer.h>
+#include <RendererIndexBufferDesc.h>
+#include <RendererMaterialDesc.h>
+#include <RendererMaterialInstance.h>
+#include <RendererMeshDesc.h>
+#include <RendererMeshContext.h>
+#include <RendererVertexBufferDesc.h>
+
+#include <SampleMaterialAsset.h>
+#include <SampleAssetManager.h>
+#endif
+
 const physx::PxU32 OBJ_STR_LEN = 256;
 
 #if defined(PX_WINDOWS)
@@ -64,26 +83,58 @@ const physx::PxU32 OBJ_STR_LEN = 256;
 #include <windows.h>
 #endif
 
+#if defined(PX_APPLE)
+#include <stdio.h>
+#endif
+
 #include <PsIntrinsics.h>
+
+mimp::MeshImport* gMeshImport = NULL; // has to be declared somewhere in the code
+
 
 namespace Samples
 {
 
 //-----------------------------------------------------------------------------
-struct TriangleMeshEdge {
-	void init(int v0, int v1, int edgeNr, int triNr) {
-		if (v0 < v1) { this->v0 = v0; this->v1 = v1; }
-		else { this->v0 = v1; this->v1 = v0; }
-		this->edgeNr = edgeNr; this->triNr = triNr;
+struct TriangleMeshEdge
+{
+	void init(int v0, int v1, int edgeNr, int triNr)
+	{
+		if (v0 < v1)
+		{
+			this->v0 = v0;
+			this->v1 = v1;
+		}
+		else
+		{
+			this->v0 = v1;
+			this->v1 = v0;
+		}
+		this->edgeNr = edgeNr;
+		this->triNr = triNr;
 	}
-	bool operator < (const TriangleMeshEdge &e) const {
-		if (v0 < e.v0) return true;
-		if (v0 > e.v0) return false;
+	bool operator < (const TriangleMeshEdge& e) const
+	{
+		if (v0 < e.v0)
+		{
+			return true;
+		}
+		if (v0 > e.v0)
+		{
+			return false;
+		}
 		return v1 < e.v1;
 	}
-	bool operator == (const TriangleMeshEdge &e) const {
-		if (v0 == e.v0 && v1 == e.v1) return true;
-		if (v0 == e.v1 && v1 == e.v0) return true;
+	bool operator == (const TriangleMeshEdge& e) const
+	{
+		if (v0 == e.v0 && v1 == e.v1)
+		{
+			return true;
+		}
+		if (v0 == e.v1 && v1 == e.v0)
+		{
+			return true;
+		}
 		return false;
 	}
 	int v0, v1;
@@ -92,65 +143,99 @@ struct TriangleMeshEdge {
 };
 
 // ------------------------------------------------------------------------------------
-struct TexCoord {
+struct TexCoord
+{
 	TexCoord() {}
-	TexCoord(float u, float v) { this->u = u; this->v = v; }
-	void zero() { u = 0.0f; v = 0.0f; }
-	TexCoord operator + (const TexCoord &tc) const {
-		TexCoord r; r.u = u + tc.u; r.v = v + tc.v;
+	TexCoord(float u, float v)
+	{
+		this->u = u;
+		this->v = v;
+	}
+	void zero()
+	{
+		u = 0.0f;
+		v = 0.0f;
+	}
+	TexCoord operator + (const TexCoord& tc) const
+	{
+		TexCoord r;
+		r.u = u + tc.u;
+		r.v = v + tc.v;
 		return tc;
 	}
-	void operator += (const TexCoord &tc) {
-		u += tc.u; v += tc.v;
+	void operator += (const TexCoord& tc)
+	{
+		u += tc.u;
+		v += tc.v;
 	}
-	void operator *= (float r) {
-		u *= r; v *= r;
+	void operator *= (float r)
+	{
+		u *= r;
+		v *= r;
 	}
-	void operator /= (float r) {
-		u /= r; v /= r;
+	void operator /= (float r)
+	{
+		u /= r;
+		v /= r;
 	}
-	float u,v;
+	float u, v;
 };
 
-// ----------------------------------------------------------------------
-void TriangleMeshMaterial::init()
-{
-	name = "";
-	textureFile = "";
-	ambient[0] = 1.0f; ambient[1] = 1.0f; ambient[2] = 1.0f;
-	diffuse[0] = 1.0f; diffuse[1] = 1.0f; diffuse[2] = 1.0f;
-	specular[0] = 1.0f; specular[1] = 1.0f; specular[2] = 1.0f;
-
-	shininess = 1.0f;
-	alpha = 1.0f;
-}
-
-
 // -------------------------------------------------------------------
-struct SimpleVertexRef {
+struct SimpleVertexRef
+{
 	int vert, normal, texCoord;
 	int indexNr;
-	bool operator < (const SimpleVertexRef &r) const {
-		if (vert < r.vert) return true;
-		if (vert > r.vert) return false;
-		if (normal < r.normal) return true;
-		if (normal > r.normal) return false;
-		return texCoord < r.texCoord;
+	float handedNess;
+
+	bool operator < (const SimpleVertexRef& r) const
+	{
+		if (vert < r.vert)
+		{
+			return true;
+		}
+		if (vert > r.vert)
+		{
+			return false;
+		}
+		if (normal < r.normal)
+		{
+			return true;
+		}
+		if (normal > r.normal)
+		{
+			return false;
+		}
+		if (texCoord < r.texCoord)
+		{
+			return true;
+		}
+		else if (texCoord > r.texCoord)
+		{
+			return false;
+		}
+		return handedNess > r.handedNess;
 	}
-	bool operator == (const SimpleVertexRef &r) const {
-		return vert == r.vert && normal == r.normal && texCoord == r.texCoord;
+	bool operator == (const SimpleVertexRef& r) const
+	{
+		return vert == r.vert && normal == r.normal && texCoord == r.texCoord && handedNess == r.handedNess;
 	}
-	void parse(char *s, int indexNr) {
-		int nr[3] = {0,0,0};
-		char *p = s;
+	void parse(char* s, int indexNr)
+	{
+		int nr[3] = {0, 0, 0};
+		char* p = s;
 		int i = 0;
 		while (*p != 0 && i < 3 && sscanf(p, "%d", &nr[i]) == 1)
 		{
 			while (*p != '/' && *p != 0)
+			{
 				p++;
+			}
 
 			if (*p == 0)
+			{
 				break;
+			}
 
 			p++;
 			i++;
@@ -160,19 +245,54 @@ struct SimpleVertexRef {
 				i++;
 			}
 		}
-		assert(nr[0] > 0);
-		vert = nr[0]-1; texCoord = nr[1]-1; normal = nr[2]-1;
+		PX_ASSERT(nr[0] > 0);
+		vert = nr[0] - 1;
+		texCoord = nr[1] - 1;
+		normal = nr[2] - 1;
 		this->indexNr = indexNr;
 	}
 };
 
 // ----------------------------------------------------------------------
-TriangleMesh::TriangleMesh(physx::PxU32 moduleIdentifier) :
-mDynamicVertexBuffer(NULL),
-mStaticVertexBuffer(NULL),
-mIndexBuffer(NULL),
-mBoneBuffer(NULL),
-mTextureUVOrigin(physx::NxTextureUVOrigin::ORIGIN_TOP_LEFT)
+void TriangleSubMesh::setMaterialReference(SampleRenderer::RendererMaterial* material, SampleRenderer::RendererMaterialInstance* materialInstance)
+{
+	PX_FORCE_PARAMETER_REFERENCE(material);
+	PX_FORCE_PARAMETER_REFERENCE(materialInstance);
+
+#ifdef USE_SAMPLE_RENDERER
+	if (mRendererMaterialReference != material && mRendererMaterialInstance != NULL)
+	{
+		delete mRendererMaterialInstance;
+		mRendererMaterialInstance = NULL;
+	}
+	mRendererMaterialReference = material;
+
+	if (mRendererMaterialInstance == NULL && materialInstance != NULL && mRendererMaterialReference != NULL)
+	{
+		mRendererMaterialInstance = new SampleRenderer::RendererMaterialInstance(*mRendererMaterialReference);
+	}
+
+	if (mRendererMaterialInstance != NULL && materialInstance != NULL)
+	{
+		// copy the values of all variables
+		*mRendererMaterialInstance = *materialInstance;
+	}
+#endif // USE_SAMPLE_RENDERER
+}
+
+// ----------------------------------------------------------------------
+TriangleMesh::TriangleMesh(physx::PxU32 /*moduleIdentifier*/, SampleRenderer::Renderer* renderer /*= NULL*/) :
+	mDynamicVertexBuffer(NULL),
+	mStaticVertexBuffer(NULL),
+	mIndexBuffer(NULL),
+	mBoneBuffer(NULL),
+	mTextureUVOrigin(physx::NxTextureUVOrigin::ORIGIN_TOP_LEFT),
+	mRenderer(renderer),
+	mRendererVertexBufferDynamic(NULL),
+	mRendererVertexBufferShared(NULL),
+	mRendererIndexBuffer(NULL),
+	mOverrideMaterial(NULL),
+	mUseGpuSkinning(false)
 {
 	clear(NULL, NULL);
 }
@@ -183,10 +303,20 @@ TriangleMesh::~TriangleMesh()
 	clear(NULL, NULL);
 }
 
+
 // ----------------------------------------------------------------------
-void TriangleMesh::clear(physx::NxUserRenderResourceManager* rrm, physx::NxResourceCallback* rcb)
+void TriangleMesh::setRenderer(SampleRenderer::Renderer* renderer)
 {
-	mMaxBoneIndex = -1;
+	PX_ASSERT(mRenderer == NULL || mRenderer == renderer);
+	mRenderer = renderer;
+}
+
+
+// ----------------------------------------------------------------------
+void TriangleMesh::clear(physx::apex::NxUserRenderResourceManager* rrm, physx::apex::NxResourceCallback* rcb)
+{
+	mMaxBoneIndexInternal = -1;
+	mMaxBoneIndexExternal = -1;
 
 	mName = "";
 	mSkeletonFile = "";
@@ -194,7 +324,6 @@ void TriangleMesh::clear(physx::NxUserRenderResourceManager* rrm, physx::NxResou
 	mBounds.setEmpty();
 
 	oneCullModeChanged = false;
-	needSkinningVertices = true;
 	textureUvOriginChanged = false;
 
 	mVertices.clear();
@@ -212,14 +341,18 @@ void TriangleMesh::clear(physx::NxUserRenderResourceManager* rrm, physx::NxResou
 	indicesChanged = false;
 
 	for (int i = 0; i < PC_NUM_CHANNELS; i++)
+	{
 		mPaintChannels[i].clear();
-	
+	}
+
 	for (int i = 0; i < NUM_TEXCOORDS; i++)
+	{
 		mTexCoords[i].clear();
+	}
 
 	mIndices.clear();
 
-	mBoneIndices.clear();
+	mBoneIndicesExternal.clear();
 	mBoneWeights.clear();
 
 	mNextMark = -1;
@@ -231,60 +364,120 @@ void TriangleMesh::clear(physx::NxUserRenderResourceManager* rrm, physx::NxResou
 	{
 		if (mSubMeshes[i].mRenderResource != NULL)
 		{
-			assert(rrm != NULL);
+			PX_ASSERT(rrm != NULL);
 			rrm->releaseResource(*mSubMeshes[i].mRenderResource);
 			mSubMeshes[i].mRenderResource = NULL;
 		}
 
 		if (mParent != NULL)
+		{
 			mSubMeshes[i].materialResource = NULL;
+		}
 
 		if (mSubMeshes[i].materialResource != NULL)
 		{
-			assert(rcb != NULL);
+#ifndef USE_SAMPLE_RENDERER
+			PX_ASSERT(rcb != NULL);
 			std::string fullMaterialName = mMaterialPrefix + mSubMeshes[i].materialName + mMaterialSuffix;
 			rcb->releaseResource(APEX_MATERIALS_NAME_SPACE, fullMaterialName.c_str(), mSubMeshes[i].materialResource);
+#endif
 			mSubMeshes[i].materialResource = NULL;
 		}
+
+#ifdef USE_SAMPLE_RENDERER
+		if (mSubMeshes[i].mRendererMeshContext != NULL)
+		{
+			delete mSubMeshes[i].mRendererMeshContext;
+			mSubMeshes[i].mRendererMeshContext = NULL;
+		}
+
+		if (mSubMeshes[i].mRendererMaterialInstance != NULL)
+		{
+			delete mSubMeshes[i].mRendererMaterialInstance;
+			mSubMeshes[i].mRendererMaterialInstance = NULL;
+		}
+
+		if (mSubMeshes[i].mSampleMaterial != NULL && mParent == NULL)
+		{
+			rcb->releaseResource(APEX_MATERIALS_NAME_SPACE, NULL, mSubMeshes[i].mSampleMaterial);
+
+			mSubMeshes[i].mRendererMaterialReference = NULL;
+		}
+
+		if (mSubMeshes[i].mRendererMesh != NULL && mParent == NULL)
+		{
+			mSubMeshes[i].mRendererMesh->release();
+			mSubMeshes[i].mRendererMesh = NULL;
+		}
+#endif // USE_SAMPLE_RENDERER
 	}
 	mSubMeshes.clear();
 
 	if (mDynamicVertexBuffer != NULL)
 	{
-		assert(rrm != NULL);
+		PX_ASSERT(rrm != NULL);
 		rrm->releaseVertexBuffer(*mDynamicVertexBuffer);
 		mDynamicVertexBuffer = NULL;
 	}
 
 	if (mStaticVertexBuffer != NULL)
 	{
-		assert(rrm != NULL);
+		PX_ASSERT(rrm != NULL);
 		rrm->releaseVertexBuffer(*mStaticVertexBuffer);
 		mStaticVertexBuffer = NULL;
 	}
 
 	if (mIndexBuffer != NULL)
 	{
-		assert(rrm != NULL);
+		PX_ASSERT(rrm != NULL);
 		rrm->releaseIndexBuffer(*mIndexBuffer);
 		mIndexBuffer = NULL;
 	}
 
 	if (mBoneBuffer != NULL)
 	{
-		assert(rrm != NULL);
+		PX_ASSERT(rrm != NULL);
 		rrm->releaseBoneBuffer(*mBoneBuffer);
 		mBoneBuffer = NULL;
 	}
 
+
+#ifdef USE_SAMPLE_RENDERER
+	if (mRendererIndexBuffer != NULL)
+	{
+		mRendererIndexBuffer->release();
+		mRendererIndexBuffer = NULL;
+	}
+
+	if (mRendererVertexBufferDynamic != NULL)
+	{
+		mRendererVertexBufferDynamic->release();
+		mRendererVertexBufferDynamic = NULL;
+	}
+
+	if (mRendererVertexBufferShared != NULL)
+	{
+		mRendererVertexBufferShared->release();
+		mRendererVertexBufferShared = NULL;
+	}
+
+	if (mOverrideMaterial != NULL && rcb != NULL)
+	{
+		rcb->releaseResource(APEX_MATERIALS_NAME_SPACE, NULL, mOverrideMaterial);
+		mOverrideMaterial = NULL;
+	}
+#endif // USE_SAMPLE_RENDERER
+
 	mParent = NULL;
+	mUseGpuSkinning = false;
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::loadMaterials(physx::NxResourceCallback* resourceCallback, bool dummyMaterial, const char* materialPrefix, const char* materialSuffix, bool onlyVisibleMaterials)
+void TriangleMesh::loadMaterials(physx::apex::NxResourceCallback* resourceCallback, physx::apex::NxUserRenderResourceManager* rrm,
+                                 bool dummyMaterial, const char* materialPrefix, const char* materialSuffix, bool onlyVisibleMaterials)
 {
 	std::string path;
-	assert(mParent == NULL);
+	PX_ASSERT(mParent == NULL);
 
 	if (dummyMaterial)
 	{
@@ -297,21 +490,31 @@ void TriangleMesh::loadMaterials(physx::NxResourceCallback* resourceCallback, bo
 		}
 	}
 
-	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+	unsigned int maxBonesShader = 0;
+
+	for (physx::PxU32 submeshIndex = 0; submeshIndex < mSubMeshes.size(); submeshIndex++)
 	{
-		TriangleSubMesh& sm = mSubMeshes[i];
+		TriangleSubMesh& sm = mSubMeshes[submeshIndex];
 
 		if (sm.materialResource != NULL)
+		{
 			continue;
+		}
 
 		if (sm.materialName.find("invisible") != std::string::npos)
+		{
 			sm.show = false;
+		}
 
 		if (onlyVisibleMaterials && !sm.show)
+		{
 			continue;
+		}
 
 		if (sm.materialName.empty())
+		{
 			sm.materialName = sm.name;
+		}
 
 		std::string materialName;
 		if (materialPrefix != NULL)
@@ -326,13 +529,47 @@ void TriangleMesh::loadMaterials(physx::NxResourceCallback* resourceCallback, bo
 			materialName.append(materialSuffix);
 		}
 
+#ifdef USE_SAMPLE_RENDERER
+		PX_ASSERT(sm.mSampleMaterial == NULL);
+		sm.mSampleMaterial = reinterpret_cast<SampleFramework::SampleMaterialAsset*>(
+		                         resourceCallback->requestResource(APEX_MATERIALS_NAME_SPACE, materialName.c_str()));
+#else
 		sm.materialResource = (MaterialResource*)resourceCallback->requestResource(APEX_MATERIALS_NAME_SPACE, materialName.c_str());
+#endif
 
 		if (materialName.find("__cloth") != std::string::npos)
 		{
 			sm.usedForCollision = false;
 		}
+
+		if (sm.materialResource != NULL || sm.mSampleMaterial != NULL)
+		{
+#ifdef USE_SAMPLE_RENDERER
+			sm.maxBonesShader = 0;//rrm->getMaxBonesForMaterial(sm.mSampleMaterial);
+#else
+			sm.maxBonesShader = rrm->getMaxBonesForMaterial(sm.materialResource);
+#endif
+			if (maxBonesShader == 0 || sm.maxBonesShader < maxBonesShader)
+			{
+				maxBonesShader = sm.maxBonesShader;
+			}
+		}
 	}
+
+#ifdef USE_SAMPLE_RENDERER
+	if (mOverrideMaterial == NULL)
+	{
+		mOverrideMaterial = reinterpret_cast<SampleFramework::SampleMaterialAsset*>(
+		                        resourceCallback->requestResource(APEX_MATERIALS_NAME_SPACE, "materials/simple_lit_uniform_color.xml"));
+	}
+	PX_ASSERT(mOverrideMaterial != NULL);
+#endif
+
+	optimizeForRendering();
+
+	const unsigned int maxBoneIndexMesh = mParent != NULL ? mParent->mMaxBoneIndexInternal : mMaxBoneIndexInternal;
+
+	mUseGpuSkinning = maxBoneIndexMesh < maxBonesShader;
 }
 
 // ----------------------------------------------------------------------
@@ -363,37 +600,50 @@ void TriangleMesh::initSingleMesh()
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::copyFrom(const TriangleMesh &mesh)
+void TriangleMesh::copyFrom(const TriangleMesh& mesh)
 {
 	clear(NULL, NULL);
 
 	mVertices.resize(mesh.mVertices.size());
 	for (size_t i = 0; i < mesh.mVertices.size(); i++)
+	{
 		mVertices[i] = mesh.mVertices[i];
+	}
 
 	mNormals.resize(mesh.mNormals.size());
 	for (size_t i = 0; i < mesh.mNormals.size(); i++)
+	{
 		mNormals[i] = mesh.mNormals[i];
+	}
 
 	mTangents.resize(mesh.mTangents.size());
 	for (size_t i = 0; i < mesh.mTangents.size(); i++)
+	{
 		mTangents[i] = mesh.mTangents[i];
+	}
 
 	mBitangents.resize(mesh.mBitangents.size());
 	for (size_t i = 0; i < mesh.mBitangents.size(); i++)
+	{
 		mBitangents[i] = mesh.mBitangents[i];
+	}
 
 	for (unsigned int t = 0; t < NUM_TEXCOORDS; t++)
 	{
 		mTexCoords[t].resize(mesh.mTexCoords[t].size());
 		for (size_t i = 0; i < mesh.mTexCoords[t].size(); i++)
+		{
 			mTexCoords[t][i] = mesh.mTexCoords[t][i];
+		}
 	}
 
-	for (unsigned int i = 0; i < PC_NUM_CHANNELS; i++) {
+	for (unsigned int i = 0; i < PC_NUM_CHANNELS; i++)
+	{
 		mPaintChannels[i].resize(mesh.mPaintChannels[i].size());
 		for (size_t j = 0; j < mesh.mPaintChannels[i].size(); j++)
+		{
 			mPaintChannels[i][j] = mesh.mPaintChannels[i][j];
+		}
 	}
 
 	mSubMeshes.resize(mesh.mSubMeshes.size());
@@ -401,35 +651,48 @@ void TriangleMesh::copyFrom(const TriangleMesh &mesh)
 	{
 		mSubMeshes[i] = mesh.mSubMeshes[i];
 		mSubMeshes[i].materialResource = NULL;
-		mSubMeshes[i].mRenderResource = NULL; // don't copy that one
+		// don't copy these
+		mSubMeshes[i].mRenderResource = NULL;
+		mSubMeshes[i].mRendererMesh = NULL;
+		mSubMeshes[i].mRendererMeshContext = NULL;
+		mSubMeshes[i].mSampleMaterial = NULL;
+		mSubMeshes[i].mRendererMaterialReference = NULL; 
+		mSubMeshes[i].mRendererMaterialInstance = NULL;
 	}
 
 	mIndices.resize(mesh.mIndices.size());
 	for (size_t i = 0; i < mesh.mIndices.size(); i++)
+	{
 		mIndices[i] = mesh.mIndices[i];
+	}
 
 	// skeleton binding
 	mSkeletonFile = mesh.mSkeletonFile;
 
-	mBoneIndices.resize(mesh.mBoneIndices.size());
-	for (size_t i = 0; i < mesh.mBoneIndices.size(); i++)
-		mBoneIndices[i] = mesh.mBoneIndices[i];
+	mBoneIndicesExternal.resize(mesh.mBoneIndicesExternal.size());
+	for (size_t i = 0; i < mesh.mBoneIndicesExternal.size(); i++)
+	{
+		mBoneIndicesExternal[i] = mesh.mBoneIndicesExternal[i];
+	}
 
 	mBoneWeights.resize(mesh.mBoneWeights.size());
 	for (size_t i = 0; i < mesh.mBoneWeights.size(); i++)
+	{
 		mBoneWeights[i] = mesh.mBoneWeights[i];
+	}
 
 	mName = mesh.mName;
 
-	mMaxBoneIndex = mesh.mMaxBoneIndex;
+	mMaxBoneIndexExternal = mesh.mMaxBoneIndexExternal;
 	updateBounds();
 	updateBoneWeights();
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool filterVertices)
+void TriangleMesh::copyFromSubMesh(const TriangleMesh& mesh, int subMeshNr, bool filterVertices)
 {
-	if (!filterVertices && subMeshNr < 0) {
+	if (!filterVertices && subMeshNr < 0)
+	{
 		copyFrom(mesh);
 		return;
 	}
@@ -437,47 +700,60 @@ void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool
 	clear(NULL, NULL);
 
 	if (subMeshNr >= (int)mesh.mSubMeshes.size())
+	{
 		return;
+	}
 
 	int firstIndex = 0;
 	int numIndices = (int)mesh.getNumIndices();
-	if (subMeshNr >= 0) {
-		const TriangleSubMesh &sm = mesh.mSubMeshes[subMeshNr];
+	if (subMeshNr >= 0)
+	{
+		const TriangleSubMesh& sm = mesh.mSubMeshes[subMeshNr];
 		firstIndex = sm.firstIndex;
 		numIndices = sm.numIndices;
 	}
 
-	int numVerts = (int)(mesh.mVertices.size());
+	size_t numVerts = mesh.mVertices.size();
 
 	std::vector<int> oldToNew;
 	oldToNew.resize(numVerts);
-	for (int i = 0; i < numVerts; i++)
+	for (size_t i = 0; i < numVerts; i++)
+	{
 		oldToNew[i] = -1;
+	}
 
 	mSubMeshes.resize(1);
 	mSubMeshes[0].init();
 
-	const std::vector<PaintedVertex> &physChannel = mesh.getPaintChannel(PC_PHYSICAL);
-	bool filter = filterVertices && physChannel.size() == mesh.getNumVertices();
+	const std::vector<PaintedVertex> &physChannel = mesh.getPaintChannel(PC_LATCH_TO_NEAREST_SLAVE);
+	const bool filter = filterVertices && physChannel.size() == mesh.getNumVertices();
 	mIndices.clear();
 	int nextIndex = 0;
-	for (int i = firstIndex; i < firstIndex + numIndices; i += 3) {
+	for (int i = firstIndex; i < firstIndex + numIndices; i += 3)
+	{
 
 		bool skipTri = false;
-		if (filter) {
-			for (int j = 0; j < 3; j++) {
-				if (physChannel[mesh.mIndices[i+j]].paintValue == 0.0f)
-					skipTri = true;
+		if (filter)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				skipTri |= (physChannel[mesh.mIndices[i + j]].paintValueU32 != 0);
 			}
 		}
 		if (skipTri)
+		{
 			continue;
+		}
 
-		for (int j = 0; j < 3; j++) {
-			physx::PxU32 idx = mesh.mIndices[i+j];
+		for (int j = 0; j < 3; j++)
+		{
+			physx::PxU32 idx = mesh.mIndices[i + j];
 			if (oldToNew[idx] >= 0)
+			{
 				mIndices.push_back(oldToNew[idx]);
-			else {
+			}
+			else
+			{
 				mIndices.push_back(nextIndex);
 				oldToNew[idx] = nextIndex;
 				nextIndex++;
@@ -487,33 +763,45 @@ void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool
 	int numNewVerts = nextIndex;
 
 	mVertices.resize(numNewVerts);
-	for (int i = 0; i < numVerts; i++) {
+	for (size_t i = 0; i < numVerts; i++)
+	{
 		if (oldToNew[i] >= 0)
+		{
 			mVertices[oldToNew[i]] = mesh.mVertices[i];
+		}
 	}
 
-	if (mesh.mNormals.size() == numVerts) {
+	if (mesh.mNormals.size() == numVerts)
+	{
 		mNormals.resize(numNewVerts);
-		for (int i = 0; i < numVerts; i++) {
-			if (oldToNew[i] >= 0) {
+		for (size_t i = 0; i < numVerts; i++)
+		{
+			if (oldToNew[i] >= 0)
+			{
 				mNormals[oldToNew[i]] = mesh.mNormals[i];
 			}
 		}
 	}
 
-	if (mesh.mTangents.size() == numVerts) {
+	if (mesh.mTangents.size() == numVerts)
+	{
 		mTangents.resize(numNewVerts);
-		for (int i = 0; i < numVerts; i++) {
-			if (oldToNew[i] >= 0) {
+		for (size_t i = 0; i < numVerts; i++)
+		{
+			if (oldToNew[i] >= 0)
+			{
 				mTangents[oldToNew[i]] = mesh.mTangents[i];
 			}
 		}
 	}
-	
-	if (mesh.mBitangents.size() == numVerts) {
+
+	if (mesh.mBitangents.size() == numVerts)
+	{
 		mBitangents.resize(numNewVerts);
-		for (int i = 0; i < numVerts; i++) {
-			if (oldToNew[i] >= 0) {
+		for (size_t i = 0; i < numVerts; i++)
+		{
+			if (oldToNew[i] >= 0)
+			{
 				mBitangents[oldToNew[i]] = mesh.mBitangents[i];
 			}
 		}
@@ -524,13 +812,15 @@ void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool
 		// PH: I suppose we could delete these 3 lines?
 		mTexCoords[t].resize(mesh.mTexCoords[t].size());
 		for (physx::PxU32 i = 0; i < mesh.mTexCoords[t].size(); i++)
+		{
 			mTexCoords[t][i] = mesh.mTexCoords[t][i];
+		}
 
 		if (mesh.mTexCoords[t].size() == numVerts)
 		{
 			mTexCoords[t].resize(numNewVerts);
 
-			for (int j = 0; j < numVerts; j++)
+			for (size_t j = 0; j < numVerts; j++)
 			{
 				if (oldToNew[j] >= 0)
 				{
@@ -540,12 +830,17 @@ void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool
 		}
 	}
 
-	for (int i = 0; i < PC_NUM_CHANNELS; i++) {
-		if (mesh.mPaintChannels[i].size() == numVerts) {
+	for (int i = 0; i < PC_NUM_CHANNELS; i++)
+	{
+		if (mesh.mPaintChannels[i].size() == numVerts)
+		{
 			mPaintChannels[i].resize(numNewVerts);
-			for (int j = 0; j < numVerts; j++) {
+			for (size_t j = 0; j < numVerts; j++)
+			{
 				if (oldToNew[j] >= 0)
+				{
 					mPaintChannels[i][oldToNew[j]] = mesh.mPaintChannels[i][j];
+				}
 			}
 		}
 	}
@@ -554,19 +849,19 @@ void TriangleMesh::copyFromSubMesh(const TriangleMesh &mesh, int subMeshNr, bool
 
 	mSkeletonFile = mesh.mSkeletonFile;
 
-	if (mesh.mBoneIndices.size() == numVerts * 4)
+	if (mesh.mBoneIndicesExternal.size() == numVerts * 4)
 	{
-		mBoneIndices.resize(numNewVerts * 4);
+		mBoneIndicesExternal.resize(numNewVerts * 4);
 		mBoneWeights.resize(numNewVerts);
 
-		for (int i = 0; i < numVerts; i++)
+		for (size_t i = 0; i < numVerts; i++)
 		{
 			if (oldToNew[i] >= 0)
 			{
 				const int newIndex = oldToNew[i];
 				for (int j = 0; j < 4; j++)
 				{
-					mBoneIndices[newIndex * 4 + j] = mesh.mBoneIndices[i * 4 + j];
+					mBoneIndicesExternal[newIndex * 4 + j] = mesh.mBoneIndicesExternal[i * 4 + j];
 				}
 				mBoneWeights[newIndex] = mesh.mBoneWeights[i];
 			}
@@ -586,15 +881,13 @@ bool TriangleMesh::loadFromObjFile(const std::string& filename, bool useCustomCh
 	mName = filename;
 
 	// extract path
-	int slashPos = (int)filename.rfind('\\', std::string::npos);
-	int columnPos = (int)filename.rfind(':', std::string::npos);
+	size_t slashPos = filename.rfind('\\', std::string::npos);
+	size_t columnPos = filename.rfind(':', std::string::npos);
 
-	int pos = slashPos > columnPos ? slashPos : columnPos;
+	size_t pos = slashPos > columnPos ? slashPos : columnPos;
 	std::string path = pos == std::string::npos ? "" : filename.substr(0, pos);
 
-	std::vector<TriangleMeshMaterial> materials;
-	char s[OBJ_STR_LEN], ps[OBJ_STR_LEN], sub[OBJ_STR_LEN];
-	int matNr = -1;
+	char s[OBJ_STR_LEN], ps[OBJ_STR_LEN];
 	physx::PxVec3 v;
 	physx::NxVertexUV tc;
 	std::vector<SimpleVertexRef> refs;
@@ -606,80 +899,98 @@ bool TriangleMesh::loadFromObjFile(const std::string& filename, bool useCustomCh
 	std::vector<physx::NxVertexUV> texCoords;
 
 
-	FILE *f;
+	FILE* f = 0;
 
 	if (physx::fopen_s(&f, filename.c_str(), "r") != 0)
+	{
 		return false;
+	}
+
+	std::string groupName;
+	std::string useMtl;
 
 	// first a vertex ref is generated for each v/n/t combination
-	while (!feof(f)) {
-		if (fgets(s, OBJ_STR_LEN, f) == NULL) break;
+	while (!feof(f))
+	{
+		if (fgets(s, OBJ_STR_LEN, f) == NULL)
+		{
+			break;
+		}
 
 		//wxMessageBox(s);
-		if (strncmp(s, "mtllib", 6) == 0) {  // material library
-			sscanf(&s[7], "%s", sub);
-			importMtlFile(std::string(sub), path, materials);
-		}
-		else if (strncmp(s, "usemtl", 6) == 0 || strncmp(s, "g ", 2) == 0) {  // new group
-			if (strncmp(s, "usemtl", 6) == 0) {
+		if (strncmp(s, "usemtl", 6) == 0 || strncmp(s, "g ", 2) == 0)    // new group
+		{
+			if (strncmp(s, "usemtl", 6) == 0)
+			{
+				char sub[OBJ_STR_LEN];
 				sscanf(&s[7], "%s", sub);
-				matNr = -1;
-				for (int i = 0; i < (int)materials.size(); i++) {
-					if (materials[i].name == std::string(sub))
-						matNr = i;
-				}
-			}
-			else {
-				sscanf(&s[2], "%s", sub);
-			}
-
-			size_t numSubs = mSubMeshes.size();
-			if (mSubMeshes[numSubs-1].numIndices > 0) {
-				mSubMeshes.resize(numSubs+1);
-				mSubMeshes[numSubs].init();
-				mSubMeshes[numSubs].firstIndex = (physx::PxU32)(mIndices.size());
-				mSubMeshes[numSubs].materialName = sub;
-				mSubMeshes[numSubs].originalMaterialName = sub;
+				useMtl = sub;
 			}
 			else
 			{
-				mSubMeshes[numSubs-1].materialName = sub;
-				mSubMeshes[numSubs-1].originalMaterialName = sub;
+				char sub[OBJ_STR_LEN];
+				sscanf(&s[2], "%s", sub);
+				groupName = sub;
+			}
+
+			size_t numSubs = mSubMeshes.size();
+			if (mSubMeshes[numSubs - 1].numIndices > 0)
+			{
+				mSubMeshes.resize(numSubs + 1);
+				mSubMeshes[numSubs].init();
+				mSubMeshes[numSubs].firstIndex = (physx::PxU32)(mIndices.size());
+				mSubMeshes[numSubs].materialName = useMtl;
+				mSubMeshes[numSubs].originalMaterialName = useMtl;
+			}
+			else
+			{
+				mSubMeshes[numSubs - 1].materialName = useMtl;
+				mSubMeshes[numSubs - 1].originalMaterialName = useMtl;
 			}
 			size_t subNr = mSubMeshes.size() - 1;
-			mSubMeshes[subNr].name = std::string(sub);
-			if (matNr >= 0)
-				mSubMeshes[subNr].textureFile = materials[matNr].textureFile;
+			mSubMeshes[subNr].name = groupName;
 		}
-		else if (strncmp(s, "v ", 2) == 0) {	// vertex
+		else if (strncmp(s, "v ", 2) == 0)  	// vertex
+		{
 			sscanf(s, "v %f %f %f", &v.x, &v.y, &v.z);
 			vertices.push_back(v);
 		}
-		else if (strncmp(s, "vn ", 3) == 0) {	// normal
+		else if (strncmp(s, "vn ", 3) == 0)  	// normal
+		{
 			sscanf(s, "vn %f %f %f", &v.x, &v.y, &v.z);
 			normals.push_back(v);
 		}
-		else if (strncmp(s, "vt ", 3) == 0) {	// texture coords
+		else if (strncmp(s, "vt ", 3) == 0)  	// texture coords
+		{
 			sscanf(s, "vt %f %f", &tc.u, &tc.v);
 			texCoords.push_back(tc);
 		}
-		else if (strncmp(s, "f ", 2) == 0) {	// face, tri or quad
+		else if (strncmp(s, "f ", 2) == 0)  	// face, tri or quad
+		{
 			size_t offset = 2;
 			size_t index = 0;
-			while (sscanf(s+offset, "%s", ps) > 0)
+			while (sscanf(s + offset, "%s", ps) > 0)
 			{
 				offset += strlen(ps);
 				while (s[offset] == ' ' || s[offset] == '\t')
+				{
 					offset++;
+				}
 
 				if (index >= 2)
 				{
 					// submit triangle
 					ref[2].parse(ps, 0);
-					ref[0].indexNr = numIndices++; refs.push_back(ref[0]); mIndices.push_back(0);
-					ref[1].indexNr = numIndices++; refs.push_back(ref[1]); mIndices.push_back(0);
-					ref[2].indexNr = numIndices++; refs.push_back(ref[2]); mIndices.push_back(0);
-					mSubMeshes[mSubMeshes.size()-1].numIndices += 3;
+					ref[0].indexNr = numIndices++;
+					refs.push_back(ref[0]);
+					mIndices.push_back(0);
+					ref[1].indexNr = numIndices++;
+					refs.push_back(ref[1]);
+					mIndices.push_back(0);
+					ref[2].indexNr = numIndices++;
+					refs.push_back(ref[2]);
+					mIndices.push_back(0);
+					mSubMeshes[mSubMeshes.size() - 1].numIndices += 3;
 
 					ref[1] = ref[2];
 					index++;
@@ -694,26 +1005,74 @@ bool TriangleMesh::loadFromObjFile(const std::string& filename, bool useCustomCh
 	}
 	fclose(f);
 
+	// make sure that vertices with left/right handed tangent space don't get merged
+	for (size_t i = 0; i < refs.size(); i += 3)
+	{
+		const physx::PxVec3 p0 = vertices[refs[i + 0].vert];
+		const physx::PxVec3 p1 = vertices[refs[i + 1].vert];
+		const physx::PxVec3 p2 = vertices[refs[i + 2].vert];
+
+		float handedNess = 1.0f;
+
+		if (refs[i + 0].texCoord >= 0)
+		{
+			const physx::PxVec3 faceNormal = (p1 - p0).cross(p2 - p0);
+
+			const physx::NxVertexUV w0 = texCoords[refs[i + 0].texCoord];
+			const physx::NxVertexUV w1 = texCoords[refs[i + 1].texCoord];
+			const physx::NxVertexUV w2 = texCoords[refs[i + 2].texCoord];
+
+			const float x1 = p1.x - p0.x;
+			const float x2 = p2.x - p0.x;
+			const float y1 = p1.y - p0.y;
+			const float y2 = p2.y - p0.y;
+			const float z1 = p1.z - p0.z;
+			const float z2 = p2.z - p0.z;
+
+			const float s1 = w1.u - w0.u;
+			const float s2 = w2.u - w0.u;
+			const float t1 = w1.v - w0.v;
+			const float t2 = w2.v - w0.v;
+
+			const float r = 1.0F / (s1 * t2 - s2 * t1);
+			const physx::PxVec3 tangentDir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
+			const physx::PxVec3 bitangentDir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
+
+			handedNess = faceNormal.cross(tangentDir).dot(bitangentDir) > 0.0f ? 1.0f : -1.0f;
+		}
+
+		refs[i + 0].handedNess = handedNess;
+		refs[i + 1].handedNess = handedNess;
+		refs[i + 2].handedNess = handedNess;
+	}
+
 	// now we merge multiple v/n/t triplets
 	std::sort(refs.begin(), refs.end());
 
-	int i = 0;
+	size_t readRefs = 0;
 	physx::PxVec3 defNormal(1.0f, 0.0f, 0.0f);
 	bool normalsOK = true;
-	bool mTextured = true;
 	int numTexCoords = (int)(texCoords.size());
 
-	while (i < (int)refs.size()) {
+	while (readRefs < refs.size())
+	{
 		int vertNr = (int)(mVertices.size());
-		SimpleVertexRef &r = refs[i];
+		SimpleVertexRef& r = refs[readRefs];
 		mVertices.push_back(vertices[r.vert]);
 
-		if (r.normal >= 0) mNormals.push_back(normals[r.normal]);
-		else { mNormals.push_back(defNormal); normalsOK = false; }
+		if (r.normal >= 0)
+		{
+			mNormals.push_back(normals[r.normal]);
+		}
+		else
+		{
+			mNormals.push_back(defNormal);
+			normalsOK = false;
+		}
 
 		if (r.texCoord >= 0 && r.texCoord < numTexCoords)
 		{
-			
+
 			mTexCoords[0].push_back(texCoords[r.texCoord]);
 		}
 		else
@@ -722,19 +1081,22 @@ bool TriangleMesh::loadFromObjFile(const std::string& filename, bool useCustomCh
 		}
 
 		mIndices[r.indexNr] = vertNr;
-		i++;
-		while (i < (int)refs.size() && r == refs[i]) {
-			mIndices[refs[i].indexNr] = vertNr;
-			i++;
+		readRefs++;
+		while (readRefs < refs.size() && r == refs[readRefs])
+		{
+			mIndices[refs[readRefs].indexNr] = vertNr;
+			readRefs++;
 		}
 	}
 
 	complete(useCustomChannels);
 
 	if (!normalsOK)
+	{
 		updateNormals(-1);
+	}
 
-	updateTangents(-1);
+	updateTangents();
 
 	mMaterialPrefix.clear();
 	mMaterialSuffix.clear();
@@ -745,18 +1107,21 @@ bool TriangleMesh::loadFromObjFile(const std::string& filename, bool useCustomCh
 // ----------------------------------------------------------------------
 bool TriangleMesh::saveToObjFile(const std::string& filename) const
 {
-	FILE *f;
+	FILE* f = 0;
 	if (physx::fopen_s(&f, filename.c_str(), "w") != 0)
+	{
 		return false;
+	}
 
 	fprintf(f, "# Wavefront OBJ\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\n");
-	fprintf(f, "# %i vertices:\n", mVertices.size());
-	for (int i = 0; i < (int)mVertices.size(); i++) {
-		const physx::PxVec3 &v = mVertices[i];
-		fprintf(f,"v %f %f %f\n", v.x, v.y, v.z);
+	fprintf(f, "# %i vertices:\n", (int)(mVertices.size()));
+	for (int i = 0; i < (int)mVertices.size(); i++)
+	{
+		const physx::PxVec3& v = mVertices[i];
+		fprintf(f, "v %f %f %f\n", v.x, v.y, v.z);
 	}
 
 	fprintf(f, "\n");
@@ -764,27 +1129,30 @@ bool TriangleMesh::saveToObjFile(const std::string& filename) const
 	fprintf(f, "# %i texture coordinates:\n", numTex);
 	for (int i = 0; i < numTex; i++)
 	{
-		fprintf(f,"vt %f %f\n", mTexCoords[0][i].u, mTexCoords[0][i].v);
+		fprintf(f, "vt %f %f\n", mTexCoords[0][i].u, mTexCoords[0][i].v);
 	}
 
 	fprintf(f, "\n");
-	fprintf(f, "# %i normals:\n", mNormals.size());
-	for (int i = 0; i < (int)mNormals.size(); i++) {
-		const physx::PxVec3 &v = mNormals[i];
-		fprintf(f,"vn %f %f %f\n", v.x, v.y, v.z);
+	fprintf(f, "# %i normals:\n", (int)(mNormals.size()));
+	for (int i = 0; i < (int)mNormals.size(); i++)
+	{
+		const physx::PxVec3& v = mNormals[i];
+		fprintf(f, "vn %f %f %f\n", v.x, v.y, v.z);
 	}
 
-	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++) {
-		const TriangleSubMesh &sm = mSubMeshes[i];
+	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+	{
+		const TriangleSubMesh& sm = mSubMeshes[i];
 		fprintf(f, "\n");
 		fprintf(f, "g %s\n", sm.name.c_str());
 
-		for (physx::PxU32 j = sm.firstIndex; j < sm.firstIndex + sm.numIndices; j += 3) {
+		for (physx::PxU32 j = sm.firstIndex; j < sm.firstIndex + sm.numIndices; j += 3)
+		{
 			physx::PxU32 i0 = mIndices[j];
-			physx::PxU32 i1 = mIndices[j+1];
-			physx::PxU32 i2 = mIndices[j+2];
+			physx::PxU32 i1 = mIndices[j + 1];
+			physx::PxU32 i2 = mIndices[j + 2];
 
-			fprintf(f, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", i0,i0,i0, i1,i1,i1, i2,i2,i2);
+			fprintf(f, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", i0, i0, i0, i1, i1, i1, i2, i2, i2);
 		}
 		fprintf(f, "\n");
 	}
@@ -800,7 +1168,7 @@ bool TriangleMesh::loadFromXML(const std::string& filename, bool loadCustomChann
 
 	FAST_XML::FastXml* fastXml = FAST_XML::createFastXml(this);
 	mParserState = PS_Uninitialized;
-	physx::PxFileBuffer fb(filename.c_str(),physx::PxFileBuf::OPEN_READ_ONLY);
+	physx::PxFileBuffer fb(filename.c_str(), physx::PxFileBuf::OPEN_READ_ONLY);
 	fastXml->processXml(fb);
 
 	int errorLineNumber = -1;
@@ -817,7 +1185,7 @@ bool TriangleMesh::loadFromXML(const std::string& filename, bool loadCustomChann
 		return false;
 	}
 
-	if ( fastXml )
+	if (fastXml)
 	{
 		fastXml->release();
 	}
@@ -839,21 +1207,23 @@ bool TriangleMesh::loadFromXML(const std::string& filename, bool loadCustomChann
 				mBoneWeights[i] *= scale;
 				if (invalidStart != -1)
 				{
-					assert(i>0);
-					printf("\n\nWARNING: Invalid Vertices from %d to %d\n\n\n", invalidStart, i-1);
+					PX_ASSERT(i > 0);
+					printf("\n\nWARNING: Invalid Vertices from %d to %d\n\n\n", invalidStart, (int)(i - 1));
 					invalidStart = -1;
 				}
 			}
 			else
 			{
 				if (invalidStart == -1)
+				{
 					invalidStart = (int)i;
+				}
 			}
 		}
 	}
 	if (invalidStart != -1)
 	{
-		printf("\n\nWARNING: Invalid Vertices from %d to %d\n\n\n", invalidStart, mVertices.size()-1);
+		printf("\n\nWARNING: Invalid Vertices from %d to %d\n\n\n", invalidStart, (int)(mVertices.size() - 1));
 		invalidStart = -1;
 	}
 
@@ -870,49 +1240,61 @@ bool TriangleMesh::loadFromXML(const std::string& filename, bool loadCustomChann
 // -------------------------------------------------------------------
 bool TriangleMesh::saveToXML(const std::string& filename)
 {
-	FILE *f = fopen(filename.c_str(), "w");
+	FILE* f = fopen(filename.c_str(), "w");
 	if (!f)
+	{
 		return false;
+	}
 
 	fprintf(f, "<mesh>\n");
 
-	fprintf(f, "	<sharedgeometry vertexcount=\"%i\">\n", mVertices.size());
+	fprintf(f, "	<sharedgeometry vertexcount=\"%i\">\n", (int)(mVertices.size()));
 
 	fprintf(f, "		<vertexbuffer positions=\"true\" normals=\"true\">\n");
-	for (int i = 0; i < (int)mVertices.size(); i++) {
-		fprintf(f,"			<vertex>\n");
-		fprintf(f,"				<position x=\"%f\" y=\"%f\" z=\"%f\" />\n", mVertices[i].x, mVertices[i].y, mVertices[i].z);
+	for (int i = 0; i < (int)mVertices.size(); i++)
+	{
+		fprintf(f, "			<vertex>\n");
+		fprintf(f, "				<position x=\"%f\" y=\"%f\" z=\"%f\" />\n", mVertices[i].x, mVertices[i].y, mVertices[i].z);
 		if (i < (int)mNormals.size())
-			fprintf(f,"				<normal x=\"%f\" y=\"%f\" z=\"%f\" />\n", mNormals[i].x, mNormals[i].y, mNormals[i].z);
-		fprintf(f,"			</vertex>\n");
+		{
+			fprintf(f, "				<normal x=\"%f\" y=\"%f\" z=\"%f\" />\n", mNormals[i].x, mNormals[i].y, mNormals[i].z);
+		}
+		fprintf(f, "			</vertex>\n");
 	}
 	fprintf(f, "		</vertexbuffer>\n");
 
 	fprintf(f, "		<vertexbuffer texture_coord_dimensions_0=\"2\">\n");
 	for (physx::PxU32 i = 0; i < mTexCoords[0].size(); i++)
 	{
-		fprintf(f,"			<vertex>\n");
-		fprintf(f,"				<texcoord u=\"%f\" v=\"%f\" />\n", mTexCoords[0][i].u, mTexCoords[0][i].v);
-		fprintf(f,"			</vertex>\n");
+		fprintf(f, "			<vertex>\n");
+		fprintf(f, "				<texcoord u=\"%f\" v=\"%f\" />\n", mTexCoords[0][i].u, mTexCoords[0][i].v);
+		fprintf(f, "			</vertex>\n");
 	}
 	fprintf(f, "		</vertexbuffer>\n");
 
 	bool coeffsOK = true;
 //	coeffsOK = false; // no more coeffs
-	for (int i = 0; i < PC_NUM_CHANNELS; i++) {
+	for (int i = 0; i < PC_NUM_CHANNELS; i++)
+	{
 		if (mPaintChannels[i].size() != mVertices.size())
+		{
 			coeffsOK = false;
+		}
 	}
 
-	if (coeffsOK) {
+	if (coeffsOK)
+	{
 		fprintf(f, "		<vertexbuffer physics_coeffs=\"%i\">\n", PC_NUM_CHANNELS);
-		for (int i = 0; i < (int)mVertices.size(); i++) {
+		for (int i = 0; i < (int)mVertices.size(); i++)
+		{
 			fprintf(f, "			<vertex>\n");
 			fprintf(f, "				<physics_coeffs ");
 			for (int j = 0; j < PC_NUM_CHANNELS; j++)
-				fprintf(f,"v%i=\"%f\" ", j, mPaintChannels[j][i].paintValue);
+			{
+				fprintf(f, "v%i=\"%f\" ", j, mPaintChannels[j][i].paintValueF32);
+			}
 			fprintf(f, " />\n");
-			fprintf(f,"			</vertex>\n");
+			fprintf(f, "			</vertex>\n");
 		}
 		fprintf(f, "		</vertexbuffer>\n");
 	}
@@ -920,17 +1302,20 @@ bool TriangleMesh::saveToXML(const std::string& filename)
 	fprintf(f, "	</sharedgeometry>\n");
 
 	fprintf(f, "	<submeshes>\n");
-	for (int i = 0; i < (int)mSubMeshes.size(); i++) {
-		TriangleSubMesh &sm = mSubMeshes[i];
-		fprintf(f, "		<submesh material=\"%s\" usesharedvertices=\"true\" use32bitindexes=\"true\" operationtype=\"triangle_list\">\n", 
-			sm.materialName.c_str());
+	for (int i = 0; i < (int)mSubMeshes.size(); i++)
+	{
+		TriangleSubMesh& sm = mSubMeshes[i];
+		fprintf(f, "		<submesh material=\"%s\" usesharedvertices=\"true\" use32bitindexes=\"true\" operationtype=\"triangle_list\">\n",
+		        sm.materialName.c_str());
 		int numTris = sm.numIndices / 3;
 		fprintf(f, "			<faces count =\"%i\">\n", numTris);
 
 		for (int j = sm.firstIndex; j < (int)sm.firstIndex + (int)sm.numIndices; j += 3)
-			fprintf(f, "				<face v1=\"%i\" v2=\"%i\" v3=\"%i\" />\n", mIndices[j], mIndices[j+1], mIndices[j+2]);
-		fprintf(f, "			</faces>\n", numTris);
-		fprintf(f, "		</submesh>\n"); 
+		{
+			fprintf(f, "				<face v1=\"%i\" v2=\"%i\" v3=\"%i\" />\n", mIndices[j], mIndices[j + 1], mIndices[j + 2]);
+		}
+		fprintf(f, "			</faces>\n");
+		fprintf(f, "		</submesh>\n");
 	}
 	fprintf(f, "	</submeshes>\n");
 
@@ -944,7 +1329,7 @@ bool TriangleMesh::saveToXML(const std::string& filename)
 			for (unsigned int j = 0; j < 4; j++)
 			{
 				fprintf(f, "		<vertexboneassignment vertexindex=\"%i\" boneindex=\"%i\" weight=\"%f\" />\n",
-					i, mBoneIndices[i*4+j], mBoneWeights[i][j]);
+				        i, mBoneIndicesExternal[i * 4 + j], mBoneWeights[i][j]);
 			}
 		}
 		fprintf(f, "	</boneassignments>\n");
@@ -962,39 +1347,59 @@ bool TriangleMesh::saveToXML(const std::string& filename)
 bool TriangleMesh::loadFromParent(TriangleMesh* parent)
 {
 	if (parent == NULL)
+	{
 		return false;
+	}
 
 	mParent = parent;
-	mMaxBoneIndex = mParent->mMaxBoneIndex;
+	mMaxBoneIndexExternal = mParent->mMaxBoneIndexExternal;
+	mMaxBoneIndexInternal = mParent->mMaxBoneIndexInternal;
 
 	mSubMeshes.resize(mParent->mSubMeshes.size());
 	for (physx::PxU32 i = 0; i < mParent->mSubMeshes.size(); i++)
 	{
 		mSubMeshes[i] = mParent->mSubMeshes[i];
 		mSubMeshes[i].mRenderResource = NULL; // don't copy that one!!!
+#ifdef USE_SAMPLE_RENDERER
+		mSubMeshes[i].mRendererMeshContext = new SampleRenderer::RendererMeshContext;
+		if (mSubMeshes[i].mRendererMaterialInstance != NULL)
+		{
+			mSubMeshes[i].mRendererMaterialInstance = new SampleRenderer::RendererMaterialInstance(*mSubMeshes[i].mRendererMaterialInstance);
+		}
+		mSubMeshes[i].mRendererMesh = NULL;
+#endif
 	}
 
 	mMaterialPrefix.clear();
 	mMaterialSuffix.clear();
 
+	mUseGpuSkinning = parent->mUseGpuSkinning;
+	mRenderer = mParent->mRenderer;
+
 	return true;
 }
 
 // ----------------------------------------------------------------------
-bool TriangleMesh::loadFromMeshImport(physx::MeshSystemContainer *msc, bool useCustomChannels)
+bool TriangleMesh::loadFromMeshImport(mimp::MeshSystemContainer* msc, bool useCustomChannels)
 {
 	if (msc == NULL)
+	{
 		return false;
+	}
 
-	physx::MeshSystem *ms = physx::gMeshImport->getMeshSystem(msc);
+	mimp::MeshSystem* ms = mimp::gMeshImport->getMeshSystem(msc);
 
 	if (ms->mMeshCount == 0)
+	{
 		return false;
+	}
 
 
-	physx::Mesh *m = ms->mMeshes[0];
+	mimp::Mesh* m = ms->mMeshes[0];
 	if (m->mVertexCount == 0)
+	{
 		return false;
+	}
 
 	// only now that everything is OK do we delete the existing mesh
 	initSingleMesh();
@@ -1007,98 +1412,108 @@ bool TriangleMesh::loadFromMeshImport(physx::MeshSystemContainer *msc, bool useC
 	physx::PxMat34Legacy rootBoneTransformation;
 	if (ms->mSkeletonCount > 0 && bakeRootBoneTransformation)
 	{
-		physx::MeshBone &b = ms->mSkeletons[0]->mBones[0];
+		mimp::MeshBone& b = ms->mSkeletons[0]->mBones[0];
 		physx::PxQuat q;
-		physx::PxQuatFromArray( q, b.mOrientation );
+		physx::PxQuatFromArray(q, b.mOrientation);
 		rootBoneTransformation.M.fromQuat(q);
-		physx::PxVec3FromArray( rootBoneTransformation.t, b.mPosition );
+		physx::PxVec3FromArray(rootBoneTransformation.t, b.mPosition);
 	}
 
-	for (unsigned int k=0; k<ms->mMeshCount; k++)
+	for (unsigned int k = 0; k < ms->mMeshCount; k++)
 	{
-		physx::Mesh *m = ms->mMeshes[k];
+		mimp::Mesh* m = ms->mMeshes[k];
 
 		unsigned int base_index = (int)(mVertices.size());
 
-        // PH: ClothingTool does not cope well with really small meshes
-        if (m->mVertexCount < 3)
-            continue;
-
-		for (unsigned int i=0; i<m->mVertexCount; i++)
+		// PH: ClothingTool does not cope well with really small meshes
+		if (m->mVertexCount < 3)
 		{
-			const physx::MeshVertex &v = m->mVertices[i];
+			continue;
+		}
+
+		for (unsigned int i = 0; i < m->mVertexCount; i++)
+		{
+			const mimp::MeshVertex& v = m->mVertices[i];
 
 			physx::PxVec3 p;
 			physx::PxVec3FromArray(p, v.mPos);
 			if (bakeRootBoneTransformation)
+			{
 				p = rootBoneTransformation * p;
+			}
 
-			if ( m->mVertexFlags & physx::MIVF_NORMAL )
+			if (m->mVertexFlags & mimp::MIVF_NORMAL)
 			{
 				physx::PxVec3 n;
 				physx::PxVec3FromArray(n, v.mNormal);
 				if (bakeRootBoneTransformation)
+				{
 					n = rootBoneTransformation.M * n;
+				}
 				mVertices.push_back(p);
 				mNormals.push_back(n);
 			}
 
-			if (m->mVertexFlags & physx::MIVF_TANGENT)
+			if (m->mVertexFlags & mimp::MIVF_TANGENT)
 			{
 				physx::PxVec3 t;
 				physx::PxVec3FromArray(t, v.mTangent);
 				if (bakeRootBoneTransformation)
+				{
 					t = rootBoneTransformation.M * t;
+				}
 				mTangents.push_back(t);
 			}
 
-			if (m->mVertexFlags & physx::MIVF_BINORMAL)
+			if (m->mVertexFlags & mimp::MIVF_BINORMAL)
 			{
 				physx::PxVec3 b;
 				physx::PxVec3FromArray(b, v.mBiNormal);
 				if (bakeRootBoneTransformation)
+				{
 					b = rootBoneTransformation.M * b;
+				}
 				mBitangents.push_back(b);
 			}
 
-			if ( m->mVertexFlags & physx::MIVF_TEXEL1 )
+			if (m->mVertexFlags & mimp::MIVF_TEXEL1)
 			{
-				mTexCoords[0].push_back( physx::NxVertexUV(v.mTexel1[0], v.mTexel1[1]) );
+				mTexCoords[0].push_back(physx::NxVertexUV(v.mTexel1[0], v.mTexel1[1]));
 			}
 
-			if ( m->mVertexFlags & physx::MIVF_TEXEL2 )
+			if (m->mVertexFlags & mimp::MIVF_TEXEL2)
 			{
-				mTexCoords[1].push_back( physx::NxVertexUV(v.mTexel2[0], v.mTexel2[1]) );
+				mTexCoords[1].push_back(physx::NxVertexUV(v.mTexel2[0], v.mTexel2[1]));
 			}
 
-			if ( m->mVertexFlags & physx::MIVF_TEXEL3 )
+			if (m->mVertexFlags & mimp::MIVF_TEXEL3)
 			{
-				mTexCoords[2].push_back( physx::NxVertexUV(v.mTexel3[0], v.mTexel3[1]) );
+				mTexCoords[2].push_back(physx::NxVertexUV(v.mTexel3[0], v.mTexel3[1]));
 			}
 
-			if ( m->mVertexFlags & physx::MIVF_TEXEL4 )
+			if (m->mVertexFlags & mimp::MIVF_TEXEL4)
 			{
-				mTexCoords[3].push_back( physx::NxVertexUV(v.mTexel4[0], v.mTexel4[1]) );
+				mTexCoords[3].push_back(physx::NxVertexUV(v.mTexel4[0], v.mTexel4[1]));
 			}
 
-			if ( m->mVertexFlags & physx::MIVF_BONE_WEIGHTING )
+			if (m->mVertexFlags & mimp::MIVF_BONE_WEIGHTING)
 			{
 				physx::PxVec4 boneWeight(0.0f, 0.0f, 0.0f, 0.0f);
 				unsigned int boneWeightWritten = 0;
-				for (unsigned int i = 0; i < 4; i++)
+				for (unsigned int j = 0; j < 4; j++)
 				{
-					if (v.mWeight[i] > 0.0f)
+					if (v.mWeight[j] > 0.0f)
 					{
-						mBoneIndices.push_back( v.mBone[i] );
-						mMaxBoneIndex = physx::PxMax(mMaxBoneIndex, (physx::PxI32)v.mBone[i]);
-						boneWeight[boneWeightWritten++] = v.mWeight[i];
+						mBoneIndicesExternal.push_back(v.mBone[j]);
+						mMaxBoneIndexExternal = physx::PxMax(mMaxBoneIndexExternal, (physx::PxI32)v.mBone[j]);
+						boneWeight[boneWeightWritten++] = v.mWeight[j];
 					}
 					else
 					{
-						mBoneIndices.push_back(0);
+						mBoneIndicesExternal.push_back(0);
 					}
 				}
-				assert(boneWeightWritten <= 4);
+				PX_ASSERT(boneWeightWritten <= 4);
 				mBoneWeights.push_back(boneWeight);
 			}
 
@@ -1108,7 +1523,7 @@ bool TriangleMesh::loadFromMeshImport(physx::MeshSystemContainer *msc, bool useC
 				physx::NxVertexUV uv(0.0f, 0.0f);
 				if (mTexCoords[t].size() > 0)
 				{
-					while(mTexCoords[t].size() < mVertices.size())
+					while (mTexCoords[t].size() < mVertices.size())
 					{
 						mTexCoords[t].push_back(uv);
 					}
@@ -1116,20 +1531,20 @@ bool TriangleMesh::loadFromMeshImport(physx::MeshSystemContainer *msc, bool useC
 			}
 		}
 
-		for (unsigned int i=0; i<m->mSubMeshCount; i++)
+		for (unsigned int i = 0; i < m->mSubMeshCount; i++)
 		{
-			physx::SubMesh *sm = m->mSubMeshes[i];
+			mimp::SubMesh* sm = m->mSubMeshes[i];
 
 			TriangleSubMesh t;
 			t.init();
 			t.firstIndex = (physx::PxU32)mIndices.size();
-			t.numIndices = sm->mTriCount*3;
+			t.numIndices = sm->mTriCount * 3;
 			t.name = m->mName;
 			t.materialName = sm->mMaterialName;
 			t.originalMaterialName = sm->mMaterialName;
-			for (unsigned int j=0; j<t.numIndices; j++)
+			for (unsigned int j = 0; j < t.numIndices; j++)
 			{
-				mIndices.push_back( sm->mIndices[j]+base_index );
+				mIndices.push_back(sm->mIndices[j] + base_index);
 			}
 			mSubMeshes.push_back(t);
 		}
@@ -1138,11 +1553,130 @@ bool TriangleMesh::loadFromMeshImport(physx::MeshSystemContainer *msc, bool useC
 	complete(useCustomChannels);
 
 	//mShaderHasEnoughBones = getMaxBoneIndex() < shaderMaxBones;
-	
+
 	mMaterialPrefix.clear();
 	mMaterialSuffix.clear();
 
 	return true;
+}
+
+// ----------------------------------------------------------------------
+bool TriangleMesh::saveToMeshImport(mimp::MeshSystemContainer* msc)
+{
+#ifndef PX_WINDOWS
+	PX_UNUSED(msc);
+	return NULL;
+#else
+	if (msc == NULL)
+	{
+		return false;
+	}
+
+	mimp::MeshSystem* ms = mimp::gMeshImport->getMeshSystem(msc);
+
+	ms->mMeshCount = 1;
+	ms->mMeshes = (mimp::Mesh**)::malloc(sizeof(mimp::Mesh*) * 1);
+	ms->mMeshes[0] = new mimp::Mesh;
+
+	unsigned int vertexFlags = mimp::MIVF_POSITION;
+
+	// fill out vertices
+	{
+		ms->mMeshes[0]->mVertexCount = (unsigned int)mVertices.size();
+		mimp::MeshVertex* verts = ms->mMeshes[0]->mVertices = (mimp::MeshVertex*)::malloc(sizeof(mimp::MeshVertex) * mVertices.size());
+		::memset(verts, 0, sizeof(mimp::MeshVertex) * mVertices.size());
+
+		for (size_t i = 0; i < mVertices.size(); i++)
+		{
+			(physx::PxVec3&)verts[i].mPos = mVertices[i];
+		}
+
+		if (mNormals.size() == mVertices.size())
+		{
+			vertexFlags |= mimp::MIVF_NORMAL;
+			for (size_t i = 0; i < mNormals.size(); i++)
+			{
+				(physx::PxVec3&)verts[i].mNormal = mNormals[i];
+			}
+		}
+
+		if (mTangents.size() == mVertices.size())
+		{
+			vertexFlags |= mimp::MIVF_TANGENT;
+			for (size_t i = 0; i < mTangents.size(); i++)
+			{
+				(physx::PxVec3&)verts[i].mTangent = mTangents[i];
+			}
+		}
+
+		if (mBitangents.size() == mVertices.size())
+		{
+			vertexFlags |= mimp::MIVF_BINORMAL;
+			for (size_t i = 0; i < mBitangents.size(); i++)
+			{
+				(physx::PxVec3&)verts[i].mBiNormal = mBitangents[i];
+			}
+		}
+
+		if (mTexCoords[0].size() == mVertices.size())
+		{
+			vertexFlags |= mimp::MIVF_TEXEL1;
+			for (size_t i = 0; i < mTexCoords[0].size(); i++)
+			{
+				(physx::NxVertexUV&)verts[i].mTexel1 = mTexCoords[0][i];
+			}
+		}
+
+		if (mBoneWeights.size() == mVertices.size())
+		{
+			PX_ASSERT(mBoneIndicesExternal.size() == mVertices.size() * 4);
+			vertexFlags |= mimp::MIVF_BONE_WEIGHTING;
+
+			for (size_t i = 0; i < mBoneWeights.size(); i++)
+			{
+				for (int k = 0; k < 4; k++)
+				{
+					verts[i].mBone[k] = mBoneIndicesExternal[i * 4 + k];
+					verts[i].mWeight[k] = mBoneWeights[i][k];
+				}
+			}
+		}
+	}
+
+	ms->mMeshes[0]->mVertexFlags = vertexFlags;
+
+	{
+		size_t nameLen = mSubMeshes[0].name.length() + 1;
+		ms->mMeshes[0]->mName = (char*)::malloc(sizeof(char) * nameLen);
+		strcpy_s((char*)ms->mMeshes[0]->mName, nameLen, mSubMeshes[0].name.c_str());
+	}
+
+	ms->mMeshes[0]->mSubMeshCount = (unsigned int)mSubMeshes.size();
+	ms->mMeshes[0]->mSubMeshes = (mimp::SubMesh**)::malloc(sizeof(mimp::SubMesh*) * mSubMeshes.size());
+
+	for (size_t submeshIndex = 0; submeshIndex < mSubMeshes.size(); submeshIndex++)
+	{
+		ms->mMeshes[0]->mSubMeshes[submeshIndex] = new mimp::SubMesh;
+		mimp::SubMesh* sm = ms->mMeshes[0]->mSubMeshes[submeshIndex];
+
+		sm->mIndices = (unsigned int*)::malloc(sizeof(unsigned int) * mSubMeshes[submeshIndex].numIndices);
+
+		for (size_t i = 0; i < mSubMeshes[submeshIndex].numIndices; i++)
+		{
+			sm->mIndices[i] = mIndices[mSubMeshes[submeshIndex].firstIndex + i];
+		}
+		PX_ASSERT(mSubMeshes[submeshIndex].numIndices % 3 == 0);
+		sm->mTriCount = mSubMeshes[submeshIndex].numIndices / 3;
+
+		size_t matNameLength = mSubMeshes[submeshIndex].materialName.length() + 1;
+		sm->mMaterialName = (char*)::malloc(sizeof(char) * matNameLength);
+		strcpy_s((char*)sm->mMaterialName, matNameLength, mSubMeshes[submeshIndex].materialName.c_str());
+
+		sm->mVertexFlags = vertexFlags;
+	}
+
+	return true;
+#endif
 }
 
 // ----------------------------------------------------------------------
@@ -1155,46 +1689,64 @@ void TriangleMesh::initPlane(float length, float uvDist, const char* materialNam
 	mTexCoords[0].resize(9);
 
 	for (physx::PxU32 i = 0; i < 9; i++)
-		mNormals[i].set(0.0f, 1.0f, 0.0f);
+	{
+		mNormals[i] = physx::PxVec3(0.0f, 1.0f, 0.0f);
+	}
 
-	mVertices[0].set(-length, 0.0f, length);
+	mVertices[0] = physx::PxVec3(-length, 0.0f, length);
 	mTexCoords[0][0].set(-uvDist, uvDist);
 
-	mVertices[1].set(0.0f, 0.0f, length);
+	mVertices[1] = physx::PxVec3(0.0f, 0.0f, length);
 	mTexCoords[0][1].set(0.0f, uvDist);
 
-	mVertices[2].set(length, 0.0f, length);
+	mVertices[2] = physx::PxVec3(length, 0.0f, length);
 	mTexCoords[0][2].set(uvDist, uvDist);
 
-	mVertices[3].set(-length, 0.0f, 0.0f);
+	mVertices[3] = physx::PxVec3(-length, 0.0f, 0.0f);
 	mTexCoords[0][3].set(-uvDist, 0.0f);
 
-	mVertices[4].set(0.0f, 0.0f, 0.0f);
+	mVertices[4] = physx::PxVec3(0.0f, 0.0f, 0.0f);
 	mTexCoords[0][4].set(0.0f, 0.0f);
 
-	mVertices[5].set(length, 0.0f, 0.0f);
+	mVertices[5] = physx::PxVec3(length, 0.0f, 0.0f);
 	mTexCoords[0][5].set(uvDist, 0.0f);
 
-	mVertices[6].set(-length, 0.0f, -length);
+	mVertices[6] = physx::PxVec3(-length, 0.0f, -length);
 	mTexCoords[0][6].set(-uvDist, -uvDist);
 
-	mVertices[7].set(0.0f, 0.0f, -length);
+	mVertices[7] = physx::PxVec3(0.0f, 0.0f, -length);
 	mTexCoords[0][7].set(0.0f, -uvDist);
 
-	mVertices[8].set(length, 0.0f, -length);
+	mVertices[8] = physx::PxVec3(length, 0.0f, -length);
 	mTexCoords[0][8].set(uvDist, -uvDist);
 
 
 	mIndices.resize(8 * 3);
 
-	mIndices[ 0] = 0; mIndices[ 1] = 1; mIndices[ 2] = 3;
-	mIndices[ 3] = 3; mIndices[ 4] = 1; mIndices[ 5] = 4;
-	mIndices[ 6] = 1; mIndices[ 7] = 2; mIndices[ 8] = 4;
-	mIndices[ 9] = 4; mIndices[10] = 2; mIndices[11] = 5;
-	mIndices[12] = 3; mIndices[13] = 4; mIndices[14] = 6;
-	mIndices[15] = 6; mIndices[16] = 4; mIndices[17] = 7;
-	mIndices[18] = 4; mIndices[19] = 5; mIndices[20] = 7;
-	mIndices[21] = 7; mIndices[22] = 5; mIndices[23] = 8;
+	mIndices[ 0] = 0;
+	mIndices[ 1] = 1;
+	mIndices[ 2] = 3;
+	mIndices[ 3] = 3;
+	mIndices[ 4] = 1;
+	mIndices[ 5] = 4;
+	mIndices[ 6] = 1;
+	mIndices[ 7] = 2;
+	mIndices[ 8] = 4;
+	mIndices[ 9] = 4;
+	mIndices[10] = 2;
+	mIndices[11] = 5;
+	mIndices[12] = 3;
+	mIndices[13] = 4;
+	mIndices[14] = 6;
+	mIndices[15] = 6;
+	mIndices[16] = 4;
+	mIndices[17] = 7;
+	mIndices[18] = 4;
+	mIndices[19] = 5;
+	mIndices[20] = 7;
+	mIndices[21] = 7;
+	mIndices[22] = 5;
+	mIndices[23] = 8;
 
 	mSubMeshes[0].materialName = mSubMeshes[0].originalMaterialName = materialName;
 	mSubMeshes[0].numIndices = 24;
@@ -1221,9 +1773,7 @@ void TriangleMesh::initFrom(physx::NxClothingPhysicalMesh& mesh, bool initCustom
 	initSingleMesh();
 
 	mVertices.resize(mesh.getNumVertices());
-	mIndices.resize(mesh.getNumIndices());
 	mesh.getVertices(&mVertices[0], sizeof(physx::PxVec3));
-	mesh.getIndices(&mIndices[0], 0);
 
 	if (mesh.isTetrahedralMesh())
 	{
@@ -1232,30 +1782,144 @@ void TriangleMesh::initFrom(physx::NxClothingPhysicalMesh& mesh, bool initCustom
 		mNormals.resize(mVertices.size(), physx::PxVec3(0.0f, 0.0f, 0.0f));
 		// normals are not yet generated here (only available in NxClothingAssetAuthoring)
 		//mesh.getVertexValue(NxRenderVertexSemantic::NORMAL, NxRenderDataFormat::FLOAT3, &mNormals[0], sizeof(physx::PxVec3));
+
+		/*unsigned int numIndices = mesh.getNumIndices();
+		assert(numIndices % 4 == 0);
+		mIndices.reserve(numIndices / 4 * 3); // same as / 4 * 12
+
+		std::vector<unsigned int> tempIndices;
+		tempIndices.resize(numIndices);
+		mesh.getIndices(&tempIndices[0], 0);
+
+		for (unsigned int i = 0; i < numIndices; i += 4)
+		{
+			unsigned int indices[4] =
+			{
+				tempIndices[i + 0],
+				tempIndices[i + 1],
+				tempIndices[i + 2],
+				tempIndices[i + 3],
+			};
+
+			mIndices.push_back(indices[0]);
+			mIndices.push_back(indices[1]);
+			mIndices.push_back(indices[2]);
+
+			mIndices.push_back(indices[0]);
+			mIndices.push_back(indices[3]);
+			mIndices.push_back(indices[1]);
+
+			mIndices.push_back(indices[0]);
+			mIndices.push_back(indices[2]);
+			mIndices.push_back(indices[3]);
+
+			mIndices.push_back(indices[1]);
+			mIndices.push_back(indices[3]);
+			mIndices.push_back(indices[2]);
+		}*/
+	}
+	//else
+	{
+		mIndices.resize(mesh.getNumIndices());
+		mesh.getIndices(&mIndices[0], 0);
 	}
 
 	complete(initCustomChannels);
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::initFrom(physx::NxRenderMeshAssetAuthoring& mesh, bool initCustomChannels)
+void TriangleMesh::initFrom(physx::apex::NxRenderMeshAssetAuthoring& mesh, bool initCustomChannels)
 {
-	assert(mesh.getPartCount() == 1);
+	PX_ASSERT(mesh.getPartCount() == 1);
 
 	initSingleMesh();
 
 	physx::PxU32 numVertices = 0;
 	physx::PxU32 numIndices = 0;
+	physx::PxU32 numBonesPerVertex = 0;
 	for (physx::PxU32 i = 0; i < mesh.getSubmeshCount(); i++)
 	{
 		numVertices += mesh.getSubmesh(i).getVertexCount(0);
 		numIndices += mesh.getSubmesh(i).getIndexCount(0);
+
+		const physx::apex::NxVertexFormat& format = mesh.getSubmesh(i).getVertexBuffer().getFormat();
+		const int boneIndexIndex = format.getBufferIndexFromID(format.getSemanticID(physx::apex::NxRenderVertexSemantic::BONE_INDEX));
+		physx::PxU32 numBonesPerVertexSubmesh = 0;
+		switch(format.getBufferFormat(boneIndexIndex))
+		{
+		case physx::apex::NxRenderDataFormat::USHORT1:
+			numBonesPerVertexSubmesh = 1;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT2:
+			numBonesPerVertexSubmesh = 2;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT3:
+			numBonesPerVertexSubmesh = 3;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT4:
+			numBonesPerVertexSubmesh = 4;
+			break;
+		default:
+			numBonesPerVertexSubmesh = 0;
+			break;
+		}
+
+		// they are either identical or one of them is 0
+		PX_ASSERT(numBonesPerVertexSubmesh == numBonesPerVertex || (numBonesPerVertex * numBonesPerVertexSubmesh) == 0);
+		numBonesPerVertex = numBonesPerVertexSubmesh;
 	}
 
 	mVertices.clear();
 	mVertices.resize(numVertices);
+	mNormals.clear();
+	mNormals.resize(numVertices);
+	mIndices.clear();
 	mIndices.resize(numIndices);
 	mSubMeshes.resize(mesh.getSubmeshCount());
+
+	if (numBonesPerVertex > 0)
+	{
+		mBoneIndicesExternal.clear();
+		mBoneIndicesExternal.resize(numVertices * 4, 0);
+		mBoneWeights.clear();
+		mBoneWeights.resize(numVertices, physx::PxVec4(0.0f));
+	}
+	mMaxBoneIndexExternal = -1;
+
+	bool hasTexCoords = false;
+	for (physx::PxU32 i = 0; i < mesh.getSubmeshCount(); i++)
+	{
+		const physx::apex::NxVertexFormat& format = mesh.getSubmesh(i).getVertexBuffer().getFormat();
+		const int texCoordIndex = format.getBufferIndexFromID(format.getSemanticID(physx::apex::NxRenderVertexSemantic::TEXCOORD0));
+		if (texCoordIndex != -1)
+		{
+			hasTexCoords = true;
+		}
+	}
+	if (hasTexCoords)
+	{
+		mTexCoords[0].clear();
+		mTexCoords[0].resize(numVertices);
+	}
+
+	bool hasTangents = false;
+	for (physx::PxU32 i = 0; i < mesh.getSubmeshCount(); i++)
+	{
+		const physx::apex::NxVertexFormat& format = mesh.getSubmesh(i).getVertexBuffer().getFormat();
+		const int bitangentIndex = format.getBufferIndexFromID(format.getSemanticID(physx::apex::NxRenderVertexSemantic::TANGENT));
+		const int tangentIndex = format.getBufferIndexFromID(format.getSemanticID(physx::apex::NxRenderVertexSemantic::BINORMAL));
+		if (tangentIndex != -1 && bitangentIndex != -1)
+		{
+			hasTangents = true;
+		}
+	}
+	if (hasTangents)
+	{
+		mTangents.clear();
+		mTangents.resize(numVertices);
+		mBitangents.clear();
+		mBitangents.resize(numVertices);
+	}
 
 	mBounds = physx::PxBounds3::empty();
 	physx::PxU32 vertexOffset = 0;
@@ -1264,39 +1928,133 @@ void TriangleMesh::initFrom(physx::NxRenderMeshAssetAuthoring& mesh, bool initCu
 	{
 		const physx::NxVertexBuffer& vb = mesh.getSubmesh(submeshIndex).getVertexBuffer();
 		const physx::NxVertexFormat& vf = vb.getFormat();
-		int bufferIndex = vf.getBufferIndexFromID( vf.getSemanticID( physx::NxRenderVertexSemantic::POSITION ) );
+		int bufferIndex = 0;
+		physx::NxRenderDataFormat::Enum format;
 
 		const physx::PxU32 vertexCount = mesh.getSubmesh(submeshIndex).getVertexCount(0);
 
-		physx::NxRenderDataFormat::Enum format;
-		const physx::PxVec3* positions = (const physx::PxVec3*)vb.getBufferAndFormat( format, bufferIndex );
-		if( !positions || format != physx::NxRenderDataFormat::FLOAT3 )
 		{
-			assert(0);
-			return;
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::POSITION));
+			const physx::PxVec3* positions = (const physx::PxVec3*)vb.getBufferAndFormat(format, bufferIndex);
+			if (!positions || format != physx::NxRenderDataFormat::FLOAT3)
+			{
+				PX_ALWAYS_ASSERT();
+				return;
+			}
+
+			for (physx::PxU32 i = 0; i < vertexCount; i++)
+			{
+				mVertices[i + vertexOffset] = positions[i];
+				mBounds.include(positions[i]);
+			}
 		}
 
-		for (physx::PxU32 i = 0; i < vertexCount; i++)
 		{
-			mVertices[i + vertexOffset] = positions[i];
-			mBounds.include(positions[i]);
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::NORMAL));
+			const physx::PxVec3* normals = (const physx::PxVec3*)vb.getBufferAndFormat(format, bufferIndex);
+			if (!normals || format != physx::NxRenderDataFormat::FLOAT3)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+			else
+			{
+				for (physx::PxU32 i = 0; i < vertexCount; i++)
+				{
+					mNormals[i + vertexOffset] = normals[i];
+				}
+			}
+		}
+
+		if (numBonesPerVertex > 0)
+		{
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::BONE_WEIGHT));
+			const float* boneWeights = (const float*)vb.getBufferAndFormat(format, bufferIndex);
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::BONE_INDEX));
+			const short* boneIndices = (const short*)vb.getBufferAndFormat(format, bufferIndex);
+			if (!boneWeights || !boneIndices)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+			else
+			{
+				for (physx::PxU32 i = 0; i < vertexCount; i++)
+				{
+					for (physx::PxU32 j = 0; j < numBonesPerVertex; j++)
+					{
+						mBoneWeights[i + vertexOffset][j] = boneWeights[i * numBonesPerVertex + j];
+						mBoneIndicesExternal[(i + vertexOffset) * 4 + j] = boneIndices[i * numBonesPerVertex + j];
+
+						mMaxBoneIndexExternal = std::max<int>(mMaxBoneIndexExternal, boneIndices[i * numBonesPerVertex + j]);
+					}
+				}
+			}
+		}
+
+		if (hasTexCoords)
+		{
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::TEXCOORD0));
+			const physx::NxVertexUV* texCoords = (const physx::NxVertexUV*)vb.getBufferAndFormat(format, bufferIndex);
+			if (texCoords == NULL || format != physx::apex::NxRenderDataFormat::FLOAT2)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+			else
+			{
+				for (physx::PxU32 i = 0; i < vertexCount; i++)
+				{
+					mTexCoords[0][i + vertexOffset] = texCoords[i];
+				}
+			}
+		}
+
+		if (hasTangents)
+		{
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::TANGENT));
+			const physx::PxVec3* tangents = (const physx::PxVec3*)vb.getBufferAndFormat(format, bufferIndex);
+			if (tangents == NULL || format != physx::apex::NxRenderDataFormat::FLOAT3)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+			else
+			{
+				for (physx::PxU32 i = 0; i < vertexCount; i++)
+				{
+					mTangents[i + vertexOffset] = tangents[i];
+				}
+			}
+
+			bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::BINORMAL));
+			const physx::PxVec3* bitangents = (const physx::PxVec3*)vb.getBufferAndFormat(format, bufferIndex);
+			if (bitangents == NULL || format != physx::apex::NxRenderDataFormat::FLOAT3)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+			else
+			{
+				for (physx::PxU32 i = 0; i < vertexCount; i++)
+				{
+					mBitangents[i + vertexOffset] = bitangents[i];
+				}
+			}
 		}
 
 		bufferIndex = vf.getBufferIndexFromID(vf.getID("MAX_DISTANCE"));
 		if (bufferIndex != -1)
 		{
-			const float* maxDistances = (const float*)vb.getBufferAndFormat( format, bufferIndex );
+			const float* maxDistances = (const float*)vb.getBufferAndFormat(format, bufferIndex);
 
 			const float scale = 1.0f / (mBounds.maximum - mBounds.minimum).magnitude();
 
 			if (maxDistances != NULL && format == physx::NxRenderDataFormat::FLOAT1)
 			{
 				if (mPaintChannels[PC_MAX_DISTANCE].size() != mVertices.size())
+				{
 					mPaintChannels[PC_MAX_DISTANCE].resize(mVertices.size());
+				}
 
 				for (size_t i = 0; i < vertexCount; i++)
 				{
-					mPaintChannels[PC_MAX_DISTANCE][i + vertexOffset].paintValue = maxDistances[i] * scale;
+					mPaintChannels[PC_MAX_DISTANCE][i + vertexOffset].paintValueF32 = maxDistances[i] * scale;
 				}
 			}
 		}
@@ -1308,12 +2066,14 @@ void TriangleMesh::initFrom(physx::NxRenderMeshAssetAuthoring& mesh, bool initCu
 
 			if (usedForPhysics != NULL && format == physx::apex::NxRenderDataFormat::UBYTE1)
 			{
-				if (mPaintChannels[PC_PHYSICAL].size() != mVertices.size())
-					mPaintChannels[PC_PHYSICAL].resize(mVertices.size());
+				if (mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE].size() != mVertices.size())
+				{
+					mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE].resize(mVertices.size());
+				}
 
 				for (size_t i = 0; i < vertexCount; i++)
 				{
-					mPaintChannels[PC_PHYSICAL][i + vertexOffset].paintValue = usedForPhysics[i] > 0 ? 1.0f : 0.0f;
+					mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE][i + vertexOffset].paintValueU32 = usedForPhysics[i] > 0 ? 0 : 0xffffffff;
 				}
 			}
 		}
@@ -1344,30 +2104,53 @@ void TriangleMesh::initFrom(physx::NxRenderMeshAssetAuthoring& mesh, bool initCu
 }
 
 // ----------------------------------------------------------------------
+void TriangleMesh::applyMorphDisplacements(const std::vector<physx::PxVec3>& displacements)
+{
+	if (mVertices.empty() && mParent != NULL)
+	{
+		if (mParent->mVertices.size() == displacements.size())
+		{
+			mVertices.resize(displacements.size());
+
+			for (size_t i = 0; i < mVertices.size(); i++)
+			{
+				mVertices[i] = mParent->mVertices[i] + displacements[i];
+			}
+
+			mUseGpuSkinning = false;
+		}
+	}
+}
+
+// ----------------------------------------------------------------------
 void TriangleMesh::drawPainting(PaintChannelType channelType, bool skinned, physx::apex::NxApexRenderDebug* batcher)
 {
 	if (batcher == NULL || channelType == PC_NUM_CHANNELS)
+	{
 		return;
+	}
 
 	std::vector<physx::PxVec3>& vertices = skinned ? mSkinnedVertices : (mParent == NULL ? mVertices : mParent->mVertices);
 	std::vector<physx::PxU32>& indices = mParent == NULL ? mIndices : mParent->mIndices;
 
-	physx::PxBounds3 bounds; getBounds(bounds);
+	physx::PxBounds3 bounds;
+	getBounds(bounds);
 	updateSubmeshInfo();
 
 	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
 	{
 		if (mSubMeshes[i].selected)
 		{
-			const physx::PxU32 lastIndex = mSubMeshes[i].firstIndex + mSubMeshes[i].numIndices; 
-			for (physx::PxU32 j = mSubMeshes[i].firstIndex; j < lastIndex; j+=3)
+			const physx::PxU32 lastIndex = mSubMeshes[i].firstIndex + mSubMeshes[i].numIndices;
+			for (physx::PxU32 j = mSubMeshes[i].firstIndex; j < lastIndex; j += 3)
 			{
-				physx::PxU32 colors[3] = {
-					mPaintChannels[channelType][indices[j+0]].color,
-					mPaintChannels[channelType][indices[j+1]].color,
-					mPaintChannels[channelType][indices[j+2]].color,
+				physx::PxU32 colors[3] =
+				{
+					mPaintChannels[channelType][indices[j + 0]].color,
+					mPaintChannels[channelType][indices[j + 1]].color,
+					mPaintChannels[channelType][indices[j + 2]].color,
 				};
-				batcher->debugGradientTri(vertices[indices[j+0]], vertices[indices[j+1]], vertices[indices[j+2]], colors[0], colors[1], colors[2]);
+				batcher->debugGradientTri(vertices[indices[j + 0]], vertices[indices[j + 1]], vertices[indices[j + 2]], colors[0], colors[1], colors[2]);
 			}
 		}
 	}
@@ -1375,46 +2158,53 @@ void TriangleMesh::drawPainting(PaintChannelType channelType, bool skinned, phys
 
 // ----------------------------------------------------------------------
 void TriangleMesh::drawVertices(PaintChannelType channelType, float maxDistanceScaling, float collisionDistanceScaling, float pointScaling,
-								float vmin, float vmax, physx::apex::NxApexRenderDebug* batcher)
+                                float vmin, float vmax, physx::apex::NxApexRenderDebug* batcher)
 {
 	if (batcher == NULL || channelType == PC_NUM_CHANNELS)
+	{
 		return;
+	}
 
 	std::vector<physx::PxVec3>& vertices = mParent == NULL ? mVertices : mParent->mVertices;
 	std::vector<physx::PxVec3>& normals = mParent == NULL ? mNormals : mParent->mNormals;
 
-	physx::PxBounds3 bounds; getBounds(bounds);
-	float diag = bounds.minimum.distance(bounds.maximum);
+	physx::PxBounds3 bounds;
+	getBounds(bounds);
 
 	updateSubmeshInfo();
 
 	const PaintedVertex* channel = channelType != PC_NUM_CHANNELS ? &mPaintChannels[channelType][0] : NULL;
-	assert(channelType >= 0);
-	assert(channelType <= PC_NUM_CHANNELS);
+	PX_ASSERT(channelType >= 0);
+	PX_ASSERT(channelType <= PC_NUM_CHANNELS);
 
-	for (physx::PxU32 i = 0; i < vertices.size(); i++)
+	const bool needsNoLines = channelType == PC_LATCH_TO_NEAREST_SLAVE || channelType == PC_LATCH_TO_NEAREST_MASTER;
+
+	for (size_t i = 0; i < vertices.size(); i++)
 	{
 		if (!mActiveSubmeshVertices[i])
-			continue;
-
-		union
 		{
-			physx::PxU32 color;
-			NxU8 colorComponents[4];
-		};
+			continue;
+		}
+
+		unsigned int color;
 		color = channel != NULL ? channel[i].color : 0;
 
 		// swap red and blue
 		batcher->setCurrentColor(color);
 		batcher->debugPoint(vertices[i], pointScaling);
 
-		if (channel[i].paintValue < vmin || channel[i].paintValue > vmax)
+		if (needsNoLines)
+		{
 			continue;
+		}
 
-		if (channelType == PC_PHYSICAL)
-			continue; // no lines here
+		if (channel[i].paintValueF32 < vmin || channel[i].paintValueF32 > vmax)
+		{
+			continue;
+		}
 
-		float len = (channel != NULL ? channel[i].paintValue : 1.0f) * maxDistanceScaling;
+		const float channelPaintValue = channel[i].paintValueF32;
+		float len = (channel != NULL ? channelPaintValue : 1.0f) * maxDistanceScaling;
 		if (channelType == PC_MAX_DISTANCE && len < 0.0f)
 		{
 			len = 0.0f;
@@ -1424,10 +2214,10 @@ void TriangleMesh::drawVertices(PaintChannelType channelType, float maxDistanceS
 			float scale = collisionDistanceScaling;
 			if (scale == 0.0f)
 			{
-				scale = mPaintChannels[PC_MAX_DISTANCE][i].paintValue * maxDistanceScaling;
+				scale = mPaintChannels[PC_MAX_DISTANCE][i].paintValueF32 * maxDistanceScaling;
 			}
-			assert(channel[i].paintValue >= vmin && channel[i].paintValue <= vmax);
-			len = channel[i].paintValue * scale;
+			PX_ASSERT(channelPaintValue >= vmin && channelPaintValue <= vmax);
+			len = channelPaintValue * scale;
 
 			// positive collisionDistance means moving inwards against the mesh normal
 			len *= -1;
@@ -1443,26 +2233,28 @@ void TriangleMesh::drawVertices(PaintChannelType channelType, float maxDistanceS
 // ----------------------------------------------------------------------
 void TriangleMesh::drawVertices(size_t boneNr, float minWeight, float pointScaling, physx::apex::NxApexRenderDebug* batcher) const
 {
-	if ((mBoneIndices.size() != mVertices.size() * 4) || batcher == NULL)
+	if ((mBoneIndicesExternal.size() != mVertices.size() * 4) || batcher == NULL)
+	{
 		return;
+	}
 
 	const size_t numVertices = mVertices.size();
 	for (size_t i = 0; i < numVertices; i++)
 	{
 		bool found = false;
-		float weight;
+		float weight = 0;
 		for (int j = 0; j < 4; j++)
 		{
 			weight = mBoneWeights[i][j];
-			if (mBoneIndices[i*4+j] == boneNr && weight > minWeight)
+			if (mBoneIndicesExternal[i * 4 + j] == boneNr && weight > minWeight)
 			{
 				found = true;
 			}
 		}
 		if (found)
 		{
-			assert(weight >= 0.0f);
-			assert(weight <= 1.0f);
+			PX_ASSERT(weight >= 0.0f);
+			PX_ASSERT(weight <= 1.0f);
 
 			physx::PxU8 gray = (physx::PxU8)(255 * weight);
 			batcher->setCurrentColor(gray << 16 | gray << 8 | gray);
@@ -1475,14 +2267,18 @@ void TriangleMesh::drawVertices(size_t boneNr, float minWeight, float pointScali
 void TriangleMesh::drawVertices(float normalScale, bool activeVerticesOnly, physx::apex::NxApexRenderDebug* batcher) const
 {
 	if (normalScale <= 0.0f || batcher == NULL)
+	{
 		return;
+	}
 
 	batcher->setCurrentColor(0xffcc3333);
 
 	for (physx::PxU32 i = 0; i < mVertices.size(); i++)
 	{
 		if (activeVerticesOnly && !mActiveSubmeshVertices[i])
+		{
 			continue;
+		}
 
 		physx::PxVec3 otherEnd = mVertices[i];
 		otherEnd += mNormals[i] * normalScale;
@@ -1495,7 +2291,9 @@ void TriangleMesh::drawVertices(float normalScale, bool activeVerticesOnly, phys
 void TriangleMesh::drawMaxDistancePartitions(float paintingScale, const float* partitions, size_t numPartitions, physx::apex::NxApexRenderDebug* batcher)
 {
 	if (batcher == NULL)
+	{
 		return;
+	}
 
 	hasRandomColors(numPartitions);
 
@@ -1505,7 +2303,9 @@ void TriangleMesh::drawMaxDistancePartitions(float paintingScale, const float* p
 	for (physx::PxU32 s = 0; s < mSubMeshes.size(); s++)
 	{
 		if (!mSubMeshes[s].selected)
+		{
 			continue;
+		}
 
 		const physx::PxU32 start = mSubMeshes[s].firstIndex;
 		const physx::PxU32 end = start + mSubMeshes[s].numIndices;
@@ -1515,9 +2315,9 @@ void TriangleMesh::drawMaxDistancePartitions(float paintingScale, const float* p
 
 		for (physx::PxU32 i = start; i < end; i += 3)
 		{
-			float maxMaxDistance = mPaintChannels[PC_MAX_DISTANCE][mIndices[i]].paintValue;
-			maxMaxDistance = physx::PxMax(maxMaxDistance, mPaintChannels[PC_MAX_DISTANCE][mIndices[i+1]].paintValue);
-			maxMaxDistance = physx::PxMax(maxMaxDistance, mPaintChannels[PC_MAX_DISTANCE][mIndices[i+2]].paintValue);
+			float maxMaxDistance = mPaintChannels[PC_MAX_DISTANCE][mIndices[i]].paintValueF32;
+			maxMaxDistance = physx::PxMax(maxMaxDistance, mPaintChannels[PC_MAX_DISTANCE][mIndices[i + 1]].paintValueF32);
+			maxMaxDistance = physx::PxMax(maxMaxDistance, mPaintChannels[PC_MAX_DISTANCE][mIndices[i + 2]].paintValueF32);
 			maxMaxDistance *= paintingScale;
 
 			physx::PxU32 color = colorDarkGray;
@@ -1537,17 +2337,17 @@ void TriangleMesh::drawMaxDistancePartitions(float paintingScale, const float* p
 
 			batcher->setCurrentColor(color);
 
-			physx::PxVec3 normal = (mVertices[mIndices[i+2]] - mVertices[mIndices[i]]).cross(mVertices[mIndices[i+1]] - mVertices[mIndices[i]]);
+			physx::PxVec3 normal = (mVertices[mIndices[i + 2]] - mVertices[mIndices[i]]).cross(mVertices[mIndices[i + 1]] - mVertices[mIndices[i]]);
 			normal.normalize();
 			batcher->debugTriNormals(
-				mVertices[mIndices[i+0]], mVertices[mIndices[i+2]], mVertices[mIndices[i+1]],
-				normal, normal, normal);
+			    mVertices[mIndices[i + 0]], mVertices[mIndices[i + 2]], mVertices[mIndices[i + 1]],
+			    normal, normal, normal);
 
 			normal = -normal;
 
 			batcher->debugTriNormals(
-				mVertices[mIndices[i+0]], mVertices[mIndices[i+1]], mVertices[mIndices[i+2]],
-				normal, normal, normal);
+			    mVertices[mIndices[i + 0]], mVertices[mIndices[i + 1]], mVertices[mIndices[i + 2]],
+			    normal, normal, normal);
 		}
 	}
 
@@ -1558,19 +2358,25 @@ void TriangleMesh::drawMaxDistancePartitions(float paintingScale, const float* p
 void TriangleMesh::drawTetrahedrons(bool wireframe, physx::PxF32 scale, physx::apex::NxApexRenderDebug* batcher)
 {
 	if (batcher == NULL)
+	{
 		return;
+	}
 
 	const physx::PxU32 numIndices = (physx::PxU32)(mIndices.size());
 	if (numIndices == 0)
+	{
 		return;
+	}
 
-	assert(numIndices % 4 == 0);
+	PX_ASSERT(numIndices % 4 == 0);
 
-	assert(scale < 1.0f);
-	assert(scale >= 0.0f);
+	PX_ASSERT(scale < 1.0f);
+	PX_ASSERT(scale >= 0.0f);
 
 	if (scale > 1.0f)
+	{
 		scale = 1.0f;
+	}
 
 	const physx::PxVec3* positions = &mVertices[0];
 
@@ -1578,8 +2384,8 @@ void TriangleMesh::drawTetrahedrons(bool wireframe, physx::PxF32 scale, physx::a
 	batcher->setCurrentColor(batcher->getDebugColor(physx::DebugColors::DarkGreen));
 	batcher->addToCurrentState(physx::DebugRenderState::SolidShaded);
 
-	const physx::PxU32 edgeIndices[6][2] = {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};	
-	const physx::PxU32 sides[4][3] = {{2,1,0}, {0,1,3}, {1,2,3}, {2,0,3}};					
+	const physx::PxU32 edgeIndices[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
+	const physx::PxU32 sides[4][3] = {{2, 1, 0}, {0, 1, 3}, {1, 2, 3}, {2, 0, 3}};
 
 	for (physx::PxU32 i = 0; i < numIndices; i += 4)
 	{
@@ -1587,7 +2393,7 @@ void TriangleMesh::drawTetrahedrons(bool wireframe, physx::PxF32 scale, physx::a
 		physx::PxVec3 center(0.0f);
 		for (physx::PxU32 j = 0; j < 4; j++)
 		{
-			vecs[j] = positions[mIndices[i+j]];
+			vecs[j] = positions[mIndices[i + j]];
 			center += vecs[j];
 		}
 		center *= 0.25f;
@@ -1608,7 +2414,7 @@ void TriangleMesh::drawTetrahedrons(bool wireframe, physx::PxF32 scale, physx::a
 		{
 			for (physx::PxU32 j = 0; j < 4; j++)
 			{
-				batcher->debugTri(vecs[sides[j][0]], vecs[sides[j][2]], vecs[sides[j][1]]);
+				batcher->debugTri(vecs[sides[j][0]], vecs[sides[j][1]], vecs[sides[j][2]]);
 			}
 		}
 	}
@@ -1617,18 +2423,18 @@ void TriangleMesh::drawTetrahedrons(bool wireframe, physx::PxF32 scale, physx::a
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUserRenderResourceManager& rrm, void * userRenderData)
+void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUserRenderResourceManager& rrm, void* userRenderData)
 {
-	const physx::PxU32 maxBonesMaterial = rrm.getMaxBonesForMaterial(NULL);
-	const physx::PxU32 maxBoneIndexMesh = mParent != NULL ? mParent->getMaxBoneIndex() : getMaxBoneIndex();
+	updateRenderResourcesInternal(rewriteBuffers, rrm, userRenderData, true);
+}
 
-	const bool useGpuSkinning = maxBoneIndexMesh < maxBonesMaterial;
-
-	if (mParent != NULL && useGpuSkinning)
-		mParent->updateRenderResources(rewriteBuffers, rrm, userRenderData);
-
-	const bool recreateResource = needSkinningVertices == useGpuSkinning;
-	needSkinningVertices = !useGpuSkinning;
+// ----------------------------------------------------------------------
+void TriangleMesh::updateRenderResourcesInternal(bool rewriteBuffers, physx::apex::NxUserRenderResourceManager& rrm, void* userRenderData, bool createResource)
+{
+	if (mParent != NULL && mUseGpuSkinning)
+	{
+		mParent->updateRenderResourcesInternal(rewriteBuffers, rrm, userRenderData, false);
+	}
 
 	const physx::PxU32 numIndices = mParent != NULL ? (physx::PxU32)(mParent->mIndices.size()) : (physx::PxU32)(mIndices.size());
 	const physx::PxU32 numVertices = mParent != NULL ? (physx::PxU32)(mParent->mVertices.size()) : (physx::PxU32)(mVertices.size());
@@ -1636,7 +2442,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 	bool resourceDirty = false;
 
 	bool boneBufferSwitch = false;
-	if (skinningMatricesChanged && useGpuSkinning)
+	if (skinningMatricesChanged && mUseGpuSkinning)
 	{
 		if (mSkinningMatrices.empty() && mBoneBuffer != NULL)
 		{
@@ -1644,7 +2450,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 			mBoneBuffer = NULL;
 			boneBufferSwitch = true;
 		}
-		if (!mSkinningMatrices.empty() && mBoneBuffer == NULL && useGpuSkinning)
+		if (!mSkinningMatrices.empty() && mBoneBuffer == NULL && mUseGpuSkinning)
 		{
 			physx::apex::NxUserRenderBoneBufferDesc bufferDesc;
 			bufferDesc.buffersRequest[physx::NxRenderBoneSemantic::POSE] = physx::NxRenderDataFormat::FLOAT3x4;
@@ -1691,7 +2497,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 		bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::POSITION] = physx::apex::NxRenderDataFormat::FLOAT3;
 		bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::NORMAL] = physx::apex::NxRenderDataFormat::FLOAT3;
 
-		if (mParent == NULL || !useGpuSkinning)
+		if (mParent == NULL || !mUseGpuSkinning)
 		{
 			mDynamicVertexBuffer = rrm.createVertexBuffer(bufferDesc);
 			vertexValuesChangedDynamic = true;
@@ -1708,33 +2514,33 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 
 		unsigned int numSemantics = 0;
 
-		if (mParent == NULL || !useGpuSkinning)
+		if (mParent == NULL || !mUseGpuSkinning)
 		{
 			for (physx::PxU32 i = 0; i < NUM_TEXCOORDS; i++)
 			{
 				const physx::PxU32 numTexCoords = mParent != NULL ? (physx::PxU32)(mParent->mTexCoords[i].size()) : (physx::PxU32)mTexCoords[i].size();
 				if (numTexCoords == numVertices)
 				{
-					bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::TEXCOORD0+i] = physx::apex::NxRenderDataFormat::FLOAT2;
+					bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::TEXCOORD0 + i] = physx::apex::NxRenderDataFormat::FLOAT2;
 					numSemantics++;
 				}
 			}
 
-			const physx::PxU32 numBoneIndices = mParent != NULL ? (physx::PxU32)(mParent->mBoneIndices.size()) : (physx::PxU32)(mBoneIndices.size());
-			if (numBoneIndices == numVertices * 4 && useGpuSkinning)
+			const physx::PxU32 numBoneIndices = mParent != NULL ? (physx::PxU32)(mParent->mBoneIndicesInternal.size()) : (physx::PxU32)(mBoneIndicesInternal.size());
+			if (numBoneIndices == numVertices * 4 && mUseGpuSkinning)
 			{
-				assert(mParent == NULL);
+				PX_ASSERT(mParent == NULL);
 				bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::BONE_INDEX] = physx::apex::NxRenderDataFormat::USHORT4;
 				bufferDesc.buffersRequest[physx::apex::NxRenderVertexSemantic::BONE_WEIGHT] = physx::apex::NxRenderDataFormat::FLOAT4;
-				numSemantics+=2;
+				numSemantics += 2;
 			}
 		}
 		else
 		{
-			assert(mParent->mStaticVertexBuffer != NULL);
+			PX_ASSERT(mParent->mStaticVertexBuffer != NULL);
 		}
 
-		if ((mParent == NULL || !useGpuSkinning) && numSemantics > 0)
+		if ((mParent == NULL || !mUseGpuSkinning) && numSemantics > 0)
 		{
 			mStaticVertexBuffer = rrm.createVertexBuffer(bufferDesc);
 			vertexValuesChangedStatic = true;
@@ -1747,18 +2553,20 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 		physx::apex::NxApexRenderVertexBufferData writeData;
 
 		const physx::PxU32 numVertices = mParent != NULL ? (physx::PxU32)(mParent->mVertices.size()) : (physx::PxU32)(mVertices.size());
-		if (mSkinnedVertices.size() == numVertices && !useGpuSkinning)
+		if (mSkinnedVertices.size() == numVertices && !mUseGpuSkinning)
 		{
-			NX_ASSERT(mSkinnedNormals.size() == mSkinnedVertices.size());
+			PX_ASSERT(mSkinnedNormals.size() == mSkinnedVertices.size());
 			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::POSITION, &mSkinnedVertices[0], sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
 			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::NORMAL,   &mSkinnedNormals[0],  sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
 		}
 		else
 		{
-			NX_ASSERT(mNormals.size()  == numVertices);
-			NX_ASSERT(mVertices.size() == numVertices);
-			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::POSITION, &mVertices[0], sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
-			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::NORMAL,   &mNormals[0],  sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
+			std::vector<physx::PxVec3>& vertices = mParent != NULL ? mParent->mVertices : mVertices;
+			std::vector<physx::PxVec3>& normals = mParent != NULL ? mParent->mNormals : mNormals;
+			PX_ASSERT(vertices.size() == numVertices);
+			PX_ASSERT(normals.size()  == numVertices);
+			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::POSITION, &vertices[0], sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
+			writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::NORMAL,   &normals[0],  sizeof(physx::PxVec3), physx::apex::NxRenderDataFormat::FLOAT3);
 		}
 		mDynamicVertexBuffer->writeBuffer(writeData, 0, numVertices);
 		vertexValuesChangedDynamic = false;
@@ -1768,7 +2576,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 	{
 		physx::apex::NxApexRenderVertexBufferData writeData;
 
-		if (mParent == NULL || !useGpuSkinning)
+		if (mParent == NULL || !mUseGpuSkinning)
 		{
 			physx::apex::NxRenderVertexSemantic::Enum semantics[4] =
 			{
@@ -1786,11 +2594,11 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 				}
 			}
 
-			const physx::PxU32 numBoneIndices = mParent != NULL ? (physx::PxU32)(mParent->mBoneIndices.size()) : (physx::PxU32)(mBoneIndices.size());
-			if (numBoneIndices == numVertices * 4 && useGpuSkinning)
+			const physx::PxU32 numBoneIndices = mParent != NULL ? (physx::PxU32)(mParent->mBoneIndicesInternal.size()) : (physx::PxU32)(mBoneIndicesInternal.size());
+			if (numBoneIndices == numVertices * 4 && mUseGpuSkinning)
 			{
-				NX_ASSERT(mParent == NULL);
-				writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::BONE_INDEX,  &mBoneIndices[0], sizeof(physx::PxU16) * 4, physx::apex::NxRenderDataFormat::USHORT4);
+				PX_ASSERT(mParent == NULL);
+				writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::BONE_INDEX,  &mBoneIndicesInternal[0], sizeof(physx::PxU16) * 4, physx::apex::NxRenderDataFormat::USHORT4);
 				writeData.setSemanticData(physx::apex::NxRenderVertexSemantic::BONE_WEIGHT, &mBoneWeights[0], sizeof(physx::PxVec4), physx::apex::NxRenderDataFormat::FLOAT4);
 			}
 		}
@@ -1805,7 +2613,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 		indicesChanged |= vertexCountChanged;
 	}
 
-	if (mIndexBuffer == NULL && (mParent == NULL || !useGpuSkinning) && numIndices > 0)
+	if (mIndexBuffer == NULL && (mParent == NULL || !mUseGpuSkinning) && numIndices > 0)
 	{
 		physx::apex::NxUserRenderIndexBufferDesc bufferDesc;
 		bufferDesc.format = physx::apex::NxRenderDataFormat::UINT1;
@@ -1838,40 +2646,53 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 
 	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
 	{
-		if (mSubMeshes[i].mRenderResource != NULL && (!mSubMeshes[i].show || mSubMeshes[i].resourceNeedsUpdate || recreateResource || resourceDirty))
+		bool show = mSubMeshes[i].show;
+		if (mParent != NULL)
+		{
+			PX_ASSERT(mParent->mSubMeshes.size() == mSubMeshes.size());
+			show &= mParent->mSubMeshes[i].show;
+		}
+
+		if (mSubMeshes[i].mRenderResource != NULL && (!show || mSubMeshes[i].resourceNeedsUpdate || !createResource || resourceDirty))
 		{
 			rrm.releaseResource(*mSubMeshes[i].mRenderResource);
 			mSubMeshes[i].mRenderResource = NULL;
 			mSubMeshes[i].resourceNeedsUpdate = false;
 		}
 
-		if (mSubMeshes[i].mRenderResource == NULL && mSubMeshes[i].show && numIndices > 0 && numVertices > 0)
+		if (mSubMeshes[i].mRenderResource == NULL && show && numIndices > 0 && numVertices > 0 && createResource)
 		{
 			physx::apex::NxUserRenderVertexBuffer* vertexBuffers[2] = { NULL , NULL };
 			physx::PxU32 numVertexBuffers = 0;
 
 			physx::apex::NxUserRenderResourceDesc resourceDesc;
 			if (mParent != NULL && mParent->mStaticVertexBuffer != NULL)
+			{
 				vertexBuffers[numVertexBuffers++] = mParent->mStaticVertexBuffer;
+			}
 			else if (mStaticVertexBuffer)
+			{
 				vertexBuffers[numVertexBuffers++] = mStaticVertexBuffer;
+			}
 
-			if (useGpuSkinning && mParent != NULL && mParent->mDynamicVertexBuffer != NULL)
+			if (mUseGpuSkinning && mParent != NULL && mParent->mDynamicVertexBuffer != NULL)
+			{
 				vertexBuffers[numVertexBuffers++] = mParent->mDynamicVertexBuffer;
+			}
 			else
 			{
-				assert(mDynamicVertexBuffer != NULL);
+				PX_ASSERT(mDynamicVertexBuffer != NULL);
 				vertexBuffers[numVertexBuffers++] = mDynamicVertexBuffer;
 			}
 
 
-			assert(numVertexBuffers > 0);
+			PX_ASSERT(numVertexBuffers > 0);
 
 			resourceDesc.vertexBuffers = vertexBuffers;
 			resourceDesc.numVertexBuffers = numVertexBuffers;
 
 			resourceDesc.indexBuffer = (mParent != NULL && mParent->mIndexBuffer != NULL) ? mParent->mIndexBuffer : mIndexBuffer;
-			assert(resourceDesc.indexBuffer != NULL);
+			PX_ASSERT(resourceDesc.indexBuffer != NULL);
 			resourceDesc.boneBuffer = mBoneBuffer;
 
 			resourceDesc.firstVertex = 0;
@@ -1897,7 +2718,7 @@ void TriangleMesh::updateRenderResources(bool rewriteBuffers, physx::apex::NxUse
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::dispatchRenderResources(physx::NxUserRenderer& r, const physx::PxMat34Legacy& currentPose)
+void TriangleMesh::dispatchRenderResources(physx::NxUserRenderer& r, const physx::PxMat44& currentPose)
 {
 	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
 	{
@@ -1913,27 +2734,412 @@ void TriangleMesh::dispatchRenderResources(physx::NxUserRenderer& r, const physx
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::skin(const SkeletalAnim &anim)
+void TriangleMesh::updateRenderer(bool rewriteBuffers, bool overrideMaterial, bool sharedOnly /* = false */)
+{
+	PX_FORCE_PARAMETER_REFERENCE(rewriteBuffers);
+	PX_FORCE_PARAMETER_REFERENCE(overrideMaterial);
+	PX_FORCE_PARAMETER_REFERENCE(sharedOnly);
+
+#ifdef USE_SAMPLE_RENDERER
+	if (mParent != NULL)
+	{
+		if (mParent->mRenderer == NULL)
+		{
+			mParent->mRenderer = mRenderer;
+		}
+
+		mParent->updateRenderer(rewriteBuffers, true);
+	}
+
+	if (mRenderer == NULL)
+	{
+		return;
+	}
+
+	const size_t numVertices = mParent != NULL ? mParent->mVertices.size() : mVertices.size();
+	const size_t numIndices  = mParent != NULL ? mParent->mIndices.size() : mIndices.size();
+
+	if (numVertices == 0 || numIndices == 0)
+	{
+		return;
+	}
+
+	bool vertexBufferDynamicDirty = vertexValuesChangedDynamic || rewriteBuffers;
+	vertexValuesChangedDynamic = false;
+	if (mRendererVertexBufferDynamic == NULL && (mVertices.size() > 0 || mSkinnedVertices.size() > 0))
+	{
+		//PH: Static or dynamic, depending on whether you're in the parent or not.
+		//    The child might have mVertices.size() == 0 when it can do gpu skinning, hence no buffer needed
+		using SampleRenderer::RendererVertexBuffer;
+
+		SampleRenderer::RendererVertexBufferDesc desc;
+		desc.hint = mParent == NULL ? RendererVertexBuffer::HINT_STATIC : RendererVertexBuffer::HINT_DYNAMIC;
+		desc.maxVertices = (physx::PxU32)numVertices;
+		desc.semanticFormats[RendererVertexBuffer::SEMANTIC_POSITION]	= RendererVertexBuffer::FORMAT_FLOAT3;
+		desc.semanticFormats[RendererVertexBuffer::SEMANTIC_NORMAL]		= RendererVertexBuffer::FORMAT_FLOAT3;
+
+		PX_ASSERT(desc.isValid());
+
+		mRendererVertexBufferDynamic = mRenderer->createVertexBuffer(desc);
+		vertexBufferDynamicDirty = true;
+	}
+
+	if (mRendererVertexBufferDynamic && vertexBufferDynamicDirty)
+	{
+		using SampleRenderer::RendererVertexBuffer;
+
+		physx::PxStrideIterator<physx::PxVec3> positions;
+		{
+			unsigned int stride = 0;
+			void* data = mRendererVertexBufferDynamic->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, stride);
+			positions = PxMakeIterator((physx::PxVec3*)data, stride);
+		}
+		physx::PxStrideIterator<physx::PxVec3> normals;
+		{
+			unsigned int stride = 0;
+			void* data = mRendererVertexBufferDynamic->lockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL, stride);
+			normals = PxMakeIterator((physx::PxVec3*)data, stride);
+		}
+
+		std::vector<physx::PxVec3>& realVertices = mParent != NULL ? mParent->mVertices : mVertices;
+		std::vector<physx::PxVec3>& realNormals = mParent != NULL ? mParent->mNormals : mNormals;
+		
+		physx::PxVec3* inPositions = mSkinnedVertices.size() == realVertices.size() ? &mSkinnedVertices[0] : &realVertices[0];
+		physx::PxVec3* inNormals = mSkinnedNormals.size() == realNormals.size() ? &mSkinnedNormals[0] : &realNormals[0];
+		for (unsigned int i = 0; i < numVertices; i++)
+		{
+			positions[i] = inPositions[i];
+			normals[i] = inNormals[i];
+		}
+
+		mRendererVertexBufferDynamic->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
+		mRendererVertexBufferDynamic->unlockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL);
+	}
+
+
+	bool vertexBufferSharedDirty = rewriteBuffers || textureUvOriginChanged;
+	bool hasBoneBuffer = mParent == NULL && mBoneWeights.size() == mVertices.size() && getMaxBoneIndex() < RENDERER_MAX_BONES;
+	const bool hasTexCoords = mParent == NULL && mTexCoords[0].size() == mVertices.size();
+
+	if (mRendererVertexBufferShared == NULL && mParent == NULL && (hasBoneBuffer || hasTexCoords))
+	{
+		// PH: Only done in the parent, hence shared
+		using SampleRenderer::RendererVertexBuffer;
+
+		SampleRenderer::RendererVertexBufferDesc desc;
+		desc.hint = SampleRenderer::RendererVertexBuffer::HINT_STATIC;
+		desc.maxVertices = (physx::PxU32)numVertices;
+		if (hasBoneBuffer)
+		{
+			desc.semanticFormats[RendererVertexBuffer::SEMANTIC_BONEINDEX]	= RendererVertexBuffer::FORMAT_USHORT4;
+			desc.semanticFormats[RendererVertexBuffer::SEMANTIC_BONEWEIGHT]	= RendererVertexBuffer::FORMAT_FLOAT4;
+		}
+		if (hasTexCoords)
+		{
+			desc.semanticFormats[RendererVertexBuffer::SEMANTIC_TEXCOORD0]	= RendererVertexBuffer::FORMAT_FLOAT2;
+		}
+
+		PX_ASSERT(desc.isValid());
+
+		mRendererVertexBufferShared = mRenderer->createVertexBuffer(desc);
+		vertexBufferSharedDirty = true;
+	}
+
+	if (mRendererVertexBufferShared != NULL && vertexBufferSharedDirty)
+	{
+		using SampleRenderer::RendererVertexBuffer;
+
+		physx::PxStrideIterator<ushort4> boneIndices;
+		if (hasBoneBuffer)
+		{
+			unsigned int stride = 0;
+			void* data = mRendererVertexBufferShared->lockSemantic(RendererVertexBuffer::SEMANTIC_BONEINDEX, stride);
+			boneIndices = physx::PxMakeIterator((ushort4*)data, stride);
+		}
+		physx::PxStrideIterator<physx::PxVec4> boneWeights;
+		if (hasBoneBuffer)
+		{
+			unsigned int stride = 0;
+			void* data = mRendererVertexBufferShared->lockSemantic(RendererVertexBuffer::SEMANTIC_BONEWEIGHT, stride);
+			boneWeights = physx::PxMakeIterator((physx::PxVec4*)data, stride);
+		}
+		physx::PxStrideIterator<physx::PxVec2> texCoords;
+		if (hasTexCoords)
+		{
+			unsigned int stride = 0;
+			void* data = mRendererVertexBufferShared->lockSemantic(RendererVertexBuffer::SEMANTIC_TEXCOORD0, stride);
+			texCoords = physx::PxMakeIterator((physx::PxVec2*)data, stride);
+		}
+
+		ushort4* inBoneIndices = hasBoneBuffer ? (ushort4*)&mBoneIndicesInternal[0] : NULL;
+		physx::PxVec4* inBoneWeights = hasBoneBuffer ? &mBoneWeights[0] : NULL;
+		physx::NxVertexUV* inTexCoords = hasTexCoords ? &mTexCoords[0][0] : NULL;
+		for (unsigned int i = 0; i < numVertices; i++)
+		{
+			if (hasBoneBuffer)
+			{
+				boneIndices[i] = inBoneIndices[i];
+				boneWeights[i] = inBoneWeights[i];
+			}
+			if (hasTexCoords)
+			{
+				// ugh, we switch to bottom left in SampleApexRenderer.cpp
+				switch (mTextureUVOrigin)
+				{
+				case physx::apex::NxTextureUVOrigin::ORIGIN_TOP_LEFT:
+					texCoords[i].x = inTexCoords[i].u;
+					texCoords[i].y = 1.0f - inTexCoords[i].v;
+					break;
+				case physx::apex::NxTextureUVOrigin::ORIGIN_TOP_RIGHT:
+					texCoords[i].x = 1.0f - inTexCoords[i].u;
+					texCoords[i].y = 1.0f - inTexCoords[i].v;
+					break;
+				case physx::apex::NxTextureUVOrigin::ORIGIN_BOTTOM_LEFT:
+					texCoords[i].x = inTexCoords[i].u;
+					texCoords[i].y = inTexCoords[i].v;
+					break;
+				case physx::apex::NxTextureUVOrigin::ORIGIN_BOTTOM_RIGHT:
+					texCoords[i].x = 1.0f - inTexCoords[i].u;
+					texCoords[i].y = inTexCoords[i].v;
+					break;
+				}
+			}
+		}
+
+		if (hasBoneBuffer)
+		{
+			mRendererVertexBufferShared->unlockSemantic(RendererVertexBuffer::SEMANTIC_BONEINDEX);
+			mRendererVertexBufferShared->unlockSemantic(RendererVertexBuffer::SEMANTIC_BONEWEIGHT);
+		}
+		if (hasTexCoords)
+		{
+			mRendererVertexBufferShared->unlockSemantic(RendererVertexBuffer::SEMANTIC_TEXCOORD0);
+		}
+	}
+
+	bool indexBufferDirty = rewriteBuffers;
+	if (mRendererIndexBuffer == NULL && mParent == NULL)
+	{
+		// PH: Only done in the parent
+		using SampleRenderer::RendererIndexBuffer;
+
+		SampleRenderer::RendererIndexBufferDesc desc;
+		desc.hint = RendererIndexBuffer::HINT_STATIC;
+		desc.maxIndices = (physx::PxU32)numIndices;
+		desc.format = RendererIndexBuffer::FORMAT_UINT32;
+
+		PX_ASSERT(desc.isValid());
+
+		mRendererIndexBuffer = mRenderer->createIndexBuffer(desc);
+		indexBufferDirty = true;
+	}
+
+	if (mRendererIndexBuffer != NULL && indexBufferDirty && numIndices > 0)
+	{
+		unsigned int* indices = (unsigned int*)mRendererIndexBuffer->lock();
+
+		unsigned int* inIndices = mParent != NULL ? &mParent->mIndices[0] : &mIndices[0];
+
+		// PH: Ugh, I need to reverse winding to make the SampleRenderer happy (mainly because of double sided rendering in D3D)
+		for (unsigned int i = 0; i < numIndices; i += 3)
+		{
+			indices[i + 0] = inIndices[i + 2];
+			indices[i + 1] = inIndices[i + 1];
+			indices[i + 2] = inIndices[i + 0];
+		}
+
+		mRendererIndexBuffer->unlock();
+	}
+
+	// only create render meshes and materials for a mesh we actually want to render
+	if (!sharedOnly)
+	{
+		bool hasTextures = false;
+		bool hasBones = mParent != NULL && mParent->mBoneWeights.size() == mParent->mVertices.size() && mParent->getMaxBoneIndex() < RENDERER_MAX_BONES;
+
+		for (size_t submeshIndex = 0; submeshIndex < mSubMeshes.size(); submeshIndex++)
+		{
+			TriangleSubMesh& sm = mSubMeshes[submeshIndex];
+			bool show = sm.show;
+			if (mParent != NULL)
+			{
+				PX_ASSERT(mParent->mSubMeshes.size() == mSubMeshes.size());
+				show &= mParent->mSubMeshes[submeshIndex].show;
+			}
+
+			if (sm.mRendererMesh == NULL && show)
+			{
+				using SampleRenderer::RendererMesh;
+				using SampleRenderer::RendererVertexBuffer;
+
+				RendererVertexBuffer* vertexBuffers[2];
+				vertexBuffers[0] = mRendererVertexBufferDynamic;
+				if (vertexBuffers[0] == NULL && mParent != NULL)
+				{
+					vertexBuffers[0] = mParent->mRendererVertexBufferDynamic;
+				}
+
+				PX_ASSERT(vertexBuffers[0] != NULL);
+
+				vertexBuffers[1] = mParent != NULL ? mParent->mRendererVertexBufferShared : mRendererVertexBufferShared;
+
+				SampleRenderer::RendererMeshDesc desc;
+				desc.vertexBuffers = vertexBuffers;
+				desc.numVertexBuffers = vertexBuffers[1] != NULL ? 2 : 1;
+				desc.numVertices = (physx::PxU32)numVertices;
+
+				desc.indexBuffer = mRendererIndexBuffer;
+				if (desc.indexBuffer == NULL && mParent != NULL)
+				{
+					desc.indexBuffer = mParent->mRendererIndexBuffer;
+				}
+				PX_ASSERT(desc.indexBuffer != NULL);
+
+				desc.firstIndex = sm.firstIndex;
+				desc.numIndices = sm.numIndices;
+
+				desc.primitives = RendererMesh::PRIMITIVE_TRIANGLES;
+
+				PX_ASSERT(desc.isValid());
+				sm.mRendererMesh = mRenderer->createMesh(desc);
+			}
+			else if (sm.mRendererMesh != NULL && !show)
+			{
+				sm.mRendererMesh->release();
+				sm.mRendererMesh = NULL;
+			}
+
+			if (sm.mRendererMeshContext == NULL && show)
+			{
+				sm.mRendererMeshContext = new SampleRenderer::RendererMeshContext;
+			}
+
+			SampleFramework::SampleMaterialAsset* materialAsset = mOverrideMaterial;
+			if (sm.mSampleMaterial != NULL && !overrideMaterial)
+			{
+				materialAsset = sm.mSampleMaterial;
+			}
+
+			PX_ASSERT(materialAsset != NULL);
+
+			for (unsigned int i = 0; i < materialAsset->getNumVertexShaders(); i++)
+			{
+				if (mUseGpuSkinning == (materialAsset->getMaxBones(i) > 0))
+				{
+					sm.setMaterialReference(materialAsset->getMaterial(i), materialAsset->getMaterialInstance(i));
+					break;
+				}
+			}
+			PX_ASSERT(sm.mRendererMaterialReference != NULL);
+
+			if (sm.mRendererMaterialInstance != NULL)
+			{
+				using SampleRenderer::RendererMaterial;
+
+				const RendererMaterial::Variable* v = sm.mRendererMaterialInstance->findVariable("diffuseColor", RendererMaterial::VARIABLE_FLOAT4);
+				if (v != NULL)
+				{
+					if (sm.color != 0x00808080) // check for lightgray, the default color. in this case leave the diffuseColor alone
+					{
+						const unsigned int color = sm.color;
+
+						const float red   = ((color >> 16) & 0xff) / 255.f;
+						const float green = ((color >>  8) & 0xff) / 255.f;
+						const float blue  = ((color >>  0) & 0xff) / 255.f;
+
+						float diffuseColor[4] = { red, green, blue, 1.0f };
+						sm.mRendererMaterialInstance->writeData(*v, diffuseColor);
+					}
+				}
+			}
+		}
+	}
+#endif // USE_SAMPLE_RENDERER
+}
+
+// ----------------------------------------------------------------------
+void TriangleMesh::queueForRendering(const physx::PxMat44& currentPose, bool wireframe)
+{
+	const physx::PxMat44* tmp = &currentPose;
+	PX_FORCE_PARAMETER_REFERENCE(tmp);
+
+	PX_FORCE_PARAMETER_REFERENCE(wireframe);
+
+#ifdef USE_SAMPLE_RENDERER
+	if (mRenderer == NULL)
+	{
+		return;
+	}
+
+	for (size_t submeshIndex = 0; submeshIndex < mSubMeshes.size(); submeshIndex++)
+	{
+		TriangleSubMesh& sm = mSubMeshes[submeshIndex];
+		if (sm.mRendererMesh != NULL && sm.mRendererMeshContext != NULL && sm.mRendererMaterialReference != NULL)
+		{
+			using SampleRenderer::RendererMeshContext;
+
+			RendererMeshContext::CullMode cullMode = RendererMeshContext::NONE;
+
+			switch (sm.cullMode)
+			{
+			case physx::apex::NxRenderCullMode::CLOCKWISE:
+				cullMode = RendererMeshContext::CLOCKWISE;
+				break;
+			case physx::apex::NxRenderCullMode::COUNTER_CLOCKWISE:
+				cullMode = RendererMeshContext::COUNTER_CLOCKWISE;
+				break;
+			}
+
+			sm.mRendererMeshContext->cullMode = cullMode;
+			sm.mRendererMeshContext->fillMode = wireframe ? RendererMeshContext::LINE : RendererMeshContext::SOLID;
+			sm.mRendererMeshContext->material = sm.mRendererMaterialReference;
+			sm.mRendererMeshContext->materialInstance = sm.mRendererMaterialInstance;
+			sm.mRendererMeshContext->mesh = sm.mRendererMesh;
+			sm.mRendererMeshContext->transform = &currentPose;
+
+			if (mUseGpuSkinning)
+			{
+				PX_ALWAYS_ASSERT();
+			}
+
+			mRenderer->queueMeshForRender(*sm.mRendererMeshContext);
+		}
+	}
+#endif // USE_SAMPLE_RENDERER
+}
+
+// ----------------------------------------------------------------------
+void TriangleMesh::skin(const SkeletalAnim& anim, float scale /* = 1.0f */)
 {
 	const size_t numVerts = mParent != NULL ? mParent->mVertices.size() : mVertices.size();
-	const size_t numBoneIndices = mParent != NULL ? mParent->mBoneIndices.size() : mBoneIndices.size();
+	const size_t numBoneIndices = mParent != NULL ? mParent->mBoneIndicesExternal.size() : mBoneIndicesExternal.size();
 
-	if (numBoneIndices != numVerts * 4 || mMaxBoneIndex < 0)
+	if (numBoneIndices != numVerts * 4 || mMaxBoneIndexExternal < 0)
+	{
 		return;
+	}
 
 	const std::vector<physx::PxMat44>& skinningMatrices = anim.getSkinningMatrices();
 
-	assert((physx::PxI32)skinningMatrices.size() > mMaxBoneIndex);
-	const physx::PxU32 numSkinningMatricesNeeded = physx::PxMin<physx::PxU32>(mMaxBoneIndex+1, (physx::PxU32)skinningMatrices.size());
+	PX_ASSERT((physx::PxI32)skinningMatrices.size() > mMaxBoneIndexInternal);
+
+	std::vector<int>& boneMappingInt2Ext = mParent != NULL ? mParent->mBoneMappingInt2Ext : mBoneMappingInt2Ext;
+
+	PX_ASSERT(mMaxBoneIndexInternal + 1 == (int)boneMappingInt2Ext.size());
+	const physx::PxU32 numSkinningMatricesNeeded = physx::PxMin<physx::PxU32>(mMaxBoneIndexInternal + 1, (physx::PxU32)skinningMatrices.size());
 	if (mSkinningMatrices.size() != numSkinningMatricesNeeded)
+	{
 		mSkinningMatrices.resize(numSkinningMatricesNeeded);
+	}
 
 	for (physx::PxU32 i = 0; i < numSkinningMatricesNeeded; i++)
-		mSkinningMatrices[i] = skinningMatrices[i];
+	{
+		mSkinningMatrices[i] = skinningMatrices[boneMappingInt2Ext[i]] * scale;
+	}
 
 	skinningMatricesChanged = true;
 
-	if (!needSkinningVertices)
+	if (mUseGpuSkinning)
 	{
 		mSkinnedVertices.clear();
 		mSkinnedNormals.clear();
@@ -1949,11 +3155,12 @@ void TriangleMesh::skin(const SkeletalAnim &anim)
 	}
 
 	const size_t numBones = skinningMatrices.size();
-	assert((int)numBones > mMaxBoneIndex);
+	PX_ASSERT((int)numBones > mMaxBoneIndexInternal);
+	PX_FORCE_PARAMETER_REFERENCE(numBones);
 
-	const physx::PxVec3* __restrict originalVertices = mParent == NULL ? &mVertices[0] : &mParent->mVertices[0];
+	const physx::PxVec3* __restrict originalVertices = mParent == NULL || (mVertices.size() == mParent->mVertices.size()) ? &mVertices[0] : &mParent->mVertices[0];
 	const physx::PxVec3* __restrict originalNormals = mParent == NULL ? &mNormals[0] : &mParent->mNormals[0];
-	const physx::PxU16* __restrict skinningIndices = mParent == NULL ? &mBoneIndices[0] : &mParent->mBoneIndices[0];
+	const physx::PxU16* __restrict skinningIndices = mParent == NULL ? &mBoneIndicesInternal[0] : &mParent->mBoneIndicesInternal[0];
 	const physx::PxVec4* __restrict skinningWeights = mParent == NULL ? &mBoneWeights[0] : &mParent->mBoneWeights[0];
 	physx::PxVec3* __restrict destVertices = &mSkinnedVertices[0];
 	physx::PxVec3* __restrict destNormals = &mSkinnedNormals[0];
@@ -1967,11 +3174,11 @@ void TriangleMesh::skin(const SkeletalAnim &anim)
 	{
 		physx::PxU32 numBoneWeight = *numBoneWeights;
 
-		const size_t maxVerts = (i+1) * 16 > numVerts ? numVerts - (i * 16) : 16;
+		const size_t maxVerts = (i + 1) * 16 > numVerts ? numVerts - (i * 16) : 16;
 
 		for (size_t j = 0; j < maxVerts; j++)
 		{
-			physx::prefetch128(skinningWeights+1, 0);
+			physx::prefetch128(skinningWeights + 1, 0);
 
 			size_t twoBit = numBoneWeight & 0x3;
 			numBoneWeight >>= 2;
@@ -1984,17 +3191,17 @@ void TriangleMesh::skin(const SkeletalAnim &anim)
 
 			physx::PxVec4 skinningWeight = *skinningWeights;
 
-			for (unsigned int j = 0; j <= twoBit; j++)
+			for (unsigned int k = 0; k <= twoBit; k++)
 			{
-				//const physx::PxU32 weightIdx = i*4 + j;
-				assert(physx::PxIsFinite(skinningWeight[j]));
-				const float weight = skinningWeight[j];
+				//const physx::PxU32 weightIdx = i*4 + k;
+				PX_ASSERT(physx::PxIsFinite(skinningWeight[k]));
+				const float weight = skinningWeight[k];
 
 				PX_ASSERT(weight > 0.0f);
-				const physx::PxU16 boneNr = skinningIndices[j];
+				const physx::PxU16 boneNr = skinningIndices[k];
 
-				vs += skinningMatrices[boneNr].transform(v) * weight;
-				ns += skinningMatrices[boneNr].rotate(n) * weight;
+				vs += mSkinningMatrices[boneNr] * v * weight;
+				ns += mSkinningMatrices[boneNr].M * n * weight;
 			}
 			ns *= physx::recipSqrtFast(ns.magnitudeSquared());
 			//ns.normalize();
@@ -2005,7 +3212,7 @@ void TriangleMesh::skin(const SkeletalAnim &anim)
 			originalVertices++;
 			originalNormals++;
 			skinningWeights++;
-			skinningIndices+=4;
+			skinningIndices += 4;
 			destVertices++;
 			destNormals++;
 		}
@@ -2024,32 +3231,36 @@ void TriangleMesh::unskin()
 	mSkinnedNormals.clear();
 	vertexValuesChangedDynamic = true;
 
-	assert(mSkinnedVertices.empty());
+	PX_ASSERT(mSkinnedVertices.empty());
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::showSubmesh(int index, bool on)
+void TriangleMesh::showSubmesh(size_t index, bool on)
 {
-	if (index < 0)
+	if (index >= mSubMeshes.size())
 	{
-		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
+		{
 			mSubMeshes[i].show = on;
+		}
 	}
-	else if ((physx::PxU32)index < mSubMeshes.size())
+	else
 	{
 		mSubMeshes[index].show = on;
 	}
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::selectSubMesh(int index, bool selected)
+void TriangleMesh::selectSubMesh(size_t index, bool selected)
 {
-	if (index < 0)
+	if (index >= mSubMeshes.size())
 	{
 		for (size_t i = 0; i < mSubMeshes.size(); i++)
+		{
 			mSubMeshes[i].selected = selected;
+		}
 	}
-	else if ((size_t)index < mSubMeshes.size())
+	else
 	{
 		mSubMeshes[index].selected = selected;
 	}
@@ -2057,52 +3268,78 @@ void TriangleMesh::selectSubMesh(int index, bool selected)
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::selectSubMesh(const char* submeshName, const char* materialName, bool select)
+void TriangleMesh::hideSubMesh(const char* submeshName, const char* materialName)
 {
-	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+	// Selected submeshes are hidden later on
+	int found = 0;
+	if (materialName != NULL)
 	{
-		if (mSubMeshes[i].name == submeshName && mSubMeshes[i].materialName == materialName)
-			mSubMeshes[i].selected = select;
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
+		{
+			if (mSubMeshes[i].name == submeshName && mSubMeshes[i].originalMaterialName == materialName)
+			{
+				mSubMeshes[i].selected = true;
+				found++;
+			}
+		}
+	}
+
+	if (found == 0)
+	{
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
+		{
+			if (mSubMeshes[i].name == submeshName)
+			{
+				mSubMeshes[i].selected = true;
+				found++;
+			}
+		}
 	}
 }
 
 // ----------------------------------------------------------------------
-size_t TriangleMesh::getNumTriangles(int subMeshNr) const
+size_t TriangleMesh::getNumTriangles(size_t subMeshNr) const
 {
 	if (mParent != NULL)
+	{
 		return mParent->getNumTriangles(subMeshNr);
+	}
 
-	if (subMeshNr < 0)
+	if (subMeshNr >= mSubMeshes.size())
+	{
 		return mIndices.size() / 3;
-	else if ((size_t)subMeshNr >= mSubMeshes.size())
-		return 0;
+	}
 	else
+	{
 		return mSubMeshes[subMeshNr].numIndices / 3;
+	}
 }
 
 // ----------------------------------------------------------------------
 std::vector<PaintedVertex> &TriangleMesh::getPaintChannel(PaintChannelType channelType)
-{ 
-	assert(0 <= channelType && channelType < PC_NUM_CHANNELS);
-	return mPaintChannels[channelType]; 
+{
+	PX_ASSERT(0 <= channelType && channelType < PC_NUM_CHANNELS);
+	return mPaintChannels[channelType];
 }
 
 // ----------------------------------------------------------------------
 const std::vector<PaintedVertex> &TriangleMesh::getPaintChannel(PaintChannelType channelType) const
-{ 
-	assert(0 <= channelType && channelType < PC_NUM_CHANNELS);
-	return mPaintChannels[channelType]; 
+{
+	PX_ASSERT(0 <= channelType && channelType < PC_NUM_CHANNELS);
+	return mPaintChannels[channelType];
 }
 // ----------------------------------------------------------------------
-float TriangleMesh::getPaintChannelMaxValue(PaintChannelType channelType) const
+float TriangleMesh::getMaximalMaxDistance() const
 {
-	if (mPaintChannels[channelType].size() != mVertices.size())
+	if (mPaintChannels[PC_MAX_DISTANCE].size() != mVertices.size())
+	{
 		return 0.0f;
+	}
 
 	float maxValue = 0.0f;
 	for (physx::PxU32 i = 0; i < mVertices.size(); i++)
 	{
-		maxValue = physx::PxMax(maxValue, mPaintChannels[channelType][i].paintValue);
+		maxValue = physx::PxMax(maxValue, mPaintChannels[PC_MAX_DISTANCE][i].paintValueF32);
 	}
 	return maxValue;
 }
@@ -2111,21 +3348,29 @@ float TriangleMesh::getPaintChannelMaxValue(PaintChannelType channelType) const
 int TriangleMesh::getBoneAssignments(physx::PxU32 vertNr, const physx::PxU16* &bones, const float* &weights) const
 {
 	if (mParent != NULL)
+	{
 		return mParent->getBoneAssignments(vertNr, bones, weights);
+	}
 
-	if (mBoneIndices.empty())
+	if (mBoneIndicesExternal.empty())
+	{
 		return 0;
+	}
 
 	if (vertNr >= mVertices.size())
+	{
 		return 0;
+	}
 
-	bones = &mBoneIndices[vertNr * 4];
+	bones = &mBoneIndicesExternal[vertNr * 4];
 	weights = &mBoneWeights[vertNr].x;
 
 	for (unsigned int i = 0; i < 4; i++)
 	{
 		if (weights[i] == 0.0f)
+		{
 			return i;
+		}
 	}
 	return 4;
 }
@@ -2134,10 +3379,28 @@ int TriangleMesh::getBoneAssignments(physx::PxU32 vertNr, const physx::PxU16* &b
 void TriangleMesh::displaceAlongNormal(float displacement)
 {
 	if (mNormals.size() != mVertices.size())
+	{
 		return;
+	}
 	for (int i = 0; i < (int)mVertices.size(); i++)
+	{
 		mVertices[i] += mNormals[i] * displacement;
+	}
 	updateBounds();
+}
+
+// ----------------------------------------------------------------------
+bool TriangleMesh::generateTangentSpace()
+{
+	if (mTexCoords[0].size() == mVertices.size())
+	{
+		// just make the size not 0
+		mTangents.push_back(physx::PxVec3(0.0f));
+		updateTangents();
+
+		return true;
+	}
+	return false;
 }
 
 // ----------------------------------------------------------------------
@@ -2145,64 +3408,76 @@ void TriangleMesh::updateBounds()
 {
 	mBounds.setEmpty();
 	for (int i = 0; i < (int)mVertices.size(); i++)
+	{
 		mBounds.include(mVertices[i]);
+	}
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::setSubMeshColor(int subMeshNr, physx::PxU32 color)
+void TriangleMesh::setSubMeshColor(size_t subMeshNr, physx::PxU32 color)
 {
-	if (subMeshNr < 0)
+	if (subMeshNr >= mSubMeshes.size())
 	{
-		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
 		{
 			setSubMeshColor(i, color);
 		}
 	}
-	else if (subMeshNr >= 0 && (physx::PxU32)subMeshNr < mSubMeshes.size())
+	else
 	{
 		mSubMeshes[subMeshNr].color = color;
+
 		if (mSubMeshes[subMeshNr].materialResource != NULL)
 		{
-			physx::PxF32 red = ((color >> 16) & 0xff) / 255.f;
-			physx::PxF32 green = ((color >> 8) & 0xff) / 255.f;
-			physx::PxF32 blue = ((color >> 0) & 0xff) / 255.f;
-			mSubMeshes[subMeshNr].materialResource->color.set(red, green, blue);
+			float red = ((color >> 16) & 0xff) / 255.f;
+			float green = ((color >> 8) & 0xff) / 255.f;
+			float blue = ((color >> 0) & 0xff) / 255.f;
+
+			mSubMeshes[subMeshNr].materialResource->color = physx::PxVec3(red, green, blue);
 		}
 	}
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::setSubMeshMaterialName(int subMeshNr, const char* materialName, physx::NxResourceCallback* resourceCallback)
+void TriangleMesh::setSubMeshMaterialName(size_t subMeshNr, const char* materialName, physx::NxResourceCallback* resourceCallback)
 {
-	if (subMeshNr < 0)
+	if (subMeshNr >= mSubMeshes.size())
 	{
-		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
 		{
 			setSubMeshMaterialName(i, materialName, resourceCallback);
 		}
 	}
-	else if (subMeshNr >= 0 && (physx::PxU32)subMeshNr < mSubMeshes.size())
+	else
 	{
 		mSubMeshes[subMeshNr].materialName = materialName;
 		std::string name;
 		name.append(mMaterialPrefix);
 		name.append(materialName);
 		name.append(mMaterialSuffix);
+#ifdef USE_SAMPLE_RENDERER
+		if (mSubMeshes[subMeshNr].mSampleMaterial != NULL)
+		{
+			resourceCallback->releaseResource(APEX_MATERIALS_NAME_SPACE, NULL, mSubMeshes[subMeshNr].mSampleMaterial);
+		}
+		mSubMeshes[subMeshNr].mSampleMaterial = reinterpret_cast<SampleFramework::SampleMaterialAsset*>(resourceCallback->requestResource(APEX_MATERIALS_NAME_SPACE, name.c_str()));
+#else
 		mSubMeshes[subMeshNr].materialResource = (MaterialResource*)resourceCallback->requestResource(APEX_MATERIALS_NAME_SPACE, name.c_str());
+#endif
 		mSubMeshes[subMeshNr].resourceNeedsUpdate = true;
 	}
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::setSubMeshUsedForCollision(int subMeshNr, bool enable)
+void TriangleMesh::setSubMeshUsedForCollision(size_t subMeshNr, bool enable)
 {
-	if (subMeshNr >= 0 && (physx::PxU32)subMeshNr < mSubMeshes.size())
+	if (subMeshNr < mSubMeshes.size())
 	{
 		mSubMeshes[subMeshNr].usedForCollision = enable;
 	}
 	else
 	{
-		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
 		{
 			setSubMeshUsedForCollision(i, enable);
 		}
@@ -2210,15 +3485,15 @@ void TriangleMesh::setSubMeshUsedForCollision(int subMeshNr, bool enable)
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::setSubMeshHasPhysics(int subMeshNr, bool enable)
+void TriangleMesh::setSubMeshHasPhysics(size_t subMeshNr, bool enable)
 {
-	if (subMeshNr >= 0 && (physx::PxU32)subMeshNr < mSubMeshes.size())
+	if (subMeshNr < mSubMeshes.size())
 	{
 		mSubMeshes[subMeshNr].hasApexAsset = enable;
 	}
 	else
 	{
-		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		for (size_t i = 0; i < mSubMeshes.size(); i++)
 		{
 			setSubMeshHasPhysics(i, enable);
 		}
@@ -2226,53 +3501,69 @@ void TriangleMesh::setSubMeshHasPhysics(int subMeshNr, bool enable)
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::setAllColors(physx::PxU32 color)
+void TriangleMesh::setAllColors(unsigned int color)
 {
-	for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+	for (size_t i = 0; i < mSubMeshes.size(); i++)
+	{
 		setSubMeshColor(i, color);
+	}
 }
 
 // ----------------------------------------------------------------------
 void TriangleMesh::subdivideSubMesh(int subMeshNr, int subdivision, bool evenOutVertexDegrees)
 {
-	const int newTris[8][13] = {
-		{ 0, 1, 2, -1,-1,-1, -1,-1,-1, -1,-1,-1, -1},
-		{ 0, 3, 2,  3, 1, 2, -1,-1,-1, -1,-1,-1, -1},
-		{ 0, 1, 4,  0, 4, 2, -1,-1,-1, -1,-1,-1, -1},
-		{ 0, 3, 2,  3, 1, 4,  3, 4, 2, -1,-1,-1, -1},
-		{ 0, 1, 5,  1, 2, 5, -1,-1,-1, -1,-1,-1, -1},
-		{ 0, 3, 5,  3, 1, 5,  1, 2, 5, -1,-1,-1, -1},
-		{ 0, 1, 5,  1, 4, 5,  4, 2, 5, -1,-1,-1, -1},
+	const int newTris[8][13] =
+	{
+		{ 0, 1, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+		{ 0, 3, 2,  3, 1, 2, -1, -1, -1, -1, -1, -1, -1},
+		{ 0, 1, 4,  0, 4, 2, -1, -1, -1, -1, -1, -1, -1},
+		{ 0, 3, 2,  3, 1, 4,  3, 4, 2, -1, -1, -1, -1},
+		{ 0, 1, 5,  1, 2, 5, -1, -1, -1, -1, -1, -1, -1},
+		{ 0, 3, 5,  3, 1, 5,  1, 2, 5, -1, -1, -1, -1},
+		{ 0, 1, 5,  1, 4, 5,  4, 2, 5, -1, -1, -1, -1},
 		{ 0, 3, 5,  3, 1, 4,  3, 4, 5,  4, 2, 5, -1}
 	};
 
 	if (subMeshNr < 0 || subMeshNr >= (int)mSubMeshes.size())
-		return; 
+	{
+		return;
+	}
 
 	if (subdivision == 0)
-		return; 
+	{
+		return;
+	}
 
-	float maxEdgeLength = mBounds.minimum.distance(mBounds.maximum) / subdivision;
-	TriangleSubMesh &sm = mSubMeshes[subMeshNr];
+	float maxEdgeLength = (mBounds.minimum - mBounds.maximum).magnitude() / subdivision;
+	TriangleSubMesh& sm = mSubMeshes[subMeshNr];
 
 	// move submesh to the end so it can be expanded
 	std::vector<physx::PxU32> tempIndices;
 	tempIndices.resize(sm.numIndices);
-	for (int i = 0; i < (int)sm.numIndices; i++) 
+	for (int i = 0; i < (int)sm.numIndices; i++)
+	{
 		tempIndices[i] = mIndices[sm.firstIndex + i];
+	}
 
 	int numShift = (physx::PxU32)mIndices.size() - (sm.firstIndex + sm.numIndices);
-	for (int i = 0; i < numShift; i++) 
+	for (int i = 0; i < numShift; i++)
+	{
 		mIndices[sm.firstIndex + i] = mIndices[sm.firstIndex + sm.numIndices + i];
+	}
 
 	int last = (physx::PxU32)mIndices.size() - sm.numIndices;
-	for (int i = 0; i < (int)sm.numIndices; i++) 
+	for (int i = 0; i < (int)sm.numIndices; i++)
+	{
 		mIndices[last + i] = tempIndices[i];
+	}
 
-	for (int i = 0; i < (int)mSubMeshes.size(); i++) {
-		TriangleSubMesh &si = mSubMeshes[i];
+	for (int i = 0; i < (int)mSubMeshes.size(); i++)
+	{
+		TriangleSubMesh& si = mSubMeshes[i];
 		if (si.firstIndex > sm.firstIndex)
+		{
 			si.firstIndex -= sm.numIndices;
+		}
 	}
 	sm.firstIndex = (physx::PxU32)mIndices.size() - sm.numIndices;
 
@@ -2280,7 +3571,9 @@ void TriangleMesh::subdivideSubMesh(int subMeshNr, int subdivision, bool evenOut
 	float h2 = maxEdgeLength * maxEdgeLength;
 	mVertexFirstSplit.resize(mVertices.size());
 	for (int i = 0; i < (int)mVertices.size(); i++)
+	{
 		mVertexFirstSplit[i] = -1;
+	}
 	mVertexSplits.clear();
 
 	int numTris = sm.numIndices / 3;
@@ -2288,42 +3581,62 @@ void TriangleMesh::subdivideSubMesh(int subMeshNr, int subdivision, bool evenOut
 
 	vertexCountChanged |= sm.numIndices > 0;
 
-	for (int i = 0; i < numTris; i++) {
-		id[0] = mIndices[sm.firstIndex + 3*i + 0];
-		id[1] = mIndices[sm.firstIndex + 3*i + 1];
-		id[2] = mIndices[sm.firstIndex + 3*i + 2];
+	for (int i = 0; i < numTris; i++)
+	{
+		id[0] = mIndices[sm.firstIndex + 3 * i + 0];
+		id[1] = mIndices[sm.firstIndex + 3 * i + 1];
+		id[2] = mIndices[sm.firstIndex + 3 * i + 2];
 		physx::PxVec3 p0 = mVertices[id[0]];
 		physx::PxVec3 p1 = mVertices[id[1]];
 		physx::PxVec3 p2 = mVertices[id[2]];
 
 		int code = 0;
-		if (p0.distanceSquared(p1) > h2) { id[3] = addSplitVert(id[0], id[1]); code |= 1; }
-		if (p1.distanceSquared(p2) > h2) { id[4] = addSplitVert(id[1], id[2]); code |= 2; }
-		if (p2.distanceSquared(p0) > h2) { id[5] = addSplitVert(id[2], id[0]); code |= 4; }
+		if ((p0 - p1).magnitudeSquared() > h2)
+		{
+			id[3] = addSplitVert(id[0], id[1]);
+			code |= 1;
+		}
+		if ((p1 - p2).magnitudeSquared() > h2)
+		{
+			id[4] = addSplitVert(id[1], id[2]);
+			code |= 2;
+		}
+		if ((p2 - p0).magnitudeSquared() > h2)
+		{
+			id[5] = addSplitVert(id[2], id[0]);
+			code |= 4;
+		}
 
-		const int *newId = newTris[code];
+		const int* newId = newTris[code];
 
 		// the first sub triangle replaces the old one
-		mIndices[sm.firstIndex + 3*i + 0] = id[*newId++];	
-		mIndices[sm.firstIndex + 3*i + 1] = id[*newId++];
-		mIndices[sm.firstIndex + 3*i + 2] = id[*newId++];
+		mIndices[sm.firstIndex + 3 * i + 0] = id[*newId++];
+		mIndices[sm.firstIndex + 3 * i + 1] = id[*newId++];
+		mIndices[sm.firstIndex + 3 * i + 2] = id[*newId++];
 
 		// the others are appended at the end
-		while (true) {
+		while (true)
+		{
 			int j = *newId++;
-			if (j >= 0) 
+			if (j >= 0)
+			{
 				mIndices.push_back(id[j]);
-			else 
+			}
+			else
+			{
 				break;
+			}
 		}
 	}
 	sm.numIndices = (physx::PxU32)mIndices.size() - sm.firstIndex;
 
 	if (evenOutVertexDegrees)
+	{
 		evenOutVertexDegree(subMeshNr, 3);
+	}
 
 	updateNormals(subMeshNr);
-	updateTangents(subMeshNr);
+	updateTangents();
 	updateBoneWeights();
 	updateSubmeshInfo();
 }
@@ -2338,41 +3651,50 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 	std::vector<int> vertDegs;
 	vertDegs.resize(mVertices.size(), 0);
 
-	assert(subMeshNr < (int)mSubMeshes.size());
+	PX_ASSERT(subMeshNr < (int)mSubMeshes.size());
 	int firstIndex = 0;
 	int lastIndex = (physx::PxU32)mIndices.size();
-	if (subMeshNr >= 0) {
+	if (subMeshNr >= 0)
+	{
 		firstIndex = mSubMeshes[subMeshNr].firstIndex;
 		lastIndex = firstIndex + mSubMeshes[subMeshNr].numIndices;
 	}
-	physx::PxU32 *indices = &mIndices[firstIndex];
+	physx::PxU32* indices = &mIndices[firstIndex];
 	int numTris = (lastIndex - firstIndex) / 3;
 
-	for (int i = 0; i < numTris; i++) {
-		physx::PxU32 i0 = indices[3*i];
-		physx::PxU32 i1 = indices[3*i + 1];
-		physx::PxU32 i2 = indices[3*i + 2];
+	for (int i = 0; i < numTris; i++)
+	{
+		physx::PxU32 i0 = indices[3 * i];
+		physx::PxU32 i1 = indices[3 * i + 1];
+		physx::PxU32 i2 = indices[3 * i + 2];
 		vertDegs[i0]++;
 		vertDegs[i1]++;
 		vertDegs[i2]++;
-		edge.init(i0,i1, 0, i); edges.push_back(edge);
-		edge.init(i1,i2, 1, i); edges.push_back(edge);
-		edge.init(i2,i0, 2, i); edges.push_back(edge);
+		edge.init(i0, i1, 0, i);
+		edges.push_back(edge);
+		edge.init(i1, i2, 1, i);
+		edges.push_back(edge);
+		edge.init(i2, i0, 2, i);
+		edges.push_back(edge);
 	}
 	std::sort(edges.begin(), edges.end());
 
 	std::vector<int> neighbors;
-	neighbors.resize(3*numTris, -1);
+	neighbors.resize(3 * numTris, -1);
 
 	size_t edgeNr = 0;
 	size_t numEdges = edges.size();
-	while (edgeNr < numEdges) {
-		TriangleMeshEdge &e0 = edges[edgeNr];
-		size_t j = edgeNr+1;
-		while (j < numEdges && edges[j] == e0) 
+	while (edgeNr < numEdges)
+	{
+		TriangleMeshEdge& e0 = edges[edgeNr];
+		size_t j = edgeNr + 1;
+		while (j < numEdges && edges[j] == e0)
+		{
 			j++;
-		if (j < numEdges && j == edgeNr+2) {	// manifold edge
-			TriangleMeshEdge &e1 = edges[edgeNr+1];
+		}
+		if (j < numEdges && j == edgeNr + 2)  	// manifold edge
+		{
+			TriangleMeshEdge& e1 = edges[edgeNr + 1];
 			neighbors[e0.triNr * 3 + e0.edgeNr] = e1.triNr;
 			neighbors[e1.triNr * 3 + e1.edgeNr] = e0.triNr;
 		}
@@ -2380,11 +3702,14 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 	}
 
 	// artifically increase the degree of border vertices
-	for (int i = 0; i < numTris; i++) {
-		for (int j = 0; j < 3; j++) {
-			if (neighbors[3*i + j] < 0) {
-				vertDegs[indices[3*i + j]]++;
-				vertDegs[indices[3*i + (j+1)%3]]++;
+	for (int i = 0; i < numTris; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (neighbors[3 * i + j] < 0)
+			{
+				vertDegs[indices[3 * i + j]]++;
+				vertDegs[indices[3 * i + (j + 1) % 3]]++;
 			}
 		}
 	}
@@ -2393,65 +3718,89 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 	std::vector<int> permutation;
 	permutation.resize(numTris);
 	for (int i = 0; i < numTris; i++)
+	{
 		permutation[i] = i;
+	}
 
 	physx::PxU32 random = 0;
-	for (int i = 0; i < numTris-1; i++) {
+	for (int i = 0; i < numTris - 1; i++)
+	{
 		random = random * 1664525 + 1013904223;
-		int j = i + random % (numTris-i);
-		int p = permutation[i]; permutation[i] = permutation[j]; permutation[j] = p;
+		int j = i + random % (numTris - i);
+		int p = permutation[i];
+		permutation[i] = permutation[j];
+		permutation[j] = p;
 	}
 
 	// flip edges
-	for (int iters = 0; iters < numIters; iters++) {
-		for (int i = 0; i < numTris; i++) {
+	for (int iters = 0; iters < numIters; iters++)
+	{
+		for (int i = 0; i < numTris; i++)
+		{
 			int t = permutation[i];
-			for (int j = 0; j < 3; j++) {
-				int n = neighbors[3*t + j];
-				if (n < t) 
+			for (int j = 0; j < 3; j++)
+			{
+				int n = neighbors[3 * t + j];
+				if (n < t)
+				{
 					continue;
+				}
 				// determine the indices of the two triangles involved
-				physx::PxU32 &i0 = indices[3*t + j];
-				physx::PxU32 &i1 = indices[3*t + (j+1)%3];
-				physx::PxU32 &i2 = indices[3*t + (j+2)%3];
+				physx::PxU32& i0 = indices[3 * t + j];
+				physx::PxU32& i1 = indices[3 * t + (j + 1) % 3];
+				physx::PxU32& i2 = indices[3 * t + (j + 2) % 3];
 
 				int backNr = -1;
-				if (neighbors[3*n] == t) 
+				if (neighbors[3 * n] == t)
+				{
 					backNr = 0;
-				else if (neighbors[3*n+1] == t)
+				}
+				else if (neighbors[3 * n + 1] == t)
+				{
 					backNr = 1;
-				else if (neighbors[3*n+2] == t)
+				}
+				else if (neighbors[3 * n + 2] == t)
+				{
 					backNr = 2;
-				assert(backNr >= 0);
-				physx::PxU32 &j0 = indices[3*n + backNr];
-				physx::PxU32 &j1 = indices[3*n + (backNr+1)%3];
-				physx::PxU32 &j2 = indices[3*n + (backNr+2)%3];
+				}
+				PX_ASSERT(backNr >= 0);
+				//physx::PxU32& j0 = indices[3 * n + backNr];
+				physx::PxU32& j1 = indices[3 * n + (backNr + 1) % 3];
+				physx::PxU32& j2 = indices[3 * n + (backNr + 2) % 3];
 
 				// do we want to flip?
 
 				// geometrical tests
-				physx::PxVec3 &p0 = mVertices[i0];
-				physx::PxVec3 &p1 = mVertices[i1];
-				physx::PxVec3 &q0 = mVertices[i2];
-				physx::PxVec3 &q1 = mVertices[j2];
+				physx::PxVec3& p0 = mVertices[i0];
+				physx::PxVec3& p1 = mVertices[i1];
+				physx::PxVec3& q0 = mVertices[i2];
+				physx::PxVec3& q1 = mVertices[j2];
 
 				// does the triangle pair form a convex shape?
-				float r = p0.distanceSquared(p1);
+				float r = (p0 - p1).magnitudeSquared();
 				if (r == 0.0f)
+				{
 					continue;
+				}
 
-				float s = (q0-p0).dot(p1-p0) / r;
+				float s = (q0 - p0).dot(p1 - p0) / r;
 				if (s < 0.2f || s > 0.8f)
+				{
 					continue;
-				s = (q1-p0).dot(p1-p0) / r;
+				}
+				s = (q1 - p0).dot(p1 - p0) / r;
 				if (s < 0.2f || s > 0.8f)
+				{
 					continue;
+				}
 
 				// the new edge shoulndnot be significantly longer than the old one
-				float d0 = mVertices[i0].distance(mVertices[i1]);
-				float d1 = mVertices[i2].distance(mVertices[j2]);
+				float d0 = (mVertices[i0] - mVertices[i1]).magnitude();
+				float d1 = (mVertices[i2] - mVertices[j2]).magnitude();
 				if (d1 > 2.0f * d0)
+				{
 					continue;
+				}
 
 				// will the flip even out the degrees?
 				int deg0 = vertDegs[i0];
@@ -2459,8 +3808,8 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 				int deg2 = vertDegs[i2];
 				int deg3 = vertDegs[j2];
 
-				int min = physx::PxMin(deg0, physx::PxMin(deg1, physx::PxMin(deg2,deg3)));
-				int max = physx::PxMax(deg0, physx::PxMax(deg1, physx::PxMax(deg2,deg3)));
+				int min = physx::PxMin(deg0, physx::PxMin(deg1, physx::PxMin(deg2, deg3)));
+				int max = physx::PxMax(deg0, physx::PxMax(deg1, physx::PxMax(deg2, deg3)));
 				int span = max - min;
 
 				deg0--;
@@ -2468,11 +3817,13 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 				deg2++;
 				deg3++;
 
-				min = physx::PxMin(deg0, physx::PxMin(deg1, physx::PxMin(deg2,deg3)));
-				max = physx::PxMax(deg0, physx::PxMax(deg1, physx::PxMax(deg2,deg3)));
+				min = physx::PxMin(deg0, physx::PxMin(deg1, physx::PxMin(deg2, deg3)));
+				max = physx::PxMax(deg0, physx::PxMax(deg1, physx::PxMax(deg2, deg3)));
 
-				if (max - min > span )
+				if (max - min > span)
+				{
 					continue;
+				}
 
 
 				// update degrees
@@ -2486,11 +3837,11 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 				j1 = i2;
 
 				// update neighbors
-				int &ni0 = neighbors[3*t + j];
-				int &ni1 = neighbors[3*t + (j+1)%3];
+				int& ni0 = neighbors[3 * t + j];
+				int& ni1 = neighbors[3 * t + (j + 1) % 3];
 
-				int &nj0 = neighbors[3*n + backNr];
-				int &nj1 = neighbors[3*n + (backNr+1)%3];
+				int& nj0 = neighbors[3 * n + backNr];
+				int& nj1 = neighbors[3 * n + (backNr + 1) % 3];
 
 				ni0 = nj1;
 				nj0 = ni1;
@@ -2498,17 +3849,43 @@ void TriangleMesh::evenOutVertexDegree(int subMeshNr, int numIters)
 				nj1 = t;
 
 				// fix backwards links
-				if (ni0 >= 0) {
-					if (neighbors[3*ni0] == n) neighbors[3*ni0] = t;
-					else if (neighbors[3*ni0+1] == n) neighbors[3*ni0+1] = t;
-					else if (neighbors[3*ni0+2] == n) neighbors[3*ni0+2] = t;
-					else assert(0);
+				if (ni0 >= 0)
+				{
+					if (neighbors[3 * ni0] == n)
+					{
+						neighbors[3 * ni0] = t;
+					}
+					else if (neighbors[3 * ni0 + 1] == n)
+					{
+						neighbors[3 * ni0 + 1] = t;
+					}
+					else if (neighbors[3 * ni0 + 2] == n)
+					{
+						neighbors[3 * ni0 + 2] = t;
+					}
+					else
+					{
+						PX_ALWAYS_ASSERT();
+					}
 				}
-				if (nj0 >= 0) {
-					if (neighbors[3*nj0] == t) neighbors[3*nj0] = n;
-					else if (neighbors[3*nj0+1] == t) neighbors[3*nj0+1] = n;
-					else if (neighbors[3*nj0+2] == t) neighbors[3*nj0+2] = n;
-					else assert(0);
+				if (nj0 >= 0)
+				{
+					if (neighbors[3 * nj0] == t)
+					{
+						neighbors[3 * nj0] = n;
+					}
+					else if (neighbors[3 * nj0 + 1] == t)
+					{
+						neighbors[3 * nj0 + 1] = n;
+					}
+					else if (neighbors[3 * nj0 + 2] == t)
+					{
+						neighbors[3 * nj0 + 2] = n;
+					}
+					else
+					{
+						PX_ALWAYS_ASSERT();
+					}
 				}
 			}
 		}
@@ -2521,7 +3898,9 @@ void TriangleMesh::setCullMode(physx::NxRenderCullMode::Enum cullMode, physx::Px
 	if (submeshIndex < 0)
 	{
 		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		{
 			setCullMode(cullMode, i);
+		}
 	}
 	else if ((physx::PxU32)submeshIndex < mSubMeshes.size())
 	{
@@ -2534,17 +3913,23 @@ void TriangleMesh::setCullMode(physx::NxRenderCullMode::Enum cullMode, physx::Px
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::updatePaintingColors(PaintChannelType channelType, float maxDistMin, float maxDistMax, physx::apex::NxApexRenderDebug* batcher)
+void TriangleMesh::updatePaintingColors(PaintChannelType channelType, float maxDistMin, float maxDistMax, unsigned int flag, physx::apex::NxApexRenderDebug* batcher)
 {
+	const physx::PxU32 colorBlack = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Black) : 0xff000000;
+	const physx::PxU32 colorWhite = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::White) : 0xffffffff;
+	const physx::PxU32 colorLightBlue = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::LightBlue) : 0xff7777ff;
+	const physx::PxU32 colorRed = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Red) : 0xffff0000;
+
 	const physx::PxU32 colorDisabled = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Purple) : 0xffff00ff;
-	const physx::PxU32 colorSmall = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Blue) : 0xff0000ff;
-	const physx::PxU32 colorBig = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Red) : 0xffff0000;
+	const physx::PxU32 colorSmall = batcher != NULL ? batcher->getDebugColor(physx::DebugColors::Blue) : 0xff0000ff;;
+	const physx::PxU32 colorBig = colorRed;
+
 
 	if (channelType == PC_MAX_DISTANCE || channelType == PC_NUM_CHANNELS)
 	{
 		for (physx::PxU32 i = 0; i < mPaintChannels[PC_MAX_DISTANCE].size(); i++)
 		{
-			const float val = mPaintChannels[PC_MAX_DISTANCE][i].paintValue;
+			const float val = mPaintChannels[PC_MAX_DISTANCE][i].paintValueF32;
 			if (val < 0.0f)
 			{
 				mPaintChannels[PC_MAX_DISTANCE][i].color = colorDisabled;
@@ -2568,71 +3953,139 @@ void TriangleMesh::updatePaintingColors(PaintChannelType channelType, float maxD
 	{
 		for (physx::PxU32 i = 0; i < mPaintChannels[PC_COLLISION_DISTANCE].size(); i++)
 		{
-			const float v = mPaintChannels[PC_COLLISION_DISTANCE][i].paintValue;
+			const float v = mPaintChannels[PC_COLLISION_DISTANCE][i].paintValueF32;
 			physx::PxVec3 color;
 			if (physx::PxAbs(v) > 1.0f)
-				color.set(0.0f, 0.0f, 0.0f);
+			{
+				color = physx::PxVec3(0.0f, 0.0f, 0.0f);
+			}
 			else if (v == 0.0f)
-				color.set(1.0f, 1.0f, 1.0f);
+			{
+				color = physx::PxVec3(1.0f, 1.0f, 1.0f);
+			}
 			else if (v < 0.0f)
 			{
-				color.set(1.0f, -v, 0.0f);
+				color = physx::PxVec3(1.0f, -v, 0.0f);
 			}
 			else // v > 0.0f
 			{
-				color.set(0.0f, v, 1.0f);
+				color = physx::PxVec3(0.0f, v, 1.0f);
 			}
 			mPaintChannels[PC_COLLISION_DISTANCE][i].setColor(color.x, color.y, color.z);
 		}
 	}
-	if (channelType == PC_PHYSICAL || channelType == PC_NUM_CHANNELS)
+
+	if (channelType == PC_LATCH_TO_NEAREST_SLAVE || channelType == PC_NUM_CHANNELS)
 	{
-		for (physx::PxU32 i = 0; i < mPaintChannels[PC_PHYSICAL].size(); i++)
+		for (size_t i = 0; i < mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE].size(); i++)
 		{
-			const float v = mPaintChannels[PC_PHYSICAL][i].paintValue;
-			mPaintChannels[PC_PHYSICAL][i].color = (v < 0.5f) ? 0xff000000 : 0xffffffff;
+			const unsigned int slave = mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE][i].paintValueU32;
+			const unsigned int master = mPaintChannels[PC_LATCH_TO_NEAREST_MASTER][i].paintValueU32;
+
+			unsigned int color;
+			if (slave == 0)
+			{
+				if (master == 0)
+				{
+					color = colorRed;
+				}
+				else
+				{
+					color = colorBlack;
+				}
+			}
+			else
+			{
+				if (flag != 0 && (slave & flag) == flag)
+				{
+					color = colorWhite;
+				}
+				else
+				{
+					color = colorLightBlue;
+				}
+			}
+
+			mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE][i].color = color;
+		}
+	}
+	if (channelType == PC_LATCH_TO_NEAREST_MASTER || channelType == PC_NUM_CHANNELS)
+	{
+		for (size_t i = 0; i < mPaintChannels[PC_LATCH_TO_NEAREST_MASTER].size(); i++)
+		{
+			const unsigned int slave = mPaintChannels[PC_LATCH_TO_NEAREST_SLAVE][i].paintValueU32;
+			const unsigned int master = mPaintChannels[PC_LATCH_TO_NEAREST_MASTER][i].paintValueU32;
+
+			unsigned int color;
+			if (slave != 0)
+			{
+				color = colorDisabled;
+			}
+			else
+			{
+				if (flag != 0 && (master & flag) == flag)
+				{
+					color = colorWhite;
+				}
+				else if (master != 0)
+				{
+					color = colorLightBlue;
+				}
+				else
+				{
+					color = colorRed;
+				}
+			}
+
+			mPaintChannels[PC_LATCH_TO_NEAREST_MASTER][i].color = color;
 		}
 	}
 }
 
 // ----------------------------------------------------------------------
-bool TriangleMesh::processElement(const char *elementName, int argc, const char **argv, const char *elementData, int lineno)
+bool TriangleMesh::processElement(const char* elementName, int argc, const char** argv, const char* /*elementData*/, int /*lineno*/)
 {
 	if (strcmp(elementName, "mesh") == 0)
 	{
-		assert(mParserState == PS_Uninitialized);
+		PX_ASSERT(mParserState == PS_Uninitialized);
 		mParserState = PS_Mesh;
 	}
 	else if (strcmp(elementName, "sharedgeometry") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "vertexcount") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "vertexcount") == 0);
 		const int vertexCount = atoi(argv[1]);
 		mVertices.resize(0);
 		mVertices.reserve(vertexCount);
 	}
 	else if (strcmp(elementName, "vertexbuffer") == 0)
 	{
-		for (int i = 0; i < argc; i+=2)
+		for (int i = 0; i < argc; i += 2)
 		{
 			if (strcmp(argv[i], "normals") == 0)
+			{
 				mNormals.reserve(mVertices.capacity());
+			}
 
 			else if (strcmp(argv[i], "texture_coord_dimensions_0") == 0)
+			{
 				mTexCoords[0].reserve(mVertices.capacity());
+			}
 		}
 	}
 	else if (strcmp(elementName, "vertex") == 0)
 	{
 		int a = 0;
+		PX_FORCE_PARAMETER_REFERENCE(a);
+
 		// do nothing?
 	}
 	else if (strcmp(elementName, "position") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 pos;
 		pos.x = (physx::PxF32)atof(argv[1]);
 		pos.y = (physx::PxF32)atof(argv[3]);
@@ -2641,10 +4094,10 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "normal") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 normal;
 		normal.x = (physx::PxF32)atof(argv[1]);
 		normal.y = (physx::PxF32)atof(argv[3]);
@@ -2653,9 +4106,9 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "texcoord") == 0)
 	{
-		assert(argc == 4);
-		assert(strcmp(argv[0], "u") == 0);
-		assert(strcmp(argv[2], "v") == 0);
+		PX_ASSERT(argc == 4);
+		PX_ASSERT(strcmp(argv[0], "u") == 0);
+		PX_ASSERT(strcmp(argv[2], "v") == 0);
 		physx::NxVertexUV tc;
 		tc.u = (physx::PxF32)atof(argv[1]);
 		tc.v = (physx::PxF32)atof(argv[3]);
@@ -2664,6 +4117,7 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 	else if (strcmp(elementName, "colour_diffuse") == 0)
 	{
 		int a = 0;
+		PX_FORCE_PARAMETER_REFERENCE(a);
 	}
 	else if (strcmp(elementName, "physics_coeffs") == 0)
 	{
@@ -2683,13 +4137,13 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "submeshes") == 0)
 	{
-		assert(mParserState == PS_Mesh);
+		PX_ASSERT(mParserState == PS_Mesh);
 		mParserState = PS_Submeshes;
 	}
 	else if (strcmp(elementName, "submesh") == 0)
 	{
-		assert(argc >= 2);
-		assert(strcmp(argv[0], "material") == 0);
+		PX_ASSERT(argc >= 2);
+		PX_ASSERT(strcmp(argv[0], "material") == 0);
 		TriangleSubMesh sm;
 		sm.init();
 		sm.name = argv[1]; // ogre xml doesn't have submesh names...
@@ -2706,55 +4160,55 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "faces") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "count") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "count") == 0);
 		const int faceCount = atoi(argv[1]);
 		mIndices.reserve(mIndices.size() + faceCount * 3);
-		assert(mSubMeshes.size() > 0);
-		assert(mSubMeshes.back().numIndices == 0);
+		PX_ASSERT(mSubMeshes.size() > 0);
+		PX_ASSERT(mSubMeshes.back().numIndices == 0);
 		mSubMeshes.back().numIndices = faceCount * 3;
 	}
 	else if (strcmp(elementName, "face") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "v1") == 0);
-		assert(strcmp(argv[2], "v2") == 0);
-		assert(strcmp(argv[4], "v3") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "v1") == 0);
+		PX_ASSERT(strcmp(argv[2], "v2") == 0);
+		PX_ASSERT(strcmp(argv[4], "v3") == 0);
 		mIndices.push_back(atoi(argv[1]));
 		mIndices.push_back(atoi(argv[3]));
 		mIndices.push_back(atoi(argv[5]));
 	}
 	else if (strcmp(elementName, "skeletonlink") == 0)
 	{
-		assert(mParserState == PS_Submeshes);
+		PX_ASSERT(mParserState == PS_Submeshes);
 		mParserState = PS_Skeleton;
 	}
 	else if (strcmp(elementName, "boneassignments") == 0)
 	{
 		// do nothing?
-		mBoneIndices.resize(mVertices.capacity() * 4, 0);
+		mBoneIndicesExternal.resize(mVertices.capacity() * 4, 0);
 		mBoneWeights.resize(mVertices.capacity(), physx::PxVec4(0.0f));
 	}
 	else if (strcmp(elementName, "vertexboneassignment") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "vertexindex") == 0);
-		assert(strcmp(argv[2], "boneindex") == 0);
-		assert(strcmp(argv[4], "weight") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "vertexindex") == 0);
+		PX_ASSERT(strcmp(argv[2], "boneindex") == 0);
+		PX_ASSERT(strcmp(argv[4], "weight") == 0);
 
 		const int vertexNr = atoi(argv[1]);
 		const int boneNr = atoi(argv[3]);
 		const float weight = (float)atof(argv[5]);
 
-		mMaxBoneIndex = physx::PxMax(mMaxBoneIndex, boneNr);
-		assert(vertexNr < (int)mVertices.size());
+		mMaxBoneIndexExternal = physx::PxMax(mMaxBoneIndexExternal, boneNr);
+		PX_ASSERT(vertexNr < (int)mVertices.size());
 		float* weights = &mBoneWeights[vertexNr].x;
-		physx::PxU16* indices = &mBoneIndices[vertexNr*4];
+		physx::PxU16* indices = &mBoneIndicesExternal[vertexNr * 4];
 		for (physx::PxU32 i = 0; i < 4; i++)
 		{
 			if (weights[i] == 0)
 			{
-				assert(boneNr < 0xffff);
+				PX_ASSERT(boneNr < 0xffff);
 				weights[i] = weight;
 				indices[i] = boneNr;
 				break;
@@ -2764,8 +4218,8 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 				// move all one back
 				for (physx::PxU32 j = 3; j > i; j--)
 				{
-					weights[j] = weights[j-1];
-					indices[j] = indices[j-1];
+					weights[j] = weights[j - 1];
+					indices[j] = indices[j - 1];
 				}
 				weights[i] = weight;
 				indices[i] = boneNr;
@@ -2773,14 +4227,14 @@ bool TriangleMesh::processElement(const char *elementName, int argc, const char 
 			}
 #if 1
 			// safety
-			for (physx::PxU32 i = 0; i < 4; i++)
+			for (physx::PxU32 j = 0; j < 4; j++)
 			{
-				assert(weights[i] >= 0.0f);
-				assert(weights[i] <= 1.0f);
+				PX_ASSERT(weights[j] >= 0.0f);
+				PX_ASSERT(weights[j] <= 1.0f);
 			}
-			for (physx::PxU32 i = 0; i < 3; i++)
+			for (physx::PxU32 j = 0; j < 3; j++)
 			{
-				assert(weights[i] >= weights[i+1]);
+				PX_ASSERT(weights[j] >= weights[j + 1]);
 			}
 #endif
 		}
@@ -2824,9 +4278,9 @@ void TriangleMesh::updateNormals(int subMeshNr)
 		const physx::PxU32 end = subMeshNr < 0 ? (physx::PxU32)mIndices.size() : mSubMeshes[subMeshNr].firstIndex + mSubMeshes[subMeshNr].numIndices;
 		for (physx::PxU32 i = start; i < end; i += 3)
 		{
-			const physx::PxU32 i0 = mIndices[i+0];
-			const physx::PxU32 i1 = mIndices[i+1];
-			const physx::PxU32 i2 = mIndices[i+2];
+			const physx::PxU32 i0 = mIndices[i + 0];
+			const physx::PxU32 i1 = mIndices[i + 1];
+			const physx::PxU32 i2 = mIndices[i + 2];
 
 			physx::PxVec3 n = (mVertices[i1] - mVertices[i0]).cross(mVertices[i2] - mVertices[i0]);
 			newNormals[i0] += n;
@@ -2839,9 +4293,13 @@ void TriangleMesh::updateNormals(int subMeshNr)
 			if (newNormals[i].isZero())
 			{
 				if (i < mNormals.size())
+				{
 					newNormals[i] = mNormals[i];
+				}
 				else
-					newNormals[i].set(0.0f, 1.0f, 0.0f);
+				{
+					newNormals[i] = physx::PxVec3(0.0f, 1.0f, 0.0f);
+				}
 			}
 			else
 			{
@@ -2859,12 +4317,12 @@ void TriangleMesh::updateNormals(int subMeshNr)
 }
 
 // ----------------------------------------------------------------------
-void TriangleMesh::updateTangents(int subMeshNr)
+void TriangleMesh::updateTangents()
 {
 	const int useTexCoords = 0;
 	if (mParent != NULL)
 	{
-		mParent->updateTangents(subMeshNr);
+		mParent->updateTangents();
 	}
 	else if ((mTangents.empty() && mBitangents.empty()) || mTexCoords[useTexCoords].empty())
 	{
@@ -2879,18 +4337,18 @@ void TriangleMesh::updateTangents(int subMeshNr)
 		mBitangents.clear();
 		mBitangents.resize(mVertices.size(), physx::PxVec3(0.0f, 0.0f, 0.0f));
 
-		assert(mTangents[0].isZero());
+		PX_ASSERT(mTangents[0].isZero());
 
 
 		for (physx::PxU32 i = 0; i < mIndices.size(); i += 3)
 		{
-			const physx::PxVec3 &p0 = mVertices[mIndices[i+0]];
-			const physx::PxVec3 &p1 = mVertices[mIndices[i+1]];
-			const physx::PxVec3 &p2 = mVertices[mIndices[i+2]];
+			const physx::PxVec3& p0 = mVertices[mIndices[i + 0]];
+			const physx::PxVec3& p1 = mVertices[mIndices[i + 1]];
+			const physx::PxVec3& p2 = mVertices[mIndices[i + 2]];
 
-			const physx::NxVertexUV& w0 = mTexCoords[useTexCoords][mIndices[i+0]];
-			const physx::NxVertexUV& w1 = mTexCoords[useTexCoords][mIndices[i+1]];
-			const physx::NxVertexUV& w2 = mTexCoords[useTexCoords][mIndices[i+2]];
+			const physx::NxVertexUV& w0 = mTexCoords[useTexCoords][mIndices[i + 0]];
+			const physx::NxVertexUV& w1 = mTexCoords[useTexCoords][mIndices[i + 1]];
+			const physx::NxVertexUV& w2 = mTexCoords[useTexCoords][mIndices[i + 2]];
 
 			const float x1 = p1.x - p0.x;
 			const float x2 = p2.x - p0.x;
@@ -2903,21 +4361,25 @@ void TriangleMesh::updateTangents(int subMeshNr)
 			const float s2 = w2.u - w0.u;
 			const float t1 = w1.v - w0.v;
 			const float t2 = w2.v - w0.v;
+			
+			const float div = (s1 * t2 - s2 * t1);
+			if (div > 0.0f)
+			{
+				const float r = 1.0F / div;
+				physx::PxVec3 sdir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
+				physx::PxVec3 tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
 
-			const float r = 1.0F / (s1 * t2 - s2 * t1);
-			physx::PxVec3 sdir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
-			physx::PxVec3 tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
+				mTangents[mIndices[i + 0]] += sdir;
+				mTangents[mIndices[i + 1]] += sdir;
+				mTangents[mIndices[i + 2]] += sdir;
 
-			mTangents[mIndices[i+0]] += sdir;
-			mTangents[mIndices[i+1]] += sdir;
-			mTangents[mIndices[i+2]] += sdir;
-
-			mBitangents[mIndices[i+0]] += tdir;
-			mBitangents[mIndices[i+1]] += tdir;
-			mBitangents[mIndices[i+2]] += tdir;
+				mBitangents[mIndices[i + 0]] += tdir;
+				mBitangents[mIndices[i + 1]] += tdir;
+				mBitangents[mIndices[i + 2]] += tdir;
+			}
 		}
 
-		for (physx::PxU32 i = 0; i< mVertices.size(); i++)
+		for (physx::PxU32 i = 0; i < mVertices.size(); i++)
 		{
 			physx::PxVec3& t = mTangents[i];
 			physx::PxVec3& bt = mBitangents[i];
@@ -2961,16 +4423,169 @@ void TriangleMesh::updateBoneWeights()
 				const unsigned int index = i / 16;
 				const unsigned int offset = (i - (index * 16)) * 2;
 				int newValue = mNumBoneWeights[index];
-				newValue = (newValue & ~(0x3<<offset)) | maxWeight << offset;
+				newValue = (newValue & ~(0x3 << offset)) | maxWeight << offset;
 				mNumBoneWeights[index] = newValue;
 			}
 		}
 		else
 		{
-			assert(mBoneWeights.empty());
+			PX_ASSERT(mBoneWeights.empty());
 			mNumBoneWeights.clear();
 		}
+
+		optimizeForRendering();
 	}
+}
+
+// ----------------------------------------------------------------------
+void TriangleMesh::optimizeForRendering()
+{
+	PX_ASSERT(mParent == NULL);
+
+	if (mBoneWeights.size() == mVertices.size() && mVertices.size() > 0)
+	{
+		PX_ASSERT(mMaxBoneIndexExternal >= 0);
+		// basically compress the bone indices
+		std::vector<int> ext2int(mMaxBoneIndexExternal + 1, -1);
+		unsigned int maxBones = 0;
+
+		for (size_t v = 0; v < mVertices.size(); v++)
+		{
+			for (unsigned int k = 0; k < 4; k++)
+			{
+				if (mBoneWeights[v][k] > 0.0f)
+				{
+					unsigned int boneIndex = mBoneIndicesExternal[v * 4 + k];
+
+					if (ext2int[boneIndex] == -1)
+					{
+						ext2int[boneIndex] = maxBones++;
+					}
+				}
+			}
+		}
+
+		mBoneIndicesInternal.resize(mBoneIndicesExternal.size(), 0);
+
+		for (size_t v = 0; v < mVertices.size(); v++)
+		{
+			for (unsigned int k = 0; k < 4; k++)
+			{
+				unsigned int index = (unsigned int)v * 4 + k;
+				if (mBoneWeights[v][k] > 0.0f)
+				{
+					mBoneIndicesInternal[index] = ext2int[mBoneIndicesExternal[index]];
+				}
+				else
+				{
+					mBoneIndicesInternal[index] = 0;
+				}
+			}
+		}
+		mMaxBoneIndexInternal = (int)maxBones - 1;
+
+		mBoneMappingInt2Ext.resize(maxBones);
+		for (size_t i = 0; i < ext2int.size(); i++)
+		{
+			if (ext2int[i] >= 0)
+			{
+				PX_ASSERT(ext2int[i] < (int)mBoneMappingInt2Ext.size());
+				mBoneMappingInt2Ext[ext2int[i]] = (int)i;
+			}
+		}
+	}
+
+
+#if 0 // PH: too advanced yet, and only a first draft
+
+	for (size_t submeshIndex = 0; submeshIndex < mSubMeshes.size(); submeshIndex++)
+	{
+		TriangleSubMesh& submesh = mSubMeshes[submeshIndex];
+
+		if (submesh.maxBonesShader > 0)
+		{
+			unsigned int indicesMapped = 0;
+			//while (indicesMapped < submesh.numIndices)
+			{
+				//OptimizedRenderData renderData;
+
+				std::vector<int> currentBoneMapping(mMaxBoneIndex + 1, -1);
+				unsigned int currentBoneMappingSize = 0;
+
+				for (unsigned int i = 0; i < submesh.numIndices; i += 3)
+				{
+					// collect all the bone indices
+					unsigned int boneIndices[12];
+					unsigned int numBoneIndices = 0;
+
+					for (int j = 0; j < 3; j++)
+					{
+						const unsigned int vertexIndex = mIndices[submesh.firstIndex + i + j];
+						for (int k = 0; k < 4; k++)
+						{
+							if (mBoneWeights[vertexIndex][k] > 0.0f)
+							{
+								unsigned int boneIndex = mBoneIndices[vertexIndex * 4 + k];
+
+								bool found = false;
+
+								for (unsigned int l = 0; l < numBoneIndices; l++)
+								{
+									if (boneIndices[l] == boneIndex)
+									{
+										found = true;
+									}
+								}
+
+								if (!found)
+								{
+									boneIndices[numBoneIndices++] = boneIndex;
+								}
+							}
+						}
+					}
+
+					// now let's see if they fit into the current mapping
+					unsigned int notInMapping = 0;
+					for (unsigned int j = 0; j < numBoneIndices; j++)
+					{
+						if (currentBoneMapping[boneIndices[j]] < 0)
+						{
+							notInMapping++;
+						}
+					}
+
+					if (notInMapping == 0)
+					{
+						//indicesMapped += 3;
+					}
+					else if (notInMapping < submesh.maxBonesShader - currentBoneMappingSize)
+					{
+						// add them to the mapping
+						for (unsigned int j = 0; j < numBoneIndices; j++)
+						{
+							if (currentBoneMapping[boneIndices[j]] < 0)
+							{
+								currentBoneMapping[boneIndices[j]] = currentBoneMappingSize++;
+							}
+						}
+
+						//indicesMapped += 3;
+					}
+					else
+					{
+						// we're full I guess
+						int a = 0;
+						a = a;
+					}
+				}
+			}
+
+			int a = 0;
+			a = a;
+		}
+	}
+#endif
 }
 
 // ----------------------------------------------------------------------
@@ -2982,7 +4597,7 @@ void TriangleMesh::complete(bool useCustomChannels)
 		if (useCustomChannels && (channel.size() == 0 || channel.size() != mVertices.size()))
 		{
 			channel.clear();
-			switch(i)
+			switch (i)
 			{
 			case PC_MAX_DISTANCE:
 				channel.resize(mVertices.size(), PaintedVertex(-0.1f));
@@ -2990,8 +4605,11 @@ void TriangleMesh::complete(bool useCustomChannels)
 			case PC_COLLISION_DISTANCE:
 				channel.resize(mVertices.size(), PaintedVertex(-1.1f));
 				break;
-			case PC_PHYSICAL:
-				channel.resize(mVertices.size(), PaintedVertex(1.0f));
+			case PC_LATCH_TO_NEAREST_SLAVE:
+				channel.resize(mVertices.size(), PaintedVertex(0, 0.0f));
+				break;
+			case PC_LATCH_TO_NEAREST_MASTER:
+				channel.resize(mVertices.size(), PaintedVertex(0xffffffff, 0.0f));
 				break;
 			default:
 #if defined(PX_WINDOWS)
@@ -3034,12 +4652,14 @@ void TriangleMesh::complete(bool useCustomChannels)
 			else
 			{
 				if (mSubMeshes[i].name.find("_invisible") != std::string::npos)
+				{
 					mSubMeshes[i].invisible = true;
+				}
 			}
-			for (physx::PxU32 j = i+1; j < mSubMeshes.size(); j++)
+			for (physx::PxU32 j = i + 1; j < mSubMeshes.size(); j++)
 			{
-				assert(mSubMeshes[i].firstIndex + mSubMeshes[i].numIndices <= mSubMeshes[j].firstIndex ||
-					mSubMeshes[j].firstIndex + mSubMeshes[j].numIndices <= mSubMeshes[i].firstIndex);
+				PX_ASSERT(mSubMeshes[i].firstIndex + mSubMeshes[i].numIndices <= mSubMeshes[j].firstIndex ||
+				          mSubMeshes[j].firstIndex + mSubMeshes[j].numIndices <= mSubMeshes[i].firstIndex);
 			}
 		}
 		// Merge submeshes
@@ -3060,15 +4680,15 @@ void TriangleMesh::complete(bool useCustomChannels)
 		mIndices.resize(newIndices.size());
 		memcpy(&mIndices[0], &newIndices[0], sizeof(physx::PxU32) * newIndices.size());
 
-		for (size_t i = mSubMeshes.size()-1; i > 0; i--)
+		for (size_t i = mSubMeshes.size() - 1; i > 0; i--)
 		{
-			if (mSubMeshes[i].name == mSubMeshes[i-1].name && mSubMeshes[i].materialName == mSubMeshes[i-1].materialName)
+			if (mSubMeshes[i].name == mSubMeshes[i - 1].name && mSubMeshes[i].materialName == mSubMeshes[i - 1].materialName)
 			{
-				mSubMeshes[i-1].numIndices += mSubMeshes[i].numIndices;
+				mSubMeshes[i - 1].numIndices += mSubMeshes[i].numIndices;
 				mSubMeshes[i].numIndices = 0;
 			}
 		}
-		for (size_t i = mSubMeshes.size()-1; i > 0; i--)
+		for (size_t i = mSubMeshes.size() - 1; i > 0; i--)
 		{
 			if (mSubMeshes[i].numIndices == 0)
 			{
@@ -3077,64 +4697,20 @@ void TriangleMesh::complete(bool useCustomChannels)
 		}
 	}
 
+
 	if (mNormals.size() != mVertices.size())
+	{
 		updateNormals(-1);
+	}
 
 	if (mTangents.size() != mVertices.size())
-		updateTangents(-1);
+	{
+		updateTangents();
+	}
 
 	updateBoneWeights();
 
 	updateBounds();
-}
-
-//-----------------------------------------------------------------------------
-bool TriangleMesh::importMtlFile(std::string filename, std::string path, std::vector<TriangleMeshMaterial> &materials)
-{
-	FILE *f;
-	errno_t err = physx::fopen_s(&f, (path + "\\" + filename).c_str(), "r");
-	if (err != 0)
-		return false;
-	materials.clear();
-	TriangleMeshMaterial m;
-	m.init();
-	char s[OBJ_STR_LEN], sub[OBJ_STR_LEN];
-	while (!feof(f)) {
-		fgets(s, OBJ_STR_LEN, f);
-		if (physx::string::strnicmp(s, "newmtl", 6) == 0) {
-			if (m.name != "")
-				materials.push_back(m);
-			m.init();
-			sscanf(&s[7], "%s", sub);
-			m.name = std::string(sub);
-		}
-		else if (physx::string::strnicmp(s, "Ka", 2) == 0) {
-			sscanf(&s[3], "%f %f %f", &m.ambient[0], &m.ambient[1], &m.ambient[2]);
-		}
-		else if (physx::string::strnicmp(s, "Kd", 2) == 0) {
-			sscanf(&s[3], "%f %f %f", &m.diffuse[0], &m.diffuse[1], &m.diffuse[2]);
-		}
-		else if (physx::string::strnicmp(s, "Ks", 2) == 0) {
-			sscanf(&s[3], "%f %f %f", &m.specular[0], &m.specular[1], &m.specular[2]);
-		}
-		else if (physx::string::strnicmp(s, "Ns", 2) == 0) {
-			sscanf(&s[3], "%f", &m.shininess);
-		}
-		else if (physx::string::strnicmp(s, "Tr", 2) == 0) {
-			sscanf(&s[3], "%f", &m.alpha);
-		}
-		else if (physx::string::strnicmp(s, "d ", 2) == 0) {
-			sscanf(&s[2], "%f", &m.alpha);
-		}
-		else if (physx::string::strnicmp(s, "map_K ", 5) == 0) {
-			sscanf(&s[6], "%s", sub);
-			m.textureFile = path + "\\" + std::string(sub);
-		}
-	}
-	if (m.name != "")
-		materials.push_back(m);
-	fclose(f);
-	return true;
 }
 
 // ----------------------------------------------------------------------
@@ -3155,12 +4731,39 @@ void TriangleMesh::hasRandomColors(size_t howmany)
 		float r, g, b;
 		switch (hi)
 		{
-		case 0: r = v; g = t; b = p; break;
-		case 1: r = q; g = v; b = p; break;
-		case 2: r = p; g = v; b = t; break;
-		case 3: r = p; g = q; b = v; break;
-		case 4: r = t; g = p; b = v; break;
-		case 5: r = v; g = p; b = q; break;
+		case 0:
+			r = v;
+			g = t;
+			b = p;
+			break;
+		case 1:
+			r = q;
+			g = v;
+			b = p;
+			break;
+		case 2:
+			r = p;
+			g = v;
+			b = t;
+			break;
+		case 3:
+			r = p;
+			g = q;
+			b = v;
+			break;
+		case 4:
+			r = t;
+			g = p;
+			b = v;
+			break;
+		case 5:
+			r = v;
+			g = p;
+			b = q;
+			break;
+		default:
+			r = g = b = 0.0f;
+			break;
 		}
 		union
 		{
@@ -3186,14 +4789,18 @@ void TriangleMesh::updateSubmeshInfo()
 		numNotSelected += mSubMeshes[i].selected ? 0 : 1;
 	}
 	if (mActiveSubmeshVertices.size() == mVertices.size() && selectionChanged == 0)
+	{
 		return;
+	}
 
 	mActiveSubmeshVertices.clear();
 	if (numNotSelected == 0)
 	{
 		mActiveSubmeshVertices.resize(mVertices.size(), true);
 		for (physx::PxU32 i = 0; i < mSubMeshes.size(); i++)
+		{
 			mSubMeshes[i].selectionActivated = mSubMeshes[i].selected;
+		}
 
 		return;
 	}
@@ -3203,9 +4810,11 @@ void TriangleMesh::updateSubmeshInfo()
 	{
 		if (mSubMeshes[i].selected)
 		{
-			TriangleSubMesh &sm = mSubMeshes[i];
-			for (physx::PxU32 i = sm.firstIndex; i < sm.firstIndex + sm.numIndices; i++) 
-				mActiveSubmeshVertices[mIndices[i]] = true;
+			TriangleSubMesh& sm = mSubMeshes[i];
+			for (physx::PxU32 j = sm.firstIndex; j < sm.firstIndex + sm.numIndices; j++)
+			{
+				mActiveSubmeshVertices[mIndices[j]] = true;
+			}
 		}
 		mSubMeshes[i].selectionActivated = mSubMeshes[i].selected;
 	}
@@ -3214,18 +4823,27 @@ void TriangleMesh::updateSubmeshInfo()
 //------------------------------------------------------------------------------------
 int TriangleMesh::addSplitVert(int vertNr0, int vertNr1)
 {
-	int v0,v1;
-	if (vertNr0 < vertNr1) 
-		{ v0 = vertNr0; v1 = vertNr1; }
-	else 
-		{ v0 = vertNr1; v1 = vertNr0; }
-	
+	int v0, v1;
+	if (vertNr0 < vertNr1)
+	{
+		v0 = vertNr0;
+		v1 = vertNr1;
+	}
+	else
+	{
+		v0 = vertNr1;
+		v1 = vertNr0;
+	}
+
 	// do we already have the split vert?
 	int i = mVertexFirstSplit[v0];
-	while (i >= 0) {
-		TriangleEdgeSplit &s = mVertexSplits[i];
+	while (i >= 0)
+	{
+		TriangleEdgeSplit& s = mVertexSplits[i];
 		if (s.adjVertNr == v1)
+		{
 			return s.newVertNr;
+		}
 		i = s.next;
 	}
 
@@ -3236,77 +4854,95 @@ int TriangleMesh::addSplitVert(int vertNr0, int vertNr1)
 	// create interpolated vertex
 	physx::PxVec3 v = (mVertices[v0] + mVertices[v1]) * 0.5f;
 	mVertices.push_back(v);
-	if (mSkinnedVertices.size() == mVertices.size() - 1) {
+	if (mSkinnedVertices.size() == mVertices.size() - 1)
+	{
 		physx::PxVec3 sv = (mSkinnedVertices[v0] + mSkinnedVertices[v1]) * 0.5f;
 		mSkinnedVertices.push_back(sv);
 	}
 
-	for (int i = 0; i < PC_NUM_CHANNELS; i++)
+	for (int j = 0; j < PC_NUM_CHANNELS; j++)
 	{
 		// ok, special case, if it's collision distance, and one of them is < -1 then the new is as well
-		float v;
-		if (i == PC_PHYSICAL)
-			v = physx::PxMin(mPaintChannels[PC_PHYSICAL][v0].paintValue, mPaintChannels[PC_PHYSICAL][v1].paintValue);
-		else if (i == PC_COLLISION_DISTANCE && (mPaintChannels[PC_COLLISION_DISTANCE][v0].paintValue == -1.1f || mPaintChannels[PC_COLLISION_DISTANCE][v1].paintValue == -1.1f))
+		float v = 0.0f;
+		unsigned int u = 0;
+		if (j == PC_LATCH_TO_NEAREST_SLAVE || j == PC_LATCH_TO_NEAREST_MASTER)
+		{
+			u = mPaintChannels[j][v0].paintValueU32 | mPaintChannels[j][v1].paintValueU32;    // bitwise OR
+		}
+		else if (j == PC_COLLISION_DISTANCE && (mPaintChannels[PC_COLLISION_DISTANCE][v0].paintValueF32 == -1.1f || mPaintChannels[PC_COLLISION_DISTANCE][v1].paintValueF32 == -1.1f))
+		{
 			v = -1.1f;
+		}
 		else
-			v = (mPaintChannels[i][v0].paintValue + mPaintChannels[i][v1].paintValue) * 0.5f;
-		mPaintChannels[i].push_back(PaintedVertex(v));
+		{
+			v = (mPaintChannels[j][v0].paintValueF32 + mPaintChannels[j][v1].paintValueF32) * 0.5f;
+		}
+		mPaintChannels[j].push_back(PaintedVertex(u, v));
 	}
 
-	for (physx::PxU32 i = 0; i < NUM_TEXCOORDS; i++)
+	for (physx::PxU32 j = 0; j < NUM_TEXCOORDS; j++)
 	{
-		if (mTexCoords[i].empty())
+		if (mTexCoords[j].empty())
+		{
 			continue;
+		}
 
 		physx::NxVertexUV newTc;
-		newTc.u = (mTexCoords[i][v0].u + mTexCoords[i][v1].u) * 0.5f;
-		newTc.v = (mTexCoords[i][v0].v + mTexCoords[i][v1].v) * 0.5f;
-		mTexCoords[i].push_back(newTc);
+		newTc.u = (mTexCoords[j][v0].u + mTexCoords[j][v1].u) * 0.5f;
+		newTc.v = (mTexCoords[j][v0].v + mTexCoords[j][v1].v) * 0.5f;
+		mTexCoords[j].push_back(newTc);
 	}
 
 	int newVertNr = (int)mVertices.size() - 1;
+	PX_FORCE_PARAMETER_REFERENCE(newVertNr);
 
 	// mix bone weights - kind of tricky
 #if 1
-	if (!mBoneIndices.empty())
+	if (!mBoneIndicesExternal.empty())
 	{
 		physx::PxU16 newIndices[4];
 		physx::PxVec4 newWeights;
-		for (int i = 0; i < 4; i++) {
-			newIndices[i] = 0;
-			newWeights[i] = 0.0f;
+		for (int j = 0; j < 4; j++)
+		{
+			newIndices[j] = 0;
+			newWeights[j] = 0.0f;
 		}
 
-		assert(!mBoneWeights.empty());
+		PX_ASSERT(!mBoneWeights.empty());
 
-		for (int i = 0; i < 2; i++) 
+		for (int k = 0; k < 2; k++)
 		{
-			int v = (i == 0) ? v0 : v1;
-			for (int j = 0; j < 4; j++) 
+			int v = (k == 0) ? v0 : v1;
+			for (int j = 0; j < 4; j++)
 			{
-				physx::PxU16 bi = mBoneIndices[4*v + j];
+				physx::PxU16 bi = mBoneIndicesExternal[4 * v + j];
 				float bw = mBoneWeights[v][j];
 
 				// do we have the index already? If so just average the weights
 				int k = 0;
 				while (k < 4 && newIndices[k] != bi)
+				{
 					k++;
-				if (k < 4) {
+				}
+				if (k < 4)
+				{
 					newWeights[k] = (newWeights[k] + bw) * 0.5f;
 					continue;
 				}
 				// else insert the pair at the right place
 				k = 3;
-				while (k >= 0 && newWeights[k] < bw) {
-					if (k < 3) {
-						newWeights[k+1] = newWeights[k];
-						newIndices[k+1] = newIndices[k];
+				while (k >= 0 && newWeights[k] < bw)
+				{
+					if (k < 3)
+					{
+						newWeights[k + 1] = newWeights[k];
+						newIndices[k + 1] = newIndices[k];
 					}
 					k--;
 				}
 				k++;
-				if (k < 4) {
+				if (k < 4)
+				{
 					newWeights[k] = bw;
 					newIndices[k] = bi;
 				}
@@ -3315,15 +4951,19 @@ int TriangleMesh::addSplitVert(int vertNr0, int vertNr1)
 
 		// copy indices to the new vertex
 		float sum = 0.0f;
-		for (int i = 0; i < 4; i++)
-			sum += newWeights[i];
-
-		if (sum > 0.0f) 
-			sum = 1.0f / sum;
-
-		for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
 		{
-			mBoneIndices.push_back(newIndices[i]);
+			sum += newWeights[j];
+		}
+
+		if (sum > 0.0f)
+		{
+			sum = 1.0f / sum;
+		}
+
+		for (int j = 0; j < 4; j++)
+		{
+			mBoneIndicesExternal.push_back(newIndices[j]);
 		}
 		mBoneWeights.push_back(newWeights * sum);
 	}
@@ -3335,36 +4975,50 @@ int TriangleMesh::addSplitVert(int vertNr0, int vertNr1)
 	std::vector<BoneAssignment> assigns;
 	BoneAssignment a;
 
-	for (int i = 0; i < 2; i++) {
-		int v = (i==0) ? v0 : v1;
+	for (int i = 0; i < 2; i++)
+	{
+		int v = (i == 0) ? v0 : v1;
 		int first = mFirstAssignment[v];
-		int num = mFirstAssignment[v+1] - first;
-		for (int j = 0; j < num; j++) {
+		int num = mFirstAssignment[v + 1] - first;
+		for (int j = 0; j < num; j++)
+		{
 			a.boneNr = mBoneAssignments[first + j];
 			a.weight = mBoneWeights[first + j];
 			int k = 0;
 			while (k < (int)assigns.size() && a.boneNr != assigns[k].boneNr)
+			{
 				k++;
+			}
 			if (k < (int)assigns.size())
+			{
 				assigns[k].weight = (assigns[k].weight + a.weight) * 0.5f;
+			}
 			else
+			{
 				assigns.pushBack(a);
+			}
 		}
 	}
 	// select the ones with the biggest weights
 	std::sort(assigns.begin(), assigns.end());
 	const int maxAssignments = 4;
 	int first = assigns.size() - maxAssignments;
-	if (first < 0) first = 0;
+	if (first < 0)
+	{
+		first = 0;
+	}
 	float sum = 0.0f;
-	for (int i = first; i < (int)assigns.size(); i++) 
+	for (int i = first; i < (int)assigns.size(); i++)
+	{
 		sum += assigns[i].weight;
-	assert(sum != 0.0f);
-	for (int i = first; i < (int)assigns.size(); i++) {
+	}
+	PX_ASSERT(sum != 0.0f);
+	for (int i = first; i < (int)assigns.size(); i++)
+	{
 		mBoneAssignments.pushBack(assigns[i].boneNr);
 		mBoneWeights.pushBack(assigns[i].weight / sum);
 	}
-	mFirstAssignment[newVertNr+1] = mBoneAssignments.size();
+	mFirstAssignment[newVertNr + 1] = mBoneAssignments.size();
 #endif
 
 	// add split vertex info

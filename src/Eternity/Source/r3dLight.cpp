@@ -66,6 +66,10 @@ r3dLight::r3dLight()
   SpotAngleOuter        	= 60;
   SpotAngleFalloffPow   	= 1.0f;
 
+  InProbesVolumePosition = r3dPoint3D( -FLT_MAX, -FLT_MAX, -FLT_MAX );
+  InProbesVolumeRadius = -FLT_MAX;
+  InProbesVolumeIntensity = -1.f;
+
   LightFunction     = R3D_LIGHTFUNC_NONE;
 
   OccluderID        = -100;
@@ -249,52 +253,6 @@ void r3dLight::SetD3DLight(int Idx, int bBright)
 { 
 }
 
-
-
-
-void SetupProjectiveTransform(D3DXVECTOR3 &From, D3DXVECTOR3 &To, float HotSpotA)
-{
- D3DXMATRIX V, InvV;
- D3DXMATRIX matTexScale;
- D3DXMATRIX m_matTex2;
- D3DXMATRIX m_matLightProj, m_matLightView;
-
- D3DXVECTOR3 vUp;
- vUp.x = 0;
- vUp.y = 1;
- vUp.z = 0;
-
- // Set the light projection matrix.
-
- D3DXMatrixPerspectiveFovLH( &m_matLightProj, R3D_DEG2RAD(HotSpotA), 1.33f, r3dRenderer->NearClip, r3dRenderer->FarClip ); //1.0f, 20000.0f);
-
-    
- // Set the light view matrix.
- D3DXMatrixLookAtLH( &m_matLightView, &From, &To, &vUp);
-
- // This will scale and offset -1 to 1 range of x, y
- // coords output by projection matrix to 0-1 texture
- // coord range.
-    ZeroMemory( &matTexScale, sizeof( D3DMATRIX ) );
-    matTexScale._11 = 0.5f;
-    matTexScale._22 = 0.5f;
-    matTexScale._33 = 0.0f; 
-    matTexScale._41 = 0.5f; 
-    matTexScale._42 = 0.5f;
-    matTexScale._43 = 0.5f; 
-    matTexScale._44 = 1.0f;
-
-
-    D3DXMATRIX mat, mat2;
-    D3DXMatrixMultiply( &mat, &m_matLightProj, &matTexScale );
-    D3DXMatrixMultiply( &mat2, &m_matLightView, &mat ); 
-
-  D3DXMatrixTranspose( &mat2, &mat2 );
-
-  r3dRenderer->SetVertexShaderConstantF(  20, (float *)&mat2,  4 );
-}
-
-
 void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 {
 	const int MAX_CONSTANTS = 10;
@@ -441,19 +399,19 @@ void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 #if 0
 		LightVec = D3DXVECTOR4(X,Y,Z,0);
 
-		r3dRenderer->SetVertexShaderConstantF( 15, (float *)&LightVec,	1 );
-		r3dRenderer->SetPixelShaderConstantF( 4, (float *)&LightVec,	1 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 15, (float *)&LightVec,	1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 4, (float *)&LightVec,	1 );
 
 		Direction.Normalize();
 		LightVec = D3DXVECTOR4(Direction.X,Direction.Y,Direction.Z,0);
 
 		r3dVector vTo = r3dPoint3D(X,Y,Z) + Direction *100.0f;
-		r3dRenderer->SetPixelShaderConstantF( 5, (float *)&LightVec,	1 );
-		r3dRenderer->SetVertexShaderConstantF( 16, (float *)&LightVec,	1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 5, (float *)&LightVec,	1 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 16, (float *)&LightVec,	1 );
 
 		r3dRenderer->SetTex(ProjectMap,3);
-		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 		SetupProjectiveTransform(D3DXVECTOR3(X,Y,Z),D3DXVECTOR3(vTo.x,vTo.y, vTo.Z), SpotAngle);
 		break;
@@ -463,7 +421,7 @@ void r3dLight :: SetShaderConstants(r3dCamera &Cam)
 
 	r3d_assert( NUM_CONSTANTS < MAX_CONSTANTS );
 
-	r3dRenderer->SetPixelShaderConstantF( 0, (float *)vConsts, NUM_CONSTANTS );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)vConsts, NUM_CONSTANTS );
 
 }
 
@@ -1211,7 +1169,7 @@ void SetLightsIfTransparent(r3dMaterial *m, const r3dBoundBox &worldBBox)
 			lightParams[i * 3 + 2] = D3DXVECTOR4(invFadeDistance, l->GetInnerRadius() * invFadeDistance, 0, 0);
 		}
 		// PointLight ptLights[NUM_POINT_LIGHTS]: register(c243);
-		r3dRenderer->SetVertexShaderConstantF(243, &lightParams[0].x, _countof(lightParams));
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF(243, &lightParams[0].x, _countof(lightParams));
 	}
 
 }

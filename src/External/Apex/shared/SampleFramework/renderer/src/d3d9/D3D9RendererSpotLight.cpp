@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,22 +32,26 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9RendererSpotLight.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
 
+#include "D3D9RendererSpotLight.h"
 #include "D3D9RendererTexture2D.h"
+
+using namespace SampleRenderer;
 
 D3D9RendererSpotLight::D3D9RendererSpotLight(D3D9Renderer &renderer, const RendererSpotLightDesc &desc) :
 	RendererSpotLight(desc),
-	m_renderer(renderer)
+m_renderer(renderer)
 {
-	
+
 }
 
 D3D9RendererSpotLight::~D3D9RendererSpotLight(void)
 {
-	
+
 }
 
 void D3D9RendererSpotLight::bind(void) const

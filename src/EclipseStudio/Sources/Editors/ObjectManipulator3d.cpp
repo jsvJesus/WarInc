@@ -94,78 +94,33 @@ typedef bool (*Win32MsgProc_fn)(UINT uMsg, WPARAM wParam, LPARAM lParam);
 //////////////////////////////////////////////////////////////////////////
 
 /// Get 3D world ray from 2D mouse click coords.
-r3dRay Picker_GetClickRay( POINT ptCursor )
+r3dRay Picker_GetClickRay ( POINT ptCursor )
 {
-	D3DVIEWPORT9 vp;
-	memset( &vp, 0, sizeof( vp ) );
+	float fWndWidth = r3dRenderer->ScreenW;
+	float fWndHeight = r3dRenderer->ScreenH;
 
-	vp.X = 0;
-	vp.Y = 0;
-	vp.Width = (DWORD)r3dRenderer->ScreenW;
-	vp.Height = (DWORD)r3dRenderer->ScreenH;
-	vp.MinZ = 0.0f;
-	vp.MaxZ = 1.0f;
+	//Application_c::Get().WindowSize( iWndWidth, iWndHeight );
 
-	D3DXMATRIX mWorld;
-	D3DXMatrixIdentity( &mWorld );
+	D3DXMATRIX mView = r3dRenderer->ViewMatrix;
+	D3DXMATRIX mInvView = r3dRenderer->InvViewMatrix;
+	D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
 
-	D3DXVECTOR3 vScreenNear;
-	D3DXVECTOR3 vScreenFar;
-	D3DXVECTOR3 vNear;
-	D3DXVECTOR3 vFar;
+	// Compute the vector of the pick ray in screen space
+	r3dVector v;
+	v.x =  ( ( ( 2.0f * ptCursor.x ) / fWndWidth  ) - 1.f ) / mProj._11;
+	v.y = -( ( ( 2.0f * ptCursor.y ) / fWndHeight ) - 1.f ) / mProj._22;
+	v.z =  1.0f;
 
-	vScreenNear.x = (float)ptCursor.x;
-	vScreenNear.y = (float)ptCursor.y;
-	vScreenNear.z = 0.0f;
+	// Transform the screen space pick ray into 3D space
+	r3dVector vPickRayDir;
+	r3dVector vPickRayOrig;
 
-	vScreenFar.x = (float)ptCursor.x;
-	vScreenFar.y = (float)ptCursor.y;
-	vScreenFar.z = 1.0f;
+	D3DXVec3TransformNormal ( vPickRayDir.d3dx(), v.d3dx(), &mInvView );
+	vPickRayOrig.x = mInvView._41;
+	vPickRayOrig.y = mInvView._42;
+	vPickRayOrig.z = mInvView._43;
 
-	D3DXVec3Unproject(
-		&vNear,
-		&vScreenNear,
-		&vp,
-		&r3dRenderer->ProjMatrix,
-		&r3dRenderer->ViewMatrix,
-		&mWorld
-	);
-
-	D3DXVec3Unproject(
-		&vFar,
-		&vScreenFar,
-		&vp,
-		&r3dRenderer->ProjMatrix,
-		&r3dRenderer->ViewMatrix,
-		&mWorld
-	);
-
-	r3dPoint3D rayOrig;
-	r3dPoint3D rayDir;
-
-	rayOrig.x = vNear.x;
-	rayOrig.y = vNear.y;
-	rayOrig.z = vNear.z;
-
-	rayDir.x = vFar.x - vNear.x;
-	rayDir.y = vFar.y - vNear.y;
-	rayDir.z = vFar.z - vNear.z;
-
-	if( rayDir.LengthSq() > 0.000001f )
-	{
-		rayDir.Normalize();
-	}
-	else
-	{
-		rayOrig.x = r3dRenderer->InvViewMatrix._41;
-		rayOrig.y = r3dRenderer->InvViewMatrix._42;
-		rayOrig.z = r3dRenderer->InvViewMatrix._43;
-
-		rayDir = gCam.vPointTo;
-		rayDir.Normalize();
-	}
-
-	return r3dRay( rayOrig, rayDir );
+	return r3dRay ( vPickRayOrig, vPickRayDir );
 }
 
 static r3dPoint2D ConvertPt ( POINT const & pt )
@@ -241,6 +196,12 @@ static float GetScreenSize ( GameObject * pObj, r3dVector vVec, r3dVector vOffse
 	D3DXMatrixInverse ( &mFinalInv, NULL, &mFinal );
 
 	D3DXVECTOR3 vRes1, vRes2, vOffsetObject;
+
+	if( r3dRenderer->ZDir == r3dRenderLayer::ZDIR_INVERSED )
+	{
+		vOffset.z = 1.0f - vOffset.z;
+	}
+
 	D3DXVec3TransformCoord ( &vRes1, vVec.d3dx(), &mFinal );
 	D3DXVec3TransformCoord ( &vOffsetObject, vOffset.d3dx(), &mFinalInv );
 	vOffsetObject = *vVec.d3dx() - vOffsetObject;
@@ -255,8 +216,6 @@ static float GetScreenSize ( GameObject * pObj, r3dVector vVec, r3dVector vOffse
 static void GetScaleMatrix ( GameObject * pObj, D3DXMATRIX & mScale )
 {
 	r3d_assert ( pObj );
-	D3DXMATRIX mView = r3dRenderer->ViewMatrix;
-	D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
 
 	float fScale = GetScreenSize ( pObj, r3dVector ( 0.0f, 0.0f, 0.0f ), r3dVector ( 1.0f, 0.0f, 0.0f ) );
 	float fNear = gCam.NearClip;
@@ -825,10 +784,17 @@ ObjectManipulator3d::ControlElement_e ObjectManipulator3d::Picker_PickElement ( 
 				D3DXMATRIX mTransfCoord = mView * mProj;
 				D3DXVec3TransformCoord ( vCenterRect.d3dx (), vCenterRect.d3dx(), &mTransfCoord );
 
-				if ( fParamKrit >= 0.0f && fParamKrit < vCenterRect.z )
+				float zRank = vCenterRect.z;
+
+				if( r3dRenderer->ZDir == r3dRenderLayer::ZDIR_INVERSED )
+				{
+					zRank = 1.0f - zRank;
+				}
+
+				if ( fParamKrit >= 0.0f && fParamKrit < zRank )
 					continue;
 
-				fParamKrit = vCenterRect.z;
+				fParamKrit = zRank;
 				
 				m_MovePlane.Set ( vPoint1, vPoint2, vPoint3 );
 
@@ -859,39 +825,22 @@ ObjectManipulator3d::ControlElement_e ObjectManipulator3d::Picker_PickElement ( 
 
 bool ObjectManipulator3d::Picker_IsPick ( GameObject * pObj, POINT ptCursor ) const
 {
-	r3d_assert(pObj);
+	r3d_assert ( pObj );
 
-	if (m_sTypeFilter.c_str() && m_sTypeFilter.c_str()[0])
+	if ( m_sTypeFilter.c_str() && m_sTypeFilter.c_str()[0] )
 	{
-		if (pObj->Class->Name != m_sTypeFilter.c_str())
+		if ( ( pObj->Class->Name != m_sTypeFilter.c_str () ) )
 			return false;
 	}
 
-	if (pObj->ObjFlags & OBJFLAG_Removed)
-		return false;
 
-	r3dRay tRay = Picker_GetClickRay(ptCursor);
-
-	extern gobjid_t UI_TargetObjID;
+	extern gobjid_t	UI_TargetObjID;
 	GameObject* TargetObj = GameWorld().GetObject(UI_TargetObjID);
-
-	if (TargetObj && pObj == TargetObj)
+ 
+	if (TargetObj && pObj == TargetObj ) 
 		return true;
 
-	D3DXMATRIX mInvView = r3dRenderer->InvViewMatrix;
-
-	r3dPoint3D vCameraOrigin;
-	vCameraOrigin.x = mInvView._41;
-	vCameraOrigin.y = mInvView._42;
-	vCameraOrigin.z = mInvView._43;
-
-	r3dBoundBox bbox = pObj->GetBBoxWorld();
-	bbox.Grow(0.25f);
-
-	if (bbox.ContainsPoint(vCameraOrigin))
-		return false;
-
-	return !!tRay.IsIntersect(bbox);
+	return false;
 }
 
 void ObjectManipulator3d::Picker_DrawPicked ( GameObject * pObj, ControlElement_e eElement, bool bLocal ) const
@@ -902,9 +851,7 @@ void ObjectManipulator3d::Picker_DrawPicked ( GameObject * pObj, ControlElement_
 
 	r3dRenderer->Flush ();
 
-
 	D3DXMATRIX mView = r3dRenderer->ViewMatrix;
-	D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
 
 	r3dVector vPos = GetSelectionCenter ();
 
@@ -1304,31 +1251,8 @@ r3dVector ObjectManipulator3d::Picker_Move ( GameObject * pObj, POINT PickPoint,
 		vObjPos += vDeltaPos;
 	}
 
-	if (!m_bAttachMode && ObjectEditMove)
-	{
-		extern r3dPoint3D UI_TerraTargetPos;
-		extern r3dPoint3D UI_TargetPos;
-
-		r3dPoint3D targetPos = Terrain ? UI_TerraTargetPos : UI_TargetPos;
-
-		if (Terrain)
-			targetPos.y = Terrain->GetHeight(targetPos);
-
-		pObj->SetPosition(targetPos);
-
-		r3dBoundBox bbox = pObj->GetBBoxWorld();
-
-		r3dPoint3D fixedPos = pObj->GetPosition();
-		fixedPos.y += targetPos.y - bbox.Org.y;
-
-		pObj->SetPosition(fixedPos);
-	}
-	else
-	{
-		pObj->SetPosition(vObjPos);
-	}
-
-	pObj->OnPickerMoved();
+	pObj->SetPosition ( vObjPos );
+	pObj->OnPickerMoved ();
 
 	return vDeltaPos;
 }
@@ -1737,12 +1661,19 @@ void ObjectManipulator3d::PickByName	( const char* Name )
 
 	Picker_Drop() ;
 
-	for(GameObject *obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 	{
+		GameObject* obj = iter.current;
+
 		strncpy( dest, obj->FileName.c_str(), sizeof dest - 1 ) ;
 		strlwr( dest ) ;
 
-		if( strstr( dest, src ) )
+		char drive[ 16 ], dir[ 1024 ], file[ 1024 ], ext[ 1024 ] ;
+		_splitpath( dest, drive, dir, file, ext ) ;
+
+		strcpy( dest, file ) ;
+
+		if( strcmp( dest, src ) == 0 ) // should be exact match, if not, need to add another fn
 		{
 			Picker_Pick( obj, false ) ;
 		}
@@ -1787,6 +1718,19 @@ void ObjectManipulator3d::Draw ()
 {
 	if ( !m_bEnabled )
 		return;
+
+	struct PerfMarker
+	{
+		PerfMarker()
+		{
+			D3DPERF_BeginEvent( 0, L"ObjectManipulator3d::Draw" );
+		}
+
+		~PerfMarker()
+		{
+			D3DPERF_EndEvent();
+		}
+	} perfMarker; (void)perfMarker;
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH ) ;
 
@@ -2322,7 +2266,6 @@ bool ObjectManipulator3d::MouseLeftBtnDown ( POINT pt, int delta )
 	
 	{
 		D3DXMATRIX mView = r3dRenderer->ViewMatrix;
-		D3DXMATRIX mProj = r3dRenderer->ProjMatrix;
 		
 		r3dVector vCameraOrigin = r3dVector ( - mView._41, - mView._42, - mView._43 );
 
@@ -2387,7 +2330,20 @@ bool ObjectManipulator3d::MouseLeftBtnUp ( POINT pt, int delta )
 
 		if ( !imgui_IsCursorOver2d () && ! imgui2_IsCursorOver2d() && !m_bLocked && !( m_bLocal  && m_bLocalEnable ) )
 		{
-			if ( !bSelectionRectShown )
+			float fMinX = 0.f;
+			float fMaxX = 0.f;
+			float fMinY = 0.f;
+			float fMaxY = 0.f;
+
+			if( bSelectionRectShown )
+			{
+				fMinX = float(r3dTL::Min ( m_tSelectionStartPt.x, m_tSelectionEndPt.x )) / r3dRenderer->ScreenW;
+				fMaxX = float(r3dTL::Max ( m_tSelectionStartPt.x, m_tSelectionEndPt.x )) / r3dRenderer->ScreenW;
+				fMinY = float(r3dTL::Min ( m_tSelectionStartPt.y, m_tSelectionEndPt.y )) / r3dRenderer->ScreenH;
+				fMaxY = float(r3dTL::Max ( m_tSelectionStartPt.y, m_tSelectionEndPt.y )) / r3dRenderer->ScreenH;
+			}
+
+			if ( !bSelectionRectShown || fabs( fMaxX - fMinX ) < 0.015625 && fabs( fMaxY - fMinY ) < 0.015625 )
 			{
 				// add objects to selection
 				if ( m_bClone && m_ePickState == PICK_SELECTED )
@@ -2436,11 +2392,6 @@ bool ObjectManipulator3d::MouseLeftBtnUp ( POINT pt, int delta )
 			else
 			{
 				// select objects in rect
-
-				float fMinX = float(r3dTL::Min ( m_tSelectionStartPt.x, m_tSelectionEndPt.x )) / r3dRenderer->ScreenW;
-				float fMaxX = float(r3dTL::Max ( m_tSelectionStartPt.x, m_tSelectionEndPt.x )) / r3dRenderer->ScreenW;
-				float fMinY = float(r3dTL::Min ( m_tSelectionStartPt.y, m_tSelectionEndPt.y )) / r3dRenderer->ScreenH;
-				float fMaxY = float(r3dTL::Max ( m_tSelectionStartPt.y, m_tSelectionEndPt.y )) / r3dRenderer->ScreenH;
 				
 				Picker_Drop();
 
@@ -2448,9 +2399,12 @@ bool ObjectManipulator3d::MouseLeftBtnUp ( POINT pt, int delta )
 				{
 					r3dPoint3D vPos = m_dObjects[i]->GetBBoxWorld().Org + m_dObjects[i]->GetBBoxWorld().Size * 0.5f;
 
+					if ( ( m_dObjects[i]->ObjFlags & OBJFLAG_SkipCastRay ))
+						continue;
+
 					if ( m_sTypeFilter.c_str() && m_sTypeFilter.c_str()[0] )
 					{
-						if ( ( m_dObjects[i]->ObjFlags & OBJFLAG_SkipCastRay ) || ( m_dObjects[i]->Class->Name != m_sTypeFilter.c_str () ) )
+						if ( ( m_dObjects[i]->Class->Name != m_sTypeFilter.c_str () ) )
 							continue;
 					}
 
@@ -2514,16 +2468,8 @@ bool ObjectManipulator3d::MouseMove ( POINT pt, int delta )
 
 	if ( ( m_ePickState == PICK_UNSELECTED || m_ePickState == PICK_SELECTED ) && !m_bLocked )
 	{
-		if ( !m_bAttachMode && m_bLeftBtnDown )
-		{
-			int dx = abs( m_tSelectionStartPt.x - m_tSelectionEndPt.x );
-			int dy = abs( m_tSelectionStartPt.y - m_tSelectionEndPt.y );
-
-			if ( dx >= m_fSelectionRectTreshold || dy >= m_fSelectionRectTreshold )
-			{
-				m_bSelectionRectShow = true;
-			}
-		}
+		if ( ! m_bAttachMode && m_bLeftBtnDown && !( abs ( m_tSelectionStartPt.x - m_tSelectionEndPt.y ) < m_fSelectionRectTreshold && abs ( m_tSelectionStartPt.y - m_tSelectionEndPt.y ) < m_fSelectionRectTreshold ) )
+			m_bSelectionRectShow = true;
 	}
 
 	switch ( m_ePickState )

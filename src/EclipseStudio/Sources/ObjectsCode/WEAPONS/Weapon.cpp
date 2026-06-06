@@ -55,22 +55,13 @@ r3dMesh* WeaponAttachmentConfig::getMesh( bool allow_async_loading, bool aim_mod
 }
 
 //------------------------------------------------------------------------
-
-int WeaponAttachmentConfig::getMeshRefs() const
-{
-	return m_Model ? m_Model->RefCount : 0 ;
-}
-
-//------------------------------------------------------------------------
-
 int WeaponAttachmentConfig::getAimMeshRefs() const
 {
 	return m_Model_AIM ? m_Model_AIM->RefCount : 0 ;
 }
 
 //------------------------------------------------------------------------
-
-r3dMesh* ItemConfig::getMesh() const
+r3dMesh* ModelItemConfig::getMesh() const
 {
 	if(m_Model == 0)
 	{
@@ -89,105 +80,51 @@ r3dMesh* ItemConfig::getMesh() const
 
 //------------------------------------------------------------------------
 
-int ItemConfig::getMeshRefs() const
+int ModelItemConfig::getMeshRefs() const
 {
 	return m_Model ? m_Model->RefCount : 0 ;
 }
 
 //------------------------------------------------------------------------
 
-r3dMesh* WeaponConfig::getMesh(bool allow_async_loading, bool first_person) const
+r3dMesh* WeaponConfig::getMesh( bool allow_async_loading, bool first_person ) const
 {
 	extern bool g_bEditMode;
-
-	if(!g_bEditMode)
-	{
+	if(!g_bEditMode) // do not check this in editor to allow artists to test models without changing DB
 		if(!IsFPS)
 			first_person = false;
-	}
 
-	if(first_person)
+	if( first_person )
 	{
 		if(m_Model_FPS == 0)
 		{
-			char fpsModelPathLower[512];
-			char fpsModelPathUpper[512];
 
-			r3dscpy(fpsModelPathLower, m_ModelPath);
-			int lenLower = strlen(fpsModelPathLower);
-			r3dscpy(&fpsModelPathLower[lenLower - 4], "_fps.sco");
-
-			r3dscpy(fpsModelPathUpper, m_ModelPath);
-			int lenUpper = strlen(fpsModelPathUpper);
-			r3dscpy(&fpsModelPathUpper[lenUpper - 4], "_FPS.sco");
-
-			const char* fpsModelPath = NULL;
-
-			if(r3dFileExists(m_ModelPath_1st))
-				fpsModelPath = m_ModelPath_1st;
-			else if(r3dFileExists(fpsModelPathLower))
-				fpsModelPath = fpsModelPathLower;
-			else if(r3dFileExists(fpsModelPathUpper))
-				fpsModelPath = fpsModelPathUpper;
-
-			if(fpsModelPath)
+#ifndef FINAL_BUILD
+			if(g_bEditMode && !r3dFileExists(m_ModelPath_1st))
 			{
-				m_Model_FPS = r3dGOBAddMesh(fpsModelPath, true, false, allow_async_loading, true);
-				if(m_Model_FPS == 0)
-				{
-					r3dError("ART: failed to load FPS weapon mesh '%s'\n", fpsModelPath);
-				}
-				r3d_assert(m_Model_FPS);
+				char buf[128];
+				sprintf(buf, "FPS model isn't available for %s", FNAME);
+				MessageBox(NULL, buf, "Warning", MB_OK);
+				m_Model_FPS = m_Model;
 			}
 			else
-			{
-#ifndef FINAL_BUILD
-				if(g_bEditMode)
-				{
-					char buf[256];
-					sprintf(buf, "FPS model isn't available for %s\nExpected: %s", FNAME ? FNAME : "UNKNOWN", m_ModelPath_1st ? m_ModelPath_1st : "");
-					MessageBox(NULL, buf, "Weapon FPS model missing", MB_OK);
-				}
 #endif
-
-				r3dOutToLog("WeaponConfig::getMesh: missing FPS model for %s. TPS='%s' FPS='%s'\n",
-					FNAME ? FNAME : "UNKNOWN",
-					m_ModelPath ? m_ModelPath : "",
-					m_ModelPath_1st ? m_ModelPath_1st : "");
-
-				if(m_Model == 0)
+			{
+				m_Model_FPS = r3dGOBAddMesh(m_ModelPath_1st, true, false, allow_async_loading, true );
+				if(m_Model_FPS==0)
 				{
-					m_Model = r3dGOBAddMesh(m_ModelPath, true, false, allow_async_loading, true);
-					if(m_Model == 0)
-					{
-						r3dError("ART: failed to load mesh '%s'\n", m_ModelPath);
-					}
-					r3d_assert(m_Model);
+					r3dError("ART: failed to load mesh '%s'\n", m_ModelPath_1st);
 				}
-
-				m_Model_FPS = m_Model;
+				r3d_assert(m_Model_FPS);
 			}
 		}
 
 		return m_Model_FPS;
 	}
 
-	if(m_Model == 0)
-	{
-		m_Model = r3dGOBAddMesh(m_ModelPath, true, false, allow_async_loading, true);
-		if(m_Model == 0)
-		{
-			r3dError("ART: failed to load mesh '%s'\n", m_ModelPath);
-		}
-		r3d_assert(m_Model);
-	}
+	r3d_assert( m_Model ) ;
 
 	return m_Model;
-}
-
-int WeaponConfig::getMeshRefs() const
-{
-	return m_Model ? m_Model->RefCount : 0 ;
 }
 
 int WeaponConfig::getConfigMeshRefs() const
@@ -247,18 +184,6 @@ void WeaponConfig::updateMuzzleOffset(bool first_person) const
 	}
 }
 
-int WeaponConfig::getGrenadeAnimType() const
-{
-	switch(m_itemID)
-	{
-		default:     return GRENADE_ANIM_Normal;
-		case 101139: return GRENADE_ANIM_Claymore;
-		case 101140: return GRENADE_ANIM_VS50;
-		case 101141: return GRENADE_ANIM_V69;
-		case 101142: return GRENADE_ANIM_V69; // tripwire
-	}
-}
-
 void WeaponConfig::aquireMesh( bool allow_async_loading ) const
 {
 	// load regular mesh no matter what, as we will need it even in FPS mode
@@ -305,20 +230,16 @@ void WeaponConfig::releaseMesh() const
 
 int g_WeaponBalance ;
 
-Weapon::Weapon(const WeaponConfig* conf, GameObject* owner, bool first_person, bool allow_async_loading) : m_pConfig(conf)
+Weapon::Weapon(obj_Player* owner, int backpackIdx, const WeaponConfig* conf, bool first_person, bool allow_async_loading, const wiWeaponAttachment* attm) : m_pConfig(conf)
 ,m_isFirstPerson(first_person)
 ,m_fractionTimeLeftFromPreviousShot(0)
 ,m_lastTimeFired(0)
-,m_ModifiedNumClips(0)
-,m_numBulletsLeftInClip(0)
-,m_numBulletsLeft(0)
 ,m_lastReloadingTime(0)
 ,m_State(WPN_EMPTY)
 ,m_triggerPressed(0)
 ,m_needDelayedAction(0)
 ,m_needDelayedAction_startTime(0)
 ,m_firemode(WPN_FRM_AUTO)
-,m_sndFire(0)
 ,m_sndReload(0)
 ,m_sndNewFire(0)
 ,m_WeaponAnim_FPS(NULL)
@@ -328,36 +249,55 @@ Weapon::Weapon(const WeaponConfig* conf, GameObject* owner, bool first_person, b
 ,m_LaserPointerParticle(NULL)
 ,m_FlashlightParticle(NULL)
 ,m_MuzzleParticle(NULL)
+,m_isMeshLoaded(false)
 {
+	m_Owner = owner;
+	r3d_assert(m_pConfig);
+	r3d_assert(m_Owner);
+	if(!(m_Owner->isObjType(OBJTYPE_Human)))
+		r3dError("Weapon owner must be obj_Player");
+	m_BackpackIdx = backpackIdx;
+
 	g_WeaponBalance ++ ;
 
 	m_pConfig->aquireMesh( allow_async_loading ) ;
 
+	// init attachments
 	for(int i=0; i<WPN_ATTM_MAX; ++i)
 		m_Attachments[i] = NULL;
 	memset(m_WeaponAttachmentStats, 0, sizeof(m_WeaponAttachmentStats));
-
-	m_Owner = (obj_AI_Player*)owner;
-	r3d_assert(m_pConfig);
-	r3d_assert(m_Owner);
-	if(!(m_Owner->isObjType(OBJTYPE_Human)))
-		r3dError("Weapon owner must be obj_AI_Player");
-
-	// if this is usable item, get quantity from player inventory. only for local player
-	m_usableItemInventoryIdx = -1;
-	if(isUsableItem() && m_Owner->NetworkLocal)
-	{
-		for(uint32_t i=0; i<gUserProfile.ProfileData.NumItems; ++i)
-		{
-			if(gUserProfile.ProfileData.Inventory[i].itemID == getItemID())
-			{
-				m_usableItemInventoryIdx = i;
-				break;
-			}
-		}
+	
+	if(attm) {
+		setWeaponAttachmentsByIDs(attm->attachments);
 	}
 
+	wiInventoryItem& wi = getPlayerItem();
+
+	// check if we need to modify starting ammo (SERVER CODE SYNC POINT)
+	// set only for actual weapons, not ones in quick slot. 
+	if(backpackIdx == wiCharDataFull::CHAR_LOADOUT_WEAPON1 || backpackIdx == wiCharDataFull::CHAR_LOADOUT_WEAPON2)
+	{
+		const WeaponAttachmentConfig* clipCfg = getClipConfig();
+		if(wi.Var1 < 0) 
+		{
+			if(clipCfg)
+				wi.Var1 = clipCfg->m_Clipsize;
+			else
+				wi.Var1 = 0;
+		}
+		// set itemid of clip (SERVER CODE SYNC POINT)
+		if(wi.Var2 < 0 && clipCfg)
+		{
+			wi.Var2 = clipCfg->m_itemID;
+		}
+	}
+	
+	// melee always have one bullet left
+	if(m_pConfig->category == storecat_MELEE)
+		wi.Var1 = 1;
+	
 	Reset();
+
 	reloadMuzzleParticle();
 
 	if(m_pConfig->m_PrimaryAmmo->getShellExtractParticleName() && strlen(m_pConfig->m_PrimaryAmmo->getShellExtractParticleName())>2)
@@ -428,9 +368,10 @@ void Weapon::reloadMuzzleParticle()
 			// create light
 			m_MuzzleLight.Assign(0,0,0);
 			m_MuzzleLight.SetType(R3D_OMNI_LIGHT);
-			m_MuzzleLight.SetRadius(0.0f, 4.0f);
-			m_MuzzleLight.SetColor(255, 201, 14);
-			m_MuzzleLight.bCastShadows = false;
+			m_MuzzleLight.SetRadius(0.4f, 11.2f);
+			m_MuzzleLight.SetColor(255, 219, 204);
+			m_MuzzleLight.bCastShadows = true;
+			m_MuzzleLight.Intensity = 0.42f;
 			m_MuzzleLight.TurnOff();
 			WorldLightSystem.Add(&m_MuzzleLight); 
 		}
@@ -459,20 +400,8 @@ void Weapon::checkForSkeleton()
 	{
 		m_pConfig->m_Model_FPS_Skeleton = new r3dSkeleton();
 		char tmpStr[512];
-		char tmpStrLower[512];
-		char tmpStrUpper[512];
-
-		r3dscpy(tmpStrLower, m_pConfig->m_ModelPath);
-		r3dscpy(&tmpStrLower[strlen(tmpStrLower) - 4], "_fps.skl");
-
-		r3dscpy(tmpStrUpper, m_pConfig->m_ModelPath);
-		r3dscpy(&tmpStrUpper[strlen(tmpStrUpper) - 4], "_FPS.skl");
-
-		if(r3dFileExists(tmpStrLower))
-			r3dscpy(tmpStr, tmpStrLower);
-		else
-			r3dscpy(tmpStr, tmpStrUpper);
-
+		r3dscpy(tmpStr, m_pConfig->m_ModelPath);
+		r3dscpy(&tmpStr[strlen(tmpStr)-4], "_FPS.skl");
 		m_pConfig->m_Model_FPS_Skeleton->LoadBinary(tmpStr);
 
 		m_pConfig->m_AnimPool_FPS = new r3dAnimPool();
@@ -499,37 +428,14 @@ void Weapon::checkForSkeleton()
 
 }
 
-void Weapon::ResetBullets(int numBullets)
-{
-	r3d_assert(numBullets > 0);
-
-	m_numBulletsLeft = numBullets;
-	m_numBulletsLeftInClip = 0;
-	
-	int numBulletsReq = getNumBulletsInClip(); 
-	m_numBulletsLeftInClip = R3D_MIN(numBulletsReq, (int)m_numBulletsLeft);
-
-	m_numBulletsLeft = m_numBulletsLeft - numBulletsReq;	
-	if(m_numBulletsLeft < 0) m_numBulletsLeft = 0;
-}
-
 void Weapon::Reset()
 {
 	m_fractionTimeLeftFromPreviousShot = 0;
 	m_lastTimeFired = 0;
-	m_ModifiedNumClips = m_pConfig->m_numClips;
-	// check for ability Double Up
-	if(m_Owner->NetworkLocal && m_pConfig->category!=storecat_SUPPORT && m_pConfig->category!=storecat_GRENADES && m_pConfig->category!=storecat_UsableItem) 
-	{
-		if(((obj_AI_Player*)m_Owner)->CurLoadout.hasItem(AbilityConfig::AB_DoubleUp) && (gClientLogic().m_gameInfo.mapType != GBGameInfo::MAPT_Bomb))
-			m_ModifiedNumClips = m_ModifiedNumClips * 2;
-	}
 
-	m_numBulletsLeftInClip = getNumBulletsInClip();
-	m_numBulletsLeft = (m_ModifiedNumClips-1) * m_numBulletsLeftInClip; // minus 1, as first clip went into a gun
 	m_lastReloadingTime = 0;
 	m_State = WPN_EMPTY;
-	if(m_numBulletsLeftInClip>0)
+	if(getNumBulletsLeft() > 0)
 		m_State = WPN_READY;
 
 	m_triggerPressed = 0;
@@ -546,7 +452,6 @@ void Weapon::Reset()
 	else
 		m_firemode = WPN_FRM_SINGLE;
 
-	m_sndFire = 0;
 	m_sndReload = 0;
 
 	if(m_sndNewFire)
@@ -556,13 +461,48 @@ void Weapon::Reset()
 	}
 
 	m_Owner->uberAnim_->StopShootAnim();
-}
 
-void Weapon::Resupply()
-{
-	m_numBulletsLeftInClip = getNumBulletsInClip();
-	m_numBulletsLeft = m_numBulletsLeftInClip * (m_ModifiedNumClips-1); // minus 1, as first one is in a gun
-	m_State = WPN_READY;
+	if(m_pConfig->m_itemID == 101306) // hard coded for melee flashlight
+	{
+		if(m_FlashlightParticle) {
+			m_FlashlightParticle->bKill = true;
+			m_FlashlightParticle = NULL;
+		}
+		if(m_Flashlight.pLightSystem) {
+			WorldLightSystem.Remove(&m_Flashlight);
+		}
+
+		{
+			m_FlashlightParticle = (obj_ParticleSystem*)srv_CreateGameObject("obj_ParticleSystem", "weaponfx_flashlight", r3dPoint3D(0,0,0));
+			if(m_FlashlightParticle->Torch != 0)
+			{
+				m_FlashlightParticle->bKeepAlive = true; // do not allow it to be destroyed
+				m_FlashlightParticle->Torch->bInheretDirectionFromSystem = 1; // hard coded for ray particles
+				m_FlashlightParticle->ObjFlags |= OBJFLAG_SkipDraw;
+			}
+		}
+
+		m_Flashlight.Assign(0,0,0);
+		m_Flashlight.SetType(R3D_SPOT_LIGHT);
+		m_Flashlight.SetRadius(17.5f, 57.0f);
+		m_Flashlight.SetColor(203, 226, 225);
+		m_Flashlight.SpotAngleInner = 4.41f;
+		m_Flashlight.SpotAngleOuter = 16.21f;
+		m_Flashlight.bCastShadows = r_lighting_quality->GetInt() == 3 && r_shadows_quality->GetInt() >= 3;
+		m_Flashlight.Intensity = 6.98f;
+		m_Flashlight.SpotAngleFalloffPow = 1.23f;
+		m_Flashlight.bSSShadowBlur = 1;
+		m_Flashlight.bUseGlobalSSSBParams = 0;
+		m_Flashlight.SSSBParams.Bias = 0.1f;
+		m_Flashlight.SSSBParams.PhysRange = 43.12f;
+		m_Flashlight.SSSBParams.Radius = 10.0f;
+		m_Flashlight.SSSBParams.Sense = 635.18f;
+		m_Flashlight.ProjectMap = r3dRenderer->LoadTexture("data\\ProjectionTextures\\flashlight_01.dds");
+
+		m_Flashlight.TurnOff();
+		WorldLightSystem.Add(&m_Flashlight); 
+	}
+
 }
 
 float Weapon::getRateOfFire() const
@@ -574,7 +514,7 @@ float Weapon::getRateOfFire() const
 		firerate = (int)ceilf(float(firerate) * (1.0f+m_WeaponAttachmentStats[WPN_ATTM_STAT_FIRERATE])); // add bonus
 		fireDelay = 60.0f / firerate; // convert back to fire delay
 	}
-	obj_AI_Player* plr = (obj_AI_Player*)m_Owner;
+	obj_Player* plr = (obj_Player*)m_Owner;
 	
 	// accumulated adjustment in percents for fire rate
 	float fireRatePerc = 0.0f;
@@ -605,15 +545,8 @@ float Weapon::getRateOfFire() const
 
 bool Weapon::isReadyToFire(bool triggerPressed, bool scopeMode)
 {
-	// RPGs can only fire if you zoom in (scope mode)
-	//if(m_pConfig->category == storecat_SUPPORT && !scopeMode)
-	//	return false;
-	
-	//if(isUsableItem())
-	//	return false;
-	
 	bool weaponReady = ((r3dGetTime()-m_lastTimeFired)>getRateOfFire());
-	if(!isUsableItem())
+	if(!(isUsableItem() || getCategory() == storecat_GRENADE))
 		weaponReady = weaponReady && !isReloading() && m_State == WPN_READY;
 
 	// fall inside if fire trigger is pressed, or we're in middle of multi-bullet firing sequence
@@ -668,6 +601,7 @@ void Weapon::OnEquip()
 	if( m_FlashlightParticle )
 	{
 		m_FlashlightParticle->ObjFlags &= ~OBJFLAG_SkipDraw;
+		m_Flashlight.TurnOn();
 	}
 
 	m_triggerPressed = 0;
@@ -736,7 +670,17 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 {
 	R3DPROFILE_FUNCTION("Weapon::Update");
 	
-	obj_AI_Player* player = (obj_AI_Player*)m_Owner;
+	obj_Player* player = (obj_Player*)m_Owner;
+	if(!m_isMeshLoaded)
+	{
+		m_isMeshLoaded = isLoaded();
+		if(m_isMeshLoaded)
+		{
+			m_pConfig->updateMuzzleOffset(g_camera_mode->GetInt()==2 && player->NetworkLocal);
+			if(g_camera_mode->GetInt()==2 && player->NetworkLocal)
+				checkForSkeleton();
+		}
+	}
 
 	r3dPoint3D muzzlerPoint = getMuzzlePos(weaponBone);
 
@@ -790,21 +734,16 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 
 	m_fractionTimeLeftFromPreviousShot = 0;
 	// update sound pos
-	if(m_sndFire)
-	{
-		if(!snd_SetSoundPos(m_sndFire, m_Owner->GetPosition()))
-			m_sndFire = 0;
-	}
 	if(m_sndReload)
 	{
-		if(!snd_SetSoundPos(m_sndReload, m_Owner->GetPosition()))
+		if(!SoundSys.SetSoundPos(m_sndReload, m_Owner->GetPosition()))
 			m_sndReload = 0;
 	}
 	if(m_sndNewFire)
 	{
 		if(!m_Owner->NetworkLocal) // only for non local player
 			SoundSys.SetParamValue(m_sndNewFire, "(distance)", (gCam-muzzlerPoint).Length());
-		if(!snd_SetSoundPos(m_sndNewFire, m_Owner->GetPosition()))
+		if(!SoundSys.SetSoundPos(m_sndNewFire, m_Owner->GetPosition()))
 			m_sndNewFire = 0;
 		else
 		{
@@ -823,18 +762,6 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 		{
 			m_triggerPressed = 0;
 			m_State = WPN_READY;
-			if(m_numBulletsLeft>0)
-			{
-//				int numBulletsReq = m_pConfig->m_clipSize - m_numBulletsLeftInClip;
-//				m_numBulletsLeftInClip += R3D_MIN(numBulletsReq, m_numBulletsLeft);
-				
-				// always change full clip, no partial reloading
-				int numBulletsReq = getNumBulletsInClip(); 
-				m_numBulletsLeftInClip = R3D_MIN(numBulletsReq, (int)m_numBulletsLeft);
-				
-				m_numBulletsLeft = m_numBulletsLeft - numBulletsReq; 
-				if(m_numBulletsLeft < 0) m_numBulletsLeft = 0;
-			}
 		}
 	}
 
@@ -849,15 +776,25 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 			if(player->bDead==false)
 			{
 				m_pConfig->m_PrimaryAmmo->Fire(m_needDelayedAction_pos, muzzlerPoint, weaponBone, m_Owner, m_pConfig, m_needDelayedAction_delay);
-				if ( getAnimType() == WPN_ANIM_GRENADE ) 
 				{
-					PKT_C2C_PlayerFired_s n; 
+					PKT_C2C_PlayerThrewGrenade_s n; 
 					n.fire_from = muzzlerPoint;
 					n.fire_to = m_needDelayedAction_pos;
 					n.holding_delay = m_needDelayedAction_delay + launchDelay;
 					n.debug_wid = player->m_SelectedWeapon;
-					n.wasAiming = player->m_isAiming;
+					n.slotFrom = m_BackpackIdx;
 					p2pSendToHost(m_Owner, &n, sizeof(n), true);
+
+					// grenades are treated as items
+					wiInventoryItem& wi = getPlayerItem();
+					r3d_assert(wi.quantity > 0);
+					wi.quantity--;
+					if(wi.quantity <= 0)
+						wi.Reset();
+
+					player->GrenadeCallbackFromWeapon(wi);
+					if(wi.quantity == 0) // this object might be deleted after GrenadeCallbackFromWeapon()
+						return;
 				}
 			}
 		}
@@ -930,24 +867,12 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 					r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &laserCastDir);
 
 				PxRaycastHit hit;
-				PxSceneQueryFilterData filter(
-					PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
-					PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
-				);
-
-				bool hitResult = g_pPhysicsWorld->raycastSingle(
-					PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z),
-					PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z),
-					500.0f,
-					PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
-					hit,
-					filter
-				);
-
-				if(hitResult)
-					m_LaserHitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
+				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
+				bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z), PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z), 500.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+				if( hitResult )
+					m_LaserHitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
 				else
-					m_LaserHitPoint.Assign(0, 0, 0);
+					m_LaserHitPoint.Assign(0,0,0);
 			}
 			if(m_FlashlightParticle)
 			{
@@ -980,7 +905,6 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 					m_FlashlightParticle->Torch->Direction = flashDir;
 				}
 
-				m_Flashlight.TurnOn();
 				m_Flashlight.Assign(flashPos);
 				m_Flashlight.Direction = r3dPoint3D( attmWorld._11, attmWorld._12, attmWorld._13 );
 			}
@@ -999,28 +923,15 @@ void Weapon::Update(const D3DXMATRIX& weaponBone)
 					r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &laserCastDir);
 
 				PxRaycastHit hit;
-				PxSceneQueryFilterData filter(
-					PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
-					PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC)
-				);
-
-				bool hitResult = g_pPhysicsWorld->raycastSingle(
-					PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z),
-					PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z),
-					500.0f,
-					PxSceneQueryFlags(PxSceneQueryFlag::ePOSITION),
-					hit,
-					filter
-				);
-
-				if(hitResult)
-					m_LaserHitPoint = r3dPoint3D(hit.position.x, hit.position.y, hit.position.z);
+				PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER),0,0,0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC));
+				bool hitResult = g_pPhysicsWorld->raycastSingle(PxVec3(laserCastPos.x, laserCastPos.y, laserCastPos.z), PxVec3(laserCastDir.x, laserCastDir.y, laserCastDir.z), 500.0f, PxSceneQueryFlags(PxSceneQueryFlag::eIMPACT), hit, filter);
+				if( hitResult )
+					m_LaserHitPoint = r3dPoint3D(hit.impact.x, hit.impact.y, hit.impact.z);
 				else
-					m_LaserHitPoint.Assign(0, 0, 0);
+					m_LaserHitPoint.Assign(0,0,0);
 			}
 			if(m_FlashlightParticle)
 			{
-				m_Flashlight.TurnOn();
 				m_Flashlight.Assign(muzzlerPoint);
 				m_Flashlight.Direction = r3dPoint3D( weaponBone._11, weaponBone._12, weaponBone._13 );
 			}
@@ -1037,7 +948,8 @@ bool Weapon::hasLaserPointer(r3dPoint3D& laserPos)
 	return m_LaserPointerParticle!=NULL && !laserPos.AlmostEqual(r3dPoint3D(0,0,0), 0.01f);
 }
 
-void Weapon::OnGameEnded() {
+void Weapon::OnGameEnded() 
+{
 	if(m_sndNewFire)
 	{
 		SoundSys.KeyOff(m_sndNewFire, "trigger");
@@ -1045,6 +957,37 @@ void Weapon::OnGameEnded() {
 	}
 }
 
+const WeaponAttachmentConfig* Weapon::getClipConfig()
+{
+	// (SERVER CODE SYNC POINT)
+	return m_Attachments[WPN_ATTM_CLIP];
+}
+
+wiInventoryItem& Weapon::getPlayerItem()
+{
+	wiInventoryItem& wi = m_Owner->CurLoadout.Items[m_BackpackIdx];
+	// ptumik: this assert is real pain in the ass. Is it really necessary? Because of it I have to save a copy of wiInventoryItem before calling Fire()
+	r3d_assert(wi.itemID == m_pConfig->m_itemID);	// make sure it wasn't changed
+	return wi;
+}
+
+int Weapon::getNumClipsLeft()
+{
+	const WeaponAttachmentConfig* clipCfg = getClipConfig();
+	if(!clipCfg)
+		return 0;
+
+	int numClips = 0;
+	for(int i=0; i<m_Owner->CurLoadout.BackpackSize; i++)
+	{
+		if(m_Owner->CurLoadout.Items[i].itemID == clipCfg->m_itemID)
+		{
+			numClips += m_Owner->CurLoadout.Items[i].quantity;
+		}
+	}
+	
+	return numClips;
+}
 
 r3dPoint3D Weapon::getMuzzlePos(const D3DXMATRIX& weaponBone) const
 {
@@ -1103,8 +1046,8 @@ int Weapon::getNumShotsRequired()
 	int numShots = 1;
 
 	// only ONE shot per grenade/support please.
-	if(m_pConfig->category == storecat_SUPPORT || m_pConfig->category == storecat_GRENADES)
-		return R3D_MIN(numShots, (int)m_numBulletsLeftInClip);
+	if(m_pConfig->category == storecat_GRENADE)
+		return numShots;
 
 	// active only when trigger is pressed for more than one frame
 	if(m_triggerPressed>1)
@@ -1117,7 +1060,7 @@ int Weapon::getNumShotsRequired()
 	}
 
 	// check how many bullets left in clip
-	numShots = R3D_MIN(numShots, (int)m_numBulletsLeftInClip);
+	numShots = R3D_MIN(numShots, getNumBulletsLeft());
 	
 	return numShots;
 }
@@ -1151,20 +1094,23 @@ int Weapon::getWeaponFireSound()
 	return -1;
 }
 
-void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float cookingTime, const r3dPoint3D& grenadeFireFrom )
+void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, bool executeWeaponFireCode, float cookingTime, const r3dPoint3D& grenadeFireFrom )
 {
 	if(isUsableItem())
 	{
 		m_lastTimeFired = r3dGetTime() - m_fractionTimeLeftFromPreviousShot;
-		if(m_pConfig->m_numClips > 1) // consumable item
+		if(m_Owner->NetworkLocal && m_pConfig->m_isConsumable) 
 		{
-			r3d_assert(gUserProfile.ProfileData.Inventory[m_usableItemInventoryIdx].quantity>0);
-			gUserProfile.ProfileData.Inventory[m_usableItemInventoryIdx].quantity--;
+			wiInventoryItem& wi = getPlayerItem();
+			r3d_assert(wi.quantity > 0);
+			wi.quantity--;
+			if(wi.quantity <= 0)
+				wi.Reset();
 		}
 		return;
 	}
 
-	if(m_Owner->NetworkLocal) // do this check only for local player, we are not tracking this correctly for network players
+	if(m_Owner->NetworkLocal && getCategory() != storecat_GRENADE) // do this check only for local player, we are not tracking this correctly for network players
 	{
 		if(m_State != WPN_READY) // because we can shoot more than one bullet per frame, let's double check that weapon isn't reloading
 			return;
@@ -1175,6 +1121,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 	const float shootTime = getRateOfFire();
 
 	// start firing anim
+	if(executeWeaponFireCode)
 	{
 		m_Owner->uberAnim_->StartShootAnim();
 
@@ -1184,39 +1131,32 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 			ai->fSpeed = ((float)ai->pAnim->NumFrames / ai->pAnim->fFrameRate) / shootTime;
 	}
 
-	if(m_pConfig->m_sndFireID_single!=-1 || m_pConfig->m_sndFireID_auto!=-1) // we need at least one of those to switch to new weapon sound system for this gun
+	if(executeWeaponFireCode)
 	{
-		if(m_firemode == WPN_FRM_SINGLE)
-			m_sndNewFire = snd_PlaySound(getWeaponFireSound(), m_Owner->GetPosition());
-		else if(m_firemode == WPN_FRM_TRIPLE && m_sndNewFire == 0)
-			m_sndNewFire = snd_PlaySound(getWeaponFireSound(), m_Owner->GetPosition());
-		else if(m_firemode == WPN_FRM_AUTO && m_sndNewFire == 0)
-			m_sndNewFire = snd_PlaySound(getWeaponFireSound(), m_Owner->GetPosition());
-	}
-	else // DEPRECATED, should be removed soon
-	{
-		if(m_Owner && m_Owner->NetworkLocal)
+		if(m_pConfig->m_sndFireID_single!=-1 || m_pConfig->m_sndFireID_auto!=-1) // we need at least one of those to switch to new weapon sound system for this gun
 		{
-			if(m_pConfig->m_sndFireID)
-				m_sndFire = snd_PlaySound(m_pConfig->m_sndFireID, m_Owner->GetPosition());
-		}
-		else
-		{
-			if(m_pConfig->m_sndFireDistantID)
-				m_sndFire = snd_PlaySound(m_pConfig->m_sndFireDistantID, m_Owner->GetPosition());
+			if(m_firemode == WPN_FRM_SINGLE)
+				m_sndNewFire = SoundSys.Play(getWeaponFireSound(), m_Owner->GetPosition());
+			else if(m_firemode == WPN_FRM_TRIPLE && m_sndNewFire == 0)
+				m_sndNewFire = SoundSys.Play(getWeaponFireSound(), m_Owner->GetPosition());
+			else if(m_firemode == WPN_FRM_AUTO && m_sndNewFire == 0)
+				m_sndNewFire = SoundSys.Play(getWeaponFireSound(), m_Owner->GetPosition());
 		}
 	}
 
-	if(!isImmediateShooting() && ( getAnimType()==WPN_ANIM_GRENADE || getAnimType() == WPN_ANIM_MINE )) 
+	if(getCategory() == storecat_GRENADE) 
 	{
-		if( m_Owner->NetworkLocal ) {
+		if( m_Owner->NetworkLocal ) 
+		{
 			m_needDelayedAction = true;
 			m_needDelayedAction_pos = hitPos;
 			m_needDelayedAction_delay = cookingTime;
 			m_needDelayedAction_startTime = r3dGetTime();
-		} else {
+		} 
+		else 
+		{
 			r3d_assert(m_pConfig->m_PrimaryAmmo);
-			obj_AI_Player* player = (obj_AI_Player*)m_Owner;
+			obj_Player* player = (obj_Player*)m_Owner;
 			if ( player->bDead == false ) 
 			{
 				m_pConfig->m_PrimaryAmmo->Fire(hitPos, grenadeFireFrom, weaponBone, m_Owner, m_pConfig, cookingTime);
@@ -1225,7 +1165,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 	}
 	else
 	{
-		if(m_WeaponAnim_FPS)
+		if(m_WeaponAnim_FPS && executeWeaponFireCode)
 		{
 			bool need_restart_fire = false;
 			if(!m_WeaponAnim_FPS->GetTrack(m_AnimTrack_fire))
@@ -1258,7 +1198,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 		r3dPoint3D muzzlerPoint = getMuzzlePos(weaponBone);
 		m_pConfig->m_PrimaryAmmo->Fire(hitPos, muzzlerPoint, weaponBone, m_Owner, m_pConfig);
 		
-		const obj_AI_Player* localPlayer = gClientLogic().localPlayer_;
+		const obj_Player* localPlayer = gClientLogic().localPlayer_;
 		float distToLocalPlayer = 0.0f;
 		bool playerVisible = r3dRenderer->IsSphereInsideFrustum(m_Owner->GetPosition()+r3dPoint3D(0,1,0), 1.0f)>0 || (m_Owner->NetworkLocal && g_camera_mode->GetInt()==2);
 		if(localPlayer)
@@ -1266,7 +1206,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 
 		bool localPlayerInSniperMode = false;
 		extern bool g_bEditMode;
-		if(((m_Owner == localPlayer) || g_bEditMode) && ((obj_AI_Player*)m_Owner)->m_isInScope) // do not spawn shell when in sniper mode
+		if(((m_Owner == localPlayer) || g_bEditMode) && ((obj_Player*)m_Owner)->m_isInScope) // do not spawn shell when in sniper mode
 			localPlayerInSniperMode = true;
 
 		extern bool	g_CameraInsidePlayer;
@@ -1276,7 +1216,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 		// add shell
 		r3dPoint3D shellPos = getShellPos(weaponBone);
 		r3dPoint3D shellDir = getShellDir(weaponBone);
-		if(m_pConfig->category != storecat_SUPPORT && m_pConfig->category != storecat_MELEE && m_pConfig->category != storecat_GRENADES && distToLocalPlayer < 30.0f)
+		if(m_pConfig->category != storecat_MELEE && m_pConfig->category != storecat_GRENADE && distToLocalPlayer < 30.0f && executeWeaponFireCode)
 		{
 			if(!localPlayerInSniperMode) 
 			{
@@ -1295,7 +1235,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 			}
 		}
 
-		if(m_MuzzleParticle && distToLocalPlayer < 100.0f && playerVisible)
+		if(m_MuzzleParticle && distToLocalPlayer < 1000.0f && playerVisible && executeWeaponFireCode)
 		{
 			if(!localPlayerInSniperMode)
 			{
@@ -1316,7 +1256,7 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 			}
 		}
 
-		if(m_ShellExtractParticle && distToLocalPlayer < 100.0f && playerVisible)
+		if(m_ShellExtractParticle && distToLocalPlayer < 100.0f && playerVisible && executeWeaponFireCode)
 		{
 			if(!localPlayerInSniperMode)
 			{
@@ -1348,29 +1288,19 @@ void Weapon::Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float 
 #endif
 	}
 
-	if(m_pConfig->category != storecat_MELEE)
-		m_numBulletsLeftInClip = m_numBulletsLeftInClip - 1;
-	if(m_numBulletsLeftInClip <= 0)
+	if(m_Owner->NetworkLocal && m_pConfig->category != storecat_MELEE && m_pConfig->category != storecat_GRENADE && executeWeaponFireCode)
 	{
-		//float time = r3dGetTime()-timer;
-		//r3dOutToLog("Time to empty clip: %.2f\n", time);
-		if(m_numBulletsLeft>0)
+		wiInventoryItem& wi = getPlayerItem();
+		r3d_assert(wi.Var1 > 0);
+
+		// decrease number of bullets
+		wi.Var1--;
+		if(wi.Var1 <= 0)
 		{
-			Reload();
-			return;
-		}	
-		else
 			m_State = WPN_EMPTY;
+			Reload();
+		}
 	}
-}
-
-
-uint32_t Weapon::getNumBulletsInClip() const 
-{ 
-	uint32_t clipsizeBoost = 0;
-	clipsizeBoost += (int)m_WeaponAttachmentStats[WPN_ATTM_STAT_CLIPSIZE];
-
-	return m_pConfig->m_clipSize + clipsizeBoost; 
 }
 
 float Weapon::getSpread() const 
@@ -1390,56 +1320,81 @@ float Weapon::getRecoil() const
 }
 
 
+void Weapon::StartReloadSequence()
+{
+	// reload anim
+	if(m_pConfig->m_sndReloadID)
+		m_sndReload = SoundSys.Play(m_pConfig->m_sndReloadID, m_Owner->GetPosition());
+	m_State = WPN_RELOADING;
+	m_lastReloadingTime = r3dGetTime();
+	m_ReloadTime = m_pConfig->m_reloadTime;
+	m_triggerPressed = 0; // reset burst fire counter
+
+	if(m_WeaponAnim_FPS)
+	{
+		int reloadTrack = m_WeaponAnim_FPS->StartAnimation(2, ANIMFLAG_RemoveOtherNow, 1.0f, 1.0f, 0.0f);
+
+		// scale reload anim to match weapon reload time
+		r3dAnimation::r3dAnimInfo* ai = m_WeaponAnim_FPS->GetTrack(reloadTrack);
+		if(ai && m_ReloadTime > 0)
+		{
+			float animTime = (float)ai->pAnim->NumFrames / ai->pAnim->fFrameRate;
+			float k = animTime / m_ReloadTime;
+			ai->SetSpeed(k);
+		}
+	}
+}
+
 void Weapon::Reload()
 {
+	r3d_assert(m_Owner->NetworkLocal && "Weapon::Reload() only for local players");
+
+	const WeaponAttachmentConfig* clipCfg = getClipConfig();
+	if(!clipCfg)
+	{
+		r3dOutToLog("!!! weapon can't be reloaded - there is no clip defined\n");
+		return;
+	}
+
+	r3d_assert(m_State != WPN_RELOADING);
+	
 #ifndef FINAL_BUILD
 	extern bool g_bEditMode;
 	if(g_bEditMode)
-		m_numBulletsLeft = m_pConfig->m_clipSize * 2; // infinite ammo in editor
+	{
+		getPlayerItem().Var1 = clipCfg->m_Clipsize;
+		StartReloadSequence();
+		return;
+	}
 #endif
 
-	if(m_numBulletsLeftInClip < ((int)getNumBulletsInClip()) && m_numBulletsLeft>0 && m_State != WPN_RELOADING)
+#ifndef FINAL_BUILD
+	r3dOutToLog("reloading %s, need clip %d\n", m_pConfig->m_StoreName, clipCfg->m_itemID);
+#endif	
+	
+	// search for same clip
+	int ammoSlot = -1;
+	for(int i=0; i<m_Owner->CurLoadout.BackpackSize; i++)
 	{
-		if(m_pConfig->m_sndReloadID)
-			m_sndReload = snd_PlaySound(m_pConfig->m_sndReloadID, m_Owner->GetPosition());
-		m_State = WPN_RELOADING;
-		m_lastReloadingTime = r3dGetTime();
-		m_ReloadTime = m_pConfig->m_reloadTime;
-		m_triggerPressed = 0; // reset burst fire counter
-
-		// combat skill
-		obj_AI_Player* plr = (obj_AI_Player*)m_Owner;
-		switch(plr->CurLoadout.getSkillLevel(CUserSkills::ASSAULT_SlightOfHand))
+		if(m_Owner->CurLoadout.Items[i].itemID == clipCfg->m_itemID)
 		{
-		case 1: m_ReloadTime = m_ReloadTime * 0.95f; break;
-		case 2: m_ReloadTime = m_ReloadTime * 0.93f; break;
-		case 3: m_ReloadTime = m_ReloadTime * 0.90f; break;
-		case 4: m_ReloadTime = m_ReloadTime * 0.88f; break;
-		case 5: m_ReloadTime = m_ReloadTime * 0.85f; break;
-		default: break;
+			ammoSlot = i;
+			break;
 		}
-
-		if(m_WeaponAnim_FPS)
-		{
-			int reloadTrack = m_WeaponAnim_FPS->StartAnimation(2, ANIMFLAG_RemoveOtherNow, 1.0f, 1.0f, 0.0f);
-
-			// scale reload anim to match weapon reload time
-			r3dAnimation::r3dAnimInfo* ai = m_WeaponAnim_FPS->GetTrack(reloadTrack);
-			if(ai && m_ReloadTime > 0)
-			{
-				float animTime = (float)ai->pAnim->NumFrames / ai->pAnim->fFrameRate;
-				float k = animTime / m_ReloadTime;
-				ai->SetSpeed(k);
-			}
-		}
-
-		// check for combat team skill
-		/*int combatSkillLevel = gClientLogic().CheckTeamSkillAvailable((obj_AI_Player*)m_Owner, 0);
-		if(combatSkillLevel == 4)
-			m_ReloadTime *= 0.96f; // +2% to speed
-		else if(combatSkillLevel == 5)
-			m_ReloadTime *= 0.92f; // +4% to speed*/
 	}
+	if(ammoSlot == -1) {
+		return;
+	}
+	
+	// calc reloaded amount and update weapon item ammo (SERVER CODE SYNC POINT)
+	wiInventoryItem& ammoItm = m_Owner->CurLoadout.Items[ammoSlot];
+	int amount = ammoItm.Var1 < 0 ? clipCfg->m_Clipsize : ammoItm.Var1;
+	getPlayerItem().Var1 = amount;
+	getPlayerItem().Var2 = clipCfg->m_itemID;
+	
+	m_Owner->ReloadWeaponFromSlot(m_BackpackIdx, ammoSlot, amount);
+	
+	StartReloadSequence();
 }
 
 bool Weapon::isImmediateShooting() const 
@@ -1475,7 +1430,7 @@ bool Weapon::isLoaded() const
 	return mesh && mesh->IsDrawable() ;
 }
 
-extern r3dSec_type<CUberData*, 0x345fd82a> AI_Player_UberData;
+extern r3dSec_type<CUberData*, 0x345fdFCa> AI_Player_UberData;
 void enableAnimBones(const char* boneName, const r3dSkeleton* skel, r3dAnimData* ad, int enable);
 
 uint32_t Weapon::getWeaponAttachmentID(WeaponAttachmentTypeEnum attm_type)
@@ -1517,7 +1472,9 @@ void Weapon::setWeaponAttachmentsByIDs(const uint32_t* ids)
 	for(int i=0; i<WPN_ATTM_MAX; ++i)
 	{
 		if(ids[i]>0)
-			configs[i] = gWeaponArmory.getAttachmentConfig(ids[i]);
+			configs[i] = g_pWeaponArmory->getAttachmentConfig(ids[i]);
+		else
+			configs[i] = g_pWeaponArmory->getAttachmentConfig(m_pConfig->FPSDefaultID[i]);
 	}
 	setWeaponAttachments(configs);
 }
@@ -1534,6 +1491,10 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 		const WeaponAttachmentConfig* wpnAttmConfig = wpnAttmConfigs[i];
 		WeaponAttachmentTypeEnum attm_type = (WeaponAttachmentTypeEnum)i;
 
+		// verify that attachment is legit and can go into this weapon
+		if(!m_pConfig->isAttachmentValid(wpnAttmConfig))
+			wpnAttmConfig = NULL;
+
 		if(m_Attachments[i] == wpnAttmConfig) // if that atttachment already installed - then skip
 			continue;
 
@@ -1548,59 +1509,69 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 		if(attm_type == WPN_ATTM_MUZZLE)
 			reloadMuzzleParticle();
 
-		if(attm_type == WPN_ATTM_LEFT_RAIL && wpnAttmConfig)
+		if(attm_type == WPN_ATTM_LEFT_RAIL)
 		{
-			if(wpnAttmConfig->m_itemID == 400004 || wpnAttmConfig->m_itemID == 400021) // laser attachment, hard coded for now
-			{
-				if(m_LaserPointerParticle)
-				{
-					m_LaserPointerParticle->bKill = true;
-					m_LaserPointerParticle = NULL;
-				}
-
-				r3d_assert(m_LaserPointerParticle == NULL);
-				if(m_Owner->NetworkLocal) // load only for local player
-				{
-					m_LaserPointerParticle = (obj_ParticleSystem*)srv_CreateGameObject("obj_ParticleSystem", "weaponfx_laserpointer", r3dPoint3D(0,0,0));
-					if(m_LaserPointerParticle->Torch != 0)
-					{
-						m_LaserPointerParticle->bKeepAlive = true; // do not allow it to be destroyed
-					}
-				}
+			// remove previous laser/flashlights
+			if(m_LaserPointerParticle) {
+				m_LaserPointerParticle->bKill = true;
+				m_LaserPointerParticle = NULL;
 			}
-			if(wpnAttmConfig->m_itemID == 400018 || wpnAttmConfig->m_itemID == 400022) // flashlight attachment, hard coded for now
-			{
-				if(m_FlashlightParticle)
-				{
-					m_FlashlightParticle->bKill = true;
-					m_FlashlightParticle = NULL;
-				}
+			if(m_FlashlightParticle) {
+				m_FlashlightParticle->bKill = true;
+				m_FlashlightParticle = NULL;
+			}
+			if(m_Flashlight.pLightSystem) {
+				WorldLightSystem.Remove(&m_Flashlight);
+			}
 
-				r3d_assert(m_FlashlightParticle == NULL);
-				if(m_Owner->NetworkLocal) // load only for local player
+			// load new one
+			if(wpnAttmConfig)
+			{
+				if(wpnAttmConfig->m_itemID == 400004 || wpnAttmConfig->m_itemID == 400021) // laser attachment, hard coded for now
 				{
-					m_FlashlightParticle = (obj_ParticleSystem*)srv_CreateGameObject("obj_ParticleSystem", "weaponfx_flashlight", r3dPoint3D(0,0,0));
-					if(m_FlashlightParticle->Torch != 0)
+					r3d_assert(m_LaserPointerParticle == NULL);
+					if(m_Owner->NetworkLocal) // load only for local player
 					{
-						m_FlashlightParticle->bKeepAlive = true; // do not allow it to be destroyed
-						m_FlashlightParticle->Torch->bInheretDirectionFromSystem = 1; // hard coded for ray particles
+						m_LaserPointerParticle = (obj_ParticleSystem*)srv_CreateGameObject("obj_ParticleSystem", "weaponfx_laserpointer", r3dPoint3D(0,0,0));
+						if(m_LaserPointerParticle->Torch != 0)
+						{
+							m_LaserPointerParticle->bKeepAlive = true; // do not allow it to be destroyed
+						}
 					}
 				}
+				if(wpnAttmConfig->m_itemID == 400018 || wpnAttmConfig->m_itemID == 400022) // flashlight attachment, hard coded for now
+				{
+					r3d_assert(m_FlashlightParticle == NULL);
+					{
+						m_FlashlightParticle = (obj_ParticleSystem*)srv_CreateGameObject("obj_ParticleSystem", "weaponfx_flashlight", r3dPoint3D(0,0,0));
+						if(m_FlashlightParticle->Torch != 0)
+						{
+							m_FlashlightParticle->bKeepAlive = true; // do not allow it to be destroyed
+							m_FlashlightParticle->Torch->bInheretDirectionFromSystem = 1; // hard coded for ray particles
+							m_FlashlightParticle->ObjFlags |= OBJFLAG_SkipDraw; // turned off until equipped
+						}
+					}
 
-				if(m_Flashlight.pLightSystem)
-					WorldLightSystem.Remove(&m_Flashlight);
+					m_Flashlight.Assign(0,0,0);
+					m_Flashlight.SetType(R3D_SPOT_LIGHT);
+					m_Flashlight.SetRadius(17.5f, 57.0f);
+					m_Flashlight.SetColor(203, 226, 225);
+					m_Flashlight.SpotAngleInner = 4.41f;
+					m_Flashlight.SpotAngleOuter = 16.21f;
+					m_Flashlight.bCastShadows = r_lighting_quality->GetInt() == 3 && r_shadows_quality->GetInt() >= 3;
+					m_Flashlight.Intensity = 6.98f;
+					m_Flashlight.SpotAngleFalloffPow = 1.23f;
+					m_Flashlight.bSSShadowBlur = 1;
+					m_Flashlight.bUseGlobalSSSBParams = 0;
+					m_Flashlight.SSSBParams.Bias = 0.1f;
+					m_Flashlight.SSSBParams.PhysRange = 43.12f;
+					m_Flashlight.SSSBParams.Radius = 10.0f;
+					m_Flashlight.SSSBParams.Sense = 635.18f;
+					m_Flashlight.ProjectMap = r3dRenderer->LoadTexture("data\\ProjectionTextures\\flashlight_01.dds");
 
-				m_Flashlight.Assign(0,0,0);
-				m_Flashlight.SetType(R3D_SPOT_LIGHT);
-				m_Flashlight.SetRadius(13.0f, 25.0f);
-				m_Flashlight.SetColor(252, 252, 255);
-				m_Flashlight.SpotAngleInner = 4;
-				m_Flashlight.SpotAngleOuter = 12;
-				m_Flashlight.bCastShadows = r_lighting_quality->GetInt() == 3 && r_shadows_quality->GetInt() >= 3;
-				m_Flashlight.Intensity = 1.2f;
-				m_Flashlight.SpotAngleFalloffPow = 2.0f;
-				m_Flashlight.TurnOff();
-				WorldLightSystem.Add(&m_Flashlight); 
+					m_Flashlight.TurnOff();
+					WorldLightSystem.Add(&m_Flashlight); 
+				}
 			}
 		}
 		if(attm_type == WPN_ATTM_UPPER_RAIL)
@@ -1622,7 +1593,7 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 				int animID = AI_Player_UberData->TryToAddAnimation(aname);
 				if(animID!=-1)
 				{
-					m_animationIds_FPS[CUberData::AIDX_CrouchAim] = m_animationIds_FPS[CUberData::AIDX_WalkAim] = animID;
+					m_animationIds_FPS[CUberData::AIDX_ProneAim] = m_animationIds_FPS[CUberData::AIDX_CrouchAim] = m_animationIds_FPS[CUberData::AIDX_WalkAim] = animID;
 					{
 						// those animations is upper body
 						r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_WalkAim]);
@@ -1729,15 +1700,43 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 					r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_ReloadCrouch]);
 					enableAnimBones(AI_Player_UberData->blendStartBones_[CUberData::AIDX_ReloadCrouch].c_str(), AI_Player_UberData->bindSkeleton_, ad, true);
 				}
+
+				sprintf(aname, "FPS_GRIP_%s_%s_Prone_Fire", m_pConfig->m_AnimPrefix, wpnAttmConfig->m_ScopeAnimPath);
+				m_animationIds_FPS[CUberData::AIDX_ShootProne] = AI_Player_UberData->AddAnimation(aname);
+				{
+					// those animations is upper body
+					r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_ShootProne]);
+					enableAnimBones(AI_Player_UberData->blendStartBones_[CUberData::AIDX_ShootProne].c_str(), AI_Player_UberData->bindSkeleton_, ad, true);
+				}
+
+				sprintf(aname, "FPS_GRIP_%s_%s_Prone_Idle", m_pConfig->m_AnimPrefix, wpnAttmConfig->m_ScopeAnimPath);
+				m_animationIds_FPS[CUberData::AIDX_IdleProne] = AI_Player_UberData->AddAnimation(aname);
+				{
+					// those animations is upper body
+					r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_IdleProne]);
+					enableAnimBones(AI_Player_UberData->blendStartBones_[CUberData::AIDX_IdleProne].c_str(), AI_Player_UberData->bindSkeleton_, ad, true);
+				}
+
+				sprintf(aname, "FPS_GRIP_%s_%s_Prone_Reload", m_pConfig->m_AnimPrefix, wpnAttmConfig->m_ScopeAnimPath);
+				m_animationIds_FPS[CUberData::AIDX_ReloadProne] = AI_Player_UberData->AddAnimation(aname);
+				{
+					// those animations is upper body
+					r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_ReloadProne]);
+					enableAnimBones(AI_Player_UberData->blendStartBones_[CUberData::AIDX_ReloadProne].c_str(), AI_Player_UberData->bindSkeleton_, ad, true);
+				}
+
+				sprintf(aname, "FPS_GRIP_%s_%s_Prone_Run", m_pConfig->m_AnimPrefix, wpnAttmConfig->m_ScopeAnimPath);
+				m_animationIds_FPS[CUberData::AIDX_ProneBlend] = AI_Player_UberData->AddAnimation(aname);
+				{
+					// those animations is upper body
+					r3dAnimData* ad = AI_Player_UberData->animPool_.Get(m_animationIds_FPS[CUberData::AIDX_ProneBlend]);
+					enableAnimBones(AI_Player_UberData->blendStartBones_[CUberData::AIDX_ProneBlend].c_str(), AI_Player_UberData->bindSkeleton_, ad, true);
+				}
 			}
 		}
 	}
 
 	memset(m_WeaponAttachmentStats, 0, sizeof(m_WeaponAttachmentStats));
-	// old bullshit code that I'm going to rewrite! 
-	int oldNumBulletsInClip = getNumBulletsInClip();
-	int oldMaxBullets = (m_ModifiedNumClips - 1) * oldNumBulletsInClip; // we already used one clip, in the gun. 
-	bool resetClip = m_numBulletsLeftInClip == oldNumBulletsInClip;
 
 	// recalculate all weapon attachment stats. Maybe not 100% optimal, but will work for now, do not want to add additional function for that
 	for(int i=0; i<WPN_ATTM_MAX; ++i)
@@ -1749,7 +1748,6 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 			m_WeaponAttachmentStats[WPN_ATTM_STAT_FIRERATE] += m_Attachments[i]->m_Firerate;
 			m_WeaponAttachmentStats[WPN_ATTM_STAT_RECOIL] += m_Attachments[i]->m_Recoil;
 			m_WeaponAttachmentStats[WPN_ATTM_STAT_SPREAD] += m_Attachments[i]->m_Spread;
-			m_WeaponAttachmentStats[WPN_ATTM_STAT_CLIPSIZE] += m_Attachments[i]->m_Clipsize;
 		}
 	}
 	// convert stats to percents (from -100..100 range to -1..1)
@@ -1758,14 +1756,6 @@ void Weapon::setWeaponAttachments(const WeaponAttachmentConfig** wpnAttmConfigs)
 	m_WeaponAttachmentStats[WPN_ATTM_STAT_FIRERATE] *= 0.01f; 
 	m_WeaponAttachmentStats[WPN_ATTM_STAT_RECOIL] *= 0.01f; 
 	m_WeaponAttachmentStats[WPN_ATTM_STAT_SPREAD] *= 0.01f;
-
-	// recalculate our clips
-	int newNumBulletsInClip = getNumBulletsInClip();
-	int newMaxBullets = (m_ModifiedNumClips - 1) * newNumBulletsInClip; // we aready used one clip... again. 
-
-	m_numBulletsLeft = m_numBulletsLeft + R3D_MAX(newMaxBullets - oldMaxBullets, 0); // add difference. UI will be auto updated
-	if(resetClip)
-		m_numBulletsLeftInClip = newNumBulletsInClip;
 }
 
 r3dMesh* Weapon::getWeaponAttachmentMesh(WeaponAttachmentTypeEnum attm_type, bool aim_model)

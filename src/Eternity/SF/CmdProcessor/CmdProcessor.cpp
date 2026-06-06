@@ -331,12 +331,13 @@ void CommandProcessor::ExecuteLine( const char * szLine, DWORD dwFlags )
 	if ( ! vc.NumArgs() )
 		return;	
 
-	const char * pToken = vc.GetString( 0 );
+	FixedString token( vc.GetString( 0 ) );
+	token.ToLower();
  
-	if ( strstr( pToken, "//" ) == pToken )
+	if ( strstr( token.c_str(), "//" ) == token.c_str() )
 		return;		// skip comment
 
-	Cmd * pCmd = m_tCmdHash.GetObject( pToken );
+	Cmd * pCmd = m_tCmdHash.GetObject( token );
 	if ( ! pCmd )
 	{
 		// empty command is chat
@@ -383,7 +384,7 @@ void CommandProcessor::ExecuteLine( const char * szLine, DWORD dwFlags )
 
 					strcpy_s( buff, start ) ;
 
-					int i = static_cast<int>(strlen(buff));
+					int i = strlen( buff ) ;
 					for( ; i >= 0 ; i -- ) 
 					{
 						if( buff[ i ] == ' ' || buff[ i ] == '\t' || buff[ i ] == '\n' || buff[ i ] == '\r' )
@@ -443,7 +444,7 @@ void CommandProcessor::InsertLine( const char * szLine, CTextBuf * pBuffer )
 		pBuffer = &m_FrameCommands;
 	}
 
-	DWORD dwLine = static_cast<DWORD>(strlen(szLine) + 1);
+	DWORD dwLine = strlen( szLine ) + 1;
 
 	if ( dwLine == 1 )
 		return;		// no text
@@ -479,7 +480,7 @@ void CommandProcessor::AppendLine( const char * szLine, CTextBuf * pBuffer )
 		pBuffer = &m_FrameCommands;
 	}
 
-	DWORD dwLine = static_cast<DWORD>(strlen(szLine));
+	DWORD dwLine = strlen( szLine );
 
 	if ( dwLine == 0 )
 		return;		// no text
@@ -535,7 +536,6 @@ void CommandProcessor::FlushBuffer()
 
 		memcpy( szLine, pText, i );
 		szLine[ i ] = '\0';
-		strlwr(szLine); // PT: otherwise if you type in your var with capital letter if will not find it
 
 		// since some commands can insert text in the beginning of the buffer,
 		// it is necessary to delete current command from it first

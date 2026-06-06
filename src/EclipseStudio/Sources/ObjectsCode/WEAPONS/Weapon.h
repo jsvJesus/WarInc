@@ -12,11 +12,13 @@
 
 class Ammo;
 class GameObject;
-class obj_AI_Player;
+class obj_Player;
+class obj_ParticleSystem;
 
 class Weapon
 {
 	friend class WeaponArmory;
+	friend class obj_Player;
 	enum WeaponState
 	{
 		WPN_EMPTY, // no more ammo
@@ -24,27 +26,26 @@ class Weapon
 		WPN_RELOADING, // reloading
 	};
 public:
-	Weapon(const WeaponConfig* conf, GameObject* owner, bool first_person, bool allow_async_loading );
+	Weapon(obj_Player* owner, int backpackIdx, const WeaponConfig* conf, bool first_person, bool allow_async_loading, const wiWeaponAttachment* attm);
 	~Weapon();
-
-	void Reset(); // reset number of clips, etc
-	void Resupply(); // resupply ammo
-	void ResetBullets(int numBullets); // when picking up a weapon, have to overwrite the number of bullets
+	
+	void Reset();
 
 	bool isReadyToFire(bool triggerPressed, bool scopeMode);
 
 	int  getNumShotsRequired(); // because we have weapons with firerate of 900+ and our fps is around 30 we need to be able to shoot more than one bullet per frame
-	void Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, float holdingDelay=0, const r3dPoint3D& grenadeFireFrom = R3D_ZERO_VECTOR );
+	void Fire(const r3dPoint3D& hitPos, const D3DXMATRIX& weaponBone, bool executeWeaponFireCode, float holdingDelay=0, const r3dPoint3D& grenadeFireFrom = R3D_ZERO_VECTOR );
 	void Update(const D3DXMATRIX& weaponBone); // call before fire
 	void Reload();
+	void   StartReloadSequence(); // used for network players
 
 	void OnEquip(); // called when player equips that weapon
 	void OnUnequip(); // called when the player is changing weapons.  
 
-	int getNumBulletsLeftInClip() const { return m_numBulletsLeftInClip; }
-	int getNumBulletsLeft() const { return m_numBulletsLeft + m_numBulletsLeftInClip; }
-	uint32_t getNumBulletsInClip() const;
-	int getNumClipsLeft() const { return (int)ceilf(float(m_numBulletsLeft)/(float)getNumBulletsInClip()); }
+	const WeaponAttachmentConfig* getClipConfig();
+	wiInventoryItem& getPlayerItem();
+	int getNumBulletsLeft() { return getPlayerItem().Var1; }
+	int getNumClipsLeft();
 
 	bool	isReloading() const { return m_State == WPN_RELOADING; }
 
@@ -57,10 +58,8 @@ public:
 	r3dPoint3D getShellDir(const D3DXMATRIX& weaponBone) const;
 
 	WeaponAnimTypeEnum getAnimType() const { return m_pConfig->m_AnimType; }
-	bool isGrenadeOrMineAnim() const { return m_pConfig->m_AnimType == WPN_ANIM_GRENADE || m_pConfig->m_AnimType == WPN_ANIM_MINE; }
 	
 	bool isUsableItem() const { return m_pConfig->category == storecat_UsableItem; }
-	int	m_usableItemInventoryIdx;
 
 	uint32_t getItemID() const { return m_pConfig->m_itemID; }
 
@@ -80,8 +79,6 @@ public:
 	float getRecoil() const; // recoil is from 0 to 100, convert it to value usable by code
 	float getReloadTime() const { return m_ReloadTime; }
 	float getReloadProgress() const { return (r3dGetTime()-m_lastReloadingTime); }
-
-	float getAmmoDelay() const { return m_pConfig->m_AmmoDelay; }
 
 	STORE_CATEGORIES getCategory() const { return m_pConfig->category; }
 
@@ -136,28 +133,33 @@ public:
 	bool hasLaserPointer(r3dPoint3D& laserPos); 
 
 	bool m_needDelayedAction; // for grenades, to sync with animation
+
+	void ResetMeshLoadedFlag() { m_isMeshLoaded = false; }
+	void setFirstPersonMeshFlag(bool flag) { m_isFirstPerson = flag; }
 private:
 	// data
 	const WeaponAttachmentConfig* m_Attachments[WPN_ATTM_MAX];
+	r3dSec_type<const WeaponConfig*, 0xFAD5839A> m_pConfig;
 
-	obj_AI_Player* m_Owner; // todo: change that to safeID!
+	obj_Player*	m_Owner; // todo: change that to safeID!
+	int		m_BackpackIdx;
+	
 	WeaponState	m_State;
-	r3dSec_type<float, 0xDFC5CAD5> m_ReloadTime;
 	float m_lastReloadingTime;
+	
 	float m_fractionTimeLeftFromPreviousShot; // for accurate fire rate
 	
-	class obj_ParticleSystem* m_MuzzleParticle;
-	class obj_ParticleSystem* m_LaserPointerParticle;
-	r3dPoint3D				  m_LaserHitPoint;
-	class obj_ParticleSystem* m_FlashlightParticle;
-	r3dLight				  m_Flashlight;
+	obj_ParticleSystem*	m_MuzzleParticle;
+	r3dLight		m_MuzzleLight;
+	obj_ParticleSystem*	m_LaserPointerParticle;
+	r3dPoint3D		m_LaserHitPoint;
+	obj_ParticleSystem*	m_FlashlightParticle;
+	r3dLight		m_Flashlight;
 
-	r3dSec_type<int, 0xF387EA12> m_ModifiedNumClips; // this clip size is modified if player has ability.
-	r3dSec_type<int, 0xFAB535D8> m_numBulletsLeftInClip;
+	r3dSec_type<float, 0xAFC57AD5> m_ReloadTime;
+
 	float m_lastTimeFired;
-	r3dSec_type<int, 0x3CF5EA3D> m_numBulletsLeft; // total number of bullets that players has for reloading
 	class obj_ParticleSystem* m_ShellExtractParticle;
-	r3dLight	m_MuzzleLight;
 	int m_firemode;
 	int m_triggerPressed; // for how many shots trigger is pressed
 
@@ -165,9 +167,8 @@ private:
 	float m_needDelayedAction_delay;
 	float m_needDelayedAction_startTime;
 
-	r3dSec_type<const WeaponConfig*, 0xFCD2829A> m_pConfig;
-
 	bool	m_isFirstPerson;
+	bool	m_isMeshLoaded;
 
 	enum WeaponAttachmentStatsEnum
 	{
@@ -176,16 +177,12 @@ private:
 		WPN_ATTM_STAT_FIRERATE, // %
 		WPN_ATTM_STAT_RECOIL, // %
 		WPN_ATTM_STAT_SPREAD, // %
-		WPN_ATTM_STAT_CLIPSIZE, // actual number
 		
 		WPN_ATTM_STAT_MAX
 	};
 	float		m_WeaponAttachmentStats[WPN_ATTM_STAT_MAX];
 
 	void*	m_sndReload;
-	void*	m_sndFire;
-
-	// new weapon sounds
 	void*	m_sndNewFire;
 
 	// animation for FPS mode

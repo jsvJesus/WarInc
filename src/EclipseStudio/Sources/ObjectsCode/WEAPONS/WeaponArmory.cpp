@@ -15,25 +15,21 @@
   #include "ServerWeapons/ServerGear.h"
 #endif
 
-extern int RUS_CLIENT;
-
-WeaponArmory gWeaponArmory;
-
+WeaponArmory* g_pWeaponArmory = NULL;
 
 WeaponArmory::WeaponArmory()
 {
+	m_NumWeaponsLoaded = 0;
+	m_NumWeaponAttmLoaded = 0;
+	m_NumGearLoaded = 0;
+	m_NumBackpackLoaded = 0;
+	m_NumHeroLoaded = 0;
+	m_NumItemLoaded = 0;
+	m_NumLootBoxLoaded = 0;
+	m_NumFoodItemsLoaded = 0;
+
 	memset(m_AmmoArray, 0, sizeof(Ammo*)*MAX_NUMBER_AMMO);
 	m_NumAmmoLoaded = 0;
-	memset(m_WeaponArray, 0, sizeof(WeaponConfig*)*MAX_NUMBER_WEAPONS);
-	m_NumWeaponsLoaded = 0;
-	memset(m_WeaponAttmArray, 0, sizeof(WeaponAttachmentConfig*)*MAX_NUMBER_WEAPON_ATTACHMENTS);
-	m_NumWeaponAttmLoaded = 0;
-	memset(m_GearArray, 0, sizeof(GearConfig*)*MAX_NUMBER_GEAR);
-	m_NumGearLoaded = 0;
-	memset(m_ItemArray, 0, sizeof(ItemConfig*)*MAX_NUMBER_ITEM);
-	m_NumItemLoaded = 0;
-	memset(m_PackageArray, 0, sizeof(PackageConfig*)*MAX_NUMBER_PACKAGE);
-	m_NumPackageLoaded = 0;
 	memset(m_ScopeArray, 0, sizeof(ScopeConfig*)*MAX_NUMBER_SCOPE);
 	m_NumScopeLoaded = 0;
 	memset(m_AchievementArray, 0, sizeof(AchievementConfig*)*MAX_NUMBER_ACHIEVEMENT);
@@ -42,28 +38,39 @@ WeaponArmory::WeaponArmory()
 
 WeaponArmory::~WeaponArmory()
 {
-	Destroy();
+	r3d_assert(m_NumWeaponsLoaded==0);
+	r3d_assert(m_NumWeaponAttmLoaded==0);
+	r3d_assert(m_NumGearLoaded==0);
+	r3d_assert(m_NumBackpackLoaded==0);
+	r3d_assert(m_NumHeroLoaded==0);
+	r3d_assert(m_NumItemLoaded==0);
+	r3d_assert(m_NumLootBoxLoaded==0);
+	r3d_assert(m_NumFoodItemsLoaded==0);
+
+	r3d_assert(m_AmmoArray[0]==NULL);
+	r3d_assert(m_NumAmmoLoaded==0);
+	r3d_assert(m_ScopeArray[0]==NULL);
+	r3d_assert(m_NumScopeLoaded==0);
+	r3d_assert(m_AchievementArray[0]==NULL);
+	r3d_assert(m_NumAchievementLoaded==0);
 }
 
 bool WeaponArmory::Init()
 {
-	InitRewards();
-
 	// material library will kill materials in previously loaded weapon meshes, so reload it
 	Destroy();
 
-	r3d_assert(m_WeaponArray[0] == NULL);
 	r3d_assert(m_NumWeaponsLoaded == 0);
-	r3d_assert(m_WeaponAttmArray[0]==NULL);
 	r3d_assert(m_NumWeaponAttmLoaded==0);
+	r3d_assert(m_NumGearLoaded==0);
+	r3d_assert(m_NumBackpackLoaded==0);
+	r3d_assert(m_NumHeroLoaded==0);
+	r3d_assert(m_NumItemLoaded==0);
+	r3d_assert(m_NumLootBoxLoaded==0);
+	r3d_assert(m_NumFoodItemsLoaded==0);
+
 	r3d_assert(m_AmmoArray[0]==NULL);
 	r3d_assert(m_NumAmmoLoaded==0);
-	r3d_assert(m_GearArray[0]==NULL);
-	r3d_assert(m_NumGearLoaded==0);
-	r3d_assert(m_ItemArray[0]==NULL);
-	r3d_assert(m_NumItemLoaded==0);
-	r3d_assert(m_PackageArray[0]==NULL);
-	r3d_assert(m_NumPackageLoaded==0);
 	r3d_assert(m_ScopeArray[0]==NULL);
 	r3d_assert(m_NumScopeLoaded==0);
 	r3d_assert(m_AchievementArray[0]==NULL);
@@ -156,8 +163,6 @@ bool WeaponArmory::Init()
 	}
 
 	const char* ItemsDBFile = "Data/Weapons/itemsDB.xml";
-	if(RUS_CLIENT)
-		ItemsDBFile = "Data/Weapons/itemsDB_RU.xml";
 	
 	r3dFile* f = r3d_open(ItemsDBFile, "rb");
 	if ( !f )
@@ -177,6 +182,15 @@ bool WeaponArmory::Init()
 		r3dError("Failed to parse XML, error: %s", parseResult.description());
 	pugi::xml_node xmlDB = xmlFile.child("DB");
 	{
+		pugi::xml_node xmlAttachments = xmlDB.child("AttachmentArmory");
+		pugi::xml_node xmlAttm = xmlAttachments.child("Attachment");
+		while(!xmlAttm.empty())
+		{
+			loadWeaponAttachment(xmlAttm);
+			xmlAttm = xmlAttm.next_sibling();
+		}
+	}
+	{
 		pugi::xml_node xmlArmory = xmlDB.child("WeaponsArmory");
 		pugi::xml_node xmlWeapon = xmlArmory.child("Weapon");
 		while(!xmlWeapon.empty())
@@ -195,6 +209,24 @@ bool WeaponArmory::Init()
 		}
 	}
 	{
+		pugi::xml_node xmlHeroes = xmlDB.child("HeroArmory");
+		pugi::xml_node xmlHero = xmlHeroes.child("Hero");
+		while(!xmlHero.empty())
+		{
+			loadHero(xmlHero);
+			xmlHero = xmlHero.next_sibling();
+		}
+	}
+	{
+		pugi::xml_node xmlArmory = xmlDB.child("BackpackArmory");
+		pugi::xml_node xmlItem = xmlArmory.child("Backpack");
+		while(!xmlItem.empty())
+		{
+			loadBackback(xmlItem);
+			xmlItem = xmlItem.next_sibling();
+		}
+	}
+	{
 		pugi::xml_node xmlItems = xmlDB.child("ItemsDB");
 		pugi::xml_node xmlItem = xmlItems.child("Item");
 		while(!xmlItem.empty())
@@ -204,20 +236,20 @@ bool WeaponArmory::Init()
 		}
 	}
 	{
-		pugi::xml_node xmlAttachments = xmlDB.child("AttachmentArmory");
-		pugi::xml_node xmlAttm = xmlAttachments.child("Attachment");
-		while(!xmlAttm.empty())
+		pugi::xml_node xmlItems = xmlDB.child("LootBoxDB");
+		pugi::xml_node xmlItem = xmlItems.child("LootBox");
+		while(!xmlItem.empty())
 		{
-			loadWeaponAttachment(xmlAttm);
-			xmlAttm = xmlAttm.next_sibling();
+			loadLootBox(xmlItem);
+			xmlItem = xmlItem.next_sibling();
 		}
 	}
 	{
-		pugi::xml_node xmlItems = xmlDB.child("PackagesDB");
-		pugi::xml_node xmlItem = xmlItems.child("Package");
+		pugi::xml_node xmlItems = xmlDB.child("FoodArmory");
+		pugi::xml_node xmlItem = xmlItems.child("Item");
 		while(!xmlItem.empty())
 		{
-			loadPackage(xmlItem);
+			loadFoodItem(xmlItem);
 			xmlItem = xmlItem.next_sibling();
 		}
 	}
@@ -228,135 +260,7 @@ bool WeaponArmory::Init()
 	return true;
 }
 
-void WeaponArmory::LevelUpBonus::setReward(int level, int _gp, int _gd, int _sp, const char* _reward1, const char* _reward2, const char* _reward3,
-						uint32_t it0, uint32_t it1, uint32_t it2, uint32_t it3, uint32_t it4, uint32_t it5, uint32_t it6, uint32_t it7, uint32_t it8)
-{ 
-	nextLevel = level;
-	gp = _gp; 
-	gd = _gd; 
-	sp = _sp;
-	reward1 = strdup(_reward1); 
-	reward2 = strdup(_reward2); 
-	reward3 = strdup(_reward3);
-	items[0] = it0;
-	items[1] = it1;
-	items[2] = it2;
-	items[3] = it3;
-	items[4] = it4;
-	items[5] = it5;
-	items[6] = it6;
-	items[7] = it7;
-}
-
-void WeaponArmory::InitRewards()
-{
-	if(m_LevelUpBonus[0].nextLevel != -1)
-		return;
-
-	int c = 0;
-	if(!RUS_CLIENT)
-	{
-		// US rewards
-		// for first 10 levels: user should get at least ONE gun for exit screen on end of round to work correctly!
-		m_LevelUpBonus[c++].setReward(2, 0, 0, 0, "5 day rental: Blackops crate key", "1 day rental: IMI Tavor", "", 301000, 101173);
-		m_LevelUpBonus[c++].setReward(3, 0, 0, 0, "7 day rental: Camera Drone", "2 day rental: Honey Badger, 1 day rental: 2X WP", "", WeaponConfig::ITEMID_Cypher2, 301003, 101106);
-		m_LevelUpBonus[c++].setReward(4, 0, 0, 0, "1 day rental: G35 Elite", "", "", 101218);
-		m_LevelUpBonus[c++].setReward(5, 0, 0, 0, "2 day rental: Desert Eagle", "", "", 101180);
-		m_LevelUpBonus[c++].setReward(6, 0, 0, 0, "3 day rental: Big Surprise ability", "", "", 301067);
-		m_LevelUpBonus[c++].setReward(7, 0, 0, 0, "2 day rental: Pecheneg", "", "", 101092);
-		m_LevelUpBonus[c++].setReward(8, 0, 0, 0, "1 day rental: Famas F1", "", "", 101037);
-		m_LevelUpBonus[c++].setReward(9, 0, 0, 0, "1 day rental: Bizon", "", "", 101109);
-		m_LevelUpBonus[c++].setReward(10, 1000, 10000, 0, "1000 GC, 10000 War Points", "1 day rental: 2x WP Boost, 2x XP boost", "2 day rental: Sig 516 Elite", 301003, 301001, 101215);
-		m_LevelUpBonus[c++].setReward(11, 0, 0, 0, "3 day rental: QLB 06", "", "", 101202);
-		m_LevelUpBonus[c++].setReward(12, 0, 0, 0, "3 day rental: USAS-12", "", "", 101200);
-		m_LevelUpBonus[c++].setReward(13, 0, 0, 0, "1 day rental: M 202 Flash", "", "", 101189);
-		m_LevelUpBonus[c++].setReward(14, 0, 0, 0, "2 day rental: VSS Vintorez", "", "", 101084);
-		m_LevelUpBonus[c++].setReward(15, 0, 10000, 0, "10000 War Points", "3 day rental: M249 Elite, Bizon Elite, SCAR Elite", "1 day rental: All weapons", 101214, 101227, 101219, 301106);
-		m_LevelUpBonus[c++].setReward(16, 0, 0, 0, "3 day rental: Mauser HP50", "", "", 101087);
-		m_LevelUpBonus[c++].setReward(17, 0, 0, 0, "3 day rental: TR7 SMG", "", "", 101063);
-		m_LevelUpBonus[c++].setReward(18, 0, 0, 0, "3 day rental: Honey Badger", "", "", 101106);
-		m_LevelUpBonus[c++].setReward(19, 0, 0, 0, "3 day rental: FN P90S", "", "", 101246);
-		m_LevelUpBonus[c++].setReward(20, 0, 10000, 0, "10000 War Points", "1 day rental: 2x WP Boost, 2x XP boost", "1 day rental: All weapons", 301003, 301001, 301106);
-		m_LevelUpBonus[c++].setReward(25, 0, 0, 0, "5 day rental: All weapons", "", "", 301106);
-		m_LevelUpBonus[c++].setReward(30, 0, 50000, 0, "50000 War Points", "1 day rental: 2x WP Boost, 2x XP boost", "", 301003, 301001);
-		m_LevelUpBonus[c++].setReward(35, 0, 15000, 0, "15000 War Points", "", "");
-		m_LevelUpBonus[c++].setReward(40, 0, 50000, 0, "50000 War Points", "2 day rental: 2x WP Boost, 2x XP boost", "", 301003, 301001);
-		m_LevelUpBonus[c++].setReward(45, 0, 15000, 0, "15000 War Points", "7 day rental: All weapons", "", 301106);
-		m_LevelUpBonus[c++].setReward(50, 0, 100000, 0, "100000 War Points", "3 day rental: 2x WP Boost", "", 301003);
-		m_LevelUpBonus[c++].setReward(55, 0, 0, 0, "2 day rental: 2x WP Boost", "", "", 301003);
-		m_LevelUpBonus[c++].setReward(60, 25000, 200000, 0, "25000 GC, 200000 War Points", "30 day rental: All weapons", "", 301106);
-		// end of US rewards
-	}
-	else
-	{
-		// russian rewards
-		m_LevelUpBonus[c++].setReward(2, 0, 1000, 0, "", "", "", 101037, 101137, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(3, 0, 1000, 0, "", "", "", 101004, 101136, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(4, 0, 1000, 0, "", "", "", 20066, 0, 0, 20013, 101005);
-		m_LevelUpBonus[c++].setReward(5, 0, 5000, 0, "", "", "", 101060, 101115, 301001, 0, 0);
-		m_LevelUpBonus[c++].setReward(6, 0, 1500, 0, "", "", "", 101169, 301003, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(7, 0, 1500, 0, "", "", "", 101139, 101103, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(8, 0, 1500, 0, "", "", "", 101137, 101109, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(9, 0, 1500, 0, "", "", "", 101108, 101267, 101150, 0, 0);
-		m_LevelUpBonus[c++].setReward(10, 0, 7500, 1, "", "", "", 101037, 20048, 20040, 101109, 301001);
-		m_LevelUpBonus[c++].setReward(11, 0, 1500, 0, "", "", "", 101084, 20040, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(12, 0, 1500, 0, "", "", "", 101130, 20105, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(13, 0, 1500, 0, "", "", "", 20107, 301001, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(14, 0, 1500, 1, "", "", "", 101200, 20091, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(15, 0, 10000, 2, "", "", "", 20088, 101232, 101139, 301001, 0);
-		m_LevelUpBonus[c++].setReward(16, 0, 2000, 0, "", "", "", 101095, 20071, 20056, 0, 0);
-		m_LevelUpBonus[c++].setReward(17, 0, 2000, 0, "", "", "", 101189, 301001, 301003, 0, 0);
-		m_LevelUpBonus[c++].setReward(18, 0, 3000, 0, "", "", "", 301062, 301061, 101224, 0, 0);
-		m_LevelUpBonus[c++].setReward(19, 0, 3000, 0, "", "", "", 301067, 301070, 101210, 0, 0);
-		m_LevelUpBonus[c++].setReward(20, 0, 15000, 2, "", "", "", 101140, 101085, 101136, 0, 301001);
-		m_LevelUpBonus[c++].setReward(21, 0, 3000, 0, "", "", "", 101106, 20067, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(22, 0, 3000, 0, "", "", "", 101202, 20011, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(23, 0, 3000, 0, "", "", "", 101245, 301003, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(24, 0, 3000, 1, "", "", "", 20106, 101064, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(25, 0, 15000, 3, "", "", "", 101077, 101087, 20075, 20073, 301001);
-		m_LevelUpBonus[c++].setReward(26, 0, 3000, 0, "", "", "", 20065, 20066, 101032, 0, 0);
-		m_LevelUpBonus[c++].setReward(27, 0, 3000, 0, "", "", "", 301001, 101107, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(28, 0, 3000, 0, "", "", "", 101183, 20081, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(29, 0, 3000, 1, "", "", "", 20061, 20049, 101201, 0, 0);
-		m_LevelUpBonus[c++].setReward(30, 0, 25000, 4, "", "", "", 101027, 101137, 20075, 20073, 301001);
-		m_LevelUpBonus[c++].setReward(31, 0, 5000, 0, "", "", "", 101063, 101008, 20016, 0, 0);
-		m_LevelUpBonus[c++].setReward(32, 0, 5000, 0, "", "", "", 20057, 301001, 101232, 0, 0);
-		m_LevelUpBonus[c++].setReward(33, 0, 5000, 0, "", "", "", 101098, 20061, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(34, 0, 5000, 1, "", "", "", 20037, 101173, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(35, 0, 20000, 3, "", "", "", 101077, 101109, 20066, 20013, 301001);
-		m_LevelUpBonus[c++].setReward(36, 0, 6000, 0, "", "", "", 20040, 101221, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(37, 0, 6000, 0, "", "", "", 101158, 20081, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(38, 0, 6000, 0, "", "", "", 101267, 101055, 20107, 0, 0);
-		m_LevelUpBonus[c++].setReward(39, 0, 6000, 1, "", "", "", 101217, 20014, 20022, 0, 0);
-		m_LevelUpBonus[c++].setReward(40, 0, 25000, 3, "", "", "", 101215, 101227, 20066, 20057, 301001);
-		m_LevelUpBonus[c++].setReward(41, 0, 7000, 0, "", "", "", 101173, 101008, 301063, 0, 0);
-		m_LevelUpBonus[c++].setReward(42, 0, 7000, 0, "", "", "", 301067, 301070, 101130, 0, 0);
-		m_LevelUpBonus[c++].setReward(43, 0, 7000, 0, "", "", "", 101171, 101084, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(44, 0, 7000, 1, "", "", "", 101227, 101137, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(45, 0, 25000, 2, "", "", "", 101088, 101215, 20016, 20011, 301001);
-		m_LevelUpBonus[c++].setReward(46, 0, 7000, 0, "", "", "", 101158, 101191, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(47, 0, 7000, 0, "", "", "", 101088, 101106, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(48, 0, 7000, 0, "", "", "", 101109, 20065, 20053, 0, 0);
-		m_LevelUpBonus[c++].setReward(49, 0, 7000, 1, "", "", "", 101093, 20066, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(50, 0, 35000, 2, "", "", "", 101088, 301001, 101227, 101137, 20017);
-		m_LevelUpBonus[c++].setReward(51, 0, 7000, 0, "", "", "", 101040, 101008, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(52, 0, 7000, 0, "", "", "", 101108, 20072, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(53, 0, 7000, 0, "", "", "", 101216, 20105, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(54, 0, 7000, 0, "", "", "", 20043, 20011, 101005, 0, 0);
-		m_LevelUpBonus[c++].setReward(55, 0, 50000, 2, "", "", "", 101064, 101087, 20003, 20024, 301001);
-		m_LevelUpBonus[c++].setReward(56, 0, 9000, 0, "", "", "", 101183, 101196, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(57, 0, 9000, 0, "", "", "", 20029, 101242, 0, 0, 0);
-		m_LevelUpBonus[c++].setReward(58, 0, 9000, 0, "", "", "", 20011, 301001, 20066, 101215, 101131);
-		m_LevelUpBonus[c++].setReward(59, 0, 9000, 1, "", "", "", 101064, 20061, 20092, 0, 0);
-		m_LevelUpBonus[c++].setReward(60, 0, 150000, 0, "", "", "", 101242, 101227, 101088, 101221, 101092);
-		// end of russian rewards
-	}
-	
-	r3d_assert(c <= MAX_NUM_RANKS);
-	return;
-}
-
-bool WeaponArmory::loadAchievement(pugi::xml_node& xmlAchievement)
+AchievementConfig* WeaponArmory::loadAchievement(pugi::xml_node& xmlAchievement)
 {
 	r3d_assert(!xmlAchievement.empty());
 
@@ -366,13 +270,13 @@ bool WeaponArmory::loadAchievement(pugi::xml_node& xmlAchievement)
 		if(strcmp(m_AchievementArray[i]->name, name)==0)
 		{
 			r3dArtBug("Trying to load an achievement '%s' that is already loaded!", name);
-			return false;
+			return NULL;
 		}
 	}
 	if(m_NumAchievementLoaded > MAX_NUMBER_ACHIEVEMENT-1)
 	{
 		r3dArtBug("Trying to load more than maximum number of achievement. Maximum is '%d'\n", MAX_NUMBER_ACHIEVEMENT);
-		return false;
+		return NULL;
 	}
 	
 	AchievementConfig* ach= new AchievementConfig(xmlAchievement.attribute("id").as_int());
@@ -385,10 +289,10 @@ bool WeaponArmory::loadAchievement(pugi::xml_node& xmlAchievement)
 	m_AchievementArray[m_NumAchievementLoaded] = ach;
 	m_NumAchievementLoaded++;
 
-	return true;
+	return ach;
 }
 
-bool WeaponArmory::loadAmmo(pugi::xml_node& xmlAmmo)
+Ammo* WeaponArmory::loadAmmo(pugi::xml_node& xmlAmmo)
 {
 	r3d_assert(!xmlAmmo.empty());
 
@@ -399,13 +303,13 @@ bool WeaponArmory::loadAmmo(pugi::xml_node& xmlAmmo)
 		if(strcmp(m_AmmoArray[i]->m_Name, ammoName)==0)
 		{
 			r3dArtBug("Trying to load an ammo '%s' that is already loaded!", ammoName);
-			return false;
+			return NULL;
 		}
 	}
 	if(m_NumAmmoLoaded > MAX_NUMBER_AMMO-2)
 	{
 		r3dArtBug("Trying to load more than maximum number of ammo. Maximum is '%d'\n", MAX_NUMBER_AMMO);
-		return false;
+		return NULL;
 	}
 	Ammo* ammo = new Ammo(ammoName);
 
@@ -427,10 +331,10 @@ bool WeaponArmory::loadAmmo(pugi::xml_node& xmlAmmo)
 	m_AmmoArray[m_NumAmmoLoaded] = ammo;
 	m_NumAmmoLoaded++;
 
-	return true;
+	return ammo;
 }
 
-bool WeaponArmory::loadScope(pugi::xml_node& xmlScope)
+ScopeConfig* WeaponArmory::loadScope(pugi::xml_node& xmlScope)
 {
 	r3d_assert(!xmlScope.empty());
 
@@ -441,91 +345,35 @@ bool WeaponArmory::loadScope(pugi::xml_node& xmlScope)
 		if(strcmp(m_ScopeArray[i]->name, scopeName)==0)
 		{
 			r3dError("Trying to load a scope '%s' that is already loaded!", scopeName);
-			return false;
+			return NULL;
 		}
 	}
 	if(m_NumScopeLoaded > MAX_NUMBER_SCOPE-1)
 	{
 		r3dError("Trying to load more than maximum number of scope. Maximum is '%d'\n", MAX_NUMBER_SCOPE);
-		return false;
+		return NULL;
 	}
 	ScopeConfig* scope = new ScopeConfig(scopeName);
-#ifndef WO_SERVER
-	const char* maskTex = xmlScope.attribute("scopeMask").value();
-	if(maskTex && maskTex[0]!=0)
-		scope->scope_mask = r3dRenderer->LoadTexture(maskTex);
 
-	const char* blurTex = xmlScope.attribute("scopeBlurMask").value();
-	if(blurTex && blurTex[0]!=0)
-		scope->scopeBlur_mask = r3dRenderer->LoadTexture(blurTex);
-	
-	const char* reticuleTex = xmlScope.attribute("scopeReticule").value();
-	if(reticuleTex && reticuleTex[0]!=0)
-		scope->scope_reticle = r3dRenderer->LoadTexture(reticuleTex);
-
-	const char* normalTex = xmlScope.attribute("scopeNormal").value();
-	if(normalTex && normalTex[0]!=0)
-		scope->scope_normal = r3dRenderer->LoadTexture(normalTex);
-
-	reticuleTex = xmlScope.attribute("reticule").value();
-	if(reticuleTex && reticuleTex[0]!=0)
-		scope->reticule = r3dRenderer->LoadTexture(reticuleTex);
-
-	scope->hasScopeMode = xmlScope.attribute("hasScope").as_bool();
-
-	pugi::xml_attribute lighting = xmlScope.attribute("lighting") ;
-
-	if( !lighting.empty() )
-	{
-		scope->lighting = lighting.as_bool() ;
-	}
-	else
-	{
-		scope->lighting = true ;
-	}
-	
-	pugi::xml_attribute hide_player = xmlScope.attribute("hide_player") ;
-
-	if( !hide_player.empty() )
-	{
-		scope->hide_player_model = hide_player.as_bool() ;
-	}
-	else
-	{
-		scope->hide_player_model = true ;
-	}
-
-	if(scope->hasScopeMode)
-	{
-		r3d_assert(scope->scope_mask);
-		r3d_assert(scope->scopeBlur_mask);
-		r3d_assert(scope->scope_reticle);
-	}
-#endif
 	m_ScopeArray[m_NumScopeLoaded] = scope;
 	m_NumScopeLoaded++;
 
-	return true;
+	return scope;
 }
 
-bool WeaponArmory::loadWeapon(pugi::xml_node& xmlWeapon)
+WeaponConfig* WeaponArmory::loadWeapon(pugi::xml_node& xmlWeapon)
 {
 	r3d_assert(!xmlWeapon.empty());
 
 	uint32_t itemID = xmlWeapon.attribute("itemID").as_uint();
 	// check if we have that weapon in our database
-	for(uint32_t i=0; i<m_NumWeaponsLoaded; ++i) // todo: change to hash table
 	{
-		if(m_WeaponArray[i]->m_itemID == itemID)
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
 		{
 			r3dArtBug("Trying to load a weapon with id '%d' that is already loaded!", itemID);
-			return false;
+			return NULL;
 		}
-	}
-	if(m_NumWeaponsLoaded > MAX_NUMBER_WEAPONS-2)
-	{
-		r3dArtBug("Trying to load more than maximum number of weapons. Maximum is '%d'\n", MAX_NUMBER_WEAPONS);
-		return false;
 	}
 
 	WeaponConfig* weapon = new WeaponConfig(itemID);
@@ -534,7 +382,7 @@ bool WeaponArmory::loadWeapon(pugi::xml_node& xmlWeapon)
 	if(!weapon->loadBaseFromXml(xmlWeapon))
 	{
 		delete weapon;
-		return false;
+		return NULL;
 	}
 
 	// things specific to game version of WeaponArmory
@@ -544,7 +392,7 @@ bool WeaponArmory::loadWeapon(pugi::xml_node& xmlWeapon)
 	{
 		r3dArtBug("Failed to find ammo '%s'. Make sure that you added it into AmmoDB.xml\n", bulletName);
 		delete weapon;
-		return false;
+		return NULL;
 	}
 
 	weapon->m_scopeConfig = getScopeConfig(xmlWeapon.child("PrimaryFire").attribute("ScopeType").value());
@@ -552,54 +400,52 @@ bool WeaponArmory::loadWeapon(pugi::xml_node& xmlWeapon)
 	{
 		r3dArtBug("Weapon '%s' has no scope config!!\n", weapon->m_StoreName);
 		delete weapon;
-		return false;
+		return NULL;
 	}
 
-#ifndef WO_SERVER
-	weapon->m_sndFireID = SoundSys.GetEventIDByPath(xmlWeapon.child("Sound").attribute("shoot").value());
-	char tempStr[512];
-	sprintf(tempStr, "%s_distant", xmlWeapon.child("Sound").attribute("shoot").value());
-	weapon->m_sndFireDistantID = SoundSys.GetEventIDByPath(tempStr);
-	weapon->m_sndReloadID = SoundSys.GetEventIDByPath(xmlWeapon.child("Sound").attribute("reload").value());
-
-	// new weapon sounds
+#ifndef WO_SERVER	
+#ifdef DEBUG
+	switch(weapon->category)
 	{
-		char tmpStr[512];
-		sprintf(tmpStr, "%s_single", xmlWeapon.child("Sound").attribute("shoot").value());
-		weapon->m_sndFireID_single = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_auto", xmlWeapon.child("Sound").attribute("shoot").value());
-		weapon->m_sndFireID_auto = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_single_Player", xmlWeapon.child("Sound").attribute("shoot").value());
-		weapon->m_sndFireID_single_player = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_auto_Player", xmlWeapon.child("Sound").attribute("shoot").value());
-		weapon->m_sndFireID_auto_player = SoundSys.GetEventIDByPath(tmpStr);
+		case storecat_UsableItem:
+		case 24: //SUP
+		case 27: //storecat_Grenades
+		case storecat_MELEE:
+			break;
+		default:
+			// validate that it has default clip attachments
+			const WeaponAttachmentConfig* clipAttach = getAttachmentConfig(weapon->FPSDefaultID[WPN_ATTM_CLIP]);
+			if(!clipAttach) {
+				r3dArtBug("Weapon '%s' does not have default clip attachment!\n", weapon->m_StoreName);
+				break;
+			}
+			if(clipAttach->m_Clipsize <= 0) {
+				r3dArtBug("Weapon '%s' default clip attachment %d have 0 clipsize!\n", weapon->m_StoreName, weapon->FPSDefaultID[WPN_ATTM_CLIP]);
+			}
+			break;
 	}
 #endif
+#endif
 
-	m_WeaponArray[m_NumWeaponsLoaded] = weapon;
+	m_itemsHash.Add(itemID, weapon);
 	m_NumWeaponsLoaded++;
 
-	return true;
+	return weapon;
 }
 
-bool WeaponArmory::loadWeaponAttachment(pugi::xml_node& xmlWeaponAttachment)
+WeaponAttachmentConfig* WeaponArmory::loadWeaponAttachment(pugi::xml_node& xmlWeaponAttachment)
 {
 	r3d_assert(!xmlWeaponAttachment.empty());
 
 	uint32_t itemID = xmlWeaponAttachment.attribute("itemID").as_uint();
 	// check if we have that weapon in our database
-	for(uint32_t i=0; i<m_NumWeaponAttmLoaded; ++i) // todo: change to hash table
 	{
-		if(m_WeaponAttmArray[i]->m_itemID == itemID)
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
 		{
 			r3dArtBug("Trying to load a weapon attachment with id '%d' that is already loaded!", itemID);
-			return false;
+			return NULL;
 		}
-	}
-	if(m_NumWeaponAttmLoaded > MAX_NUMBER_WEAPON_ATTACHMENTS-2)
-	{
-		r3dArtBug("Trying to load more than maximum number of weapon attachments. Maximum is '%d'\n", MAX_NUMBER_WEAPON_ATTACHMENTS);
-		return false;
 	}
 
 	WeaponAttachmentConfig* attm = new WeaponAttachmentConfig(itemID);
@@ -608,8 +454,9 @@ bool WeaponArmory::loadWeaponAttachment(pugi::xml_node& xmlWeaponAttachment)
 	if(!attm->loadBaseFromXml(xmlWeaponAttachment))
 	{
 		delete attm;
-		return false;
+		return NULL;
 	}
+	attm->category = storecat_FPSAttachment; // in .xml it doesn't have category 
 
 	const char* scopeType = xmlWeaponAttachment.child("Upgrade").attribute("ScopeType").value();
 	attm->m_scopeConfig = getScopeConfig(scopeType);
@@ -624,44 +471,25 @@ bool WeaponArmory::loadWeaponAttachment(pugi::xml_node& xmlWeaponAttachment)
 		if(attm->m_scopeConfigTPS == NULL)
 			attm->m_scopeConfigTPS = attm->m_scopeConfig;
 	}
-#ifndef WO_SERVER
-	// new weapon sounds
-	{
-		char tmpStr[512];
-		sprintf(tmpStr, "%s_single", xmlWeaponAttachment.child("Model").attribute("FireSound").value());
-		attm->m_sndFireID_single = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_auto", xmlWeaponAttachment.child("Model").attribute("FireSound").value());
-		attm->m_sndFireID_auto = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_single_Player", xmlWeaponAttachment.child("Model").attribute("FireSound").value());
-		attm->m_sndFireID_single_player = SoundSys.GetEventIDByPath(tmpStr);
-		sprintf(tmpStr, "%s_auto_Player", xmlWeaponAttachment.child("Model").attribute("FireSound").value());
-		attm->m_sndFireID_auto_player = SoundSys.GetEventIDByPath(tmpStr);
-	}
-#endif
 
-	m_WeaponAttmArray[m_NumWeaponAttmLoaded] = attm;
+	m_itemsHash.Add(itemID, attm);
 	m_NumWeaponAttmLoaded++;
 
-	return true;
+	return attm;
 }
 
-bool WeaponArmory::loadGear(pugi::xml_node& xmlGear)
+GearConfig* WeaponArmory::loadGear(pugi::xml_node& xmlGear)
 {
 	r3d_assert(!xmlGear.empty());
 
 	uint32_t itemID = xmlGear.attribute("itemID").as_uint();
-	for(uint32_t i=0; i<m_NumGearLoaded; ++i) // todo: change to hash table
 	{
-		if(m_GearArray[i]->m_itemID == itemID)
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
 		{
 			r3dArtBug("Trying to load a gear with id '%d' that is already loaded!", itemID);
-			return false;
+			return NULL;
 		}
-	}
-	if(m_NumGearLoaded > MAX_NUMBER_GEAR-2)
-	{
-		r3dArtBug("Trying to load more than maximum number of gear. Maximum is '%d'\n", MAX_NUMBER_GEAR);
-		return false;
 	}
 
 	GearConfig* gear = new GearConfig(itemID);
@@ -669,35 +497,86 @@ bool WeaponArmory::loadGear(pugi::xml_node& xmlGear)
 	if(!gear->loadBaseFromXml(xmlGear))
 	{
 		delete gear;
-		return false;
+		return NULL;
 	}
 
-	m_GearArray[m_NumGearLoaded] = gear;
+	m_itemsHash.Add(itemID, gear);
 	m_NumGearLoaded++;
 
-	return true;
+	return gear;
 }
 
-bool WeaponArmory::loadItem(pugi::xml_node& xmlItem)
+BackpackConfig* WeaponArmory::loadBackback(pugi::xml_node& xmlItem)
 {
 	r3d_assert(!xmlItem.empty());
 
 	uint32_t itemID = xmlItem.attribute("itemID").as_uint();
-	for(uint32_t i=0; i<m_NumItemLoaded; ++i) // todo: change to hash table
 	{
-		if(m_ItemArray[i]->m_itemID == itemID)
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
 		{
-			r3dArtBug("Trying to load an item with id '%d' that is already loaded!", itemID);
-			return false;
+			r3dArtBug("Trying to load a backpack with id '%d' that is already loaded!", itemID);
+			return NULL;
 		}
 	}
-	if(m_NumItemLoaded > MAX_NUMBER_ITEM-1)
+
+	BackpackConfig* backpack = new BackpackConfig(itemID);
+	// load base stuff, common for all versions
+	if(!backpack->loadBaseFromXml(xmlItem))
 	{
-		r3dArtBug("Trying to load more than maximum number of items. Maximum is '%d'\n", MAX_NUMBER_ITEM);
-		return false;
+		delete backpack;
+		return NULL;
 	}
 
-	ItemConfig* item = new ItemConfig(itemID);
+	m_itemsHash.Add(itemID, backpack);
+	m_NumBackpackLoaded++;
+
+	return backpack;
+}
+
+HeroConfig* WeaponArmory::loadHero(pugi::xml_node& xmlHero)
+{
+	r3d_assert(!xmlHero.empty());
+
+	uint32_t itemID = xmlHero.attribute("itemID").as_uint();
+	{
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
+		{
+			r3dArtBug("Trying to load a hero with id '%d' that is already loaded!", itemID);
+			return NULL;
+		}
+	}
+
+	HeroConfig* hero = new HeroConfig(itemID);
+	// load base stuff, common for all versions
+	if(!hero->loadBaseFromXml(xmlHero))
+	{
+		delete hero;
+		return NULL;
+	}
+
+	m_itemsHash.Add(itemID, hero);
+	m_NumHeroLoaded++;
+
+	return hero;
+}
+
+ModelItemConfig* WeaponArmory::loadItem(pugi::xml_node& xmlItem)
+{
+	r3d_assert(!xmlItem.empty());
+
+	uint32_t itemID = xmlItem.attribute("itemID").as_uint();
+	{
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
+		{
+			r3dArtBug("Trying to load an item with id '%d' that is already loaded!", itemID);
+			return NULL;
+		}
+	}
+
+	ModelItemConfig* item = new ModelItemConfig(itemID);
 	item->category = (STORE_CATEGORIES)xmlItem.attribute("category").as_int();
 
 	const char* desc = xmlItem.child("Store").attribute("desc").value();
@@ -705,104 +584,141 @@ bool WeaponArmory::loadItem(pugi::xml_node& xmlItem)
 	item->m_Description = strdup(desc);
 	item->m_StoreIcon = strdup(xmlItem.child("Store").attribute("icon").value());
 	item->m_StoreName = strdup(xmlItem.child("Store").attribute("name").value());
-	item->m_LevelRequired = xmlItem.child("Store").attribute("LevelRequired").as_int();
 	item->m_StoreNameW = wcsdup(utf8ToWide(item->m_StoreName));
 	item->m_DescriptionW = wcsdup(utf8ToWide(item->m_Description));
 
 	if(!xmlItem.child("Model").empty())
 		item->m_ModelPath = strdup(xmlItem.child("Model").attribute("file").value());
 
-	m_ItemArray[m_NumItemLoaded] = item;
+	m_itemsHash.Add(itemID, item);
 	m_NumItemLoaded++;
 
-	return true;
+	return item;
 }
 
-bool WeaponArmory::loadPackage(pugi::xml_node& xmlPackage)
+static void renormalizeLootBox(LootBoxConfig* lootBox)
 {
-	r3d_assert(!xmlPackage.empty());
+	if(lootBox->entries.size() == 0)
+		return;
+		
+	double sum = 0.0;
+	for(size_t i=0; i<lootBox->entries.size(); i++)
+		sum += lootBox->entries[i].chance;
+	for(size_t i=0; i<lootBox->entries.size(); i++)
+		lootBox->entries[i].chance /= sum;
 
-	uint32_t itemID = xmlPackage.attribute("itemID").as_uint();
-	for(uint32_t i=0; i<m_NumPackageLoaded; ++i) // todo: change to hash table
+	// bring to [0..1]
+	sum = lootBox->entries[0].chance;
+        for(size_t i=1; i<lootBox->entries.size(); i++)
+        {
+            double chance = lootBox->entries[i].chance;
+            lootBox->entries[i].chance += sum;
+            sum += chance;
+        }
+        
+        return;
+}
+
+void WeaponArmory::updateLootBoxContent(pugi::xml_node& xmlLootBox)
+{
+	xmlLootBox = xmlLootBox.first_child();
+	while(!xmlLootBox.empty())
 	{
-		if(m_PackageArray[i]->m_itemID == itemID)
+		uint32_t itemId = xmlLootBox.attribute("itemID").as_uint();
+		LootBoxConfig* lootBox = const_cast<LootBoxConfig*>(getLootBoxConfig(itemId));
+		if(lootBox == NULL)
 		{
-			r3dArtBug("Trying to load package with id '%d' that is already loaded!", itemID);
-			return false;
+			r3dOutToLog("There is no LootBox %d\n", itemId);
+			xmlLootBox = xmlLootBox.next_sibling();
+			continue;
+		}
+
+		lootBox->entries.clear();
+		pugi::xml_node xmlContent = xmlLootBox.first_child();
+		while(!xmlContent.empty())
+		{
+			LootBoxConfig::LootEntry le;
+			le.chance = xmlContent.attribute("c").as_double();
+			le.itemID = xmlContent.attribute("i").as_uint();
+			le.GDMin  = xmlContent.attribute("g1").as_int();
+			le.GDMax  = xmlContent.attribute("g2").as_int();
+			lootBox->entries.push_back(le);
+		
+			xmlContent = xmlContent.next_sibling();
+		}
+		
+		// renormalize lootbox chances
+		renormalizeLootBox(lootBox);
+
+		xmlLootBox = xmlLootBox.next_sibling();
+	}
+}
+
+LootBoxConfig* WeaponArmory::loadLootBox(pugi::xml_node& xmlItem)
+{
+	r3d_assert(!xmlItem.empty());
+
+	uint32_t itemID = xmlItem.attribute("itemID").as_uint();
+	{
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
+		{
+			r3dArtBug("Trying to load lootbox with id '%d' that is already loaded!", itemID);
+			return NULL;
 		}
 	}
-	if(m_NumPackageLoaded> MAX_NUMBER_PACKAGE-1)
+
+	LootBoxConfig* lootBox = new LootBoxConfig(itemID);
+	lootBox->loadBaseFromXml(xmlItem);
+
+	m_itemsHash.Add(itemID, lootBox);
+	m_NumLootBoxLoaded++;
+
+	return lootBox;
+}
+
+FoodConfig* WeaponArmory::loadFoodItem(pugi::xml_node& xmlItem)
+{
+	r3d_assert(!xmlItem.empty());
+
+	uint32_t itemID = xmlItem.attribute("itemID").as_uint();
 	{
-		r3dArtBug("Trying to load more than maximum number of packages. Maximum is '%d'\n", MAX_NUMBER_PACKAGE);
-		return false;
+		BaseItemConfig* temp = NULL;
+		if(m_itemsHash.GetObject(itemID, &temp))
+		{
+			r3dArtBug("Trying to load food item with id '%d' that is already loaded!", itemID);
+			return NULL;
+		}
 	}
 
-	PackageConfig* pkg = new PackageConfig(itemID);
-	pkg->category = (STORE_CATEGORIES)xmlPackage.attribute("category").as_int();
+	FoodConfig* food = new FoodConfig(itemID);
+	food->loadBaseFromXml(xmlItem);
 
-	const char* desc = xmlPackage.child("Store").attribute("desc").value();
-	r3d_assert(desc);
-	pkg->m_Description = strdup(desc);
-	pkg->m_StoreIcon = strdup(xmlPackage.child("Store").attribute("icon").value());
-	pkg->m_StoreName = strdup(xmlPackage.child("Store").attribute("name").value());
-	pkg->m_LevelRequired = xmlPackage.child("Store").attribute("LevelRequired").as_int();
-	pkg->m_StoreNameW = wcsdup(utf8ToWide(pkg->m_StoreName));
-	pkg->m_DescriptionW = wcsdup(utf8ToWide(pkg->m_Description));
+	m_itemsHash.Add(itemID, food);
+	m_NumFoodItemsLoaded++;
 
-	pkg->m_addGD = xmlPackage.child("PackageDesc").attribute("gp").as_uint();
-	pkg->m_addSP = xmlPackage.child("PackageDesc").attribute("sp").as_uint();
-
-	pkg->m_itemID1 = xmlPackage.child("PackageDesc").attribute("item1ID").as_uint();
-	pkg->m_itemID1Exp = xmlPackage.child("PackageDesc").attribute("item1Exp").as_uint();
-	pkg->m_itemID2 = xmlPackage.child("PackageDesc").attribute("item2ID").as_uint();
-	pkg->m_itemID2Exp = xmlPackage.child("PackageDesc").attribute("item2Exp").as_uint();
-	pkg->m_itemID3 = xmlPackage.child("PackageDesc").attribute("item3ID").as_uint();
-	pkg->m_itemID3Exp = xmlPackage.child("PackageDesc").attribute("item3Exp").as_uint();
-	pkg->m_itemID4 = xmlPackage.child("PackageDesc").attribute("item4ID").as_uint();
-	pkg->m_itemID4Exp = xmlPackage.child("PackageDesc").attribute("item4Exp").as_uint();
-	pkg->m_itemID5 = xmlPackage.child("PackageDesc").attribute("item5ID").as_uint();
-	pkg->m_itemID5Exp = xmlPackage.child("PackageDesc").attribute("item5Exp").as_uint();
-	pkg->m_itemID6 = xmlPackage.child("PackageDesc").attribute("item6ID").as_uint();
-	pkg->m_itemID6Exp = xmlPackage.child("PackageDesc").attribute("item6Exp").as_uint();
-
-	m_PackageArray[m_NumPackageLoaded] = pkg;
-	m_NumPackageLoaded++;
-
-	return true;
+	return food;
 }
 
 void WeaponArmory::Destroy()
 {
-	for(uint32_t i=0; i<m_NumPackageLoaded; ++i)
+	m_itemsHash.IterateStart();
+	while(m_itemsHash.IterateNext())
 	{
-		delete m_PackageArray[i];
-		m_PackageArray[i] = NULL;
+		const BaseItemConfig* item = m_itemsHash.IterateGet();
+		delete item;
+		item = NULL;
 	}
-	m_NumPackageLoaded = 0;
-	for(uint32_t i=0; i<m_NumItemLoaded; ++i)
-	{
-		delete m_ItemArray[i];
-		m_ItemArray[i] = NULL;
-	}
+
+	m_NumLootBoxLoaded = 0;
+	m_NumFoodItemsLoaded = 0;
 	m_NumItemLoaded = 0;
-	for(uint32_t i=0; i<m_NumGearLoaded; ++i)
-	{
-		delete m_GearArray[i];
-		m_GearArray[i] = NULL;
-	}
 	m_NumGearLoaded = 0;
-	for(uint32_t i=0; i<m_NumWeaponsLoaded; ++i)
-	{
-		delete m_WeaponArray[i];
-		m_WeaponArray[i] = NULL;
-	}
+	m_NumBackpackLoaded = 0;
+	m_NumHeroLoaded = 0;
 	m_NumWeaponsLoaded = 0;
-	for(uint32_t i=0; i<m_NumWeaponAttmLoaded; ++i)
-	{
-		delete m_WeaponAttmArray[i];
-		m_WeaponAttmArray[i] = NULL;
-	}
 	m_NumWeaponAttmLoaded = 0;
+
 	for(uint32_t i=0; i<m_NumAmmoLoaded; ++i)
 	{
 		delete m_AmmoArray[i];
@@ -825,76 +741,101 @@ void WeaponArmory::Destroy()
 
 void WeaponArmory::UnloadMeshes()
 {
-	for(uint32_t i=0; i<m_NumItemLoaded; ++i)
-		m_ItemArray[i]->resetMesh();
-	for(uint32_t i=0; i<m_NumGearLoaded; ++i)
-		m_GearArray[i]->resetMesh();
-	for(uint32_t i=0; i<m_NumWeaponsLoaded; ++i)
-		m_WeaponArray[i]->resetMesh();
-	for(uint32_t i=0; i<m_NumWeaponAttmLoaded; ++i)
-		m_WeaponAttmArray[i]->resetMesh();
-	for(uint32_t i=0; i<m_NumAmmoLoaded; ++i)
-		m_AmmoArray[i]->unloadModel();
 }
 
 const WeaponConfig* WeaponArmory::getWeaponConfig(uint32_t itemID)
 {
-	for(uint32_t i=0; i<m_NumWeaponsLoaded; ++i)
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
 	{
-		if(m_WeaponArray[i]->m_itemID == itemID)
-		{
-			return m_WeaponArray[i];
-		}
+		if(item->category >= storecat_ASR && item->category <= storecat_MELEE)
+			return (WeaponConfig*)item;
+	}
+	return NULL;
+}
+
+const FoodConfig* WeaponArmory::getFoodConfig(uint32_t itemID)
+{
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
+	{
+		if(item->category == storecat_Food || item->category == storecat_Water)
+			return (FoodConfig*)item;
 	}
 	return NULL;
 }
 
 const WeaponAttachmentConfig* WeaponArmory::getAttachmentConfig(uint32_t itemID)
 {
-	for(uint32_t i=0; i<m_NumWeaponAttmLoaded; ++i)
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
 	{
-		if(m_WeaponAttmArray[i]->m_itemID == itemID)
-		{
-			return m_WeaponAttmArray[i];
-		}
+		if(item->category == storecat_FPSAttachment)
+			return (WeaponAttachmentConfig*)item;
 	}
 	return NULL;
 }
 
 const GearConfig* WeaponArmory::getGearConfig(uint32_t itemID)
 {
-	for(uint32_t i=0; i<m_NumGearLoaded; ++i)
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
 	{
-		if(m_GearArray[i]->m_itemID == itemID)
-		{
-			return m_GearArray[i];
-		}
+		if(item->category == storecat_Armor || item->category == storecat_Helmet)
+			return (GearConfig*)item;
 	}
 	return NULL;
 }
 
-const ItemConfig* WeaponArmory::getItemConfig(uint32_t itemID)
+const BackpackConfig* WeaponArmory::getBackpackConfig(uint32_t itemID)
 {
-	for(uint32_t i=0; i<m_NumItemLoaded; ++i)
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
 	{
-		if(m_ItemArray[i]->m_itemID == itemID)
-		{
-			return m_ItemArray[i];
-		}
+		if(item->category == storecat_Backpack)
+			return (BackpackConfig*)item;
 	}
 	return NULL;
 }
 
-const PackageConfig* WeaponArmory::getPackageConfig(uint32_t itemID)
+const HeroConfig* WeaponArmory::getHeroConfig(uint32_t itemID)
 {
-	for(uint32_t i=0; i<m_NumPackageLoaded; ++i)
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
 	{
-		if(m_PackageArray[i]->m_itemID == itemID)
-		{
-			return m_PackageArray[i];
-		}
+		if(item->category == storecat_HeroPackage)
+			return (HeroConfig*)item;
 	}
 	return NULL;
+}
+
+const ModelItemConfig* WeaponArmory::getItemConfig(uint32_t itemID)
+{
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
+	{
+		if(item->category >= storecat_Account && item->category <= storecat_LootBox)
+			return (ModelItemConfig*)item;
+	}
+	return NULL;
+}
+
+const LootBoxConfig* WeaponArmory::getLootBoxConfig(uint32_t itemID)
+{
+	BaseItemConfig* item = NULL;
+	if(m_itemsHash.GetObject(itemID, &item))
+	{
+		if(item->category == storecat_LootBox)
+			return (const LootBoxConfig*)item;
+	}
+	return NULL;
+}
+
+const BaseItemConfig* WeaponArmory::getConfig(uint32_t itemID)
+{
+	BaseItemConfig* item = NULL;
+	m_itemsHash.GetObject(itemID, &item);
+	return item;
 }
 
 const ScopeConfig* WeaponArmory::getScopeConfig(const char* name)
@@ -926,32 +867,11 @@ Gear* WeaponArmory::createGear(uint32_t itemID)
 	if(itemID == 0)
 		return NULL;
 
-	for(uint32_t i=0; i<m_NumGearLoaded; ++i)
-	{
-		if(m_GearArray[i]->m_itemID == itemID)
-		{
-			return new Gear(m_GearArray[i]);
-		}
-	}
+	const GearConfig* gc = getGearConfig(itemID);
+	if(gc)
+		return new Gear(gc);
 
 	r3dError("Failed to get gear with ID %d\nVersion mismatch!\n", itemID);
-	return NULL;
-}
-
-Weapon* WeaponArmory::createWeapon(uint32_t itemID, GameObject* owner, bool first_person, bool allow_async_loading)
-{
-	if(itemID == 0)
-		return NULL;
-
-	for(uint32_t i=0; i<m_NumWeaponsLoaded; ++i)
-	{
-		if(m_WeaponArray[i]->m_itemID == itemID)
-		{
-			return new Weapon(m_WeaponArray[i], owner, first_person, allow_async_loading );
-		}
-	}
-
-	r3dError("Failed to get weapon with ID %d\nVersion mismatch!\n", itemID);
 	return NULL;
 }
 
@@ -965,34 +885,24 @@ Ammo* WeaponArmory::getAmmo(const char* ammoName)
 	return NULL;
 }
 
-const WeaponConfig* WeaponArmory::getWeaponConfigByIndex(uint32_t index)
+void WeaponArmory::startItemSearch()
 {
-	r3d_assert(/*index >= 0 &&*/ index < m_NumWeaponsLoaded);
-	return m_WeaponArray[index];
+	m_itemsHash.IterateStart();
 }
 
-const WeaponAttachmentConfig* WeaponArmory::getAttachmentConfigByIndex(uint32_t index)
+uint32_t WeaponArmory::getCurrentSearchItemID()
 {
-	r3d_assert(/*index >= 0 &&*/ index < m_NumWeaponAttmLoaded);
-	return m_WeaponAttmArray[index];
+	return m_itemsHash.IterateGetKey();
 }
 
-const GearConfig* WeaponArmory::getGearConfigByIndex(uint32_t index)
+bool WeaponArmory::searchNextItem()
 {
-	r3d_assert(/*index >= 0 &&*/ index < m_NumGearLoaded);
-	return m_GearArray[index];
+	return m_itemsHash.IterateNext();
 }
 
-const ItemConfig* WeaponArmory::getItemConfigByIndex(uint32_t index)
+uint32_t WeaponArmory::getNumItemsInHash()
 {
-	r3d_assert(/*index >= 0 &&*/ index < m_NumItemLoaded);
-	return m_ItemArray[index];
-}
-
-const PackageConfig* WeaponArmory::getPackageConfigByIndex(uint32_t index)
-{
-	r3d_assert(/*index >= 0 &&*/ index < m_NumPackageLoaded);
-	return m_PackageArray[index];
+	return m_itemsHash.Size();
 }
 
 const AchievementConfig* WeaponArmory::getAchievementByIndex(uint32_t index)
@@ -1013,107 +923,7 @@ const AchievementConfig* WeaponArmory::getAchievementByID(uint32_t ID)
 
 	return NULL;
 }
-
-STORE_CATEGORIES WeaponArmory::getCategoryByItemId(uint32_t itemId)
-{
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->category;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->category;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->category;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->category;
-	
-	return storecat_INVALID;
-}
-
-const char* WeaponArmory::getIconByItemId(uint32_t itemId, bool emptyStringOnNULL)
-{
-	if(itemId == 0)
-		return emptyStringOnNULL?"":NULL;
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->m_StoreIcon;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->m_StoreIcon;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->m_StoreIcon;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->m_StoreIcon;
-	
-	return emptyStringOnNULL?"":NULL;
-}
-
-const char* WeaponArmory::getNameByItemId(uint32_t itemId, bool emptyStringOnNULL)
-{
-	if(itemId == 0)
-		return emptyStringOnNULL?"":NULL;
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->m_StoreName;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->m_StoreName;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->m_StoreName;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->m_StoreName;
-	
-	return emptyStringOnNULL?"":NULL;
-}
-
-const wchar_t* WeaponArmory::getNameWByItemId(uint32_t itemId, bool emptyStringOnNULL)
-{
-	if(itemId == 0)
-		return emptyStringOnNULL?L"":NULL;
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->m_StoreNameW;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->m_StoreNameW;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->m_StoreNameW;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->m_StoreNameW;
-
-	return emptyStringOnNULL?L"":NULL;
-}
-
-const wchar_t* WeaponArmory::getDescByItemId(uint32_t itemId, bool emptyStringOnNULL)
-{
-	if(itemId == 0)
-		return emptyStringOnNULL?L"":NULL;
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->m_DescriptionW;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->m_DescriptionW;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->m_DescriptionW;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->m_DescriptionW;
-	
-	return emptyStringOnNULL?L"":NULL;
-}
-
-int WeaponArmory::getLevelReqByItemId(uint32_t itemId)
-{
-	//TODO: we can detect weapon/gear/item by it's itemID range
-	const WeaponConfig* wc = getWeaponConfig(itemId);
-	if(wc) return wc->m_LevelRequired;
-	const GearConfig* gc = getGearConfig(itemId);
-	if(gc) return gc->m_LevelRequired;
-	const ItemConfig* ic = getItemConfig(itemId);
-	if(ic) return ic->m_LevelRequired;
-	const WeaponAttachmentConfig* wac = getAttachmentConfig(itemId);
-	if(wac) return wac->m_LevelRequired;
-	const PackageConfig* pc = getPackageConfig(itemId);
-	if(pc) return pc->m_LevelRequired;
-
-	return 0;
-}
-
+/*
 void WeaponArmory::dumpStats()
 {
 #ifndef WO_SERVER
@@ -1183,7 +993,7 @@ void WeaponArmory::dumpStats()
 
 	for( int i = 0, e = (int)m_NumItemLoaded  ; i < e ; i ++ )
 	{
-		ItemConfig* itm = m_ItemArray[ i ] ;
+		ModelItemConfig* itm = m_ItemArray[ i ] ;
 
 		int refs = itm->getMeshRefs() ;
 
@@ -1203,9 +1013,9 @@ void WeaponArmory::dumpStats()
 	fclose( fout ) ;
 #endif
 #endif
-}
+}*/
 
 void DumpArmoryStats()
 {
-	gWeaponArmory.dumpStats() ;
+	//gWeaponArmory.dumpStats() ;
 }

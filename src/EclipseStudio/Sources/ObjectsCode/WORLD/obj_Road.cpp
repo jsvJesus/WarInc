@@ -38,12 +38,8 @@ obj_Road::obj_Road()
 {
 	ObjTypeFlags |= OBJTYPE_Road;
 
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows
-						| 
-					OBJFLAG_ForceSleep
-						;
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	r3dBoundBox bboxLocal ;
 
@@ -72,6 +68,9 @@ obj_Road::obj_Road()
 obj_Road::~obj_Road()
 {
 	SAFE_DELETE(mesh_);
+
+	if( Terrain2 )
+		Terrain2->OnRoadDelete( this );
 
 	return;
 }
@@ -221,6 +220,11 @@ float GetRoadCtrlScreenSize ( r3dPoint3D vPos, r3dVector vVec, r3dVector vOffset
 
 	D3DXMATRIX mFinalInv;
 	D3DXMatrixInverse ( &mFinalInv, NULL, &mFinal );
+
+	if( r3dRenderer->ZDir == r3dRenderLayer::ZDIR_INVERSED )
+	{
+		vOffset.z = 1.0f - vOffset.z;
+	}
 
 	D3DXVECTOR3 vRes1, vRes2, vOffsetObject;
 	D3DXVec3TransformCoord ( &vRes1, vVec.d3dx(), &mFinal );
@@ -534,15 +538,15 @@ void obj_Road::DrawRoad()
 	float vConst[4] = { -r_roads_zdisplace->GetFloat(), r3dRenderer->ProjMatrix._43, r3dRenderer->ProjMatrix._33, 0 };
 	//	Disable z-displacement when error show mode is on
 	if (_road_ShowZFail > 0 || _road_FixZInShader == 0) { vConst[0] = 0; }
-	r3dRenderer->SetPixelShaderConstantF( MC_DDEPTH, vConst, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DDEPTH, vConst, 1 );
 
 	//r3dRenderer->SetMipMapBias(-2.0f);
 
 	//disable writing to MRT2 - depth
-	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
-	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
-	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE2, 0);
-	r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE2, 0);
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE );
 
 	DWORD curStencilEnable = 0;
 	DWORD curStencilRef = 0;
@@ -560,12 +564,12 @@ void obj_Road::DrawRoad()
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILPASS, &curStencilPass));
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILZFAIL, &curStencilZFail));
 		//	Mark z-fail regions with stencil bit 3
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, TRUE));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILWRITEMASK, 4));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILREF, 4));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, TRUE));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILWRITEMASK, 4));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILREF, 4));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE));
 	}
 
 	mesh_->DrawMeshDeferred( r3dColor::white, R3D_MATF_ROAD );
@@ -575,10 +579,10 @@ void obj_Road::DrawRoad()
 
 	// enable writing to MRT
 
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_ALPHA | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_RED);
 	//r3dRenderer->SetMipMapBias(__WorldRenderBias);
 
 #if 0
@@ -605,29 +609,29 @@ void obj_Road::DrawRoad()
 		D3D_V(r3dRenderer->pd3ddev->GetRenderState(D3DRS_STENCILMASK, &curStencilMask));
 		
 		//	Now Render full screen quad and mark all road occlusions
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILMASK, 4));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILMASK, 4));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP));
 
 		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH);
  		r3dRenderer->SetPixelShader( VS_CLEAR_FLOAT_ID );
  		r3dRenderer->SetPixelShader( PS_CLEAR_FLOAT_ID );
 
 		float cl[4] = { 1.0f, 0, 0, 0 };
-		r3dRenderer->SetPixelShaderConstantF(0, &cl[0], 1);
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF (0, &cl[0], 1);
 
 		r3dDrawBoxFS(r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor::red);
 		r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
 
 		//	Restore stencil state
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, curStencilEnable));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILREF, curStencilRef));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILFUNC, curStencilFunc));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILPASS, curStencilPass));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILZFAIL, curStencilZFail));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILWRITEMASK, curStencilWriteMask));
-		D3D_V(r3dRenderer->SetRenderState(D3DRS_STENCILMASK, curStencilMask));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, curStencilEnable));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILREF, curStencilRef));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILFUNC, curStencilFunc));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILPASS, curStencilPass));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILZFAIL, curStencilZFail));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILWRITEMASK, curStencilWriteMask));
+		D3D_V(r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILMASK, curStencilMask));
 	}
 
 
@@ -950,3 +954,53 @@ void obj_Road::SetMaterial( const char* szName )
 		}
 	}
 }
+
+//-------------------------------------------------------------------------
+//	Standalone helper functions
+//-------------------------------------------------------------------------
+
+#ifndef FINAL_BUILD
+void CleanOrphanedRoadFiles()
+{
+	//	Collect all file names in level_name/roads directory
+	r3dTL::TArray<r3dString> roadFiles;
+	WIN32_FIND_DATA fd;
+	char path[MAX_PATH] = {0};
+	sprintf(path, "%s\\roads\\*.dat", r3dGameLevel::GetHomeDir());
+
+	HANDLE h = FindFirstFile(path, &fd);
+	if (h == INVALID_HANDLE_VALUE)
+		return;
+	
+	do 
+	{
+		fd.cFileName[strlen(fd.cFileName) - 4] = 0;
+		roadFiles.PushBack(fd.cFileName);
+	}
+	while (FindNextFile(h, &fd) != 0);
+	FindClose(h);
+
+	//	Iterate over all objects and remove valid roads from orphan list
+	for (const GameObject* obj = GameWorld().GetFirstObject(); obj; obj = GameWorld().GetNextObject(obj))
+	{
+		if (!obj->isObjType(OBJTYPE_Road))
+			continue;
+
+		const obj_Road *r = static_cast<const obj_Road*>(obj);
+		int idx = roadFiles.FindItemIndex(r->FileName);
+		if (idx != -1)
+		{
+			//	Not orphaned, remove from list
+			roadFiles.Erase(idx);
+		}
+	}
+
+	//	Now delete all orphan road files
+	for (uint32_t i = 0; i < roadFiles.Count(); ++i)
+	{
+		const r3dString &name = roadFiles[i];
+		sprintf(path, "%s\\roads\\%s.dat", r3dGameLevel::GetHomeDir(), name);
+		DeleteFile(path);
+	}
+}
+#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -40,8 +40,11 @@
 #include <RendererMeshDesc.h>
 #include <SampleAssetManager.h>
 #include <SampleMaterialAsset.h>
+#include <RendererMemoryMacros.h>
 
-SampleLineDebugRender::SampleLineDebugRender(Renderer &renderer, SampleAssetManager &assetmanager) :
+using namespace SampleFramework;
+
+SampleLineDebugRender::SampleLineDebugRender(SampleRenderer::Renderer &renderer, SampleAssetManager &assetmanager) :
 	m_renderer(renderer),
 	m_assetmanager(assetmanager)
 {
@@ -49,7 +52,7 @@ SampleLineDebugRender::SampleLineDebugRender(Renderer &renderer, SampleAssetMana
 	PX_ASSERT(m_material);
 	PX_ASSERT(m_material->getNumVertexShaders() == 1);
 	m_meshContext.material = m_material ? m_material->getMaterial(0) : 0;
-	
+
 	m_maxVerts        = 0;
 	m_numVerts        = 0;
 	m_vertexbuffer    = 0;
@@ -58,20 +61,22 @@ SampleLineDebugRender::SampleLineDebugRender(Renderer &renderer, SampleAssetMana
 	m_positionStride  = 0;
 	m_lockedColors    = 0;
 	m_colorStride     = 0;
+
+	checkResizeLine(2048);
 }
 
 SampleLineDebugRender::~SampleLineDebugRender(void)
 {
 	checkUnlock();
-	if(m_vertexbuffer) m_vertexbuffer->release();
-	if(m_mesh)         m_mesh->release();
+	SAFE_RELEASE(m_vertexbuffer);
+	SAFE_RELEASE(m_mesh);
 	if(m_material)
 	{
 		m_assetmanager.returnAsset(*m_material);
 	}
 }
 
-void SampleLineDebugRender::addLine(const physx::PxVec3 &p0, const physx::PxVec3 &p1, const RendererColor &color)
+void SampleLineDebugRender::addLine(const PxVec3 &p0, const PxVec3 &p1, const SampleRenderer::RendererColor &color)
 {
 	checkResizeLine(m_numVerts+2);
 	addVert(p0, color);
@@ -93,28 +98,28 @@ void SampleLineDebugRender::clearLine(void)
 	m_numVerts = 0;
 }
 
-void SampleLineDebugRender::checkResizeLine(physx::PxU32 maxVerts)
+void SampleLineDebugRender::checkResizeLine(PxU32 maxVerts)
 {
 	if(maxVerts > m_maxVerts)
 	{
-		m_maxVerts = maxVerts + (physx::PxU32)(maxVerts*0.2f);
-		
-		RendererVertexBufferDesc vbdesc;
-		vbdesc.hint = RendererVertexBuffer::HINT_DYNAMIC;
-		vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_POSITION] = RendererVertexBuffer::FORMAT_FLOAT3;
-		vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_COLOR]    = RendererVertexBuffer::FORMAT_COLOR;
+		m_maxVerts = maxVerts + (PxU32)(maxVerts*0.2f);
+
+		SampleRenderer::RendererVertexBufferDesc vbdesc;
+		vbdesc.hint = SampleRenderer::RendererVertexBuffer::HINT_DYNAMIC;
+		vbdesc.semanticFormats[SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION] = SampleRenderer::RendererVertexBuffer::FORMAT_FLOAT3;		
+		vbdesc.semanticFormats[SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR]    = SampleRenderer::RendererVertexBuffer::FORMAT_COLOR_NATIVE; // same as RendererColor
 		vbdesc.maxVertices = m_maxVerts;
-		RendererVertexBuffer *vertexbuffer = m_renderer.createVertexBuffer(vbdesc);
+		SampleRenderer::RendererVertexBuffer *vertexbuffer = m_renderer.createVertexBuffer(vbdesc);
 		PX_ASSERT(vertexbuffer);
-		
+
 		if(vertexbuffer)
 		{
-			physx::PxU32 positionStride = 0;
-			void *positions = vertexbuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
-			
-			physx::PxU32 colorStride = 0;
-			void *colors = vertexbuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_COLOR, colorStride);
-			
+			PxU32 positionStride = 0;
+			void *positions = vertexbuffer->lockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
+
+			PxU32 colorStride = 0;
+			void *colors = vertexbuffer->lockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR, colorStride);
+
 			PX_ASSERT(positions && colors);
 			if(positions && colors)
 			{
@@ -125,18 +130,18 @@ void SampleLineDebugRender::checkResizeLine(physx::PxU32 maxVerts)
 					PX_ASSERT(m_lockedColors);
 					if(m_lockedPositions && m_lockedColors)
 					{
-						for(physx::PxU32 i=0; i<m_numVerts; i++)
+						for(PxU32 i=0; i<m_numVerts; i++)
 						{
-							memcpy(((physx::PxU8*)positions) + (positionStride*i), ((physx::PxU8*)m_lockedPositions) + (m_positionStride*i), sizeof(physx::PxVec3));
-							memcpy(((physx::PxU8*)colors)    + (colorStride*i),    ((physx::PxU8*)m_lockedColors)    + (m_colorStride*i),    sizeof(RendererColor));
+							memcpy(((PxU8*)positions) + (positionStride*i), ((PxU8*)m_lockedPositions) + (m_positionStride*i), sizeof(PxVec3));
+							memcpy(((PxU8*)colors)    + (colorStride*i),    ((PxU8*)m_lockedColors)    + (m_colorStride*i),    sizeof(SampleRenderer::RendererColor));
 						}
 					}
-					m_vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_COLOR);
-					m_vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
+					m_vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR);
+					m_vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION);
 				}
 			}
-			vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_COLOR);
-			vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
+			vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR);
+			vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION);
 		}
 		if(m_vertexbuffer)
 		{
@@ -147,16 +152,12 @@ void SampleLineDebugRender::checkResizeLine(physx::PxU32 maxVerts)
 			m_lockedColors    = 0;
 			m_colorStride     = 0;
 		}
-		if(m_mesh)
-		{
-			m_mesh->release();
-			m_mesh = 0;
-		}
+		SAFE_RELEASE(m_mesh);
 		if(vertexbuffer)
 		{
 			m_vertexbuffer = vertexbuffer;
-			RendererMeshDesc meshdesc;
-			meshdesc.primitives       = RendererMesh::PRIMITIVE_LINES;
+			SampleRenderer::RendererMeshDesc meshdesc;
+			meshdesc.primitives       = SampleRenderer::RendererMesh::PRIMITIVE_LINES;
 			meshdesc.vertexBuffers    = &m_vertexbuffer;
 			meshdesc.numVertexBuffers = 1;
 			meshdesc.firstVertex      = 0;
@@ -174,12 +175,12 @@ void SampleLineDebugRender::checkLock(void)
 	{
 		if(!m_lockedPositions)
 		{
-			m_lockedPositions = m_vertexbuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, m_positionStride);
+			m_lockedPositions = m_vertexbuffer->lockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION, m_positionStride);
 			PX_ASSERT(m_lockedPositions);
 		}
 		if(!m_lockedColors)
 		{
-			m_lockedColors = m_vertexbuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_COLOR, m_colorStride);
+			m_lockedColors = m_vertexbuffer->lockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR, m_colorStride);
 			PX_ASSERT(m_lockedColors);
 		}
 	}
@@ -191,26 +192,31 @@ void SampleLineDebugRender::checkUnlock(void)
 	{
 		if(m_lockedPositions)
 		{
-			m_vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
+			m_vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_POSITION);
 			m_lockedPositions = 0;
 		}
 		if(m_lockedColors)
 		{
-			m_vertexbuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_COLOR);
+			m_vertexbuffer->unlockSemantic(SampleRenderer::RendererVertexBuffer::SEMANTIC_COLOR);
 			m_lockedColors = 0;
 		}
 	}
 }
 
-void SampleLineDebugRender::addVert(const physx::PxVec3 &p, const RendererColor &color)
+void SampleLineDebugRender::addVert(const PxVec3 &p, const SampleRenderer::RendererColor &color)
 {
 	PX_ASSERT(m_maxVerts > m_numVerts);
 	{
 		checkLock();
 		if(m_lockedPositions && m_lockedColors)
 		{
-			memcpy(((physx::PxU8*)m_lockedPositions) + (m_positionStride*m_numVerts), &p,     sizeof(physx::PxVec3));
-			memcpy(((physx::PxU8*)m_lockedColors)    + (m_colorStride*m_numVerts),    &color, sizeof(RendererColor));
+			memcpy(((PxU8*)m_lockedPositions) + (m_positionStride*m_numVerts), &p,     sizeof(PxVec3));
+#if defined(RENDERER_XBOX360)
+			PxU8 colors[4] = {color.a, color.r, color.g, color.b};
+			memcpy(((PxU8*)m_lockedColors)    + (m_colorStride*m_numVerts), colors, sizeof(PxU8) * 4);
+#else
+			memcpy(((PxU8*)m_lockedColors)    + (m_colorStride*m_numVerts), &color, sizeof(SampleRenderer::RendererColor));
+#endif
 			m_numVerts++;
 		}
 	}

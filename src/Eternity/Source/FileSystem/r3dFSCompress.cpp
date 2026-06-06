@@ -142,10 +142,16 @@ int r3dFSCompress::DecompressInflate(const BYTE* in_data, const DWORD in_csize, 
     r3dOutToLog("ZLIB: inflateInit2 failed %d\n", err);
     return 0;
   }
-
+  
   err = inflate(&stream, Z_FINISH);
   if(err != Z_STREAM_END) {
     r3dOutToLog("ZLIB: Error %d inflating\n", err);
+    r3dOutToLog("%d %d %d %d %d %d\n", in_csize, in_size, stream.avail_in, stream.total_in, stream.avail_out, stream.total_out);
+    void* temp_ptr1 = malloc(256 * 1024);
+    void* temp_ptr2 = malloc(1024 * 1024);
+    r3dOutToLog("%p %p\n", temp_ptr1, temp_ptr2);
+    free(temp_ptr1);
+    free(temp_ptr2);
     return 0;
   }
 
@@ -216,88 +222,77 @@ r3dFSCompress::r3dFSCompress()
 }
 
 int r3dFSCompress::CompressFile(
-    const char* fname, 
-    int* method, 
-    BYTE** out_data, 
-    DWORD* out_size, 
-    DWORD* out_csize,
-    DWORD* out_crc32)
+	  const char* fname, 
+	  int* method, 
+	  BYTE** out_data, 
+	  DWORD* out_size, 
+	  DWORD* out_csize,
+	  DWORD* out_crc32)
 {
+  // read that file first
   FILE* f = fopen(fname, "rb");
   if(f == NULL) {
     r3dError("r3dFSCompress::CompressFile() can't open %s\n", fname);
     return 0;
   }
-
   fseek(f, 0, SEEK_END);
-  const long fileSizeLong = ftell(f);
+  const long size = ftell(f);
   fseek(f, 0, SEEK_SET);
-
-  if(fileSizeLong < 0 || static_cast<unsigned long>(fileSizeLong) > MAXDWORD) {
-    fclose(f);
-    r3dError("r3dFSCompress::CompressFile() invalid file size %s\n", fname);
-    return 0;
-  }
-
-  const DWORD size = static_cast<DWORD>(fileSizeLong);
-
-  BYTE* data = new BYTE[static_cast<size_t>(size) + 1];
-
-  const size_t rsize = fread(data, 1, static_cast<size_t>(size), f);
+  
+  BYTE* data = new BYTE[size + 1];
+  const long rsize = fread(data, 1, size, f);
   fclose(f);
-
-  if(rsize != static_cast<size_t>(size)) {
-    delete[] data;
-    r3dError("failed to read %s %u vs %u\n", fname, size, static_cast<unsigned int>(rsize));
-    return 0;
+  if(rsize != size) {
+    r3dError("failed to read %s %d vs %d\n", fname, size, rsize);
   }
-
-  *out_size  = size;
+  
+  *out_size  = (DWORD)size;
   *out_crc32 = r3dCRC32(data, size);
-
+  
+  // zero length file compression
   if(size == 0) {
     *method    = COMPRESS_STORE;
-    *out_data  = data;
+    *out_data  = data; // there is 1 byte array now
     *out_csize = 0;
     return 1;
   }
 
-  int res = 0;
-
+  float t1 = r3dGetTime();
+  int res;
   switch(*method)
   {
-  default:
-    delete[] data;
-    r3dError("invalid compression method %d for %s\n", *method, fname);
-    return 0;
+    default:
+      r3dError("invalid compression method %d for %s\n", method, fname);
+      return 0;
+      
+    case COMPRESS_STORE:
+      res = CompressStore(data, size, out_data, out_csize);
+      break;
 
-  case COMPRESS_STORE:
-    res = CompressStore(data, size, out_data, out_csize);
-    break;
-
-  case COMPRESS_INFLATE:
-    res = CompressInflate(data, size, out_data, out_csize);
-    break;
-
+    case COMPRESS_INFLATE:
+      res = CompressInflate(data, size, out_data, out_csize);
+      break;
+      
 #ifdef USING_LZO
-  case COMPRESS_LZO:
-    res = CompressLzo(data, size, out_data, out_csize);
-    break;
+    case COMPRESS_LZO:
+      res = CompressLzo(data, size, out_data, out_csize);
+      break;
 #endif
   }
-
+  
   if(!res) {
-    delete[] data;
     r3dError("Compress failed\n");
-    return 0;
   }
 
-  if(*out_csize > size) {
+  if(*out_csize > (DWORD)size) {
+    // compressed size was larger that normal, switch to store
     *method = COMPRESS_STORE;
     delete[] *out_data;
     res = CompressStore(data, size, out_data, out_csize);
   }
 
+  //r3dOutToLog(", %.3fsec", r3dGetTime() - t1);
+  
   delete[] data;
   return res;
 }
@@ -370,28 +365,24 @@ bool r3dGetFileCrc32(const char* fname, DWORD* out_crc32, DWORD* out_size)
   }
   
   fseek(f, 0, SEEK_END);
-  const long fileSizeLong = ftell(f);
+  long size = ftell(f);
   fseek(f, 0, SEEK_SET);
-
-  if(fileSizeLong < 0 || static_cast<unsigned long>(fileSizeLong) > MAXDWORD) {
-    fclose(f);
-    r3dError("r3dFSCompress::CompressFile() invalid file size %s\n", fname);
+  
+  BYTE* data = new BYTE[size + 1];
+  if(fread(data, 1, size, f) != size) {
+	fclose(f);
+	delete [] data;
+    r3dError("failed to read %s %d\n", fname, size);
     return 0;
   }
 
-  const DWORD size = static_cast<DWORD>(fileSizeLong);
-
-  BYTE* data = new BYTE[static_cast<size_t>(size) + 1];
-
-  const size_t rsize = fread(data, 1, static_cast<size_t>(size), f);
+  DWORD crc32 = r3dCRC32(data, size);
+  
+  delete[] data;
   fclose(f);
-
-  if(rsize != static_cast<size_t>(size)) {
-    r3dError("failed to read %s %u vs %u\n", fname, size, static_cast<unsigned int>(rsize));
-  }
-
-  *out_size  = size;
-  *out_crc32 = r3dCRC32(data, size);
+  
+  if(out_size) *out_size = size;
+  *out_crc32 = crc32;
   
   return true;
 }

@@ -320,9 +320,6 @@ public:
     bool          SetRestrict(const String& restrStr);
     const String* GetRestrict() const;
     void          ClearRestrict();
-    // returns true, if wcharCode is ALLOWED (not restricted); false otherwise.
-    bool          CheckRestrict(wchar_t wcharCode) const;
-    bool          HasRestrict() const { return !!pRestrict; }
 
 #ifndef SF_NO_IME_SUPPORT
     // Composition string
@@ -391,8 +388,8 @@ public:
     void OnMouseDown(float , float , int ) {}
     void OnMouseUp(float , float , int ) {}
     void OnMouseMove(float , float ) {}
-    bool OnKeyDown(int, const KeyModifiers&) { return false; }
-    bool OnKeyUp(int, const KeyModifiers&)   { return false; }
+    bool OnKeyDown(int code, const KeyModifiers& specKeysState) { return false; }
+    bool OnKeyUp(int code, const KeyModifiers& specKeysState)   { return false; }
     bool OnChar(UInt32) { return false; }
     void OnSetFocus() {}
     void OnKillFocus() {}

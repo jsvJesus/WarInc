@@ -41,7 +41,7 @@ static void GetCurveControlPoints ( const r3dBezierGradient::val_s * pKnots, int
 	{ 
 		// Special case: Bezier curve should be a straight line.
 		// 3P1 = 2P0 + P3
-		// P2 = 2P1 – P0
+		// P2 = 2P1 P0
 
 		for ( int i = 0; i < 4; i++ )
 		{

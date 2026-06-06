@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,12 +34,14 @@
  */
 #include <RendererColor.h>
 
+using namespace SampleRenderer;
+
 RendererColor::RendererColor(void)
 {
 
 }
 
-RendererColor::RendererColor(physx::PxU8 _r, physx::PxU8 _g, physx::PxU8 _b, physx::PxU8 _a)
+RendererColor::RendererColor(PxU8 _r, PxU8 _g, PxU8 _b, PxU8 _a)
 {
 	r=_r;
 	g=_g;
@@ -47,10 +49,17 @@ RendererColor::RendererColor(physx::PxU8 _r, physx::PxU8 _g, physx::PxU8 _b, phy
 	a=_a;
 }
 
-RendererColor::RendererColor(physx::PxU32 rgba)
+RendererColor::RendererColor(PxU32 rgba)
 {
-	r = (physx::PxU8)((rgba>>16) & 0xff);
-	g = (physx::PxU8)((rgba>>8)  & 0xff);
-	b = (physx::PxU8)((rgba)     & 0xff);
+	b = (PxU8)((rgba>>16) & 0xff);
+	g = (PxU8)((rgba>>8)  & 0xff);
+	r = (PxU8)((rgba)     & 0xff);
 	a = 255;
+}
+
+void RendererColor::swizzleRB(void)
+{
+	PxU8 t = b;
+	b = r;
+	r = t;
 }

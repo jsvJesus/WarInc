@@ -5,50 +5,130 @@
 
 #pragma once
 
-#if ENABLE_ZOMBIES
-
-#include "gameobjects/obj_Mesh.h"
-#include "../ai/AI_PlayerAnim.h"
+#include "multiplayer/P2PMessages.h"
+#include "multiplayer/NetCellMover.h"
 #include "ZombieStates.h"
-#include "ai/NavMeshActor.h"
 
-//////////////////////////////////////////////////////////////////////////
-
-const int ZOMBIE_BODY_PARTS_COUNT = 3;
-
-//////////////////////////////////////////////////////////////////////////
-
-class obj_AI_Player;
 class r3dPhysSkeleton;
-class obj_ZombieSpawn;
 
 class obj_Zombie: public GameObject
 {
 	DECLARE_CLASS(obj_Zombie, GameObject)
+	
+private:
+	bool	m_isFemale;
+
+	// sounds
+	float m_sndMaxDistIdle;
+	float m_sndMaxDistChase;
+	float m_sndMaxDistAttack;
+	float m_sndMaxDistAll;
+
+	void* m_sndIdleHandle;
+	void* m_sndChaseHandle;
+	void* m_sndAttackHandle;
+	float m_sndAttackLength;
+	float m_sndAttackNextPlayTime;
+	void* m_sndDeathHandle;
+	void* m_sndHurtHandle;
+
+	void UpdateSounds();
+
+	void DestroySounds();
+	void PlayAttackSound();
+	void PlayDeathSound();
+	bool isSoundAudible();
+	
+	bool		gotDebugMove;
+	PKT_S2C_Zombie_DBG_AIInfo_s dbgAiInfo;
 
 public:
-	/**	Configuration structure. All parameters except speed in range [0..100]. */
-	struct Config
-	{
-		float detectionRadius;
-		float speed;
+	void PlayHurtSound();
 
-		Config()
-		: detectionRadius(1.0f)
-		, speed(3.0f)
-		{}
+	PKT_S2C_CreateZombie_s CreateParams;
+
+	/**	Zombie animation system. */
+	r3dAnimation	anim_;
+
+	int physSkeletonIndex;
+	int isPhysInRagdoll;
+
+	r3dMesh*	zombieParts[4]; //head/body/legs/special
+	bool		gotLocalBbox;
+	float		walkAnimCoef;
+	void		UpdateAnimations();
+	int		AddAnimation(const char* anim);
+
+	void		StartWalkAnim(bool run);
+
+	CNetCellMover	netMover;
+	void		ProcessMovement();
+
+	int		PhysXObstacleIndex;
+
+	r3dPoint3D	lastTimeHitPos;
+	int		lastTimeDmgType;
+	int		lastTimeHitBoneID;
+	int		staggeredTrack;
+	int		attackTrack;
+	float		walkSpeed;
+
+	int		ZombieState;
+	float		StateTimer;
+
+	bool	bDead;
+
+	int UpdateWarmUp;
+	int PhysicsOn;
+
+	struct ZombieSortEntry
+	{
+		obj_Zombie*	zombie;
+		float		distance;
 	};
 
+	static r3dTL::TArray< ZombieSortEntry > ZombieList;
+
+	struct CacheEntry
+	{
+		r3dPhysSkeleton*	skeleton;
+		bool				allocated;
+	};
+
+	static r3dTL::TArray< CacheEntry > PhysSkeletonCache;
+
+	static void InitPhysSkeletonCache( float progressStart, float progressEnd );
+
+	static void FreePhysSkeletonCache();
+
+	static void ReassignSkeletons();
+
+	void		LinkSkeleton( int cacheIndex );
+	void		UnlinkSkeleton();
+
+	void		SwitchPhysToRagdoll( bool ragdollOn, r3dPoint3D* hitForce, int boneID );
+
+	void		SetZombieState(int state, bool atStart);
+	
+	void		DoDeath();
+
+	r3dPhysSkeleton* GetPhysSkeleton() const;
+
+	virtual	BOOL	OnNetReceive(DWORD EventID, const void* packetData, int packetSize);
+	void		 OnNetPacket(const PKT_S2C_MoveTeleport_s& n);
+	void		 OnNetPacket(const PKT_C2C_MoveSetCell_s& n);
+	void		 OnNetPacket(const PKT_C2C_MoveRel_s& n);
+	void		 OnNetPacket(const PKT_S2C_ZombieSetState_s& n);
+	void		OnNetAttackStart();
+
+public:
 	obj_Zombie();
 	~obj_Zombie();
 
 	virtual	BOOL OnCreate();
 	virtual BOOL Update();
 	virtual BOOL OnDestroy();
-	const Config & GetAIConfig() const { return cfg; }
 	virtual void OnPreRender();
-	void Die(const r3dPoint3D &hitRay);
-	void SetSpawn(obj_ZombieSpawn *s) { spawn = s; }
 
 	virtual void AppendShadowRenderables(RenderArray &rarr, const r3dCamera& cam);
 	virtual void AppendRenderables(RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& cam);
@@ -56,54 +136,5 @@ public:
 #ifndef FINAL_BUILD
 	void DrawDebugInfo() const;
 #endif
-
-private:
-	friend class ZombieLookForTargetState;
-	friend class ZombieMoveToTargetState;
-	friend class ZombieAttackTargetState;
-	friend class ZombieDieState;
-	friend class ZombieGlobalState;
-
-	/**	Navigation agent idx. */
-	int navAgentIdx;
-
-	/**	Chased player game object id. */
-	gobjid_t chasedTarget;
-
-	/**	Last seen chased target pos. Used for i.e. "soft-lock" targeting. */
-	r3dPoint3D lastTargetPos;
-
-	/**	Zombie AI config. */
-	Config cfg;
-
-	/**	Zombie animation system. */
-	CUberAnim *uberAnim;
-
-	/**	Zombie AI state machine. */
-	r3dFiniteStateMachine<obj_Zombie> *fsm;
-
-	/**	Zombie ragdoll. */
-	r3dPhysSkeleton *physSkeleton;
-
-	/**	Time since zombie death. */
-	float deadTime;
-
-	/**	Spawn that produce this zombie. */
-	obj_ZombieSpawn *spawn;
-
-	/**	Death hit velocity. */
-	r3dPoint3D deathHitVel;
-
-	/**	AI navigation agent parameters. */
-	r3dNavAgentParams aiParams;
-
-	/**	Array of meshes with zombie parts. */
-	r3dMesh * zombieParts[ZOMBIE_BODY_PARTS_COUNT];
-
-	/**	Currently played sound. */
-	void *playingSndHandle;
-
-	void UpdateAnimations();
 };
 
-#endif // ENABLE_ZOMBIES

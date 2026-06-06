@@ -205,6 +205,12 @@ void obj_VehicleSpawn::AppendRenderables( RenderArray ( & render_arrays  )[ rsCo
 	if( r_hide_icons->GetInt() )
 		return ;
 
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
+
 	// helper
 	extern int CurHUDID;
 	if(CurHUDID == 0)

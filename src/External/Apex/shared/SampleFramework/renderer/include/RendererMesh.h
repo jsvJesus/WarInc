@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,17 +38,21 @@
 #include <RendererConfig.h>
 #include <RendererIndexBuffer.h>
 
-class RendererMeshDesc;
-class RendererVertexBuffer;
-class RendererIndexBuffer;
-class RendererInstanceBuffer;
-class RendererMaterial;
-
-class RendererMesh
+namespace SampleRenderer
 {
-	friend class Renderer;
+	class Renderer;
+	class RendererMeshDesc;
+	class RendererVertexBuffer;
+	class RendererIndexBuffer;
+	class RendererInstanceBuffer;
+	class RendererMaterial;
+
+	class RendererMesh
+	{
+		friend class Renderer;
+		friend class GLES2Renderer;
 	public:
-		typedef enum Primitive
+		enum Primitive
 		{
 			PRIMITIVE_POINTS = 0,
 			PRIMITIVE_LINES,
@@ -56,60 +60,66 @@ class RendererMesh
 			PRIMITIVE_TRIANGLES,
 			PRIMITIVE_TRIANGLE_STRIP,
 			PRIMITIVE_POINT_SPRITES,
-			
+
 			NUM_PRIMITIVES
-		};
-	
+		}_Primitive;
+
 	protected:
 		RendererMesh(const RendererMeshDesc &desc);
 		virtual ~RendererMesh(void);
-		
+
 	public:
-		void release(void) { delete this; }
-		
+		void release(void);
+
 		Primitive getPrimitives(void) const;
-		
-		physx::PxU32 getNumVertices(void) const;
-		physx::PxU32 getNumIndices(void) const;
-		physx::PxU32 getNumInstances(void) const;
-		
-		void setVertexBufferRange(physx::PxU32 firstVertex, physx::PxU32 numVertices);
-		void setIndexBufferRange(physx::PxU32 firstIndex, physx::PxU32 numIndices);
-		void setInstanceBufferRange(physx::PxU32 firstInstance, physx::PxU32 numInstances);
-		
-		physx::PxU32                             getNumVertexBuffers(void) const;
+
+		PxU32 getNumVertices(void) const;
+		PxU32 getNumIndices(void) const;
+		PxU32 getNumInstances(void) const;
+
+		void setVertexBufferRange(PxU32 firstVertex, PxU32 numVertices);
+		void setIndexBufferRange(PxU32 firstIndex, PxU32 numIndices);
+		void setInstanceBufferRange(PxU32 firstInstance, PxU32 numInstances);
+
+		PxU32                             getNumVertexBuffers(void) const;
 		const RendererVertexBuffer *const*getVertexBuffers(void) const;
-		
+
 		const RendererIndexBuffer        *getIndexBuffer(void) const;
-		
+
 		const RendererInstanceBuffer     *getInstanceBuffer(void) const;
-		
-	private:
+
+		virtual bool willRender() const { return true; }
+
+	protected:
 		void         bind(void) const;
 		void         render(RendererMaterial *material) const;
 		void         unbind(void) const;
-		
-		virtual void renderIndices(physx::PxU32 numVertices, physx::PxU32 firstIndex, physx::PxU32 numIndices, RendererIndexBuffer::Format indexFormat) const = 0;
-		virtual void renderVertices(physx::PxU32 numVertices) const = 0;
-		
-		virtual void renderIndicesInstanced(physx::PxU32 numVertices, physx::PxU32 firstIndex, physx::PxU32 numIndices, RendererIndexBuffer::Format indexFormat,RendererMaterial *material) const = 0;
-		virtual void renderVerticesInstanced(physx::PxU32 numVertices,RendererMaterial *material) const = 0;
-	
+
+		virtual void renderIndices(PxU32 numVertices, PxU32 firstIndex, PxU32 numIndices, RendererIndexBuffer::Format indexFormat, RendererMaterial *material) const = 0;
+		virtual void renderVertices(PxU32 numVertices, RendererMaterial *material) const = 0;
+
+		virtual void renderIndicesInstanced(PxU32 numVertices, PxU32 firstIndex, PxU32 numIndices, RendererIndexBuffer::Format indexFormat,RendererMaterial *material) const = 0;
+		virtual void renderVerticesInstanced(PxU32 numVertices,RendererMaterial *material) const = 0;
+
+		virtual Renderer& renderer() = 0;
+
 	protected:
 		Primitive               m_primitives;
-		
+
 		RendererVertexBuffer  **m_vertexBuffers;
-		physx::PxU32                   m_numVertexBuffers;
-		physx::PxU32                   m_firstVertex;
-		physx::PxU32                   m_numVertices;
-		
+		PxU32                   m_numVertexBuffers;
+		PxU32                   m_firstVertex;
+		PxU32                   m_numVertices;
+
 		RendererIndexBuffer    *m_indexBuffer;
-		physx::PxU32                   m_firstIndex;
-		physx::PxU32                   m_numIndices;
-		
+		PxU32                   m_firstIndex;
+		PxU32                   m_numIndices;
+
 		RendererInstanceBuffer *m_instanceBuffer;
-		physx::PxU32                   m_firstInstance;
-		physx::PxU32                   m_numInstances;
-};
+		PxU32                   m_firstInstance;
+		PxU32                   m_numInstances;
+	};
+
+} // namespace SampleRenderer
 
 #endif

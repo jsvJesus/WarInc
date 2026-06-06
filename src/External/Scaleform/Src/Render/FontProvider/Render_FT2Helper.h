@@ -34,14 +34,12 @@ class ShapeDataInterface;
 class GlyphShape;
 struct ShapePosInfo;
 
-// see FT_Vector in ftimage.h
 struct FTVector
 {
-    long x; // must be same type as FT_Pos
-    long y;
+    SInt32 x;
+    SInt32 y;
 };
 
-// see FT_Outline in ftimage.h
 struct  FTOutline
 {
     SInt16      NContours;      // number of contours in glyph        

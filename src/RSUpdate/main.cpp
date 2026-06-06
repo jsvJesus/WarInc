@@ -23,6 +23,8 @@ const IID r3dIID_ITaskbarList3 = { 0xEA1AFB91, 0x9E28, 0x4B86, { 0x90, 0xE9, 0x9
 #include "Win32Input.h"
 #include "SteamHelper.h"
 
+#include "LauncherConfig.h"
+
 #ifdef USE_VMPROTECT
   #error "DO NOT compile updater with USE_VMPROTECT"
 #endif
@@ -43,14 +45,21 @@ extern	void		r3dWinStyleModify(HWND hWnd, int add, DWORD style);
 
 	r3dTexImage2D*	g_bkgLogin  = NULL;
 	r3dTexImage2D*	g_bkgUpdate = NULL;
+	r3dTexImage2D*	g_bkgSerialCheck = NULL;
 	r3dTexImage2D*	g_bkgRegister = NULL;
 	r3dTexImage2D*	g_bkgStarting = NULL;
+	r3dTexImage2D*	g_bkgExpired = NULL;
 	r3dTexImage2D*	g_imPB[3] = {0};	// progress bar images
 	r3dTexImage2D*	g_imBtnPg[3] = {0};
 	r3dTexImage2D*	g_imBtnClose = {0};
 	r3dTexImage2D*	g_imBtnLogin = {0};
 	r3dTexImage2D*	g_imBtnTopMenu[8] = {0};
 	r3dTexImage2D*	g_imBtnRegister = {0};
+	r3dTexImage2D*	g_imBtnRegisterNew = {0};
+	r3dTexImage2D*	g_imBtnValidate = {0};
+	r3dTexImage2D*	g_imBtnGetSerial = {0};
+	r3dTexImage2D*	g_imBtnGetNewKey = {0};
+	r3dTexImage2D*	g_imBtnApplyNewKey = {0};
 	
 	CD3DFont*	g_font1   = NULL;
 	CD3DFont*	g_font2   = NULL;
@@ -94,8 +103,8 @@ static bool insideRect(const r3dRECT& r, int x, int y)
 
 static bool checkIfAlreadyRunning()
 {
-  static const char* updaterName = "Global\\WarInc_Updater_001";
-  static const char* gameName = "Global\\WarInc_Game_001";
+  static const char* updaterName = "Global\\WarZ_Updater_001";
+  static const char* gameName = "Global\\WarZ_Game_001";
   
   HANDLE h;
   if((h = OpenEvent(SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, gameName)) != NULL) {
@@ -289,7 +298,7 @@ static int fake_SetMode(int XRes, int YRes)
   extern int r3d_CD3DFont_Quality;
   r3d_CD3DFont_Quality = 5; // set to CLEARTYPE_QUALITY
 
-  g_font1 = new CD3DFont(ig, "Tahoma", 11, D3DFONT_FILTERED | D3DFONT_SKIPGLYPH);
+  g_font1 = new CD3DFont(ig, "Tahoma", 12, D3DFONT_FILTERED | D3DFONT_SKIPGLYPH);
   g_font1->CreateSystemFont();
   g_font2 = new CD3DFont(ig, "Tahoma", 10, D3DFONT_FILTERED | D3DFONT_SKIPGLYPH);
   g_font2->CreateSystemFont();
@@ -311,27 +320,32 @@ static void CreateResources()
   g_bkgLogin    = new r3dTexImage2D(IDR_IMAGE_BACK_LOGIN, 785, 650);
   g_bkgUpdate   = new r3dTexImage2D(IDR_IMAGE_BACK_UPDATE, 785, 650);
   g_bkgRegister = new r3dTexImage2D(IDR_IMAGE_BACK_REGISTER, 785, 650);
+  g_bkgSerialCheck = new r3dTexImage2D(IDR_IMAGE_BACK_SERIALCHECK, 785, 650);
   g_bkgStarting = new r3dTexImage2D(IDR_IMAGE_BACK_STARTING, 785, 650);
-  g_imPB[0] = new r3dTexImage2D(IDR_IMAGE_PB_LEFT, 6, 10);
-  g_imPB[1] = new r3dTexImage2D(IDR_IMAGE_PB_CENTER, 4, 10);
-  g_imPB[2] = new r3dTexImage2D(IDR_IMAGE_PB_RIGHT, 6, 10);
-  g_imBtnClose = new r3dTexImage2D(IDR_IMAGE_BTN_CLOSE_ON, 20, 19);
-  g_imBtnLogin = new r3dTexImage2D(IDR_IMAGE_BTN_LOGIN_HOVER, 98, 128);
-  g_imBtnRegister = new r3dTexImage2D(IDR_IMAGE_BTN_REGISTER_HOVER, 256, 44);
-  g_imBtnTopMenu[0] = new r3dTexImage2D(IDR_IMAGE_BTN_HOWTO_HOVER, 128, 32);
-  g_imBtnTopMenu[1] = new r3dTexImage2D(IDR_IMAGE_BTN_MYACC_HOVER, 142, 32);
-  g_imBtnTopMenu[2] = new r3dTexImage2D(IDR_IMAGE_BTN_FORUMS_HOVER, 80, 32);
-  g_imBtnTopMenu[3] = new r3dTexImage2D(IDR_IMAGE_BTN_BLOG_HOVER, 80, 32);
-  g_imBtnTopMenu[4] = new r3dTexImage2D(IDR_IMAGE_BTN_SUPPORT_HOVER, 95, 32);
-  g_imBtnTopMenu[5] = new r3dTexImage2D(IDR_IMAGE_BTN_YOUTUBE_HOVER, 67, 32);
-  g_imBtnTopMenu[6] = new r3dTexImage2D(IDR_IMAGE_BTN_FACEBOOK_HOVER, 26, 32);
-  g_imBtnTopMenu[7] = new r3dTexImage2D(IDR_IMAGE_BTN_TWITTER_HOVER, 26, 32);
+  g_bkgExpired = new r3dTexImage2D(IDR_IMAGE_BACK_EXPIRED, 785, 650);
+  g_imPB[0] = new r3dTexImage2D(IDR_IMAGE_PB_LEFT, 6, 8);
+  g_imPB[1] = new r3dTexImage2D(IDR_IMAGE_PB_CENTER, 4, 8);
+  g_imPB[2] = new r3dTexImage2D(IDR_IMAGE_PB_RIGHT, 6, 8);
+  g_imBtnClose = new r3dTexImage2D(IDR_IMAGE_BTN_CLOSE_ON, 32, 32);
+  g_imBtnLogin = new r3dTexImage2D(IDR_IMAGE_BTN_LOGIN_HOVER, 455, 72);
+  g_imBtnRegister = new r3dTexImage2D(IDR_IMAGE_BTN_REGISTER_HOVER, 276, 90);
+  g_imBtnRegisterNew = new r3dTexImage2D(IDR_IMAGE_BTN_REGISTER_NEW_HOVER, 455, 72);
+  g_imBtnValidate = new r3dTexImage2D(IDR_IMAGE_BTN_VALIDATE_HOVER, 456, 77);
+  g_imBtnGetSerial = new r3dTexImage2D(IDR_IMAGE_BTN_GETSERIAL_HOVER, 456, 77);
+  g_imBtnGetNewKey = new r3dTexImage2D(IDR_IMAGE_BTN_GETNEWKEY_HOVER, 455, 72);
+  g_imBtnApplyNewKey = new r3dTexImage2D(IDR_IMAGE_BTN_APPLYNEWKEY_HOVER, 455, 72);
+  g_imBtnTopMenu[0] = new r3dTexImage2D(IDR_IMAGE_BTN_MYACC_HOVER, 130, 52);
+  g_imBtnTopMenu[1] = new r3dTexImage2D(IDR_IMAGE_BTN_FORUMS_HOVER, 89, 52);
+  g_imBtnTopMenu[2] = new r3dTexImage2D(IDR_IMAGE_BTN_SUPPORT_HOVER, 99, 52);
+  g_imBtnTopMenu[3] = new r3dTexImage2D(IDR_IMAGE_BTN_YOUTUBE_HOVER, 45, 52);
+  g_imBtnTopMenu[4] = new r3dTexImage2D(IDR_IMAGE_BTN_FACEBOOK_HOVER, 48, 52);
+  g_imBtnTopMenu[5] = new r3dTexImage2D(IDR_IMAGE_BTN_TWITTER_HOVER, 48, 52);
   
-  g_imBtnPg[0] = new r3dTexImage2D(IDR_IMAGE_BTN_PG_ON,    328, 128);
-  g_imBtnPg[1] = new r3dTexImage2D(IDR_IMAGE_BTN_PG_HOVER, 328, 128);
+  g_imBtnPg[0] = new r3dTexImage2D(IDR_IMAGE_BTN_PG_ON,    276, 127);
+  g_imBtnPg[1] = new r3dTexImage2D(IDR_IMAGE_BTN_PG_HOVER, 276, 127);
 
   // sync steam_api.dll from resource
-  gSteam.SyncDllFromResource();
+  //gSteam.SyncDllFromResource();
 
   return;
 }
@@ -408,10 +422,10 @@ void game::Init(void)
     return;
   }
   
-  //gHwInfoPoster.Start(); -- DISABLED FOR NOW
+  //@gHwInfoPoster.Start(); -- DISABLED FOR NOW
 
   // set small icon
-  ::SendMessage(win::hWnd, WM_SETICON, FALSE, (LPARAM)::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARINC_SMALL)));
+  ::SendMessage(win::hWnd, WM_SETICON, FALSE, (LPARAM)::LoadIcon(win::hInstance, MAKEINTRESOURCE(IDI_WARINC)));
   
   // make borderless window and subclass wndProc
   r3dWinStyleModify(win::hWnd, 0, WS_BORDER);
@@ -490,8 +504,28 @@ static SIZE GetTextExtent(CD3DFont* fnt, const char* text)
   return sz;
 }
 
+// YAY! STL WONDERS!
+#include <algorithm>  
+#include <functional>  
+#include <cctype> 
+#include <locale> 
+// trim from start 
+static inline std::string &ltrim(std::string &s) { 
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace)))); 
+        return s; 
+} 
+// trim from end 
+static inline std::string &rtrim(std::string &s) { 
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end()); 
+        return s; 
+} 
+// trim from both ends 
+static inline std::string &trim(std::string &s) { 
+        return ltrim(rtrim(s)); 
+} 
 
-static int editTextField(float x, float y, char* editString, bool isFocused, bool isPassword, unsigned int maxLength = 32)
+
+static int editTextField(float x, float y, char* editString, bool isFocused, int editType, unsigned int maxLength = 32)
 {
   r3dColor clr(0, 86, 159);
 
@@ -500,8 +534,8 @@ static int editTextField(float x, float y, char* editString, bool isFocused, boo
     stars[i] = '*';
   stars[strlen(editString)] = 0;
      
-  char* msg = isPassword ? stars : editString;
-  g_font1->PrintF(x, y, clr, "%s", msg);
+  char* msg = (editType == 1) ? stars : editString;
+  g_font1->PrintF(x, y + ((editType == 1) ? 4 : 0), clr, "%s", msg); // '*' in font is way up, adjust it to center
   if(!isFocused)
     return 0;
     
@@ -524,13 +558,33 @@ static int editTextField(float x, float y, char* editString, bool isFocused, boo
     r3dDrawBox2D(x + (float)(ts1.cx - ts2.cx), y+2, 1, 16, r3dColor(0, 0, 0));
   }
 
+  // some wierd Control-V logic, as we can't detect it - it's eated inside WMKEYDOWN
+  static bool btnVPressed = false;
+  if(::GetFocus() == win::hWnd && (GetKeyState('V') & 0x80) && !btnVPressed) {
+    btnVPressed = true;
+    if(GetKeyState(VK_CONTROL) & 0x80) {
+      if(OpenClipboard(NULL)) 
+      {
+        HANDLE clip = GetClipboardData(CF_TEXT);
+        const char* ptr = (LPSTR)GlobalLock(clip);
+        if(ptr)
+        {
+          std::string text = ptr;
+          text = trim(text);
+          r3dscpy_s(editString, maxLength, text.c_str());
+        }
+        GlobalUnlock(clip);
+        CloseClipboard();
+      }
+    }
+  }
+  else btnVPressed = false;
+  
   // do input
   int ch = win32_getch();
   if(ch == 0)
     return 0;
     
-  //r3dOutToLog("KEY: %d\n", ch);
-  
   // backspace
   if(ch == 8 && *editString != 0)
     editString[strlen(editString)-1] = 0;
@@ -538,6 +592,30 @@ static int editTextField(float x, float y, char* editString, bool isFocused, boo
   // check for max length
   if(strlen(editString) >= maxLength)
     return 0;
+    
+  if(editType == 2)
+  {
+    // special case for serial entry
+    int len = strlen(editString);
+    if(len >= 19) // max length
+      return 0;
+    if(len == 4 || len == 9 || len == 14) { // '-' in serial
+      if(ch == '-') {
+        sprintf(editString + strlen(editString), "%c", ch);
+      }
+      return 0;
+    }
+    if(ch >= '0' && ch <= '9')
+      sprintf(editString + strlen(editString), "%c", ch);
+    else if(ch >= 'a' && ch <= 'z')
+      sprintf(editString + strlen(editString), "%c", ch - 0x20);
+    else if(ch >= 'A' && ch <= 'Z')
+      sprintf(editString + strlen(editString), "%c", ch);
+    else if(ch == 9 || ch == 13)
+      return ch;
+
+    return 0;
+  }
     
   // normal key
   if(ch >= 0x20 && ch < 0x80) {
@@ -551,24 +629,23 @@ static int editTextField(float x, float y, char* editString, bool isFocused, boo
 
 static void drawProgressBar(CUpdater& updater)
 {
-  float base_y = 626; //updater.status_ == CUpdater::STATUS_Updating ? 615.0f : 626.0f;
+  float base_y = 617.0f;
   
   // updater info & version
-  g_font1->PrintF(21, base_y-24, r3dColor(153, 208, 237), "%s", updater.updMsg1_);
-  g_font3->PrintF(21, base_y+11, r3dColor(82, 108, 129), "v%s%s", UPDATER_VERSION,UPDATER_VERSION_SUFFIX);
+  g_font1->PrintF(20, base_y-26, r3dColor(226, 226, 226), "%s", updater.updMsg1_);
+  g_font3->PrintF(20, base_y+15, r3dColor(82, 108, 129), "v%s%s", UPDATER_VERSION,UPDATER_VERSION_SUFFIX);
   
   if(!updater.showProgress_)
     return;
 
   r3dColor pbclr = r3dColor(255, 255, 255);
   float y    = base_y;
-  float x    = 22;
-  float w    = 762 - x;
+  float x    = 25;
+  float w    = 735;
   float perc = updater.prgTotal_.getCoef();
   float c    = (w * perc);	// length of center bar
   
-  g_imPB[1]->draw(x, y, c, 10, pbclr);
-
+  g_imPB[1]->draw(x, y, c, 9, pbclr);
 
 /*
   float mbLeft = ((float)updater.prgTotal_.total - updater.prgTotal_.cur) / 1024.0f / 1024.0f;
@@ -582,21 +659,22 @@ static void drawProgressBar(CUpdater& updater)
 
 static bool drawUrl(float x, float y, const char* msg)
 {
+    CD3DFont* fnt = g_font1;
     // news text
-    SIZE ts = GetTextExtent(g_font1, msg);
+    SIZE ts = GetTextExtent(fnt, msg);
     r3dRECT r = {x, y, (float)ts.cx, (float)ts.cy};
-    r3dColor clr = r3dColor(34, 152, 214);
+    r3dColor clr = r3dColor(251, 1, 2);
     
     // selection and underline
     if(insideRect(r, g_mx, g_my)) {
-      clr = r3dColor(255, 216, 0);
+      clr = r3dColor(255, 255, 255);
       r3dDrawBox2D(x, y + (float)ts.cy, (float)ts.cx, 1, clr);
       if(g_mb) {
         return true;
       }
     }
 
-    g_font1->PrintF(x, y, clr, "%s", msg);
+    fnt->PrintF(x, y, clr, "%s", msg);
     return false;
 }
 
@@ -607,7 +685,7 @@ static void drawCloseButton()
   // close button
   r3dColor clr(255, 255, 255);
   if(insideRect(g_rCloseBtn, g_mx, g_my)) {
-    g_imBtnClose->draw(759, 6, 20, 19, clr);
+    g_imBtnClose->draw(753, 0, 32, 32, clr);
     if(g_mb) {
       g_bExit = true;
     }
@@ -640,49 +718,40 @@ static void filterAccountName(char* acc)
 
 static void drawRegisterButtons(CUpdater& updater)
 {
-  static r3dRECT g_rRegisterBtn  = {516, 530, 256, 44};
-  static r3dRECT g_rEditFields[4] = {
-    {462, 321, 289, 19},
-    {462, 373, 289, 19},
-    {462, 424, 289, 19},
-    {462, 476, 289, 19}
+  static r3dRECT g_rRegisterBtn  = {254, 531, 276, 90};
+  static r3dRECT g_rEditFields[3] = {
+    {182, 351, 424, 24},
+    {182, 411, 424, 24},
+    {182, 472, 424, 24},
   };
-  // username, email, passwd1, passwd1
-  static char gEditText[4][512] = {0};
-  static int gInputLen[4] = {16, 64, 32, 32};
-  
-  static bool firstTime = true;
-  if(firstTime) {
-    if(gSteam.steamID > 0)
-	r3dscpy(gEditText[0], gSteam.playerName);
-    
-    filterAccountName(gEditText[0]);
-    firstTime = false;
-  }
-  
+  // email, passwd1, passwd2, serial
+  static char gEditText[3][512] = {0};
+  static int gInputLen[3] = {64, 32, 32};
+
   r3dColor clr(255, 255, 255);
 
   // if login in process, draw only needed things
-  if(updater.createAccHelper.createAccCode == CCreateAccHelper::CA_Processing) 
+  bool testDraw = (GetAsyncKeyState(VK_F1) & 0x8000) && false;
+  if(testDraw || updater.createAccHelper.createAccCode == CCreateAccHelper::CA_Processing) 
   {
-    for(int i=0; i<4; i++) {
+    for(int i=0; i<3; i++) {
       r3dDrawBox2D(g_rEditFields[i].left-2, g_rEditFields[i].top-2, g_rEditFields[i].width+4, g_rEditFields[i].height+4, r3dColor(0, 0, 0, 100));
-      editTextField(g_rEditFields[i].left, g_rEditFields[i].top, gEditText[i], false, i>=2);
+      editTextField(g_rEditFields[i].left, g_rEditFields[i].top, gEditText[i], false, i>=1 ? 1 : 0);
     }
     return;
   }
   
   // register button. enabled if we have all data
-  if(gEditText[0][0] && gEditText[1][0] && gEditText[2][0] && gEditText[3][0] &&
+  if(gEditText[0][0] && gEditText[1][0] && gEditText[2][0] &&
      insideRect(g_rRegisterBtn, g_mx, g_my)) 
   {
     g_imBtnRegister->draw(g_rRegisterBtn.left, g_rRegisterBtn.top, g_rRegisterBtn.width, g_rRegisterBtn.height, clr);
     if(g_mb) 
     {
       strcpy(updater.createAccHelper.username, gEditText[0]);
-      strcpy(updater.createAccHelper.email,    gEditText[1]);
-      strcpy(updater.createAccHelper.passwd1,  gEditText[2]);
-      strcpy(updater.createAccHelper.passwd2,  gEditText[3]);
+      strcpy(updater.createAccHelper.passwd1,  gEditText[1]);
+      strcpy(updater.createAccHelper.passwd2,  gEditText[2]);
+      strcpy(updater.createAccHelper.serial,   updater.checkSerialHelper.serial);
       updater.DoCreateAccount();
     }
   }
@@ -690,7 +759,7 @@ static void drawRegisterButtons(CUpdater& updater)
   // input fields logic
   static int focusId = 0;
   
-  for(int i=0; i<4; i++) 
+  for(int i=0; i<3; i++) 
   {
     if(g_mb && insideRect(g_rEditFields[i], g_mx, g_my)) {
       focusId = i;
@@ -703,35 +772,185 @@ static void drawRegisterButtons(CUpdater& updater)
       g_rEditFields[i].top, 
       gEditText[i], 
       focusId == i, 
-      i>=2,
+      (i == 1 || i == 2) ? 1 : 0,
       gInputLen[i]);
     if(key == 9)  focusId = (GetKeyState(VK_SHIFT)&0x8000) ? focusId-1 : focusId+1;
     if(key == 13 && gEditText[i][0]) focusId++;
     
-    if(focusId >= 4) focusId = 0;
-    if(focusId < 0)  focusId = 3;
+    if(focusId >= 3) focusId = 0;
+    if(focusId <  0) focusId = 2;
   }
   
-  filterAccountName(gEditText[0]);
+  return;
+}
+
+static void drawTimeExpiredButtons(CUpdater& updater)
+{
+  static r3dRECT g_rGetNewKeyBtn   = {165, 343, 455, 72};
+  static r3dRECT g_rApplyNewKeyBtn = {165, 550, 455, 72};
+  static r3dRECT g_rEditFields[1] = {
+    {182, 497, 424, 24},
+  };
+  // email, passwd1, passwd2, serial
+  static char gEditText[1][512] = {0};
+  static int gInputLen[1] = {64};
+
+  r3dColor clr(255, 255, 255);
+
+  // if login in process, draw only needed things
+  bool testDraw = (GetAsyncKeyState(VK_F1) & 0x8000) && false;
+  if(testDraw || updater.createAccHelper.createAccCode == CCreateAccHelper::CA_Processing) 
+  {
+    for(int i=0; i<1; i++) {
+      r3dDrawBox2D(g_rEditFields[i].left-2, g_rEditFields[i].top-2, g_rEditFields[i].width+4, g_rEditFields[i].height+4, r3dColor(0, 0, 0, 100));
+      editTextField(g_rEditFields[i].left, g_rEditFields[i].top, gEditText[i], false, i>=1 ? 1 : 0);
+    }
+    return;
+  }
+  
+  // apply new key button. enabled if we have all data
+  if(gEditText[0][0] && insideRect(g_rApplyNewKeyBtn, g_mx, g_my)) 
+  {
+    g_imBtnApplyNewKey->draw(g_rApplyNewKeyBtn.left, g_rApplyNewKeyBtn.top, g_rApplyNewKeyBtn.width, g_rApplyNewKeyBtn.height, clr);
+    if(g_mb) 
+    {
+      updater.DoApplyNewKey(gEditText[0]);
+      return;
+    }
+  }
+
+  // get new serial button
+  if(insideRect(g_rGetNewKeyBtn, g_mx, g_my)) 
+  {
+    g_imBtnGetNewKey->draw(g_rGetNewKeyBtn.left, g_rGetNewKeyBtn.top, g_rGetNewKeyBtn.width, g_rGetNewKeyBtn.height, clr);
+    if(g_mb) 
+    {
+      ShellExecute(NULL, "open", gLauncherConfig.serialExpiredBuyURL.c_str(), "", NULL, SW_SHOW);
+    }
+  }
+  
+  // input fields logic
+  static int focusId = 0;
+  
+  for(int i=0; i<1; i++) 
+  {
+    if(g_mb && insideRect(g_rEditFields[i], g_mx, g_my)) {
+      focusId = i;
+      win32_input_Flush();
+    }
+    
+    int key;
+    key = editTextField(
+      g_rEditFields[i].left, 
+      g_rEditFields[i].top, 
+      gEditText[i], 
+      focusId == i, 
+      0,
+      gInputLen[i]);
+  }
+  
+  return;
+}
+
+static void drawSerialCheckButtons(CUpdater& updater)
+{
+  static r3dRECT g_rValidateBtn   = {164, 402, 456, 77};
+  static r3dRECT g_rGetSerialBtn  = {164, 546, 456, 77};
+  static r3dRECT g_rEditFields[2] = {
+    {182, 349, 424, 24},
+  };
+  // email, serial
+  static char gEditText[1][512] = {0};
+  static int gInputLen[1] = {48};
+  
+  r3dColor clr(255, 255, 255);
+  
+  // if serial check in process, draw only needed things
+  bool testDraw = (GetAsyncKeyState(VK_F1) & 0x8000) && false;
+  if(testDraw || updater.checkSerialHelper.processCode == CCheckSerialHelper::CA_Processing) 
+  {
+    for(int i=0; i<2; i++) {
+      r3dDrawBox2D(g_rEditFields[i].left-2, g_rEditFields[i].top-2, g_rEditFields[i].width+4, g_rEditFields[i].height+4, r3dColor(0, 0, 0, 100));
+      editTextField(g_rEditFields[i].left, g_rEditFields[i].top, gEditText[i], false, 0);
+    }
+    return;
+  }
+  
+  // register button. enabled if we have all data
+  if(gEditText[0][0] && insideRect(g_rValidateBtn, g_mx, g_my)) 
+  {
+    g_imBtnValidate->draw(g_rValidateBtn.left, g_rValidateBtn.top, g_rValidateBtn.width, g_rValidateBtn.height, clr);
+    if(g_mb) 
+    {
+      strcpy(updater.checkSerialHelper.serial, gEditText[0]);
+      updater.DoCheckSerial();
+    }
+  }
+  
+  // some temp warning
+  {
+    r3dColor clr(251, 1, 2, 160);
+    g_font1->PrintF(317, 325, clr, "You can paste (Control-V) your serial");
+    //g_font1->PrintF(180, 374, clr, "Make sure not to confuse O and 0 (zero), I and 1 (one)");
+  }
+  
+  // get new serial button
+  if(insideRect(g_rGetSerialBtn, g_mx, g_my)) 
+  {
+    g_imBtnGetSerial->draw(g_rGetSerialBtn.left, g_rGetSerialBtn.top, g_rGetSerialBtn.width, g_rGetSerialBtn.height, clr);
+    if(g_mb) 
+    {
+		ShellExecute(NULL, "open", gLauncherConfig.serialBuyURL.c_str(), "", NULL, SW_SHOW);
+    }
+  }
+  
+  // input fields logic
+  static int focusId = 0;
+  
+  for(int i=0; i<1; i++) 
+  {
+    if(g_mb && insideRect(g_rEditFields[i], g_mx, g_my)) {
+      focusId = i;
+      win32_input_Flush();
+    }
+    
+    int key;
+    key = editTextField(
+      g_rEditFields[i].left, 
+      g_rEditFields[i].top, 
+      gEditText[i], 
+      focusId == i, 
+      0,
+      gInputLen[i]);
+      
+    //if(key == 9)  focusId = (GetKeyState(VK_SHIFT)&0x8000) ? focusId-1 : focusId+1;
+    //if(key == 13 && gEditText[i][0]) focusId++;
+    //if(focusId >= 2) focusId = 0;
+    //if(focusId <  0) focusId = 1;
+  }
+  
+  strupr(gEditText[1]);
 
   return;
 }
 
 static void drawLoginButtons(CUpdater& updater)
 {
-  static r3dRECT g_rLoginBtn  = {687, 166, 98, 128};
-  static r3dRECT g_rLoginEdit = {462, 194, 206, 19};
-  static r3dRECT g_rPwdEdit   = {462, 246, 206, 19};
+  static r3dRECT g_rLoginBtn  = {271, 483, 244, 51};
+  static r3dRECT g_rRegisterNewBtn = {271, 550, 244, 72};
+  static r3dRECT g_rLoginEdit = {181, 357, 424, 24};
+  static r3dRECT g_rPwdEdit   = {181, 417, 424, 24};
   r3dColor clr(255, 255, 255);
   
   // if login or update in process, draw only needed things
-  if(updater.gUserProfile.loginAnswerCode == CLoginHelper::ANS_Processing 
+  bool testDraw = (GetAsyncKeyState(VK_F1) & 0x8000) && false;
+  if(testDraw || updater.gUserProfile.loginAnswerCode == CLoginHelper::ANS_Processing 
      || updater.gUserProfile.loginAnswerCode == CLoginHelper::ANS_Logged)
   {
     r3dDrawBox2D(g_rLoginEdit.left-2, g_rLoginEdit.top-2, g_rLoginEdit.width+4, g_rLoginEdit.height+4, r3dColor(0, 0, 0, 100));
     r3dDrawBox2D(g_rPwdEdit.left-2, g_rPwdEdit.top-2, g_rPwdEdit.width+4, g_rPwdEdit.height+4, r3dColor(0, 0, 0, 100));
-    editTextField(g_rLoginEdit.left, g_rLoginEdit.top, updater.gUserProfile.username, false, false);
-    editTextField(g_rPwdEdit.left, g_rPwdEdit.top, updater.gUserProfile.passwd, false, true);
+    editTextField(g_rLoginEdit.left, g_rLoginEdit.top, updater.gUserProfile.username, false, 0);
+    editTextField(g_rPwdEdit.left, g_rPwdEdit.top, updater.gUserProfile.passwd, false, 1);
 
     if(updater.gUserProfile.loginAnswerCode == CLoginHelper::ANS_Logged) {
       updater.SwitchToUpdater();
@@ -742,24 +961,38 @@ static void drawLoginButtons(CUpdater& updater)
   
   // login button. enabled if we have all data
   if(*updater.gUserProfile.username && *updater.gUserProfile.passwd && insideRect(g_rLoginBtn, g_mx, g_my)) {
-    g_imBtnLogin->draw(g_rLoginBtn.left, g_rLoginBtn.top, g_rLoginBtn.width, g_rLoginBtn.height, clr);
+    g_imBtnLogin->draw(165, 473, 455, 72, clr);
     if(g_mb) {
       updater.DoLogin();
     }
   }
-  
-  if(drawUrl(446, 621, "Forgot Password?")) {
-    ShellExecute(NULL, "open", "http://192.95.7.127/account/pwdreset1.php", "", NULL, SW_SHOW);
+
+  if(drawUrl(481, 445, "Forgot Password?")) {
+    ShellExecute(NULL, "open", gLauncherConfig.accountForgotPasswordURL.c_str(), "", NULL, SW_SHOW);
   }
 
-  if(drawUrl(640, 621, "Create New Account")) {
-    ShellExecute(NULL, "open", "http://192.95.7.127/signup/?id=A1u4mou", "", NULL, SW_SHOW);
+  // register new account button
+  if(insideRect(g_rRegisterNewBtn, g_mx, g_my)) 
+  {
+    g_imBtnRegisterNew->draw(165, 550, 455, 72, clr);
+    if(g_mb) {
+      if(eulaShowDialog(0) != IDOK) {
+        return;
+      }
+      if(eulaShowDialog(1) != IDOK) {
+        return;
+      }
+    
+      updater.status_ = CUpdater::STATUS_SerialCheck;
+    }
   }
   
   // login error
   if(updater.loginErrMsg_[0]) {
-    r3dDrawBox2D(441, 293, 331, 22, r3dColor(0, 0, 0, 100));
-    g_font1->DrawText(441, 293, 331, 22, r3dColor(255, 26, 26), updater.loginErrMsg_, D3DFONT_CENTERED);
+    static float bx = 230;
+    static float by = 285;
+    r3dDrawBox2D(bx, by, 331, 25, r3dColor(0, 0, 0, 150));
+    g_font1->DrawText(bx, by, 331, 25, r3dColor(255, 26, 26), updater.loginErrMsg_, D3DFONT_CENTERED);
   }
   
   // name/pwd logic
@@ -775,11 +1008,11 @@ static void drawLoginButtons(CUpdater& updater)
   }
 
   int key;
-  key = editTextField(g_rLoginEdit.left, g_rLoginEdit.top, updater.gUserProfile.username, focusId == 0, false);
+  key = editTextField(g_rLoginEdit.left, g_rLoginEdit.top, updater.gUserProfile.username, focusId == 0, 0, 64);
   if(key == 9)  focusId = 1;
   if(key == 13 && updater.gUserProfile.username[0]) focusId = 1;
 
-  key = editTextField(g_rPwdEdit.left, g_rPwdEdit.top, updater.gUserProfile.passwd, focusId == 1, true);
+  key = editTextField(g_rPwdEdit.left, g_rPwdEdit.top, updater.gUserProfile.passwd, focusId == 1, 1);
   if(key == 9)  focusId = 0;
   if(key == 13 && updater.gUserProfile.passwd[0] && updater.gUserProfile.username[0])
     updater.DoLogin();
@@ -794,53 +1027,41 @@ static void executeTopMenuButton(const CUpdater& updater, int btnIdx)
 
   switch(btnIdx)
   {
-    case 0: // how to play
-    {
-      ShellExecute(NULL, "open", "http://my.massive.ph", "", NULL, SW_SHOW);
-      break;
-    }
-
-    case 1: // my account
-    {
-      ShellExecute(NULL, "open", "http://192.95.7.127/account/home.php", "", NULL, SW_SHOW);
-      break;
-    }
-    
-    case 2: // forums
-    {
-      ShellExecute(NULL, "open", "http://forums.massive.ph", "", NULL, SW_SHOW);
-      break;
-    }
-    
-    case 3: // get gc
+    case 0: // my account
     {
       char url[1024];
-      sprintf(url, "http://topup.massive.ph?WoLogin=%s", token);
+      sprintf(url, gLauncherConfig.myAccountURL.c_str(), token);
       ShellExecute(NULL, "open", url, "", NULL, SW_SHOW);
       break;
     }
     
-    case 4: // support
+    case 1: // forums
     {
-      ShellExecute(NULL, "open", "http://support.massive.ph", "", NULL, SW_SHOW);
+      ShellExecute(NULL, "open", gLauncherConfig.forumsURL.c_str(), "", NULL, SW_SHOW);
+      break;
+    }
+
+    case 2: // support
+    {
+      ShellExecute(NULL, "open", gLauncherConfig.supportURL.c_str(), "", NULL, SW_SHOW);
       break;
     }
     
-    case 5: // youtube
+    case 3: // youtube
     {
-      ShellExecute(NULL, "open", "http://tube.massive.ph", "", NULL, SW_SHOW);
+      ShellExecute(NULL, "open", gLauncherConfig.youtubeURL.c_str(), "", NULL, SW_SHOW);
       break;
     }
     
-    case 6: // facebook
+    case 4: // facebook
     {
-      ShellExecute(NULL, "open", "http://fb.massive.ph", "", NULL, SW_SHOW);
+      ShellExecute(NULL, "open", gLauncherConfig.facebookURL.c_str(), "", NULL, SW_SHOW);
       break;
     }
     
-    case 7: // twitter
+    case 5: // twitter
     {
-      ShellExecute(NULL, "open", "http://twitter.massive.ph", "", NULL, SW_SHOW);
+      ShellExecute(NULL, "open", gLauncherConfig.twitterURL.c_str(), "", NULL, SW_SHOW);
       break;
     }
   }
@@ -849,16 +1070,14 @@ static void executeTopMenuButton(const CUpdater& updater, int btnIdx)
 
 static void drawUpdateButtons(CUpdater& updater)
 {
-  static r3dRECT g_rPlayBtn  = {499, 494, 275, 100};
-  static r3dRECT g_rTopBtn[8] = {
-    { 14, 31, 128, 32},
-    {156, 31, 142, 32},
-    {316, 31,  80, 32},
-    {415, 31,  80, 32},
-    {511, 31,  95, 32},
-    {636, 31,  67, 32},
-    {707, 31,  26, 32},
-    {742, 31,  26, 32}
+  static r3dRECT g_rPlayBtn  = {506, 521, 244, 61};
+  static r3dRECT g_rTopBtn[6] = {
+    {139, 15, 130, 52},
+    {270, 15,  89, 52},
+    {362, 15,  99, 52},
+    {509, 15,  45, 52},
+    {555, 15,  48, 52},
+    {609, 15,  48, 52}
   };
     
 
@@ -869,18 +1088,25 @@ static void drawUpdateButtons(CUpdater& updater)
   if(updater.result_ == CUpdater::RES_PLAY && updater.IsServerOnline())
   {
     if(insideRect(g_rPlayBtn, g_mx, g_my)) {
-      g_imBtnPg[1]->draw(456, 475, 328, 128, clr);
-    }/*there is no ON state for massive// else {
-      g_imBtnPg[0]->draw(456, 475, 328, 128, clr);
-    }*/
+      g_imBtnPg[1]->draw(489, 484, 276, 127, clr);
+    } else {
+      g_imBtnPg[0]->draw(489, 484, 276, 127, clr);
+    }
 
-    if(insideRect(g_rPlayBtn, g_mx, g_my) && g_mb) {
+    if(insideRect(g_rPlayBtn, g_mx, g_my) && g_mb) 
+    {
+      if(updater.CheckForNewData())
+      {
+        MessageBox(NULL, "There is new build available, please log in again", "Update required", MB_OK | MB_ICONEXCLAMATION);
+        g_bExit = true;
+        return;
+      }
       g_bStartGame = true;
     }
   }
   
   // top menu buttons
-  for(int btnIdx=0; btnIdx<8; btnIdx++)
+  for(int btnIdx=0; btnIdx<6; btnIdx++)
   {
     if(insideRect(g_rTopBtn[btnIdx], g_mx, g_my)) 
     {
@@ -1003,7 +1229,7 @@ static void drawServerStatus(const CUpdater& updater)
   float y = 591;
 
   if(updater.newsStatus_ == 0) {
-    g_font1->PrintF(607, y, r3dColor(153, 208, 237), "Retrieving Server Status");
+    g_font1->PrintF(595, y, r3dColor(214, 214, 214), "Retrieving Server Status");
     return;
   }
 
@@ -1015,131 +1241,14 @@ static void drawServerStatus(const CUpdater& updater)
   g_font1->PrintF(610, y, r3dColor(153, 208, 237), "Server Status:");
   const char* status = updater.serverStatus_.c_str();
   if(stricmp(status, "ONLINE") == 0)
-    g_font1->PrintF(710, y, r3dColor(31, 255, 57), "ONLINE");
+    g_font1->PrintF(709, y, r3dColor(31, 255, 57), "ONLINE");
   else if(stricmp(status, "OFFLINE") == 0)
-    g_font1->PrintF(710, y, r3dColor(255, 31, 31), "OFFLINE");
+    g_font1->PrintF(709, y, r3dColor(255, 31, 31), "OFFLINE");
   else
-    g_font1->PrintF(710, y, r3dColor(255, 127, 39), status);
+    g_font1->PrintF(709, y, r3dColor(255, 127, 39), status);
     
   return;
 }
-
-static void rotatorCreateTexture(CUpdater::rotator_s& rot)
-{
-  // create rotator texture if we downloaded data
-  if(rot.imgStatus_ == 2) 
-  {
-    IDirect3DTexture9* d3dtex = NULL;
-    HRESULT hr = D3DXCreateTextureFromFileInMemory(
-      r3dRenderer->pd3ddev,
-      rot.imgData_.getBytes(), 
-      rot.imgData_.getSize(), 
-      &d3dtex);
-
-    if(hr == D3D_OK)
-    {
-      rot.tex_ = r3dRenderer->AllocateTexture();
-      rot.tex_->Create(4, 4, D3DFMT_A8R8G8B8, 1);
-      rot.tex_->SetNewD3DTexture(d3dtex);
-    }
-    else
-    {
-      r3dOutToLog("Rotator: failed to create texture from %s\n", rot.image_);
-    }
-    
-    rot.imgStatus_ = 3;
-  }
-}
-
-static void drawRotator(CUpdater& updater)
-{
-  static r3dRECT rRotImg = {21, 85, 745, 226};
-
-  if(updater.rotatorStatus_ != 1)
-    return;
-  if(updater.rotatorData_.size() == 0)
-    return;
-
-  static float TIME_IN_IMAGE = 10.0f;
-  static float TIME_TO_FADEIN = 1.0f;
-  static float TIME_TO_SHOW_DESC = 1.0f;
-    
-  static int rotIdx = -1;
-  static r3dTexture* prevTex = NULL;
-  static float imgStartTime = -999;
-  static float descShowTime = -999;
-  
-  if(r3dGetTime() > imgStartTime + TIME_IN_IMAGE) 
-  {
-    // check if next image is loaded
-    size_t newIdx = (rotIdx + 1) % updater.rotatorData_.size();
-    if(updater.rotatorData_[newIdx].imgStatus_ == 0)
-      return;
-
-    if(newIdx != rotIdx)
-    {
-      rotatorCreateTexture(updater.rotatorData_[newIdx]);
-      
-      // switch to new image
-      if(rotIdx >= 0) 
-        prevTex    = updater.rotatorData_[rotIdx].tex_;
-      rotIdx       = newIdx;
-      imgStartTime = r3dGetTime();
-    }
-  }
-  
-  r3d_assert(rotIdx >= 0 && rotIdx < (int)updater.rotatorData_.size());
-  CUpdater::rotator_s& rot = updater.rotatorData_[rotIdx]; 
-  
-  if(rot.tex_ != NULL) 
-  {
-    if(prevTex) 
-      r3dDrawBox2D(21, 85, 745, 226, r3dColor(255, 255, 255), prevTex);
-
-    float a = 255.0f * R3D_MIN(1.0f, (r3dGetTime()-imgStartTime) / TIME_TO_FADEIN);
-    r3dDrawBox2D(21, 85, 745, 226, r3dColor(255, 255, 255, (int)a), rot.tex_);
-  } 
-  else 
-  {
-    r3dDrawBox2D(21, 85, 745, 226, r3dColor(0, 0, 0, 100), NULL);
-  }
-  
-  // process click
-  if(g_mb && insideRect(rRotImg, g_mx, g_my)) 
-  {
-    char token[512];
-    updater.gUserProfile.CreateAuthToken(token);
-
-    char url[1024];
-    if(strchr(rot.url_.c_str(), '?') == NULL) {
-      sprintf(url, "%s?WoLogin=%s", rot.url_.c_str(), token);
-    } else {
-      sprintf(url, "%s&WoLogin=%s", rot.url_.c_str(), token);
-    }
-    
-    ShellExecute(NULL, "open", url, "", NULL, SW_SHOW);
-  }
-  
-  // show description
-  if(insideRect(rRotImg, g_mx, g_my))
-  {
-    g_hCursor = gCursorHand;
-
-    if(descShowTime < 0)
-      descShowTime = r3dGetTime();
-
-    if(r3dGetTime() > descShowTime + TIME_TO_SHOW_DESC)
-    {
-      g_font1->PrintF(25, 89, r3dColor(0, 0, 0), rot.desc_.c_str());
-      g_font1->PrintF(23, 87, r3dColor(255, 255, 255), rot.desc_.c_str());
-    }
-  }
-  else 
-  {
-    descShowTime = -1;
-  }
-}
-
 
 static void showErrorMessageBox(const CUpdater& updater)
 {
@@ -1165,7 +1274,10 @@ static void startGame(const CUpdater& updater)
 
   // show EULA if we have updated something
   if(updater.numUpdatedFiles_) {
-    if(eulaShowDialog() != IDOK) {
+    if(eulaShowDialog(0) != IDOK) {
+      return;
+    }
+    if(eulaShowDialog(1) != IDOK) {
       return;
     }
   }
@@ -1192,7 +1304,7 @@ static void startGame(const CUpdater& updater)
   updater.gUserProfile.CreateAuthToken(token);
 
   char GAME_START_PARAM[2048];
-  sprintf(GAME_START_PARAM, "-WOUpdatedOk %s -WOLogin \"%s\" -massive", __r3dCmdLine, token);
+  sprintf(GAME_START_PARAM, "-WOUpdatedOk %s -WOLogin \"%s\"", __r3dCmdLine, token);
   if(updater.surveyLinkOut_.length() > 0) {
     sprintf(GAME_START_PARAM + strlen(GAME_START_PARAM), " -survey \"%s\"", updater.surveyLinkOut_.c_str());
   }
@@ -1291,21 +1403,19 @@ void game::MainLoop(void)
   r3dOutToLog("Starting updater, v:%s, cmd:%s\n", UPDATER_VERSION, __r3dCmdLine);
 
   CUpdater updater;
-
-/*  
+  
   // parse command line
   int argc = 0;
   char** argv = CommandLineToArgvA(__r3dCmdLine, &argc);
   for(int i=0; i<argc; i++) 
   {
-    if(strcmp(argv[i], "-steam") == 0 && (i + 0) < argc)
+    /*if(strcmp(argv[i], "-steam") == 0 && (i + 0) < argc)
     {
       r3dOutToLog("Trying to init steam\n");
       gSteam.InitSteam();
       continue;
-    }
+    }*/
   }
-*/  
 
   if(g_isConsoleUpdater)
   {
@@ -1337,12 +1447,14 @@ void game::MainLoop(void)
     
     r3dDrawBox2D(0, 0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(64, 64, 64));
     
-    /*updater.status_ = CUpdater::STATUS_Updating;
-    updater.showProgress_ = true;
+    #if 0
+    updater.status_ = CUpdater::STATUS_TimeExpired;
+    updater.showProgress_ = false;
     updater.prgTotal_.cur = 100;
     updater.prgTotal_.total = 100;
-    r3dscpy(updater.updMsg1_, "Xxxxxxx");*/
-    
+    r3dscpy(updater.updMsg1_, "Xxxxxxx");
+    #endif
+
     switch(updater.status_) 
     {
       default: r3d_assert(0);
@@ -1356,11 +1468,23 @@ void game::MainLoop(void)
 	
 	drawLoginButtons(updater);
 	break;
+
+      case CUpdater::STATUS_SerialCheck:
+	g_bkgSerialCheck->draw(0, 0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(255, 255, 255));
+
+	drawSerialCheckButtons(updater);
+	break;
     
       case CUpdater::STATUS_NeedRegister:
 	g_bkgRegister->draw(0, 0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(255, 255, 255));
 
 	drawRegisterButtons(updater);
+	break;
+	
+      case CUpdater::STATUS_TimeExpired:
+	g_bkgExpired->draw(0, 0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, r3dColor(255, 255, 255));
+
+	drawTimeExpiredButtons(updater);
 	break;
 
       case CUpdater::STATUS_Updating:
@@ -1369,7 +1493,6 @@ void game::MainLoop(void)
 	drawUpdateButtons(updater);
         drawServerStatus(updater);
 	drawNews(updater);
-	drawRotator(updater);
 	break;
     }
     drawProgressBar(updater);

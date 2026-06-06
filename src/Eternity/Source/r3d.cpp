@@ -1,13 +1,7 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
-#ifndef WO_SERVER
-#include "r3dDX11.h"
-#endif
-
 #include "r3dBackgroundTaskDispatcher.h"
-
-#include <intrin.h>
 
 // no occlusion if server build
 #ifdef WO_SERVER 
@@ -465,6 +459,9 @@ void r3dShowArtBugs()
 
 	if(strlen(uberBug.c_str())>3)
 		MessageBoxA( r3dRenderer->HLibWin, uberBug.c_str(), "Art Bugs", MB_OK ) ;
+
+	// clean art bugs after showing them
+	r3dPurgeArtBugs();
 #endif
 }
 
@@ -505,17 +502,17 @@ void r3dSetFiltering( r3dFilter Filter, int Stage )
  {
   for (int i=0;i<8;i++)
   {
-   r3dRenderer->SetSamplerState(i, D3DSAMP_MAGFILTER, FMagMode );
-   r3dRenderer->SetSamplerState(i, D3DSAMP_MINFILTER, FMode );
-   r3dRenderer->SetSamplerState(i, D3DSAMP_MIPFILTER, MipFMode );
+   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MAGFILTER, FMagMode );
+   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MINFILTER, FMode );
+   r3dRenderer->pd3ddev->SetSamplerState(i, D3DSAMP_MIPFILTER, MipFMode );
 
   }
  }
  else
   {
-   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MAGFILTER, FMagMode );
-   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MINFILTER, FMode );
-   r3dRenderer->SetSamplerState(Stage, D3DSAMP_MIPFILTER, MipFMode );
+   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MAGFILTER, FMagMode );
+   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MINFILTER, FMode );
+   r3dRenderer->pd3ddev->SetSamplerState(Stage, D3DSAMP_MIPFILTER, MipFMode );
   }
 }
 
@@ -523,23 +520,23 @@ void r3dSetMaxAnisotropy( int value, int stage )
 {
 	value = R3D_MIN( value, (int)r3dRenderer->d3dCaps.MaxAnisotropy ) ;
 
-	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MAXANISOTROPY, value ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MAXANISOTROPY, value ) );
 }
 
 void r3dSetAnisotropy( int value, int stage )
 {
 	r3dSetMaxAnisotropy( value, stage ) ;
 	
-	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MAGFILTER,D3DTEXF_LINEAR ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MAGFILTER,D3DTEXF_LINEAR ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR ) ) ;
 
 	if( value > 1 )
 	{
-		D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC ) ) ;
 	}
 	else
 	{
-		D3D_V( r3dRenderer->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_LINEAR ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( stage, D3DSAMP_MINFILTER, D3DTEXF_LINEAR ) ) ;
 	}
 }
 
@@ -619,7 +616,7 @@ void ScreenShotSaver(r3dTaskParams *tp)
 
 int r3dUpdateScreenShot()
 {
-	if( r_do_screenshot->GetInt() )
+	if( r_do_screenshot->GetInt() && r3dRenderer->pd3ddev->TestCooperativeLevel() == D3D_OK && win::bNeedRender )
 	{
 		r_do_screenshot->SetInt( 0 ); 
 
@@ -659,7 +656,7 @@ int r3dUpdateScreenShot()
 	}
 	
 	// if requested, make scaled copy of screenshot
-	if( _r3d_sscopy_width > 0)
+	if( _r3d_sscopy_width > 0 && r3dRenderer->pd3ddev->TestCooperativeLevel() == D3D_OK && win::bNeedRender )
 	{
 		SAFE_RELEASE(_r3d_screenshot_copy);
 
@@ -670,11 +667,31 @@ int r3dUpdateScreenShot()
 
 		r3dRenderer->CheckOutOfMemory( hr ) ;
 
-		if(D3D_OK == hr )
+		if( D3D_OK == hr )
 		{
+			IDirect3DSurface9 *sysmemBB = r3dRenderer->GetTempSurfaceForScreenShots();
+
+			HRESULT getRTHR = r3dRenderer->pd3ddev->GetRenderTargetData( BBuf, sysmemBB );
+
+			if( getRTHR == D3DERR_DEVICELOST )
+			{
+				r3dRenderer->SetDeviceLost();
+			}
+
+			if( getRTHR != S_OK )
+			{
+				BBuf->Release();
+				return 0;
+			}
+
 			IDirect3DSurface9* pSurf0 = NULL;
 			_r3d_screenshot_copy->GetSurfaceLevel(0, &pSurf0);
-			D3DXLoadSurfaceFromSurface(pSurf0, NULL, NULL, BBuf, NULL, NULL, D3DX_DEFAULT, 0);
+			D3DXLoadSurfaceFromSurface(pSurf0, NULL, NULL, sysmemBB, NULL, NULL, D3DX_DEFAULT, 0);
+
+#if 0
+			D3DXSaveSurfaceToFile( "testscr.bmp", D3DXIFF_BMP, pSurf0, NULL, NULL );
+#endif
+
 			SAFE_RELEASE(pSurf0);
 		}
 		BBuf->Release();
@@ -769,7 +786,7 @@ void r3dDrawNormQuad(r3dCamera &Cam, const r3dPoint3D& Pos, const r3dPoint3D& No
 void r3dSetWireframe(int bOn)
 {
   r3dRenderer->Flush();
-  r3dRenderer->SetRenderState(D3DRS_FILLMODE, bOn ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
+  r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, bOn ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
 }
 
 int r3dGetPitchHeight( int count, D3DFORMAT fmt )
@@ -906,24 +923,14 @@ void r3dStartFrame()
 	if(r3dRenderer && r3dRenderer->DeviceAvailable)
 		r3dRenderer->ResetQueryCounters();
 
-#ifndef WO_SERVER
-	if(r3dRenderer &&
-		r3dRenderer->DeviceAvailable &&
-		g_r3dDX11.IsInitialized() &&
-		!r3dRenderer->GetUseD3D9Present())
-	{
-		g_r3dDX11.BeginFrame(0.015f, 0.017f, 0.022f, 1.0f);
-	}
-#endif
-
-	_r3d_StartFrameTime = r3dGetTime();
+  _r3d_StartFrameTime = r3dGetTime();
 
 #if !DISABLE_PROFILER
-	if(r3dProfiler::Instance())
-		r3dProfiler::Instance()->StartFrame();
+  if(r3dProfiler::Instance())
+	  r3dProfiler::Instance()->StartFrame();
 #endif
 
-	r3dMaterial::ResetMaterialFilter();
+  r3dMaterial::ResetMaterialFilter();
 }
 
 static double FPSSum = 0;
@@ -1037,9 +1044,10 @@ const char* r3dError(const char* fmt, ...)
 
 	ShowWindow(win::hWnd, FALSE); // hide window, otherwise in fullscreen it's impossible to debug
 	if(IsDebuggerPresent()) 
-		__debugbreak();
+		__asm int 3;
 	else 
 	{
+		// please do not remove this!!! Otherwise it will just silently crash
 		MessageBox(0, buf, "Error!", MB_OK);
 	}
 
@@ -2170,47 +2178,37 @@ r3dDevStrength r3dGetDeviceStrength()
 
 wchar_t* utf8ToWide(const char* str)
 {
-	static wchar_t emptyW[] = L"";
-
 	if(str == NULL || *str == 0)
-		return emptyW;
+		return L"";
 
 	static wchar_t wbuf[2048];
-
-	::MultiByteToWideChar(
-		CP_UTF8,
-		MB_ERR_INVALID_CHARS,
-		str,
-		-1,
+	int wchars = ::MultiByteToWideChar(
+		CP_UTF8,		// convert from UTF-8
+		MB_ERR_INVALID_CHARS,	// error on invalid chars
+		str,			// source UTF-8 string
+		strlen(str) + 1,	// total length of source UTF-8 string, encluding EOF
 		wbuf,
-		2048
+		2048			// size of destination buffer, in WCHAR's
 		);
-
-	wbuf[2047] = 0;
 	return wbuf;
 }
 
 char* wideToUtf8(const wchar_t* str)
 {
-	static char emptyA[] = "";
-
 	if(str == NULL || *str == 0)
-		return emptyA;
+		return "";
 
 	static char buf[2048];
-
-	::WideCharToMultiByte(
-		CP_UTF8,
-		0,
-		str,
-		-1,
+	int chars = ::WideCharToMultiByte(
+		CP_UTF8,		// convert to UTF-8
+		0,			// WC_ERR_INVALID_CHARS for Vista+ error on invalid chars
+		str,			// source string
+		wcslen(str) + 1,	// total length of source string, encluding EOF
 		buf,
-		2048,
+		2048,			// size of destination buffer, in bytes
 		NULL,
 		NULL
 		);
-
-	buf[2047] = 0;
 	return buf;
 }
 

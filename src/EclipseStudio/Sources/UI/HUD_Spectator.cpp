@@ -7,6 +7,9 @@
 #include "UI\Hud_spectator.h"
 #include "Editors\LevelEditor.h"
 
+#include "ObjectsCode\Gameplay\obj_ZombieDummy.h"
+#include "..\Editors\LevelEditor_Collections.h"
+
 #include "GameCommon.h"
 #include "GameLevel.h"
 
@@ -152,8 +155,8 @@ void CameraHUD :: Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -175,58 +178,8 @@ void CameraHUD :: Draw()
 	LevelEditor.Process(!enablemouselook);
 #endif
 
-	// display exposure/ luminance tab
-	if (d_show_scene_luma->GetInt() > 0)
-	{
-		float luma = 0.5f, exp=0.0f ;
-		IDirect3DTexture9* tex = NULL ;
-
-		struct CreateDelTex
-		{
-			CreateDelTex()
-			{
-				D3D_V( r3dRenderer->pd3ddev->CreateTexture( 1, 1, 0, 0, D3DFMT_R32F, D3DPOOL_SYSTEMMEM, &tex, NULL ) ) ;
-				D3D_V( tex->GetSurfaceLevel( 0, &surf ) ) ;
-			}
-
-			~CreateDelTex()
-			{
-				surf->Release() ;
-				tex->Release() ;
-			}
-
-			IDirect3DSurface9* surf ;
-			IDirect3DTexture9* tex ;
-
-		} cdt ;
-
-		char exp_val[ 512 ] ;
-
-		D3DLOCKED_RECT lrect ;
-
-		// can be device lost
-		if( r3dRenderer->pd3ddev->GetRenderTargetData( SceneExposure1->GetTex2DSurface(), cdt.surf ) == D3D_OK ) 
-		{
-			D3D_V( cdt.tex->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) ) ;
-			exp=(*(float*)lrect.pBits);		
-			D3D_V( cdt.tex->UnlockRect( 0 ) ) ;
-		}
-
-
-		if( r3dRenderer->pd3ddev->GetRenderTargetData( AvgSceneLuminanceBuffer->GetTex2DSurface(), cdt.surf ) == D3D_OK ) 
-		{
-			D3D_V( cdt.tex->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) ) ;
-			luma=(*(float*)lrect.pBits);		
-			D3D_V( cdt.tex->UnlockRect( 0 ) ) ;
-		}
-
-		sprintf( exp_val, "Scene Exposure: %7.4f, Luma: %7.4f", exp, luma ) ;
-
-		imgui_Static( 5, r3dRenderer->ScreenH-235, exp_val ) ;
-	}
-
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 }
 
 /*virtual*/
@@ -256,6 +209,11 @@ void CameraHUD :: Process()
 		CreateDummyEditorPlayer();
 	}
 
+	// alt-9 spawn test zombie
+	if(Keyboard->WasPressed(kbs9) && (Keyboard->IsPressed(kbsLeftAlt) || Keyboard->IsPressed(kbsRightAlt)))
+	{
+		obj_ZombieDummy* z = (obj_ZombieDummy *)srv_CreateGameObject("obj_ZombieDummy", "Zombie", UI_TargetPos + r3dPoint3D(0, 0.01f, 0));
+	}
 	switch (CameraMode)
 	{
 	case hud_FPSCamera:
@@ -284,7 +242,7 @@ void CameraHUD :: ProcessFPSCamera()
 	float  glb_MouseSensAdj = 1.0f;	// in range (0.1 - 1.0)
 
 
-	enablemouselook = (Mouse->IsPressed(r3dMouse::mRightButton));
+	enablemouselook = (Mouse->IsPressed(r3dMouse::mRightButton)) && !g_imgui_LockRbr;
 
 
 	if (!enablemouselook) return;
@@ -378,7 +336,8 @@ bool hud_ProcessCameraPick(float mx, float my)
 
 	bool found = false;
 
-	if(target) {
+	if (target)
+	{
 		UI_TargetObjID = target->ID;
 		UI_TargetPos   = CL.NewPosition; //target->Position;
 		UI_TargetPos2  = CL.NewPosition;
@@ -390,14 +349,13 @@ bool hud_ProcessCameraPick(float mx, float my)
 		found = true;
 	}
 
-	extern r3dMaterial* Get_Material_By_Ray(const r3dPoint3D& vStart, const r3dPoint3D& vRay, float& dist);
-
 	float dist = 9999999;
 	r3dMaterial* collectionsMaterial = Get_Material_By_Ray(gCam, dir, dist);
 
-	if((!CL.Material || (CL.Material && dist < CL.Distance) ) && collectionsMaterial)
+	if (!CL.Material && collectionsMaterial)
 	{
 		UI_TargetMaterial  = collectionsMaterial;
+		UI_TargetPos = gCam + dir * dist;
 		found = true;
 	}
 
@@ -409,10 +367,17 @@ bool hud_ProcessCameraPick(float mx, float my)
 		{
 			UI_TerraTargetPos = v3;
 
+			float offset = 0;
+			//	Add small offset for roads, because usually roads and terrain coincide, and false roads non-selection events can happen
+			if (target && target->isObjType(OBJTYPE_Road))
+			{
+				offset = -0.2f;
+			}
+
 			r3dVector oldDistance = UI_TargetPos - gCam;
 			r3dVector newDistance = v3 - gCam;
 			// if the new distance is closer than the hit, and the new distance is in the same direction as the hit. 
-			if( !target || ( oldDistance.LengthSq() > newDistance.LengthSq() && newDistance.Dot(dir) > 0 ) )
+			if( !found || ( oldDistance.LengthSq() + offset > newDistance.LengthSq() && newDistance.Normalize().Dot(dir) > 0 ) )
 			{
 				UI_TargetObjID = invalidGameObjectID;
 				UI_TargetPos   = v3;

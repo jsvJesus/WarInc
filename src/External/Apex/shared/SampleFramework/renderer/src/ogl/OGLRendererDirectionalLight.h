@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -43,21 +43,26 @@
 
 #include "OGLRenderer.h"
 
-class RendererDirectionalLightDesc;
-
-class OGLRendererDirectionalLight : public RendererDirectionalLight
+namespace SampleRenderer
 {
+
+	class RendererDirectionalLightDesc;
+
+	class OGLRendererDirectionalLight : public RendererDirectionalLight
+	{
 	public:
 		OGLRendererDirectionalLight(const RendererDirectionalLightDesc &desc, OGLRenderer &renderer);
 		virtual ~OGLRendererDirectionalLight(void);
-		
+
 		virtual void bind(void) const;
-		
+
 	private:
-	#if defined(RENDERER_ENABLE_CG)
+#if defined(RENDERER_ENABLE_CG)
 		const OGLRenderer::CGEnvironment &m_cgenv;
-	#endif
-};
+#endif
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

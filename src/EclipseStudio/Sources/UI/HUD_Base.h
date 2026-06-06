@@ -22,7 +22,7 @@ struct PlayerStateVars_s
 	bool		allowScope; // if this state allows using scope.Sprinting and jumping for example doesn't
 	fn_VisualFX	FXFunc;
 
-	void Lerp(class obj_AI_Player* pl, PlayerStateVars_s& s1, PlayerStateVars_s& s2, float lerpV);
+	void Lerp(class obj_Player* pl, PlayerStateVars_s& s1, PlayerStateVars_s& s2, float lerpV);
 	//Need params for 
 	// camera shaker effect
 	// visual effect ( like radial blur or something else... )

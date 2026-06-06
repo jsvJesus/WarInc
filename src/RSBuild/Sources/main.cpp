@@ -32,7 +32,7 @@ void CreateArchive()
   
   builder.ReconvertAllSCO();
   builder.BuildFileList();
-  builder.CreateArchive("wo");
+  builder.CreateArchive("wz");
 }
 
 void TestArchive()

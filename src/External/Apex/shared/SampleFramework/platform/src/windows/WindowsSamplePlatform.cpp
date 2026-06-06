@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,13 +34,17 @@
  */
 #include <RendererMemoryMacros.h>
 #include <windows/WindowsSamplePlatform.h>
-#include <SampleApplication.h>
+
+#if defined(RENDERER_ENABLE_CG)
 #include <cg/cg.h>
+#endif
+
 #include <direct.h>
 #include <stdio.h>
 
 #include <PsString.h>
 #include <PsFile.h>
+#include <PsUtilities.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
 	#include <d3d9.h>
@@ -48,18 +52,34 @@
 	#include <XInput.h>
 #endif
 
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+#pragma warning(push)
+// Disable macro redefinition warnings
+#pragma warning(disable: 4005)
+	#include <d3d11.h>
+#pragma warning(pop)
+#endif
+
 #if defined(RENDERER_ENABLE_OPENGL)
 	#define GLEW_STATIC
 	#include <GL/glew.h>
 	#include <GL/wglew.h>
+
+	#pragma comment(lib, "OpenGL32.lib")
+	#pragma comment(lib, "GLU32.lib")
 #endif
 
-#pragma comment(lib, "XInput.lib")
-#pragma comment(lib, "OpenGL32.lib")
-#pragma comment(lib, "GLU32.lib")
+using std::min;
+using std::max;
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#include <atlimage.h>
+#include <Gdiplusimaging.h>
+#pragma warning(pop)
 
 using namespace SampleFramework;
-using physx::pubfnd2::PxU32;
+using SampleRenderer::RendererWindow;
+using namespace physx;
 
 static void setDCPixelFormat(HDC &dc)
 {
@@ -88,132 +108,181 @@ static void setDCPixelFormat(HDC &dc)
 	SetPixelFormat(dc, pfindex, &pfd);
 }
 
-static bool gTimeInit=false;
-
-// PT: TODO: share this with PxApplication
-static const unsigned int MAX_GAMEPADS = 4;
-static const unsigned int MAX_GAMEPAD_AXES = 4;
-static XINPUT_STATE m_lastInputState[MAX_GAMEPADS];
-static int m_lastAxisData[MAX_GAMEPADS][MAX_GAMEPAD_AXES];
-
 static const char *g_windowClassName = "RendererWindow";
 static const DWORD g_windowStyle     = WS_OVERLAPPEDWINDOW;
 static const DWORD g_fullscreenStyle = WS_POPUP;
 
-static void doOnMouseDown(HWND m_hwnd, RendererWindow &window, LPARAM lParam, RendererWindow::MouseButton button)
+static void handleMouseEvent(UINT msg, LPARAM lParam, HWND hwnd, RendererWindow* window)
 {
+	if (!window || !window->getPlatform())
+		return;
+
 	RECT rect;
-	GetClientRect(m_hwnd, &rect);
-	const physx::PxU32 height = (physx::PxU32)(rect.bottom-rect.top);
-	window.onMouseDown((physx::PxU32)LOWORD(lParam), height-(physx::PxU32)HIWORD(lParam), button);
-}
+	GetClientRect(hwnd, &rect);
+	PxU32 height = (PxU32)(rect.bottom-rect.top);
+	PxU32 x = (PxU32)LOWORD(lParam);
+	PxU32 y = height-(PxU32)HIWORD(lParam);
+	PxVec2 current(static_cast<PxReal>(x), static_cast<PxReal>(y));
 
-static void doOnMouseUp(HWND m_hwnd, RendererWindow &window, LPARAM lParam, RendererWindow::MouseButton button)
-{
-	RECT rect;
-	GetClientRect(m_hwnd, &rect);
-	const physx::PxU32 height = (physx::PxU32)(rect.bottom-rect.top);
-	window.onMouseUp((physx::PxU32)LOWORD(lParam), height-(physx::PxU32)HIWORD(lParam), button);
-}
+	WindowsPlatform& platform = *((WindowsPlatform*)window->getPlatform());
+	PxVec2 diff = current - platform.getMouseCursorPos();
+	platform.setMouseCursorPos(current);
 
-static RendererWindow::KeyCode getKeyCode(WPARAM wParam)
-{
-	RendererWindow::KeyCode keyCode = RendererWindow::KEY_UNKNOWN;
-	const int keyparam = (int)wParam;
-	//there are no lowercase virtual key codes!!
-	//if(     keyparam >= 'a' && keyparam <= 'z') keyCode = (RendererWindow::KeyCode)((keyparam - 'a')+RendererWindow::KEY_A);		else 
-
-	if(keyparam >= 'A' && keyparam <= 'Z') keyCode = (RendererWindow::KeyCode)((keyparam - 'A')+RendererWindow::KEY_A);
-	else if(keyparam >= '0' && keyparam <= '9') keyCode = (RendererWindow::KeyCode)((keyparam - '0')+RendererWindow::KEY_0);
-	else if(keyparam >= VK_NUMPAD0 && keyparam <= VK_DIVIDE) keyCode = (RendererWindow::KeyCode)((keyparam - VK_NUMPAD0)+RendererWindow::KEY_NUMPAD0);
-	else if(keyparam == VK_SHIFT) keyCode = RendererWindow::KEY_SHIFT;
-	else if(keyparam == VK_CONTROL) keyCode = RendererWindow::KEY_CONTROL;
-	else if(keyparam == VK_SPACE) keyCode = RendererWindow::KEY_SPACE;
-	else if(keyparam == VK_ESCAPE) keyCode = RendererWindow::KEY_ESCAPE;
-	else if(keyparam == VK_OEM_COMMA) keyCode = RendererWindow::KEY_COMMA;
-	else if(keyparam == VK_OEM_2) keyCode = RendererWindow::KEY_DIVIDE;
-	else if(keyparam == VK_OEM_MINUS) keyCode = RendererWindow::KEY_SUBTRACT;
-	else if(keyparam == VK_OEM_PLUS) keyCode = RendererWindow::KEY_ADD;
-	
-	return keyCode;
+	switch (msg)
+	{
+	case WM_MOUSEMOVE:
+		if (!SamplePlatform::platform()->getMouseCursorRecentering())
+		{
+			platform.getWindowsSampleUserInput().doOnMouseMove(x, y, diff.x, diff.y, MOUSE_MOVE);
+		}
+		break;
+	case WM_LBUTTONDOWN:
+		SetCapture(hwnd);
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::LEFT_MOUSE_BUTTON, true);
+		break;
+	case WM_LBUTTONUP:
+		ReleaseCapture();
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::LEFT_MOUSE_BUTTON, false);
+		break;
+	case WM_RBUTTONDOWN:
+		SetCapture(hwnd);
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::RIGHT_MOUSE_BUTTON, true);
+		break;
+	case WM_RBUTTONUP:
+		ReleaseCapture();
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::RIGHT_MOUSE_BUTTON, false);
+		break;
+	case WM_MBUTTONDOWN:
+		SetCapture(hwnd);
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::CENTER_MOUSE_BUTTON, true);
+		break;
+	case WM_MBUTTONUP:
+		ReleaseCapture();
+		platform.getWindowsSampleUserInput().doOnMouseButton(x, y, WindowsSampleUserInput::CENTER_MOUSE_BUTTON, false);
+		break;
+	}
 }
 
 static INT_PTR CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 #if defined(RENDERER_64BIT)
-	RendererWindow *window = (RendererWindow *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	RendererWindow* window = (RendererWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 #else
-	RendererWindow *window = (RendererWindow *)LongToPtr(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+	RendererWindow* window = (RendererWindow*)LongToPtr(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 #endif
-	
+
 	bool customHandle = false;
 
 	if(!customHandle)
 	{
 		switch(msg)
 		{
-			case WM_CREATE:
-				::UpdateWindow(hwnd);
-				break;
-				
-			case WM_CLOSE:
+		case WM_SETFOCUS:
+			if(window)
+				window->setFocus(true);
+			break;
+
+		case WM_KILLFOCUS:
+			if(window)
+				window->setFocus(false);
+			break;
+
+		case WM_EXITSIZEMOVE:
+			if (window)
+			{
+				((WindowsPlatform*)window->getPlatform())->recenterMouseCursor(false);
+			}
+			break;
+
+		case WM_CREATE:
+			::UpdateWindow(hwnd);
+			break;
+
+		case WM_CLOSE:
+			if(window)
+			{
+				window->close();
+			}
+			break;
+
+		case WM_SIZE:
+			if(window)
+			{
+				RECT rect;
+				GetClientRect(hwnd, &rect);
+				PxU32 width  = (PxU32)(rect.right-rect.left);
+				PxU32 height = (PxU32)(rect.bottom-rect.top);
+				window->onResize(width, height);
+			}
+			break;
+
+		case WM_MOUSEMOVE:
+			handleMouseEvent(WM_MOUSEMOVE, lParam, hwnd, window);
+			break;
+
+		case WM_LBUTTONDOWN:
+			((WindowsPlatform*)window->getPlatform())->recenterMouseCursor(false);
+			handleMouseEvent(WM_LBUTTONDOWN, lParam, hwnd, window);
+			break;
+
+		case WM_LBUTTONUP:
+			handleMouseEvent(WM_LBUTTONUP, lParam, hwnd, window);
+			break;
+
+		case WM_RBUTTONDOWN:
+			handleMouseEvent(WM_RBUTTONDOWN, lParam, hwnd, window);
+			break;
+
+		case WM_RBUTTONUP:
+			handleMouseEvent(WM_RBUTTONUP, lParam, hwnd, window);
+			break;
+
+		case WM_MBUTTONDOWN:
+			handleMouseEvent(WM_MBUTTONDOWN, lParam, hwnd, window);
+			break;
+
+		case WM_MBUTTONUP:
+			handleMouseEvent(WM_MBUTTONUP, lParam, hwnd, window);
+			break;
+
+		case WM_CHAR:
+			// PT: we need to catch this message to make a difference between lower & upper case characters
+			if(window)
+			{
+				((WindowsPlatform*)window->getPlatform())->getWindowsSampleUserInput().onKeyDownEx(wParam);
+			}
+			break;
+
+		case WM_SYSKEYDOWN:	// For F10 or ALT
+			if (VK_F4 == wParam && (KF_ALTDOWN & HIWORD(lParam)))
+			{
 				if(window)
 				{
 					window->close();
+					break;
 				}
-				break;
-				
-			case WM_SIZE:
-				if(window)
-				{
-					RECT rect;
-					GetClientRect(hwnd, &rect);
-					physx::PxU32 width  = (physx::PxU32)(rect.right-rect.left);
-					physx::PxU32 height = (physx::PxU32)(rect.bottom-rect.top);
-					window->onResize(width, height);
-				}
-				break;
-				
-			case WM_MOUSEMOVE:
-				if(window)
-				{
-					RECT rect;
-					GetClientRect(hwnd, &rect);
-					physx::PxU32 height = (physx::PxU32)(rect.bottom-rect.top);
-					window->onMouseMove((physx::PxU32)LOWORD(lParam), height-(physx::PxU32)HIWORD(lParam));
-				}
-				break;
-				
-			case WM_LBUTTONDOWN:
-				if(window) doOnMouseDown(hwnd, *window, lParam, RendererWindow::MOUSE_LEFT);
-				break;
-				
-			case WM_LBUTTONUP:
-				if(window) doOnMouseUp(hwnd, *window, lParam, RendererWindow::MOUSE_LEFT);
-				break;
-			
-			case WM_RBUTTONDOWN:
-				if(window) doOnMouseDown(hwnd, *window, lParam, RendererWindow::MOUSE_RIGHT);
-				break;
-				
-			case WM_RBUTTONUP:
-				if(window) doOnMouseUp(hwnd, *window, lParam, RendererWindow::MOUSE_RIGHT);
-				break;
-			
-			case WM_KEYDOWN:
-				if(window) window->onKeyDown(getKeyCode(wParam));
-				break;
-			
-			case WM_KEYUP:
-				if(window) window->onKeyUp(getKeyCode(wParam));
-				break;
-			
-			case WM_PAINT:
-				ValidateRect(hwnd, 0);
-				break;
-				
-			default:
-				return ::DefWindowProc(hwnd, msg, wParam, lParam);
+			}
+			// no break, fall through
+		case WM_KEYDOWN:
+			if(window)
+			{
+				((WindowsPlatform*)window->getPlatform())->getWindowsSampleUserInput().onKeyDown(wParam, lParam);				
+			}
+			break;
+
+		case WM_SYSKEYUP:
+		case WM_KEYUP:
+			if(window)
+			{
+				((WindowsPlatform*)window->getPlatform())->getWindowsSampleUserInput().onKeyUp(wParam, lParam);
+			}
+			break;
+
+		case WM_PAINT:
+			ValidateRect(hwnd, 0);
+			break;
+		default:
+			return ::DefWindowProc(hwnd, msg, wParam, lParam);
 		}
 	}
 	return 0; 
@@ -231,18 +300,18 @@ static ATOM registerWindowClass(HINSTANCE hInstance)
 		wcex.cbClsExtra     = 0;
 		wcex.cbWndExtra     = sizeof(void*);
 		wcex.hInstance      = hInstance;
-		wcex.hIcon          = ::LoadIcon(hInstance, (LPCTSTR)0);
+		wcex.hIcon          = ::LoadIcon(hInstance, "SampleApplicationIcon");
 		wcex.hCursor        = ::LoadCursor(NULL, IDC_ARROW);
 		wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
 		wcex.lpszMenuName   = 0;
 		wcex.lpszClassName  = g_windowClassName;
-		wcex.hIconSm        = ::LoadIcon(wcex.hInstance, (LPCTSTR)0);
+		wcex.hIconSm        = ::LoadIcon(wcex.hInstance, "SampleApplicationIcon");
 		atom = ::RegisterClassEx(&wcex);
 	}
 	return atom;
 }
 
-SamplePlatform*		createPlatform(RendererWindow* _app)
+SamplePlatform*		SampleFramework::createPlatform(SampleRenderer::RendererWindow* _app)
 {
 	printf("Creating Windows platform abstraction.\n");
 	SamplePlatform::setPlatform(new WindowsPlatform(_app));
@@ -280,36 +349,112 @@ void* WindowsPlatform::initializeD3D9()
 	return m_d3d;
 }
 
+void WindowsPlatform::showCursor(bool show)
+{
+	if(show != m_showCursor)
+	{
+		m_showCursor = show;
+		PxI32 count = ShowCursor(show);
+		PX_ASSERT((m_showCursor && (count == 0)) || (!m_showCursor && (count == -1)));
+		PX_UNUSED(count);
+	}
+}
+
 void* WindowsPlatform::compileProgram(void * context, 
+										const char* assetDir, 
 										const char *programPath, 
-										physx::pubfnd2::PxU64 profile, 
+										physx::PxU64 profile, 
+										const char* passString, 
 										const char *entry, 
 										const char **args)
 
 {
+#if defined(RENDERER_ENABLE_CG)
 	char fullpath[1024];
-	physx::string::strcpy_s(fullpath, 1024, gShadersDir);
+	physx::string::strcpy_s(fullpath, 1024, assetDir);
+	physx::string::strcat_s(fullpath, 1024, "shaders/");
 	physx::string::strcat_s(fullpath, 1024, programPath);
 	CGprogram program = cgCreateProgramFromFile(static_cast<CGcontext>(context), CG_SOURCE, fullpath, static_cast<CGprofile>(profile), entry, args);
 
+	if (!program)
+	{
+		static bool ignoreErrors = false;
+		if (!ignoreErrors)
+		{
+			const char* compileError = cgGetLastListing(static_cast<CGcontext>(context));
+			int ret = MessageBoxA(0, compileError, "CG cgCreateProgramFromFile Error", MB_ABORTRETRYIGNORE);
+
+			if (ret == IDABORT)
+			{
+				exit(0);
+			}
+			else if (ret == IDIGNORE)
+			{
+				ignoreErrors = true;
+			}
+			else
+			{
+				DebugBreak();
+			}
+		}
+	}
+
 	return program;
+#else
+	return NULL;
+#endif
 }
 
-WindowsPlatform::WindowsPlatform(RendererWindow* _app) : SamplePlatform(_app)
+WindowsPlatform::WindowsPlatform(SampleRenderer::RendererWindow* _app) :
+SamplePlatform(_app), 
+m_d3d(NULL),
+m_d3dDevice(NULL),
+m_dxgiFactory(NULL),
+m_dxgiSwap(NULL),
+m_d3d11Device(NULL),
+m_d3d11DeviceContext(NULL),
+m_hwnd(0),
+m_hdc(0),
+m_hrc(0),
+m_library(NULL),
+m_dxgiLibrary(NULL),
+m_d3d11Library(NULL),
+m_ownsWindow(false),
+m_isHandlingMessages(false),
+m_destroyWindow(false),
+m_hasFocus(true),
+m_vsync(false)
 {
-	m_isHandlingMessages = false;
-	m_destroyWindow = false;
-	m_hasFocus = true;
-	m_hwnd = 0;
+	m_library = 0;
+
+	// adjust ShowCursor display counter to be 0 or -1
+	m_showCursor = true;
+	PxI32 count = ShowCursor(true);
+	while(count != 0)
+		count = ShowCursor(count < 0);
+	strcpy(m_platformName, "windows");
+
+	m_mouseCursorPos = PxVec2(0);
+	m_recenterMouseCursor = false;
 }
 
 WindowsPlatform::~WindowsPlatform()
 {
-	RENDERER_ASSERT(m_hwnd==0, "RendererWindow was not closed before being destroyed.");
+	RENDERER_ASSERT(!m_ownsWindow || m_hwnd==0, "RendererWindow was not closed before being destroyed.");
 	if(m_library) 
 	{
 		FreeLibrary(m_library);
 		m_library = 0;
+	}
+	if(m_dxgiLibrary) 
+	{
+		FreeLibrary(m_dxgiLibrary);
+		m_dxgiLibrary = 0;
+	}
+	if(m_d3d11Library) 
+	{
+		FreeLibrary(m_d3d11Library);
+		m_d3d11Library = 0;
 	}
 }
 
@@ -338,7 +483,7 @@ bool WindowsPlatform::isOpen()
 	return false;
 }
 
-void WindowsPlatform::getTitle(char *title, physx::pubfnd2::PxU32 maxLength) const
+void WindowsPlatform::getTitle(char *title, physx::PxU32 maxLength) const
 {
 	RENDERER_ASSERT(m_hwnd, "Tried to get the title of a window that was not opened.");
 	if(m_hwnd)
@@ -361,8 +506,68 @@ void WindowsPlatform::showMessage(const char* title, const char* message)
 	printf("%s: %s\n", title, message);
 }
 
-void WindowsPlatform::setWindowSize(physx::pubfnd2::PxU32 width, 
-									physx::pubfnd2::PxU32 height)
+bool WindowsPlatform::saveBitmap(const char* pFileName, physx::PxU32 width, physx::PxU32 height, physx::PxU32 sizeInBytes, const void* pData)
+{
+	bool bSuccess = false;
+	HBITMAP bitmap = CreateBitmap(width, height, 1, 32, pData);
+	if (bitmap)
+	{
+		CImage image;
+		image.Attach(bitmap, CImage::DIBOR_TOPDOWN);
+		bSuccess = SUCCEEDED(image.Save(pFileName, Gdiplus::ImageFormatBMP));
+		DeleteObject(bitmap);
+	}
+	return bSuccess;
+}
+
+void WindowsPlatform::setMouseCursorRecentering(bool val)
+{
+	if (m_recenterMouseCursor != val)
+	{
+		m_recenterMouseCursor = val;
+		if (m_recenterMouseCursor)
+			recenterMouseCursor(false);
+	}
+}
+
+bool WindowsPlatform::getMouseCursorRecentering() const
+{
+	return m_recenterMouseCursor;
+}
+
+void WindowsPlatform::recenterMouseCursor(bool generateEvent)
+{
+	if (m_recenterMouseCursor && m_app->hasFocus())
+	{
+		RECT rect;
+		GetWindowRect(m_hwnd, (LPRECT)&rect);
+		PxU32 winHeight = (PxU32)(rect.bottom-rect.top);
+		PxU32 winWidth = (PxU32)(rect.right - rect.left);
+
+		POINT winPos;
+		GetCursorPos(&winPos);
+		PxVec2 current(static_cast<PxReal>(winPos.x), winHeight - static_cast<PxReal>(winPos.y));
+
+		PxI32 winCenterX = 0;
+		PxI32 winCenterY = 0;
+		{
+			winCenterX = rect.left + PxI32(winWidth>>1);
+			winCenterY = rect.top + PxI32(winHeight>>1);
+		}
+		SetCursorPos(winCenterX, winCenterY);
+
+		if (generateEvent)
+		{
+			PxVec2 diff = current - PxVec2(static_cast<PxReal>(winCenterX), winHeight - static_cast<PxReal>(winCenterY));
+			getWindowsSampleUserInput().doOnMouseMove(winCenterX, winHeight - winCenterY, diff.x, diff.y, MOUSE_MOVE);
+		}
+	
+		m_mouseCursorPos = current;
+	}
+}
+
+void WindowsPlatform::setWindowSize(physx::PxU32 width, 
+									physx::PxU32 height)
 {
 	bool fullscreen = false;
 	RENDERER_ASSERT(m_hwnd, "Tried to resize a window that was not opened.");
@@ -402,11 +607,12 @@ void WindowsPlatform::update()
 			}
 			m_destroyWindow = false;
 		}
+		recenterMouseCursor(true);
 	}
 }
 
-bool WindowsPlatform::openWindow(physx::pubfnd2::PxU32& width, 
-								physx::pubfnd2::PxU32& height,
+bool WindowsPlatform::openWindow(physx::PxU32& width, 
+								physx::PxU32& height,
 								const char* title,
 								bool fullscreen) 
 {
@@ -414,25 +620,51 @@ bool WindowsPlatform::openWindow(physx::pubfnd2::PxU32& width,
 	RENDERER_ASSERT(m_hwnd==0, "Attempting to open a window that is already opened");
 	if(m_hwnd==0)
 	{
+		int offset = fullscreen ? 0 : 50;
+
 		registerWindowClass((HINSTANCE)::GetModuleHandle(0));
 		RECT winRect;
-		winRect.left   = 0;
-		winRect.top    = 0;
-		winRect.right  = width;
-		winRect.bottom = height;
+		winRect.left   = offset;
+		winRect.top    = offset;
+		winRect.right  = width + offset;
+		winRect.bottom = height + offset;
 		DWORD dwstyle  = (fullscreen ? g_fullscreenStyle : g_windowStyle);
-		UINT  offset   = fullscreen ? 0 : 50;
+
 		::AdjustWindowRect(&winRect, dwstyle, 0);
+
+		// make sure the window fits in the main screen
+		if (!fullscreen)
+		{
+			// check the work area of the primary display
+			RECT screen;
+			SystemParametersInfo(SPI_GETWORKAREA, 0, &screen, 0);
+
+			if (winRect.right > screen.right)
+			{
+				int diff = winRect.right - screen.right;
+				winRect.right -= diff;
+				winRect.left = std::max<int>(0, winRect.left - diff);
+			}
+
+			if (winRect.bottom > screen.bottom)
+			{
+				int diff = winRect.bottom - screen.bottom;
+				winRect.bottom -= diff;
+				winRect.top = std::max<int>(0, winRect.top - diff);
+			}
+		}
+
 		m_hwnd = ::CreateWindowA(g_windowClassName, title, dwstyle,
-			offset, offset,
-			winRect.right-winRect.left, winRect.bottom-winRect.top,
-			0, 0, 0, 0);
+		                         winRect.left, winRect.top,
+		                         winRect.right - winRect.left, winRect.bottom - winRect.top,
+		                         0, 0, 0, 0);
 		RENDERER_ASSERT(m_hwnd, "CreateWindow failed");
 		if(m_hwnd)
 		{
 			ok = true;
+			m_ownsWindow = true;
 			ShowWindow(m_hwnd, SW_SHOWNORMAL);
-			SetFocus(m_hwnd);              
+			SetFocus(m_hwnd);
 			SetWindowLongPtr(m_hwnd, GWLP_USERDATA, PtrToLong(m_app));
 			m_app->onOpen();
 		}
@@ -456,6 +688,12 @@ bool WindowsPlatform::openWindow(physx::pubfnd2::PxU32& width,
 	return ok;
 }
 
+bool WindowsPlatform::useWindow(physx::PxU64 hwnd)
+{
+	m_hwnd = reinterpret_cast<HWND>(hwnd);
+	return true;
+}
+
 bool WindowsPlatform::closeWindow() 
 {
 	if(m_hwnd)
@@ -474,6 +712,10 @@ bool WindowsPlatform::closeWindow()
 	return true;
 }
 
+size_t WindowsPlatform::getCWD(char* path, size_t len)
+{
+	return ::GetCurrentDirectory((DWORD)len, path);
+}
 void WindowsPlatform::setCWDToEXE(void) 
 {
 	char exepath[1024] = {0};
@@ -482,19 +724,19 @@ void WindowsPlatform::setCWDToEXE(void)
 	if(exepath[0])
 	{
 		popPathSpec(exepath);
-		_chdir(exepath);
+		(void)_chdir(exepath);
 	}
 }
 
-void WindowsPlatform::setupRendererDescription(RendererDesc& renDesc) 
+void WindowsPlatform::setupRendererDescription(SampleRenderer::RendererDesc& renDesc) 
 {
-	renDesc.driver = Renderer::DRIVER_DIRECT3D9;
-	renDesc.windowHandle = reinterpret_cast<physx::pubfnd2::PxU64>(m_hwnd);
+	renDesc.driver = SampleRenderer::Renderer::DRIVER_DIRECT3D9;
+	renDesc.windowHandle = reinterpret_cast<physx::PxU64>(m_hwnd);
 }
 
-void WindowsPlatform::postRendererSetup() 
+void WindowsPlatform::postRendererSetup(SampleRenderer::Renderer* renderer) 
 {
-	if(!m_sf_app->getRenderer())
+	if(!renderer)
 	{
 		// quit if no renderer was created.  Nothing else to do.
 		// error was output in createRenderer.
@@ -503,120 +745,21 @@ void WindowsPlatform::postRendererSetup()
 	char windowTitle[1024] = {0};
 	m_app->getTitle(windowTitle, 1024);
 	strcat_s(windowTitle, 1024, " : ");
-	strcat_s(windowTitle, 1024, Renderer::getDriverTypeName(
-												m_sf_app->getRenderer()->getDriverType()));
+	strcat_s(windowTitle, 1024, SampleRenderer::Renderer::getDriverTypeName(
+												renderer->getDriverType()));
 	m_app->setTitle(windowTitle);
 }
 
 void WindowsPlatform::doInput()
 {
-	processGamepads();
+	m_windowsSampleUserInput.updateInput();
 }
 
-void WindowsPlatform::processGamepads()
+void WindowsPlatform::initializeOGLDisplay(const SampleRenderer::RendererDesc& desc,
+										physx::PxU32& width, 
+										physx::PxU32& height)
 {
-	if(!gTimeInit)
-	{
-		gTimeInit=true;
-
-		for(PxU32 p=0;p<MAX_GAMEPADS;p++)
-		{
-			memset(&m_lastInputState[p], 0, sizeof(XINPUT_STATE));
-			for(PxU32 i=0;i<MAX_GAMEPAD_AXES;i++)
-			{
-				m_lastAxisData[p][i]=0;
-			}
-		}
-	}
-
-	// PT: TODO: share this with PxApplication
-	for(PxU32 p=0;p<MAX_GAMEPADS;p++)
-	{
-		XINPUT_STATE inputState;
-		if(XInputGetState(p, &inputState) == ERROR_SUCCESS)
-		{
-			XINPUT_CAPABILITIES caps;
-			XInputGetCapabilities(p, XINPUT_FLAG_GAMEPAD, &caps);
-
-			//gamepad
-			{
-				// Process buttons
-				const WORD lastWButtons	= m_lastInputState[p].Gamepad.wButtons;
-				const WORD currWButtons	= inputState.Gamepad.wButtons;
-
-				const WORD buttonsDown	= currWButtons & ~lastWButtons;
-				const WORD buttonsUp	=  ~currWButtons & lastWButtons;
-				//				const WORD buttonsHeld	= currWButtons & lastWButtons;
-
-				for(int i=0;i<14;i++)
-				{
-					// order has to match struct GamepadControls
-					static const WORD buttonMasks[]={
-						XINPUT_GAMEPAD_DPAD_UP,
-						XINPUT_GAMEPAD_DPAD_DOWN,
-						XINPUT_GAMEPAD_DPAD_LEFT,
-						XINPUT_GAMEPAD_DPAD_RIGHT,
-						XINPUT_GAMEPAD_START,
-						XINPUT_GAMEPAD_BACK,
-						XINPUT_GAMEPAD_LEFT_THUMB,
-						XINPUT_GAMEPAD_RIGHT_THUMB, 
-						XINPUT_GAMEPAD_Y,
-						XINPUT_GAMEPAD_A,
-						XINPUT_GAMEPAD_X,
-						XINPUT_GAMEPAD_B,
-						XINPUT_GAMEPAD_LEFT_SHOULDER,
-						XINPUT_GAMEPAD_RIGHT_SHOULDER,
-					};
-
-					if (buttonsDown & buttonMasks[i])
-						m_sf_app->onGamepadButton(i, true);
-					else if(buttonsUp & buttonMasks[i])
-						m_sf_app->onGamepadButton(i, false);
-				}
-
-				// PT: I think we do the 2 last ones separately because they're listed in GamepadControls but not in buttonMasks...
-				{
-					const BYTE oldTriggerVal = m_lastInputState[p].Gamepad.bRightTrigger;
-					const BYTE newTriggerVal = inputState.Gamepad.bRightTrigger;
-					if( !oldTriggerVal && newTriggerVal )
-						m_sf_app->onGamepadButton(GamepadControls::RIGHT_SHOULDER_BOT, true);
-					else if( oldTriggerVal && !newTriggerVal )
-						m_sf_app->onGamepadButton(GamepadControls::RIGHT_SHOULDER_BOT, false);
-				}
-				{
-					const BYTE oldTriggerVal = m_lastInputState[p].Gamepad.bLeftTrigger;
-					const BYTE newTriggerVal = inputState.Gamepad.bLeftTrigger;
-					if( !oldTriggerVal && newTriggerVal )
-						m_sf_app->onGamepadButton(GamepadControls::LEFT_SHOULDER_BOT, true);
-					else if( oldTriggerVal && !newTriggerVal )
-						m_sf_app->onGamepadButton(GamepadControls::LEFT_SHOULDER_BOT, false);
-				}
-			}		
-
-			// Gamepad
-			const int axisData[] = {inputState.Gamepad.sThumbRX, inputState.Gamepad.sThumbRY, inputState.Gamepad.sThumbLX, inputState.Gamepad.sThumbLY };
-			for(PxU32 i=0;i<MAX_GAMEPAD_AXES;i++)
-			{
-				if(axisData[i] != m_lastAxisData[p][i])
-				{
-					int data = axisData[i];
-					if(abs(data) < XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)
-					{
-						data = 0;
-					}
-					m_sf_app->onGamepadAxis( i, ((float)data)/SHRT_MAX);
-				}
-				m_lastAxisData[p][i] = axisData[i];
-			}
-			m_lastInputState[p] = inputState;
-		}
-	}
-}
-
-void WindowsPlatform::initializeOGLDisplay(const RendererDesc& desc,
-										physx::pubfnd2::PxU32& width, 
-										physx::pubfnd2::PxU32& height)
-{
+#if defined(RENDERER_ENABLE_OPENGL)
 	m_hwnd = reinterpret_cast<HWND>(desc.windowHandle);
 
 	RENDERER_ASSERT(m_hwnd, "Invalid window handle!");
@@ -641,11 +784,14 @@ void WindowsPlatform::initializeOGLDisplay(const RendererDesc& desc,
 			m_hrc = 0;
 		}
 	}
+#endif
+
+	m_vsync = desc.vsync;
 }
 
-physx::pubfnd2::PxU64 WindowsPlatform::getWindowHandle()
+physx::PxU64 WindowsPlatform::getWindowHandle()
 {
-	return reinterpret_cast<physx::pubfnd2::PxU64>(m_hwnd);
+	return reinterpret_cast<physx::PxU64>(m_hwnd);
 }
 
 void WindowsPlatform::getWindowSize(PxU32& width, PxU32& height)
@@ -661,17 +807,21 @@ void WindowsPlatform::getWindowSize(PxU32& width, PxU32& height)
 
 void WindowsPlatform::freeDisplay() 
 {
+#if defined(RENDERER_ENABLE_OPENGL)
 	if(m_hrc)
 	{
 		wglMakeCurrent(m_hdc, 0);
 		wglDeleteContext(m_hrc);
 		m_hrc = 0;
 	}
+#endif
 }
 
 bool WindowsPlatform::makeContextCurrent()
 {
 	bool ok = false;
+
+#if defined(RENDERER_ENABLE_OPENGL)
 	if(m_hdc && m_hrc)
 	{
 		if(wglGetCurrentContext()==m_hrc)
@@ -680,10 +830,11 @@ bool WindowsPlatform::makeContextCurrent()
 		}
 		else
 		{
-			bool ok = wglMakeCurrent(m_hdc, m_hrc) ? true : false;
-			return ok;
+			ok = wglMakeCurrent(m_hdc, m_hrc) ? true : false;
 		}
 	}
+#endif
+
 	return ok;
 }
 
@@ -701,21 +852,35 @@ bool WindowsPlatform::isContextValid()
 
 void WindowsPlatform::postInitializeOGLDisplay()
 {
+#if defined(RENDERER_ENABLE_OPENGL)
 	glewInit();
-		// turn off v-sync...
+
 #if defined(GLEW_MX)
 	wglewInit();
 #endif
+
 	if(WGLEW_EXT_swap_control)
 	{
-		wglSwapIntervalEXT(0);
+		wglSwapIntervalEXT(m_vsync ? -1 : 0);
 	}
+#endif
 }
 
-physx::pubfnd2::PxU32 WindowsPlatform::initializeD3D9Display(void * d3dPresentParameters, 
+void WindowsPlatform::setOGLVsync(bool on)
+{
+#if defined(RENDERER_ENABLE_OPENGL)
+	m_vsync = on;
+	if(WGLEW_EXT_swap_control)
+	{
+		wglSwapIntervalEXT(m_vsync ? 1 : 0);
+	}
+#endif
+}
+
+physx::PxU32 WindowsPlatform::initializeD3D9Display(void * d3dPresentParameters, 
 																char* m_deviceName, 
-																physx::pubfnd2::PxU32& width, 
-																physx::pubfnd2::PxU32& height,
+																physx::PxU32& width, 
+																physx::PxU32& height,
 																void * m_d3dDevice_out)
 {
 	D3DPRESENT_PARAMETERS* m_d3dPresentParams = static_cast<D3DPRESENT_PARAMETERS*>(d3dPresentParameters);
@@ -740,8 +905,8 @@ physx::pubfnd2::PxU32 WindowsPlatform::initializeD3D9Display(void * d3dPresentPa
 		RECT rect = {0};
 		GetWindowRect(m_hwnd, &rect);
 		m_d3dPresentParams->BackBufferFormat = D3DFMT_X8R8G8B8;
-		m_d3dPresentParams->BackBufferWidth  = rect.right-rect.left;
-		m_d3dPresentParams->BackBufferHeight = rect.bottom-rect.top;
+		width = (m_d3dPresentParams->BackBufferWidth  = rect.right-rect.left);
+		height = (m_d3dPresentParams->BackBufferHeight = rect.bottom-rect.top);
 
 		bool foundAdapterMode = false;
 		const UINT numAdapterModes = m_d3d->GetAdapterModeCount(0, m_d3dPresentParams->BackBufferFormat);
@@ -785,7 +950,7 @@ physx::pubfnd2::PxU32 WindowsPlatform::initializeD3D9Display(void * d3dPresentPa
 
 	D3DADAPTER_IDENTIFIER9 adapterIdentifier;
 	m_d3d->GetAdapterIdentifier(adapter, 0, &adapterIdentifier);
-	strncpy_s(m_deviceName, 256, adapterIdentifier.Description, sizeof(m_deviceName));
+	strncpy_s(m_deviceName, 256, adapterIdentifier.Description, 256);
 
 	HRESULT res = m_d3d->CreateDevice( adapter, deviceType,
 		m_hwnd,
@@ -795,25 +960,223 @@ physx::pubfnd2::PxU32 WindowsPlatform::initializeD3D9Display(void * d3dPresentPa
 	return res;
 }
 
-physx::pubfnd2::PxU32 WindowsPlatform::D3D9Present()
+physx::PxU32 WindowsPlatform::D3D9Present()
 {
 	return m_d3dDevice->Present(0, 0, m_hwnd, 0);
 }
-
-
-physx::pubfnd2::PxU64 WindowsPlatform::getD3D9TextureFormat(RendererTexture2D::Format format)
+physx::PxU64 WindowsPlatform::getD3D9TextureFormat(SampleRenderer::RendererTexture2D::Format format)
 {
 	D3DFORMAT d3dFormat = D3DFMT_UNKNOWN;
 	switch(format)
 	{
-	case RendererTexture2D::FORMAT_B8G8R8A8: d3dFormat = D3DFMT_A8R8G8B8; break;
-	case RendererTexture2D::FORMAT_A8:       d3dFormat = D3DFMT_A8;       break;
-	case RendererTexture2D::FORMAT_R32F:     d3dFormat = D3DFMT_R32F;     break;
-	case RendererTexture2D::FORMAT_DXT1:     d3dFormat = D3DFMT_DXT1;     break;
-	case RendererTexture2D::FORMAT_DXT3:     d3dFormat = D3DFMT_DXT3;     break;
-	case RendererTexture2D::FORMAT_DXT5:     d3dFormat = D3DFMT_DXT5;     break;
-	case RendererTexture2D::FORMAT_D16:      d3dFormat = D3DFMT_D16;      break;
-	case RendererTexture2D::FORMAT_D24S8:    d3dFormat = D3DFMT_D24S8;    break;
+	case SampleRenderer::RendererTexture2D::FORMAT_B8G8R8A8: d3dFormat = D3DFMT_A8R8G8B8; break;
+	case SampleRenderer::RendererTexture2D::FORMAT_A8:       d3dFormat = D3DFMT_A8;       break;
+	case SampleRenderer::RendererTexture2D::FORMAT_R32F:     d3dFormat = D3DFMT_R32F;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT1:     d3dFormat = D3DFMT_DXT1;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT3:     d3dFormat = D3DFMT_DXT3;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT5:     d3dFormat = D3DFMT_DXT5;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_D16:      d3dFormat = D3DFMT_D16;      break;
+	case SampleRenderer::RendererTexture2D::FORMAT_D24S8:    d3dFormat = D3DFMT_D24S8;    break;
 	}
-	return static_cast<physx::pubfnd2::PxU64>(d3dFormat);
+	return static_cast<physx::PxU64>(d3dFormat);
+}
+
+physx::PxU64 WindowsPlatform::getD3D11TextureFormat(SampleRenderer::RendererTexture2D::Format format)
+{
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+	DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN;
+	switch(format)
+	{
+	case SampleRenderer::RendererTexture2D::FORMAT_B8G8R8A8: dxgiFormat = DXGI_FORMAT_B8G8R8A8_UNORM; break;
+	case SampleRenderer::RendererTexture2D::FORMAT_A8:       dxgiFormat = DXGI_FORMAT_A8_UNORM;       break;
+	case SampleRenderer::RendererTexture2D::FORMAT_R32F:     dxgiFormat = DXGI_FORMAT_R32_FLOAT;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT1:     dxgiFormat = DXGI_FORMAT_BC1_UNORM;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT3:     dxgiFormat = DXGI_FORMAT_BC2_UNORM;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_DXT5:     dxgiFormat = DXGI_FORMAT_BC3_UNORM;     break;
+	case SampleRenderer::RendererTexture2D::FORMAT_D16:      dxgiFormat = DXGI_FORMAT_R16_TYPELESS;      break;
+	}
+#else
+	PxU64 dxgiFormat = 0;
+#endif
+	return static_cast<physx::PxU64>(dxgiFormat);
+}
+
+void* WindowsPlatform::initializeD3D11()
+{
+	m_dxgiLibrary   = 0;
+	m_d3d11Library  = 0;
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+	if(m_hwnd)
+	{
+#if defined(D3D_DEBUG_INFO)
+#define D3D11_DLL "d3d11d.dll"
+#define DXGI_DLL "dxgid.dll"
+#else
+#define D3D11_DLL "d3d11.dll"
+#define DXGI_DLL "dxgi.dll"
+#endif
+		m_dxgiLibrary = LoadLibraryA(DXGI_DLL);
+		m_d3d11Library = LoadLibraryA(D3D11_DLL);
+		RENDERER_ASSERT(m_dxgiLibrary, "Could not load " DXGI_DLL ".");
+		RENDERER_ASSERT(m_d3d11Library, "Could not load " D3D11_DLL ".");
+		if(!m_dxgiLibrary)
+		{
+			MessageBoxA(0, "Could not load " DXGI_DLL ". Please install the latest DirectX End User Runtime available at www.microsoft.com/directx.", "Renderer Error.", MB_OK);
+		}
+		if(!m_d3d11Library)
+		{
+			MessageBoxA(0, "Could not load " D3D11_DLL ". Please install the latest DirectX End User Runtime available at www.microsoft.com/directx.", "Renderer Error.", MB_OK);
+		}
+#undef D3D11_DLL
+#undef DXGI_DLL
+		if(m_dxgiLibrary)
+		{
+			typedef HRESULT     (WINAPI * LPCREATEDXGIFACTORY)(REFIID, void ** );
+			LPCREATEDXGIFACTORY pCreateDXGIFactory = (LPCREATEDXGIFACTORY)GetProcAddress(m_dxgiLibrary, "CreateDXGIFactory1");
+			RENDERER_ASSERT(pCreateDXGIFactory, "Could not find CreateDXGIFactory1 function.");
+			if(pCreateDXGIFactory)
+			{
+				pCreateDXGIFactory(__uuidof(IDXGIFactory1), (void**)(&m_dxgiFactory));
+			}
+		}
+	}
+#endif
+	return m_dxgiFactory;
+}
+
+
+bool WindowsPlatform::isD3D11ok()
+{
+	if(m_dxgiLibrary && m_d3d11Library) 
+	{
+		return true;
+	}
+	return false;
+}
+
+physx::PxU32 WindowsPlatform::initializeD3D11Display(void *dxgiSwapChainDesc, 
+															  char *m_deviceName, 
+													 physx::PxU32& width, 
+													 physx::PxU32& height,
+															  void *m_d3dDevice_out,
+															  void *m_d3dDeviceContext_out,
+															  void *m_dxgiSwap_out)
+{
+	HRESULT hr = S_OK;
+
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+	ID3D11Device* pD3D11Device               = NULL;
+	ID3D11DeviceContext* pD3D11DeviceContext = NULL;
+	IDXGISwapChain* pSwapChain               = NULL;
+	IDXGIFactory1* pDXGIFactory              = m_dxgiFactory;
+	DXGI_SWAP_CHAIN_DESC* pSwapChainDesc     = static_cast<DXGI_SWAP_CHAIN_DESC*>(dxgiSwapChainDesc);
+	
+	hr = pDXGIFactory->MakeWindowAssociation(m_hwnd, 0);
+	pSwapChainDesc->OutputWindow = m_hwnd;
+
+	bool fullscreen = false;
+	WINDOWINFO wininfo = {0};
+	if(GetWindowInfo(m_hwnd, &wininfo))
+	{
+		if(wininfo.dwStyle & WS_POPUP)
+		{
+			fullscreen = true;
+			pSwapChainDesc->Windowed = 0;
+		}
+	}
+	
+	PFN_D3D11_CREATE_DEVICE pD3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(m_d3d11Library, "D3D11CreateDevice");
+	RENDERER_ASSERT(pD3D11CreateDevice, "Could not find D3D11CreateDeviceAndSwapChain.");
+	if (pD3D11CreateDevice)
+	{
+		UINT i                  = 0; 
+		IDXGIAdapter1* pAdapter = NULL; 
+		std::vector<IDXGIAdapter1*> vAdapters; 
+		while(pDXGIFactory->EnumAdapters1(i++, &pAdapter) != DXGI_ERROR_NOT_FOUND) 
+		{ 
+			vAdapters.push_back(pAdapter); 
+		} 
+
+		const D3D_FEATURE_LEVEL supportedFeatureLevels[] = 
+		{
+			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_10_1,
+			D3D_FEATURE_LEVEL_10_0,
+			//D3D_FEATURE_LEVEL_9_3,
+			//D3D_FEATURE_LEVEL_9_2,
+			//D3D_FEATURE_LEVEL_9_1,
+		};
+
+		D3D11_CREATE_DEVICE_FLAG deviceFlags = (D3D11_CREATE_DEVICE_FLAG)(D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_BGRA_SUPPORT);
+		D3D_FEATURE_LEVEL deviceFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+		for (i = 0; i < vAdapters.size(); ++i)
+		{
+			hr = pD3D11CreateDevice(
+				vAdapters[i],
+				D3D_DRIVER_TYPE_UNKNOWN,
+				NULL,
+				deviceFlags,
+				supportedFeatureLevels, 
+				PX_ARRAY_SIZE(supportedFeatureLevels),
+				D3D11_SDK_VERSION,
+				&pD3D11Device,
+				&deviceFeatureLevel,
+				&pD3D11DeviceContext);
+
+			if (SUCCEEDED(hr))
+			{
+				// Disable MSAA on sub DX10.1 devices
+				if (deviceFeatureLevel <= D3D_FEATURE_LEVEL_10_0)
+				{
+					pSwapChainDesc->SampleDesc.Count   = 1;
+					pSwapChainDesc->SampleDesc.Quality = 0;
+				}
+				hr = pDXGIFactory->CreateSwapChain(pD3D11Device, pSwapChainDesc, &pSwapChain);
+			}
+
+			if (SUCCEEDED(hr))
+			{
+				m_dxgiSwap = pSwapChain;
+				m_d3d11Device = pD3D11Device;
+				m_d3d11DeviceContext = pD3D11DeviceContext;
+				*(static_cast<IDXGISwapChain**>(m_dxgiSwap_out)) = m_dxgiSwap;
+				*(static_cast<ID3D11Device**>(m_d3dDevice_out)) = m_d3d11Device;
+				*(static_cast<ID3D11DeviceContext**>(m_d3dDeviceContext_out)) = m_d3d11DeviceContext;
+				break;
+			}
+
+			// If DXGI creation failed but device creation succeeded, we need to release both device and context
+			if (pD3D11Device)        pD3D11Device->Release();
+			if (pD3D11DeviceContext) pD3D11DeviceContext->Release();
+		}
+
+		for (i = 0; i < vAdapters.size(); ++i)
+		{
+			vAdapters[i]->Release();
+		}
+	} 
+	RENDERER_ASSERT(m_dxgiSwap && m_d3d11Device && m_d3d11DeviceContext, "Unable to create D3D device and swap chain");
+#endif
+
+	return hr;
+}
+
+bool WindowsPlatform::makeSureDirectoryPathExists(const char* dirPath)
+{
+	// [Kai] Currently create the final folder only if the dirPath doesn't exist.
+	// To create all the directories in the specified dirPath, use API
+	// MakeSureDirectoryPathExists() declared in dbghelp.h
+	bool ok = GetFileAttributes(dirPath) != -1;
+	if (!ok)
+		ok = CreateDirectory(dirPath, NULL) != 0;
+	return ok;
+}
+
+physx::PxU32 WindowsPlatform::D3D11Present(bool vsync)
+{
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+	return m_dxgiSwap->Present(vsync ? 1 : 0, 0);
+#else
+	return 0;
+#endif
 }

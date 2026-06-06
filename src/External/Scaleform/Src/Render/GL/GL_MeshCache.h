@@ -35,18 +35,11 @@ class MeshCacheItem : public Render::MeshCacheItem
     friend class MeshCache;
     friend class MeshBuffer;
     friend class HAL;
-    friend class VertexBuilder_Legacy;
-    friend class VertexBuilder_Core30;
-    friend class VertexBuilder_VAOES;
 
-    MeshBuffer*         pVertexBuffer;
-    MeshBuffer*         pIndexBuffer;
-    UPInt               VBAllocOffset, VBAllocSize;
-    UPInt               IBAllocOffset, IBAllocSize;
-
-    GLuint              VAO;            // The vertex array object name this item uses. 
-    const VertexFormat* VAOFormat;      // The vertex format used to construct the current VAO.
-    UByte*              VAOOffset;      // The base vertex offset to construct the current VAO.
+    MeshBuffer*     pVertexBuffer;
+    MeshBuffer*     pIndexBuffer;
+    UPInt           VBAllocOffset, VBAllocSize;
+    UPInt           IBAllocOffset, IBAllocSize;
 
 public:
 
@@ -67,9 +60,6 @@ public:
             p->VBAllocSize   = vertexAllocSize;
             p->IBAllocOffset = indexOffset;
             p->IBAllocSize   = indexAllocSize;
-            p->VAO           = 0;
-            p->VAOFormat     = 0;
-            p->VAOOffset     = 0;
         }
         return p;
     }
@@ -100,7 +90,7 @@ protected:
 public:
     MeshBuffer(HAL* phal, GLenum btype, UPInt size, AllocType type, unsigned arena)
         : Render::MeshBuffer(size, type, arena)
-    { pHal = phal; Buffer = 0; BufferData = 0; pNextLock = 0; Type = btype; CurrentBuffer = 0xffffffff; }
+    { pHal = phal; Buffer = 0; BufferData = 0; pNextLock = 0; Type = btype; }
     ~MeshBuffer();
 
     inline  UPInt   GetIndex() const { return Index; }
@@ -112,8 +102,6 @@ public:
     GLuint  GetBuffer() { return Buffer; }
     UByte*  GetBufferBase() const;
     GLenum  GetBufferType() const { return Type; }
-
-    static GLuint CurrentBuffer;
 
     // Simple LockList class is used to track all MeshBuffers that were locked.
     struct MapList
@@ -309,7 +297,6 @@ class MeshCache : public Render::MeshCache
     List<Render::MeshBuffer>    ChunkBuffers;
 
     GLuint                      MaskEraseBatchVertexBuffer;
-    GLuint                      MaskEraseBatchVAO;
     
     inline MeshCache* getThis() { return this; }
     inline HAL* GetHAL() const { return pHal; }

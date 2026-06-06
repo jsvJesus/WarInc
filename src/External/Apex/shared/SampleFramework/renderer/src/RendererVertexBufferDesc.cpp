@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,10 +34,12 @@
  */
 #include <RendererVertexBufferDesc.h>
 
+using namespace SampleRenderer;
+
 RendererVertexBufferDesc::RendererVertexBufferDesc(void)
 {
 	hint = RendererVertexBuffer::HINT_STATIC;
-	for(physx::PxU32 i=0; i<RendererVertexBuffer::NUM_SEMANTICS; i++)
+	for(PxU32 i=0; i<RendererVertexBuffer::NUM_SEMANTICS; i++)
 	{
 		semanticFormats[i] = RendererVertexBuffer::NUM_FORMATS;
 	}

@@ -1,6 +1,17 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#include "foundation/PxAllocatorCallback.h"
+#include "foundation/PxErrorCallback.h"
+#include "extensions/PxExtensionsAPI.h"
+#include "extensions/PxVisualDebuggerExt.h"
+#include "extensions/PxDefaultCpuDispatcher.h"
+#include "extensions/PxDefaultSimulationFilterShader.h"
+#include "cooking/PxTriangleMeshDesc.h"
+#include "cooking/PxConvexMeshDesc.h"
+#include "characterkinematic/PxControllerManager.h"
+#include "physxprofilesdk/PxProfileZoneManager.h"
+
 #include "PhysXWorld.h"
 #include "GameObj.h"
 
@@ -10,8 +21,68 @@
 #include "PhysXRepXHelpers.h"
 #include "VehicleManager.h"
 
-// PhysX 3.4 libs are linked from .vcxproj.
-// Do not use old hardcoded PhysX 3.1.1 pragma libs here.
+// libs
+#ifdef _DEBUG
+#pragma comment(lib, "PhysX3CHECKED_x86.lib")
+#pragma comment(lib, "PhysX3CookingCHECKED_x86.lib")
+#pragma comment(lib, "PhysX3CHECKED_x86.lib")
+#pragma comment(lib, "PhysXProfileSDKCHECKED.lib")
+#pragma comment(lib, "PhysXVisualDebuggerSDKCHECKED.lib")
+#pragma comment(lib, "PhysX3CommonCHECKED_x86.lib")
+#pragma comment(lib, "PhysX3ExtensionsCHECKED.lib")
+#pragma comment(lib, "PhysX3VehicleCHECKED.lib")
+#pragma comment(lib, "RepX3CHECKED.lib")
+#pragma comment(lib, "RepXUpgrader3CHECKED.lib")
+#elif defined(FINAL_BUILD)
+#pragma comment(lib, "PhysX3_x86.lib")
+#pragma comment(lib, "PhysX3Cooking_x86.lib")
+#pragma comment(lib, "PhysX3_x86.lib")
+#pragma comment(lib, "PhysXProfileSDK.lib")
+#pragma comment(lib, "PhysXVisualDebuggerSDK.lib")
+#pragma comment(lib, "PhysX3Common_x86.lib")
+#pragma comment(lib, "PhysX3Extensions.lib")
+#pragma comment(lib, "PhysX3Vehicle.lib")
+#pragma comment(lib, "RepX3.lib")
+#pragma comment(lib, "RepXUpgrader3.lib")
+#else // RELEASE
+#ifndef WO_SERVER
+#pragma comment(lib, "PhysX3PROFILE_x86.lib")
+#pragma comment(lib, "PhysX3CookingPROFILE_x86.lib")
+#pragma comment(lib, "PhysX3PROFILE_x86.lib")
+#pragma comment(lib, "PhysXProfileSDKPROFILE.lib")
+#pragma comment(lib, "PhysXVisualDebuggerSDKPROFILE.lib")
+#pragma comment(lib, "PhysX3CommonPROFILE_x86.lib")
+#pragma comment(lib, "PhysX3ExtensionsPROFILE.lib")
+#pragma comment(lib, "PhysX3VehiclePROFILE.lib")
+#pragma comment(lib, "RepX3PROFILE.lib")
+#pragma comment(lib, "RepXUpgrader3PROFILE.lib")
+#else // WO_SERVER
+// use checked libs for server to get crash dump for nvidia
+#pragma comment(lib, "PhysX3CHECKED_x86.lib")
+#pragma comment(lib, "PhysX3CookingCHECKED_x86.lib")
+#pragma comment(lib, "PhysX3CHECKED_x86.lib")
+#pragma comment(lib, "PhysXProfileSDKCHECKED.lib")
+#pragma comment(lib, "PhysXVisualDebuggerSDKCHECKED.lib")
+#pragma comment(lib, "PhysX3CommonCHECKED_x86.lib")
+#pragma comment(lib, "PhysX3ExtensionsCHECKED.lib")
+#pragma comment(lib, "PhysX3VehicleCHECKED.lib")
+#pragma comment(lib, "RepX3CHECKED.lib")
+#pragma comment(lib, "RepXUpgrader3CHECKED.lib")
+#endif // WO_SERVER
+#endif
+
+//ptumik: for server just use already built lib for character controller, unless we will modify it
+#ifdef WO_SERVER
+#ifdef _DEBUG
+#pragma comment(lib, "PhysX3CharacterKinematicCHECKED_x86.lib")
+#elif defined(FINAL_BUILD)
+#pragma comment(lib, "PhysX3CharacterKinematic_x86.lib")
+#else // RELEASE
+//#pragma comment(lib, "PhysX3CharacterKinematicPROFILE_x86.lib")
+#pragma comment(lib, "PhysX3CharacterKinematicCHECKED_x86.lib")
+#endif
+#endif
+
 
 PhysXWorld* g_pPhysicsWorld = 0;
 // because we might re-cook meshes in physics editor, let's be able to disable cache
@@ -30,8 +101,7 @@ PxTriangleMesh *r3dGOBAddPhysicsMesh(const char* fname)
 {
 	if(gPhysics_DisableCacheForEditor)
 	{
-		UserStream stream(fname, true);
-		return g_pPhysicsWorld->PhysXSDK->createTriangleMesh(stream);
+		return g_pPhysicsWorld->PhysXSDK->createTriangleMesh(PhysxUserFileReadStream(fname));
 	}
 
 	for (int i=0;i<gob_NumMeshesInPhysicsFactoryCache;i++)
@@ -46,15 +116,10 @@ PxTriangleMesh *r3dGOBAddPhysicsMesh(const char* fname)
 
 	int i = gob_NumMeshesInPhysicsFactoryCache;
 	gob_PhysicsFactoryCache[i] = new PhysicsMesh;
-
-	UserStream stream(fname, true);
-	gob_PhysicsFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createTriangleMesh(stream);
-
+	gob_PhysicsFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createTriangleMesh(PhysxUserFileReadStream(fname));
 	r3dscpy(gob_PhysicsFactoryCache[i]->filename, fname);
-
 	if(!gob_PhysicsFactoryCache[i]->mesh) 
 		return NULL;
-
 	gob_NumMeshesInPhysicsFactoryCache++;
 	return gob_PhysicsFactoryCache[gob_NumMeshesInPhysicsFactoryCache-1]->mesh;
 }
@@ -83,10 +148,8 @@ PxConvexMesh *r3dGOBAddPhysicsConvexMesh(const char* fname)
 {
 	if(gPhysics_DisableCacheForEditor)
 	{
-		UserStream stream(fname, true);
-		return g_pPhysicsWorld->PhysXSDK->createConvexMesh(stream);
+		return g_pPhysicsWorld->PhysXSDK->createConvexMesh(PhysxUserFileReadStream(fname));
 	}
-
 	for (int i=0;i<gob_NumConvexMeshesInPhysicsFactoryCache;i++)
 		if (strcmp(gob_PhysicsConvexFactoryCache[i]->filename, fname)==0) 
 			return gob_PhysicsConvexFactoryCache[i]->mesh;
@@ -99,15 +162,10 @@ PxConvexMesh *r3dGOBAddPhysicsConvexMesh(const char* fname)
 
 	int i = gob_NumConvexMeshesInPhysicsFactoryCache;
 	gob_PhysicsConvexFactoryCache[i] = new PhysicsConvexMesh;
-
-	UserStream stream(fname, true);
-	gob_PhysicsConvexFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createConvexMesh(stream);
-
+	gob_PhysicsConvexFactoryCache[i]->mesh = g_pPhysicsWorld->PhysXSDK->createConvexMesh(PhysxUserFileReadStream(fname));
 	r3dscpy(gob_PhysicsConvexFactoryCache[i]->filename, fname);
-
 	if(!gob_PhysicsConvexFactoryCache[i]->mesh) 
 		return NULL;
-
 	gob_NumConvexMeshesInPhysicsFactoryCache++;
 	return gob_PhysicsConvexFactoryCache[gob_NumConvexMeshesInPhysicsFactoryCache-1]->mesh;
 }
@@ -123,24 +181,32 @@ void r3dFreePhysicsConvexMeshes()
 	gob_NumConvexMeshesInPhysicsFactoryCache = 0;
 }
 
+
 PhysXWorld::PhysXWorld()
-: m_needFetchResults(false)
-, Foundation(NULL)
-, Pvd(NULL)
-, PvdTransport(NULL)
-, PhysXSDK(NULL)
-, PhysXScene(NULL)
-, Cooking(NULL)
-, CharacterManager(NULL)
-, CpuDispatcher(NULL)
-, defaultMaterial(NULL)
-, m_VehicleManager(NULL)
+: m_VehicleManager( NULL )
+, PhysXFoundation(0)
+, PhysXProfileZoneMgr(0)
+#ifndef FINAL_BUILD
+, debuggerConnection(0)
+#endif
 {
+	PhysXSDK = 0;
+	PhysXScene = 0;
+	CharacterManager = 0;
+	Cooking = 0;
+	defaultMaterial = NULL;
+	noBounceMaterial = NULL;
+#ifndef WO_SERVER
+	m_PlayerObstaclesManager = NULL;
+#endif
 }
 
 PhysXWorld::~PhysXWorld()
 {
-	Destroy();
+	if( PhysXSDK )
+	{
+		Destroy();
+	}
 }
 
 void* MyPhysXAllocator::allocate(size_t size, const char* typeName, const char* filename, int line)
@@ -193,117 +259,74 @@ public:
 			break;
 		}
 
-		if (code > PxErrorCode::eDEBUG_WARNING && code != PxErrorCode::eINVALID_PARAMETER) // TEMP eINVALID_PARAMETER check until PhysX 3.1.1
+		if (code > PxErrorCode::eDEBUG_WARNING && code != PxErrorCode::eINVALID_PARAMETER && code != PxErrorCode::ePERF_WARNING) // TEMP eINVALID_PARAMETER check until PhysX 3.1.1
 			r3dError("PhysX Error (%s): '%s' at file %s, line %d\n", errorCode, message, file, line);
 		else
 			r3dOutToLog("PhysX Warning (%s): '%s' at file %s, line %d\n", errorCode, message, file, line);
 	}
 } myErrorCallback;
 
-class MySimulationEventCallback : public PxSimulationEventCallback
-{
+class MySimulationEventCallback : public PxSimulationEventCallback     
+{        
 public:
-	virtual void onContact(
-		const PxContactPairHeader& pairHeader,
-		const PxContactPair* pairs,
-		PxU32 nbPairs
-	) OVERRIDE
+	virtual void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs)
 	{
-		if (pairHeader.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_0)
-			return;
-
-		if (pairHeader.flags & PxContactPairHeaderFlag::eREMOVED_ACTOR_1)
-			return;
-
-		if (!pairHeader.actors[0] || !pairHeader.actors[1])
-			return;
-
-		PhysicsCallbackObject* obj1 = static_cast<PhysicsCallbackObject*>(pairHeader.actors[0]->userData);
-		PhysicsCallbackObject* obj2 = static_cast<PhysicsCallbackObject*>(pairHeader.actors[1]->userData);
-
-		for (PxU32 pairIndex = 0; pairIndex < nbPairs; ++pairIndex)
+		for (PxU32 i = 0; i < nbPairs; ++i)
 		{
-			const PxContactPair& pair = pairs[pairIndex];
-
-			if (!(pair.events & PxPairFlag::eNOTIFY_TOUCH_FOUND))
-				continue;
-
-			PxContactPairPoint contactPoints[16];
-			const PxU32 contactCount = pair.extractContacts(contactPoints, 16);
-
-			if (contactCount == 0)
-				continue;
-
-			CollisionInfo collInfo;
-			collInfo.Type = CLT_Vertex;
-
-			for (PxU32 contactIndex = 0; contactIndex < contactCount; ++contactIndex)
+			const PxContactPair& cp = pairs[i];
+			if (cp.events == PxPairFlag::eNOTIFY_TOUCH_FOUND)
 			{
-				const PxContactPairPoint& contact = contactPoints[contactIndex];
+				if ((cp.flags & PxContactPairFlag::eDELETED_SHAPE_0) || (cp.flags & PxContactPairFlag::eDELETED_SHAPE_1))
+					continue;
 
-				collInfo.Normal = *(r3dPoint3D*)&contact.normal;
-				collInfo.NewPosition = *(r3dPoint3D*)&contact.position;
-				collInfo.Distance = contact.separation;
+				PhysicsCallbackObject* obj1 = reinterpret_cast<PhysicsCallbackObject*>(pairHeader.actors[0]->userData);
+				PhysicsCallbackObject* obj2 = reinterpret_cast<PhysicsCallbackObject*>(pairHeader.actors[1]->userData);
 
-				collInfo.pObj = obj2;
-				if (obj1)
-					obj1->OnCollide(obj2, collInfo);
+				CollisionInfo collInfo;
+				collInfo.Type = CLT_Vertex;
 
-				collInfo.pObj = obj1;
-				if (obj2)
-					obj2->OnCollide(obj1, collInfo);
+				PxContactPairPoint contactPairs[1];
+				PxU32 numContacts = 1;
+				cp.extractContacts(contactPairs, numContacts);
 
-				break;
+				{
+					PxContactPairPoint &pt = contactPairs[i];
+					collInfo.Normal = *(r3dPoint3D*)&pt.normal;
+					collInfo.NewPosition = *(r3dPoint3D*)&pt.position;			
+					collInfo.Distance = pt.separation;
+					collInfo.pObj = obj2;
+					if(obj1)
+						obj1->OnCollide(obj2, collInfo);
+
+					collInfo.pObj = obj1;
+					if(obj2)
+						obj2->OnCollide(obj1, collInfo);
+				}
 			}
 		}
-	}
+	};
 
-	virtual void onTrigger(PxTriggerPair* pairs, PxU32 count) OVERRIDE
+	void onTrigger(PxTriggerPair *  pairs,  PxU32  count)
 	{
-		for (PxU32 i = 0; i < count; ++i)
+		for(PxU32 i=0; i<count; ++i)
 		{
-			if (pairs[i].flags & PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER)
-				continue;
+            if(pairs[i].status == PxPairFlag::eNOTIFY_TOUCH_FOUND)
+            {
+                r3d_assert(pairs[i].triggerShape);
+                r3d_assert(pairs[i].otherShape);
+                PhysicsCallbackObject* triggerObj = (PhysicsCallbackObject*)pairs[i].triggerShape->getActor().userData;
+                r3d_assert(triggerObj);
 
-			if (pairs[i].flags & PxTriggerPairFlag::eREMOVED_SHAPE_OTHER)
-				continue;
+                PhysicsCallbackObject* otherObj = (PhysicsCallbackObject*)pairs[i].otherShape->getActor().userData;
 
-			if (pairs[i].status != PxPairFlag::eNOTIFY_TOUCH_FOUND)
-				continue;
-
-			if (!pairs[i].triggerShape || !pairs[i].otherShape)
-				continue;
-
-			PhysicsCallbackObject* triggerObj = static_cast<PhysicsCallbackObject*>(
-			pairs[i].triggerShape->getActor()->userData
-			);
-
-			if (!triggerObj)
-				continue;
-
-			PhysicsCallbackObject* otherObj = static_cast<PhysicsCallbackObject*>(
-				pairs[i].otherShape->getActor()->userData
-			);
-
-			triggerObj->OnTrigger(pairs[i].status, otherObj);
+                triggerObj->OnTrigger(pairs[i].status, otherObj);
+            }
 		}
 	}
+	virtual void onSleep(PxActor** actors, PxU32 count) {}
+	virtual void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count){}
+	virtual void onWake(PxActor** actors, PxU32 count) {}
 
-	virtual void onConstraintBreak(PxConstraintInfo*, PxU32) OVERRIDE
-	{
-	}
-
-	virtual void onWake(PxActor**, PxU32) OVERRIDE
-	{
-	}
-
-	virtual void onSleep(PxActor**, PxU32) OVERRIDE
-	{
-	}
-
-	virtual void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) OVERRIDE
-	{
-	}
 } mySimulationEventCallback;
 
 PxU32 groupCollisionFlags[32];
@@ -348,139 +371,141 @@ PxFilterFlags MyCollisionFilterShader(
 		return PxFilterFlag::eSUPPRESS;
 
 	// generate contacts for all that were not filtered above
-	pairFlags = PxPairFlag::eCONTACT_DEFAULT;
-	// ptumik: disabled for now, crashing physx, no idea why :(
-    /*{
+	pairFlags = PxPairFlag::eRESOLVE_CONTACTS | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+#if PHYSX_USE_CCD
+	{
 		PxU32 ShapeGroup01 = filterData0.word1 & 31;
 		PxU32 ShapeGroup11 = filterData1.word1 & 31;
 		if(ShapeGroup01 == PHYSCOLL2_FAST_MOVING_OBJECT || ShapeGroup11 == PHYSCOLL2_FAST_MOVING_OBJECT)
 			pairFlags |= PxPairFlag::eSWEPT_INTEGRATION_LINEAR;
-	}*/
+	}
+#endif
 
 	return PxFilterFlag::eDEFAULT;
 }
 
 void PhysXWorld::Init()
 {
-	m_needFetchResults = false;
+	r3d_assert( !PhysXSDK );
+
+    m_needFetchResults = false;
 
 	InitializeCriticalSection(&concurrencyGuard);
 
-	for (unsigned i = 0; i < 32; i++)
+	//init all group pairs to true:
+	for (unsigned i = 0; i < 32; i ++)
 		groupCollisionFlags[i] = 0xffffffff;
+
 
 	PxTolerancesScale tolerancesScale;
 	tolerancesScale.length = 1.0f;
 	tolerancesScale.mass = 1000.0f;
 	tolerancesScale.speed = 10.0f;
 
-	Foundation = PxCreateFoundation(PX_FOUNDATION_VERSION, myPhysXAllocator, myErrorCallback);
-	if (!Foundation)
+	bool recordMemoryAllocations = false;
+#ifdef _DEBUG
+	recordMemoryAllocations = true; // track memory allocations
+#endif
+	PhysXFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, myPhysXAllocator, myErrorCallback);
+	if (!PhysXFoundation)
+		r3dError("PxCreateFoundation failed!");
+
+	PhysXProfileZoneMgr = &PxProfileZoneManager::createProfileZoneManager(PhysXFoundation);
+	if (!PhysXProfileZoneMgr)
+		r3dError("PxProfileZoneManager::createProfileZoneManager failed!");
+
+
+	PhysXSDK = PxCreatePhysics(PX_PHYSICS_VERSION, *PhysXFoundation, tolerancesScale, recordMemoryAllocations, PhysXProfileZoneMgr);
+	if(!PhysXSDK)
 	{
-		r3dError("PhysX: Failed to create foundation");
+		r3dError("Failed to init PhysX SDK");
+	}
+
+	if(!PxInitExtensions(*PhysXSDK))
+	{
+		r3dError("Failed to init PhysX Extensions");
+	}
+
+	PxCookingParams cookingParams;
+	Cooking = PxCreateCooking(PX_PHYSICS_VERSION, PhysXSDK->getFoundation(), cookingParams);
+	if(!Cooking)
+	{
+		r3dError("Failed to init PhysX Cooking");
 	}
 
 #ifndef FINAL_BUILD
-	Pvd = PxCreatePvd(*Foundation);
-	if (Pvd)
-	{
-		PvdTransport = PxDefaultPvdSocketTransportCreate("26.163.92.76", 5425, 10);
-		if (PvdTransport)
-			Pvd->connect(*PvdTransport, PxPvdInstrumentationFlag::eALL);
-	}
+	PxVisualDebuggerConnectionFlags PVDFlags = PxVisualDebuggerConnectionFlag::Profile;
+	//PxVisualDebuggerConnectionFlags PVDFlags = PxVisualDebuggerConnectionFlag::Debug; // enable if you want to see physx scene in PVD
+	debuggerConnection = PxVisualDebuggerExt::createConnection(PhysXSDK->getPvdConnectionManager(), "localhost", 5425, 1000, PVDFlags);
 #endif
 
-	bool recordMemoryAllocations = false;
-
-#ifdef _DEBUG
-	recordMemoryAllocations = true;
-#endif
-
-	PhysXSDK = PxCreatePhysics(
-		PX_PHYSICS_VERSION,
-		*Foundation,
-		tolerancesScale,
-		recordMemoryAllocations,
-		Pvd
-	);
-
-	if (!PhysXSDK)
-	{
-		r3dError("PhysX: Failed to create physics SDK");
-	}
-
-	if (!PxInitExtensions(*PhysXSDK, Pvd))
-	{
-		r3dError("PhysX: Failed to init extensions");
-	}
-
-	PxCookingParams cookingParams(tolerancesScale);
-
-	Cooking = PxCreateCooking(PX_PHYSICS_VERSION, *Foundation, cookingParams);
-	if (!Cooking)
-	{
-		r3dError("PhysX: Failed to init cooking");
-	}
-
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_LOCALPLAYER, false);
+	// set collision group BEFORE creating scene and cannot change after that
+//#if !ENABLE_RAGDOLL
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_LOCALPLAYER, false); // do not collide between local player and weapons that local player fires
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_NETWORKPLAYER, false);
+//#endif
 
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_TINY_GEOMETRY, false);
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_TINY_GEOMETRY, false); 
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_TINY_GEOMETRY, false);
 
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false);
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false); 
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_NON_PLAYER_GEOMETRY, false);
+	
+	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_PROJECTILES, false); 
 
-	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_PROJECTILES, false);
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_LOCALPLAYER, false); 
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_NETWORKPLAYER, false); 
 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_LOCALPLAYER, false);
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_NETWORKPLAYER, false);
-
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
-	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false); 
+	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false); 
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_PLAYER_ONLY_GEOMETRY, false);
 
-	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_CHARACTERCONTROLLER, false);
-	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_CHARACTERCONTROLLER, false);
+	setGroupCollisionFlag(PHYSCOLL_PROJECTILES, PHYSCOLL_CHARACTERCONTROLLER, false); 
+	setGroupCollisionFlag(PHYSCOLL_TINY_GEOMETRY, PHYSCOLL_CHARACTERCONTROLLER, false); 
 	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_CHARACTERCONTROLLER, false);
 	setGroupCollisionFlag(PHYSCOLL_NETWORKPLAYER, PHYSCOLL_CHARACTERCONTROLLER, false);
 
+	//	Prevent collision between player and character ragdoll
 	setGroupCollisionFlag(PHYSCOLL_LOCALPLAYER, PHYSCOLL_NETWORKPLAYER, false);
 
-	PxSceneDesc sceneDesc(PhysXSDK->getTolerancesScale());
-	sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
+#if VEHICLES_ENABLED
+	//	Vehicle related collision detection
+	setGroupCollisionFlag(PHYSCOLL_COLLISION_GEOMETRY, PHYSCOLL_VEHICLE_WHEEL, false);
+	setGroupCollisionFlag(PHYSCOLL_STATIC_GEOMETRY, PHYSCOLL_VEHICLE_WHEEL, false);
+#endif
 
+	// create scene
+	PxSceneDesc sceneDesc(PhysXSDK->getTolerancesScale());
+	sceneDesc.gravity = PxVec3(0, -9.81f, 0);
 	sceneDesc.filterShaderData = groupCollisionFlags;
 	sceneDesc.filterShaderDataSize = 32 * sizeof(PxU32);
 
-	CpuDispatcher = PxDefaultCpuDispatcherCreate(2);
-	if (!CpuDispatcher)
-	{
+	sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2, NULL);
+	if(!sceneDesc.cpuDispatcher)
 		r3dError("PhysX: Failed to create CPU dispatcher");
-	}
-
-	sceneDesc.cpuDispatcher = CpuDispatcher;
+	
 	sceneDesc.filterShader = MyCollisionFilterShader;
 
-	PhysXScene = PhysXSDK->createScene(sceneDesc);
-	if (!PhysXScene)
-	{
-		r3dError("PhysX: Failed to create scene");
-	}
+	sceneDesc.gpuDispatcher = NULL;
+
+#if PHYSX_USE_CCD
+	sceneDesc.flags |= PxSceneFlag::eENABLE_SWEPT_INTEGRATION;
+#endif
+
+	PhysXScene = PhysXSDK->createScene(sceneDesc);	
+	if (!PhysXScene) 
+		r3dError("PhysX: can't create physics scene!");
 
 	PhysXScene->setSimulationEventCallback(&mySimulationEventCallback);
 
 	defaultMaterial = PhysXSDK->createMaterial(0.8f, 0.8f, 0.05f);
-	if (!defaultMaterial)
-	{
-		r3dError("PhysX: Failed to create default material");
-	}
+	noBounceMaterial = PhysXSDK->createMaterial(100.0f, 100.0f, 0.0f);
+	
+	CharacterManager = PxCreateControllerManager(PhysXSDK->getFoundation());
 
-	CharacterManager = PxCreateControllerManager(*PhysXScene);
-	if (!CharacterManager)
-	{
-		r3dError("PhysX: Failed to create character controller manager");
-	}
+#ifndef WO_SERVER
+	m_PlayerObstaclesManager = CharacterManager->createObstacleContext();
+#endif
 
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
@@ -491,10 +516,24 @@ void PhysXWorld::Init()
 
 void PhysXWorld::Destroy()
 {
-	if (defaultMaterial)
+	r3d_assert( PhysXSDK );
+
+#ifndef FINAL_BUILD
+	if (debuggerConnection)
+	{
+		debuggerConnection->release();
+		debuggerConnection = 0;
+	}
+#endif
+	if(defaultMaterial)
 	{
 		defaultMaterial->release();
 		defaultMaterial = NULL;
+	}
+	if(noBounceMaterial)
+	{
+		noBounceMaterial->release();
+		noBounceMaterial = NULL;
 	}
 
 #ifndef WO_SERVER
@@ -502,62 +541,49 @@ void PhysXWorld::Destroy()
 	if (m_VehicleManager)
 	{
 		delete m_VehicleManager;
-		m_VehicleManager = NULL;
+		m_VehicleManager = 0;
 	}
 #endif
 #endif
 
-	if (CharacterManager)
+#ifndef WO_SERVER
+	if(m_PlayerObstaclesManager)
 	{
+		m_PlayerObstaclesManager->release();
+		m_PlayerObstaclesManager = NULL;
+	}
+#endif
+
+	if(CharacterManager) {
 		CharacterManager->release();
 		CharacterManager = NULL;
 	}
-
+	
 	r3dFreePhysicsMeshes();
 	r3dFreePhysicsConvexMeshes();
-
-	if (Cooking)
-	{
+	
+	if(Cooking) {
 		Cooking->release();
 		Cooking = NULL;
 	}
 
 	PxCloseExtensions();
-
-	if (PhysXScene)
+	
+	if(PhysXScene)
 	{
 		PhysXScene->release();
 		PhysXScene = NULL;
 	}
 
-	if (CpuDispatcher)
-	{
-		CpuDispatcher->release();
-		CpuDispatcher = NULL;
-	}
-
-	if (PhysXSDK)
-	{
+	if(PhysXSDK) {
 		PhysXSDK->release();
 		PhysXSDK = NULL;
 	}
 
-	if (Pvd)
+	if( PhysXFoundation )
 	{
-		Pvd->release();
-		Pvd = NULL;
-	}
-
-	if (PvdTransport)
-	{
-		PvdTransport->release();
-		PvdTransport = NULL;
-	}
-
-	if (Foundation)
-	{
-		Foundation->release();
-		Foundation = NULL;
+		PhysXFoundation->release();
+		PhysXFoundation = NULL;
 	}
 
 	DeleteCriticalSection(&concurrencyGuard);
@@ -570,14 +596,12 @@ void PhysXWorld::Destroy()
 int DisablePhysXSimulation = 0;
 //#endif
 
-#ifndef FINAL_BUILD
-int DrawPhysicsDebug = 0;
-#endif
-
 extern bool g_bAllowPhysObjCreation;
 void PhysXWorld::StartSimulation()
 {
-    g_bAllowPhysObjCreation = false;
+	r3dCSHolder block(concurrencyGuard) ;
+
+	g_bAllowPhysObjCreation = false;
 
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
@@ -585,7 +609,7 @@ void PhysXWorld::StartSimulation()
 #endif
 #endif
 #ifndef FINAL_BUILD
-	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, DrawPhysicsDebug?1.0f:0.0f);
+	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eSCALE, d_physx_debug->GetInt()?1.0f:0.0f);
 	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES,	1.0f);
 	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_AABBS,	0.0f);
 	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eBODY_MASS_AXES,	0.0f);
@@ -596,12 +620,11 @@ void PhysXWorld::StartSimulation()
 	PhysXScene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_FNORMALS,	0.0f);
 #endif
 
-#if !APEX_ENABLED
 	if(!DisablePhysXSimulation)
 	{
 		float elapsedTime = r3dGetFrameTime();
-        static const float substepSize = 1.0f/60.0f;
-        static const int numMaxSubsteps = 16;
+        static const float substepSize = 1.0f/30.0f;
+        static const int numMaxSubsteps = 8;
         
         static float accumulator = 0.0f;
         accumulator += elapsedTime;
@@ -613,31 +636,40 @@ void PhysXWorld::StartSimulation()
         {
             for(int i=0; i<numStepsReq-1; ++i)
             {
-				r3dCSHolder block(concurrencyGuard) ;
                 accumulator -= substepSize;
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
 				m_VehicleManager->Update(substepSize);
 #endif
 #endif
+
+#if APEX_ENABLED
+				g_pApexWorld->Simulate(substepSize, i == numStepsReq - 2);
+				g_pApexWorld->FetchResults(true);
+#else
                 PhysXScene->simulate(substepSize);
                 PhysXScene->fetchResults(true);
+#endif
             }
         }
         if(accumulator >= substepSize)
         {
-			r3dCSHolder block(concurrencyGuard) ;
             accumulator -=substepSize;
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
 			m_VehicleManager->Update(substepSize);
 #endif
 #endif
+
+#if APEX_ENABLED
+			g_pApexWorld->Simulate(substepSize, true);
+			g_pApexWorld->FetchResults(true);
+#else
 		    PhysXScene->simulate(substepSize); 
             m_needFetchResults = true;
+#endif
         }
 	}
-#endif
 }
 
 void PhysXWorld::EndSimulation()
@@ -645,67 +677,42 @@ void PhysXWorld::EndSimulation()
 	if(!DisablePhysXSimulation)
 	{
 #if !APEX_ENABLED
-		if(m_needFetchResults)
+        if(m_needFetchResults)
 		{
-			r3dCSHolder block(concurrencyGuard);
-			PhysXScene->fetchResults(true);
-			m_needFetchResults = false;
+			r3dCSHolder block(concurrencyGuard) ;
+		    PhysXScene->fetchResults(true);
 		}
 #endif
 	}
-	g_bAllowPhysObjCreation = true;
+    g_bAllowPhysObjCreation = true;
 }
 
-bool PhysXWorld::raycastSingle(
-	const PxVec3& origin,
-	const PxVec3& unitDir,
-	const PxReal distance,
-	PxSceneQueryFlags outputFlags,
-	PxRaycastHit& hit,
-	const PxSceneQueryFilterData& filterData
-)
+bool PhysXWorld::raycastSingle(const PxVec3& origin, const PxVec3& unitDir, const PxReal distance, PxSceneQueryFlags outputFlags, PxRaycastHit& hit, const PxSceneQueryFilterData& filterData /* = PxSceneQueryFilterData */)
 {
-	PxRaycastHit touchHits[32];
-	PxRaycastBuffer hitBuffer(touchHits, 32);
+    PxRaycastHit hits[32];
+    bool blockingHit;
+    // some weird PhysX shit. Sometimes raycastSingle will just return distance 0 and show collision with terrain!!! even though there is no even close terrain to the ray
+    outputFlags |= PxSceneQueryFlag::eDISTANCE; // always add, as we need distance to check for physX bug
+    int numHits = g_pPhysicsWorld->PhysXScene->raycastMultiple(origin, unitDir, distance, outputFlags, hits, 32, blockingHit, filterData);
+    bool foundProperHit = false;
+    float closestHit = 99999999.0f;
+    if(numHits)
+    {
+        for(int i=0; i<numHits; ++i)
+        {
+            if(hits[i].distance > 0)
+            {
+                if(hits[i].distance < closestHit)
+                {
+                    hit = hits[i];
+                    closestHit = hits[i].distance;
+                    foundProperHit = true;
+                }
+            }					
+        }
+    }
 
-	const bool raycastResult = PhysXScene->raycast(
-		origin,
-		unitDir,
-		distance,
-		hitBuffer,
-		outputFlags,
-		filterData
-	);
-
-	if (!raycastResult)
-		return false;
-
-	bool foundProperHit = false;
-	float closestHit = 99999999.0f;
-
-	if (hitBuffer.hasBlock)
-	{
-		if (hitBuffer.block.distance >= 0.0f && hitBuffer.block.distance < closestHit)
-		{
-			hit = hitBuffer.block;
-			closestHit = hitBuffer.block.distance;
-			foundProperHit = true;
-		}
-	}
-
-	for (PxU32 i = 0; i < hitBuffer.nbTouches; ++i)
-	{
-		const PxRaycastHit& currentHit = hitBuffer.touches[i];
-
-		if (currentHit.distance >= 0.0f && currentHit.distance < closestHit)
-		{
-			hit = currentHit;
-			closestHit = currentHit.distance;
-			foundProperHit = true;
-		}
-	}
-
-	return foundProperHit;
+    return foundProperHit;
 }
 
 extern	r3dCamera	gCam;
@@ -713,7 +720,7 @@ extern r3dScreenBuffer* ScreenBuffer;
 void PhysXWorld::DrawDebug()
 {
 #ifndef FINAL_BUILD
-	if(!DrawPhysicsDebug)
+	if(!d_physx_debug->GetInt())
 		return;
 
 	R3DPROFILE_FUNCTION("PhysXWorld::DrawDebug");
@@ -812,8 +819,7 @@ bool PhysXWorld::CookMesh(const r3dMesh* orig_mesh, const char* save_as)
 		r3dscpy(cookedMeshFilename, orig_mesh->FileName.c_str());
 	int len = strlen(cookedMeshFilename);
 	r3dscpy(&cookedMeshFilename[len-3], "mpx");
-	UserStream outputStream(cookedMeshFilename, false);
-	bool res = Cooking->cookTriangleMesh(meshDesc, outputStream);
+	bool res = Cooking->cookTriangleMesh(meshDesc, PhysxUserFileWriteStream(cookedMeshFilename));
 
 	return res;
 #else
@@ -848,41 +854,31 @@ bool PhysXWorld::CookConvexMesh(const r3dMesh* orig_mesh, const char* save_as)
 {
 #ifndef FINAL_BUILD
 	r3d_assert(orig_mesh);
-
 	const r3dMesh* mesh = orig_mesh;
 
-	r3d_assert(mesh->NumVertices > 0);
+	r3d_assert(mesh->NumVertices >0 && mesh->NumIndices>0);
 
-	PxConvexMeshDesc meshDesc;
-	meshDesc.points.count = mesh->NumVertices;
-	meshDesc.points.stride = sizeof(r3dPoint3D);
-	meshDesc.points.data = mesh->GetVertexPositions();
+	//Build physical model 
+	PxConvexMeshDesc meshDesc;    
+	meshDesc.points.count = mesh->NumVertices;    
+	meshDesc.points.stride = sizeof(r3dPoint3D);   
+	meshDesc.points.data = mesh->GetVertexPositions();  
+	meshDesc.triangles.count = mesh->NumIndices/3;    
+	meshDesc.triangles.stride = 3*sizeof(uint32_t);   
+	meshDesc.triangles.data = mesh->GetIndices();   
 
-	r3d_assert(meshDesc.points.data);
+	r3d_assert( meshDesc.points.data && meshDesc.triangles.data ) ;
 
-	meshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-	meshDesc.vertexLimit = 255;
+	meshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX; // let physX compute convex mesh. even if we are providing it a convex mesh, maybe it can optimize it better. also in that case if don't have to worry about 256 faces limit
 
-	char cookedMeshFilename[256];
-	memset(cookedMeshFilename, 0, sizeof(cookedMeshFilename));
-
+	char cookedMeshFilename[256]; memset(cookedMeshFilename, 0, 256);
 	if(save_as)
 		r3dscpy(cookedMeshFilename, save_as);
 	else
 		r3dscpy(cookedMeshFilename, orig_mesh->FileName.c_str());
-
 	int len = strlen(cookedMeshFilename);
-	r3dscpy(&cookedMeshFilename[len - 3], "cpx");
-
-	UserStream outputStream(cookedMeshFilename, false);
-
-	PxConvexMeshCookingResult::Enum result;
-	bool res = Cooking->cookConvexMesh(meshDesc, outputStream, &result);
-
-	if(!res)
-	{
-		r3dOutToLog("PhysX: CookConvexMesh failed for %s. Result=%d\n", cookedMeshFilename, (int)result);
-	}
+	r3dscpy(&cookedMeshFilename[len-3], "cpx");
+	bool res = Cooking->cookConvexMesh(meshDesc, PhysxUserFileWriteStream(cookedMeshFilename));
 
 	return res;
 #else
@@ -913,10 +909,89 @@ void PhysXWorld::RemoveActor(PxActor &actor)
 
 //////////////////////////////////////////////////////////////////////////
 
+#include "ObjManag.h"
+#include "RepX/RepX.h"
+#include "RepX/RepXUtility.h"
+
 #ifndef FINAL_BUILD
-bool PhysXWorld::ExportWholeScene(const char* filename) const
+bool PhysXWorld::ExportWholeScene(const char *filename) const
 {
-	r3dOutToLog("PhysXWorld::ExportWholeScene is disabled for PhysX 3.4 migration. File: %s\n", filename ? filename : "");
-	return false;
+	using namespace physx::repx;
+	if (!PhysXSDK || !PhysXScene)
+		return false;
+
+	PxCollection *cl = PhysXSDK->createCollection();
+	if (!cl)
+		return false;
+
+	PhysxUserFileWriteStream fs(filename);
+
+	RepXCollection* theCollection = createCollection(PhysXSDK->getTolerancesScale(), PhysXFoundation->getAllocatorCallback());
+	RepXIdToRepXObjectMap* theIdMap =  RepXIdToRepXObjectMap::create(PxGetFoundation().getAllocatorCallback());
+	addSDKItemsToRepX ( *PhysXSDK, *theIdMap, *theCollection); //add physcis object
+	addSceneItemsToRepX ( *PhysXScene, *theIdMap, *theCollection); //add physcis object
+//	physx::repx::addObjectsToScene(theCollection, physics, cooking, scene, mStringTable );
+	theCollection->save(fs);
+	theCollection->destroy();
+	theIdMap->destroy();
+	return true;
+
+
+//	PxCollectForExportSDK(*PhysXSDK, *cl);
+//	PxCollectForExportScene(*PhysXScene, *cl);
+	ObjectIterator iter = GameWorld().GetFirstOfAllObjects();
+
+	while( iter.current )
+	{
+		GameObject* o = iter.current;
+
+		if (o->PhysicsObject)
+		{
+			PxActor *a = o->PhysicsObject->getPhysicsActor();
+			PxSerialFlags f = a->getSerialFlags();
+			a->collectForExport(*cl);
+			break;
+		}
+
+		iter = GameWorld().GetNextOfAllObjects( iter );
+	}
+	PxU32 numObjs = cl->getNbObjects();
+	numObjs;
+
+	cl->serialize(fs);
+
+	PhysXSDK->releaseCollection(*cl);
+	fclose(fs.fpw);
+
+	FILE* fp=NULL;
+
+	if( (fp = fopen(filename, "rb")) )
+	{
+		fseek(fp, 0, SEEK_END);
+		PxU32 fileSize = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		PX_ASSERT(fileSize!=0);
+		void* mem = malloc(fileSize+PX_SERIAL_FILE_ALIGN);
+
+		void* mem16 = (void*)((size_t(mem) + PX_SERIAL_FILE_ALIGN)&~(PX_SERIAL_FILE_ALIGN-1));
+		fread(mem16, 1, fileSize, fp);
+		fclose(fp);
+
+		PxUserReferences* convexRefs = PhysXSDK->createUserReferences();
+		PxCollection* collection = PhysXSDK->createCollection();
+		collection->deserialize(mem16, convexRefs, NULL);
+
+		PxU32 numObjs = collection->getNbObjects();
+		for (PxU32 i = 0; i < numObjs; ++i)
+		{
+			PxSerializable *o = collection->getObject(i);
+			const char * name = o->getConcreteTypeName();
+			PX_ASSERT(name);
+		}
+	}
+
+
+	return true;
 }
 #endif

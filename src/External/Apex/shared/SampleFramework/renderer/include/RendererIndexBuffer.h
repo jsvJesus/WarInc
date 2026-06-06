@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,43 +36,46 @@
 #define RENDERER_INDEXBUFFER_H
 
 #include <RendererConfig.h>
-#include "PxSimpleTypes.h"
 #include "RendererInteropableBuffer.h"
 
-class RendererIndexBufferDesc;
-
-class RendererIndexBuffer: public RendererInteropableBuffer
+namespace SampleRenderer
 {
-	friend class RendererMesh;
+
+	class RendererIndexBufferDesc;
+
+	class RendererIndexBuffer: public RendererInteropableBuffer
+	{
+		friend class RendererMesh;
+		friend class GLES2Renderer;
 	public:
-		typedef enum Format
+		enum Format
 		{
 			FORMAT_UINT16 = 0,
 			FORMAT_UINT32,
-			
+
 			NUM_FORMATS
-		};
-		
-		typedef enum Hint
+		}_Format;
+
+		enum Hint
 		{
 			HINT_STATIC = 0,
 			HINT_DYNAMIC,
-		};
-	
+		}_Hint;
+
 	public:
-		static physx::PxU32 getFormatByteSize(Format format);
-	
+		static PxU32 getFormatByteSize(Format format);
+
 	protected:
 		RendererIndexBuffer(const RendererIndexBufferDesc &desc);
 		virtual ~RendererIndexBuffer(void);
-		
+
 	public:
 		void release(void) { delete this; }
-		
+
 		Hint   getHint(void) const;
 		Format getFormat(void) const;
-		physx::PxU32  getMaxIndices(void) const;
-		
+		PxU32  getMaxIndices(void) const;
+
 	public:
 		virtual void *lock(void) = 0;
 		virtual void  unlock(void) = 0;
@@ -80,13 +83,15 @@ class RendererIndexBuffer: public RendererInteropableBuffer
 	private:
 		virtual void bind(void) const = 0;
 		virtual void unbind(void) const = 0;
-		
+
 		RendererIndexBuffer &operator=(const RendererIndexBuffer &) { return *this; }
-		
+
 	protected:
 		const Hint   m_hint;
 		const Format m_format;
-		physx::PxU32        m_maxIndices;
-};
+		PxU32        m_maxIndices;
+	};
+
+} // namespace SampleRenderer
 
 #endif

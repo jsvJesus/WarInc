@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -40,20 +40,23 @@
 
 #include <RendererShape.h>
 
-class RendererVertexBuffer;
-class RendererIndexBuffer;
-
-#include "PxVec3.h"
-
-class RendererBoxShape : public RendererShape
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+	class RendererIndexBuffer;
+
+	class RendererBoxShape : public RendererShape
+	{
 	public:
-		RendererBoxShape(Renderer &renderer, const physx::PxVec3 &extents);
+		RendererBoxShape(Renderer &renderer, const PxVec3 &extents, const PxReal* uvs=NULL);
 		virtual ~RendererBoxShape(void);
-		
+
 	private:
 		RendererVertexBuffer *m_vertexBuffer;
 		RendererIndexBuffer  *m_indexBuffer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

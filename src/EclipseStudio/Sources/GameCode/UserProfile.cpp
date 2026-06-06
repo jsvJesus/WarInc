@@ -5,7 +5,6 @@
 #include "CkHttp.h"
 #include "CkHttpResponse.h"
 #include "CkByteData.h"
-#include "CkString.h"
 
 #include "UserProfile.h"
 #include "UserFriends.h"
@@ -20,215 +19,44 @@
 #include "SteamHelper.h"
 #endif
 
-int g_RanksPoints[MAX_NUM_RANKS] = 
-{
-	1000,
-	2000,
-	3000,
-	4000,
-	5000,
-	6000,
-	7000,
-	8000,
-	20000,
-	25000,
-	30000,
-	35000,
-	40000,
-	45000,
-	50000,
-	55000,
-	60000,
-	65000,
-	85000,
-	92500,
-	100000,
-	107500,
-	115000,
-	122500,
-	130000,
-	137500,
-	145000,
-	152500,
-	200000,
-	225000,
-	250000,
-	275000,
-	300000,
-	327500,
-	355000,
-	382500,
-	410000,
-	437500,
-	600000,
-	696000,
-	808000,
-	938000,
-	1089000,
-	1264000,
-	1467000,
-	1702000,
-	1975000,
-	2291000,
-	2658000,
-	3084000,
-	3578000,
-	4151000,
-	4816000,
-	5587000,
-	6481000,
-	7518000,
-	8721000,
-	10117000,
-	12141000,
-};
-
-static int g_RUS_RanksPoints[MAX_NUM_RANKS] = 
-{
-	1000,
-	2000,
-	3000,
-	4000,
-	5200,
-	6600,
-	8200,
-	10000,
-	13000,
-	16900,
-	21970,
-	28561,
-	37129,
-	48268,
-	62749,
-	81573,
-	106045,
-	137858,
-	179216,
-	232981,
-	302875,
-	393738,
-	511859,
-	665417,
-	865042,
-	1124554,
-	1461920,
-	1900496,
-	2470645,
-	2717710,
-	2989481,
-	3288429,
-	3617272,
-	3978999,
-	4376899,
-	4814589,
-	5296048,
-	5825652,
-	6408218,
-	7049039,
-	7753943,
-	8529338,
-	9382271,
-	10320499,
-	11352548,
-	12487803,
-	13736584,
-	15110242,
-	16621266,
-	18782031,
-	21223695,
-	23982775,
-	27340363,
-	31168014,
-	35531536,
-	40861267,
-	46990457,
-	54039025,
-	62144879,
-};
-
-void UserProfile_SetRankPointsRUS()
-{
-	r3d_assert(sizeof(g_RUS_RanksPoints) == sizeof(g_RanksPoints));
-	memcpy(g_RanksPoints, g_RUS_RanksPoints, sizeof(g_RanksPoints));
-}
-
-/*
-void UserProfile_GenerateSQLRanks()
-{
-	FILE* f = fopen_for_write("ranks.sql", "wt");
-	fprintf(f, "delete from DataRankPoints\n");
-	for(int i=0; i<MAX_NUM_RANKS-1; i++) {
-		fprintf(f, "insert into DataRankPoints values (%d, %d)\n", i+1, g_RanksPoints[i]);
-	}
-	fprintf(f, "insert into DataRankPoints values (%d, %d)\n", MAX_NUM_RANKS, 99999999);
-	fclose(f);
-}
-*/
-
-int wiStats::getRankLevel() const
-{
-	for(int i=0; i<MAX_NUM_RANKS; ++i)
-	{
-		if(HonorPoints < g_RanksPoints[i])
-			return i+1;
-	}
-	return MAX_NUM_RANKS;
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 #ifndef WO_SERVER
 CClientUserProfile	gUserProfile;
 #endif
 
-const char* g_ServerKey = "CfFkqQWjfgksYG56893GDhjfjZ20";
-
-bool isWeaponCategory(STORE_CATEGORIES cat)
+bool storecat_IsItemStackable(uint32_t ItemID)
 {
-	return (cat>=storecat_ASR && cat <=storecat_UsableItem);
-}
+	const BaseItemConfig* itm = g_pWeaponArmory->getConfig(ItemID);
+	if(!itm) 
+		return true;
 
-bool isGearCategory(STORE_CATEGORIES cat)
-{
-	return (cat>=storecat_Characters && cat<=storecat_Heroes);
-}
-
-bool isItemCategory(STORE_CATEGORIES cat)
-{
-	return (cat>=storecat_Account && cat<=storecat_Items);
-}
-
-wiInventoryItem::wiInventoryItem()
-{
-}
-
-wiInventoryItem::~wiInventoryItem()
-{
-}
-
-wiAchievement* wiUserProfile::getAchievementDataByID( int achievementID )
-{
-	if( Achievements[achievementID].ID == achievementID ){
-		return &(Achievements[achievementID]);
-	} 
-	else 
+	switch(itm->category)
 	{
-		return NULL;
+		case storecat_FPSAttachment:
+		case storecat_UsableItem:
+		case storecat_Food:
+		case storecat_Water:
+		case storecat_GRENADE:
+			return true;
 	}
 	
+	return false;
 }
 
-wiAchievement* wiUserProfile::addAchievement( int achievementID )
+float wiCharDataFull::getTotalWeight() const
 {
-	r3d_assert( getAchievementDataByID( achievementID) == NULL );
-	r3d_assert( achievementID < MAX_POTENTIAL_ACHIEVEMENTS );
-
-	Achievements[achievementID].ID = achievementID;
-	Achievements[achievementID].unlocked = 0;
-	Achievements[achievementID].value = 0;
-
-	return &(Achievements[achievementID]);
+	float totalWeight = 0.0f;
+	for(int i=0; i<BackpackSize; ++i)
+	{
+		if(Items[i].itemID != 0 && Items[i].quantity > 0)
+		{
+			const BaseItemConfig* bic = g_pWeaponArmory->getConfig(Items[i].itemID);
+			if(bic)
+				totalWeight += bic->m_Weight * Items[i].quantity;
+		}
+	}
+	return totalWeight;
 }
-
 
 CUserProfile::CUserProfile()
 {
@@ -237,64 +65,35 @@ CUserProfile::CUserProfile()
 	CustomerID = 0;
 	SessionID = 0;
 	AccountStatus = 0;
-	r3dscpy(ScreenName, "unknown");
-	ScreenNameW[0] = 0;
+	ProfileDataDirty = 0;
 
 	ProfileData.NumSlots = 0;
-	
-	NumNewItems = 0;
 }
 
 CUserProfile::~CUserProfile()
 {
 }
 
-int CUserProfile::getInventoryItemByID(uint32_t id) const
+wiInventoryItem* CUserProfile::getInventorySlot(__int64 InventoryID)
 {
-	if(id == 0)
-		return -1;
+	if(InventoryID == 0)
+		return NULL;
 
 	// todo: make it faster!
 	for(uint32_t i=0; i<ProfileData.NumItems; ++i)
 	{
-		if(ProfileData.Inventory[i].itemID == id)
-			return i;
+		if(ProfileData.Inventory[i].InventoryID == InventoryID)
+			return &ProfileData.Inventory[i];
 	}
-	return -1;
+
+	return NULL;
 }
 
-static void parseLoadoutSlot(const char* slotData, wiLoadoutSlot& w)
+int CUserProfile::GetProfile(int CharID)
 {
-	r3d_assert(slotData);
-	// should match arguments of ModifyLoadoutSlot!!
-	int nargs = sscanf(slotData, "%d %d %d %d %d %d %d %d %d %d %d %d %d", 
-		&w.BodyArmorID, 
-		&w.BodyHeadGearID, 
-		&w.BodyHeadID, 
-		&w.BodyMeshID, 
-		&w.BodySkinID, 
-		&w.BodyVoiceID, 
-		&w.Item1, 
-		&w.Item2, 
-		&w.Item3, 
-		&w.Item4, 
-		&w.PrimaryWeaponID, 
-		&w.SecondaryWeaponID, 
-		&w.SidearmWeaponID);
-	if(nargs != 13)
-	{
-		r3dOutToLog("Incorrect number of args in loadout slot %d\n", nargs);
-		memset(&w, 0, sizeof(wiLoadoutSlot));
-	}
-	
-	return;
-}
-
-int CUserProfile::GetProfile(bool fromServer)
-{
-	CWOBackendReq req(this, "api_GetProfile4.aspx");
-	if(fromServer)
-		req.AddParam("jg", "1");
+	CWOBackendReq req(this, "api_GetProfile1.aspx");
+	if(CharID)
+		req.AddParam("CharID", CharID);
 		
 	if(!req.Issue())
 	{
@@ -312,39 +111,12 @@ int CUserProfile::GetProfile(bool fromServer)
 		return 9;
 	}
 	
-	r3dscpy(ScreenName, xmlAccount.attribute("gamertag").value());
-	wcscpy(ScreenNameW, utf8ToWide(ScreenName));
-	
-	AccountStatus = xmlAccount.attribute("AccountStatus").as_int();
-	ProfileData.Stats.GamePoints  = xmlAccount.attribute("gamepoints").as_int();
-	ProfileData.Stats.GameDollars  = xmlAccount.attribute("GameDollars").as_int();
-	ProfileData.Stats.HonorPoints = xmlAccount.attribute("HonorPoints").as_int();
-	ProfileData.Stats.SkillPoints = xmlAccount.attribute("SkillPoints").as_int();
-	ProfileData.Stats.Kills       = xmlAccount.attribute("Kills").as_int();
-	ProfileData.Stats.Deaths      = xmlAccount.attribute("Deaths").as_int();
-	ProfileData.Stats.ShotsFired  = xmlAccount.attribute("ShotsFired").as_int();
-	ProfileData.Stats.ShotsHits   = xmlAccount.attribute("ShotsHits").as_int();
-	ProfileData.Stats.Headshots   = xmlAccount.attribute("Headshots").as_int();
-	ProfileData.Stats.AssistKills = xmlAccount.attribute("AssistKills").as_int();
-	ProfileData.Stats.Wins        = xmlAccount.attribute("Wins").as_int();
-	ProfileData.Stats.Losses      = xmlAccount.attribute("Losses").as_int();
-	ProfileData.Stats.CaptureNeutralPoints = xmlAccount.attribute("CaptureNeutralPoints").as_int();
-	ProfileData.Stats.CaptureEnemyPoints   = xmlAccount.attribute("CaptureEnemyPoints").as_int();
-	ProfileData.Stats.TimePlayed  = xmlAccount.attribute("TimePlayed").as_int();
-	ProfileData.isDevAccount	  = xmlAccount.attribute("IsDev").as_int();
-	// faction scores
-	ProfileData.FactionScores[0]  = xmlAccount.attribute("F1S").as_int();
-	ProfileData.FactionScores[1]  = xmlAccount.attribute("F2S").as_int();
-	ProfileData.FactionScores[2]  = xmlAccount.attribute("F3S").as_int();
-	ProfileData.FactionScores[3]  = xmlAccount.attribute("F4S").as_int();
-	ProfileData.FactionScores[4]  = xmlAccount.attribute("F5S").as_int();
-	// clan
-	ProfileData.ClanID            = xmlAccount.attribute("ClanID").as_int();
-	ProfileData.ClanRank          = xmlAccount.attribute("ClanRank").as_int();
-	r3dscpy(ProfileData.ClanTag,    xmlAccount.attribute("ClanTag").value());
-	ProfileData.ClanTagColor      = xmlAccount.attribute("ClanTagColor").as_int();
-	// test fps flag
-	ProfileData.IsFPSEnabled      = xmlAccount.attribute("IsFPSEnabled").as_int();
+	ProfileDataDirty              = xmlAccount.attribute("DataDirty").as_int();
+	AccountStatus                 = xmlAccount.attribute("AccountStatus").as_int();
+	ProfileData.AccountType       = xmlAccount.attribute("AccountType").as_int();
+	ProfileData.GamePoints        = xmlAccount.attribute("GamePoints").as_int();
+	ProfileData.GameDollars       = xmlAccount.attribute("GameDollars").as_int();
+	ProfileData.isDevAccount      = xmlAccount.attribute("IsDeveloper").as_int();
 
 	const char* curTime = xmlAccount.attribute("time").value();
 	memset(&ServerTime, 0, sizeof(ServerTime));
@@ -356,138 +128,149 @@ int CUserProfile::GetProfile(bool fromServer)
 	ServerTime.tm_isdst = 1; // day light saving time
 
 	// fill things
-	ParseLoadouts(xmlAccount.child("loadouts"));
-	ParseAchievements(xmlAccount.child("achievements"));
-	ParseFPSAttachments(xmlAccount.child("fpsattach"));
+	ParseLoadouts(xmlAccount.child("chars"));
 	ParseInventory(xmlAccount.child("inventory"));
-	ParseNewItemsInStore(xmlAccount.child("nis"));
-	ParseStatistics(xmlAccount.child("sday"), DailyStats);
-	ParseStatistics(xmlAccount.child("sweek"), WeeklyStats);
-	
-	for(int i=0; i<wiUserProfile::MAX_LOADOUT_SLOTS; ++i)
-	{
-		wiLoadoutSlot& w = ProfileData.ArmorySlots[i];
-		if(w.LoadoutID == 0)
-			continue;
+	ParseBackpacks(xmlAccount.child("backpacks"));
 
-		if(!isValidInventoryItem(w.BodyArmorID))
-			w.BodyArmorID = 0;
-		if(!isValidInventoryItem(w.BodyHeadGearID))
-			w.BodyHeadGearID = 0;
-		if(!isValidInventoryItem(w.BodyHeadID))
-			w.BodyHeadID = 0;
-		if(!isValidInventoryItem(w.BodyMeshID))
-			w.BodyMeshID = 0;
-		if(!isValidInventoryItem(w.BodySkinID))
-			w.BodySkinID = 0;
-		if(!isValidInventoryItem(w.BodyVoiceID))
-			w.BodyVoiceID = 0;
-		if(!isValidInventoryItem(w.Item1))
-			w.Item1 = 0;
-		if(!isValidInventoryItem(w.Item2))
-			w.Item2 = 0;
-		if(!isValidInventoryItem(w.Item3))
-			w.Item3 = 0;
-		if(!isValidInventoryItem(w.Item4))
-			w.Item4 = 0;
-		if(!isValidInventoryItem(w.PrimaryWeaponID))
-			w.PrimaryWeaponID = 0;
-		if(!isValidInventoryItem(w.SecondaryWeaponID))
-			w.SecondaryWeaponID = 0;
-		if(!isValidInventoryItem(w.SidearmWeaponID))
-			w.SidearmWeaponID = 0;
-	}
-	
 	return 0;
 }
 
-bool CUserProfile::isValidInventoryItem(uint32_t id) const
+static void parseCharAttachments(const char* slotData, wiWeaponAttachment& attm)
 {
-	bool skillItem = false;
-	if( id == WeaponConfig::ITEMID_MedKit ||
-		id == WeaponConfig::ITEMID_MotionSensor ||
-		id == WeaponConfig::ITEMID_RiotShield ||
-		id == WeaponConfig::ITEMID_AdrenalineShot ||
-		id == WeaponConfig::ITEMID_MorphineShot ||
-		id == WeaponConfig::ITEMID_AutoTurret ||
-		id == WeaponConfig::ITEMID_RespawnBeacon 
-		)
-		skillItem = true;
+	r3d_assert(slotData);
+	if(*slotData == 0) 
+	{
+		memset(&attm, 0, sizeof(attm));
+		return;
+	}
 
-	if(getInventoryItemByID(id)!=-1 || skillItem)
-		return true;
+	// should match arguments of ApiCharModifyAttachments
+	int nargs = sscanf(slotData, "%d %d %d %d %d %d %d %d", 
+		&attm.attachments[0], 
+		&attm.attachments[1], 
+		&attm.attachments[2], 
+		&attm.attachments[3], 
+		&attm.attachments[4], 
+		&attm.attachments[5], 
+		&attm.attachments[6], 
+		&attm.attachments[7]);
+	if(nargs != 8)
+	{
+		r3dOutToLog("Incorrect number of args in attachments %d\n", nargs);
+		memset(&attm, 0, sizeof(attm));
+	}
+	
+	return;
+}
 
-	return false;
+static void parseInventoryItem(pugi::xml_node xmlItem, wiInventoryItem& itm)
+{
+	itm.InventoryID = xmlItem.attribute("id").as_int64();
+	itm.itemID      = xmlItem.attribute("itm").as_uint();
+	itm.quantity    = xmlItem.attribute("qt").as_uint();
+	// if Var2/Var2 isn't supplied - set them -1 by default
+	if(xmlItem.attribute("v1").value()[0])
+		itm.Var1 = xmlItem.attribute("v1").as_int();
+	else
+		itm.Var1 = -1;
+	if(xmlItem.attribute("v2").value()[0])
+		itm.Var2 = xmlItem.attribute("v2").as_int();
+	else
+		itm.Var2 = -1;
+
+	r3d_assert(itm.InventoryID > 0);
+	r3d_assert(itm.itemID > 0);
+	r3d_assert(itm.quantity > 0);
+}
+
+static void parseCharBackpack(pugi::xml_node xmlItem, wiCharDataFull& w)
+{
+	// enter into items list
+	xmlItem = xmlItem.first_child();
+	while(!xmlItem.empty())
+	{
+		wiInventoryItem itm;
+		parseInventoryItem(xmlItem, itm);
+
+		int slot = xmlItem.attribute("s").as_int();
+
+		r3d_assert(slot >= 0 && slot < w.BackpackSize);
+		r3d_assert(w.Items[slot].InventoryID == 0);
+		w.Items[slot] = itm;
+
+		xmlItem = xmlItem.next_sibling();
+	}
+
+	
+	return;
 }
 
 void CUserProfile::ParseLoadouts(pugi::xml_node& xmlItem)
 {
+	// reset current backpacks
+	for(int i=0; i<ProfileData.NumSlots; i++) {
+		for(int j=0; j<ProfileData.ArmorySlots[i].BackpackSize; j++) {
+			ProfileData.ArmorySlots[i].Items[j].Reset();
+		}
+	}
+
 	ProfileData.NumSlots = 0;
 	
 	// parse all slots
 	xmlItem = xmlItem.first_child();
 	while(!xmlItem.empty())
 	{
-		wiLoadoutSlot& w = ProfileData.ArmorySlots[ProfileData.NumSlots++];
+		wiCharDataFull& w = ProfileData.ArmorySlots[ProfileData.NumSlots++];
+		wiStats& st = w.Stats;
 		if(ProfileData.NumSlots > wiUserProfile::MAX_LOADOUT_SLOTS)
 			r3dError("more that 6 profiles!");
 
-		w.LoadoutID   = xmlItem.attribute("id").as_uint();
-		w.Class       = xmlItem.attribute("cl").as_int();
-		w.HonorPoints = xmlItem.attribute("xp").as_int();
-		w.TimePlayed  = xmlItem.attribute("tm").as_int();
+		w.LoadoutID   = xmlItem.attribute("CharID").as_uint();
+		r3dscpy(w.Gamertag, xmlItem.attribute("Gamertag").value());
+		w.Alive       = xmlItem.attribute("Alive").as_int();
+		w.Hardcore    = xmlItem.attribute("Hardcore").as_int();
+		st.XP         = xmlItem.attribute("XP").as_int();
+		st.TimePlayed = xmlItem.attribute("TimePlayed").as_int();
+		w.Health      = xmlItem.attribute("Health").as_float();
+		w.Hunger      = xmlItem.attribute("Hunger").as_float();
+		w.Thirst      = xmlItem.attribute("Thirst").as_float();
+		w.Toxic       = xmlItem.attribute("Toxic").as_float();
+		st.Reputation = xmlItem.attribute("Reputation").as_int();
+		w.DeathUtcTime= xmlItem.attribute("DeathTime").as_int64();
+		w.SecToRevive = xmlItem.attribute("SecToRevive").as_int();
 
-		// we hope that our "designers" will limit SP spend on each tier by 255...
-		w.SpendSP[0]  = (BYTE)xmlItem.attribute("sp1").as_int();
-		w.SpendSP[1]  = (BYTE)xmlItem.attribute("sp2").as_int();
-		w.SpendSP[2]  = (BYTE)xmlItem.attribute("sp3").as_int();
-		const char* skills = xmlItem.attribute("sv").value();
-		int skLen = R3D_MIN((int)strlen(skills), CUserSkills::NUM_SKILLS_PER_TIER * CUserSkills::NUM_TIERS);
-		for(int i=0, len = skLen; i<len;i++)
-		{
-			if(skills[i] >= '0' && skills[i] <= '9')
-				w.Skills[i] = BYTE(skills[i] - '0');
-		}
+		w.GameMapId   = xmlItem.attribute("GameMapId").as_int();
+		w.GameServerId= xmlItem.attribute("GameServerId").as_int();
+		w.GamePos = r3dPoint3D(0, 0, 0);
+		sscanf(xmlItem.attribute("GamePos").value(), "%f %f %f %f", &w.GamePos.x, &w.GamePos.y, &w.GamePos.z, &w.GameDir);
+		w.GameFlags   = xmlItem.attribute("GameFlags").as_int();
+
+		w.HeroItemID  = xmlItem.attribute("HeroItemID").as_int();
+		w.HeadIdx     = xmlItem.attribute("HeadIdx").as_int();
+		w.BodyIdx     = xmlItem.attribute("BodyIdx").as_int();
+		w.LegsIdx     = xmlItem.attribute("LegsIdx").as_int();
+
+		w.ClanID      = xmlItem.attribute("ClanID").as_int();
+		w.ClanRank    = xmlItem.attribute("ClanRank").as_int();
+		r3dscpy(w.ClanTag, xmlItem.attribute("ClanTag").value());
+		w.ClanTagColor= xmlItem.attribute("ClanTagColor").as_int();
+
+		const char* attm1 = xmlItem.attribute("attm1").value();
+		const char* attm2 = xmlItem.attribute("attm2").value();
+		parseCharAttachments(attm1, w.Attachment[0]);
+		parseCharAttachments(attm2, w.Attachment[1]);
+
+		w.BackpackID   = xmlItem.attribute("BackpackID").as_uint();
+		w.BackpackSize = xmlItem.attribute("BackpackSize").as_int();
 		
-		const char* slotData = xmlItem.attribute("lo").value();
-		parseLoadoutSlot(slotData, w);
+		// trackable stats
+		st.KilledZombies   = xmlItem.attribute("ts00").as_int();
+		st.KilledSurvivors = xmlItem.attribute("ts01").as_int();
+		st.KilledBandits   = xmlItem.attribute("ts02").as_int();
 
-		xmlItem = xmlItem.next_sibling();
-	}
-}
+		// skill xp
+		st.SkillXPPool = 0;
 
-void CUserProfile::ParseAchievements(pugi::xml_node& xmlItem)
-{
-
-	for(int AchievementIndex=0; AchievementIndex< wiUserProfile::MAX_POTENTIAL_ACHIEVEMENTS; AchievementIndex++)
-	{
-		// makes it so this appears invalid (The ID Doesn't match it's index)
-		ProfileData.Achievements[AchievementIndex].ID = wiUserProfile::MAX_POTENTIAL_ACHIEVEMENTS;
-	}
-
-	// enter into items list
-	xmlItem = xmlItem.first_child();
-	while(!xmlItem.empty())
-	{
-		uint32_t AchID  = xmlItem.attribute("id").as_uint();
-		uint32_t AchValue = xmlItem.attribute("v").as_uint();
-		uint32_t AchUnlocked = xmlItem.attribute("u").as_uint();
-		if(AchID == 0) { // in pugixml, for empty line it will return empty xml_node
-			xmlItem = xmlItem.next_sibling();
-			continue;
-		}
-		
-
-		if( AchID < 512) {
-
-			wiAchievement& itm = ProfileData.Achievements[AchID];
-
-			itm.ID     = AchID;
-			itm.value  = AchValue;
-			itm.unlocked = AchUnlocked;
-			itm.dirty = false;
-		}
-		
 		xmlItem = xmlItem.next_sibling();
 	}
 }
@@ -495,87 +278,45 @@ void CUserProfile::ParseAchievements(pugi::xml_node& xmlItem)
 void CUserProfile::ParseInventory(pugi::xml_node& xmlItem)
 {
 	ProfileData.NumItems = 0;
-	ProfileData.hasExpiringItems = false;
 
 	// enter into items list
 	xmlItem = xmlItem.first_child();
 	while(!xmlItem.empty())
 	{
-		uint32_t itemId  = xmlItem.attribute("id").as_uint();
-		uint32_t minLeft = xmlItem.attribute("ml").as_uint();
-		uint32_t quantity= xmlItem.attribute("qt").as_uint();
-		if(quantity == 0) // Quantity attribute can be empty to save space
-			quantity = 1;
-		if(itemId == 0) { // in pugixml, for empty line it will return empty xml_node
-			xmlItem = xmlItem.next_sibling();
-			continue;
-		}
-		
 		wiInventoryItem& itm = ProfileData.Inventory[ProfileData.NumItems++];
-		r3d_assert(ProfileData.NumItems < 512);
+		r3d_assert(ProfileData.NumItems < wiUserProfile::MAX_INVENTORY_SIZE);
 
-		itm.itemID     = itemId;
-		itm.expiration = minLeft;
-		itm.quantity   = quantity;
-
-		if(minLeft <= 24*60) // 24 hours
-			ProfileData.hasExpiringItems = true;
+		parseInventoryItem(xmlItem, itm);
 
 		xmlItem = xmlItem.next_sibling();
 	}
 }
 
-void CUserProfile::ParseFPSAttachments(pugi::xml_node& xmlItem)
+void CUserProfile::ParseBackpacks(pugi::xml_node& xmlItem)
 {
-	ProfileData.NumFPSAttachments = 0;
-
 	// enter into items list
 	xmlItem = xmlItem.first_child();
 	while(!xmlItem.empty())
 	{
-		wiUserProfile::temp_fps_attach& att = ProfileData.FPSAttachments[ProfileData.NumFPSAttachments++];
-		r3d_assert(ProfileData.NumFPSAttachments < 2048);
-
-		att.WeaponID     = xmlItem.attribute("wi").as_uint();
-		att.AttachmentID = xmlItem.attribute("ai").as_uint();
-		att.expiration   = xmlItem.attribute("ml").as_uint();
-		att.isEquipped   = xmlItem.attribute("eq").as_uint();
-
-		xmlItem = xmlItem.next_sibling();
-	}
-	
-	return;
-}
-
-void CUserProfile::ParseNewItemsInStore(pugi::xml_node& xmlItem)
-{
-	NumNewItems = 0;
-
-	// enter into items list
-	xmlItem = xmlItem.first_child();
-	while(!xmlItem.empty())
-	{
-		uint32_t itemId  = xmlItem.attribute("id").as_uint();
-		if(itemId != 0) // in pugixml, for empty line it will return empty xml_node
+		uint32_t CharID  = xmlItem.attribute("CharID").as_uint();
+		r3d_assert(CharID);
+		
+		bool found = true;
+		for(int i=0; i<ProfileData.NumSlots; i++) 
 		{
-			NewItemsInStore[NumNewItems++] = itemId;
-			r3d_assert(NumNewItems < R3D_ARRAYSIZE(NewItemsInStore));
+			if(ProfileData.ArmorySlots[i].LoadoutID == CharID) 
+			{
+				parseCharBackpack(xmlItem, ProfileData.ArmorySlots[i]);
+				found = true;
+				break;
+			}
 		}
 		
+		if(!found)
+			r3dError("bad backpack data for charid %d", CharID);
+
 		xmlItem = xmlItem.next_sibling();
 	}
-}
-
-void CUserProfile::ParseStatistics(pugi::xml_node& xmlStat, PlayedStats_s& stat)
-{
-	// statistics
-	stat.GamesPlayed = xmlStat.attribute("dg").as_int();
-	stat.Kills = xmlStat.attribute("ki").as_int();
-	stat.Headshots = xmlStat.attribute("hs").as_int();
-	stat.CaptureFlags = xmlStat.attribute("cf").as_int();
-	stat.MatchesCQ = xmlStat.attribute("mcq").as_int();
-	stat.MatchesDM = xmlStat.attribute("mdm").as_int();
-	stat.MatchesSB = xmlStat.attribute("msb").as_int();
 }
 
 wiStoreItem g_StoreItems[MAX_NUM_STORE_ITEMS] = {0}; 
@@ -586,16 +327,16 @@ const char* STORE_CATEGORIES_NAMES[storecat_NUM_ITEMS] =
 	"$CatInvalid", // 0
 	"$CatAccount", //1
 	"$CatBoosts", //2
-	"$CatMysteryBox", //3
+	"$CatInvalid", //3
 	"$CatItems", //4
 	"$CatAbilities", //5
 	"$CatInvalid", //6
 	"$CatLootBox", //7
 	"$CatInvalid", //8
-	"$CatDeals", //9
-	"$CatChar", //10
+	"$CatInvalid", //9
+	"$CatInvalid", //10
 	"$CatGear", //11
-	"$CatHeads", //12
+	"$CatInvalid", //12
 	"$CatHeadGear", //13
 	"$CatInvalid", //14
 	"$CatInvalid", //15
@@ -615,28 +356,9 @@ const char* STORE_CATEGORIES_NAMES[storecat_NUM_ITEMS] =
 	"$CatMelee", // 29
 };
 
-static void addItemToStore(uint32_t itemID, 
-						   uint32_t price1d, uint32_t price7d, uint32_t price30d, uint32_t pricePerm,
-						   uint32_t gd_price1d, uint32_t gd_price7d, uint32_t gd_price30d, uint32_t gd_pricePerm)
-{
-	g_StoreItems[g_NumStoreItems].itemID       = itemID;
-	g_StoreItems[g_NumStoreItems].price1day    = price1d;
-	g_StoreItems[g_NumStoreItems].price7day    = price7d;
-	g_StoreItems[g_NumStoreItems].price30day   = price30d;
-	g_StoreItems[g_NumStoreItems].pricePerm    = pricePerm;
-	g_StoreItems[g_NumStoreItems].gd_price1day = gd_price1d;
-	g_StoreItems[g_NumStoreItems].gd_price7day = gd_price7d;
-	g_StoreItems[g_NumStoreItems].gd_price30day= gd_price30d;
-	g_StoreItems[g_NumStoreItems].gd_pricePerm = gd_pricePerm;
-
-	if(g_StoreItems[g_NumStoreItems].itemID > 0) // bug in pugixml, for empty line it will return empty xml_node
-		g_NumStoreItems++;
-	r3d_assert(g_NumStoreItems < MAX_NUM_STORE_ITEMS);
-}
-
 int CUserProfile::ApiGetShopData()
 {
-	CWOBackendReq req(this, "api_GetShop5.aspx");
+	CWOBackendReq req(this, "api_GetShop1.aspx");
 	if(!req.Issue())
 	{
 		r3dOutToLog("GetShopData FAILED, code: %d\n", req.resultCode_);
@@ -647,34 +369,12 @@ int CUserProfile::ApiGetShopData()
 
 	const char* d = req.bodyStr_;
 	const char* p = d;
-	if(p[0] != 'S' || p[1] != 'H' || p[2] != 'O' || p[3] != '3') {
+	if(p[0] != 'S' || p[1] != 'H' || p[2] != 'O' || p[3] != '1') {
 		r3dOutToLog("GetShopData: bad answer #1\n");
 		return 9;
 	}
 	p += 4;
 
-	// new skills. served as skillID/byte array of 5 per price
-	while(true)
-	{
-		WORD skillID = *(WORD*)p; p += 2;
-		if(skillID == 0xFFFF)
-			break;
-		r3d_assert(skillID < CUserSkills::CLASS_MAX * CUserSkills::SKILL_CLASS_MULT);
-
-		ShopSkillCosts2[skillID][0] = *(BYTE*)p;  p += 1;
-		ShopSkillCosts2[skillID][1] = *(BYTE*)p;  p += 1;
-		ShopSkillCosts2[skillID][2] = *(BYTE*)p;  p += 1;
-		ShopSkillCosts2[skillID][3] = *(BYTE*)p;  p += 1;
-		ShopSkillCosts2[skillID][4] = *(BYTE*)p;  p += 1;
-	}
-
-	if(p[0] != 'S' || p[1] != 'H' || p[2] != 'O' || p[3] != '3') {
-		r3dOutToLog("GetShopData: bad answer #2\n");
-		r3d_assert(false);
-		return 9;
-	}
-	p += 4;
-	
 	// shop items
 	while(1) 
 	{
@@ -684,46 +384,21 @@ int CUserProfile::ApiGetShopData()
 		}
 
 		// end tag
-		if(p[0] == 'S' && p[1] == 'H' && p[2] == 'O' && p[3] == '3')
+		if(p[0] == 'S' && p[1] == 'H' && p[2] == 'O' && p[3] == '1')
 			break;
 
 		// item
-		DWORD itemId    = *(DWORD*)p; p += 4;
-		BYTE  priceBits = *(BYTE*)p;  p += 1;
-		BYTE  itemCat   = *(BYTE*)p;  p += 1;
+		DWORD itemId       = *(DWORD*)p; p += 4;
+		DWORD flags        = *(BYTE*)p;  p += 1;
+		DWORD pricePerm    = *(DWORD*)p; p += 4;
+		DWORD gd_pricePerm = *(DWORD*)p; p += 4;
 
-		DWORD  price1d=0, price7d=0, price30d=0, pricePerm=0;
-		DWORD  gd_price1d=0, gd_price7d=0, gd_price30d=0, gd_pricePerm=0;
-
-		r3d_assert(priceBits);
-		if(priceBits & 0x1) {
-			price1d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x2) {
-			price7d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x4) {
-			price30d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x8) {
-			pricePerm = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x10) {
-			gd_price1d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x20) {
-			gd_price7d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x40) {
-			gd_price30d = *(DWORD*)p;  p += 4;
-		}
-		if(priceBits & 0x80) {
-			gd_pricePerm = *(DWORD*)p;  p += 4;
-		}
-
-		addItemToStore(itemId, 
-			price1d, price7d, price30d, pricePerm,
-			gd_price1d, gd_price7d, gd_price30d, gd_pricePerm);
+		wiStoreItem& itm = g_StoreItems[g_NumStoreItems++];
+		r3d_assert(g_NumStoreItems < MAX_NUM_STORE_ITEMS);
+		itm.itemID       = itemId;
+		itm.pricePerm    = pricePerm;
+		itm.gd_pricePerm = gd_pricePerm;
+		itm.isNew        = (flags & 0x1) ? true : false;
 	}
 
 	DeriveGamePricesFromItems();
@@ -733,114 +408,22 @@ int CUserProfile::ApiGetShopData()
 
 void CUserProfile::DeriveGamePricesFromItems()
 {
-	// now ability prices and unlock slot prices defined by items
 	for(uint32_t i = 0; i<g_NumStoreItems; i++) 
 	{
 		const wiStoreItem& itm = g_StoreItems[i];
-		
+
 		switch(itm.itemID) 
 		{
-		case 301143: ShopClanCreate = itm.pricePerm; break;
-		case 301142: ShopUnlockLoadoutCost = itm.pricePerm; break; 
-		case 301150: ShopResetLoadoutCost = itm.pricePerm; break;
+			case 301151: ShopClanCreate = itm.pricePerm; break;
 		}
 		
 		// clan add members items
-		if(itm.itemID >= 301144 && itm.itemID <= 301149)
+		if(itm.itemID >= 301152 && itm.itemID <= 301157)
 		{
-			ShopClanAddMembers_GP[itm.itemID - 301144]  = itm.pricePerm;
-			ShopClanAddMembers_Num[itm.itemID - 301144] = itm.price1day;
+			ShopClanAddMembers_GP[itm.itemID - 301152]  = itm.pricePerm;
+			ShopClanAddMembers_Num[itm.itemID - 301152] = itm.gd_pricePerm;
 		}
 	}
-}
-
-bool CUserProfile::CheckAchievementByValue( int whichAchievement, int value )
-{
-	const AchievementConfig* achievementInfo = gWeaponArmory.getAchievementByIndex( whichAchievement);
-	if( achievementInfo->value == 0 ) {
-		// this should not happen.  Complain. 
-		r3dOutToLog("We're checking the achievement index %d which is achievement id %d, and it doesn't have a value", whichAchievement, achievementInfo->id);
-		return false;
-	}
-
-	if( achievementInfo->value <= value ) {
-		return MarkAchievementComplete( whichAchievement );
-	}
-	else 
-	{
-		return false;
-	}
-	
-
-}
-
-bool CUserProfile::MarkAchievementComplete( int whichAchievement )
-{
-
-	const AchievementConfig* achievementInfo = gWeaponArmory.getAchievementByIndex( whichAchievement);
-	if( achievementInfo->enabled == false )
-	{
-		// no disabled achievements. 
-		return false;
-	}
-	
-	wiAchievement* achievementData = ProfileData.getAchievementDataByID( achievementInfo->id );
-	
-	if( achievementData != NULL && achievementData->unlocked != 0 )
-	{
-		// already accomplished
-		return false; 
-	}
-	
-	if( achievementData == NULL ) {
-		achievementData = ProfileData.addAchievement( achievementInfo->id );
-	}
-
-	achievementData->unlocked = 1;
-	achievementData->dirty = true;
-	
-	return true;
-
-}
-
-bool CUserProfile::IncrementAchievement( int whichAchievement, int value )
-{
-	const AchievementConfig* achievementInfo = gWeaponArmory.getAchievementByIndex( whichAchievement);
-	if( achievementInfo->value == 0 ) {
-		// this should not happen.  Complain. 
-		r3dOutToLog("We're incrementing an achievement index %d which is achievement id %d, and it doesn't have a value", whichAchievement, achievementInfo->id);
-		return false;
-	}
-
-	if( achievementInfo->enabled == false )
-	{
-		// no disabled achievements. 
-		return false;
-	}
-	
-	wiAchievement* achievementData = ProfileData.getAchievementDataByID( achievementInfo->id );
-
-	if( achievementData != NULL && achievementData->unlocked != 0 )
-	{
-		// already accomplished we shouldn't infrement this. 
-		return false; 
-	}
-
-	if( achievementData == NULL ) {
-		achievementData = ProfileData.addAchievement( achievementInfo->id );
-	}
-
-	achievementData->value += value;
-	achievementData->dirty = true;
-
-	if( achievementInfo->value <= (int) achievementData->value ) {
-		return MarkAchievementComplete( whichAchievement );
-	} 
-	else 
-	{
-		return false; 
-	}
-
 }
 
 #ifndef WO_SERVER
@@ -848,29 +431,27 @@ bool CUserProfile::IncrementAchievement( int whichAchievement, int value )
 class GameObject;
 #include "ObjectsCode/Weapons/WeaponArmory.h"
 
-extern int RUS_CLIENT;
-
 CClientUserProfile::CClientUserProfile()
 {
-	ShopUnlockLoadoutCost = 0;
-	ShopResetLoadoutCost = 0;
+	steamCallbacks = NULL;
+	friends = new CUserFriends();
+
+	for(int i=0; i<wiUserProfile::MAX_LOADOUT_SLOTS; i++)
+		clans[i] = new CUserClans();
+	
+	SelectedCharID = 0;
+
 	ShopClanCreate = 0;
 	memset(&ShopClanAddMembers_GP, 0, sizeof(ShopClanAddMembers_GP));
 	memset(&ShopClanAddMembers_Num, 0, sizeof(ShopClanAddMembers_Num));
-	memset(&ShopSkillCosts2, 0, sizeof(ShopSkillCosts2));
-
-	steamCallbacks = NULL;
-	friends = new CUserFriends();
-	clans = new CUserClans();
-
-	curRetentionDays_ = 0;
-	minutesToNextRetDay_ = 0;
 }
 
 CClientUserProfile::~CClientUserProfile()
 {
 	SAFE_DELETE(friends);
-	SAFE_DELETE(clans);
+
+	for(int i=0; i<wiUserProfile::MAX_LOADOUT_SLOTS; i++)
+		SAFE_DELETE(clans[i]);
 }
 
 void CClientUserProfile::GenerateSessionKey(char* outKey)
@@ -945,11 +526,10 @@ int CClientUserProfile::ApiGetItemsInfo()
 	while(!xmlNode.empty())
 	{
 		uint32_t itemId = xmlNode.attribute("ID").as_uint();
-		GearConfig* gc = const_cast<GearConfig*>(gWeaponArmory.getGearConfig(itemId));
+		GearConfig* gc = const_cast<GearConfig*>(g_pWeaponArmory->getGearConfig(itemId));
 		if(gc)
 		{
-			gc->m_LevelRequired = xmlNode.attribute("lv").as_int();
-			gc->m_Weight        = xmlNode.attribute("wg").as_float();
+			gc->m_Weight        = xmlNode.attribute("wg").as_float() / 1000.0f;
 			gc->m_damagePerc    = xmlNode.attribute("dp").as_float() / 100.0f;
 			gc->m_damageMax     = xmlNode.attribute("dm").as_float();
 		}
@@ -962,14 +542,11 @@ int CClientUserProfile::ApiGetItemsInfo()
 	while(!xmlNode.empty())
 	{
 		uint32_t itemId = xmlNode.attribute("ID").as_uint();
-		WeaponConfig* wc = const_cast<WeaponConfig*>(gWeaponArmory.getWeaponConfig(itemId));
+		WeaponConfig* wc = const_cast<WeaponConfig*>(g_pWeaponArmory->getWeaponConfig(itemId));
 		if(wc)
 		{
-			wc->m_LevelRequired = xmlNode.attribute("lv").as_int();
 			wc->m_AmmoDamage    = xmlNode.attribute("d1").as_float();
 			wc->m_AmmoDecay     = xmlNode.attribute("d2").as_float();
-			wc->m_numClips      = xmlNode.attribute("c1").as_uint();
-			wc->m_clipSize      = xmlNode.attribute("c2").as_uint();
 			wc->m_fireDelay     = 60.0f / (xmlNode.attribute("rf").as_float());
 			wc->m_spread        = xmlNode.attribute("sp").as_float();
 			wc->m_recoil        = xmlNode.attribute("rc").as_float();
@@ -979,11 +556,11 @@ int CClientUserProfile::ApiGetItemsInfo()
 	}
 
 	// read packages(in <packages><p>...)
-	xmlNode = xmlItems.child("packages").first_child();
+	/*xmlNode = xmlItems.child("packages").first_child();
 	while(!xmlNode.empty())
 	{
 		uint32_t itemId = xmlNode.attribute("ID").as_uint();
-		PackageConfig* pc = const_cast<PackageConfig*>(gWeaponArmory.getPackageConfig(itemId));
+		PackageConfig* pc = const_cast<PackageConfig*>(g_pWeaponArmory->getPackageConfig(itemId));
 		if(pc)
 		{
 			replaceItemNameParams<PackageConfig>(pc, xmlNode);
@@ -1005,17 +582,17 @@ int CClientUserProfile::ApiGetItemsInfo()
 		}
 
 		xmlNode = xmlNode.next_sibling();
-	}
+	}*/
 
 	// read mystery crates/loot boxes names
 	xmlNode = xmlItems.child("generics").first_child();
 	while(!xmlNode.empty())
 	{
 		uint32_t itemId = xmlNode.attribute("ID").as_uint();
-		ItemConfig* itm = const_cast<ItemConfig*>(gWeaponArmory.getItemConfig(itemId));
+		ModelItemConfig* itm = const_cast<ModelItemConfig*>(g_pWeaponArmory->getItemConfig(itemId));
 		if(itm)
 		{
-			replaceItemNameParams<ItemConfig>(itm, xmlNode);
+			replaceItemNameParams<ModelItemConfig>(itm, xmlNode);
 		}
 
 		xmlNode = xmlNode.next_sibling();
@@ -1024,22 +601,64 @@ int CClientUserProfile::ApiGetItemsInfo()
 	return 0;
 }
 
-int CClientUserProfile::ApiUnlockLoadoutSlot2(int Class)
+int CClientUserProfile::ApiCharCreate(const char* Gamertag, int Hardcore, int HeroItemID, int HeadIdx, int BodyIdx, int LegsIdx)
 {
-	if(ProfileData.NumSlots >= wiUserProfile::MAX_LOADOUT_SLOTS)
-	{
-#ifndef FINAL_BUILD
-		r3dError("too many slots unlocked already");
-#endif
-		return 6;
-	}
-
-	CWOBackendReq req(this, "api_LoadoutUnlock.aspx");
-	req.AddParam("Class", Class);
+	CWOBackendReq req(this, "api_CharSlots.aspx");
+	req.AddParam("func",       "create");
+	req.AddParam("Gamertag",   Gamertag);
+	req.AddParam("Hardcore",   Hardcore);
+	req.AddParam("HeroItemID", HeroItemID);
+	req.AddParam("HeadIdx",    HeadIdx);
+	req.AddParam("BodyIdx",    BodyIdx);
+	req.AddParam("LegsIdx",    LegsIdx);
 	if(!req.Issue())
 	{
-		r3dOutToLog("UnlockLoadoutSlot failed: %d", req.resultCode_);
+		r3dOutToLog("ApiCharCreate failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+
+	// reread profile
+	GetProfile();
+
+	return 0;
+}
+
+int CClientUserProfile::ApiCharDelete()
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	CWOBackendReq req(this, "api_CharSlots.aspx");
+	req.AddParam("func",   "delete");
+	req.AddParam("CharID", w.LoadoutID);
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiCharDelete failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+
+	w.LoadoutID = 0;
+
+	if(GetProfile() != 0)
 		return false;
+
+	return 0;
+}
+
+int CClientUserProfile::ApiCharRevive()
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	CWOBackendReq req(this, "api_CharSlots.aspx");
+	req.AddParam("func",   "revive");
+	req.AddParam("CharID", w.LoadoutID);
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiCharRevive failed: %d", req.resultCode_);
+		return req.resultCode_;
 	}
 
 	// reread profile
@@ -1048,130 +667,270 @@ int CClientUserProfile::ApiUnlockLoadoutSlot2(int Class)
 	return 0;
 }
 
-int CClientUserProfile::ApiResetLoadoutSlot(int SlotID, int Class)
+int CClientUserProfile::ApiBackpackToInventory(int GridFrom, int amount)
 {
-	r3d_assert(ShopResetLoadoutCost);
-	r3d_assert(SlotID >= 0 && SlotID < wiUserProfile::MAX_LOADOUT_SLOTS);
-	wiLoadoutSlot& w = ProfileData.ArmorySlots[SlotID];
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
 
-	CWOBackendReq req(this, "api_LoadoutReset.aspx");
-	req.AddParam("LoadoutID",  w.LoadoutID);
-	req.AddParam("Class", Class);
+	r3d_assert(GridFrom >= 0 && GridFrom < w.BackpackSize);
+	wiInventoryItem* wi1 = &w.Items[GridFrom];
+	r3d_assert(wi1->InventoryID > 0);
+	r3d_assert(wi1->quantity >= amount);
+	
+	// scan for inventory and see if we can stack item there
+	__int64 InvInventoryID = 0;
+	bool isStackable = storecat_IsItemStackable(wi1->itemID);
+	for(uint32_t i=0; i<ProfileData.NumItems; i++)
+	{
+		// can stack only non-modified items
+		const wiInventoryItem* wi2 = &ProfileData.Inventory[i];
+		if(isStackable && wi2->itemID == wi1->itemID && wi1->Var1 < 0 && wi2->Var1 < 0)
+		{
+			InvInventoryID = wi2->InventoryID;
+			break;
+		}
+	}
+	char strInventoryID[128];
+	sprintf(strInventoryID, "%I64d", InvInventoryID);
+
+	CWOBackendReq req(this, "api_CharBackpack.aspx");
+	req.AddParam("CharID", w.LoadoutID);
+	req.AddParam("op",     10);		// inventory operation code
+	req.AddParam("v1",     strInventoryID);	// value 1
+	req.AddParam("v2",     GridFrom);	// value 2
+	req.AddParam("v3",     amount);		// value 3
 	if(!req.Issue())
 	{
-		r3dOutToLog("ApiResetLoadoutSlot failed: %d", req.resultCode_);
-		return false;
+		r3dOutToLog("ApiBackpackToInventory failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+	
+	__int64 InventoryID = 0;
+	int nargs = sscanf(req.bodyStr_, "%I64d", &InventoryID);
+	r3d_assert(nargs == 1);
+	r3d_assert(InventoryID > 0);
+
+	// add one item to inventory
+	wiInventoryItem* wi2 = getInventorySlot(InventoryID);
+	if(wi2 == NULL) 
+	{
+		// add new inventory slot with same vars
+		wi2 = &ProfileData.Inventory[ProfileData.NumItems++];
+		r3d_assert(ProfileData.NumItems < wiUserProfile::MAX_INVENTORY_SIZE);
+		
+		*wi2 = *wi1;
+		wi2->InventoryID = InventoryID;
+		wi2->quantity    = amount;
+	}
+	else
+	{
+		wi2->quantity += amount;
+	}
+	
+	// remove item
+	wi1->quantity -= amount;
+	if(wi1->quantity <= 0)
+		wi1->Reset();
+	
+	return 0;
+}
+
+int CClientUserProfile::ApiBackpackFromInventory(__int64 InventoryID, int GridTo, int amount)
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	wiInventoryItem* wi1 = getInventorySlot(InventoryID);
+	r3d_assert(wi1);
+	r3d_assert(wi1->quantity >= amount);
+
+	int idx_free   = -1;
+	int idx_exists = -1;
+
+	bool isStackable = storecat_IsItemStackable(wi1->itemID);
+	
+	// search for free or existing slot
+	if(GridTo >= 0)
+	{
+		// placing to free slot
+		if(w.Items[GridTo].InventoryID == 0)
+		{
+			idx_free = GridTo;
+		}
+		else if(isStackable && w.Items[GridTo].itemID == wi1->itemID && wi1->Var1 < 0 && w.Items[GridTo].Var1 < 0)
+		{
+			idx_exists = GridTo;
+		}
+		else
+		{
+			// trying to stack not stackable item
+			return 9;
+		}
+	}
+	else
+	{
+		// search for same or free slot
+		for(int i=wiCharDataFull::CHAR_REAL_BACKPACK_IDX_START; i<w.BackpackSize; i++)
+		{
+			// can stack only non-modified items
+			if(isStackable && w.Items[i].itemID == wi1->itemID && wi1->Var1 < 0 && w.Items[i].Var1 < 0)
+			{
+				idx_exists = i;
+				break;
+			}
+			if(w.Items[i].itemID == 0 && idx_free == -1) 
+			{
+				idx_free = i;
+			}
+		}
+		if(idx_free == -1 && idx_exists == -1)
+		{
+			r3dOutToLog("ApiBackpackFromInventory - no free slots");
+			return 6;
+		}
+	}
+	GridTo = idx_exists != -1 ? idx_exists : idx_free;
+	r3d_assert(GridTo != -1);
+	
+	char strInventoryID[128];
+	sprintf(strInventoryID, "%I64d", InventoryID);
+
+	CWOBackendReq req(this, "api_CharBackpack.aspx");
+	req.AddParam("CharID", w.LoadoutID);
+	req.AddParam("op",     11);		// inventory operation code
+	req.AddParam("v1",     strInventoryID);	// value 1
+	req.AddParam("v2",     GridTo);		// value 2
+	req.AddParam("v3",     amount);		// value 3
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiBackpackFromInventory failed: %d", req.resultCode_);
+		return req.resultCode_;
 	}
 
-	// reread profile
+	// get new inventory id
+	int nargs = sscanf(req.bodyStr_, "%I64d", &InventoryID);
+	r3d_assert(nargs == 1);
+	r3d_assert(InventoryID > 0);
+
+	if(idx_exists != -1) 
+	{
+		r3d_assert(w.Items[idx_exists].InventoryID == InventoryID);
+		w.Items[idx_exists].quantity += amount;
+	} 
+	else 
+	{
+		w.Items[idx_free] = *wi1;
+		w.Items[idx_free].InventoryID = InventoryID;
+		w.Items[idx_free].quantity    = amount;
+	}
+	
+	wi1->quantity -= amount;
+	if(wi1->quantity <= 0)
+		wi1->Reset();
+		
+	return 0;
+}
+
+int CClientUserProfile::ApiBackpackGridSwap(int GridFrom, int GridTo)
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	// check if we can join both slots
+	r3d_assert(GridFrom >= 0 && GridFrom < w.BackpackSize);
+	r3d_assert(GridTo >= 0 && GridTo < w.BackpackSize);
+	wiInventoryItem& wi1 = w.Items[GridFrom];
+	wiInventoryItem& wi2 = w.Items[GridTo];
+	if(wi1.itemID && wi1.itemID == wi2.itemID)
+	{
+		if(storecat_IsItemStackable(wi1.itemID) && wi1.Var1 < 0 && wi2.Var1 < 0)
+		{
+			return ApiBackpackGridJoin(GridFrom, GridTo);
+		}
+	}
+	
+	CWOBackendReq req(this, "api_CharBackpack.aspx");
+	req.AddParam("CharID", w.LoadoutID);
+	req.AddParam("op",     12);		// inventory operation code
+	req.AddParam("v1",     GridFrom);	// value 1
+	req.AddParam("v2",     GridTo);		// value 2
+	req.AddParam("v3",     0);		// value 3
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiBackpackGridMove failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+	
+	R3D_SWAP(wi1, wi2);
+	
+	return 0;
+}
+
+int CClientUserProfile::ApiBackpackGridJoin(int GridFrom, int GridTo)
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	r3d_assert(GridFrom >= 0 && GridFrom < w.BackpackSize);
+	r3d_assert(GridTo >= 0 && GridTo < w.BackpackSize);
+	wiInventoryItem& wi1 = w.Items[GridFrom];
+	wiInventoryItem& wi2 = w.Items[GridTo];
+	r3d_assert(wi1.itemID && wi1.itemID == wi2.itemID);
+	
+	CWOBackendReq req(this, "api_CharBackpack.aspx");
+	req.AddParam("CharID", w.LoadoutID);
+	req.AddParam("op",     13);		// inventory operation code
+	req.AddParam("v1",     GridFrom);	// value 1
+	req.AddParam("v2",     GridTo);		// value 2
+	req.AddParam("v3",     0);		// value 3
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiBackpackGridJoin failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+	
+	wi2.quantity += wi1.quantity;
+	wi1.Reset();
+	
+	return 0;
+}
+
+
+int CClientUserProfile::ApiChangeBackpack(__int64 InventoryID)
+{
+	r3d_assert(SelectedCharID >= 0 && SelectedCharID < wiUserProfile::MAX_LOADOUT_SLOTS);
+	wiCharDataFull& w = ProfileData.ArmorySlots[SelectedCharID];
+	r3d_assert(w.LoadoutID > 0);
+
+	// no need to validate InventoryID - server will do that
+	char strInventoryID[128];
+	sprintf(strInventoryID, "%I64d", InventoryID);
+
+	CWOBackendReq req(this, "api_CharBackpack.aspx");
+	req.AddParam("CharID", w.LoadoutID);
+	req.AddParam("op",     16);		// inventory operation code
+	req.AddParam("v1",     strInventoryID);	// value 1
+	req.AddParam("v2",     0);
+	req.AddParam("v3",     0);
+	if(!req.Issue())
+	{
+		r3dOutToLog("ApiChangeBackpack failed: %d", req.resultCode_);
+		return req.resultCode_;
+	}
+
+	// reread profile, as inventory/backpack is changed
 	GetProfile();
 	
 	return 0;
 }
 
-bool CClientUserProfile::WelcomePackageProcess(int specID)
-{
-	CWOBackendReq req(this, "api_WelcomePackage4.aspx");
-	req.AddParam("specID", specID);
-	if(!req.Issue())
-	{
-		r3dOutToLog("WelcomePackage failed: %d", req.resultCode_);
-		return false;
-	}
-
-	AccountStatus = 101;
-	return true;
-}
-
-int CClientUserProfile::ApiSkillLearn(int SlotID, int SkillID, int SkillLevel)
-{
-	r3d_assert(SlotID >= 0 && SlotID < wiUserProfile::MAX_LOADOUT_SLOTS);
-	wiLoadoutSlot& w = ProfileData.ArmorySlots[SlotID];
-
-	CWOBackendReq req(this, "api_SkillLearn.aspx");
-	req.AddParam("LoadoutID",  w.LoadoutID);
-	req.AddParam("SkillID",    SkillID);
-	req.AddParam("SkillLevel", SkillLevel);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiSkillLearn FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	int spendSp1, spendSp2, spendSp3;
-	int nargs = sscanf(req.bodyStr_, "%d %d %d", &spendSp1, &spendSp2, &spendSp3);
-	if(nargs != 3)
-	{
-		r3dError("wrong answer for ApiSkillLearn");
-		return 9;
-	}
-
-	w.SpendSP[0] = (BYTE)spendSp1;
-	w.SpendSP[1] = (BYTE)spendSp2;
-	w.SpendSP[2] = (BYTE)spendSp3;
-			
-	int idx = SkillID % 100; // CUserSkills::SKILL_CLASS_MULT;
-	r3d_assert(idx >= 0 && idx < R3D_ARRAYSIZE(w.Skills));
-	w.Skills[idx] = SkillLevel;
-	return 0;
-}
-
-int CClientUserProfile::ApiSkillReset(int SlotID)
-{
-	r3d_assert(SlotID >= 0 && SlotID < wiUserProfile::MAX_LOADOUT_SLOTS);
-	wiLoadoutSlot& w = ProfileData.ArmorySlots[SlotID];
-
-	CWOBackendReq req(this, "api_SkillReset.aspx");
-	req.AddParam("LoadoutID",  w.LoadoutID);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiSkillReset FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	w.SpendSP[0] = 0;
-	w.SpendSP[1] = 0;
-	w.SpendSP[2] = 0;
-	memset(w.Skills, 0, sizeof(w.Skills));
-
-	return 0;
-}
-
-int CClientUserProfile::ApiModifyLoadoutSlot(int SlotID)
-{
-	r3d_assert(SlotID >= 0 && SlotID < wiUserProfile::MAX_LOADOUT_SLOTS);
-	wiLoadoutSlot& w = ProfileData.ArmorySlots[SlotID];
-
-	CWOBackendReq req(this, "api_LoadoutModify.aspx");
-	req.AddParam("LoadoutID", w.LoadoutID);
-	req.AddParam("i1",     w.BodyArmorID);
-	req.AddParam("i2",     w.BodyHeadGearID);
-	req.AddParam("i3",     w.BodyHeadID);
-	req.AddParam("i4",     w.BodyMeshID);
-	req.AddParam("i5",     w.BodySkinID);
-	req.AddParam("i6",     w.BodyVoiceID);
-	req.AddParam("i7",     w.Item1);
-	req.AddParam("i8",     w.Item2);
-	req.AddParam("i9",     w.Item3);
-	req.AddParam("i10",    w.Item4);
-	req.AddParam("i11",    w.PrimaryWeaponID);
-	req.AddParam("i12",    w.SecondaryWeaponID);
-	req.AddParam("i13",    w.SidearmWeaponID);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ModifyLoadoutSlot FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-	
-	parseLoadoutSlot(req.bodyStr_, w);
-	return 0;
-}
-
-int CClientUserProfile::ApiBuyItem(int itemId, int buyIdx)
+int CClientUserProfile::ApiBuyItem(int itemId, int buyIdx, __int64* out_InventoryID)
 {
 	r3d_assert(buyIdx > 0);
-	if(RUS_CLIENT && buyIdx >= 1 && buyIdx <= 4) // move buy idx to gamenet range [9-12]
-		buyIdx += 8;
 
 	CWOBackendReq req(this, "api_BuyItem3.aspx");
 	req.AddParam("ItemID", itemId);
@@ -1183,8 +942,8 @@ int CClientUserProfile::ApiBuyItem(int itemId, int buyIdx)
 	}
 
 	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d", &balance);
-	if(nargs != 1)
+	int nargs = sscanf(req.bodyStr_, "%d %I64d", &balance, out_InventoryID);
+	if(nargs != 2)
 	{
 		r3dError("wrong answer for ApiBuyItem");
 		return 9;
@@ -1192,95 +951,12 @@ int CClientUserProfile::ApiBuyItem(int itemId, int buyIdx)
 
 	// update balance
 	if(buyIdx >= 5 && buyIdx <= 8)
-		ProfileData.Stats.GameDollars = balance;
+		ProfileData.GameDollars = balance;
 	else
-		ProfileData.Stats.GamePoints  = balance;
+		ProfileData.GamePoints  = balance;
 
 	return 0;
 }
-
-int CClientUserProfile::ApiChangeGamertag(int itemId, int buyIdx, const char* gametag)
-{
-	r3d_assert(buyIdx > 0);
-	if(RUS_CLIENT && buyIdx >= 1 && buyIdx <= 4) // move buy idx to gamenet range [9-12]
-		buyIdx += 8;
-
-	CWOBackendReq req(this, "api_ChangeGamerTag2.aspx");
-	req.AddParam("ItemID",  itemId);
-	req.AddParam("BuyIdx",  buyIdx);
-	req.AddParam("gametag", gametag);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ChangeGamertag FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-	
-	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d", &balance);
-	if(nargs != 1)
-	{
-		r3dError("wrong answer for ApiChangeGamertag");
-		return 9;
-	}
-
-	// update balance
-	if(buyIdx >= 5 && buyIdx <= 8)
-		ProfileData.Stats.GameDollars = balance;
-	else
-		ProfileData.Stats.GamePoints  = balance;
-
-	return 0;
-}
-
-int CClientUserProfile::ApiGetCreateGameKey(int serverId, DWORD* out_createGameKey, int isBasicGame)
-{
-	*out_createGameKey = 0;
-	
-	CWOBackendReq req(this, "api_GetCreateGameKey3.aspx");
-	req.AddParam("ServerID", serverId);
-	req.AddParam("BasicGame", isBasicGame);
-	if(!req.Issue())
-	{
-		r3dOutToLog("GetCreateGameKey FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_; 
-	}
-
-	int CreateGameKey = 0;
-	int nargs = sscanf(req.bodyStr_, "%d" , &CreateGameKey);
-	if(nargs != 1)
-	{
-		r3dError("wrong answer for GetCreateGameKey");
-		return 9;
-	}
-	
-	*out_createGameKey = CreateGameKey;
-	return 0;
-}
-
-int CClientUserProfile::ApiGNAGetBalance()
-{
-	if(!RUS_CLIENT)
-		r3dError("ApiGNAUpdateBalance");
-		
-	CWOBackendReq req(this, "api_GNAGetBalance.aspx");
-	if(!req.Issue())
-	{
-		r3dOutToLog("GNAUpdateBalance FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d" , &balance);
-	if(nargs != 1)
-	{
-		r3dError("wrong answer for GNAUpdateBalance");
-		return 9;
-	}
-	
-	ProfileData.Stats.GamePoints = balance;
-	return 0;
-}
-
 
 //
 //
@@ -1393,7 +1069,7 @@ int CClientUserProfile::ApiSteamFinishBuyGP(__int64 orderId)
 	int nargs = sscanf(req.bodyStr_, "%d", &balance);
 	r3d_assert(nargs == 1);
 	
-	ProfileData.Stats.GamePoints = balance;
+	ProfileData.GamePoints = balance;
 	return 0;
 }
 
@@ -1470,13 +1146,14 @@ int CClientUserProfile::ApiFriendGetStats(DWORD friendId)
 	return 0;
 }
 
-int CClientUserProfile::ApiGetLeaderboard(int TableID, int StartPos, int* out_CurPos)
+int CClientUserProfile::ApiGetLeaderboard(int hardcore, int type, int page, int& out_startPos, int& out_pageCount)
 {
-	r3d_assert(TableID >= 0 && TableID <= 3);
-	
+	r3d_assert(type >= 0 && type <= 6);
+
 	CWOBackendReq req(this, "api_LeaderboardGet.aspx");
-	req.AddParam("t", TableID);
-	req.AddParam("pos", StartPos);
+	req.AddParam("Type", type);
+	req.AddParam("Hardcore", hardcore);
+	req.AddParam("Page", page);
 
 	if(!req.Issue())
 	{
@@ -1488,26 +1165,21 @@ int CClientUserProfile::ApiGetLeaderboard(int TableID, int StartPos, int* out_Cu
 	req.ParseXML(xmlFile);
 	
 	pugi::xml_node xmlLeaderboard = xmlFile.child("leaderboard");
-	*out_CurPos = xmlLeaderboard.attribute("pos").as_int();
-	int LbSize = xmlLeaderboard.attribute("size").as_int(); // for future use
-	m_lbData[TableID].reserve(100);
-	m_lbData[TableID].clear();
+	out_startPos = xmlLeaderboard.attribute("pos").as_int();
+	out_pageCount = xmlLeaderboard.attribute("pc").as_int();
+
+	m_lbData[type].reserve(100);
+	m_lbData[type].clear();
 
 	pugi::xml_node xmlItem = xmlLeaderboard.first_child();
 	while(!xmlItem.empty())
 	{
 		LBEntry_s lb;
-		r3dscpy(lb.gamertag, xmlItem.attribute("GT").value());
-		lb.stats.HonorPoints = xmlItem.attribute("XP").as_uint();
-		lb.stats.Kills       = xmlItem.attribute("k").as_uint();
-		lb.stats.Deaths      = xmlItem.attribute("d").as_uint();
-		lb.stats.Wins        = xmlItem.attribute("w").as_uint();
-		lb.stats.Losses      = xmlItem.attribute("l").as_uint();
-		lb.stats.ShotsFired  = xmlItem.attribute("f").as_uint();
-		lb.stats.ShotsHits   = xmlItem.attribute("h").as_uint();
-		lb.stats.TimePlayed  = xmlItem.attribute("t").as_uint();
-		lb.havePremium       = xmlItem.attribute("p").as_bool();
-		m_lbData[TableID].push_back(lb);
+		r3dscpy(lb.gamertag, xmlItem.attribute("gt").value());
+		lb.alive = xmlItem.attribute("a").as_int();
+		lb.data = xmlItem.attribute("d").as_int();
+
+		m_lbData[type].push_back(lb);
 
 		xmlItem = xmlItem.next_sibling();
 	}
@@ -1563,253 +1235,6 @@ int CClientUserProfile::ApiMysteryBoxGetContent(int itemId, const MysteryBox_s**
 	mysteryBoxes_.push_back(box);
 	*out_box = &mysteryBoxes_.back();
 	return 0;
-}
-
-int CClientUserProfile::ApiLootBoxBuy(int itemId, int buyIdx)
-{
-	r3d_assert(buyIdx > 0);
-	if(RUS_CLIENT && buyIdx >= 1 && buyIdx <= 4) // move buy idx to gamenet range [9-12]
-		buyIdx += 8;
-
-	CWOBackendReq req(this, "api_MysteryBox.aspx");
-	req.AddParam("func", "roll");
-	req.AddParam("ItemID", itemId);
-	req.AddParam("BuyIdx", buyIdx);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiLootBoxBuy FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d %d %d %d", 
-		&lastMysteryWin_.ItemID, 
-		&lastMysteryWin_.ExpDays, 
-		&lastMysteryWin_.GD,
-		&balance);
-	if(nargs != 4)
-	{
-		r3dError("wrong answer for ApiMysteryBoxBuy");
-		return 9;
-	}
-	
-	// update balance
-	if(buyIdx >= 5 && buyIdx <= 8)
-		ProfileData.Stats.GameDollars = balance;
-	else
-		ProfileData.Stats.GamePoints  = balance;
-		
-	ProfileData.Stats.GameDollars += lastMysteryWin_.GD;
-
-	return 0;
-}
-
-int CClientUserProfile::ApiLootBoxSell(int itemId)
-{
-	// make sure that we have price for selling loot box (permanent GD price in store)
-	uint32 price = 0;
-	for(uint32_t i=0; i<g_NumStoreItems; i++) {
-		if(g_StoreItems[i].itemID == itemId) {
-			price = g_StoreItems[i].gd_pricePerm;
-			break;
-		}
-	}
-	if(price == 0) {
-#ifndef FINAL_BUILD
-		r3dError("there is no sell price for lootbox\n");
-#else
-		return 6;
-#endif
-	}
-
-	CWOBackendReq req(this, "api_MysteryBox.aspx");
-	req.AddParam("func", "sell");
-	req.AddParam("ItemID", itemId);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiLootBoxSell FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	ProfileData.Stats.GameDollars += price;
-
-	lastMysteryWin_.GD     = price;
-	lastMysteryWin_.ItemID = 0;
-	return 0;
-}
-
-int CClientUserProfile::ApiWeaponAttachBuy(int WeaponID, int AttachID, int slot, int buyIdx)
-{
-	r3d_assert(buyIdx > 0);
-	if(RUS_CLIENT && buyIdx >= 1 && buyIdx <= 4) // move buy idx to gamenet range [9-12]
-		buyIdx += 8;
-
-	CWOBackendReq req(this, "api_WeaponAttach.aspx");
-	req.AddParam("func",     "buy");
-	req.AddParam("WeaponID", WeaponID);
-	req.AddParam("AttachID", AttachID);
-	req.AddParam("Slot",     slot);
-	req.AddParam("BuyIdx",   buyIdx);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiWeaponAttachBuy FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-	
-	//TODO: we added *AND EQUIPPED* new attachment to the weapon
-
-	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d", &balance);
-	if(nargs != 1)
-	{
-		r3dError("wrong answer for ApiWeaponAttachBuy");
-		return 9;
-	}
-
-	if(buyIdx >= 5 && buyIdx <= 8)
-		ProfileData.Stats.GameDollars = balance;
-	else
-		ProfileData.Stats.GamePoints  = balance;
-		
-	return 0;
-}
-
-int CClientUserProfile::ApiWeaponAttachEquip(int WeaponID, int AttachID, int slot)
-{
-	CWOBackendReq req(this, "api_WeaponAttach.aspx");
-	req.AddParam("func",     "equip");
-	req.AddParam("WeaponID", WeaponID);
-	req.AddParam("AttachID", AttachID);
-	req.AddParam("Slot",     slot);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiWeaponAttachEquip FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-	
-	//TODO: weapon attachment equipped
-	
-	return 0;
-}
-
-int CClientUserProfile::ApiWeaponAttachFixDefaults(int WeaponID)
-{
-	CWOBackendReq req(this, "api_WeaponAttach.aspx");
-	req.AddParam("func",     "fix");
-	req.AddParam("WeaponID", WeaponID);
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiWeaponAttachFixDefaults FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-	
-	return 0;
-}
-
-int CClientUserProfile::ApiRetBonusGetInfo()
-{
-	CWOBackendReq req(this, "api_RetBonus.aspx");
-	req.AddParam("func", "info");
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiRetBonusGetInfo FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	pugi::xml_document xmlFile;
-	req.ParseXML(xmlFile);
-
-	pugi::xml_node xmlBonus = xmlFile.child("retbonus");
-	curRetentionDays_ = xmlBonus.attribute("d").as_int();
-	minutesToNextRetDay_ = xmlBonus.attribute("m").as_int();
-
-	retentionBonusByDays_.clear();
-	pugi::xml_node xmlDays = xmlBonus.child("days").first_child();
-	while(!xmlDays.empty())
-	{
-		int bonus = xmlDays.attribute("b").as_int();
-		retentionBonusByDays_.push_back(bonus);
-
-		xmlDays = xmlDays.next_sibling();
-	}
-	if(curRetentionDays_ > (int)retentionBonusByDays_.size())
-		curRetentionDays_ = (int)retentionBonusByDays_.size(); // equal size, as index is curRetentionDays_-1
-	
-	return 0;
-}
-
-int CClientUserProfile::ApiRetBonusClaim()
-{
-	CWOBackendReq req(this, "api_RetBonus.aspx");
-	req.AddParam("func", "give");
-	if(!req.Issue())
-	{
-		r3dOutToLog("ApiRetBonusClaim FAILED, code: %d\n", req.resultCode_);
-		return req.resultCode_;
-	}
-
-	int balance = 0;
-	int nargs = sscanf(req.bodyStr_, "%d", &balance);
-	if(nargs != 1)
-	{
-		r3dError("wrong answer for ApiRetBonusClaim");
-		return 9;
-	}
-
-	// update balance
-	if(RUS_CLIENT)
-		ProfileData.Stats.GameDollars = balance;
-	else
-		ProfileData.Stats.GamePoints  = balance;
-	
-	return 0;
-}
-
-int CClientUserProfile::ApiUpdateAchievements(int numAchs, wiAchievement* achs)
-{
-	if(numAchs>0)
-	{
-		CWOBackendReq req(this, "api_ClientUpdateAchievements.aspx");
-		req.AddParam("NumAch",  numAchs);
-		char achIDstr[32];
-		char achValstr[32];
-		char achUnlstr[32];
-		for(int i=0; i<numAchs; ++i)
-		{
-			sprintf(achIDstr, "AchID%d", i);
-			sprintf(achValstr, "AchVal%d", i);
-			sprintf(achUnlstr, "AchUnl%d", i);
-			req.AddParam(achIDstr, achs[i].ID);
-			req.AddParam(achValstr, achs[i].value);
-			req.AddParam(achUnlstr, achs[i].unlocked);
-		}
-		if(!req.Issue())
-		{
-			r3dOutToLog("ApiUpdateAchievements FAILED, code: %d\n", req.resultCode_);
-			return req.resultCode_;
-		}
-	}
-
-	return 0;
-}
-
-void CClientUserProfile::RecordFrontEndAchievements()
-{
-	wiAchievement achievementsToRecord[NUM_ACHIEVEMENTS];
-	int numAchievements = 0;
-	for( int achievementIndex = FIRST_FRONT_END_ACHIEVEMENT; achievementIndex < NUM_ACHIEVEMENTS; achievementIndex++ )
-	{
-		const AchievementConfig* achievementInfo = gWeaponArmory.getAchievementByIndex( achievementIndex );
-		wiAchievement* achievementData = ProfileData.getAchievementDataByID( achievementInfo->id );
-		if ( achievementData != NULL && achievementData->dirty ) {
-			achievementsToRecord[ numAchievements ] = *achievementData;
-			numAchievements++;
-			achievementData->dirty = false;
-		}
-	}
-	if ( numAchievements > 0 ) {
-		ApiUpdateAchievements( numAchievements, achievementsToRecord);
-	}
 }
 
 #endif // ! WO_SERVER

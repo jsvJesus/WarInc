@@ -11,6 +11,8 @@ enum eRenderStageID
 	rsCreateTransparentSM = rsCreateSM + NumShadowSlices,
 	rsFillGBufferFirstPerson,
 	rsFillGBuffer,
+	rsFillGBufferEffects,
+	rsFillGBufferAfterEffects,
 	rsDrawComposite1,
 	rsDrawComposite2,
 	rsDrawPhysicsMeshes, // in editor only
@@ -32,6 +34,7 @@ class PhysicsCallbackObject;
 class GameObject;
 class MeshGameObject;
 class DummyObject;
+class INetworkHelper;
 
 // stack for special object drawing order
 #define OBJ_DRAWORDER_FIRST		100
@@ -49,22 +52,23 @@ enum EGameObjectType
 	OBJTYPE_Mesh				= (1<<2),		// mesh object
 	OBJTYPE_Road				= (1<<3),		// road object
 	OBJTYPE_Building			= (1<<4),		// building object
-	OBJTYPE_Human				= (1<<5), // obj_ai_player
+	OBJTYPE_Human				= (1<<5), // obj_Player
 	OBJTYPE_Particle			= (1<<6), // particle emitter
 	OBJTYPE_Sound				= (1<<7), // sound emitter
 	OBJTYPE_Trees				= (1<<8), // all world trees
-	OBJTYPE_Mine				= (1<<9), // mines
-	OBJTYPE_WeaponDrop  		= (1<<10), // weapon drop
 	OBJTYPE_ApexDestructible	= (1<<11),
 	OBJTYPE_AnimMesh			= (1<<12),
 	OBJTYPE_DecalProxy			= (1<<13),
-	OBJTYPE_LootBoxDrop  		= (1<<14), // loot drop box
 	OBJTYPE_Sprite				= (1<<15),
 #if VEHICLES_ENABLED
 	OBJTYPE_Vehicle				= (1<<16),
 #endif
 	OBJTYPE_Zombie				= (1<<17),
 	OBJTYPE_GameplayItem		= (1<<18),
+	OBJTYPE_CollectionProxy		= (1<<19),
+	OBJTYPE_ItemSpawnPoint		= (1<<20),
+	OBJTYPE_SharedUsableItem	= (1<<21),
+	OBJTYPE_NPC					= (1<<22),
 };
 
 
@@ -96,7 +100,7 @@ enum EGameObjectFlags
 	OBJFLAG_SkipDraw	= (1<<5),		
 
 	// do not check occlusion for this object (usually huge objects, or objects that do not have proper aabb for whatever reason)
-	OBJFLAG_SkipOcclusionCheck = (1<<6),
+	//OBJFLAG_SkipOcclusionCheck = (1<<6),
 
 	OBJFLAG_ForceSceneBoxBBox = (1<<7),
 
@@ -109,6 +113,10 @@ enum EGameObjectFlags
 
 	OBJFLAG_AsyncLoading = (1<<11),
 
+#ifdef WO_SERVER
+	OBJFLAG_AddToDummyWorld = (1<<12),	// special flag to add object to other ObjectManager
+#endif
+
 	// internal flags
 	OBJFLAG_JustCreated	= (1<<20),		// object is just created
 
@@ -117,7 +125,7 @@ enum EGameObjectFlags
 	//	Is object should be culled using map detailed objects cull radius
 	OBJFLAG_Detailed = (1<<24),
 
-	OBJFLAG_ForceSleep = (1<<25)
+	OBJFLAG_ForceSleep = (1<<25),
 };
 
 #define DISABLE_SHADOWS_FLAGS ( OBJFLAG_DisableShadows | OBJFLAG_SkipDraw | OBJFLAG_PlayerCollisionOnly )
@@ -154,7 +162,7 @@ struct CollisionInfo
 
 	// for CLT_Face type
 	r3dMesh	*pMeshObj;		// collided mesh object
-	CollisionInfo() {pMeshObj=0; Material = 0;};
+	CollisionInfo() {pMeshObj=0; Material = 0; Distance = 9999999;};
 };
 
 enum gobjid_e { invalidGameObjectID = 0 };
@@ -227,7 +235,9 @@ public:
 
 //---------------------------------------------------------
 
-typedef r3dTL::TArray< GameObject* > GameObjects ;
+typedef r3dTL::TArray< GameObject* > GameObjects;
+
+extern std::vector<GameObject*> gSkipOcclusionCheckGameObjects;
 
 class GameObject : public AObject, public PhysicsCallbackObject
 {
@@ -239,10 +249,12 @@ private:
 	// it will load one from serialization, or will create a new one in OnCreate()
 
 	r3dPoint3D		vLoadTimePos; // for dynamic objects that are moved by physics in editor, we don't want to update their position in this case. only if moved by designer
-	r3dPoint3D		vPos;
 	r3dPoint3D		vScl;
+	r3dPoint3D		vPos;
 	r3dPoint3D		vLoadTimeRot;
 	r3dPoint3D		vRot;
+
+	DWORD		NetworkID; // should be private! Do not change visibility
 
 	enum EPrivateFlags
 	{
@@ -252,15 +264,18 @@ private:
 	int				PrivateFlags ;
 
 protected:
-	int				FirstUpdate;
-
-protected:
 	// linked list pointers inside ObjectManager
 	friend class ObjectManager;
-	r3dSec_type<GameObject*, 0x37C3DE85> pPrevObject;
-	r3dSec_type<GameObject*, 0xDACE913A> pNextObject;
-	
+	r3dSec_type<GameObject*, 0x1FAA913A> pNextObject;
+	r3dSec_type<GameObject*, 0x37CFDEF5> pPrevObject;
+
+protected:
+	int				FirstUpdate;
+
 public:
+	bool			wasSetSkipOcclusionCheck;
+	void			setSkipOcclusionCheck(bool set);
+
 	bool			m_isSerializable; // set it to false if you don't want that object to write to leveldata.xml (for example particle emmiters)
 	bool			InMainFrustum;
 
@@ -321,7 +336,7 @@ public:
 		bbox_local = local; bbox_world = world ; 
 	}
 
-	virtual void			SetScale			( const r3dPoint3D & v )		{ vScl = v; ShadowExDirty = true ; UpdateTransform(); }
+	virtual void			SetScale			( const r3dPoint3D & v );
 	const r3dPoint3D & 		GetScale			() const						{ return vScl; }
 
 
@@ -342,13 +357,19 @@ public:
 		else             return ID;
 	};
 
-	DWORD		NetworkID;		// network ID: 
 	bool		NetworkLocal;		// TRUE if local computer process this object
+
+	DWORD		GetNetworkID() const { return NetworkID; }
+	bool		SetNetworkID(DWORD id);
 
 	DWORD		GetSafeNetworkID() const {
 		if(this == NULL) return invalidGameObjectID;
 		else             return NetworkID;
 	}
+
+#ifdef WO_SERVER
+	virtual INetworkHelper*	GetNetworkHelper();
+#endif	
 
 	// engine variables
 	int			ObjTypeFlags;		// type of world object
@@ -385,12 +406,14 @@ public:
 	float		time_LifeTime;
 
 	int		DrawOrder;
-	int		bLoaded ;
+	float	DrawDistanceSq;
+	int		bLoaded;
 
 	class BasePhysicsObject* PhysicsObject; // may be null if no physics object
 	bool				m_bEnablePhysics; // per object physics enable/disable flag. By default enabled
 	PhysicsObjectConfig	PhysicsConfig;
 	bool				RecreatePhysicsObject;
+
 	virtual r3dMesh* GetObjectMesh() { return 0; }
 	virtual r3dMesh* GetObjectLodMesh() { return 0 ;}
 
@@ -398,7 +421,7 @@ public:
 
 	void SavePhysicsData();
 
-	static PhysicsObjectConfig LoadPhysicsConfig(r3dMesh* mesh); // static function to load physics settings, to prevent code duplication
+	static void LoadPhysicsConfig(const char* meshName, PhysicsObjectConfig& result); // static function to load physics settings, to prevent code duplication
 protected:
 	void CreatePhysicsData();
 	void ReadPhysicsConfig();
@@ -406,10 +429,10 @@ protected:
 	r3dPoint3D	Velocity;
 public:
 
-	ShadowExtrusionData ShadowExData ;
-	bool				ShadowExDirty ;
+	ShadowExtrusionData ShadowExData;
+	float				LastShadowExtrusion;
 
-	float				LastShadowExtrusion ;
+	bool				ShadowExDirty;
 
 	virtual	void 			SetPosition(const r3dPoint3D& pos);
 	virtual	void 			SetRotationVector(const r3dVector& Angles);
@@ -481,6 +504,7 @@ public:
 	virtual void		WriteSerializedData(pugi::xml_node& node);
 
 	virtual void		OnGameEnded() {};				// ObjMan: called after the current round of gameplay is over. 
+	virtual int			IsStatic() { return false; }
 
 #ifndef FINAL_BUILD
 
@@ -500,6 +524,7 @@ public:
 	virtual GameObject* isGameObject() { return this; }
 	virtual r3dMesh*	hasMesh() { return GetObjectMesh(); }
 	void				PrecalculateMatrices();
+	void				PrecalculateMatricesIgnoreSkinning( PrecalculatedMeshVSConsts* oConsts );
 
 	void				SetTransparentShadowCasting( bool enabled ) ;	
 	int					IsTransparentShadowCaster() const ;
@@ -596,6 +621,12 @@ void PropagateChange( void (C::*updateFunc) (), const r3dTL::TArray< GameObject*
 }
 
 
+R3D_FORCEINLINE int CheckObjectDistance( GameObject* obj, float distSq, float defDistSq )
+{
+	float cmpDistSq = obj->DrawDistanceSq ? obj->DrawDistanceSq : defDistSq;
+
+	return distSq <= cmpDistSq || !r_allow_distance_cull->GetInt();
+}
 
 #include "obj_Mesh.h"
 

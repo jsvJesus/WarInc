@@ -37,6 +37,7 @@ private:
 	r3dPoint3D m_Pos;
 	D3DXMATRIX m_RenderMatrix;
 	float m_StartTime;
+	bool	m_PlayedBrassSound;
 };
 
 class BulletShellMngr

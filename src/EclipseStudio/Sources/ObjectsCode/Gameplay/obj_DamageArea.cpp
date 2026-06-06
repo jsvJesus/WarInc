@@ -21,7 +21,6 @@ obj_DamageArea::obj_DamageArea()
 {
 	m_Radius = 5.0f;
 	m_Damage = 1.0f;
-	m_TeamID = 2;
 
 	ms_DamageAreaArr.PushBack( this ) ;
 }
@@ -58,7 +57,8 @@ BOOL obj_DamageArea::OnCreate()
 	parent::OnCreate();
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck | OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	r3dBoundBox bboxLocal ;
 
@@ -74,15 +74,6 @@ BOOL obj_DamageArea::OnCreate()
 extern bool g_bExplicitlyShowBattleZoneWarning;
 BOOL obj_DamageArea::Update()
 {
-	const ClientGameLogic& CGL = gClientLogic();
-	if(CGL.localPlayer_)
-	{
-		if(CGL.localPlayer_->TeamID == m_TeamID)
-		{
-			if((GetPosition() - CGL.localPlayer_->GetPosition()).Length() < (m_Radius+2.0f)) // add 2 meter buffer zone
-				g_bExplicitlyShowBattleZoneWarning = true;
-		}
-	}
 	return parent::Update();
 }
 
@@ -92,8 +83,6 @@ void obj_DamageArea::ReadSerializedData(pugi::xml_node& node)
 	pugi::xml_node damageAreaNode = node.child("damageArea");
 	m_Radius = damageAreaNode.attribute("radius").as_float();
 	m_Damage = damageAreaNode.attribute("damage").as_float();
-	if(!damageAreaNode.attribute("teamID").empty())
-		m_TeamID = damageAreaNode.attribute("teamID").as_int();
 }
 
 void obj_DamageArea::WriteSerializedData(pugi::xml_node& node)
@@ -103,7 +92,6 @@ void obj_DamageArea::WriteSerializedData(pugi::xml_node& node)
 	damageAreaNode.set_name("damageArea");
 	damageAreaNode.append_attribute("radius") = m_Radius;
 	damageAreaNode.append_attribute("damage") = m_Damage;
-	damageAreaNode.append_attribute("teamID") = m_TeamID;
 }
 
 struct DamageAreaRenderable : Renderable
@@ -163,6 +151,12 @@ void obj_DamageArea::AppendRenderables( RenderArray ( & render_arrays  )[ rsCoun
 	if( r_hide_icons->GetInt() )
 		return ;
 
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
+
 	if(g_Manipulator3d.PickedObject() == this)
 	{
 		DamageAreaRenderable rend;
@@ -206,12 +200,6 @@ float obj_DamageArea::DrawPropertyEditor(float scrx, float scry, float scrw, flo
 		damageVal = m_Damage ;
 		starty += imgui_Value_Slider(scrx, starty, "Damage per second", &damageVal,	0.0f,200.0f,	"%.2f",1);
 		PropagateChange( damageVal, &obj_DamageArea::m_Damage, this, selected ) ;
-
-		static const char* spawntypes[] = { "BLUE", "RED", "EVERYONE"};
-
-		int sel = m_TeamID ;
-		Edit_Value_List(scrx, starty, "DAMAGE FOR TEAM", &sel, spawntypes, R3D_ARRAYSIZE(spawntypes));
-		PropagateChange( sel, &obj_DamageArea::m_TeamID, this, selected ) ;
 	}
 
 	return starty-scry;

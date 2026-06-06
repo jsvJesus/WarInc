@@ -31,44 +31,6 @@ namespace Scaleform { namespace Render {
 // used to determine whether 16-bit integer indices are ok or not. This
 // result depend on matrix scale (similar to mesh quality).
 
-enum VertexElementDataType
-{
-    VEDT_None,
-    VEDT_U8N,
-    VEDT_U8,            
-    VEDT_S16,            
-    VEDT_U16,            
-    VEDT_U32,            
-    VEDT_F32,             
-    VEDT_I8,
-    VEDT_I16,
-};
-
-enum VertexElementUsageType
-{
-    VEUT_None,
-    VETT_Pos,
-    VETT_Color,
-    VETT_TexCoord,
-    VETT_Instance,
-};
-
-enum VertexElementIndexType
-{
-    VEIT_None,
-    VEIT_Index1,
-    VEIT_Index2,
-};
-
-struct AttributeType
-{
-    unsigned                Components : 4;     // Number of components in the element.
-    VertexElementDataType   DataType   : 4;     // Element data type
-    VertexElementUsageType  UsageType  : 4;     // Element usage type
-    VertexElementIndexType  IndexType  : 4;     // Element index type
-    unsigned                Argument   : 1;     // Element argument
-};
-
 enum VertexElementType
 {
     // If this flag is set, all the vertex elements of this type will
@@ -121,11 +83,7 @@ static unsigned VertexTypeSizes[] = {1,1,2,2,4,4};
 struct VertexElement
 {
     unsigned Offset;
-    union
-    {
-        unsigned Attribute;
-        AttributeType AttributeNice;
-    };
+    unsigned Attribute;
 
     inline unsigned CompSize() const
     {

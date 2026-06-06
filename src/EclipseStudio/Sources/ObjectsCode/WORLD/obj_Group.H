@@ -23,7 +23,8 @@ private:
 public:
 
 	void				SetPreviewMode ( bool bPreview );
-	void				SetPreviewObjectsPos ( r3dVector vPos );
+	bool				GetPreviewMode () { return m_bPreviewMode; }
+	void				SetPreviewObjectsPos ( r3dVector vPos, bool dropOnGround );
 	bool				IsGroupJustCreated () const { return m_bGroupJustCreated; }
 	void				ResetJustCreatedFlag ( bool bResetPicked = true );
 	void				SetJustCreatedFlag () {m_bGroupJustCreated = true;}
@@ -33,6 +34,7 @@ public:
 
 	static void			LoadFromFile ( const char * sFile );	
 	static void			SaveToFile ( const char * sFile );	
+	static void			Save();
 
 	static obj_Group *  CreateNewGroup ();
 	static void			DeleteGroup ( obj_Group & group );

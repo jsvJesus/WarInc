@@ -5,6 +5,8 @@
 #include "GenerateUpdaterXML.h"
 #include "UPDATER_CONFIG.h"
 
+#include "LauncherConfig.h"
+
 /*
 <p>
  <u file="RSUpdate.exe" crc="0"/>
@@ -29,13 +31,13 @@ void GenerateUpdaterXML()
   if(CopyFile(fname, newExeName, FALSE) == 0)
     r3dError("unable to copy %s->%s\n", fname, newExeName);
 
-  const char* updater_file = strrchr(UPDATE_UPDATER_URL, '/');
+  const char* updater_file = strrchr(gLauncherConfig.updateLauncherDataURL.c_str(), '/');
   r3d_assert(updater_file);
   FILE* f = fopen_for_write(updater_file+1, "wt");
   
   fprintf(f, "<p>\n");
   fprintf(f, " <u url=\"%s%s\" crc=\"%u\" ver=\"%s\" size=\"%u\"/>\n", 
-    UPDATE_UPDATER_HOST, newExeName, 
+    gLauncherConfig.updateLauncherDataHostURL.c_str(), newExeName, 
     crc32, 
     UPDATER_VERSION,
     size

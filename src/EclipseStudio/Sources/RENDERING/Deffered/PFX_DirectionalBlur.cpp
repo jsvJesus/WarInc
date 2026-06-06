@@ -28,7 +28,7 @@ PFX_DirectionalBlur::PFX_DirectionalBlur( float xDir, float yDir, int tapCount )
 
 	const int MAX_SOURCE_TAPS = 63;
 
-	TL_STATIC_ASSERT( MAX_SOURCE_TAPS & 1 );
+	COMPILE_ASSERT( MAX_SOURCE_TAPS & 1 );
 
 	uint64_t		gauss0[ MAX_SOURCE_TAPS ], 
 					gauss1[ MAX_SOURCE_TAPS ];
@@ -166,7 +166,7 @@ PFX_DirectionalBlur::DoPrepare( r3dScreenBuffer* src, float stepAmplify )
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * offset / src->Height * stepAmplify;
 	}
 
-	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 }
 
 //------------------------------------------------------------------------
@@ -243,7 +243,7 @@ PFX_DirectionalBlurOptimized::DoPrepare(r3dScreenBuffer* src, float stepAmplify)
 		mConstants[ i / 2 ][ i % 2 * 2 + 1 ] = mDirY * offset / src->Height * stepAmplify;
 	}
 
-	r3dRenderer->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, mConstants[0], NUM_PS_CONSTS );
 	r3dSetFiltering(R3D_BILINEAR, 0);
 }
 
@@ -347,12 +347,12 @@ void PFX_DirectionalDepthBlur::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuff
 
 	vConsts[ 3 ] = 0.f;
 	
-	r3dRenderer->SetPixelShaderConstantF( PFX_DirectionalBlur::NUM_PS_CONSTS, vConsts, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( PFX_DirectionalBlur::NUM_PS_CONSTS, vConsts, 1 );
 
 	if( sts.UseStencil )
 	{
 		SetupLightMaskStencilStates( SCM_LITAREA );
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE ) ) ;
 	}
 
 }
@@ -372,7 +372,7 @@ PFX_DirectionalDepthBlur::FinishImpl() /*OVERRIDE*/
 
 	if( sts.UseStencil )
 	{
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) ) ;
 	}
 }
 

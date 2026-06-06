@@ -1,42 +1,37 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
 #ifndef NX_CLOTHING_ASSET_AUTHORING_H
 #define NX_CLOTHING_ASSET_AUTHORING_H
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "NxApex.h"
-#include "NxClothingAsset.h"
-#include "NxModuleClothing.h"
+
+#include "NxApexAsset.h"
+#include "NxApexUserProgress.h"
+#include "NxClothingPhysicalMesh.h"
+
 
 namespace physx
 {
@@ -53,19 +48,19 @@ class NxClothingIsoMesh;
 /**
 \brief The clothing authoring asset. This is used to generate streams that can then be deserialized into a regular asset.
 */
-class NxClothingAssetAuthoring : public NxApexAssetAuthoring, public NxApexInterface
+class NxClothingAssetAuthoring : public NxApexAssetAuthoring
 {
 public:
 
 	/**
 	\brief set the default value for all coefficients if none is available
 	*/
-	virtual void setDefaultConstrainCoefficients(const NxClothConstrainCoefficients& coeff) = 0;
+	virtual void setDefaultConstrainCoefficients(const NxClothingConstrainCoefficients& coeff) = 0;
 
 	/**
 	\brief set the value which is considered invalid when painting
 	*/
-	virtual void setInvalidConstrainCoefficients(const NxClothConstrainCoefficients& coeff) = 0;
+	virtual void setInvalidConstrainCoefficients(const NxClothingConstrainCoefficients& coeff) = 0;
 
 	/**
 	\brief Sets the graphcial and physical mesh for the given graphical lod level.
@@ -86,14 +81,32 @@ public:
 										resemblance. Must be in range (0, 90], but it's highly recommended to use more than 5 degrees.
 	\param [in] ignoreUnusedVertices	All Vertices that have the 'usedForPhysics' property set to false will be ignored when transfering
 										the painted values from the graphical to the physical mesh
-	\param [in] fasterMeshMeshSkinning	A more leightweight and faster mesh-mesh skinning algorithm is used. It should be equivalent or better
-										in quality as well.
 	\param [in] progress				Progress bar callback class.
 	*/
 	virtual void setMeshes(physx::PxU32 lod, NxRenderMeshAssetAuthoring* graphicalMesh, NxClothingPhysicalMesh* physicalMesh,
-	                       physx::PxU32 numMaxDistReductions, physx::PxF32* maxDistReductions = NULL, physx::PxF32 normalResemblance = 25, bool ignoreUnusedVertices = true,
-	                       bool fasterMeshMeshSkinning = true, IProgressListener* progress = NULL) = 0;
+	                       physx::PxU32 numMaxDistReductions = 0, physx::PxF32* maxDistReductions = NULL, physx::PxF32 normalResemblance = 25,
+	                       bool ignoreUnusedVertices = true, IProgressListener* progress = NULL) = 0;
 
+
+	/**
+	\brief Assigns a platform tag to a graphcial lod.
+	*/
+	virtual bool addPlatformToGraphicalLod(physx::PxU32 lod, NxPlatformTag platform) = 0;
+
+	/**
+	\brief Removes a platform tag from a graphical lod.
+	*/
+	virtual bool removePlatform(physx::PxU32 lod,  NxPlatformTag platform) = 0;
+
+	/**
+	\brief Get number of platform tags for a given lod.
+	*/
+	virtual physx::PxU32 getNumPlatforms(physx::PxU32 lod) = 0;
+
+	/**
+	\brief Get i-th platform tag of given lod;
+	*/
+	virtual NxPlatformTag getPlatform(physx::PxU32 lod, physx::PxU32 i) = 0;
 
 	/**
 	\brief Returns the number of LoDs that have been set in the NxClothingAssetAuthoring::setMeshes call
@@ -126,6 +139,13 @@ public:
 	\param [in] parentIndex	The bone index of the parent bone, -1 for root bones.
 	*/
 	virtual void setBoneInfo(physx::PxU32 boneIndex, const char* boneName, const physx::PxMat44& bindPose, physx::PxI32 parentIndex) = 0;
+
+	/**
+	\brief Specifies the root bone.
+
+	\param [in] boneName		The bone name.
+	*/
+	virtual void setRootBone(const char* boneName) = 0;
 
 	/**
 	\brief add a convex collision representation to a bone, vertices must be in bone-bind-pose space!
@@ -181,6 +201,30 @@ public:
 	virtual void clearAllBoneActors() = 0;
 
 	/**
+	\brief Set up the collision volumes for PhysX3.
+	The boneNames, radii and localPositions array need to be of size numSpheres, each triplet describes a sphere that is attached to a bone.
+	The pairs array describes connections between pairs of spheres. It defines capsules with 2 radii.
+
+	\param [in] boneNames			names of the bones to which a spheres are added
+	\param [in] radii				radii of the spheres
+	\param [in] localPositions		sphere positions relative to the bone
+	\param [in] numSpheres			number of spheres that are being defined
+	\param [in] pairs				pairs of indices that reference 2 spheres to define a capsule with 2 radii
+	\param [in] numIndices			size of the pairs array
+	*/
+	virtual void setCollision(const char** boneNames, physx::PxF32* radii, physx::PxVec3* localPositions, PxU32 numSpheres, physx::PxU16* pairs, physx::PxU32 numIndices) = 0;
+
+	/**
+	\brief Set up the collision volumes for PhysX3.
+	*/
+	virtual void setCollision(physx::PxU32* boneIndices, physx::PxF32* radii, physx::PxVec3* localPositions, PxU32 numSpheres, physx::PxU16* pairs, physx::PxU32 numIndices) = 0;
+
+	/**
+	\brief Clear the collision volumes for PhysX3.
+	*/
+	virtual void clearCollision() = 0;
+
+	/**
 	\brief Number of hierarchical levels. 0 to turn off
 
 	If either the hierarchical solver iterations or the hierarchical levels are set to 0, this feature is turned off
@@ -194,14 +238,19 @@ public:
 	virtual void setSimulationThickness(physx::PxF32 thickness) = 0;
 
 	/**
-	\brief The radius of the cloth/softbody particles for the purpose of self-collision.
+	\brief The amount of virtual particles created. 0 means none, 1 means 2 or 3 per triangle.
 	*/
-	virtual void setSimulationSelfcollisionThickness(physx::PxF32 thickness) = 0;
+	virtual void setSimulationVirtualParticleDensity(physx::PxF32 density) = 0;
 
 	/**
 	\brief The sleep velocity. If all vertices of a cloth/softbody are below this velocity for some time, it falls asleep
 	*/
 	virtual void setSimulationSleepLinearVelocity(physx::PxF32 sleep) = 0;
+
+	/**
+	\brief The direction of gravity. Can be used for cooking.
+	*/
+	virtual void setSimulationGravityDirection(const physx::PxVec3& gravity) = 0;
 
 	/**
 	\brief Turn off Continuous collision detection for clothing.
@@ -212,14 +261,6 @@ public:
 	\note Whenever the isContinuous parameter in NxClothingActor::updateState is set to false, cloth CCD will be temporarily disabled as well
 	*/
 	virtual void setSimulationDisableCCD(bool disable) = 0;
-
-	/**
-	\brief Turns on self collision. This prevents two vertices coming closer than their thickness allows, and thus preventing from tunneling
-	if configured correctly.
-
-	\note This comes with a performance penalty
-	*/
-	virtual void setSimulationSelfcollision(bool enable) = 0;
 
 	/**
 	\brief Turns on twoway interaction with rigid body. Only of limited use for clothing
@@ -234,11 +275,9 @@ public:
 	virtual void setSimulationUntangling(bool enable) = 0;
 
 	/**
-	\brief Turn on target FPS for this piece of clothing
-
-	\param [in] frequency	must be either 0 or in a sane range > 10 Hz
+	\brief The scale of the cloth rest length
 	*/
-	virtual void setSimulationTargetFrequency(PxF32 frequency) = 0;
+	virtual void setSimulationRestLengthScale(float scale) = 0;
 
 	/**
 	\brief Provide a scaling to the serialize functionality.
@@ -296,11 +335,6 @@ public:
 	virtual bool setMaterialLibrary(NxParameterized::Interface* materialLibrary, physx::PxU32 materialIndex, bool transferOwnership) = 0;
 
 	/**
-	\brief Returns stats (sizes, counts) for the asset.  See NxClothingAssetStats.
-	*/
-	virtual void getStats(NxClothingAssetStats& stats) const = 0;
-
-	/**
 	\brief Gets the parameterized render mesh associated with this asset.
 
 	\param [in] lodLevel	The LoD level of the render mesh asset
@@ -326,7 +360,7 @@ public:
 
 PX_POP_PACK
 
-}
-} // namespace physx::apex
+} // namespace apex
+} // namespace physx
 
-#endif // __NX_CLOTHING_ASSET_AUTHORING_H__
+#endif // NX_CLOTHING_ASSET_AUTHORING_H

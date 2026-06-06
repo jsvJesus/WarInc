@@ -196,35 +196,6 @@ void InitSSAO ()
 
 	}
 
-	// HBAO+ defaults
-	{
-		SSAOSettings& sts = g_SSAOSettings[ SSM_HBAO_PLUS ];
-
-		sts.Radius			= 1.5f;
-		sts.DepthRange			= 0.5f;
-		sts.Brightness			= 1.0f;
-		sts.Contrast			= 1.0f;
-
-		sts.BlurDepthSensitivity	= 25.0f;
-		sts.BlurStrength		= 1.0f;
-		sts.RadiusExpandStart		= 0.f;
-		sts.RadiusExpandCoef		= 0.f;
-
-		sts.TemporalTolerance		= 4.0f;
-		sts.TemporalHistoryDepth	= 8.0f;
-
-		sts.DetailPathEnable		= 0;
-		sts.DetailRadius		= 0.0f;
-		sts.DetailDepthRange		= 0.0f;
-		sts.DetailStrength		= 0.0f;
-		sts.DetailRadiusExpandStart	= 0.f;
-		sts.DetailRadiusExpandCoef	= 0.f;
-		sts.DetailFadeOut		= 0.f;
-
-		sts.BlurTapCount		= 5;
-		sts.BlurPassCount		= 1;
-	}
-
 	// NORMAL constraints
 	{
 		SSAOConstraints& constr = g_SSAOConstraints[ SSM_REF ];
@@ -288,27 +259,6 @@ void InitSSAO ()
 		constr.MinDetailFadeOut				= 0.0f,		constr.MaxDetailFadeOut				= 32.0f;
 	}
 
-	// HBAO+ constraints
-	{
-		SSAOConstraints& constr = g_SSAOConstraints[ SSM_HBAO_PLUS ];
-
-		constr.MinRadius			= 0.1f;	constr.MaxRadius			= 3.0f;
-		constr.MinDepthRange			= 0.05f;	constr.MaxDepthRange			= 2.0f;
-		constr.MinBrightness			= 0.0f;	constr.MaxBrightness			= 2.0f;
-		constr.MinContrast			= 0.0f;	constr.MaxContrast			= 2.0f;
-		constr.MinBlurDepthSensitivity		= 0.0f;	constr.MaxBlurDepthSensitivity		= 50.0f;
-		constr.MinBlurStrength			= 0.0f;	constr.MaxBlurStrength			= 1.0f;
-		constr.MinRadiusExpandStart		= 0.0f;	constr.MaxRadiusExpandStart		= 200.f;
-		constr.MinRadiusExpandCoef		= 0.0f;	constr.MaxRadiusExpandCoef		= 0.07f;
-
-		constr.MinDetailStrength		= 0.0f;	constr.MaxDetailStrength		= 0.0f;
-		constr.MinDetailRadius			= 0.0f;	constr.MaxDetailRadius			= 0.0f;
-		constr.MinDetailDepthRange		= 0.0f;	constr.MaxDetailDepthRange		= 0.0f;
-		constr.MinDetailRadiusExpandStart	= 0.0f;	constr.MaxDetailRadiusExpandStart	= 0.0f;
-		constr.MinDetailRadiusExpandCoef	= 0.0f;	constr.MaxDetailRadiusExpandCoef	= 0.0f;
-		constr.MinDetailFadeOut			= 0.0f;	constr.MaxDetailFadeOut			= 0.0f;
-	}
-
 }
 
 void InitColorCorrection()
@@ -362,57 +312,55 @@ void GetCCLUT3DTextureFullPath( char (&buffer)[512], const char* name )
 	sprintf( buffer, EC_CCLUT3D_TEX_PATH "%s", name );
 }
 
-bool IsCCLUT3DTextureUsedAsGlobal( const char* name )
+int IsCCLUT3DTextureUsedAsGlobal( const char* name )
 {
-	bool rv = true;
-	for (int i = 0; i < HUDFilter_Total; ++i)
-	{
-		rv &= !strcmpi( name, gHUDFilterSettings[i].colorCorrectionTextureName );
-	}
-	return rv;
+	return gHUDFilterSettings[ HUDFilter_Default ].IsTextureUsedAsColorCorrection( name );
 }
 
 void RestoreCCLUT3DTexture ()
 {
-	for (int i = 0; i < HUDFilter_Total; ++i)
+	for( int i = 0; i < HUDFilter_Total; i++ )
 	{
-		HUDFilterSettings &hfs = gHUDFilterSettings[i];
-		if (hfs.colorCorrectionTex)
-		{
-			r3dRenderer->DeleteTexture( hfs.colorCorrectionTex );
-			hfs.colorCorrectionTex = NULL;
-		}
+		gHUDFilterSettings[i].DeleteColorCorrectionTextures();
+	}
 
-		char fullPath[ 512 ];
-
-		GetCCLUT3DTextureFullPath( fullPath, hfs.colorCorrectionTextureName );
-		hfs.colorCorrectionTex = r3dRenderer->LoadTexture( fullPath );
+	for( int i = 0; i < HUDFilter_Total; i++ )
+	{
+		gHUDFilterSettings[i].LoadColorCorrectionTextures();
 	}
 }
 
-const char* GetCCLUT3DTextureName( HUDFilters filter )
+const r3dString& GetCCLUT3DTextureName( HUDFilters filter, r3dAtmosphere::SkyPhase phase )
 {
 	const HUDFilterSettings &hfs = gHUDFilterSettings[filter];
-	return hfs.colorCorrectionTextureName ;
+	return hfs.colorCorrectionTextureNames[ phase ];
 }
 
-void ReloadCCLUT3DTexture( const char* newName, HUDFilters filter )
+void ReloadCCLUT3DTexture( const char* newName, r3dAtmosphere::SkyPhase phase, HUDFilters filter )
 {
 	HUDFilterSettings &hfs = gHUDFilterSettings[filter];
 
-	if( hfs.colorCorrectionTex )
+	if( hfs.colorCorrectionTextures[ phase ] )
 	{
-		r3dRenderer->DeleteTexture( hfs.colorCorrectionTex );
-		hfs.colorCorrectionTex = NULL;
+		r3dRenderer->DeleteTexture( hfs.colorCorrectionTextures[ phase ] );
+		hfs.colorCorrectionTextures[ phase ] = NULL;
 	}
 
 	char fullPath[ 512 ];
 
 	GetCCLUT3DTextureFullPath( fullPath, newName );
 
-	r3dscpy( hfs.colorCorrectionTextureName, newName );
+	r3dscpy( hfs.colorCorrectionTextureNames[ phase ], newName );
 
-	hfs.colorCorrectionTex = r3dRenderer->LoadTexture( fullPath );
+	hfs.colorCorrectionTextures[ phase ] = r3dRenderer->LoadTexture( fullPath );
+}
+
+void ReloadAllCCLUT3DTextures( const char* newName, HUDFilters filter )
+{	
+	for( int i = 0, e = r3dAtmosphere::SKY_PHASE_COUNT; i < e ; i ++ )
+	{
+		ReloadCCLUT3DTexture( newName, r3dAtmosphere::SkyPhase( i ), filter );
+	}
 }
 
 void PostFX_UpdateResources()
@@ -428,9 +376,10 @@ void PostFX_UpdateResources()
 		RadialBlur_ModulationTex = r3dRenderer->LoadTexture( "Data\\Shaders\\Texture\\Modulation.dds" );
 	}
 
-	if( gHUDFilterSettings[HUDFilter_Default].colorCorrectionTex == NULL )
+	if( gHUDFilterSettings[HUDFilter_Default].colorCorrectionTextures[ 0 ] == NULL )
 	{
-		ReloadCCLUT3DTexture( "default.dds", HUDFilter_Default );
+		gHUDFilterSettings[HUDFilter_Default].FixColorCorrectionTextureNames();
+		gHUDFilterSettings[HUDFilter_Default].LoadColorCorrectionTextures();
 	}
 }
 
@@ -449,40 +398,32 @@ void RenderSSAORefEffect()
  //r3dRenderer->SetRenderingMode(R3D_BLEND_MODULATE | R3D_BLEND_NZ);
  r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
- r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
- r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
- r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
- r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
- r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
+ r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+ r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+ r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
+ r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+ r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP);
 
  float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
  D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, r3dRenderer->ScreenW * 0.25f * noiseScaleK, r3dRenderer->ScreenH * 0.25f * noiseScaleK );
- r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+ r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
  // mat proj
 
- float fNear = -r3dRenderer->ProjMatrix._43/(r3dRenderer->ProjMatrix._33);
- float fFar = fNear / ( 1.0f - 1.0f/(r3dRenderer->ProjMatrix._33) );
+ float fNear = r3dRenderer->NearClip;
+ float fFar = r3dRenderer->FarClip;
 
  const SSAOSettings& sts = g_SSAOSettings[ SSM_REF ];
 
  D3DXVECTOR4 pconst0 = D3DXVECTOR4(sts.Radius/fFar, sts.Radius/fFar*r3dRenderer->ScreenH/r3dRenderer->ScreenW, sts.DepthRange/fFar, 1.0f / fFar );
- float test1 = fFar/r3dRenderer->ProjMatrix._43;
- float test2 = -fFar * (r3dRenderer->ProjMatrix._33) / r3dRenderer->ProjMatrix._43;
+ D3DXVECTOR4 pconst1 = D3DXVECTOR4(0.f, 0.f, sts.RadiusExpandStart / fFar, fFar * sts.RadiusExpandCoef );
+ D3DXVECTOR4 pconst2 = D3DXVECTOR4( sts.Contrast, sts.Brightness * sts.Contrast - 1.5f * sts.Contrast + 0.5f, 0.f, 0.f ); 
 
-#if 0
- D3DXVECTOR4 pconst1 = D3DXVECTOR4(test1, test2, fFar/5.11f, fFar/8.0f );
-#else
- D3DXVECTOR4 pconst1 = D3DXVECTOR4(test1, test2, sts.RadiusExpandStart / fFar, fFar * sts.RadiusExpandCoef );
-#endif
- D3DXVECTOR4 pconst2 = D3DXVECTOR4( sts.Contrast, sts.Brightness * sts.Contrast - 1.5f * sts.Contrast + 0.5f, 0.f, 0.f );
- 
-
- r3dRenderer->SetPixelShaderConstantF(  0, (float *)&pconst0,  1 );
- r3dRenderer->SetPixelShaderConstantF(  1, (float *)&pconst1,  1 );
- r3dRenderer->SetPixelShaderConstantF(  2, (float *)&pconst2,  1 );
+ r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&pconst0,  1 );
+ r3dRenderer->pd3ddev->SetPixelShaderConstantF(  1, (float *)&pconst1,  1 );
+ r3dRenderer->pd3ddev->SetPixelShaderConstantF(  2, (float *)&pconst2,  1 );
  
  r3dSetFiltering( R3D_POINT, 0 );
  r3dSetFiltering( R3D_POINT, 1 );
@@ -493,7 +434,7 @@ void RenderSSAORefEffect()
  r3dRenderer->SetTex( SSAO_RotTex, 2 );
  r3dRenderer->SetTex( DepthBuffer->Tex );
 
- r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	D3DCOLORWRITEENABLE_RED );
+ r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	D3DCOLORWRITEENABLE_RED );
 
  r3dDrawFullScreenQuad(!!r_half_scale_ssao->GetInt());
 
@@ -501,7 +442,7 @@ void RenderSSAORefEffect()
 
  r3dRenderer->SetVertexShader();
  r3dRenderer->SetPixelShader();
- r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
+ r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
 }
 
 D3DXMATRIX g_PrevSSAO_View ;
@@ -515,6 +456,29 @@ void FinalizeSSAORender()
 {
 	g_PrevSSAO_Valid = 1 ;
 	g_PrevSSAO_View = r3dRenderer->ViewMatrix ;
+}
+
+float GetDefaultSSAOValue()
+{
+	const SSAOSettings& sts = g_SSAOSettings[ r_ssao_method->GetInt() ];
+
+	float val = sts.Contrast + sts.Brightness * sts.Contrast - 1.5f * sts.Contrast + 0.5f;
+
+	return val;
+}
+
+void UpdateSSAOClearValue()
+{
+	if( r_half_scale_ssao->GetInt() )
+	{
+		r_ssao_clear_val->SetFloat( 0.f );
+	}
+	else
+	{
+		float defVal = GetDefaultSSAOValue();
+
+		r_ssao_clear_val->SetFloat( defVal );
+	}
 }
 
 void RenderSSAOEffect( bool lightWeight )
@@ -560,28 +524,30 @@ void RenderSSAOEffect( bool lightWeight )
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
 
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	float noiseScaleK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
 
-	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, r3dRenderer->ScreenW * 0.25f * noiseScaleK, r3dRenderer->ScreenH * 0.25f * noiseScaleK );
-	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+	extern r3dScreenBuffer* gBuffer_Depth;
+
+	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / gBuffer_Depth->Width, 0.5f / gBuffer_Depth->Height, gBuffer_Depth->Width * 0.25f * noiseScaleK, gBuffer_Depth->Height * 0.25f * noiseScaleK );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
 	// mat proj
 
-	float fNear = -r3dRenderer->ProjMatrix._43/(r3dRenderer->ProjMatrix._33);
-	float fFar = fNear / ( 1.0f - 1.0f/(r3dRenderer->ProjMatrix._33) );
+	float fNear = r3dRenderer->NearClip;
+	float fFar = r3dRenderer->FarClip;
 
 	const int RAYS_START = 7 + 3 + 3 + 3 ;
 
 #define SSAO_ALT_DETAIL_NUM_RAYS	24
 
-	TL_STATIC_ASSERT( SSAO_ALT_DETAIL_NUM_RAYS > SSAO_ALT_NUM_RAYS );
+	COMPILE_ASSERT( SSAO_ALT_DETAIL_NUM_RAYS > SSAO_ALT_NUM_RAYS );
 
 	const int RADIUS_SPLIT = SSAO_ALT_NUM_RAYS;
 
@@ -608,7 +574,7 @@ void RenderSSAOEffect( bool lightWeight )
 	// float4      g_vInvProjScaleTrans        : register ( c2 );
 	pconsts[ 2 ] = D3DXVECTOR4( 2.0f / r3dRenderer->ProjMatrix._11, -2.0f / r3dRenderer->ProjMatrix._22, -1.0f / r3dRenderer->ProjMatrix._11, 1.0f / r3dRenderer->ProjMatrix._22 );
 	// float4      g_vInvRes_DepthFadeRange    : register ( c3 );
-	pconsts[ 3 ] = D3DXVECTOR4( 1.0f / r3dRenderer->ScreenW, 1.0f / r3dRenderer->ScreenH, 0.985f * fFar, 0.99f * fFar );
+	pconsts[ 3 ] = D3DXVECTOR4( 1.0f / gBuffer_Depth->Width, 1.0f / gBuffer_Depth->Height, 0.985f * fFar, 0.99f * fFar );
 	// float4      g_vExpandRanges             : register ( c4 );
 	pconsts[ 4 ] = D3DXVECTOR4( sts.RadiusExpandStart, sts.DetailRadiusExpandStart, sts.RadiusExpandCoef, sts.DetailRadiusExpandCoef );
 	// float4      g_vDetail_Fade_ZScale1      : register ( c5 );
@@ -694,7 +660,7 @@ void RenderSSAOEffect( bool lightWeight )
 		}
 	}
 
-	r3dRenderer->SetPixelShaderConstantF(  0, (float*)pconsts, RAYS_START + NUM_RAYS );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float*)pconsts, RAYS_START + NUM_RAYS );
 
 	r3dSetFiltering( R3D_POINT, 0 );
 	r3dSetFiltering( R3D_POINT, 1 );
@@ -710,10 +676,10 @@ void RenderSSAOEffect( bool lightWeight )
 
 	if( doSSAOTemporalOptimize )
 	{
-		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 		r3dSetFiltering( R3D_BILINEAR, 3 );
 		r3dSetFiltering( R3D_POINT, 4 );
@@ -724,108 +690,20 @@ void RenderSSAOEffect( bool lightWeight )
 
 #if R3D_ALLOW_TEMPORAL_SSAO
 	if( r_ssao_temporal_filter->GetInt() == R3D_SSAO_TEMPORAL_FILTER )
-		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN );
+		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN );
 	else
 #endif
-		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED );
+		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED );
 
-	r3dDrawFullScreenQuad(!!r_half_scale_ssao->GetInt());
+	r3dDrawFullScreenQuad( false );
 
 	r3dRenderer->SetMipMapBias(0, 2);
 
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 	0xffffffff );
 }
 
-
-// ═══════════════════════════════════════════════════════════════
-// HBAO+ — NVIDIA native GFSDK_SSAO (D3D11)
-// ═══════════════════════════════════════════════════════════════
-
-#ifndef WO_SERVER
-
-#include "RENDERING/Deffered/HBAOPlusWrapper.h"
-
-extern r3dScreenBuffer* gBuffer_Aux;
-
-void RenderHBAOPlusEffect()
-{
-	if (!r_ssao->GetBool())
-		return;
-
-	if (!g_r3dDX11.IsInitialized())
-	{
-		r3dOutToLog("HBAO+: DX11 is not initialized, falling back to HSAO\n");
-		RenderSSAOEffect(true);
-		return;
-	}
-
-	extern int __SSAOBlurEnable;
-	int prevBlur = __SSAOBlurEnable;
-	__SSAOBlurEnable = 0;
-
-	if (!g_HBAOPlus.IsInitialized())
-	{
-		ID3D11Device* device = g_r3dDX11.GetDevice();
-		ID3D11DeviceContext* ctx = g_r3dDX11.GetContext();
-		ID3D11DepthStencilView* depthDSV = g_r3dDX11.GetDepthStencilView();
-
-		if (!device || !ctx || !depthDSV)
-		{
-			r3dOutToLog("HBAO+: no DX11 device/context/depth DSV, falling back to HSAO\n");
-			__SSAOBlurEnable = prevBlur;
-			RenderSSAOEffect(true);
-			return;
-		}
-
-		if (!g_HBAOPlus.Init(device, ctx, depthDSV, r3dRenderer->ScreenW, r3dRenderer->ScreenH))
-		{
-			r3dOutToLog("HBAO+: init failed, falling back to HSAO\n");
-			__SSAOBlurEnable = prevBlur;
-			RenderSSAOEffect(true);
-			return;
-		}
-
-		r3dOutToLog("HBAO+: initialized and selected\n");
-	}
-
-	GFSDK_SSAO_Parameters& p = g_HBAOPlus.GetParameters();
-
-	p.Radius = r_hbao_radius->GetFloat();
-	p.Bias = r_hbao_bias->GetFloat();
-	p.PowerExponent = r_hbao_power->GetFloat();
-	p.SmallScaleAO = 1.0f;
-	p.LargeScaleAO = 1.0f;
-	p.Blur.Enable = true;
-	p.Blur.Radius = GFSDK_SSAO_BLUR_RADIUS_4;
-	p.Blur.Sharpness = r_hbao_blur_sharpness->GetFloat();
-
-	if (!g_HBAOPlus.RenderAOToScreenBuffer(r3dRenderer->ProjMatrix, 1.0f, gBuffer_Aux))
-	{
-		r3dOutToLog("HBAO+: RenderAOToScreenBuffer failed, falling back to HSAO\n");
-		__SSAOBlurEnable = prevBlur;
-		RenderSSAOEffect(true);
-		return;
-	}
-
-	static bool hbaoFrameLogged = false;
-	if (!hbaoFrameLogged)
-	{
-		r3dOutToLog("HBAO+: frame rendered to gBuffer_Aux\n");
-		hbaoFrameLogged = true;
-	}
-
-	__SSAOBlurEnable = prevBlur;
-}
-
-#else
-
-void RenderHBAOPlusEffect()
-{
-}
-
-#endif
 
 void RenderSSAOEffect ()
 {
@@ -842,7 +720,7 @@ void RenderSSAOEffect ()
 		// is SSAOed. With full scale ssao we use stencil to avoid expensive
 		// stuff where sky is, so we have to clear to not let it through.
 		// ( this step is done later if SSAO blur is on )
-		r3dRenderer->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ;
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, r3dRenderer->GetClearZValue(), 0 ) ) ;
 	}
 
 	switch( r_ssao_method->GetInt() )
@@ -856,9 +734,6 @@ void RenderSSAOEffect ()
 	case SSM_HQ:
 		RenderSSAOEffect( false );
 		break;
-	case SSM_HBAO_PLUS:
-		RenderHBAOPlusEffect();
-		break;
 	}
 
 	R3DPROFILE_D3DEND( D3DPROFILE_SSAO ) ;
@@ -869,7 +744,7 @@ void RenderSSAOEffect ()
 static void SetupScreenTexDSP( int contNum )
 {
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, 0.f, 0.f );
-	r3dRenderer->SetVertexShaderConstantF(  contNum, (float *)&vconst, 1  );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  contNum, (float *)&vconst, 1  );
 }
 
 void RenderLUT1DColorCorrection( r3dScreenBuffer* SourceTex, bool hsv )
@@ -884,10 +759,10 @@ void RenderLUT1DColorCorrection( r3dScreenBuffer* SourceTex, bool hsv )
 	r3dSetFiltering( R3D_POINT,		0 );
 	r3dSetFiltering( R3D_BILINEAR,	1 );
 
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 	r3dRenderer->SetTex( SourceTex->Tex );
 	extern r3dTexture* CC_LUT1D_HSV_Tex, *CC_LUT1D_RGB_Tex;
@@ -912,10 +787,10 @@ void CopyScreen( r3dScreenBuffer* SourceTex )
 	r3dRenderer->SetVertexShader( "VS_POSTFX" );
 	r3dRenderer->SetPixelShader( "PS_FSCOPY" );
 
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 	r3dSetFiltering( R3D_POINT, 0 );
 
@@ -942,7 +817,7 @@ void DiluteSSAOMask( r3dScreenBuffer *sourceTex )
 	HalfScale = !!r_half_scale_ssao->GetInt() ;
 
 	float vConsts[ 4 ] = {	1.0f / r3dRenderer->ScreenW, 0.f, 0.f, 1.0f / r3dRenderer->ScreenH } ;
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConsts, 1 ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConsts, 1 ) ) ;
 
 	r3dRenderer->SetVertexShader( "VS_SSAO" ) ;
 	r3dRenderer->SetPixelShader( "PS_SSAO_MASK_DILUTE" ) ;
@@ -950,11 +825,11 @@ void DiluteSSAOMask( r3dScreenBuffer *sourceTex )
 	r3dRenderer->SetTex( sourceTex->Tex, 0 ) ;
 	r3dSetFiltering( R3D_BILINEAR, 0 ) ;
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
-	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst, 1 ) ;
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst, 1 ) ;
 
 	r3dDrawFullScreenQuad(!!HalfScale);
 
@@ -998,7 +873,7 @@ void CompositeSSAO( r3dScreenBuffer* currSSAO )
 	D3DXMatrixInverse( &fromPrevViewMtx, NULL, &toPrevViewMtx ) ;
 	D3DXMatrixTranspose( (D3DXMATRIX*)&psConsts[6], &fromPrevViewMtx );
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
 
 	extern r3dScreenBuffer* gBuffer_Depth ;
 
@@ -1011,12 +886,12 @@ void CompositeSSAO( r3dScreenBuffer* currSSAO )
 	{
 		r3dSetFiltering( R3D_BILINEAR, i ) ;
 
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 	}
 
 	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK ) ;
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&vconst, 1 ) ;
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&vconst, 1 ) ;
 
 	r3dDrawFullScreenQuad( !!HalfScale ) ;
 
@@ -1040,16 +915,10 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 
 	r3dSetRestoreFSQuadVDecl setRestoreVDECL; (void)setRestoreVDECL;
 
-	float resK;
-	int HalfScale;
-
-	resK = r_half_scale_ssao->GetInt() ? 0.5f : 1.0f;
-	HalfScale = !!r_half_scale_ssao->GetInt();
-
 	int Normals = !!r_ssao_blur_w_normals->GetInt() ;
 
-	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, resK, resK );
-	r3dRenderer->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
+	D3DXVECTOR4 vconst = D3DXVECTOR4( 0.5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, 1.0f, 1.0f );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  0, (float *)&vconst,  1 );
 
 	r3dRenderer->SetVertexShader("VS_SSAO"); 
 
@@ -1058,46 +927,30 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 	int tapCount = sts.BlurTapCount;
 
 	char SSAOBlurPSName[ 32 ];
-	GetSSAOBlurPSName( SSAOBlurPSName, tapCount, HalfScale, Normals );
+	GetSSAOBlurPSName( SSAOBlurPSName, tapCount, 0, Normals );
 
 	D3DXVECTOR4 pconsts[2];
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP ) );
 
 	TempTex->Activate();
 
-	if( HalfScale )
-	{
-		D3DRECT clearRects[2];
+	// with half scale ssao we don't use stencil so the background
+	// is SSAOed. With full scale ssao we use stencil to avoid expensive
+	// stuff where sky is, so we have to clear to not let it through.
 
-		int FilterDim = tapCount * 3 / 2;
+	DWORD clearVal = R3D_MIN( R3D_MAX( int( r_ssao_clear_val->GetFloat() * 0xff ), 0 ), 0xff );
 
-		clearRects[0].x1 = int( TempTex->Width * 0.5f ) - FilterDim;
-		clearRects[0].x2 = int( TempTex->Width * 0.5f ) + FilterDim;
-		clearRects[0].y1 = 0;
-		clearRects[0].y2 = int( TempTex->Height * 0.5f ) + 1;
+	clearVal |= clearVal << 8 | clearVal << 16 | clearVal << 24;
 
-		clearRects[1].x1 = 0;
-		clearRects[1].x2 = int( TempTex->Width * 0.5f ) + FilterDim;
-		clearRects[1].y1 = int( TempTex->Height * 0.5f ) - FilterDim;
-		clearRects[1].y2 = int( TempTex->Height * 0.5f ) + FilterDim;
-
-		r3dRenderer->Clear( 2, clearRects, D3DCLEAR_TARGET,	0xffffffff,	1.0f, 0 );
-	}
-	else
-	{
-		// with half scale ssao we don't use stencil so the background
-		// is SSAOed. With full scale ssao we use stencil to avoid expensive
-		// stuff where sky is, so we have to clear to not let it through.
-		r3dRenderer->Clear( 0, 0, D3DCLEAR_TARGET, 0xffffffff, 1.f, 0 ) ;
-	}
+	D3D_V( r3dRenderer->pd3ddev->Clear( 0, 0, D3DCLEAR_TARGET, clearVal, r3dRenderer->GetClearZValue(), 0 ) ) ;
 
 	TempTex->Deactivate();
 
@@ -1108,9 +961,8 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		const SSAOSettings& sts = g_SSAOSettings[ r_ssao_method->GetInt() ];
 
 		pconsts[0] = D3DXVECTOR4( -sts.BlurDepthSensitivity, sts.BlurStrength, 1.0f / r3dRenderer->ScreenW, 0.0f );
-		pconsts[1] = D3DXVECTOR4( 1.0f / r3dRenderer->ScreenW / resK, 0.0f, 0.0f, 0.0f );
 
-		r3dRenderer->SetPixelShaderConstantF(  0, (float *)pconsts,  2 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)pconsts,  1 );
 
 		r3dSetFiltering( R3D_POINT, 0 );
 		r3dSetFiltering( R3D_POINT, 1 );
@@ -1119,7 +971,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 
 		r3dRenderer->SetTex( SourceTex->Tex );
 
-		r3dDrawFullScreenQuad(!!HalfScale);
+		r3dDrawFullScreenQuad( false );
 
 		TempTex->Deactivate();
 
@@ -1128,9 +980,8 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 		r3dRenderer->SetPixelShader( SSAOBlurPSName );
 
 		pconsts[0] = D3DXVECTOR4( -sts.BlurDepthSensitivity, sts.BlurStrength, 0.0f, 1.0f / r3dRenderer->ScreenH );
-		pconsts[1] = D3DXVECTOR4( 0.f, 1.0f / r3dRenderer->ScreenH / resK, 0.0f, 0.0f );
 
-		r3dRenderer->SetPixelShaderConstantF( 0, (float *)pconsts,  2 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float *)pconsts, 1 );
 
 		r3dSetFiltering( R3D_POINT, 0 );
 		r3dSetFiltering( R3D_POINT, 1 );
@@ -1138,7 +989,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 
 		r3dRenderer->SetTex( TempTex->Tex );
 
-		r3dDrawFullScreenQuad(!!HalfScale);
+		r3dDrawFullScreenQuad( false );
 
 		SourceTex->Deactivate();
 	}
@@ -1146,7 +997,7 @@ void BlurSSAO(r3dScreenBuffer *SourceTex, r3dScreenBuffer *TempTex)
 	r3dRenderer->SetPixelShader();
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->EndRenderSimple();
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 																	D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA );
 }
 

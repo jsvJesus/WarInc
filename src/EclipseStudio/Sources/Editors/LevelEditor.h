@@ -46,7 +46,6 @@ struct Editor_Level
 	int		EnvironmentEditMode;
 
 	r3dScreenBuffer* m_pPreviewBuffer;
-	DecalGameObjectProxy *mDecalProxyObj;
 
 	r3dColor	m_tPaintTerrainColor;
 
@@ -79,7 +78,6 @@ struct Editor_Level
 	void	ProcessMaterials();
 	void	ProcessGroups();
 	void	ProcessDamageLib();
-	void	ProcessTCamo();
 	void	ProcessUtils();
 	void	ProcessCameraSpots();
 	void	ProcessMeshes();
@@ -95,6 +93,7 @@ struct Editor_Level
 	void	ProcessPost_Debug();
 
 	void	ProcessColorGrading();
+	float	ProcessColorCorrectionMenu( struct HUDFilterSettings &hfs, float SliderX, float SliderY );
 
 	void	ProcessCollections();
 	void	ProcessDecorators();
@@ -103,9 +102,16 @@ struct Editor_Level
 	void	ProcessParticleGun();
 
 	void	ProcessNavigation();
+	void	ProcessAutodeskNavigation(float SliderX, float SliderY);
+	void	ProcessNavigationRegions(float SliderX, float SliderY);
 
 	void	ProcessLightProbesCreate();
 	void	ProcessLightProbesEdit();
+
+	float	ProcessStaticSky( float SliderX, float SliderY );
+
+	float	ProcessSkySun( float SliderX, float SliderY );
+	float	ProcessLightSetup( float SliderX, float SliderY );
 
 	void	FlushStates();
 	

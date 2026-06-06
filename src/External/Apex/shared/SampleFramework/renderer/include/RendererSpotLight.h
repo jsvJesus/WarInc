@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,38 +36,42 @@
 #define RENDERER_SPOT_LIGHT_H
 
 #include <RendererLight.h>
-#include <PxVec3.h>
 
-class RendererSpotLightDesc;
-
-class RendererSpotLight : public RendererLight
+namespace SampleRenderer
 {
+
+	class RendererSpotLightDesc;
+
+	class RendererSpotLight : public RendererLight
+	{
 	protected:
 		RendererSpotLight(const RendererSpotLightDesc &desc);
 		virtual ~RendererSpotLight(void);
-	
+
 	public:
-		const physx::PxVec3		 &getPosition(void) const;
-		void                      setPosition(const physx::PxVec3 &pos);
-		
-		const physx::PxVec3		 &getDirection(void) const;
-		void                      setDirection(const physx::PxVec3 &dir);
-		
-		physx::PxF32                    getInnerRadius(void) const;
-		physx::PxF32                    getOuterRadius(void) const;
-		void                      setRadius(physx::PxF32 innerRadius, physx::PxF32 outerRadius);
-		
-		physx::PxF32                    getInnerCone(void) const;
-		physx::PxF32                    getOuterCone(void) const;
-		void                      setCone(physx::PxF32 innerCone, physx::PxF32 outerCone);
-		
+		const PxVec3 &getPosition(void) const;
+		void          setPosition(const PxVec3 &pos);
+
+		const PxVec3 &getDirection(void) const;
+		void          setDirection(const PxVec3 &dir);
+
+		PxF32         getInnerRadius(void) const;
+		PxF32         getOuterRadius(void) const;
+		void          setRadius(PxF32 innerRadius, PxF32 outerRadius);
+
+		PxF32         getInnerCone(void) const;
+		PxF32         getOuterCone(void) const;
+		void          setCone(PxF32 innerCone, PxF32 outerCone);
+
 	protected:
-		physx::PxVec3	   m_position;
-		physx::PxVec3      m_direction;
-		physx::PxF32             m_innerRadius;
-		physx::PxF32             m_outerRadius;
-		physx::PxF32             m_innerCone;
-		physx::PxF32             m_outerCone;
-};
+		PxVec3        m_position;
+		PxVec3        m_direction;
+		PxF32         m_innerRadius;
+		PxF32         m_outerRadius;
+		PxF32         m_innerCone;
+		PxF32         m_outerCone;
+	};
+
+} // namespace SampleRenderer
 
 #endif

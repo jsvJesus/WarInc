@@ -9,6 +9,8 @@
 
 PFX_GodRays::PFX_GodRays()
 : Parent( this )
+, prevAddressU(0)
+, prevAddressV(0)
 {
 	mSettings.Density	= 1.0f;
 	mSettings.Decay 	= 0.5f;
@@ -85,7 +87,14 @@ PFX_GodRays::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*OV
 		D3DXVECTOR4( scr.x/dest->Width, scr.y/dest->Height, 1.f, 1.f )
 	};	
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)vConsts, 2 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)vConsts, 2 ) );
+
+	D3D_V( r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_ADDRESSU, &prevAddressU));
+	D3D_V( r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_ADDRESSV, &prevAddressV));
+
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER));
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER));
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_BORDERCOLOR, 0));
 
 }
 
@@ -95,6 +104,7 @@ PFX_GodRays::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*OV
 void
 PFX_GodRays::FinishImpl()	/*OVERRIDE*/
 {
-	
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, prevAddressU));
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, prevAddressV));
 }
 

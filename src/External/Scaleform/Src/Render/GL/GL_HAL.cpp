@@ -17,13 +17,17 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_Random.h"
-#include "Kernel/SF_HeapNew.h"  
+#include "Kernel/SF_HeapNew.h"
 #include "Kernel/SF_Debug.h"
 
-#include "Render/Render_TextureCacheGeneric.h"
-#include "Render/Render_BufferGeneric.h"
 #include "Render/GL/GL_HAL.h"
 #include "Render/GL/GL_Events.h"
+
+#ifdef SF_GL_BINARY_SHADERS
+#include <unistd.h>
+#include "Kernel/SF_SysFile.h"
+#endif
+
 
 namespace Scaleform { namespace Render { namespace GL {
 
@@ -31,14 +35,19 @@ namespace Scaleform { namespace Render { namespace GL {
 // ***** RenderHAL_GL
 
 HAL::HAL(ThreadCommandQueue* commandQueue)
-:   Render::ShaderHAL<ShaderManager, ShaderInterface>(commandQueue),
+:   Render::HAL(commandQueue),
     MultiBitStencil(1),
     EnabledVertexArrays(-1),
     Cache(Memory::GetGlobalHeap(), MeshCacheParams::PC_Defaults),
-    PrevBatchType(PrimitiveBatch::DP_None),
-    Caps(SManager.Caps),
-    MajorVersion(0), MinorVersion(0)
+    SManager(&Profiler),
+    ShaderData(GetHAL()),
+    PrevBatchType(PrimitiveBatch::DP_None)
 {
+    Caps = 0;
+    memset(StaticShaders, 0, sizeof(StaticShaders));
+    memset(MappedXY16iUVTexture, 0, sizeof(MappedXY16iUVTexture));
+    memset(MappedXY16iAlphaTexture, 0, sizeof(MappedXY16iAlphaTexture));
+    memset(MappedXY16iAlphaSolid, 0, sizeof(MappedXY16iAlphaSolid));
 }
 
 HAL::~HAL()
@@ -46,304 +55,12 @@ HAL::~HAL()
     ShutdownHAL();
 }
 
-// *** RenderHAL_GL Implementation
-
-bool HAL::InitHAL(const GL::HALInitParams& params)
-{
-    if ( !Render::HAL::initHAL(params))
-        return false;
-
-    // Clear the error stack.
-    glGetError();
-
-#ifdef SF_GL_RUNTIME_LINK
-    Extensions::Init();
-#endif
-
-    // Check versions and extensions immediately, to make sure they are initialized.
-    CheckExtension(0);
-    CheckGLVersion(0,0);
-
-#if defined(SF_USE_GLES_ANY)
-    const char *ren = (const char*) glGetString(GL_RENDERER);
-    if (CheckExtension("GL_OES_mapbuffer"))
-        Caps |= Cap_MapBuffer;
-    Caps |= Cap_BufferUpdate;
-    if (CheckExtension("GL_OES_get_program_binary") && strncmp(ren, "PowerVR", 7))
-        Caps |= Cap_BinaryShaders;
-#else
-    if (CheckExtension("GL_ARB_get_program_binary"))
-        Caps |= Cap_BinaryShaders;
-#endif
-
-#if defined(SF_USE_GLES2)
-    // Adreno GPU/driver, needs aligned vertices
-    if (!strncmp(ren, "Adreno", 6))
-        Caps |= MVF_AlignVertexStride | Cap_NoBatching;
-
-    // Check if platform supports dynamic looping. If it doesn't, can't support blur-type filter shaders.
-    if ( !ShaderData.GetDynamicLoopSupport() )
-        Caps |= Cap_NoDynamicLoops;
-
-    // Force vertex stride alignment on GLES2 devices. The GL Analyzer instrument in XCode, at least, indicates
-    // that vertex alignment is preferred, and there shouldn't be any situations where alignment would break
-    // anything.
-    // 
-    // This flag should be safe, but if weird problems start cropping up on Android, remove this first.
-    Caps |= MVF_AlignVertexStride;
-
-#elif defined(SF_USE_GLES)
-    // Never dynamic loops or batching on GLES1.1
-    Caps |= Cap_NoDynamicLoops | Cap_NoBatching;
-#else
-    // OpenGL
-    Caps |= Caps_Standard;
-#endif
-
-    if (params.NoVAO)
-    {
-        Caps |= Cap_NoVAO;
-    }
-
-#if !defined(SF_USE_GLES_ANY)
-    // Check for instancing (glDrawElementsInstanced is available).
-    if ( Has_glDrawElementsInstanced() && !params.NoInstancing)
-        Caps |= Cap_Instancing;
-#endif
-
-    GLint maxUniforms = 128;
-#if !defined(GL_MAX_VERTEX_UNIFORM_VECTORS)
-    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &maxUniforms);
-#else
-    glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &maxUniforms);
-#endif
-
-#if defined(SF_OS_ANDROID)
-    // Reports 128 uniforms but some drivers crash when more than 64 are used. These drivers
-    // only seem to be present on Android.
-    if (!strncmp(ren, "PowerVR SGX 5", 12))
-        maxUniforms = 64;
-#endif
-
-    Caps |= maxUniforms << Cap_MaxUniforms_Shift;
-
-    SManager.SetBinaryShaderPath(params.BinaryShaderPath);
-
-    SF_DEBUG_MESSAGE1(1, "GL_VENDOR                   = %s\n", (const char*)glGetString(GL_VENDOR));
-    SF_DEBUG_MESSAGE1(1, "GL_VERSION                  = %s\n", (const char*)glGetString(GL_VERSION));
-    SF_DEBUG_MESSAGE1(1, "GL_RENDERER                 = %s\n", (const char*)glGetString(GL_RENDERER));
-    SF_DEBUG_MESSAGE1(1, "GL_SHADING_LANGUAGE_VERSION = %s\n", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-    GLint maxAttributes;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttributes);
-    SF_DEBUG_MESSAGE1(1, "GL_MAX_VERTEX_ATTRIBS       = %d\n", maxAttributes);
-    SF_DEBUG_MESSAGE1(1, "GL_EXTENSIONS               = %s\n", Extensions.ToCStr());
-    SF_DEBUG_MESSAGE1(1, "GL_CAPS                     = 0x%x\n", Caps);
-
-    pTextureManager = params.GetTextureManager();
-    if (!pTextureManager)
-    {
-        Ptr<TextureCacheGeneric> textureCache = 0;
-
-        // On GLES, create a texture cache, with the default size. Otherwise, do not use texture caching.
-#if defined(SF_USE_GLES_ANY)
-        textureCache = *SF_NEW TextureCacheGeneric();
-#endif
-        pTextureManager = 
-            *SF_HEAP_AUTO_NEW(this) TextureManager(params.RenderThreadId, pRTCommandQueue, textureCache);
-    }
-    pTextureManager->Initialize(this);
-
-    // Allocate our matrix state
-    Matrices = *SF_HEAP_AUTO_NEW(this) MatrixState(this);
-
-
-    pRenderBufferManager = params.pRenderBufferManager;
-    if (!pRenderBufferManager)
-    {
-        pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric();
-        if ( !pRenderBufferManager || !createDefaultRenderBuffer())
-        {
-            ShutdownHAL();
-            return false;
-        }
-    }
-
-    if (!SManager.Initialize(this, VMCFlags) ||
-        !Cache.Initialize(this))
-        return false;
-
-    HALState|= HS_ModeSet;    
-    notifyHandlers(HAL_Initialize);
-    return true;
-}
-
-// Returns back to original mode (cleanup)
-bool HAL::ShutdownHAL()
-{
-    if (!(HALState & HS_ModeSet))
-        return true;
-
-    if (!shutdownHAL())
-        return false;
-
-    destroyRenderBuffers();
-    pRenderBufferManager.Clear();
-    pTextureManager->ProcessQueues();
-    pTextureManager.Clear();
-    Cache.Reset();
-    SManager.Reset();
-
-    // Reset these, incase the HAL is started again with a different GL profile.
-    MajorVersion = 0;
-    MinorVersion = 0;
-    Extensions.Clear();
-
-    return true;
-}
-
-bool HAL::ResetContext()
-{
-    notifyHandlers(HAL_PrepareForReset);
-    pTextureManager->NotifyLostContext();
-    Cache.Reset(true);
-    SManager.Reset();
-
-    ShaderData.ResetContext();
-    pTextureManager->Initialize(this);
-    pTextureManager->RestoreAfterLoss();
-
-#ifdef SF_GL_RUNTIME_LINK
-    Extensions::Init();
-#endif
-
-    if (!SManager.Initialize(this, VMCFlags) ||
-        !Cache.Initialize(this))
-        return false;
-
-    if (pRenderBufferManager)
-        pRenderBufferManager->Reset();
-
-    notifyHandlers(HAL_RestoreAfterReset);
-    return true;
-}
-
-
-// ***** Rendering
-
-bool HAL::BeginFrame()
-{
-    // Clear the error state.
-    glGetError();
-    return Render::HAL::BeginFrame();
-}
-
-// Set states not changed in our rendering, or that are reset after changes
-bool HAL::BeginScene()
-{
-    if ( !Render::HAL::BeginScene())
-        return false;
-
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
-    glStencilMask(0xffffffff);
-
-#if defined(GL_ALPHA_TEST)
-    if (!CheckGLVersion(3,0))
-    glDisable(GL_ALPHA_TEST);
-#endif
-
-    BlendEnable = -1;
-
-    // Reset vertex array usage (in case it changed between frames).
-    EnabledVertexArrays = -1;
-    GLint va;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &va);
-    for (int i = 0; i < va; i++)
-        glDisableVertexAttribArray(i);
-
-    return true;
-}
-
-bool HAL::EndScene()
-{
-    if ( !Render::HAL::EndScene())
-        return false;
-
-#if !defined(SF_USE_GLES_ANY) && defined(GL_VERSION_3_0)
-    if (CheckGLVersion(3,0) && !(GetHAL()->Caps & Cap_NoVAO))
-        glBindVertexArray(0);
-#elif defined(GL_ES_VERSION_2_0) && defined(SF_OS_IPHONE)
-    glBindVertexArrayOES(0);
-#endif
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glUseProgram(0);
-
-    return true;
-}
-
-
-void HAL::beginDisplay(BeginDisplayData* data)
-{
-    glDisable(GL_STENCIL_TEST);
-
-    Render::HAL::beginDisplay(data);
-}
-
-// Updates HW Viewport and ViewportMatrix based on provided viewport
-// and view rectangle.
-void HAL::updateViewport()
-{
-    Viewport vp;
-
-    if (HALState & HS_ViewValid)
-    {
-        int dx = ViewRect.x1 - VP.Left,
-            dy = ViewRect.y1 - VP.Top;
-
-        // Modify HW matrix and viewport to clip.
-        CalcHWViewMatrix(VP.Flags, &Matrices->View2D, ViewRect, dx, dy);
-        Matrices->SetUserMatrix(Matrices->User);
-        Matrices->ViewRect    = ViewRect;
-        Matrices->UVPOChanged = 1;
-
-        if ( HALState & HS_InRenderTarget )
-        {
-            glViewport(VP.Left, VP.Top, VP.Width, VP.Height);
-            glDisable(GL_SCISSOR_TEST);
-        }
-        else
-        {
-            vp = VP;
-            vp.Left     = ViewRect.x1;
-            vp.Top      = ViewRect.y1;
-            vp.Width    = ViewRect.Width();
-            vp.Height   = ViewRect.Height();
-            vp.SetStereoViewport(Matrices->S3DDisplay);
-            glViewport(vp.Left, VP.BufferHeight-vp.Top-vp.Height, vp.Width, vp.Height);
-            if (VP.Flags & Viewport::View_UseScissorRect)
-            {
-                glEnable(GL_SCISSOR_TEST);
-                glScissor(VP.ScissorLeft, VP.BufferHeight-VP.ScissorTop-VP.ScissorHeight, VP.ScissorWidth, VP.ScissorHeight);
-            }
-            else
-            {
-                glDisable(GL_SCISSOR_TEST);
-            }
-        }
-    }
-    else
-    {
-        glViewport(0,0,0,0);
-    }
-}
-
 void   HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                             const VertexFormat** single,
                             const VertexFormat** batch, const VertexFormat** instanced, unsigned)
 {
-    unsigned instancingFlag = (Caps&Cap_Instancing ? MVF_HasInstancing : 0);
+    // TODO: enable instancing
+    unsigned instancingFlag = 0 ; // (Caps&Cap_Instancing ? MVF_HasInstancing : 0);
     SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced, (Caps&MVF_Align)| instancingFlag);
 #if defined(GL_ES_VERSION_2_0)
     if (Caps & Cap_NoBatching)
@@ -351,11 +68,9 @@ void   HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFo
 #endif
 }
 
-void HAL::FinishFrame()
+PrimitiveFill*  HAL::CreatePrimitiveFill(const PrimitiveFillData &data)
 {
-#if defined(SF_USE_GLES_ANY)
-    glFinish();
-#endif
+    return SF_HEAP_NEW(pHeap) PrimitiveFill(data);
 }
 
 // Draws a range of pre-cached and preprocessed primitives
@@ -404,11 +119,16 @@ void        HAL::DrawProcessedPrimitive(Primitive* pprimitive,
                 SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat, batchMeshCount, Matrices,
                                           &pprimitive->Meshes[meshIndex], &ShaderData);
 
-            if ((HALState & HS_ViewValid) && pShader && SetVertexArray(pbatch->pFormat, pmesh))
+            if ((HALState & HS_ViewValid) && pShader &&
+                SetVertexArray(pbatch->pFormat, pmesh->pVertexBuffer->GetBuffer(),
+                               pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset))
             {
                 SF_ASSERT((pbatch->Type != PrimitiveBatch::DP_Failed) &&
-                          (pbatch->Type != PrimitiveBatch::DP_Virtual));
+                          (pbatch->Type != PrimitiveBatch::DP_Virtual) &&
+                          (pbatch->Type != PrimitiveBatch::DP_Instanced));
 
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pmesh->pIndexBuffer->GetBuffer());
 
                 // Make sure the blending state is correct.
                 int blend = (fillFlags & FF_Blending) ? 1 : 0;
@@ -422,6 +142,7 @@ void        HAL::DrawProcessedPrimitive(Primitive* pprimitive,
                 }
                 Profiler.SetFillFlags(fillFlags);
 
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pmesh->pIndexBuffer->GetBuffer());
                 // Draw the object with cached mesh.
                 if (pbatch->Type != PrimitiveBatch::DP_Instanced)
                 	drawIndexedPrimitive(pmesh->IndexCount, pmesh->MeshCount, pmesh->pIndexBuffer->GetBufferBase() + pmesh->IBAllocOffset);
@@ -481,6 +202,7 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
     }
 
     const Matrix2F* textureMatrices = complexMesh->GetFillMatrixCache();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pmesh->pIndexBuffer->GetBuffer());
     ShaderData.BeginPrimitive();
 
     for (unsigned fillIndex = 0; fillIndex < fillCount; fillIndex++)
@@ -510,7 +232,7 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
         // Apply fill.
         PrimitiveFillType fillType = Profiler.GetFillType(fr.pFill->GetType());
         const ShaderManager::Shader& pso = SManager.SetFill(fillType, fillFlags, batchType, fr.pFormats[formatIndex], &ShaderData);
-        SetVertexArray(fr.pFormats[formatIndex], pmesh, (unsigned)fr.VertexByteOffset);
+        SetVertexArray(fr.pFormats[formatIndex], pmesh->pVertexBuffer->GetBuffer(), pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset + fr.VertexByteOffset);
 
         UByte textureCount = fr.pFill->GetTextureCount();
         bool solid = (fillType == PrimFill_None || fillType == PrimFill_Mask || fillType == PrimFill_SolidColor);
@@ -544,6 +266,8 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
                 ShaderData.SetTexture(pso, Uniform::SU_tex, ptex, fr.pFill->GetFillMode(tm), stage);
                 stage += ptex->GetPlaneCount();
             }
+
+            ShaderData.Finish(0);
 
             bool lastPrimitive = (i == instanceCount-1);
             if ( batchType != PrimitiveBatch::DP_Instanced )
@@ -616,7 +340,7 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
         ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
         ShaderData.Finish(1);
 
-        SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
+        SetVertexArray(&VertexXY16iInstance::Format, Cache.MaskEraseBatchVertexBuffer, 0);
         drawPrimitive(6,1);
     }
 }
@@ -786,6 +510,39 @@ void HAL::PopMask()
         glStencilFunc(GL_LEQUAL, MaskStackTop, 0xff);
 }
 
+
+void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
+{
+    // This operation is used to clear bounds for masks.
+    // Potential issue: Since our bounds are exact, right/bottom pixels may not
+    // be drawn due to HW fill rules.
+    //  - This shouldn't matter if a mask is tessellated within bounds of those
+    //    coordinates, since same rules are applied to those render shapes.
+    //  - EdgeAA must be turned off for masks, as that would extrude the bounds.
+
+    unsigned fillflags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags, PrimitiveBatch::DP_Batch, &VertexXY16iInstance::Format, &ShaderData);
+
+    unsigned drawRangeCount = 0;
+    for (UPInt i = 0; i < count; i+= (UPInt)drawRangeCount)
+    {
+        drawRangeCount = Alg::Min<unsigned>((unsigned)count, SF_RENDER_MAX_BATCHES);
+
+        for (unsigned j = 0; j < drawRangeCount; j++)
+        {
+            ShaderData.SetMatrix(pso, Uniform::SU_mvp, Matrix2F::Identity, matrices[i+j], Matrices, 0, j);
+        }
+        ShaderData.Finish(drawRangeCount);
+
+        SetVertexArray(&VertexXY16iInstance::Format, Cache.MaskEraseBatchVertexBuffer, 0);
+        drawPrimitive(drawRangeCount * 6, drawRangeCount);
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+
+
 //--------------------------------------------------------------------
 // *** BlendMode Stack support
 //--------------------------------------------------------------------
@@ -807,7 +564,6 @@ void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
         GL_SRC_ALPHA,           // BlendFactor_SRCALPHA
         GL_ONE_MINUS_SRC_ALPHA, // BlendFactor_INVSRCALPHA
         GL_DST_COLOR,           // BlendFactor_DESTCOLOR
-        GL_ONE_MINUS_DST_COLOR, // BlendFactor_INVDESTCOLOR
     };
 
     GLenum sourceColor = BlendFactors[BlendModeTable[mode].SourceColor];
@@ -972,13 +728,13 @@ RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStenc
 
 bool HAL::SetRenderTarget(RenderTarget* ptarget, bool setState)
 {
-    // When changing the render target while in a scene, we must flush all drawing.
-    if ( HALState & HS_InScene)
-        Flush();
-
     // Cannot set the bottom level render target if already in display.
     if ( HALState & HS_InDisplay )
         return false;
+
+    // When changing the render target while in a scene, we must flush all drawing.
+    if ( HALState & HS_InScene)
+        Flush();
 
     RenderTargetEntry entry;
     if ( setState )
@@ -1073,6 +829,10 @@ void HAL::PopRenderTarget(unsigned)
     ViewRect = entry.OldViewRect;
     VP = entry.OldViewport;
 
+    // Must reverse the offset of the 'original' viewrect.
+    Matrices->ViewRectOriginal.Offset(entry.OldViewport.Left, entry.OldViewport.Top);
+    Matrices->UVPOChanged = true;
+
     RenderTargetStack.PopBack();
     RenderTargetData* phd = 0;
     GLuint fboID = 0;
@@ -1093,47 +853,6 @@ void HAL::PopRenderTarget(unsigned)
     // Reset the viewport to the last render target on the stack.
     HALState |= HS_ViewValid;
     updateViewport();
-}
-
-bool HAL::CheckExtension(const char *name)
-{
-    if (Extensions.IsEmpty())
-    {
-#if defined(SF_USE_GLES_ANY) || !defined(GL_VERSION_3_0)
-        Extensions = (const char *) glGetString(GL_EXTENSIONS);
-#else
-        if (!CheckGLVersion(3,0) || !Has_glGetStringi())
-            Extensions = (const char*)glGetString(GL_EXTENSIONS);
-        else
-        {
-            GLint extCount;
-            glGetIntegerv(GL_NUM_EXTENSIONS, &extCount);
-            for (int extIndex = 0; extIndex < extCount; ++extIndex)
-            {
-                const char* ext = (const char*)glGetStringi(GL_EXTENSIONS, extIndex);
-                Extensions += " ";
-                Extensions += ext;
-            }
-        }
-#endif
-        // Add space, just so we know it is initialized.
-        Extensions += " "; 
-    }
-
-    if (name == 0)
-        return false;
-    const char *p = strstr(Extensions.ToCStr(), name);
-    return (p && (p[strlen(name)] == 0 || p[strlen(name)] == ' '));
-}
-
-bool HAL::CheckGLVersion(unsigned reqMajor, unsigned reqMinor)
-{
-    if (MajorVersion == 0 && MinorVersion == 0)
-    {
-        const char* version = (const char*)glGetString(GL_VERSION);
-        SFsscanf(version, "%d.%d", &MajorVersion, &MinorVersion);
-    }
-    return (MajorVersion > reqMajor || (MajorVersion == reqMajor && MinorVersion >= reqMinor));
 }
 
 ImageSize HAL::getFboInfo(GLint fbo, GLint& currentFBO, bool useCurrent)
@@ -1248,7 +967,7 @@ void HAL::PushFilters(FilterPrimitive* prim)
         ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
         ShaderData.Finish(1);
 
-        SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
+        SetVertexArray(&VertexXY16iInstance::Format, Cache.MaskEraseBatchVertexBuffer, 0);
         drawPrimitive(6,1);
         FilterStack.PushBack(e);
         return;
@@ -1337,7 +1056,8 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
         // All shadows (except those hiding the object) need the original texture.
         bool requireSource = false;
         if ( filter->GetFilterType() >= Filter_Shadow &&
-             filter->GetFilterType() <= Filter_Blur_End )
+             filter->GetFilterType() <= Filter_Blur_End &&
+             !(((BlurFilterImpl*)filter)->GetParams().Mode & BlurFilterParams::Mode_HideObject) )
         {
             temporaryTextures[Target_Original] = temporaryTextures[Target_Source];
             requireSource = true;
@@ -1373,7 +1093,7 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
 
             Matrix2F mvp = Matrix2F::Scaling(2,2) * Matrix2F::Translation(-0.5f, -0.5f);                          
             DrawFilter(mvp, Cxform::Identity, filter, temporaryTextures, shaders, pass, passes, 
-                MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], LEBlurState, false);
+                MappedXY16iUVTexture[PrimitiveBatch::DP_Single], LEBlurState, false);
 
             // If we require the original source, create a new target for the source.
             if ( requireSource && pass == 0)
@@ -1384,25 +1104,15 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
         }
     }
 
-    // If there were no passes, assume we were doing a cacheAsBitmap.
-    bool cacheAsBitmap = passes == 0;
-    SF_DEBUG_ASSERT(!cacheAsBitmap || filterCount == 1, "Expected exactly one cacheAsBitmap filter.");
-
-    // Cache the 2nd last step so it might be available as a cached filter next time.
-	if (temporaryTextures[Target_Source] && (Profiler.IsFilterCachingEnabled() || cacheAsBitmap))
+	if (Profiler.IsFilterCachingEnabled() && temporaryTextures[Target_Source])
 	{
 	    // Cache the 2nd last step so it might be available as a cached filter next time.
 		RenderTarget* cacheResults[2] = { temporaryTextures[0], temporaryTextures[2] };
-        e.pPrimitive->SetCacheResults(cacheAsBitmap ? FilterPrimitive::Cache_Target : FilterPrimitive::Cache_PreTarget, cacheResults, cacheAsBitmap ? 1 : 2);
+		e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_PreTarget, cacheResults, 2);
 		((GL::RenderTargetData*)cacheResults[0]->GetRenderTargetData())->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
 		if ( cacheResults[1] )
 			((GL::RenderTargetData*)cacheResults[1]->GetRenderTargetData())->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
 	}
-    else
-    {
-        // This is required, or else disabling filter caching may produce incorrect results.
-        e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
-    }
 
     // Pop the temporary target, begin rendering to the previous surface.
     PopRenderTarget();
@@ -1412,20 +1122,11 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
         glEnable(GL_STENCIL_TEST);
 
     // Now actually draw the filtered sub-scene to the target below.
-    if (passes != 0)
-    {
-        // 'Real' filter.
-        const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
-        const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
-        applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
-        DrawFilter(mvp, cx, filter, temporaryTextures, shaders, pass, passes, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], LEBlurState, true);
-        applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState&HS_InRenderTarget) != 0);
-    }
-    else
-    {
-        // CacheAsBitmap
-        drawCachedFilter(e.pPrimitive);
-    }
+    const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
+    const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
+    applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
+    DrawFilter(mvp, cx, filter, temporaryTextures, shaders, pass, passes, MappedXY16iUVTexture[PrimitiveBatch::DP_Single], LEBlurState, true);
+    applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState&HS_InRenderTarget) != 0);
 
     if ( HALState & HS_DrawingMask )
         glColorMask(0,0,0,0);
@@ -1471,9 +1172,10 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
 
             // Render to the target.
             Matrix2F mvp = Matrix2F::Scaling(2,2) * Matrix2F::Translation(-0.5f, -0.5f);
+            const Cxform & cx = primitive->GetFilterAreaMatrix().GetCxform();
 
             applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
-            DrawFilter(mvp, Cxform::Identity, filter, temporaryTextures, shaders, passes-1, passes, 
+            DrawFilter(mvp, cx, filter, temporaryTextures, shaders, passes-1, passes, 
                 MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], LEBlurState, true);
 
             PopRenderTarget();
@@ -1504,7 +1206,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         // We have a final filtered texture. Just apply it to a screen quad.
         case FilterPrimitive::Cache_Target:
         {
-            unsigned fillFlags = (FillFlags|FF_Cxform|FF_AlphaWrite);
+            unsigned fillFlags = (FillFlags & ~FF_Cxform);
             const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single, 
                 MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);
 
@@ -1517,8 +1219,6 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
             texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
             texgen.AppendScaling((float)srect.Width() / ptexture->GetSize().Width, (float)srect.Height() / ptexture->GetSize().Height);
 
-            const Cxform & cx = primitive->GetFilterAreaMatrix().GetCxform();
-            ShaderData.SetCxform(pso, cx);
             ShaderData.SetUniform(pso, Uniform::SU_mvp, &mvp.M[0][0], 8 );
             ShaderData.SetUniform(pso, Uniform::SU_texgen, &texgen.M[0][0], 8 );
             ShaderData.SetTexture(pso, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
@@ -1526,7 +1226,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
 
             if (!FilterVertexBufferSet)
             {
-                SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
+                SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, 0);
                 FilterVertexBufferSet = 1;
             }
 
@@ -1544,6 +1244,113 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         // Should have been one of the other two caching types.
         default: SF_ASSERT(0); break;
     }
+}
+
+void HAL::DrawableCxform( Render::Texture** tex, const Matrix2F* texgen, const Cxform* cx)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICxform), __FUNCTION__);
+    SManager.SetDrawableCxform(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), cx, 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport );
+    drawScreenQuad();
+}
+
+void HAL::DrawableCompare( Render::Texture** tex, const Matrix2F* texgen )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICompare), __FUNCTION__);
+    SManager.SetDrawableCompare(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport );
+    drawScreenQuad();
+}
+
+void HAL::DrawableCopyChannel( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul ) 
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIMerge), __FUNCTION__);
+    SManager.SetDrawableMergeFill(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), 
+        cxmul, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport);
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableMerge( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIMerge), __FUNCTION__);
+    SManager.SetDrawableMergeFill(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), 
+        cxmul, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableCopyPixels( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, bool mergeAlpha, bool destAlpha )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICopyPixels), __FUNCTION__);
+    SManager.SetDrawableCopyPixelsFill(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        mergeAlpha, destAlpha, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawablePaletteMap( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, unsigned channelMask, const UInt32* values)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIPaletteMap), __FUNCTION__);
+
+    // Create a temporary texture with the palette map. There may be a more efficient way to do this; however, using
+    // uniforms seems unworkable, due to shader constant slot constraints.
+    ImageData data;
+    Ptr<Render::Texture> ptex = *pTextureManager->CreateTexture(Image_B8G8R8A8, 1, ImageSize(256, 4), ImageUse_Map_Mask, 0);
+    if ( !ptex->Map(&data, 0, 1) )
+        return;
+    for ( int channel = 0; channel < 4; ++channel )
+    {
+        UInt32* dataPtr = (UInt32*)data.GetScanline(channel);
+        if ( channelMask & (1<<channel))
+        {
+            memcpy(dataPtr, values + channel*256, 256*sizeof(UInt32));
+        }
+        else
+        {
+            // Channel was not provided, just do a straight mapping.
+            for ( unsigned i = 0; i < 256; ++i )
+                *dataPtr++ = (i << (channel*8));
+        }
+    }
+    if (!ptex->Unmap())
+        return;
+
+    // First pass overwrites everything.
+    applyBlendMode(Blend_OverwriteAll, true, true);
+    SManager.SetDrawablePaletteMap(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        ptex, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_InvertedViewport );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, DrawableImage::OperationType op, 
+                            UInt32 threshold, UInt32 color, UInt32 mask, bool copySource)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIThreshold), __FUNCTION__);
+
+    SManager.SetDrawableThreshold(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        op, threshold, color, mask, copySource, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], 
+        &ShaderData, ShaderManager::CPF_InvertedViewport );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableCopyback( Render::Texture* source, const Matrix2F& mvp, const Matrix2F& texgen )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICopyback), __FUNCTION__);
+
+    // Set shader constants.
+    unsigned fillFlags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single, 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);    
+
+    ShaderData.SetMatrix(pso,  Uniform::SU_mvp,    mvp);
+    ShaderData.SetMatrix(pso,  Uniform::SU_texgen, texgen);
+    ShaderData.SetTexture(pso, Uniform::SU_tex,    source, ImageFillMode());
+    ShaderData.Finish(1);
+
+    drawScreenQuad();
 }
 
 //--------------------------------------------------------------------
@@ -1568,59 +1375,43 @@ RenderTargetData::~RenderTargetData()
 
 }
 
-// Helper function to retrieve the vertex element type (VET) and normalization from a vertex attribute. Returns false if the attribute should be ignored.
-bool VertexBuilderVET(unsigned attr, GLenum&vet, bool& norm)
-{
-    switch (attr & VET_CompType_Mask)
-    {
-    case VET_U8:  vet = GL_UNSIGNED_BYTE; norm = false; break;
-    case VET_U8N: vet = GL_UNSIGNED_BYTE; norm = true; break;
-    case VET_U16: vet = GL_UNSIGNED_SHORT; norm = false; break;
-    case VET_S16: vet = GL_SHORT; norm = false; break;
-    case VET_U32: vet = GL_UNSIGNED_INT; norm = false; break;
-    case VET_F32: vet = GL_FLOAT; norm = false;  break;
-
-        // Instance indices are not used in the vertex arrays, so just ignore them.
-    case VET_I8:
-    case VET_I16:
-        return false;
-
-    default: SF_ASSERT(0); vet = GL_FLOAT; norm = false; return false;
-    }
-    return true;
-}
-
-// Uses functions within the GL 2.1- (or GLES 2.0) spec to define vertex attributes. This is not
-// compatible with GL 3.0+ (see VertexBuilder_Core30).
-class VertexBuilder_Legacy
+class VertexBuilder
 {
 public:
-    HAL*            pHal;
-    unsigned        Stride;
-    UByte*          VertexOffset;
+    UByte*    vertexOffset;
+    unsigned  Size;
+    HAL*      pHal;
 
-    VertexBuilder_Legacy(HAL* phal, unsigned stride, GLuint vbuffer, GLuint ibuffer, UByte* vertOffset) : 
-        pHal(phal), Stride(stride), VertexOffset(vertOffset)
-    {
-        // Bind the vertex buffer and the index buffer immediately.
-        glBindBuffer(GL_ARRAY_BUFFER, vbuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibuffer);
-    }
-
+    VertexBuilder(HAL* phal, UByte* v, unsigned s) : vertexOffset(v), Size(s), pHal(phal) {}
     HAL* GetHAL() { return pHal; }
 
     void Add(int vi, int attr, int ac, int offset)
     {
         GLenum vet; bool norm;
-        if (!VertexBuilderVET(attr, vet, norm))
+
+        switch (attr & VET_CompType_Mask)
+        {
+        case VET_U8:  vet = GL_UNSIGNED_BYTE; norm = false; break;
+        case VET_U8N: vet = GL_UNSIGNED_BYTE; norm = true; break;
+        case VET_U16: vet = GL_UNSIGNED_SHORT; norm = false; break;
+        case VET_S16: vet = GL_SHORT; norm = false; break;
+        case VET_U32: vet = GL_UNSIGNED_INT; norm = false; break;
+        case VET_F32: vet = GL_FLOAT; norm = false;  break;
+
+        // Instance indices are not used in the vertex arrays, so just ignore them.
+        case VET_I8:
+        case VET_I16:
             return;
+
+        default: SF_ASSERT(0); vet = GL_FLOAT; norm = false; break;
+        }
 
         if ( pHal->EnabledVertexArrays < vi )
         {
             glEnableVertexAttribArray(vi);
             pHal->EnabledVertexArrays++;
         }
-        glVertexAttribPointer(vi, ac, vet, norm, Stride, VertexOffset + offset);
+        glVertexAttribPointer(vi, ac, vet, norm, Size, vertexOffset + offset);
     }
 
     void Finish(int vi)
@@ -1634,209 +1425,163 @@ public:
     }
 };
 
-#if !defined(SF_USE_GLES_ANY)
-class VertexBuilder_Core30
+bool HAL::SetVertexArray(const VertexFormat* pFormat, GLuint buffer, UByte* vertexOffset)
 {
-public:
-    HAL*            pHal;
-    unsigned        Stride;
-    MeshCacheItem*  pMesh;
-    bool            NeedsGeneration;    // Set to true if the VAO has not been initialized yet (and should be done by this class).
-    UByte*          VertexOffset;
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
 
-    VertexBuilder_Core30(HAL* phal, const VertexFormat* pformat, MeshCacheItem* pmesh, unsigned vbOffset) : 
-        pHal(phal), Stride(pformat->Size), pMesh(pmesh), NeedsGeneration(false), VertexOffset(0)
-    {
-        SF_DEBUG_ASSERT(GetHAL()->CheckGLVersion(3,0), "Cannot use VertexBuilder_Core30 without a GL 3.0+ context.");
-        
-        // Allocate VAO for this mesh now.
-        VertexOffset = pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset + vbOffset;
-        if (pMesh->VAOFormat != pformat || pMesh->VAOOffset != VertexOffset || pMesh->VAO == 0)
-        {
-            if (pMesh->VAO)
-                glDeleteVertexArrays(1, &pMesh->VAO);
-            glGenVertexArrays(1, &pMesh->VAO);
-
-            // Store the vertex offset, and indicate that we need to generate the contents of the VAO.
-            pMesh->VAOOffset = VertexOffset;
-            pMesh->VAOFormat = pformat;
-            NeedsGeneration = true;
-        }
-
-        // Bind the VAO.
-        glBindVertexArray(pMesh->VAO);        
-
-        // If need to generate the VAO, bind the VB/IB now
-        if (NeedsGeneration)
-        {
-            GLuint vbuffer = pmesh->pVertexBuffer->GetBuffer();
-            GLuint ibuffer = pmesh->pIndexBuffer->GetBuffer();
-            glBindBuffer(GL_ARRAY_BUFFER, vbuffer);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibuffer);
-        }
-    }
-
-    HAL* GetHAL() { return pHal; }
-
-    void Add(int vi, int attr, int ac, int offset)
-    {
-        // If we have already generated the VAO, just skip everything.
-        if (!NeedsGeneration)
-            return;
-
-        GLenum vet; bool norm;
-        if (!VertexBuilderVET(attr, vet, norm))
-            return;
-
-        glEnableVertexAttribArray(vi);
-        glVertexAttribPointer(vi, ac, vet, norm, Stride, VertexOffset + offset);
-    }
-
-    void Finish(int)
-    {
-    }
-};
-#elif defined(GL_ES_VERSION_2_0) && defined(SF_OS_IPHONE)
-    class VertexBuilder_VAOES
-    {
-    public:
-        HAL*            pHal;
-        unsigned        Stride;
-        MeshCacheItem*  pMesh;
-        bool            NeedsGeneration;    // Set to true if the VAO has not been initialized yet (and should be done by this class).
-        UByte*          VertexOffset;
-        static GLuint   CurrentVAO;
-        
-        VertexBuilder_VAOES(HAL* phal, const VertexFormat* pformat, MeshCacheItem* pmesh, unsigned vbOffset) : 
-        pHal(phal), Stride(pformat->Size), pMesh(pmesh), NeedsGeneration(false), VertexOffset(0)
-        {
-            // Allocate VAO for this mesh now.
-            VertexOffset = pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset + vbOffset;
-            if (pMesh->VAOFormat != pformat || pMesh->VAOOffset != VertexOffset || pMesh->VAO == 0)
-            {
-                if (pMesh->VAO)
-                    glDeleteVertexArraysOES(1, &pMesh->VAO);
-                glGenVertexArraysOES(1, &pMesh->VAO);
-                
-                // Store the vertex offset, and indicate that we need to generate the contents of the VAO.
-                pMesh->VAOOffset = VertexOffset;
-                pMesh->VAOFormat = pformat;
-                NeedsGeneration = true;
-            }
-            
-            // Bind the VAO.
-            //if (pMesh->VAO != CurrentVAO)
-            {
-                glBindVertexArrayOES(pMesh->VAO);
-                CurrentVAO = pMesh->VAO;
-            }
-            
-            // If need to generate the VAO, bind the VB/IB now
-            if (NeedsGeneration)
-            {
-                GLuint vbuffer = pmesh->pVertexBuffer->GetBuffer();
-                GLuint ibuffer = pmesh->pIndexBuffer->GetBuffer();
-                glBindBuffer(GL_ARRAY_BUFFER, vbuffer);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibuffer);
-            }
-        }
-        
-        HAL* GetHAL() { return pHal; }
-        
-        void Add(int vi, int attr, int ac, int offset)
-        {
-            // If we have already generated the VAO, just skip everything.
-            if (!NeedsGeneration)
-                return;
-            
-            GLenum vet; bool norm;
-            if (!VertexBuilderVET(attr, vet, norm))
-                return;
-            
-            glEnableVertexAttribArray(vi);
-            glVertexAttribPointer(vi, ac, vet, norm, Stride, VertexOffset + offset);
-        }
-        
-        void Finish(int)
-        {
-        }
-    };
-
-    GLuint VertexBuilder_VAOES::CurrentVAO;
-#endif
-
-bool HAL::SetVertexArray(const VertexFormat* pFormat, MeshCacheItem* pmesh, unsigned vboffset)
-{
-#if defined(GL_ES_VERSION_2_0) && defined(SF_OS_IPHONE)
-    VertexBuilder_VAOES vb (this, pFormat, pmesh, vboffset);
+    VertexBuilder vb (this, vertexOffset, pFormat->Size);
     BuildVertexArray(pFormat, vb);
-    return true;
-#else
-#if !defined(SF_USE_GLES_ANY)
-    if (CheckGLVersion(3,0) && !(Caps & Cap_NoVAO))
-    {
-        VertexBuilder_Core30 vb (this, pFormat, pmesh, vboffset);
-        BuildVertexArray(pFormat, vb);
-        
-        GLint binding;
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &binding);
-        SF_DEBUG_ASSERT(binding != 0, "Must have an index buffer binding...");
-        return true;
-    }
-#endif
-    
-    // Legacy and/or GLES path.
-    VertexBuilder_Legacy vb (this, pFormat->Size, pmesh->pVertexBuffer->GetBuffer(),
-                             pmesh->pIndexBuffer->GetBuffer(), pmesh->pVertexBuffer->GetBufferBase() + pmesh->VBAllocOffset + vboffset);
-    BuildVertexArray(pFormat, vb);
-#endif
+
     return true;
 }
 
-bool HAL::SetVertexArray(const VertexFormat* pFormat, GLuint buffer, GLuint vao)
+const ShaderObject* HAL::GetStaticShader( FragShaderDesc::ShaderType shaderType )
 {
-#if defined(GL_ES_VERSION_2_0) && defined(SF_OS_IPHONE)
-	SF_UNUSED(pFormat);
-    SF_UNUSED(buffer);
-    glBindVertexArrayOES(vao);
-    return true;
-#else
-
-#if !defined(SF_USE_GLES_ANY)
-	SF_UNUSED(pFormat);
-    SF_UNUSED(buffer);
-    if (GetHAL()->CheckGLVersion(3,0) && !(GetHAL()->Caps & Cap_NoVAO))
-    {
-        // Immediately bind the VAO, it must be constructed already.
-        glBindVertexArray(vao);
-        return true;
-    }
-#endif
-
-    // Legacy and/or GLES path. Assume no buffer offsets.
-    VertexBuilder_Legacy vb (this, pFormat->Size, buffer, 0, 0);
-    BuildVertexArray(pFormat, vb);
-#endif
-    return true;
-}
-
-const ShaderObject* HAL::GetStaticShader( ShaderDesc::ShaderType shaderType )
-{
-    unsigned comboIndex = FragShaderDesc::GetShaderComboIndex(shaderType, SManager.GLSLVersion);
-    SF_DEBUG_ASSERT(VertexShaderDesc::GetShaderComboIndex(shaderType, SManager.GLSLVersion) == comboIndex,
+    unsigned comboIndex = FragShaderDesc::GetShaderComboIndex(shaderType);
+    SF_DEBUG_ASSERT(VertexShaderDesc::GetShaderComboIndex((VertexShaderDesc::ShaderType)shaderType) == comboIndex,
         "Expected ComboIndex for both vertex and fragment shaders to be equivalent.");
     if ( comboIndex >= UniqueShaderCombinations )
         return 0;
 
-    ShaderObject* shader = &SManager.StaticShaders[comboIndex];
+    ShaderObject* shader = &StaticShaders[comboIndex];
 
     // Initialize the shader if it hasn't already been initialized.
     if ( (VMCFlags & HALConfig_DynamicShaderCompile) && shader->Prog == 0 )
     {
-        if ( !shader->Init(this, shaderType))
+        if ( !shader->Init(this, (VertexShaderType)shaderType, shaderType))
             return 0;
     }
     return shader;
+}
+
+bool HAL::initializeShaders(bool force)
+{
+#ifdef SF_GL_BINARY_SHADERS
+    if ((Caps & Cap_BinaryShaders) && BinaryShaderPath.GetLength())
+    {
+        String shpath = BinaryShaderPath + "GFxShaders.cache";
+        Ptr<File>  pfile = *SF_NEW SysFile(shpath);
+
+        //SF_DEBUG_MESSAGE1(1, "Shader binary file is %d bytes", pfile->GetLength());
+        if (pfile)
+        {
+            char header[10];
+            if (pfile->Read((UByte*)header, 10) < 10 || strncmp(header, "GFxShaders", 10))
+                goto noBinary;
+
+            SInt64 version = pfile->ReadSInt64();
+            SF_DEBUG_WARNING2(version != SF_GFXSHADERMAKER_TIMESTAMP, "Binary shaders timestamps do not match executable. "
+                "Using source shaders (bin=%lld, exe=%lld)", version, SF_GFXSHADERMAKER_TIMESTAMP);
+            if ( version != SF_GFXSHADERMAKER_TIMESTAMP )
+                goto noBinary;
+
+            GLsizei bufferSize = 0;
+            void* buffer = 0;
+
+            SInt32 count = pfile->ReadSInt32();
+            for (int i = 0; i < count; i++)
+            {
+                SInt32 comboIndex = pfile->ReadSInt32();
+                //SF_DEBUG_MESSAGE1(1, "Loading binary shader (comboIndex=%d)", comboIndex);
+
+                // Find the shader type that goes with this combination.
+                if (!StaticShaders[comboIndex].InitBinary(comboIndex, pfile, buffer, bufferSize))
+                {
+                    SF_FREE(buffer);
+                    SF_DEBUG_WARNING(1, "Error loading some binary shaders. Using source.");
+
+                    // Kill all previously loaded binary shaders, they are likely bogus.
+                    for ( unsigned ci = 0; ci < UniqueShaderCombinations; ++ci)
+                        StaticShaders[ci].Shutdown();
+
+                    goto noBinary;
+                }                    
+            }
+            SF_FREE(buffer);
+            return true;
+        }
+    }
+    noBinary:
+#endif
+
+
+    if ( (VMCFlags & HALConfig_DynamicShaderCompile) == 0 || force)
+    {
+        for (unsigned i = 0; i < UniqueShaderCombinations; i++)
+        {
+            if ( StaticShaders[i].Prog )
+                continue;
+
+            // Find the shader type that goes with this combination.
+            FragShaderDesc::ShaderIndex fsIndex = FragShaderDesc::GetShaderIndexForComboIndex(i);
+            VertexShaderDesc::ShaderIndex vsIndex = VertexShaderDesc::GetShaderIndexForComboIndex(i);
+
+            if (!FragShaderDesc::Descs[fsIndex] || !VertexShaderDesc::Descs[vsIndex] )
+                continue;
+
+            // If the platform does not support dynamic loops, do not initialize shaders that use them.
+            if ((FragShaderDesc::Descs[fsIndex]->Flags & Shader_DynamicLoop) && (Caps & Cap_NoDynamicLoops))
+                continue;
+
+            // If the platform doesn't support instancing, do not initialize shaders that use it.
+            if ( (FragShaderDesc::Descs[fsIndex]->Flags & Shader_Instanced) && !SManager.HasInstancingSupport() )
+                continue;
+
+            if ( !StaticShaders[i].Init(this, VertexShaderDesc::Descs[vsIndex]->Type, FragShaderDesc::Descs[fsIndex]->Type))
+                return false;
+        }
+    }
+
+#ifdef SF_GL_BINARY_SHADERS
+    if ((Caps & Cap_BinaryShaders) && BinaryShaderPath.GetLength())
+    {
+        String shpath = BinaryShaderPath + "GFxShaders.cache";
+        Ptr<File>  pfile = *SF_NEW SysFile(shpath, File::Open_Write|File::Open_Create|File::Open_Truncate);
+
+        if (pfile->IsValid())
+        {
+            GLsizei totalSize = 0;
+            GLsizei bufferSize = 0;
+            void* buffer = 0;
+
+            pfile->Write((const UByte*) "GFxShaders", 10);
+            pfile->WriteSInt64(SF_GFXSHADERMAKER_TIMESTAMP);
+            totalSize += 10 + 8;
+
+            SInt32 count = 0;
+            for (unsigned i = 0; i < UniqueShaderCombinations; i++)
+                if (StaticShaders[i].Prog)
+                    count++;
+
+            pfile->WriteSInt32(count);
+            totalSize += 4;
+
+            for (unsigned i = 0; i < UniqueShaderCombinations; i++)
+            {
+                if (StaticShaders[i].Prog)
+                {
+                    pfile->WriteSInt32(i);
+                    totalSize += 4;
+                    //SF_DEBUG_MESSAGE1(1, "Saving binary shader (comboIndex=%d)", i);
+                    if (!StaticShaders[i].SaveBinary(pfile, buffer, bufferSize, totalSize))
+                    {
+                        SF_DEBUG_WARNING1(1, "Error saving shader (comboIndex=%d)", i);
+                        pfile->Close();
+                        unlink(shpath.ToCStr());
+                        break;
+                    }
+                }
+            }
+
+            //SF_DEBUG_MESSAGE1(1, "Total bytes written to shader cache file: %d", totalSize);
+            pfile->Close();
+        }
+        else
+            SF_DEBUG_WARNING2(1, "Error creating binary shader cache %s: %d", shpath.ToCStr(), pfile->GetErrorCode());
+    }
+#endif
+
+    return true;
 }
 
 bool HAL::shouldRenderFilters(const FilterPrimitive*) const
@@ -1848,7 +1593,7 @@ bool HAL::shouldRenderFilters(const FilterPrimitive*) const
 void HAL::drawScreenQuad()
 {
     // Set the vertices, and Draw
-    SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
+    SetVertexArray(&VertexXY16iInstance::Format, Cache.MaskEraseBatchVertexBuffer, 0);
     drawPrimitive(6,1);
 }
 
@@ -1944,18 +1689,13 @@ void    HAL::DrawFilter(const Matrix2F& mvp, const Cxform & cx, const Filter* fi
     {
         if (!FilterVertexBufferSet)
         {
-            SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
+            SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, 0);
             FilterVertexBufferSet = 1;
         }
 
         SManager.SetFilterFill(mvp, cx, filter, targets, shaders, pass, passCount, pvf, &ShaderData);
         drawPrimitive(6,1);
     }
-}
-
-void HAL::setBatchUnitSquareVertexStream()
-{
-    SetVertexArray(&VertexXY16iAlpha::Format, Cache.MaskEraseBatchVertexBuffer, Cache.MaskEraseBatchVAO);
 }
 
 void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
@@ -1984,7 +1724,7 @@ void HAL::drawIndexedPrimitive( unsigned indexCount, unsigned meshCount, UByte* 
 
 void HAL::drawIndexedInstanced( unsigned indexCount, unsigned meshCount, UByte* indexPtr)
 {
-#if !defined (SF_USE_GLES_ANY)
+#if !defined (SF_USE_GLES_ANY) && !defined(SF_OS_MAC)
     glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, indexPtr, meshCount);
 #else
     SF_DEBUG_ASSERT(0, "Instancing not supported on GLES platforms.");

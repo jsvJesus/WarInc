@@ -421,7 +421,6 @@ public:
 
     bool         GetMovieInfo(const char *pfilename, MovieInfo *pinfo,
         bool getTagCount, unsigned loadLibConstants);    
-    bool         IsMovieLoaded(const char *pfilename, unsigned loadConstants);
     MovieDef*    CreateMovie(const char* filename, unsigned loadConstants, UPInt memoryArena = 0);    
 
     // The actual creation function; called from CreateMovie.

@@ -77,7 +77,6 @@ DecalType::DecalType()
 , ClipNearFactor( 1.f )
 , MinQuality( 2 )
 , globalDecal( true )
-, WriteGloss( 0 )
 {
 	UVStart[ 0 ] = 0.f;
 	UVStart[ 1 ] = 0.f;
@@ -552,36 +551,6 @@ DecalChief::Move( int idx, const r3dPoint3D& pos, const r3dPoint3D& norm )
 
 //------------------------------------------------------------------------
 
-bool DecalChief::UpdateDecalParams( int idx, const DecalParams& params )
-{
-	if( idx == INVALID_DECAL_ID || idx < 0 || idx >= (int)mDecals.Count() )
-		return false;
-
-	if( params.TypeID == INVALID_DECAL_ID )
-		return false;
-
-	if( params.TypeID < 0 || params.TypeID >= (int)mTypes.Count() )
-		return false;
-
-	DecalParams& toUpdate = mDecals[ idx ];
-
-	if( toUpdate.TypeID == INVALID_DECAL_ID )
-		return false;
-
-	toUpdate = params;
-
-	Conform( toUpdate );
-
-	if( toUpdate.ScaleCoef <= 0.0f )
-		toUpdate.ScaleCoef = 1.0f;
-
-	UpdateDecal( idx, mTypes[ toUpdate.TypeID ] );
-
-	return true;
-}
-
-//------------------------------------------------------------------------
-
 namespace
 {
 	const char* LIB_FILE_PATH = "Data\\Decals\\";
@@ -610,16 +579,33 @@ bool DecalChief::LoadLib(const r3dString& levelPath)
 		GetFullXMLPath(levelPath)
 	};
 
+	uint32_t numEntries[_countof(libPaths)] = {0};
+
 	bool rv = true;
 	for (uint32_t i = 0; i < _countof(libPaths); ++i)
 	{
 		r3dOutToLog( "Loading decal library %s.\n", libPaths[i].c_str() );
 		if (!LoadLibInternal(libPaths[i], i == 0))
 		{
-			r3dArtBug( "Error: couldn't load decal lib %s!\n", libPaths[i]) ;
+			r3dArtBug( "Error: couldn't load decal lib %s!\n", libPaths[i].c_str()) ;
 			rv = false;
 		}
+		numEntries[i] = mTypes.Count();
 	}
+
+	//	Copy all entries from global lib if local lib empty
+	if (numEntries[0] > 0 && numEntries[1] == numEntries[0])
+	{
+		for (uint32_t i = 0; i < numEntries[0]; ++i)
+		{
+			DecalType t = mTypes[i];
+			t.Name += "(L)";
+			t.LifeTime = 0;
+			t.globalDecal = false;
+			AddType(t);
+		}
+	}
+
 	return rv;
 }
 
@@ -700,7 +686,6 @@ DecalChief::LoadLibInternal(const r3dString &libPath, bool globalLib)
 		PUGI_GET_IF_SET( type.ClipFarFactor, xmlItem, "clip_far_factor", float );
 		PUGI_GET_IF_SET( type.ClipNearFactor, xmlItem, "clip_near_factor", float );
 		PUGI_GET_IF_SET( type.MinQuality, xmlItem, "min_quality", int );
-		PUGI_GET_IF_SET( type.WriteGloss, xmlItem, "write_gloss", int );
 
 		attrib = xmlItem.attribute( "diffuse_tex" );
 		if( !attrib.empty() )
@@ -794,7 +779,6 @@ DecalChief::SaveLibInternal(const r3dString &libPath, bool globalLib) const
 		xmlItem.append_attribute( "clip_far_factor" )	= type.ClipFarFactor;
 		xmlItem.append_attribute( "clip_near_factor" )	= type.ClipNearFactor;
 		xmlItem.append_attribute( "min_quality" )		= type.MinQuality;
-		xmlItem.append_attribute( "write_gloss" )		= type.WriteGloss;
 	}
 
 	xmlLibFile.save_file( libPath.c_str() );
@@ -1414,6 +1398,7 @@ DecalChief::Update()
 void
 DecalChief::Draw()
 {
+#ifndef WO_SERVER
 	D3DPERF_BeginEvent( 0, L"DecalChief::Draw" );
 	R3DPROFILE_FUNCTION("DecalChief::Draw");
 
@@ -1438,22 +1423,22 @@ DecalChief::Draw()
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSU, &PrevAddressU ) );
 			D3D_V( r3dRenderer->pd3ddev->GetSamplerState( Sampler, D3DSAMP_ADDRESSV, &PrevAddressV ) );
 
-			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
-			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 		}
 
 		~SetRestoreStates()
 		{
-			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
-			D3D_V( r3dRenderer->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSU, PrevAddressU ) );
+			D3D_V( r3dRenderer->pd3ddev->SetSamplerState( Sampler, D3DSAMP_ADDRESSV, PrevAddressV ) );
 
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 		}
@@ -1465,7 +1450,7 @@ DecalChief::Draw()
 
 	} setRestoreStates ( 0 ); (void)setRestoreStates;
 
-	r3dRenderer->SetCamera( gCam );
+	r3dRenderer->SetCamera( gCam, false );
 
 	d3dc._SetDecl( mVDecl );
 
@@ -1496,7 +1481,7 @@ DecalChief::Draw()
 		D3DXVECTOR4(mSettings.MaxDecalSize * DECAL_MAX_SCALE_COEF, 0.0f, 0.0f, 0.0f)
 	};
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, (float*) vsConst, sizeof vsConst / sizeof vsConst[ 0 ] ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float*) vsConst, sizeof vsConst / sizeof vsConst[ 0 ] ) );
 
 	float worldW = 2.f / r3dRenderer->ProjMatrix._11 / r3dRenderer->ScreenW;
 	float worldH = 2.f / r3dRenderer->ProjMatrix._22 / r3dRenderer->ScreenH;
@@ -1524,12 +1509,12 @@ DecalChief::Draw()
 		D3DXVECTOR4( dc_sts.ReliefMappingDepth, dc_sts.AlphaRef, 0.f, 0.f )
 	};
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, (float*)psConst, sizeof psConst / sizeof psConst[ 0 ] ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)psConst, sizeof psConst / sizeof psConst[ 0 ] ) );
 
 	r3dRenderer->SetVertexShader( VS_ID );
 	r3dRenderer->SetPixelShader( r_relief_decals->GetBool() ? PS_RELIEF_ID : PS_ID );
 
-	TL_STATIC_ASSERT( DecalTexCplIDs::COUNT == DecalVIdxes::COUNT );
+	COMPILE_ASSERT( DecalTexCplIDs::COUNT == DecalVIdxes::COUNT );
 
 	r3d_assert( mDecals.Count() <= DecalTexCplIDs::COUNT );
 
@@ -1546,9 +1531,12 @@ DecalChief::Draw()
 
 	//	Copy RT into frame buffer to use it as source texture during decal render.
 
-	r3dRenderer->StretchRect(gBuffer_Color, gScreenSmall, 0);
+	extern r3dScreenBuffer* gScreenSmall2;
+	r3dScreenBuffer* halvedScrTex = gScreenSmall2; // NOTE: gScreenSmall without 2 holds SSAO
 
-	r3dRenderer->SetTex(gScreenSmall->Tex, 4);
+	D3D_V( r3dRenderer->pd3ddev->StretchRect(gBuffer_Color->GetTex2DSurface(), 0, halvedScrTex->GetTex2DSurface(), 0, D3DTEXF_POINT) );
+
+	r3dRenderer->SetTex(halvedScrTex->Tex, 4);
 
 	r3d_assert( mDecals.Count() <= mDecalTexCplIDs.COUNT );
 
@@ -1606,27 +1594,15 @@ DecalChief::Draw()
 
 			AutoLoadTextures( type );
 
-			const DWORD colorWrite0 =
-				D3DCOLORWRITEENABLE_RED |
-				D3DCOLORWRITEENABLE_GREEN |
-				D3DCOLORWRITEENABLE_BLUE |
-				( type.WriteGloss ? D3DCOLORWRITEENABLE_ALPHA : 0 );
-
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, colorWrite0 ) );
-
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1,
-				D3DCOLORWRITEENABLE_RED |
-				D3DCOLORWRITEENABLE_GREEN |
-				D3DCOLORWRITEENABLE_BLUE ) );
-
 			r3dRenderer->SetTex( type.DiffuseTex, 2 );
 			r3dRenderer->SetTex( type.NormalTex, 3 );
 
-			r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, vused, mIBOffset, icount / 3 );
+			r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST,	0, 0, vused, mIBOffset, icount / 3 );
 
 			mIBOffset += icount;
 		}
 	}
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -1693,7 +1669,7 @@ DecalChief::Init()
 	const uint32_t VERTEX_COUNT = MAX_DECALS * 4;
 	const uint32_t INDEX_COUNT = MAX_DECALS * 6;
 
-	TL_STATIC_ASSERT( VERTEX_COUNT < 65536 );
+	COMPILE_ASSERT( VERTEX_COUNT < 65536 );
 
 	mVB = new r3dVertexBuffer( VERTEX_COUNT * 4, sizeof(DecalVertex), 0, true );
 	mIB = new r3dIndexBuffer( INDEX_COUNT * 4, true );
@@ -1972,3 +1948,4 @@ bool operator != ( const DecalType& t0, const DecalType& t1 )
 			;
 			
 }
+

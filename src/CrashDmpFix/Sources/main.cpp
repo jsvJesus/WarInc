@@ -149,7 +149,7 @@ DWORD GetImageSizeFromSymbol(DWORD TimeDateStamp)
 {
 	WIN32_FIND_DATA ffblk;
 	char fname[MAX_PATH];
-	sprintf(fname, "%s\\WarInc.exe\\%08X*", g_SymbolPath, TimeDateStamp);
+	sprintf(fname, "%s\\WarZ.exe\\%08X*", g_SymbolPath, TimeDateStamp);
 	HANDLE h = FindFirstFile(fname, &ffblk);
 	if(h == INVALID_HANDLE_VALUE) {
 		r3dOutToLog("no symbol files found in %s\n", fname);

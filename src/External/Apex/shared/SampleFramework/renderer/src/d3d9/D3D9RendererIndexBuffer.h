@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,12 +42,15 @@
 #include <RendererIndexBuffer.h>
 #include "D3D9Renderer.h"
 
-class D3D9RendererIndexBuffer : public RendererIndexBuffer, public D3D9RendererResource
+namespace SampleRenderer
 {
+
+	class D3D9RendererIndexBuffer : public RendererIndexBuffer, public D3D9RendererResource
+	{
 	public:
 		D3D9RendererIndexBuffer(IDirect3DDevice9 &d3dDevice, const RendererIndexBufferDesc &desc);
 		virtual ~D3D9RendererIndexBuffer(void);
-		
+
 	public:
 		virtual void *lock(void);
 		virtual void  unlock(void);
@@ -55,10 +58,10 @@ class D3D9RendererIndexBuffer : public RendererIndexBuffer, public D3D9RendererR
 	private:
 		virtual void bind(void) const;
 		virtual void unbind(void) const;
-	
+
 		virtual void onDeviceLost(void);
 		virtual void onDeviceReset(void);
-	
+
 	private:
 		IDirect3DDevice9      &m_d3dDevice;
 		IDirect3DIndexBuffer9 *m_d3dIndexBuffer;
@@ -67,7 +70,9 @@ class D3D9RendererIndexBuffer : public RendererIndexBuffer, public D3D9RendererR
 		D3DPOOL                       m_pool;
 		UINT                          m_bufferSize;
 		D3DFORMAT					  m_format;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

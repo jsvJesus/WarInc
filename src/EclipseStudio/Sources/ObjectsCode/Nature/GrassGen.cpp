@@ -399,9 +399,7 @@ GrassGen::Load()
 {
 	stringlist_t loadList ;
 
-//#define R3D_GLIST_FILE "grasslist.txt"
-
-#define R3D_GLIST_FILE "grasslist.txt"
+#define R3D_GLIST_FILE "grasslist.dat"
 
 #ifndef FINAL_BUILD
 	WIN32_FIND_DATA ffblk;
@@ -437,20 +435,28 @@ GrassGen::Load()
 	loadList.clear() ;
 #endif
 
-	FILE* glistFile = fopen( GetGrassPath( R3D_GLIST_FILE ).c_str(), "rt" ) ;
+	r3dFile* glistFile = r3d_open( GetGrassPath( R3D_GLIST_FILE ).c_str(), "rt" ) ;
 
 	if( glistFile )
 	{
 		int glist_n = 0 ;
 		int loaded = 0 ;
-		if( fscanf( glistFile, "%d\n", &glist_n ) == 1 )
+
+		char buf[ 1024 ];
+		fgets( buf, sizeof buf - 1, glistFile );
+
+		if( sscanf( buf, "%d\n", &glist_n ) == 1 )
 		{
 			for( int i = 0, e = glist_n ; i < e ; i ++ )
 			{
-				char buff[ 512 ] ;
-				if( fscanf( glistFile, "%511s\n", buff ) == 1 )
+				buf[ 0 ] = 0;
+				fgets( buf, sizeof buf - 1, glistFile );
+
+				char loc[ 512 ];
+
+				if( sscanf( buf, "%511s", loc ) == 1 )
 				{
-					loadList.push_back( buff ) ;
+					loadList.push_back( loc ) ;
 					loaded ++ ;
 				}
 			}

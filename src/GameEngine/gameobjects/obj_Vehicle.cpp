@@ -98,11 +98,11 @@ void obj_Vehicle::UpdatePositionFromPhysx()
 	if (!vd)
 		return;
 
-	PxRigidDynamicFlags f = vd->vehicle->mActor->getRigidDynamicFlags();
+	PxRigidDynamicFlags f = vd->vehicle->getRigidDynamicActor()->getRigidDynamicFlags();
 	if ( !(f & PxRigidDynamicFlag::eKINEMATIC) )
 	{
 
-		PxTransform t = vd->vehicle->mActor->getGlobalPose();
+		PxTransform t = vd->vehicle->getRigidDynamicActor()->getGlobalPose();
 		SetPosition(r3dVector(t.p.x, t.p.y, t.p.z));
 
 		r3dVector angles;
@@ -135,12 +135,12 @@ BOOL obj_Vehicle::Update()
 
 	if(NetworkLocal)
 	{
-		CNetCellMover::moveData_s md;
+		/*CNetCellMover::moveData_s md;
 		md.pos       = GetPosition();
 		md.turnAngle = GetRotationVector().x;
 		md.bendAngle = 0;
 		md.state     = 0;
-		netMover.SendPosUpdate(md);
+		netMover.SendPosUpdate(md);*/
 	}
 	else 
 	{
@@ -208,9 +208,9 @@ void obj_Vehicle::SetRotationVector(const r3dVector& Angles)
 
 void obj_Vehicle::SwitchToDrivable(bool doDrive)
 {
-	if (vd && vd->vehicle->mActor)
+	if (vd && vd->vehicle->getRigidDynamicActor())
 	{
-		vd->vehicle->mActor->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, !doDrive);
+		vd->vehicle->getRigidDynamicActor()->setRigidDynamicFlag(PxRigidDynamicFlag::eKINEMATIC, !doDrive);
 		if (doDrive)
 			g_pPhysicsWorld->m_VehicleManager->DriveCar(vd);
 	}
@@ -223,7 +223,7 @@ void obj_Vehicle::SyncPhysicsPoseWithObjectPose()
 	if (!vd)
 		return;
 
-	PxRigidDynamicFlags f = vd->vehicle->mActor->getRigidDynamicFlags();
+	PxRigidDynamicFlags f = vd->vehicle->getRigidDynamicActor()->getRigidDynamicFlags();
 	if (!(f & PxRigidDynamicFlag::eKINEMATIC))
 		return;
 
@@ -234,7 +234,7 @@ void obj_Vehicle::SyncPhysicsPoseWithObjectPose()
 	PxQuat quat(q.x, q.y, q.z, q.w);
 
 	PxTransform carPose(PxVec3(pos.x, pos.y, pos.z), quat);
-	vd->vehicle->mActor->setGlobalPose(carPose);
+	vd->vehicle->getRigidDynamicActor()->setGlobalPose(carPose);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -244,7 +244,7 @@ void obj_Vehicle::SetBoneMatrices()
 	if (!vd)
 		return;
 
-	PxRigidDynamic *a = vd->vehicle->mActor;
+	PxRigidDynamic *a = vd->vehicle->getRigidDynamicActor();
 	D3DXMATRIX boneTransform;
 
 	static const UsefulTransforms T;
@@ -342,27 +342,31 @@ float obj_Vehicle::DrawPropertyEditor(float scrx, float scry, float scrw, float 
 #ifdef EXTENDED_VEHICLE_CONFIG
 	y += imgui_Value_Slider(scrx, y, "Friction", &gVehicleTireGroundFriction, 0.5f, 8.0f, "%-02.2f");
 
+	PxVehicleAckermannGeometryData &ad = vd->ackermannData;
 	y += 5.0f;
 	y += imgui_Static(scrx, y, "Chassis:");
 	y += imgui_Value_Slider(scrx, y, "Mass", &vd->chassisData.mMass, 100.0f, 5000.0f, "%-02.2f");
-	y += imgui_Value_Slider(scrx, y, "Ackerman accuracy", &vd->ackermannData.mAccuracy, 0.0f, 1.0f, "%-02.2f");
+	y += imgui_Value_Slider(scrx, y, "Ackerman accuracy", &ad.mAccuracy, 0.0f, 1.0f, "%-02.2f");
 #endif
 
+	PxVehicleEngineData &ed = vd->engineData;
 	y += 5.0f;
 	y += imgui_Static(scrx, y, "Engine:");
-	y += imgui_Value_Slider(scrx, y, "Peak torque", &vd->engineData.mPeakTorque, 100.0f, 5000.0f, "%-02.f");
-	float x = vd->engineData.mMaxOmega / 0.104719755f;
+	y += imgui_Value_Slider(scrx, y, "Peak torque", &ed.mPeakTorque, 100.0f, 5000.0f, "%-02.f");
+	float x = ed.mMaxOmega / 0.104719755f;
 	y += imgui_Value_Slider(scrx, y, "Max RPM", &x, 0.0f, 15000.0f, "%-02.0f");
-	vd->engineData.mMaxOmega = x * 0.104719755f;
+	ed.mMaxOmega = x * 0.104719755f;
 
 #ifdef EXTENDED_VEHICLE_CONFIG
 	y += 5.0f;
 	y += imgui_Static(scrx, y, "Gears:");
-	y += imgui_Value_Slider(scrx, y, "Switch time", &vd->gearsData.mSwitchTime, 0.0f, 3.0f, "%-02.2f");
+	PxVehicleGearsData &gd = vd->gearsData;
+	y += imgui_Value_Slider(scrx, y, "Switch time", &gd.mSwitchTime, 0.0f, 3.0f, "%-02.2f");
 
+	PxVehicleDifferential4WData &dd = vd->diffData;
 	y += 5.0f;
 	y += imgui_Static(scrx, y, "Differential:");
-	y += imgui_Value_Slider(scrx, y, "Front-rear split", &vd->diffData.mFrontRearSplit, 0.0f, 1.0f, "%-02.3f");
+	y += imgui_Value_Slider(scrx, y, "Front-rear split", &dd.mFrontRearSplit, 0.0f, 1.0f, "%-02.3f");
 #endif
 	y += 10.0f;
 	y += imgui_Static(scrx, y, "Select wheel:");
@@ -412,7 +416,7 @@ float obj_Vehicle::DrawPropertyEditor(float scrx, float scry, float scrw, float 
 	}
 	y += 22.0f;
 
-	vd->ApplyDynamicChanges();
+	vd->ConfigureVehicleSimulationData();
 	return y - scry;
 }
 #endif
@@ -450,16 +454,6 @@ BOOL obj_Vehicle::OnNetReceive(DWORD EventID, const void* packetData, int packet
 			OnNetPacket(n);
 			break;
 		}
-
-	case PKT_S2C_UAVSetState:
-		{
-// 			const PKT_S2C_UAVSetState_s& n = *(PKT_S2C_UAVSetState_s*)packetData;
-// 			r3d_assert(packetSize == sizeof(n));
-// 
-// 			OnNetPacket(n);
-			break;
-		}
-
 	}
 
 	return TRUE;
@@ -486,7 +480,7 @@ void obj_Vehicle::OnNetPacket(const PKT_C2C_MoveRel_s& n)
 		// calc velocity to reach position on time for next update
 		r3dPoint3D vel = netMover.GetVelocityToNetTarget(
 			GetPosition(),
-			GPP->UAV_FLY_SPEED_V * 1.5f,
+			/*GPP->UAV_FLY_SPEED_V **/ 1.5f,
 			1.0f);
 
 		netVelocity = vel;

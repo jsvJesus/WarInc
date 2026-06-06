@@ -8,17 +8,18 @@
 #include "GameCommon.h"
 
 #include "DamageLib.h"
+#include "MeshPropertyLib.h"
+
 #include "../../Eternity/Include/r3dDeviceQueue.h"
-#include "../../EclipseStudio/Sources/multiplayer/ClientGameLogic.h"
 
 extern bool g_bEditMode;
 extern int g_bForceQualitySelectionInEditor;
 
 int		g_DrawCollisionMeshes = 0;
 int		g_DrawPlayerOnlyCollisionMeshes = 0;
-int				gob_NumMeshesInMeshFactoryCache=0;
 
-r3dMesh * gob_MeshFactoryCache[2048];
+// static to prevent extern
+static std::vector<r3dMesh*> s_MeshCache;
 
 #define COMMON_DEPOT_PREFIX "data/objectsdepot/"
 
@@ -62,8 +63,7 @@ void CacheMeshFunc(void *params)
 }
 
 //--------------------------------------------------------------------------------------------------------
-r3dMesh * 
-CacheMesh( const char* fname, bool use_default_material, bool allow_async, bool player_mesh )
+r3dMesh* CacheMesh( const char* fname, bool use_default_material, bool allow_async, bool player_mesh )
 {
 	R3DPROFILE_FUNCTION("CacheMesh");
 	r3dMesh * pMesh = new r3dMesh( 0 );
@@ -78,9 +78,14 @@ CacheMesh( const char* fname, bool use_default_material, bool allow_async, bool 
 	params.mesh = pMesh;
 	params.delParams = false;
 	params.use_default_material = use_default_material;
-	params.allow_async = allow_async ;
+	params.allow_async = allow_async;
 
 	CacheMeshFunc(&params);
+	if(!allow_async && !pMesh->IsLoaded())
+	{
+		delete pMesh;
+		return NULL;
+	}
 
 	// can be safe deleted
 	pMesh = params.mesh ;
@@ -96,21 +101,22 @@ void ReloadMesh(const char* fname)
 	char szFixedName[MAX_PATH];	
 	FixFileName(fname, szFixedName);
 
-	for (int i=0;i<gob_NumMeshesInMeshFactoryCache;i++)
+	for (size_t i=0;i<s_MeshCache.size();++i)
 	{
-		if ( !r3dIsSamePath(gob_MeshFactoryCache[i]->FileName.c_str(), szFixedName) ) 
+		if ( !r3dIsSamePath(s_MeshCache[i]->FileName.c_str(), szFixedName) ) 
 			continue;
 
-
-		r3dMesh * pFreeMesh = gob_MeshFactoryCache[i];
+		r3dMesh* pFreeMesh = s_MeshCache[i];
 
 		bool was_player = pFreeMesh->Flags & r3dMesh::obfPlayerMesh ? true : false ;
 
-		SAFE_DELETE( gob_MeshFactoryCache[i] )
-		gob_MeshFactoryCache[i] = CacheMesh( szFixedName, false, false, was_player );
+		SAFE_DELETE( s_MeshCache[i] )
+		s_MeshCache[i] = CacheMesh( szFixedName, false, false, was_player );
 
-		for( GameObject * pObj = GameWorld().GetFirstObject(); pObj; pObj = GameWorld().GetNextObject( pObj ) )
+		for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
 		{
+			GameObject* pObj = iter.current;
+
 			if ( ! pObj->isObjType(OBJTYPE_Mesh) )
 				continue;
 			 ((MeshGameObject *)pObj)->ReloadMeshData( pFreeMesh );
@@ -126,9 +132,9 @@ r3dMesh *r3dGOBAddMesh(const char* fname, bool addToLibrary, bool use_default_ma
 	char szFixedName[MAX_PATH];	
 	FixFileName(fname, szFixedName);
 
-	for (int i=0;i<gob_NumMeshesInMeshFactoryCache;i++)
+	for (size_t i=0;i<s_MeshCache.size();++i)
 	{
-		r3dMesh* mesh = gob_MeshFactoryCache[i] ;
+		r3dMesh* mesh = s_MeshCache[i] ;
 		if( mesh->FileName == szFixedName ) 
 		{
 			if( !allow_async && !mesh->IsDrawable() )
@@ -147,10 +153,9 @@ r3dMesh *r3dGOBAddMesh(const char* fname, bool addToLibrary, bool use_default_ma
 		}
 	}
 
-	if (gob_NumMeshesInMeshFactoryCache > 2046)
+	if(s_MeshCache.size() > 2048)
 	{
-		r3dError("MESH:  Mesh Cache overflow !\n" );
-		return NULL;
+		r3dOutToLog("MESH:  Mesh Cache is too big!\n" );
 	}
 
 	r3dMesh* loadedMesh = CacheMesh( szFixedName, use_default_material, allow_async, player_mesh );
@@ -160,7 +165,7 @@ r3dMesh *r3dGOBAddMesh(const char* fname, bool addToLibrary, bool use_default_ma
 		loadedMesh->RefCount = 1 ;
 
 		if(addToLibrary)
-			gob_MeshFactoryCache[ gob_NumMeshesInMeshFactoryCache++ ] = loadedMesh;
+			s_MeshCache.push_back(loadedMesh);
 		return loadedMesh;
 	}
 
@@ -179,18 +184,16 @@ void r3dGOBReleaseMesh( r3dMesh* mesh )
 
 static void DoReleaseMesh( r3dMesh* mesh )
 {
-	int foundIdx = -1 ;
-
-	for( int i = 0, e = gob_NumMeshesInMeshFactoryCache ; i < e ; i ++ )
+	std::vector<r3dMesh*>::iterator it;
+	for(it = s_MeshCache.begin(); it!=s_MeshCache.end(); ++it)
 	{
-		if( gob_MeshFactoryCache[ i ] == mesh )
+		if(*it==mesh)
 		{
-			foundIdx = i ;
 			break ;
 		}
 	}
 
-	if( foundIdx < 0 )
+	if(it==s_MeshCache.end())
 	{
 		r3dOutToLog( "r3dGOBReleaseMesh: can't find mesh %s(%p) in cache\n", mesh->Name, mesh ) ;
 		return ;
@@ -216,12 +219,7 @@ static void DoReleaseMesh( r3dMesh* mesh )
 																( playerBuff + playerTex ) / 1024.f / 1024.f ) ;
 #endif
 
-		for( int i = foundIdx ; i < gob_NumMeshesInMeshFactoryCache ; i ++ )
-		{
-			gob_MeshFactoryCache[ i ] = gob_MeshFactoryCache[ i + 1 ] ;
-		}
-
-		gob_MeshFactoryCache[ --gob_NumMeshesInMeshFactoryCache ] = NULL ;
+		s_MeshCache.erase(it);
 	}
 }
 
@@ -271,19 +269,19 @@ void r3dFlushReleasedMeshes()
 
 void r3dUpdateMeshMaterials()
 {
-	for ( int i=0;i<gob_NumMeshesInMeshFactoryCache;i++ )
+	for (size_t i=0;i<s_MeshCache.size(); ++i)
 	{
-		gob_MeshFactoryCache[i]->FindAlphaTextures();
+		s_MeshCache[i]->FindAlphaTextures();
 	}
 }
 
 void r3dFreeGOBMeshes()
 {
-	for (int i=0;i<gob_NumMeshesInMeshFactoryCache;i++)
+	for (size_t i=0;i<s_MeshCache.size();++i)
 	{
-		SAFE_DELETE( gob_MeshFactoryCache[i] );
+		SAFE_DELETE(s_MeshCache[i]);
 	}
-	gob_NumMeshesInMeshFactoryCache = 0;
+	s_MeshCache.clear();
 
 	g_ReleasedMeshes.Clear() ;
 }
@@ -323,6 +321,8 @@ MeshGameObject::MeshGameObject()
 	m_ObjectColor = r3dColor24::white;
 	m_HitPoints = 0XA107 ;
 	m_pDamageLibEntry = NULL ;
+
+	m_FillGBufferTarget = rsFillGBuffer;
 
 }
 
@@ -419,7 +419,7 @@ void
 MeshGameObject::UpdateDestructionData()
 {
 	if( g_DamageLib )
-		m_pDamageLibEntry = g_DamageLib->GetEntry( GetDestructionKey() );
+		m_pDamageLibEntry = g_DamageLib->GetEntry( GetMeshLibKey() );
 
 	if( m_pDamageLibEntry && m_pDamageLibEntry->MeshName[ 0 ] )
 	{
@@ -434,7 +434,7 @@ MeshGameObject::UpdateDestructionData()
 //------------------------------------------------------------------------
 
 std::string
-MeshGameObject::GetDestructionKey() const
+MeshGameObject::GetMeshLibKey() const
 {
 	const char* DestructFileName = 0 ;
 
@@ -542,7 +542,17 @@ BOOL MeshGameObject::Load(const char* fname)
 		return FALSE;
 
 	if( g_DamageLib )
-		m_pDamageLibEntry = g_DamageLib->GetEntry( GetDestructionKey() );
+		m_pDamageLibEntry = g_DamageLib->GetEntry( GetMeshLibKey() );
+
+	DrawDistanceSq = 0.f;
+
+	if( g_MeshPropertyLib )
+	{
+		if( MeshPropertyLibEntry* entry = g_MeshPropertyLib->GetEntry( GetMeshLibKey() ) )
+		{
+			DrawDistanceSq = entry->DrawDistance * entry->DrawDistance;
+		}
+	}
 
 	if( FillDestructionMeshName ( szFixedName, m_pDamageLibEntry ) )
 	{
@@ -559,9 +569,7 @@ BOOL MeshGameObject::Load(const char* fname)
 	return TRUE;
 }
 
-/*virtual*/
-BOOL
-MeshGameObject::UpdateLoading() /*OVERRIDE*/
+BOOL MeshGameObject::UpdateLoading() 
 {
 	for( int i = 0, e = NUM_LODS ; i < e; i ++ )
 	{
@@ -579,7 +587,16 @@ MeshGameObject::UpdateLoading() /*OVERRIDE*/
 
 	}
 
+	// update BBox after finished loading mesh (for async loading)
+	if(MeshLOD[0])
+		SetBBoxLocal( MeshLOD[0]->localBBox );
+	OnFinishedLoadingMeshes(); // let parent classes know about that
+
 	return true ;
+}
+
+void MeshGameObject::OnFinishedLoadingMeshes()
+{
 }
 
 #ifndef FINAL_BUILD
@@ -603,18 +620,65 @@ float MeshGameObject::DrawPropertyEditor(float scrx, float scry, float scrw, flo
 		r3dColor24 color = m_ObjectColor ;
 		starty += imgui_DrawColorPicker(scrx, starty, "Object tint", &color, 200, false);
 
-		PropagateChange( color, &MeshGameObject::m_ObjectColor, this, selected ) ;
+		PropagateChange( color, &MeshGameObject::m_ObjectColor, this, selected );
 
 		int Shadows = !( this->ObjFlags & OBJFLAG_DisableShadows );
-		int newShadows = Shadows ;
+		int newShadows = Shadows;
 
-		starty += imgui_Checkbox( scrx, scry, 360, 22, "Enable Shadows", &newShadows, 1 ) ;
+		starty += imgui_Checkbox( scrx, starty, 360, 22, "Enable Shadows", &newShadows, 1 );
 
 		if( Shadows != newShadows )
 		{
-			PropagateChange( newShadows, &MeshGameObject::UpdateShadows, selected ) ;
+			PropagateChange( newShadows, &MeshGameObject::UpdateShadows, selected );
 		}
 
+		static float DrawDistance = 0.f;
+
+		const std::string& meshLibKey = GetMeshLibKey();
+
+		MeshPropertyLibEntry* entry = g_MeshPropertyLib->GetEntry( meshLibKey );
+
+		if( entry )
+		{
+			DrawDistance = entry->DrawDistance;
+		}
+		else
+		{
+			DrawDistance = 0.0f;
+		}
+
+		int infinity = DrawDistance > 0.5 * FLT_MAX;
+
+		starty += imgui_Checkbox( scrx, starty, "Infinite Draw Distance", &infinity, 1 );
+
+		if( infinity )
+		{
+			DrawDistance = FLT_MAX;
+		}
+		else
+		{
+			DrawDistance = 0;
+			starty += imgui_Value_Slider( scrx, starty, "Draw Distance", &DrawDistance, 0.f, 4096.f, "%.0f" );
+		}
+
+		if( DrawDistance && !entry )
+		{
+			g_MeshPropertyLib->AddEntry( meshLibKey );
+			entry = g_MeshPropertyLib->GetEntry( meshLibKey );
+		}
+
+		if( entry )
+		{
+			entry->DrawDistance = DrawDistance;
+		}
+
+		float newDistSq = DrawDistance*DrawDistance;
+
+		if( newDistSq != DrawDistanceSq )
+		{
+			PropagateChange( newDistSq, &MeshGameObject::DrawDistanceSq, this, selected );
+			PropagateChange( &MeshGameObject::OnDrawDistanceChanged, selected );
+		}
 	}
 
 	return starty-scry;
@@ -692,6 +756,31 @@ struct MeshObjDeferredRenderable : MeshDeffRenderableBase
 	MeshGameObject* Parent;
 };
 
+void MeshObjDeferredHighlightRenderable::Init( r3dMesh* mesh, MeshGameObject* parent )
+{
+	ParentType::Init( mesh );
+
+	Parent = parent;
+	DrawFunc = Draw;
+}
+
+//------------------------------------------------------------------------
+
+void MeshObjDeferredHighlightRenderable::Draw( Renderable* RThis, const r3dCamera& Cam )
+{
+	MeshObjDeferredHighlightRenderable* This = static_cast< MeshObjDeferredHighlightRenderable* >( RThis );
+
+	PrecalculatedMeshVSConsts consts;
+
+	This->Parent->PrecalculateMatricesIgnoreSkinning( &consts );
+
+	r3dApplyPreparedMeshVSConsts( consts );
+
+	float distance = ( This->Parent->GetPosition() - Cam ).Length();
+
+	ParentType::DoDraw( RThis, distance, Cam );
+}
+
 #ifndef FINAL_BUILD
 struct MeshPhysicsDebugRenderable : Renderable
 {
@@ -708,26 +797,26 @@ struct MeshPhysicsDebugRenderable : Renderable
 			D3DXVECTOR4 color(0.63f, 0.28f, 0.64f, 0.4f);
 			D3DXVECTOR4 color_plrOnly(237.0f/255.0f, 28.0f/255.0f, 36.0f/255.0f, 0.4f);
 			if(This->Parent->ObjFlags & OBJFLAG_PlayerCollisionOnly)
-				r3dRenderer->SetPixelShaderConstantF(0, (float*)&color_plrOnly, 1);
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color_plrOnly, 1);
 			else
-				r3dRenderer->SetPixelShaderConstantF(0, (float*)&color, 1);
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color, 1);
 
 			This->Parent->MeshLOD[0]->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->MeshLOD[0]->DrawMeshSimple( 0 );
-			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
 			This->Parent->MeshLOD[0]->DrawMeshSimple( 0 );
-			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 		}
 		if(g_DrawPlayerOnlyCollisionMeshes && This->Parent->PhysicsObject && This->Parent->PlayerOnly_CollisionMesh)
 		{
 			D3DXVECTOR4 color(0.0f/255.0f, 255.0f/255.0f, 64.0f/255.0f, 0.4f);
-			r3dRenderer->SetPixelShaderConstantF(0, (float*)&color, 1);
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, (float*)&color, 1);
 
 			This->Parent->PlayerOnly_CollisionMesh->SetVSConsts( This->Parent->GetTransformMatrix() );
 			This->Parent->PlayerOnly_CollisionMesh->DrawMeshSimple( 0 );
-			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
 			This->Parent->PlayerOnly_CollisionMesh->DrawMeshSimple( 0 );
-			r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+			r3dRenderer->pd3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 		}
 		/*else
 		{
@@ -782,7 +871,7 @@ struct HighlightMeshRenderable : Renderable
 		r3dRenderer->SetVertexShader( VS_FWD_COLOR_ID ) ;
 		r3dRenderer->SetPixelShader( PS_FWD_COLOR_ID ) ;
 		float colr[ 4 ] = { 1, 0, 0, 0.5 } ;
-		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, colr, 1 ) ) ;
 		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH ) ;
 		This->Mesh->DrawMeshSimple( 0 );
 		r3dRenderer->SetVertexShader( curVs ) ;
@@ -1031,11 +1120,9 @@ BOOL MeshGameObject::Update()
 	return parent::Update();
 }
 
-/*virtual*/
-void
-MeshGameObject::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )
+void MeshGameObject::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam )
 {
-	TL_STATIC_ASSERT( sizeof(MeshObjDeferredRenderable) <= MAX_RENDERABLE_SIZE );
+	COMPILE_ASSERT( sizeof(MeshObjDeferredRenderable) <= MAX_RENDERABLE_SIZE );
 
 	float distSq = (Cam - GetPosition()).LengthSq();
 
@@ -1073,15 +1160,19 @@ MeshGameObject::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], 
 	int idist = R3D_MIN( (int)dist, 0xffff );
 
 	r3dMesh* ( &TargetLODSet ) [ NUM_LODS ] = GetPreferredMeshLODSet();
+	if(!TargetLODSet[ meshLodIndex ])
+		return;
+	if(!TargetLODSet[ meshLodIndex ]->IsDrawable())
+		return;
 
-	uint32_t prevCount = render_arrays[ rsFillGBuffer ].Count();
+	uint32_t prevCount = render_arrays[ m_FillGBufferTarget ].Count();
 	uint32_t prevTranspCount = render_arrays[rsDrawTransparents].Count();
-	TargetLODSet[ meshLodIndex ]->AppendRenderablesDeferred( render_arrays[ rsFillGBuffer ], m_ObjectColor );
+	TargetLODSet[ meshLodIndex ]->AppendRenderablesDeferred( render_arrays[ m_FillGBufferTarget ], m_ObjectColor );
 	TargetLODSet[ meshLodIndex ]->AppendTransparentRenderables( render_arrays[rsDrawTransparents], m_ObjectColor, dist, 0 );
 
-	for( uint32_t i = prevCount, e = render_arrays[ rsFillGBuffer ].Count(); i < e; i ++ )
+	for( uint32_t i = prevCount, e = render_arrays[ m_FillGBufferTarget ].Count(); i < e; i ++ )
 	{
-		MeshObjDeferredRenderable& rend = static_cast<MeshObjDeferredRenderable&>( render_arrays[ rsFillGBuffer ][ i ] ) ;
+		MeshObjDeferredRenderable& rend = static_cast<MeshObjDeferredRenderable&>( render_arrays[ m_FillGBufferTarget ][ i ] ) ;
 
 		int MatScoreID = ( rend.SortValue >> 32 ) & MAT_FRAME_SCORE_MASK ;
 
@@ -1263,6 +1354,11 @@ MeshGameObject::AppendShadowRenderables( RenderArray& rarr, const r3dCamera& Cam
 		meshLodIndex = TargetLOD[3] ? 3 : TargetLOD[ 2 ] ? 2 : TargetLOD[ 1 ] ? 1 : 0;
 	}
 
+	if(!TargetLOD[ meshLodIndex ])
+		return;
+	if(!TargetLOD[ meshLodIndex ]->IsDrawable())
+		return;
+
 	uint32_t prevCount = rarr.Count();
 
 	TargetLOD[ meshLodIndex ]->AppendShadowRenderables( rarr );
@@ -1337,7 +1433,7 @@ MeshGameObject::DrawSelected( const r3dCamera& Cam, const D3DXVECTOR4& color )
 		extern int g_FwdColorVS;
 		extern int g_FwdColorPS;
 
-		D3D_V ( r3dRenderer->SetPixelShaderConstantF( 0, (float*)&color, 1 ) );
+		D3D_V ( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, (float*)&color, 1 ) );
 
 		r3dRenderer->SetPixelShader( g_FwdColorPS );
 		r3dRenderer->SetVertexShader( g_FwdColorVS );
@@ -1345,19 +1441,21 @@ MeshGameObject::DrawSelected( const r3dCamera& Cam, const D3DXVECTOR4& color )
 		DWORD prevFillMode;
 
 		D3D_V ( r3dRenderer->pd3ddev->GetRenderState( D3DRS_FILLMODE, &prevFillMode ) );
-		D3D_V ( r3dRenderer->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME ) );
+		D3D_V ( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, D3DFILL_WIREFRAME ) );
 
 		// evil proj mtx hack
 		float prev43 = r3dRenderer->ProjMatrix._43;
-		r3dRenderer->ProjMatrix._43 -= 0.00033f;
+		r3dRenderer->ProjMatrix._43 -= 0.00033f * ( r3dRenderer->ZDir == r3dRenderLayer::ZDIR_INVERSED ? -1.0f : 1.0f );
+		r3dRenderer->ViewProjMatrix = r3dRenderer->ViewMatrix * r3dRenderer->ProjMatrix;
 
 		MeshLOD[0]->SetVSConsts( mTransform );
 
 		r3dRenderer->ProjMatrix._43 = prev43;
+		r3dRenderer->ViewProjMatrix = r3dRenderer->ViewMatrix * r3dRenderer->ProjMatrix;
 
 		MeshLOD[0]->DrawMeshWithoutMaterials();
 
-		D3D_V ( r3dRenderer->SetRenderState( D3DRS_FILLMODE, prevFillMode ) );
+		D3D_V ( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE, prevFillMode ) );
 
 		r3dRenderer->SetPixelShader();
 		r3dRenderer->SetVertexShader();
@@ -1468,6 +1566,30 @@ r3dMaterial * MeshGameObject::GetMaterial(uint32_t faceID)
 	}
 	return material;
 }
+
+//------------------------------------------------------------------------
+
+void MeshGameObject::OnDrawDistanceChanged()
+{
+	const std::string& key = GetMeshLibKey();
+
+	for( ObjectIterator iter = GameWorld().GetFirstOfAllObjects(); iter.current ; iter = GameWorld().GetNextOfAllObjects( iter ) )
+	{
+		GameObject* obj = iter.current;
+
+		if( obj->ObjTypeFlags & OBJTYPE_Mesh )
+		{
+			MeshGameObject* mgo = static_cast< MeshGameObject* >( obj );
+
+			if( mgo->GetMeshLibKey() == key )
+			{
+				mgo->DrawDistanceSq = DrawDistanceSq;
+			}
+		}
+	}
+}
+
+//------------------------------------------------------------------------
 
 void MeshGameObject::OnPreRender()
 {

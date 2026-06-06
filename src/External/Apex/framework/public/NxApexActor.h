@@ -1,51 +1,52 @@
-#include "NxApex.h"
-#ifndef __NX_APEX_ACTOR_H__
-#define __NX_APEX_ACTOR_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_APEX_ACTOR_H
+#define NX_APEX_ACTOR_H
 
 /*!
 \file
 \brief classes NxApexActor, NxApexActorSource
 */
 
+#include "NxApexInterface.h"
+
 // PhysX SDK class declarations
+#if NX_SDK_VERSION_MAJOR == 2
 class NxActorDesc;
 class NxActorDescBase;
 class NxShapeDesc;
 class NxBodyDesc;
+#elif NX_SDK_VERSION_MAJOR == 3
+namespace physx { namespace apex
+{
+class PhysX3DescTemplate;
+}}
+#endif
 
 namespace physx
 {
@@ -98,6 +99,9 @@ public:
 	\brief Ensure that all module-cached data is cached.
 	*/
 	virtual void cacheModuleData() const {}
+
+protected:
+	virtual ~NxApexActor() {} // use release() method instead!
 };
 
 /**
@@ -126,6 +130,8 @@ public:
 
 	You can pass NULL to not have a template.
 	*/
+
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual void setActorTemplate(const NxActorDescBase*) = 0;
 
 	/**
@@ -186,7 +192,34 @@ public:
 	If the template is NULL this will return false; otherwise it will fill in dest and return true.
 	*/
 	virtual bool getBodyTemplate(NxBodyDesc& dest) const = 0;
+#elif NX_SDK_VERSION_MAJOR == 3
+	/**
+	\brief Sets the current body template
 
+	User can specify a descriptor template for bodies that this object may create.  APEX may customize these suggested settings.
+	Already created / existing bodies will not be changed if the body template is changed!  The body template will only be used for
+	new bodies created after this is called!
+
+	members that are ignored:
+	massLocalPose
+	massSpaceInertia
+	mass
+	linearVelocity
+	angularVelocity
+
+	These fields should be left at their default values as set by the desc constructor.
+
+	Because it is not possible to instance the type NxShapeDesc directly, it is simplest to pass a pointer to a NxSphereShapeDesc.
+	*/
+	virtual void setPhysX3Template(const PhysX3DescTemplate*) = 0;
+
+	/**
+	\brief Retrieve the current body template
+
+	If the template is NULL this will return false; otherwise it will fill in dest and return true.
+	*/
+	virtual bool getPhysX3Template(PhysX3DescTemplate& dest) const = 0;
+#endif
 };
 
 PX_POP_PACK
@@ -194,4 +227,4 @@ PX_POP_PACK
 }
 } // end namespace physx::apex
 
-#endif // __NX_APEX_ACTOR_H__
+#endif // NX_APEX_ACTOR_H

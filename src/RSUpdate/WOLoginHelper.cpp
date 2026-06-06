@@ -29,12 +29,28 @@ void CLoginHelper::DoLogin()
 		return;
 	}
 
-	if(CustomerID == 0)
+	if(AccountStatus == 999) {
+		loginAnswerCode = ANS_Deleted;
+		return;
+	}
+
+	if(CustomerID == 0) {
 		loginAnswerCode = ANS_BadPassword;
-	else if(AccountStatus >= 200)
-		loginAnswerCode = ANS_Frozen;
-	else
+		return;
+	}
+	
+	if(AccountStatus == 100)
 		loginAnswerCode = ANS_Logged;
+	else if(AccountStatus == 70)
+		loginAnswerCode = ANS_GameActive;
+	else if(AccountStatus == 200)
+		loginAnswerCode = ANS_Banned;
+	else if(AccountStatus == 201)
+		loginAnswerCode = ANS_Frozen;
+	else if(AccountStatus == 300)
+		loginAnswerCode = ANS_TimeExpired;
+	else
+		loginAnswerCode = ANS_Unknown;
 		
 	return;
 }
@@ -66,47 +82,12 @@ bool CLoginHelper::CheckSteamLogin()
 	return true;
 }
 
-bool CLoginHelper::CheckG1Login()
-{
-	r3d_assert(g1AuthToken[0]);
-
-	CWOBackendReq req("api_Gamersfirst.aspx");
-	req.AddParam("func",  "login");
-	req.AddParam("token", g1AuthToken);
-	if(!req.Issue()) {
-		r3dOutToLog("CheckG1Login: failed %d\n", req.resultCode_);
-		return false;
-	}
-
-	int n = sscanf(req.bodyStr_, "%d %d %d %d %d", 
-		&CustomerID, 
-		&SessionID,
-		&AccountStatus,
-		&g1AccountId, 
-		&g1PayCode);
-	if(n != 5) {
-		r3dOutToLog("CheckG1Login: bad answer %s\n", req.bodyStr_);
-		return false;
-	}
-	
-	// something wrong happens
-	if(g1AccountId == 0)
-		return false;
-		
-	// get username from parsestring after :
-	const char* delim = strchr(req.bodyStr_, ':');
-	if(delim)
-		r3dscpy(g1Username, delim + 1);
-
-	return true;
-}
-
 void CLoginHelper::SaveUserName()
 {
 	HKEY hKey;
 	int hr;
 	hr = RegCreateKeyEx(HKEY_CURRENT_USER, 
-		"Software\\Arktos Entertainment Group\\War Inc Battlezone", 
+		"Software\\Arktos Entertainment Group\\WarZ", 
 		0, 
 		NULL,
 		REG_OPTION_NON_VOLATILE, 
@@ -129,7 +110,7 @@ bool CLoginHelper::LoadUserName()
 	HKEY hKey;
 	int hr;
 	hr = RegOpenKeyEx(HKEY_CURRENT_USER, 
-		"Software\\Arktos Entertainment Group\\War Inc Battlezone", 
+		"Software\\Arktos Entertainment Group\\WarZ", 
 		0, 
 		KEY_ALL_ACCESS, 
 		&hKey);

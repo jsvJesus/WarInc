@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,24 +32,53 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-//
-// RendererBoxShape : convenience class for generating a box mesh.
-//
 #ifndef RENDERER_PARTICLE_SYSTEM_SHAPE_H
 #define RENDERER_PARTICLE_SYSTEM_SHAPE_H
 
 #include <RendererShape.h>
 
-class RendererVertexBuffer;
-
-class RendererParticleSystemShape : public RendererShape
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+	class RendererInstanceBuffer;
+	class RendererIndexBuffer;
+
+	class RendererParticleSystemShape : public RendererShape
+	{
 	public:
-		RendererParticleSystemShape(Renderer &renderer, physx::PxU32 num_vertices, physx::PxReal* vertices);
-		virtual ~RendererParticleSystemShape(void);
-		
+								RendererParticleSystemShape(Renderer &renderer, 
+									physx::PxU32 num_vertices, 
+									bool _mInstanced,
+									bool _mFading,
+									PxReal fadingPeriod = 1.0f,
+									PxReal debriScaleFactor = 1.0f);
+		virtual					~RendererParticleSystemShape(void);
+
+		void					update(PxU32 validParticleRange, 
+										 const PxVec3* positions, 
+										 const PxU32* validParticleBitmap,
+										 const PxReal* lifetime = NULL);
+
+		void					update(PxU32 validParticleRange, 
+										const PxVec3* positions, 
+										const PxU32* validParticleBitmap,
+										const PxMat33* orientation);
 	private:
-		RendererVertexBuffer *m_vertexBuffer;
-};
+		bool					mInstanced;
+		bool					mFading;
+		PxReal					mFadingPeriod;
+		PxU32					mMaxParticles;
+		RendererVertexBuffer	*mVertexBuffer;
+		RendererInstanceBuffer	*mInstanceBuffer;
+		RendererIndexBuffer		*mIndexBuffer;
+
+		void					initializeVertexBuffer(PxU32 color);
+		void					initializeBuffersAsSimpleConvex(PxU32 color, PxReal scaleFactor);
+		void					initializeInstanceBuffer();
+
+	};
+
+} // namespace SampleRenderer
 
 #endif

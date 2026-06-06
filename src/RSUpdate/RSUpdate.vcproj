@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="RSUpdate"
 	ProjectGUID="{4C326ABD-0ED8-49E0-AA2A-B24629A2E14D}"
 	RootNamespace="RSUpdate"
@@ -69,10 +69,9 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib ws2_32.lib strsafe.lib d3dx9d.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib Crypt32.lib ..\External\ChilKat\Libs\ChilkatDbg.lib Shlwapi.lib"
-				OutputFile="..\..\bin\build\updater\$(ProjectName)_d.exe"
+				OutputFile="..\..\bin\build\updater\WarZlauncher_d.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\External\dxsdk\Lib\"
-				UACExecutionLevel="2"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -154,11 +153,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="winmm.lib ws2_32.lib strsafe.lib d3dx9.lib d3d9.lib dinput8.lib dxguid.lib xinput.lib Crypt32.lib ..\External\ChilKat\Libs\ChilkatRel.lib Shlwapi.lib"
-				OutputFile="..\..\bin\build\updater\$(ProjectName).exe"
+				OutputFile="..\..\bin\build\updater\WarZlauncher.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\External\dxsdk\Lib\"
-				UACExecutionLevel="2"
 				GenerateDebugInformation="true"
+				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -245,6 +244,14 @@
 			</File>
 			<File
 				RelativePath=".\ITaskbarList3.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LauncherConfig.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\LauncherConfig.h"
 				>
 			</File>
 			<File
@@ -356,6 +363,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\WOCheckSerialHelper.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\WOCheckSerialHelper.h"
+				>
+			</File>
+			<File
 				RelativePath=".\WOCreateAccHelper.cpp"
 				>
 			</File>
@@ -378,6 +393,18 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
+				RelativePath=".\gfx\back_register_2.png"
+				>
+			</File>
+			<File
+				RelativePath=".\gfx\btn_get_serial_hover.png"
+				>
+			</File>
+			<File
+				RelativePath=".\gfx\btn_validate_hover.png"
+				>
+			</File>
+			<File
 				RelativePath=".\RSUpdate.rc"
 				>
 			</File>
@@ -390,15 +417,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\res\warinc_small.ico"
+				RelativePath=".\res\warz_icon_01.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\res\WarIncBattleZoneIcon.ico"
+				RelativePath=".\res\warz_icon_02.ico"
 				>
 			</File>
 			<File
-				RelativePath=".\res\WarIncBattleZoneIcon_Full.ico"
+				RelativePath=".\res\warz_icon_03.ico"
 				>
 			</File>
 		</Filter>

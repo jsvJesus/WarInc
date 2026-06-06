@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,9 +32,12 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9Renderer.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
+
+#include "D3D9Renderer.h"
 
 #include <RendererDesc.h>
 
@@ -71,40 +74,36 @@
 
 #include <SamplePlatform.h>
 
-using physx::pubfnd2::PxU32;
+using namespace SampleRenderer;
 
-#if defined(RENDERER_XBOX360)
-extern int gWindowWidth;
-extern int gWindowHeight;
-#endif
-
-void convertToD3D9(D3DCOLOR &dxcolor, const RendererColor &color)
+void SampleRenderer::convertToD3D9(D3DCOLOR &dxcolor, const RendererColor &color)
 {
 	const float inv255 = 1.0f / 255.0f;
 	dxcolor = D3DXCOLOR(color.r*inv255, color.g*inv255, color.b*inv255, color.a*inv255);
 }
 
-void convertToD3D9(float *dxvec, const physx::PxVec3 &vec)
+void SampleRenderer::convertToD3D9(float *dxvec, const PxVec3 &vec)
 {
 	dxvec[0] = vec.x;
 	dxvec[1] = vec.y;
 	dxvec[2] = vec.z;
 }
 
-void convertToD3D9(D3DMATRIX &dxmat, const physx::PxMat34Legacy &mat)
+void SampleRenderer::convertToD3D9(D3DMATRIX &dxmat, const physx::PxMat44 &mat)
 {
-	mat.getRowMajor44(&dxmat._11);
+	PxMat44 mat44 = mat.getTranspose();
+	memcpy(&dxmat._11, mat44.front(), 4 * 4 * sizeof (float));
 }
 
-void convertToD3D9(D3DMATRIX &dxmat, const RendererProjection &mat)
+void SampleRenderer::convertToD3D9(D3DMATRIX &dxmat, const RendererProjection &mat)
 {
 	float temp[16];
 	mat.getColumnMajor44(temp);
-	for(physx::PxU32 r=0; r<4; r++)
-	for(physx::PxU32 c=0; c<4; c++)
-	{
-		dxmat.m[r][c] = temp[c*4+r];
-	}
+	for(PxU32 r=0; r<4; r++)
+		for(PxU32 c=0; c<4; c++)
+		{
+			dxmat.m[r][c] = temp[c*4+r];
+		}
 }
 
 /******************************
@@ -115,40 +114,58 @@ D3D9Renderer::D3DXInterface::D3DXInterface(void)
 {
 	memset(this, 0, sizeof(*this));
 #if defined(RENDERER_WINDOWS)
-	#define D3DX_DLL "d3dx9_" RENDERER_TEXT2(D3DX_SDK_VERSION) ".dll"
+#define D3DX_DLL "d3dx9_" RENDERER_TEXT2(D3DX_SDK_VERSION) ".dll"
+
 	m_library = LoadLibraryA(D3DX_DLL);
-	RENDERER_ASSERT(m_library, "Unable to load " D3DX_DLL ".");
 	if(!m_library)
 	{
 		MessageBoxA(0, "Unable to load " D3DX_DLL ". Please install the latest DirectX End User Runtime available at www.microsoft.com/directx.", "Renderer Error.", MB_OK);
 	}
 	if(m_library)
 	{
-		#define FIND_D3DX_FUNCTION(_name)                             \
-		    m_##_name = (LP##_name)GetProcAddress(m_library, #_name); \
-		    RENDERER_ASSERT(m_##_name, "Unable to find D3DX9 Function " #_name " in " D3DX_DLL ".");
-		
+#define FIND_D3DX_FUNCTION(_name)                             \
+m_##_name = (LP##_name)GetProcAddress(m_library, #_name); \
+RENDERER_ASSERT(m_##_name, "Unable to find D3DX9 Function " #_name " in " D3DX_DLL ".");
+
 		FIND_D3DX_FUNCTION(D3DXCompileShaderFromFileA)
 		FIND_D3DX_FUNCTION(D3DXGetVertexShaderProfile)
 		FIND_D3DX_FUNCTION(D3DXGetPixelShaderProfile)
-		
-		#undef FIND_D3DX_FUNCTION
+		FIND_D3DX_FUNCTION(D3DXSaveSurfaceToFileInMemory)
+		FIND_D3DX_FUNCTION(D3DXCreateBuffer)
+		FIND_D3DX_FUNCTION(D3DXSaveSurfaceToFileA)
+
+#undef FIND_D3DX_FUNCTION
 	}
-	#undef D3DX_DLL
+
+#define D3DCOMPILER_DLL "D3DCompiler_" RENDERER_TEXT2(D3DX_SDK_VERSION) ".dll"
+	m_compiler_library = LoadLibraryA(D3DCOMPILER_DLL);
+	if(!m_library)
+	{
+		MessageBoxA(0, "Unable to load " D3DCOMPILER_DLL ". Please install the latest DirectX End User Runtime available at www.microsoft.com/directx.", "Renderer Error.", MB_OK);
+	}
+
+
+#undef D3DX_DLL
 #endif
 }
 
 D3D9Renderer::D3DXInterface::~D3DXInterface(void)
 {
 #if defined(RENDERER_WINDOWS)
-	if(m_library) FreeLibrary(m_library);
+	if(m_library)
+	{
+		FreeLibrary(m_library);
+		m_library = 0;
+		FreeLibrary(m_compiler_library);
+		m_compiler_library = 0;
+	}
 #endif
 }
 
 #if defined(RENDERER_WINDOWS)
-	#define CALL_D3DX_FUNCTION(_name, _params)   if(m_##_name) result = m_##_name _params;
+#define CALL_D3DX_FUNCTION(_name, _params)   if(m_##_name) result = m_##_name _params;
 #else
-	#define CALL_D3DX_FUNCTION(_name, _params)   result = _name _params;
+#define CALL_D3DX_FUNCTION(_name, _params)   result = _name _params;
 #endif
 
 HRESULT D3D9Renderer::D3DXInterface::CompileShaderFromFileA(LPCSTR srcFile, CONST D3DXMACRO *defines, LPD3DXINCLUDE include, LPCSTR functionName, LPCSTR profile, DWORD flags, LPD3DXBUFFER *shader, LPD3DXBUFFER *errorMsgs, LPD3DXCONSTANTTABLE *constantTable)
@@ -156,6 +173,15 @@ HRESULT D3D9Renderer::D3DXInterface::CompileShaderFromFileA(LPCSTR srcFile, CONS
 
 	HRESULT result = D3DERR_NOTAVAILABLE;
 	CALL_D3DX_FUNCTION(D3DXCompileShaderFromFileA, (srcFile, defines, include, functionName, profile, flags, shader, errorMsgs, constantTable));
+	return result;
+
+}
+
+HRESULT D3D9Renderer::D3DXInterface::SaveSurfaceToFileA( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT DestFormat, LPDIRECT3DSURFACE9 pSrcSurface, CONST PALETTEENTRY* pSrcPalette, CONST RECT*  pSrcRect)
+{
+
+	HRESULT result = D3DERR_NOTAVAILABLE;
+	CALL_D3DX_FUNCTION(D3DXSaveSurfaceToFileA, (pDestFile, DestFormat, pSrcSurface, pSrcPalette, pSrcRect));
 	return result;
 
 }
@@ -176,6 +202,21 @@ LPCSTR D3D9Renderer::D3DXInterface::GetPixelShaderProfile(LPDIRECT3DDEVICE9 devi
 	return result;
 }
 
+HRESULT D3D9Renderer::D3DXInterface::SaveSurfaceToFileInMemory(LPD3DXBUFFER *ppDestBuf, D3DXIMAGE_FILEFORMAT DestFormat, LPDIRECT3DSURFACE9 pSrcSurface, const PALETTEENTRY *pSrcPalette, const RECT *pSrcRect)
+{
+	HRESULT result = D3DERR_NOTAVAILABLE;
+	CALL_D3DX_FUNCTION(D3DXSaveSurfaceToFileInMemory, (ppDestBuf, DestFormat, pSrcSurface, pSrcPalette, pSrcRect));
+	return result;
+}
+
+HRESULT D3D9Renderer::D3DXInterface::CreateBuffer(DWORD NumBytes, LPD3DXBUFFER *ppBuffer)
+{
+	HRESULT result = D3DERR_NOTAVAILABLE;
+	CALL_D3DX_FUNCTION(D3DXCreateBuffer, (NumBytes, ppBuffer));
+	return result;
+}
+
+
 #undef CALL_D3DX_FUNCTION
 
 /**********************************
@@ -191,21 +232,26 @@ D3D9Renderer::ShaderEnvironment::ShaderEnvironment(void)
 * D3D9Renderer *
 ***************/ 
 
-D3D9Renderer::D3D9Renderer(const RendererDesc &desc) :
-	Renderer	(DRIVER_DIRECT3D9)
+D3D9Renderer::D3D9Renderer(const RendererDesc &desc, const char* assetDir) :
+Renderer	(DRIVER_DIRECT3D9, assetDir)
 {
 	m_textVDecl						= NULL;
 	m_useShadersForTextRendering	= true;
 	m_pixelCenterOffset      = 0.5f;
 	m_displayWidth           = 0;
 	m_displayHeight          = 0;
+	m_displayBuffer          = 0;
 	m_d3d                    = 0;
 	m_d3dDevice              = 0;
 	m_d3dDepthStencilSurface = 0;
-	
-	m_viewMatrix.id();
-	
-	SamplePlatform* m_platform = SamplePlatform::platform();
+	m_d3dSurface             = 0;
+	m_d3dSwapChain           = 0;
+	m_d3dSwapDepthStencilSurface = 0;
+	m_d3dSwapSurface         = 0;
+
+	m_viewMatrix				= PxMat44::createIdentity();
+
+	SampleFramework::SamplePlatform* m_platform = SampleFramework::SamplePlatform::platform();
 	m_d3d = static_cast<IDirect3D9*>(m_platform->initializeD3D9());
 	RENDERER_ASSERT(m_d3d, "Could not create Direct3D9 Interface.");
 	if(m_d3d)
@@ -216,16 +262,18 @@ D3D9Renderer::D3D9Renderer(const RendererDesc &desc) :
 		m_d3dPresentParams.BackBufferFormat       = D3DFMT_X8R8G8B8;
 		m_d3dPresentParams.EnableAutoDepthStencil = 0;
 		m_d3dPresentParams.AutoDepthStencilFormat = D3DFMT_D24S8;
-		m_d3dPresentParams.PresentationInterval   = D3DPRESENT_INTERVAL_IMMEDIATE; // turns off V-sync;
+		m_d3dPresentParams.PresentationInterval   = desc.vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
 
 		HRESULT res = m_platform->initializeD3D9Display(&m_d3dPresentParams, 
 														m_deviceName, 
 														m_displayWidth, 
 														m_displayHeight, 
 														&m_d3dDevice);
+
 		RENDERER_ASSERT(res==D3D_OK, "Failed to create Direct3D9 Device.");
 		if(res==D3D_OK)
 		{
+			m_d3dPresentParamsChanged = false;
 			checkResize(false);
 			onDeviceReset();
 		}
@@ -235,7 +283,11 @@ D3D9Renderer::D3D9Renderer(const RendererDesc &desc) :
 D3D9Renderer::~D3D9Renderer(void)
 {
 	assert(!m_textVDecl);
-	SamplePlatform* m_platform = SamplePlatform::platform();
+	SampleFramework::SamplePlatform* m_platform = SampleFramework::SamplePlatform::platform();
+
+	releaseAllMaterials();
+
+	releaseSwapchain();
 
 	if(m_d3dDepthStencilSurface)
 	{
@@ -246,22 +298,26 @@ D3D9Renderer::~D3D9Renderer(void)
 	m_platform->D3D9DeviceBlockUntilIdle();
 	if(m_d3dDevice)              m_d3dDevice->Release();
 	if(m_d3d)                    m_d3d->Release();
+	if(m_displayBuffer)          m_displayBuffer->Release();
 }
 
 bool D3D9Renderer::checkResize(bool isDeviceLost)
 {
 	bool isDeviceReset = false;
 #if defined(RENDERER_WINDOWS)
-	if(SamplePlatform::platform()->getWindowHandle() && m_d3dDevice)
+	if(SampleFramework::SamplePlatform::platform()->getWindowHandle() && m_d3dDevice)
 	{
 		PxU32 width  = 0;
 		PxU32 height = 0;
-		SamplePlatform::platform()->getWindowSize(width, height);
+		SampleFramework::SamplePlatform::platform()->getWindowSize(width, height);
 		if(width && height && (width != m_displayWidth || height != m_displayHeight) || isDeviceLost)
 		{
-			bool needsReset = (m_displayWidth&&m_displayHeight ? true : false);
+			bool needsReset = (m_displayWidth&&m_displayHeight&&(isDeviceLost||!useSwapchain()) ? true : false);
 			m_displayWidth  = width;
 			m_displayHeight = height;
+
+			m_d3dPresentParams.BackBufferWidth  = (UINT)m_displayWidth;
+			m_d3dPresentParams.BackBufferHeight = (UINT)m_displayHeight;
 
 			D3DVIEWPORT9 viewport = {0};
 			m_d3dDevice->GetViewport(&viewport);
@@ -272,30 +328,113 @@ bool D3D9Renderer::checkResize(bool isDeviceLost)
 
 			if(needsReset)
 			{
-				physx::pubfnd2::PxU64 res = m_d3dDevice->TestCooperativeLevel();
+				physx::PxU64 res = m_d3dDevice->TestCooperativeLevel();
 				if(res == D3D_OK || res == D3DERR_DEVICENOTRESET)	//if device is lost, device has to be ready for reset
 				{
 					onDeviceLost();
-					m_d3dPresentParams.BackBufferWidth  = (UINT)m_displayWidth;
-					m_d3dPresentParams.BackBufferHeight = (UINT)m_displayHeight;
-					res = m_d3dDevice->Reset(&m_d3dPresentParams);
-					RENDERER_ASSERT(res == D3D_OK, "Failed to reset Direct3D9 Device.");
-					if(res == D3D_OK)
+					isDeviceReset = resetDevice();
+					if (isDeviceReset)
 					{
-						isDeviceReset = true;
+						onDeviceReset();
+						m_d3dDevice->SetViewport(&viewport);
 					}
-					m_d3dDevice->SetViewport(&viewport);
-					onDeviceReset();
 				}
 			}
 			else
 			{
+				buildSwapchain();
 				m_d3dDevice->SetViewport(&viewport);
 			}
 		}
 	}
 #endif
 	return isDeviceReset;
+}
+
+bool D3D9Renderer::resetDevice(void)
+{
+	
+	HRESULT res = m_d3dDevice->Reset(&m_d3dPresentParams);
+	RENDERER_ASSERT(res == D3D_OK, "Failed to reset Direct3D9 Device.");
+	if(res == D3D_OK)
+	{
+		m_d3dPresentParamsChanged = false;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void D3D9Renderer::buildSwapchain(void)
+{
+	if (!useSwapchain())
+		return;
+
+#if RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN
+	// Set the DX9 surfaces back to the originals
+	m_d3dDevice->SetRenderTarget(0, m_d3dSurface);
+	m_d3dDevice->SetDepthStencilSurface(m_d3dDepthStencilSurface);
+
+	// Release the swapchain resources
+	releaseSwapchain();
+
+	// Recreate the swapchain resources
+	m_d3dDevice->CreateAdditionalSwapChain(&m_d3dPresentParams, &m_d3dSwapChain);
+	m_d3dSwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &m_d3dSwapSurface);
+	m_d3dDevice->CreateDepthStencilSurface(m_displayWidth,m_displayHeight,D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, false, &m_d3dSwapDepthStencilSurface, 0);
+
+	// Re-assign the DX9 surfaces to use the swapchain
+	m_d3dDevice->SetRenderTarget(0, m_d3dSwapSurface);
+	m_d3dDevice->SetDepthStencilSurface(m_d3dSwapDepthStencilSurface);
+#endif
+}
+
+void SampleRenderer::D3D9Renderer::releaseSwapchain()
+{
+#if RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN
+	if(m_d3dSwapChain) 
+	{
+		m_d3dSwapChain->Release();
+		m_d3dSwapChain = 0;
+	}
+	if(m_d3dSwapDepthStencilSurface) 
+	{
+		m_d3dSwapDepthStencilSurface->Release();
+		m_d3dSwapDepthStencilSurface = 0;
+	}
+	if(m_d3dSwapSurface) 
+	{
+		m_d3dSwapSurface->Release();
+		m_d3dSwapSurface = 0;
+	}
+#endif
+}
+
+bool SampleRenderer::D3D9Renderer::useSwapchain() const
+{
+	return RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN==1;
+}
+
+bool SampleRenderer::D3D9Renderer::validSwapchain() const
+{
+#if RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN
+	return m_d3dSwapChain && m_d3dSwapDepthStencilSurface && m_d3dSwapSurface;
+#else
+	return false;
+#endif
+}
+
+HRESULT SampleRenderer::D3D9Renderer::presentSwapchain()
+{
+#if RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN
+	RENDERER_ASSERT(m_d3dSwapChain, "Invalid D3D9 swapchain");
+	if(m_d3dSwapChain)
+		return m_d3dSwapChain->Present(0, 0, 0, 0, 0);
+	else
+#endif
+		return D3DERR_NOTAVAILABLE;
 }
 
 void D3D9Renderer::onDeviceLost(void)
@@ -306,6 +445,12 @@ void D3D9Renderer::onDeviceLost(void)
 		m_d3dDepthStencilSurface->Release();
 		m_d3dDepthStencilSurface = 0;
 	}
+	if (m_d3dSurface)
+	{
+		m_d3dSurface->Release();
+		m_d3dSurface = 0;
+	}
+	releaseSwapchain();
 }
 
 void D3D9Renderer::onDeviceReset(void)
@@ -314,11 +459,13 @@ void D3D9Renderer::onDeviceReset(void)
 	{
 		// set out initial states...
 		m_d3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
-	#if defined(RENDERER_WINDOWS)
+#if defined(RENDERER_WINDOWS)
 		m_d3dDevice->SetRenderState(D3DRS_LIGHTING, 0);
-	#endif
+#endif
 		m_d3dDevice->SetRenderState(D3DRS_ZENABLE,  1);
+		m_d3dDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &m_d3dSurface);
 		buildDepthStencilSurface();
+		buildSwapchain();
 	}
 	notifyResourcesResetDevice();
 }
@@ -327,13 +474,13 @@ void D3D9Renderer::buildDepthStencilSurface(void)
 {
 	if(m_d3dDevice)
 	{
-		physx::PxU32 width  = m_displayWidth;
-		physx::PxU32 height = m_displayHeight;
+		PxU32 width  = m_displayWidth;
+		PxU32 height = m_displayHeight;
 		if(m_d3dDepthStencilSurface)
 		{
 			D3DSURFACE_DESC dssdesc;
 			m_d3dDepthStencilSurface->GetDesc(&dssdesc);
-			if(width != (physx::PxU32)dssdesc.Width || height != (physx::PxU32)dssdesc.Height)
+			if(width != (PxU32)dssdesc.Width || height != (PxU32)dssdesc.Height)
 			{
 				m_d3dDepthStencilSurface->Release();
 				m_d3dDepthStencilSurface = 0;
@@ -374,32 +521,36 @@ bool D3D9Renderer::swapBuffers(void)
 	bool isDeviceReset = false;
 	if(m_d3dDevice)
 	{
-		HRESULT result = SamplePlatform::platform()->D3D9Present();
+		HRESULT result = S_OK;
+		if (useSwapchain() && validSwapchain())
+			result = presentSwapchain();
+		else
+			result = SampleFramework::SamplePlatform::platform()->D3D9Present();
 		RENDERER_ASSERT(result == D3D_OK || result == D3DERR_DEVICELOST, "Unknown Direct3D9 error when swapping buffers.");
 		if(result == D3D_OK || result == D3DERR_DEVICELOST)
 		{
-			isDeviceReset = checkResize(result == D3DERR_DEVICELOST);
+			isDeviceReset = checkResize(result == D3DERR_DEVICELOST || m_d3dPresentParamsChanged);
 		}
 	}
 	return isDeviceReset;
 }
 
-void D3D9Renderer::getWindowSize(physx::PxU32 &width, physx::PxU32 &height) const
+void D3D9Renderer::getWindowSize(PxU32 &width, PxU32 &height) const
 {
+	RENDERER_ASSERT(m_displayHeight * m_displayWidth > 0, "variables not initialized properly");
 	width = m_displayWidth;
 	height = m_displayHeight;
 }
 
 RendererVertexBuffer *D3D9Renderer::createVertexBuffer(const RendererVertexBufferDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createVertexBuffer);
 	D3D9RendererVertexBuffer *vb = 0;
 	if(m_d3dDevice)
 	{
 		RENDERER_ASSERT(desc.isValid(), "Invalid Vertex Buffer Descriptor.");
 		if(desc.isValid())
 		{
-			vb = new D3D9RendererVertexBuffer(*m_d3dDevice, desc, m_deferredVBUnlock);
+			vb = new D3D9RendererVertexBuffer(*m_d3dDevice, desc);
 		}
 	}
 	if(vb) addResource(*vb);
@@ -408,7 +559,6 @@ RendererVertexBuffer *D3D9Renderer::createVertexBuffer(const RendererVertexBuffe
 
 RendererIndexBuffer *D3D9Renderer::createIndexBuffer(const RendererIndexBufferDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createIndexBuffer);
 	D3D9RendererIndexBuffer *ib = 0;
 	if(m_d3dDevice)
 	{
@@ -424,7 +574,6 @@ RendererIndexBuffer *D3D9Renderer::createIndexBuffer(const RendererIndexBufferDe
 
 RendererInstanceBuffer *D3D9Renderer::createInstanceBuffer(const RendererInstanceBufferDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createInstanceBuffer);
 	D3D9RendererInstanceBuffer *ib = 0;
 	if(m_d3dDevice)
 	{
@@ -440,7 +589,6 @@ RendererInstanceBuffer *D3D9Renderer::createInstanceBuffer(const RendererInstanc
 
 RendererTexture2D *D3D9Renderer::createTexture2D(const RendererTexture2DDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createTexture2D);
 	D3D9RendererTexture2D *texture = 0;
 	if(m_d3dDevice)
 	{
@@ -454,9 +602,15 @@ RendererTexture2D *D3D9Renderer::createTexture2D(const RendererTexture2DDesc &de
 	return texture;
 }
 
+RendererTexture3D *D3D9Renderer::createTexture3D(const RendererTexture3DDesc &desc)
+{
+	//RENDERER_ASSERT(0, "Not implemented!");
+	// TODO: Properly implement. 
+	return 0;
+}
+
 RendererTarget *D3D9Renderer::createTarget(const RendererTargetDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createTarget);
 	RendererTarget *target = 0;
 #if defined(RENDERER_ENABLE_DIRECT3D9_TARGET)
 	D3D9RendererTarget *d3dTarget = 0;
@@ -473,19 +627,19 @@ RendererTarget *D3D9Renderer::createTarget(const RendererTargetDesc &desc)
 
 RendererMaterial *D3D9Renderer::createMaterial(const RendererMaterialDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createMaterial);
-	D3D9RendererMaterial *mat = 0;
+	RendererMaterial *mat = hasMaterialAlready(desc);
 	RENDERER_ASSERT(desc.isValid(), "Invalid Material Descriptor.");
-	if(desc.isValid())
+	if(!mat && desc.isValid())
 	{
 		mat = new D3D9RendererMaterial(*this, desc);
+
+		registerMaterial(desc, mat);
 	}
 	return mat;
 }
 
 RendererMesh *D3D9Renderer::createMesh(const RendererMeshDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createMesh);
 	D3D9RendererMesh *mesh = 0;
 	RENDERER_ASSERT(desc.isValid(), "Invalid Mesh Descriptor.");
 	if(desc.isValid())
@@ -497,7 +651,6 @@ RendererMesh *D3D9Renderer::createMesh(const RendererMeshDesc &desc)
 
 RendererLight *D3D9Renderer::createLight(const RendererLightDesc &desc)
 {
-	RENDERER_PERFZONE(D3D9Renderer_createLight);
 	RendererLight *light = 0;
 	if(m_d3dDevice)
 	{
@@ -506,18 +659,26 @@ RendererLight *D3D9Renderer::createLight(const RendererLightDesc &desc)
 		{
 			switch(desc.type)
 			{
-				case RendererLight::TYPE_DIRECTIONAL:
-					light = new D3D9RendererDirectionalLight(*this, *(RendererDirectionalLightDesc*)&desc);
-					break;
-				case RendererLight::TYPE_SPOT:
-					light = new D3D9RendererSpotLight(*this, *(RendererSpotLightDesc*)&desc);
-					break;
-				default:
-					RENDERER_ASSERT(0, "Not implemented!");
+			case RendererLight::TYPE_DIRECTIONAL:
+				light = new D3D9RendererDirectionalLight(*this, *(RendererDirectionalLightDesc*)&desc);
+				break;
+			case RendererLight::TYPE_SPOT:
+				light = new D3D9RendererSpotLight(*this, *(RendererSpotLightDesc*)&desc);
+				break;
+			default:
+				RENDERER_ASSERT(0, "Not implemented!");
 			}
 		}
 	}
 	return light;
+}
+
+void D3D9Renderer::setVsync(bool on)
+{
+	UINT newVal = on ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+	m_d3dPresentParamsChanged |= m_d3dPresentParams.PresentationInterval != newVal;
+	m_d3dPresentParams.PresentationInterval = newVal;
+	//RENDERER_ASSERT(0, "Not implemented!");
 }
 
 bool D3D9Renderer::beginRender(void)
@@ -538,15 +699,26 @@ void D3D9Renderer::endRender(void)
 	}
 }
 
-void D3D9Renderer::bindViewProj(const physx::PxMat34Legacy &eye, const RendererProjection &proj)
+void D3D9Renderer::bindViewProj(const physx::PxMat44 &eye, const RendererProjection &proj)
 {
-	eye.getInverseRT(m_viewMatrix);
+	m_viewMatrix = eye.inverseRT();
 	convertToD3D9(m_environment.viewMatrix, m_viewMatrix);
 	convertToD3D9(m_environment.projMatrix, proj);
-	
-	const physx::PxVec3 eyeDirection = -eye.M.getColumn(2);
-	memcpy(m_environment.eyePosition,  &eye.t.x,        sizeof(float)*3);
+
+	const PxVec3 eyePosition  =  eye.getPosition();
+	const PxVec3 eyeDirection = -eye.getBasis(2);
+	memcpy(m_environment.eyePosition,  &eyePosition.x,  sizeof(float)*3);
 	memcpy(m_environment.eyeDirection, &eyeDirection.x, sizeof(float)*3);
+}
+
+void D3D9Renderer::bindFogState(const RendererColor &fogColor, float fogDistance)
+{
+	const float inv255 = 1.0f / 255.0f;
+
+	m_environment.fogColorAndDistance[0] = fogColor.r*inv255;
+	m_environment.fogColorAndDistance[1] = fogColor.g*inv255;
+	m_environment.fogColorAndDistance[2] = fogColor.b*inv255;
+	m_environment.fogColorAndDistance[3] = fogDistance;
 }
 
 void D3D9Renderer::bindAmbientState(const RendererColor &ambientColor)
@@ -561,38 +733,55 @@ void D3D9Renderer::bindDeferredState(void)
 
 void D3D9Renderer::bindMeshContext(const RendererMeshContext &context)
 {
-	physx::PxMat34Legacy model;
-	physx::PxMat34Legacy modelView;
+	physx::PxMat44 model;
+	physx::PxMat44 modelView;
 	if(context.transform) model = *context.transform;
-	else                  model.id();
-	modelView.multiply(m_viewMatrix, model);
-	
+	else                  model = PxMat44::createIdentity();
+	modelView = m_viewMatrix * model;
+
 	convertToD3D9(m_environment.modelMatrix,     model);
 	convertToD3D9(m_environment.modelViewMatrix, modelView);
 
 	// it appears that D3D winding is backwards, so reverse them...
-    DWORD cullMode = D3DCULL_CCW;
-    switch(context.cullMode)
-    {
-    case RendererMeshContext::CLOCKWISE: 
-       cullMode = D3DCULL_CCW;
-        break;
-    case RendererMeshContext::COUNTER_CLOCKWISE: 
-        cullMode = D3DCULL_CW;
-        break;
-    case RendererMeshContext::NONE: 
-        cullMode = D3DCULL_NONE;
-        break;
-    default:
-        RENDERER_ASSERT(0, "Invalid Cull Mode");
-    }
+	DWORD cullMode = D3DCULL_CCW;
+	switch(context.cullMode)
+	{
+	case RendererMeshContext::CLOCKWISE: 
+		cullMode = D3DCULL_CCW;
+		break;
+	case RendererMeshContext::COUNTER_CLOCKWISE: 
+		cullMode = D3DCULL_CW;
+		break;
+	case RendererMeshContext::NONE: 
+		cullMode = D3DCULL_NONE;
+		break;
+	default:
+		RENDERER_ASSERT(0, "Invalid Cull Mode");
+	}
+	if (!blendingCull() && NULL != context.material && context.material->getBlending())
+		cullMode = D3DCULL_NONE;
 
-    m_d3dDevice->SetRenderState(D3DRS_CULLMODE, cullMode);
+	m_d3dDevice->SetRenderState(D3DRS_CULLMODE, cullMode);
 
-    RENDERER_ASSERT(context.numBones <= RENDERER_MAX_BONES, "Too many bones.");
+	DWORD fillMode = D3DFILL_SOLID;
+	switch(context.fillMode)
+	{
+	case RendererMeshContext::SOLID:
+		fillMode = D3DFILL_SOLID;
+		break;
+	case RendererMeshContext::LINE:
+		fillMode = D3DFILL_WIREFRAME;
+		break;
+	case RendererMeshContext::POINT:
+		fillMode = D3DFILL_POINT;
+		break;
+	}
+	m_d3dDevice->SetRenderState(D3DRS_FILLMODE, fillMode);
+
+	RENDERER_ASSERT(context.numBones <= RENDERER_MAX_BONES, "Too many bones.");
 	if(context.boneMatrices && context.numBones>0 && context.numBones <= RENDERER_MAX_BONES)
 	{
-		for(physx::PxU32 i=0; i<context.numBones; i++)
+		for(PxU32 i=0; i<context.numBones; i++)
 		{
 			convertToD3D9(m_environment.boneMatrices[i], context.boneMatrices[i]);
 		}
@@ -620,9 +809,42 @@ void D3D9Renderer::endMultiPass(void)
 	}
 }
 
+void D3D9Renderer::beginTransparentMultiPass(void)
+{
+	if(m_d3dDevice)
+	{
+		setEnableBlendingOverride(true);
+		m_d3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,  1);
+		m_d3dDevice->SetRenderState(D3DRS_SRCBLEND,          D3DBLEND_SRCALPHA);
+		m_d3dDevice->SetRenderState(D3DRS_DESTBLEND,         D3DBLEND_ONE);
+		//m_d3dDevice->SetRenderState(D3DRS_ZFUNC,             D3DCMP_EQUAL);
+		m_d3dDevice->SetRenderState(D3DRS_ZFUNC,             D3DCMP_LESSEQUAL);
+		m_d3dDevice->SetRenderState(D3DRS_ZWRITEENABLE,      false);
+	}
+}
+
+void D3D9Renderer::endTransparentMultiPass(void)
+{
+	if(m_d3dDevice)
+	{
+		setEnableBlendingOverride(false);
+		m_d3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,  0);
+		m_d3dDevice->SetRenderState(D3DRS_ZFUNC,             D3DCMP_LESS);
+		m_d3dDevice->SetRenderState(D3DRS_ZWRITEENABLE,      true);
+	}
+}
+
 void D3D9Renderer::renderDeferredLight(const RendererLight &light)
 {
 	RENDERER_ASSERT(0, "Not implemented!");
+}
+
+PxU32 D3D9Renderer::convertColor(const RendererColor& color) const
+{
+	D3DCOLOR outColor;
+	convertToD3D9(outColor, color);
+
+	return outColor;
 }
 
 bool D3D9Renderer::isOk(void) const
@@ -631,8 +853,9 @@ bool D3D9Renderer::isOk(void) const
 	if(!m_d3d)            ok = false;
 	if(!m_d3dDevice)      ok = false;
 #if defined(RENDERER_WINDOWS)
-	ok = SamplePlatform::platform()->isD3D9ok();
+	ok = SampleFramework::SamplePlatform::platform()->isD3D9ok();
 	if(!m_d3dx.m_library) ok = false;
+	// note: we could assert m_compiler_library here too, but actually loading that one is optional, so the app still may work without it.
 #endif
 	return ok;
 }
@@ -653,28 +876,23 @@ void D3D9Renderer::removeResource(D3D9RendererResource &resource)
 	if(resource.m_d3dRenderer==this)
 	{
 		resource.m_d3dRenderer = 0;
-		const physx::PxU32 numResources  = (physx::PxU32)m_resources.size();
-		physx::PxU32       foundResource = numResources;
-		for(physx::PxU32 i=0; i<numResources; i++)
+		const PxU32 numResources  = (PxU32)m_resources.size();
+		for (PxU32 i = 0; i < numResources; i++)
 		{
 			if(m_resources[i] == &resource)
 			{
-				foundResource = i;
+				// the order of resources needs to remain intact, otherwise a render target that has a dependency on a texture might get onDeviceReset'ed earlier which is an error
+				m_resources.erase(m_resources.begin() + i);
 				break;
 			}
-		}
-		if(foundResource < numResources)
-		{
-			m_resources[foundResource] = m_resources.back();
-			m_resources.pop_back();
 		}
 	}
 }
 
 void D3D9Renderer::notifyResourcesLostDevice(void)
 {
-	const physx::PxU32 numResources  = (physx::PxU32)m_resources.size();
-	for(physx::PxU32 i=0; i<numResources; i++)
+	const PxU32 numResources  = (PxU32)m_resources.size();
+	for(PxU32 i=0; i<numResources; i++)
 	{
 		m_resources[i]->onDeviceLost();
 	}
@@ -682,8 +900,8 @@ void D3D9Renderer::notifyResourcesLostDevice(void)
 
 void D3D9Renderer::notifyResourcesResetDevice(void)
 {
-	const physx::PxU32 numResources  = (physx::PxU32)m_resources.size();
-	for(physx::PxU32 i=0; i<numResources; i++)
+	const PxU32 numResources  = (PxU32)m_resources.size();
+	for(PxU32 i=0; i<numResources; i++)
 	{
 		m_resources[i]->onDeviceReset();
 	}
@@ -755,6 +973,12 @@ void D3D9Renderer::closeTexter()
 {
 	if(m_textVDecl)
 	{
+		IDirect3DVertexDeclaration9* currDecl = NULL;
+		m_d3dDevice->GetVertexDeclaration(&currDecl);
+		if (currDecl == m_textVDecl)
+		{
+			m_d3dDevice->SetVertexDeclaration(NULL);
+		}
 		m_textVDecl->Release();
 		m_textVDecl = NULL;
 	}
@@ -767,7 +991,7 @@ void D3D9Renderer::setupTextRenderStates()
 {
 	// PT: save render states. Let's just hope this isn't a pure device, else the Get method won't work
 	m_d3dDevice->GetRenderState(D3DRS_CULLMODE, &gCullMode);
-	m_d3dDevice->GetRenderState(D3DRS_ALPHABLENDENABLE, &gAlphaBlendEnable);
+	m_d3dDevice->GetRenderState(D3DRS_ALPHABLENDENABLE, &gAlphaBlendEnable);	
 	m_d3dDevice->GetRenderState(D3DRS_SRCBLEND, &gSrcBlend);
 	m_d3dDevice->GetRenderState(D3DRS_DESTBLEND, &gDstBlend);
 	m_d3dDevice->GetRenderState(D3DRS_FILLMODE, &gFillMode);
@@ -802,8 +1026,9 @@ void D3D9Renderer::resetTextRenderStates()
 #endif
 }
 
-void D3D9Renderer::renderTextBuffer(const void* vertices, physx::PxU32 nbVerts, const physx::PxU16* indices, physx::PxU32 nbIndices)
+void D3D9Renderer::renderTextBuffer(const void* vertices, PxU32 nbVerts, const PxU16* indices, PxU32 nbIndices, RendererMaterial* material)
 {
+	PX_UNUSED(material);
 	// PT: font texture must have been selected prior to calling this function
 	const int PrimCount = nbIndices/3;
 	const int Stride = sizeof(TextVertex);
@@ -817,12 +1042,36 @@ void D3D9Renderer::renderTextBuffer(const void* vertices, physx::PxU32 nbVerts, 
 	DWORD hr = m_d3dDevice->DrawIndexedPrimitiveUP(D3DPT_TRIANGLELIST, 0, nbVerts, PrimCount, indices, D3DFMT_INDEX16, vertices, Stride);
 	if(FAILED(hr))
 	{
-//		printf("Error!\n");
+		//		printf("Error!\n");
+	}
+}
+
+void D3D9Renderer::renderLines2D(const void* vertices, PxU32 nbVerts)
+{
+	const int PrimCount = nbVerts-1;
+	const int Stride = sizeof(TextVertex);
+
+	if(m_textVDecl && FAILED(m_d3dDevice->SetVertexDeclaration(m_textVDecl)))
+	{
+		assert(0);
+		return;
+	}
+
+	DWORD hr = m_d3dDevice->DrawPrimitiveUP(D3DPT_LINESTRIP, PrimCount, vertices, Stride);
+	if(FAILED(hr))
+	{
+		//		printf("Error!\n");
 	}
 }
 
 void D3D9Renderer::setupScreenquadRenderStates()
 {
+	m_d3dDevice->GetRenderState(D3DRS_CULLMODE, &gCullMode);
+	m_d3dDevice->GetRenderState(D3DRS_FILLMODE, &gFillMode);
+
+	m_d3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	m_d3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+
 	m_d3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
 #if defined(RENDERER_XBOX360)
 	m_d3dDevice->SetRenderState(D3DRS_VIEWPORTENABLE, false);
@@ -831,11 +1080,55 @@ void D3D9Renderer::setupScreenquadRenderStates()
 
 void D3D9Renderer::resetScreenquadRenderStates()
 {
+	m_d3dDevice->SetRenderState(D3DRS_CULLMODE, gCullMode);
+	m_d3dDevice->SetRenderState(D3DRS_FILLMODE, gFillMode);
 	m_d3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, true);
 #if defined(RENDERER_XBOX360)
 	m_d3dDevice->SetRenderState(D3DRS_VIEWPORTENABLE, true);
 #endif
 }
 
+bool D3D9Renderer::captureScreen( PxU32 &width, PxU32& height, PxU32& sizeInBytes, const void*& screenshotData )
+{
+#if defined(RENDERER_XBOX360)
+	return false;
+#else
+	bool bSuccess = false;
+
+	IDirect3DSurface9* backBuffer = NULL;
+	if (useSwapchain() && validSwapchain())
+	{
+#if RENDERER_ENABLE_DIRECT3D9_SWAPCHAIN	
+		bSuccess = SUCCEEDED(m_d3dSwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backBuffer));
+#endif		
+	}
+	else
+	{
+		bSuccess = SUCCEEDED(m_d3dDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer));
+	}
+
+	if (bSuccess)
+	{
+		bSuccess = false;
+		if(m_displayBuffer)
+		{
+			m_displayBuffer->Release();
+			m_displayBuffer = 0;
+		}
+
+		if(SUCCEEDED(m_d3dx.SaveSurfaceToFileInMemory(&m_displayBuffer, D3DXIFF_BMP, backBuffer, NULL, NULL)))
+		{
+			getWindowSize(width, height);
+			sizeInBytes    = (physx::PxU32)m_displayBuffer->GetBufferSize();
+			screenshotData = m_displayBuffer->GetBufferPointer();
+			bSuccess       = true;
+		}
+		backBuffer->Release();
+	}
+
+	return bSuccess;
+#endif
+}
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
+

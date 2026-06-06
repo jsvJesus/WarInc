@@ -27,13 +27,6 @@ obj_EnvmapProbe::obj_EnvmapProbe ()
 , mEdgeSize( DEFAULT_ENVMAP_EDGE )
 {
 	g_EnvmapProbes.Register( this );
-
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows
-						| 
-					OBJFLAG_ForceSleep;
-
 }
 
 //------------------------------------------------------------------------
@@ -55,11 +48,9 @@ obj_EnvmapProbe::OnCreate()
 	if (!EnvProbeIcon) EnvProbeIcon = r3dRenderer->LoadTexture("Data\\Images\\EnvProbe.dds");
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows
-						|	
-					OBJFLAG_ForceSleep;
+
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	r3dBoundBox bboxLocal ;
 
@@ -116,6 +107,12 @@ obj_EnvmapProbe::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ],
 
 	if( r_hide_icons->GetInt() )
 		return ;
+
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
 
 	EnvmapProbeRenderable rend;
 

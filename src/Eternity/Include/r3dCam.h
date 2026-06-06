@@ -10,20 +10,28 @@
 class r3dCamera : public r3dPoint3D
 {
 public:
-	float		NearClip;
-	float		FarClip;
 
-	r3dVector	vPointTo;
-	r3dVector	vUP;
+	enum ProjectionTypeE
+	{
+		PROJTYPE_PRESPECTIVE,
+		PROJTYPE_ORTHO,
+		PROJTYPE_CUSTOM
+	};
+
+	float			NearClip;
+	float			FarClip;
+
+	r3dVector		vPointTo;
+	r3dVector		vUP;
 
 	// perspective projection matrix 
-	float		FOV;
+	float			FOV;
 
 	// orthographic projection matrix
-	bool		bOrtho;
-	float		Width;
-	float		Height;
-	float		Aspect;
+	ProjectionTypeE	ProjectionType;
+	float			Width;
+	float			Height;
+	float			Aspect;
 
   private:
 	void		_Init(const r3dPoint3D& pos);
@@ -33,7 +41,6 @@ public:
 				r3dCamera();
 
 	void		SetOrtho	( float fWidth, float fHeight );
-	void		ResetOrtho	();
 	inline void	SetPosition	(const r3dPoint3D& Pos);
 	void		PointTo		(const r3dPoint3D& p);
 	void		SetPlanes	(float nc, float fc) { NearClip = nc; FarClip = fc;}

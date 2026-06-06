@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,7 +34,9 @@
  */
 
 #include <SamplePlatform.h>
-#include <SampleApplication.h>
+
+using namespace SampleFramework;
+using namespace physx;
 
 SamplePlatform* SamplePlatform::m_platform = NULL;
 
@@ -46,6 +48,20 @@ SamplePlatform* SamplePlatform::platform()
 		return SamplePlatform::m_platform;
 	}
 	return NULL;
+}
+
+SampleApplication* SamplePlatform::application()
+{
+	return m_sf_app;
+}
+
+bool SamplePlatform::preOpenWindow(void * ptr)
+{
+	return true;
+}
+
+void SamplePlatform::showCursor(bool)
+{
 }
 
 void SamplePlatform::setPlatform(SamplePlatform* ptr)
@@ -63,9 +79,27 @@ bool SamplePlatform::isD3D9ok()
 	return true;
 }
 
+void* SamplePlatform::initializeD3D11()
+{
+	return NULL;
+}
+
+void SamplePlatform::showSoftInput() 
+{
+
+}
+
+
+bool SamplePlatform::isD3D11ok()
+{
+	return true;
+}
+
 void* SamplePlatform::compileProgram(void * context, 
+										const char* assetDir, 
 										const char *programPath, 
-										physx::pubfnd2::PxU64 profile, 
+										physx::PxU64 profile, 
+										const char* passString, 
 										const char *entry, 
 										const char **args)
 
@@ -73,9 +107,8 @@ void* SamplePlatform::compileProgram(void * context,
 	return NULL;
 }
 
-SamplePlatform::SamplePlatform(RendererWindow* _app) : m_app(_app)
+SamplePlatform::SamplePlatform(SampleRenderer::RendererWindow* _app) : m_app(_app)
 {
-	m_sf_app = static_cast<SampleApplication*>(m_app);
 }
 
 SamplePlatform::~SamplePlatform()
@@ -95,12 +128,12 @@ void SamplePlatform::update()
 {
 }
 
-void SamplePlatform::setWindowSize(physx::pubfnd2::PxU32 width, 
-									physx::pubfnd2::PxU32 height)
+void SamplePlatform::setWindowSize(physx::PxU32 width, 
+									physx::PxU32 height)
 {
 }
 
-void SamplePlatform::getTitle(char *title, physx::pubfnd2::PxU32 maxLength) const
+void SamplePlatform::getTitle(char *title, PxU32 maxLength) const
 {
 }
 
@@ -108,18 +141,18 @@ void SamplePlatform::setTitle(const char *title)
 {
 }
 
-void SamplePlatform::recenterCursor(physx::pubfnd2::PxReal& deltaMouseX, 
-									physx::pubfnd2::PxReal& deltaMouseY)
-{
-}
-
-
-bool SamplePlatform::openWindow(physx::pubfnd2::PxU32& width, 
-								physx::pubfnd2::PxU32& height,
+bool SamplePlatform::openWindow(physx::PxU32& width, 
+								physx::PxU32& height,
 								const char* title,
 								bool fullscreen) 
 {
 	return true;
+}
+
+
+bool SamplePlatform::useWindow(physx::PxU64 hwnd)
+{
+	return false;
 }
 
 
@@ -133,6 +166,17 @@ bool SamplePlatform::closeWindow()
 	return true;
 }
 
+bool SamplePlatform::updateWindow() 
+{
+	return true;
+}
+
+size_t SamplePlatform::getCWD(char* path, size_t len)
+{
+	RENDERER_ASSERT(path && len, "buffer should not be empty!");
+	*path = '\0';
+	return 0;
+}
 void SamplePlatform::setCWDToEXE(void) 
 {
 }
@@ -152,20 +196,17 @@ void SamplePlatform::preRendererSetup()
 {
 }
 
-void SamplePlatform::postRendererSetup()
+void SamplePlatform::postRendererSetup(SampleRenderer::Renderer* renderer)
 {
+	getSampleUserInput()->setRenderer(renderer);
 }
 
-void SamplePlatform::setupRendererDescription(RendererDesc& renDesc) 
+void SamplePlatform::setupRendererDescription(SampleRenderer::RendererDesc& renDesc) 
 {
-	renDesc.driver = Renderer::DRIVER_OPENGL;
+	renDesc.driver = SampleRenderer::Renderer::DRIVER_OPENGL;
 }
 
 void SamplePlatform::doInput()
-{
-}
-
-void SamplePlatform::processGamepads()
 {
 }
 
@@ -173,9 +214,9 @@ void SamplePlatform::postRendererRelease()
 {
 }
 
-void SamplePlatform::initializeOGLDisplay(const RendererDesc& desc,
-									   physx::pubfnd2::PxU32& width, 
-									   physx::pubfnd2::PxU32& height)
+void SamplePlatform::initializeOGLDisplay(const SampleRenderer::RendererDesc& desc,
+									   physx::PxU32& width, 
+									   physx::PxU32& height)
 {
 }
 
@@ -184,11 +225,16 @@ void SamplePlatform::showMessage(const char* title, const char* message)
 	printf("%s: %s\n", title, message);
 }
 
+bool SamplePlatform::saveBitmap(const char*, physx::PxU32, physx::PxU32, physx::PxU32, const void*)
+{
+	return false;
+}
+
 void SamplePlatform::initializeCGRuntimeCompiler()
 {
 }
 
-void SamplePlatform::getWindowSize(physx::pubfnd2::PxU32& width, physx::pubfnd2::PxU32& height)
+void SamplePlatform::getWindowSize(PxU32& width, PxU32& height)
 {
 }
 	
@@ -214,21 +260,42 @@ void SamplePlatform::postInitializeOGLDisplay()
 {
 }
 
-physx::pubfnd2::PxU32 SamplePlatform::initializeD3D9Display(void * presentParameters, 
+void SamplePlatform::setOGLVsync(bool on)
+{
+}
+
+physx::PxU32 SamplePlatform::initializeD3D9Display(void * presentParameters, 
 																char* m_deviceName, 
-																physx::pubfnd2::PxU32& width, 
-																physx::pubfnd2::PxU32& height,
+																physx::PxU32& width, 
+																physx::PxU32& height,
 																void * m_d3dDevice_out)
 {
 	return 0;
 }
 
-physx::pubfnd2::PxU64 SamplePlatform::getWindowHandle()
+physx::PxU32 SamplePlatform::initializeD3D11Display(void *dxgiSwapChainDesc, 
+													char *m_deviceName, 
+													physx::PxU32& width, 
+													physx::PxU32& height,
+													void *m_d3dDevice_out,
+													void *m_d3dDeviceContext_out,
+													void *m_dxgiSwap_out)
 {
 	return 0;
 }
 
-physx::pubfnd2::PxU32 SamplePlatform::D3D9Present()
+physx::PxU64 SamplePlatform::getWindowHandle()
+{
+	return 0;
+}
+
+physx::PxU32 SamplePlatform::D3D9Present()
+{
+	return 0;
+}
+
+
+physx::PxU32 SamplePlatform::D3D11Present(bool vsync)
 {
 	return 0;
 }
@@ -241,7 +308,21 @@ void SamplePlatform::D3D9DeviceBlockUntilIdle()
 {
 }
 
-physx::pubfnd2::PxU64 SamplePlatform::getD3D9TextureFormat(RendererTexture2D::Format format)
+physx::PxU64 SamplePlatform::getD3D9TextureFormat(SampleRenderer::RendererTexture2D::Format format)
+{
+	return 0;
+}
+
+const char* SamplePlatform::getPathSeparator()
+{
+	return "\\";
+}
+
+bool SamplePlatform::makeSureDirectoryPathExists(const char*)
+{
+	return false;
+}
+physx::PxU64 SamplePlatform::getD3D11TextureFormat(SampleRenderer::RendererTexture2D::Format format)
 {
 	return 0;
 }

@@ -2,8 +2,6 @@
 #include "r3d.h"
 
 #include "sun.h"
-#include "GameCommon.h"
-#include "GameLevel.h"
 
 #include "../SF/Console/Config.h"
 
@@ -23,6 +21,13 @@ void r3dSun :: Init()
  //SunLight.SetColor(SunColor);
  SunLight.bAffectBump = 1;
  SunLight.bCastShadows = 0;
+
+ SunDirAngle	= 0.f;
+ SunElevAngle	= 0.f;
+
+ AngleRange = 200.f;
+
+ SunColor = r3dColor::white;
 }
 
 
@@ -52,33 +57,70 @@ void r3dSun :: SetLocation(float Angle1, float Angle2)
  SunLight.Direction = -SunDir;
 }
 
+r3dPoint3D r3dSun :: GetSunVecAtNormalizedTime( float CurTime )
+{
+	float Angle = GetAngleAtNormalizedTime( CurTime );
 
-void r3dSun :: SetTime(float Hour)
+	D3DXMATRIX rotY, rotZ, rotY2;
+
+	D3DXMatrixRotationY( &rotY, R3D_DEG2RAD( SunDirAngle ) );
+	D3DXMatrixRotationZ( &rotZ, R3D_DEG2RAD( SunElevAngle ) - float(M_PI)*0.5f );
+	D3DXMatrixRotationY( &rotY2, R3D_DEG2RAD( Angle ) - float(M_PI)*0.5f );
+
+	D3DXMATRIX compoundRot = rotY * rotZ * rotY2;
+
+	D3DXMatrixInverse( &compoundRot, NULL, &compoundRot );
+
+	D3DXVECTOR3 DXSunVec( 1.0f, 0, 0 );
+
+	D3DXVec3TransformNormal( &DXSunVec, &DXSunVec, &compoundRot );
+
+	r3dPoint3D SunVec( DXSunVec.x, DXSunVec.y, DXSunVec.z );
+
+	SunVec.Normalize();
+
+	return SunVec;
+}
+
+r3dPoint3D	r3dSun :: GetCurrentSunVec()
+{
+	return GetSunVecAtNormalizedTime( TimeToValD( Time ) );
+}
+
+float r3dSun :: TimeToValD( float Time )
+{
+	float ValD = (Time-DawnTime) / (DuskTime-DawnTime);
+	if (ValD <0 ) ValD = 0;
+	if (ValD >1 ) ValD = 1;
+
+	return ValD;
+}
+
+void r3dSun :: SetParams(float Hour, float NewDawnTime, float NewDuskTime, float NewSunDirAngle, float NewSunElevAngle, r3dColor NewSunColor, float NewAngleRange)
 {
  if (!bLoaded) return;
 
  Time = Hour;
+ DawnTime = NewDawnTime;
+ DuskTime = NewDuskTime;
+
+ SunDirAngle = NewSunDirAngle;
+ SunElevAngle = NewSunElevAngle;
+
+ AngleRange = NewAngleRange;
+
+ SunColor = NewSunColor;
 
  if (Time < 0 ) Time = 0;
  if (Time > 24 ) Time = 0;
 
- DawnTime = 0;
- DuskTime = 24;
- float ValD = (Time-DawnTime) / (24.0f-(24.0f-DuskTime-DawnTime));
- if (ValD <0 ) ValD = 0;
- if (ValD >1 ) ValD = 1;
+ float ValD = TimeToValD( Time );
 
  //V.RotateAroundX(-Angle2);
  //V.RotateAroundY(Angle1);
  //V.Normalize();
 
- float Angle = ValD*180.0f;
-
- r3dVector SunVec = r3dVector(1.0f, 0, 0);
- SunVec.RotateAroundY(r3dGameLevel::Environment.SunElevationAngle);
-
- SunVec.RotateAroundZ(Angle);
- SunVec.Normalize();
+ r3dVector SunVec = GetSunVecAtNormalizedTime( ValD );
 
 
 // 	if ( d_sun_rotate->GetBool() )
@@ -96,8 +138,7 @@ void r3dSun :: SetTime(float Hour)
  SunDir = SunVec*Mult;
  SunLight.Direction = SunVec*Mult;
 
- r3dColor sunColor = r3dGameLevel::Environment.SunColor.GetColorValue(ValD);
- SunLight.SetColor(sunColor);
+ SunLight.SetColor(SunColor);
 // r3dRenderer->AmbientColor = AmbientColorG.GetColorValue(ValD);
 
   #if 1
@@ -107,14 +148,18 @@ void r3dSun :: SetTime(float Hour)
   gPartShadeDir = SunLight.Direction;
   gPartShadeDir.Y = 0; gPartShadeDir.Normalize();	// in 2D
 
-  gPartShadeColor = sunColor;
+  gPartShadeColor = SunColor;
   //gPartShadeColor = r3dColor(255, 255, 0);
   #endif
 }
 
-
+float r3dSun :: GetAngleAtNormalizedTime( float CurTime )
+{
+	return (CurTime-0.5f)*AngleRange+90.f;
+}
 
 
 void r3dSun :: DrawSun(const r3dCamera &Cam, int bReplicate)
 {
 }
+

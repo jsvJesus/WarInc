@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,23 +38,30 @@
 #ifndef RENDERER_CAPSULE_SHAPE_H
 #define RENDERER_CAPSULE_SHAPE_H
 
-#include "PsShare.h"
-#include "PxSimpleTypes.h"
 #include <RendererShape.h>
 #include <RendererBoxShape.h>
 
-class RendererVertexBuffer;
-class RendererIndexBuffer;
-
-class RendererCapsuleShape : public RendererShape
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+	class RendererIndexBuffer;
+
+	class RendererCapsuleShape : public RendererShape
+	{
 	public:
-		RendererCapsuleShape(Renderer &renderer, physx::PxF32 halfHeight, physx::PxF32 radius);
+		RendererCapsuleShape(Renderer &renderer, PxF32 halfHeight, PxF32 radius);
+		
+		// resize the capsule
+		void setDimensions(PxF32 halfHeight, PxF32 radius0, PxF32 radius1);
+
 		virtual ~RendererCapsuleShape(void);
-	
+
 	private:
 		RendererVertexBuffer *m_vertexBuffer;
 		RendererIndexBuffer  *m_indexBuffer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

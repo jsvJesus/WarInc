@@ -41,10 +41,11 @@ bool	Edit_Value_Static(float x, float y, const char* name, const char* value);
 
 
 
-float	imgui_DrawHSlider(float x, float y, float width, float minval, float maxval, float* edit_val, bool bUseDesktop = true);
+float	imgui_DrawHSlider(float x, float y, float width, float minval, float maxval, float* edit_val, char *fmt, void* tag, bool bUseDesktop = true);
 float	imgui_DrawHSliderI(float x, float y, float width, float minval, float maxval, int* edit_val, bool bUseDesktop = true);
 
 int		imgui_Static(float x, float y,const char* name,  const int Width = 360, bool bUseDesktop = true, const int Height = 25, bool top_centered_text = false );
+int		imgui_Print(float x, float y,const char* name,  bool bUseDesktop = true );
 int		imgui_Checkbox(float x, float y, int wid, int ht, const char* name, int* edit_val, const DWORD flag, bool * pInFocus = NULL, bool bUseDesktop = true );
 int		imgui_Checkbox(float x, float y, const char* name, int* edit_val, const DWORD flag, bool * pInFocus = NULL, bool bUseDesktop = true );
 bool	imgui_Button(float sx, float sy, float sw, float sh, const char* name, int selected = false, bool bUseDesktop = true );
@@ -53,6 +54,8 @@ bool	imgui_ColorButton(float sx, float sy, float sw, float sh, r3dColor color, i
 int		imgui_Toolbar(float sx, float sy, float sw, float sh, int *edit_val, int MinIdx, const char* list[], int numlist, bool bUseDesktop = true );
 
 bool	imgui_DrawList(float sx, float sy, float sw, float sh, const stringlist_t& names, float* arr_offset, int* edit_val, bool bUseDesktop = true, bool bChangedVal= false, bool bLeftAlign = false, int* pDragIndex = NULL );
+
+bool	imgui_DrawList(float sx, float sy, float sw, float sh, const stringlist_t& names, float* arr_offset, r3dTL::TArray<int>* edit_values, bool bUseDesktop = true, bool bChangedVal= false, bool bLeftAlign = false );
 
 bool	imgui_DrawListColored(float sx, float sy, float sw, float sh, const clrstringlist_t& names, float* arr_offset, int* edit_val, bool bUseDesktop = true, bool bLeftAlign = false );
 bool	imgui_FileList(float sx, float sy, float sw, float sh, const char *Dir, char *edit_val, float *pDirFilesOffset , bool bUseDesktop = true, bool bChangedVal= false, int* pDragIndex = NULL, const char* szExtNames = NULL, int* outSelIdx = NULL );
@@ -65,10 +68,10 @@ int		imgui_Value_Slider(float x, float y, const char* name, float* edit_val, flo
 int		imgui_Value_SliderI(float x, float y, const char* name, int* edit_val, float minval, float maxval, const char* fmt, int doslider = true, bool bUseDesktop = true, int optWidth=0 );
 
 int		imgui_DrawColorPicker(float x, float y, const char* name, r3dColor* edit_val, float width, bool withAlpha, bool bUseDesktop = true, bool bHSV = false ) ;
-int		imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2* edit_val, float width, bool bUseDesktop = true);
+int		imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2* edit_val, float width, float currentTime = -1.f, bool bUseDesktop = true );
 
 int		imgui_DrawFloatGradient(float in_x, float in_y, const char* name, r3dTimeGradient2* edit_val, float in_w, float in_h, 
-								float minVal, float maxVal, int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, bool bUseDesktop = true );
+								float minVal, float maxVal, int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, float currentTime = -1.0f, bool bUseDesktop = true );
 
 int		imgui_DrawBezierGradient(float in_x, float in_y, const char* name, r3dBezierGradient* edit_val, float in_w, float in_h, 
 								int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, bool bUseDesktop = true );
@@ -177,3 +180,5 @@ inline Desktop_c & Desktop()
 {
 	return g_pDesktopManager->GetActiveDesctop();
 }
+
+extern int g_imgui_LockRbr;

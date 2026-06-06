@@ -5,11 +5,6 @@
 #include "r3dProfilerRender.h"
 #include "r3dBudgeter.h"
 
-#ifndef WO_SERVER
-#include "r3dDX11.h"
-#include "r3dDX9UIBridge.h"
-#endif
-
 #include "r3dBackgroundTaskDispatcher.h"
 
 #include "r3dDebug.h"
@@ -18,7 +13,6 @@
 #include "GameLevel.h"
 
 #include "ui/m_LoadingScreen.h"
-#include "ui/HUDRespawn.h"
 
 #include "GameObjects/EventTransport.h"
 
@@ -29,12 +23,14 @@
 #include "../SF/Console/EngineConsole.h"
 #include "ObjectsCode\Effects\obj_ParticleSystem.h"
 #include "ObjectsCode\world\DecalChief.h"
-#include "ObjectsCode\world\WeatherPuddleManager.h"
 #include "ObjectsCode\Nature\wind.h"
 #include "ObjectsCode\Nature\GrassMap.h"
 #include "ObjectsCode\Nature\GrassLib.h"
 #include "ObjectsCode\world\EnvmapProbes.h"
 #include "ObjectsCode/ai/AI_Player.H"
+#include "MeshPropertyLib.h"
+
+#include "ObjectsCode/Gameplay/obj_Zombie.h"
 
 #include "TrueNature2/Terrain2.h"
 
@@ -46,11 +42,11 @@
 #include "UI\HUD_EditorGame.h"
 #include "UI\Hud_ParticleEditor.h"
 #include "UI\HUD_PhysicsEditor.h"
-#include "UI\HUD_ShootingGallery.h"
 #include "UI\HUD_Character.h"
 
 #include "Editors/LevelEditor.h"
 #include "Editors/ObjectManipulator3d.h"
+#include "Editors/LevelEditor_Collections.h"
 
 #include "RENDERING\Deffered\VisibilityGrid.h"
 #include "rendering/Probes/ProbeMaster.h"
@@ -62,10 +58,12 @@
 
 #include "../../Eternity/Source/r3dEternityWebBrowser.h"
 #include "../../GameEngine/gameobjects/obj_Vehicle.h"
-#include "../../GameEngine/ai/NavMesh.h"
-#include "../../GameEngine/ai/NavMeshActor.h"
+#include "../../GameEngine/ai/NavGenerationHelpers.h"
+#include "../../GameEngine/ai/AutodeskNav/AutodeskNavMesh.h"
 
-const int NUM_HUDS = 7;
+#include "rendering/Deffered/D3DMiscFunctions.h"
+
+const int NUM_HUDS = 6;
 BaseHUD* HudArray[NUM_HUDS] = {0};
 
 BaseHUD* editor_GetHudByIndex(int index)
@@ -198,12 +196,15 @@ void UnloadGame()
 	r3dMaterialLibrary::UnloadManaged();
 	r3dMaterialLibrary::Reset();
 	MeshGlobalBuffer::unloadManaged();
-	gWeaponArmory.UnloadMeshes();
+	g_pWeaponArmory->UnloadMeshes();
 	r3dFreeGOBMeshes();
 	r3dParticleSystemReleaseCachedData();
 }
 
-void DoLoadGame(const char* LevelName, int MaxPlayers, bool unloadPrev )
+float g_LoadLevelTimeMark = 0.0f;
+int g_LoadToStartOutputDone = 0;
+
+void DoLoadGame(const char* LevelName, int MaxPlayers, bool unloadPrev, bool isMenuLevel )
 {
 #if R3D_PROFILE_LOADING
 	extern float gTotalTimeWaited  ;
@@ -224,13 +225,15 @@ void DoLoadGame(const char* LevelName, int MaxPlayers, bool unloadPrev )
 	g_pPhysicsWorld = new PhysXWorld();
 	g_pPhysicsWorld->Init();
 
+	const float LEVEL_LOAD_START = 0.05f;
+
 #if APEX_ENABLED
 	r3d_assert(g_pApexWorld == 0);
 	g_pApexWorld = new ApexWorld;
 	g_pApexWorld->Init();
 #endif
 
-	GameWorld().Init(OBJECTMANAGER_MAXOBJECTS);
+	GameWorld().Init(OBJECTMANAGER_MAXOBJECTS, OBJECTMANAGER_MAXSTATICOBJECTS);
 
 	r3dParticleSystemReloadCachedData();
 
@@ -241,20 +244,34 @@ void DoLoadGame(const char* LevelName, int MaxPlayers, bool unloadPrev )
 
 	srv_SetWorldScale(1.0f); //WorldScale);
 
-	LoadWorld( LevelName, MaxPlayers );
+	LoadWorld( LevelName, LEVEL_LOAD_START, MaxPlayers, isMenuLevel );
+
+	Do_Collection_Editor_Init( PLAYER_CACHE_INIT_END, PLAYER_CACHE_INIT_END + 0.05f );
+
+	const float POST_COLLECTION_PROGRESS = PLAYER_CACHE_INIT_END + 0.05f;
+
+	SetLoadingProgress( POST_COLLECTION_PROGRESS );
+
+	extern bool g_bEditMode;
+	if( !isMenuLevel && !g_bEditMode )
+	{
+		obj_Zombie::InitPhysSkeletonCache( POST_COLLECTION_PROGRESS, 1.0f );
+	}
+
+	g_LoadLevelTimeMark = r3dGetTime();
+	g_LoadToStartOutputDone = 0;
 
 	gCam.SetPlanes( r_near_plane->GetFloat(), r_far_plane->GetFloat() );
 
 	HudArray[0] = new CameraHUD;
 	HudArray[2] = new TPSGameHUD;
-	HudArray[6] = new ShootingGalleryHUD;
 #ifndef FINAL_BUILD
 	HudArray[1] = new EditorGameHUD;
 	HudArray[3] = new ParticleHUD;
 	HudArray[4] = new PhysicsHUD;
 	HudArray[5] = new CharacterHUD;
 #endif
-	r3d_assert ( NUM_HUDS == 7 );
+	r3d_assert ( NUM_HUDS == 6 );
 
 	for ( int i = 0; i < NUM_HUDS; i++ )
 		if(HudArray[i])
@@ -290,8 +307,8 @@ void DoLoadGame(const char* LevelName, int MaxPlayers, bool unloadPrev )
 
 struct LoadGameParams
 {
-	const char* Name ;
-	int MaxPlayers ;
+	const char* Name;
+	int MaxPlayers;
 };
 
 static unsigned int WINAPI DoLoadGameThread( void * param )
@@ -300,7 +317,7 @@ static unsigned int WINAPI DoLoadGameThread( void * param )
 	r3dRandInitInTread rand_in_thread;
 
 	LoadGameParams *lgParams = (LoadGameParams*)param;
-	DoLoadGame(lgParams->Name, lgParams->MaxPlayers, false);
+	DoLoadGame( lgParams->Name, lgParams->MaxPlayers, false, false );
 
 	return 0;
 }
@@ -311,18 +328,18 @@ static void LoadGameWithLoadScreen(const char* LevelFolder )
 
 	R3D_ENSURE_MAIN_THREAD();
 
-	LoadGameParams lgparams ;
+	LoadGameParams lgparams;
 
-	lgparams.Name = LevelFolder ;
+	lgparams.Name = LevelFolder;
 
-	extern bool g_bEditMode ;
+	extern bool g_bEditMode;
 	if( g_bEditMode )
 	{
-		lgparams.MaxPlayers = 4 ;
+		lgparams.MaxPlayers = 4;
 	}
 	else
 	{
-		lgparams.MaxPlayers = gClientLogic().m_gameInfo.maxPlayers ;
+		lgparams.MaxPlayers = gClientLogic().m_gameInfo.maxPlayers;
 	}
 
 	// unload here in main thread ( some buffers may get destroyed which requires main thread )
@@ -334,138 +351,6 @@ static void LoadGameWithLoadScreen(const char* LevelFolder )
 	const wchar_t* levelName = L"NO NAME";
 	const wchar_t* levelDesc = L"No description";
 	int gameMode = -1;
-    if(strstr(LevelFolder, "WO_Crossroads16"))
-    {
-        levelName = gLangMngr.getString("MapCrossroadsName");
-        levelDesc = gLangMngr.getString("MapCrossroadsDesc");
-        gameMode = GBGameInfo::MAPT_Conquest;
-    }
-	if(strstr(LevelFolder, "WO_Crossroads2"))
-	{
-		levelName = gLangMngr.getString("MapCrossroads2Name");
-		levelDesc = gLangMngr.getString("MapCrossroads2Desc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-    }
-	else if(strstr(LevelFolder, "wo_crossroadsredux_cq"))
-	{
-		levelName = gLangMngr.getString("MapCrossroadsReduxName");
-		levelDesc = gLangMngr.getString("MapCrossroadsReduxDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-    }
-	else if(strstr(LevelFolder, "WO_Torn_classic"))
-	{
-		levelName = gLangMngr.getString("MapTornClassicName");
-		levelDesc = gLangMngr.getString("MapTornClassicDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-	else if(strstr(LevelFolder, "WO_Grozny"))
-	{
-		levelName = gLangMngr.getString("MapEasternFallName");
-		levelDesc = gLangMngr.getString("MapEasternFallDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-    }
-	else if(strstr(LevelFolder, "MC_NukeTownDM"))
-	{
-		levelName = gLangMngr.getString("MapNukeTownName");
-		levelDesc = gLangMngr.getString("MapNukeTownDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-    }
-	else if(strstr(LevelFolder, "wo_dm_shippingyard2"))
-	{
-		levelName = gLangMngr.getString("Mapshippingyard2Name");
-		levelDesc = gLangMngr.getString("Mapshippingyard2Desc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-	else if(strstr(LevelFolder, "WO_Grozny_CQ"))
-	{
-		levelName = gLangMngr.getString("MapEasternFallName");
-		levelDesc = gLangMngr.getString("MapEasternFallDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-	else if(strstr(LevelFolder, "wo_torn_cq"))
-	{
-		levelName = gLangMngr.getString("MapTornName");
-		levelDesc = gLangMngr.getString("MapTornDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-	else if(strstr(LevelFolder, "wo_shippingyard"))
-	{
-		levelName = gLangMngr.getString("MapShippingYardName");
-		levelDesc = gLangMngr.getString("MapShippingYardDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-	else if(strstr(LevelFolder, "WO_Burning_Sea"))
-	{
-		levelName = gLangMngr.getString("MapBurningSeaName");
-		levelDesc = gLangMngr.getString("MapBurningSeaDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-    }
-	else if(strstr(LevelFolder, "WO_Burning_Sea_classic"))
-	{
-		levelName = gLangMngr.getString("MapBurningSeaClassicName");
-		levelDesc = gLangMngr.getString("MapBurningSeaClassicDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-	else if(strstr(LevelFolder, "wo_nightfall_cq"))
-	{
-		levelName = gLangMngr.getString("MapNightfallName");
-		levelDesc = gLangMngr.getString("MapNightfallDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-    else if(strstr(LevelFolder, "wo_valley"))
-	{
-		levelName = gLangMngr.getString("MapvalleyName");
-		levelDesc = gLangMngr.getString("MapvalleyNameDesc");
-		gameMode = GBGameInfo::MAPT_Conquest;
-	}
-	else if(strstr(LevelFolder, "WO_Torn_ct"))
-	{
-		levelName = gLangMngr.getString("MapDustName");
-		levelDesc = gLangMngr.getString("MapDustDesc");
-		gameMode = GBGameInfo::MAPT_Bomb;
-	}
-	else if(strstr(LevelFolder, "wo_wasteland"))
-	{
-		levelName = gLangMngr.getString("MapWasteland");
-		levelDesc = gLangMngr.getString("MapWastelandDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-   else if(strstr(LevelFolder, "wo_wasteland_classic"))
-	{
-		levelName = gLangMngr.getString("MapwastelandclassicName");
-		levelDesc = gLangMngr.getString("MapwastelandclassicDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-	else if(strstr(LevelFolder, "wo_jungleruins"))
-	{
-		levelName = gLangMngr.getString("MapJungleRuins");
-		levelDesc = gLangMngr.getString("MapJungleRuinsDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-	else if(strstr(LevelFolder, "wo_citadel_dm"))
-	{
-		levelName = gLangMngr.getString("MapCitadel");
-		levelDesc = gLangMngr.getString("MapCitadelDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
-	else if(strstr(LevelFolder, "wo_inferno"))
-	{
-		levelName = gLangMngr.getString("MapInferno");
-		levelDesc = gLangMngr.getString("MapInfernoDesc");
-		gameMode = GBGameInfo::MAPT_Bomb;
-    }
-	else if(strstr(LevelFolder, "wr_dust_old"))
-	{
-		levelName = gLangMngr.getString("MapDustOldName");
-		levelDesc = gLangMngr.getString("MapDustOldDesc");
-		gameMode = GBGameInfo::MAPT_Bomb;
-	}
-	else if(strstr(LevelFolder, "wo_eastern_bunker_tdm"))
-	{
-		levelName = gLangMngr.getString("MapInferno"); // same name and desc
-		levelDesc = gLangMngr.getString("MapInfernoDesc");
-		gameMode = GBGameInfo::MAPT_Deathmatch;
-	}
 	DoLoadingScreen( &gGameLoadActive, levelName, levelDesc, LevelFolder, 0.f, gameMode );
 
 	r3dRenderer->ChangeForceAspect( 0 );
@@ -505,6 +390,7 @@ void InitGame_Start()
 	MaterialTextureChangeUndo::Register();
 	ParticleEmitterAddDelUndo::Register();
 	WaterGridChangeUndo::Register();
+	WatterPlaneSettingsUndo::Register();
 
 	d_video_spectator_mode->SetInt( 0 ) ;
 
@@ -551,6 +437,8 @@ void InitGame()
 
 void DestroyGame()
 {
+	ShutdownCollections();
+
 	r3dSetAsyncLoading( 0 ) ;
 
 #ifndef FINAL_BUILD
@@ -565,12 +453,13 @@ void DestroyGame()
 		UnloadGrassLib();
 	}
 
+	{
+		if(g_MeshPropertyLib)
+			g_MeshPropertyLib->Unload();
+	}
+
 	r3dGameLevel::Environment.DisableStaticSky();
 
-	// hack, we need to kill our respawn fake world before killing HUDS and real gameworld (as player in respawn world is holding references to HUD scaleform objects and references to objects in real gameworld)
-	extern HUDRespawn*	hudRespawn;
-	if(hudRespawn)
-		hudRespawn->ReleaseGameWorld();
 	// objects
 	GameWorld().Destroy();
 
@@ -588,6 +477,7 @@ void DestroyGame()
 	r3dParticleSystemReleaseCachedData();
 
 	DestroyPhysSkeletonCache() ;
+	DestroyPhysObstacleCache();
 
 	//GunModels.Unload();
 
@@ -600,7 +490,9 @@ void DestroyGame()
 	r3dMaterialLibrary::UnloadManaged();
 	r3dMaterialLibrary::Reset();	
 	MeshGlobalBuffer::unloadManaged();
-	gWeaponArmory.UnloadMeshes();
+	g_pWeaponArmory->UnloadMeshes();
+
+	obj_Zombie::FreePhysSkeletonCache();
 
 #if APEX_ENABLED
 	g_pApexWorld->Destroy();
@@ -613,11 +505,24 @@ void DestroyGame()
 	SAFE_DELETE(SkyDome);
 	SAFE_DELETE(Sun);
 
+#if ENABLE_AUTODESK_NAVIGATION
+	{
+		r3dOutToLog( "gAutodeskNavMesh.Close...\n" );
+		gAutodeskNavMesh.Close();
+	}
+#endif // ENABLE_AUTODESK_NAVIGATION
+
+	WaterBase::FlushRefractionBuffer();
+
+
 #if !DISABLE_PROFILER
 	r3dProfileRender::Destroy();
 	r3dProfiler::Destroy();
 #endif
 }
+
+float	DayDuration = 60.0f;
+int		bDaySim = 0;
 
 void GameFrameStart()
 {
@@ -631,6 +536,16 @@ void GameFrameStart()
 		extern void r3dParticleSystemStartFrame();
 		r3dParticleSystemStartFrame();
 	R3DPROFILE_END("Game: PreUpdate");
+
+
+if (bDaySim)
+{
+	float Increment = 24.0f/DayDuration;
+	r3dGameLevel::Environment.__CurTime += Increment * r3dGetFrameTime();
+	if (r3dGameLevel::Environment.__CurTime > 24.0f ) r3dGameLevel::Environment.__CurTime = 0;
+}
+
+
 }
 
 static float gLastFrameTime = r3dGetTime();
@@ -657,40 +572,18 @@ void SyncLightingAndSSAO()
 	}
 }
 
-static void UpdateEditorUILayer();
-static void ProcessEditorUICommands();
-static void RenderEditorUIDebug();
-#ifndef WO_SERVER
-static void ForceDX11BackBufferForEditorUI(const char*)
-{
-	if(!r3dRenderer)
-		return;
-
-	if(!g_r3dDX11.IsInitialized())
-		return;
-
-	if(r3dRenderer->GetUseD3D9Present())
-		return;
-
-	g_r3dDX11.ResetBackBufferTarget();
-
-	const float w = (float)g_r3dDX11.GetWidth();
-	const float h = (float)g_r3dDX11.GetHeight();
-
-	r3dRenderer->ScreenW = w;
-	r3dRenderer->ScreenH = h;
-	r3dRenderer->ScreenW2 = w * 0.5f;
-	r3dRenderer->ScreenH2 = h * 0.5f;
-
-	r3dRenderer->AllowNullViewport = 0;
-	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-	r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
-}
-#endif
 void GameStateGameLoop()
 {
 
 	R3DPROFILE_FUNCTION("GameStateGameLoop");
+
+#if 0
+	if( r_debug_helper->GetInt() )
+	{
+		issueD3DAntiCheatCodepath( ANTICHEAT_SCREEN_HELPERS2 );
+		r_debug_helper->SetInt( 0 );
+	}
+#endif
 
 #ifndef FINAL_BUILD
 	if( r_show_d3dmarks->GetInt() )
@@ -736,9 +629,21 @@ void GameStateGameLoop()
 	}
 #endif
 
+	if( g_LoadToStartOutputDone < 3 )
+	{
+		g_LoadToStartOutputDone ++;
+
+		if( g_LoadToStartOutputDone == 3 )
+		{
+			r3dOutToLog( "\nTime between load end and game start: %.2f\n", r3dGetTime() - g_LoadLevelTimeMark );
+		}
+	}
+
 	R3DPROFILE_START("Game: Update World");
 
 	GameWorld().StartFrame();
+
+	obj_Zombie::ReassignSkeletons();
 
 	r3dRenderer->StartFrame();
 
@@ -779,38 +684,44 @@ void GameStateGameLoop()
     g_pPhysicsWorld->m_VehicleManager->UpdateVehiclePoses();
 #endif
 
+	R3DPROFILE_START("Set Camera");
 	if(Hud)
 		Hud->SetCamera ( gCam);
 
 	// set correct camera for  updates
-	r3dRenderer->SetCamera( gCam );
+	r3dRenderer->SetCamera( gCam, true );
 	gCameraAccelerometer.Update(r3dRenderer->ViewMatrix, r3dRenderer->InvViewMatrix);
+	R3DPROFILE_END("Set Camera");
 
 	// world update. 
 	R3DPROFILE_START("Obj Manager");
 	GameWorld().Update();
 	R3DPROFILE_END("Obj Manager");
 
-	if( r3dRenderer->DeviceAvailable )
+	if( r3dRenderer->DeviceAvailable && r_decals->GetInt() )
 	{
 		R3DPROFILE_START("Decals");
-		gWeatherPuddleManager.Update();
 		g_pDecalChief->Update();
 		R3DPROFILE_END("Decals");
 	}
 
 	// start physics after game world update right now, as gameworld will move some objects around if necessary
+	R3DPROFILE_START("Physics Start Sim");
 	g_pPhysicsWorld->StartSimulation();
-#if APEX_ENABLED
-	g_pApexWorld->StartSimulation();
-#endif
+	R3DPROFILE_END("Physics Start Sim");
 
 	void AnimateGrass();
+	R3DPROFILE_START("Animate Grass");
 	AnimateGrass();
+	R3DPROFILE_END("Animate Grass");
 
+	R3DPROFILE_START("Environment Update");
 	r3dGameLevel::Environment.Update();
+	R3DPROFILE_END("Environment Update");
 
+	R3DPROFILE_START("Wind Update");
 	g_pWind->Update(r3dGetTime());
+	R3DPROFILE_END("Wind Update");
 
 #if ENABLE_WEB_BROWSER
 	g_pBrowserManager->Update();
@@ -854,10 +765,6 @@ void GameStateGameLoop()
 
 		R3DPROFILE_END("Post processing");
 
-#ifndef WO_SERVER
-		ForceDX11BackBufferForEditorUI("after PostProcess");
-#endif
-
 		//Font_Label->PrintF(10, 500, r3dColor(255,255,255), "WorldObjects %d", GameWorld().GetNumObjects());
 		r3dSetFiltering( R3D_POINT );
 
@@ -869,19 +776,13 @@ void GameStateGameLoop()
 
 	}
 
-#if APEX_ENABLED
-	R3DPROFILE_START("Apex EndSimulation");
-	g_pApexWorld->EndSimulation();
-	R3DPROFILE_END("Apex EndSimulation");
-#endif
-
 	R3DPROFILE_START("Physics EndSimulation");
 	g_pPhysicsWorld->EndSimulation();
 	R3DPROFILE_END("Physics EndSimulation");
 
-#if ENABLE_RECAST_NAVIGATION
-	gNavMeshActorsManager.Update();
-#endif // ENABLE_RECAST_NAVIGATION
+#if ENABLE_AUTODESK_NAVIGATION
+	gAutodeskNavMesh.Update();
+#endif // ENABLE_AUTODESK_NAVIGATION
 
 	if( r3dRenderer->DeviceAvailable )
 	{
@@ -904,20 +805,11 @@ void GameStateGameLoop()
 			Terrain2->DrawDebug() ;
 		}
 
-	#if ENABLE_RECAST_NAVIGATION
-		gNavMesh.DebugDraw();
-	#endif // ENABLE_RECAST_NAVIGATION		
-#endif
+		Nav::gConvexRegionsManager.VisualizeRegions();
+	#if ENABLE_AUTODESK_NAVIGATION
+		gAutodeskNavMesh.DebugDraw();
+	#endif
 
-#ifndef WO_SERVER
-		bool dx9UIBridgeActive = false;
-
-		if(r3dRenderer &&
-			r3dRenderer->IsDX11GamePresent() &&
-			r3dRenderer->IsDX9UIEnabled())
-		{
-			dx9UIBridgeActive = r3dDX9UIBridge_Begin();
-		}
 #endif
 
 		R3DPROFILE_START("rsDrawFlashUI");
@@ -939,18 +831,9 @@ void GameStateGameLoop()
 
 			R3DPROFILE_START("SysInfo Render");
 			DrawSysInfo();
-			RenderEditorUIDebug();
 			R3DPROFILE_END("SysInfo Render");
 		}
 		R3DPROFILE_END("HudGui Render");
-
-#ifndef WO_SERVER
-		if(dx9UIBridgeActive)
-		{
-			r3dDX9UIBridge_End(true);
-			ForceDX11BackBufferForEditorUI("after DX9 UI bridge composite");
-		}
-#endif
 
 		//Console.Draw();
 
@@ -967,11 +850,6 @@ void GameStateGameLoop()
 		R3DPROFILE_END("debug stuff");
 
 		R3DPROFILE_START("Finalize");
-
-#ifndef WO_SERVER
-		ForceDX11BackBufferForEditorUI("before Finalize");
-#endif
-
 		r3dRenderer->StartRender( 0 );
 		CurRenderPipeline->Finalize();
 
@@ -999,8 +877,6 @@ void GameStateGameLoop()
 
 		g_pProbeMaster->UpdateSkyAndSun() ;
 
-		g_pProbeMaster->UpdateProximity();
-
 		g_pProbeMaster->Save( r3dGameLevel::GetSaveDir() ) ;
 
 		r_need_recalc_probes->SetInt( 0 ) ;
@@ -1020,38 +896,67 @@ void GameStateGameLoop()
 			g_LastSunDir.z != Sun->SunDir.z
 			)
 		{
-			g_pProbeMaster->UpdateSkyAndSun() ;
+			r_need_update_sky_sun_sh->SetInt( 1 );
+			r_need_update_probes->SetInt( 1 );
 
-			r_need_update_probes->SetInt( 1 ) ;
-
-			g_LastSunDir = Sun->SunDir ;
+			g_LastSunDir = Sun->SunDir;
 		}
 	}
 
+	if( r_light_probes->GetInt() && r_need_update_sky_sun_sh->GetInt() )
+	{
+		g_pProbeMaster->UpdateSkyAndSun();
+		r_need_update_sky_sun_sh->SetInt( 0 );
+	}
+
+	int needUpdateProbeVolume = 0;
+
 	if( r_need_update_probes->GetInt() )
 	{
-		if( g_pProbeMaster->IsCreated() )
+		if( g_pProbeMaster->IsCreated() && r_light_probes->GetInt() )
 		{
-			g_pProbeMaster->RelightProbes() ;
-			g_pProbeMaster->UpdateProbeVolumes() ;
+			g_pProbeMaster->RelightProbes();
+			g_pProbeMaster->UpdateCameraCell( gCam );
+			g_pProbeMaster->UpdateProbeVolumes();
 
-			r_need_update_probes->SetInt( 0 ) ;
+			r_need_update_probes->SetInt( 0 );
 		}
 	}
 	else
 	{
 		if( r_light_probes->GetInt() && g_pProbeMaster->IsCreated() )
 		{
-			g_pProbeMaster->UpdateCamera( gCam ) ;
+			needUpdateProbeVolume = g_pProbeMaster->UpdateCameraCell( gCam );
 		}
+	}
+
+	if( r_dynamic_light_probes->GetInt() && g_pProbeMaster->IsCreated() && r_light_probes->GetInt() )
+	{
+		needUpdateProbeVolume |= g_pProbeMaster->UpdateDynamicLights();
+		g_pProbeMaster->RelightDynamicProbes();
+	}
+
+	if( r_light_probes->GetInt() )
+	{
+		if( needUpdateProbeVolume )
+		{
+			g_pProbeMaster->UpdateProbeVolumes();
+		}
+
+		g_pProbeMaster->Tick();
 	}
 
 #endif
 
 	R3DPROFILE_START("EndRender");
 	r3dRenderer->EndFrame();
+
+	UpdateD3DAntiCheatPrePresent();
+
 	r3dRenderer->EndRender( true );
 	R3DPROFILE_END("EndRender");
+
+	UpdateD3DAntiCheatPostPresent();
 
 	if( r3dRenderer->DeviceAvailable )
 	{
@@ -1142,7 +1047,7 @@ void SetHud ( int iHud )
 			Hud->SetCameraDir(OldHud->GetCameraDir ());
 
 			Hud->SetCamera ( gCam);
-			r3dRenderer->SetCamera ( gCam);
+			r3dRenderer->SetCamera ( gCam, true);
 		}
 
 		if ( Hud )
@@ -1173,18 +1078,6 @@ void UpdateAutoProfile()
 
 static void SpawnTestVehicle();
 
-static void UpdateEditorUILayer()
-{
-}
-
-static void ProcessEditorUICommands()
-{
-}
-
-static void RenderEditorUIDebug()
-{
-}
-
 void PlayEditor()
 {
 #ifndef FINAL_BUILD
@@ -1198,9 +1091,6 @@ void PlayEditor()
 	g_pProbeMaster->InitEditor() ;
 #endif
 
-	extern void Do_Collection_Editor_Init();
-	Do_Collection_Editor_Init();
-
 	StopLoadingScreen();
 
 	LevelEditor.Init();
@@ -1211,7 +1101,7 @@ void PlayEditor()
 	CurrentGameMode = GAMESTATE_PREGAME;
 	while(CurrentGameMode != GAMESTATE_EXIT) 
 	{
-		UpdateAutoProfile();
+		UpdateAutoProfile() ;
 
 		r3dStartFrame();
 
@@ -1221,13 +1111,9 @@ void PlayEditor()
 
 		InputUpdate();
 
-		UpdateEditorUILayer();
-
 		g_Manipulator3d.Update();
 
 		GameFrameStart();
-
-		ProcessEditorUICommands();
 
 		extern bool g_bStartedAsParticleEditor;
 		if ( !( g_bStartedAsParticleEditor && CurHUDID == 3 ) )

@@ -141,7 +141,7 @@ float obj_Building::DrawPropertyEditor(float scrx, float scry, float scrw, float
 		{
 			if ( imgui_Button ( scrx, starty, 360, 20, m_pDamageLibEntry ? "To Destruction Params" : "Create Destruction Params" ) )
 			{
-				LevelEditor.ToDamageLib( GetDestructionKey().c_str() );
+				LevelEditor.ToDamageLib( GetMeshLibKey().c_str() );
 			}
 		}
 
@@ -443,6 +443,11 @@ obj_Building::UpdateDestructionData()
 			m_DestructionSoundID = SoundSys.GetEventIDByPath( m_pDamageLibEntry->SoundName.c_str() );
 		}
 	}
+}
+
+int obj_Building::IsStatic()
+{
+	return true;
 }
 
 bool obj_Building::NeedDrawAnimated(const r3dCamera& Cam)

@@ -1,66 +1,82 @@
+//=========================================================================
+//	Module: PhysXRepXHelpers.h
+//	Copyright (C) 2011.
+//=========================================================================
+
 #pragma once
 
-#include "PxPhysicsAPI.h"
+//////////////////////////////////////////////////////////////////////////
 
-using namespace physx;
+#include "common/PxIO.h"
 
-class UserStream : public PxInputData, public PxOutputStream
+//////////////////////////////////////////////////////////////////////////
+
+namespace physx
+{
+	namespace repx
+	{
+		class RepXCollection;
+	}
+}
+//////////////////////////////////////////////////////////////////////////
+
+physx::repx::RepXCollection* loadCollection(const char* inPath, PxAllocatorCallback& inCallback);
+
+//////////////////////////////////////////////////////////////////////////
+
+class PhysxUserFileReadStream : public PxInputStream
 {
 public:
-	UserStream(const char* filename, bool load);
-	virtual ~UserStream();
+	PhysxUserFileReadStream(const char* filename);
+	virtual                     ~PhysxUserFileReadStream();
+	virtual     PxU32			read(void* buffer, PxU32 size);
 
-	virtual PxU32 read(void* dest, PxU32 count);
-	virtual PxU32 write(const void* src, PxU32 count);
-
-	virtual PxU32 getLength() const;
-	virtual void seek(PxU32 offset);
-	virtual PxU32 tell() const;
-
-	FILE* fpw;
-	r3dFile* fpr;
+	r3dFile*    fpr;	// reading stream can be used from archives
 };
 
-class MemoryWriteBuffer : public PxOutputStream
+//////////////////////////////////////////////////////////////////////////
+
+class PhysxUserMemoryReadStream: public PxInputStream
 {
 public:
-	MemoryWriteBuffer();
-	virtual ~MemoryWriteBuffer();
+	PhysxUserMemoryReadStream(PxU8* data, PxU32 length);
 
-	void clear();
+	PxU32		read(void* dest, PxU32 count);
+	PxU32		getLength() const;
+	void		seek(PxU32 pos);
+	PxU32		tell() const;
 
-	virtual PxU32 write(const void* src, PxU32 count);
-
-	PxU32 currentSize;
-	PxU32 maxSize;
-	PxU8* data;
+private:
+	PxU32		mSize;
+	const PxU8*	mData;
+	PxU32		mPos;
 };
 
-class MemoryReadBuffer : public PxInputData
+//////////////////////////////////////////////////////////////////////////
+
+class PhysxUserFileWriteStream: public PxOutputStream
 {
 public:
-	MemoryReadBuffer(const PxU8* data, PxU32 length);
-	virtual ~MemoryReadBuffer();
-
-	virtual PxU32 read(void* dest, PxU32 count);
-	virtual PxU32 getLength() const;
-	virtual void seek(PxU32 offset);
-	virtual PxU32 tell() const;
-
-	const PxU8* buffer;
-	PxU32 size;
-	PxU32 pos;
+	PhysxUserFileWriteStream(const char *fileName);
+	virtual				~PhysxUserFileWriteStream();
+	virtual		PxU32	write(const void* src, PxU32 count);
+	FILE*       fpw;	// direct writing stream
 };
 
-class FileSerialStream : public PxOutputStream
+//////////////////////////////////////////////////////////////////////////
+
+class PhysxUserMemoryWriteStream: public PxOutputStream
 {
-	PxU32 writtenBytes;
-	FILE* f;
-
 public:
-	explicit FileSerialStream(const char* fileName);
-	virtual ~FileSerialStream();
+				 PhysxUserMemoryWriteStream();
+	virtual		~PhysxUserMemoryWriteStream();
 
-	virtual PxU32 write(const void* src, PxU32 count);
-	PxU32 getTotalStoredSize() const;
+	PxU32		write(const void* src, PxU32 count);
+
+	PxU32		getSize()	const	{ return mSize; }
+	PxU8*		getData()	const	{ return mData; }
+private:
+	PxU8*		mData;
+	PxU32		mSize;
+	PxU32		mCapacity;
 };

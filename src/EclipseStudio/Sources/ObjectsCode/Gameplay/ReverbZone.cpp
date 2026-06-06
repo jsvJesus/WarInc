@@ -77,11 +77,8 @@ BOOL obj_ReverbZone::OnCreate()
 	parent::OnCreate();
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows
-						| 
-					OBJFLAG_ForceSleep;
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	r3dBoundBox bboxLocal ;
 
@@ -232,6 +229,12 @@ void obj_ReverbZone::AppendRenderables( RenderArray ( & render_arrays  )[ rsCoun
 	if( r_hide_icons->GetInt() )
 		return ;
 
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
+
 	{
 		ReverbZoneRenderable rend;
 		rend.Init();
@@ -253,12 +256,11 @@ void obj_ReverbZone::AppendRenderables( RenderArray ( & render_arrays  )[ rsCoun
 #endif
 }
 
-extern int g_bEnableSoundRadiusDraw;
 extern ObjectManipulator3d g_Manipulator3d;
 void obj_ReverbZone::DoDraw()
 {
 #ifndef FINAL_BUILD
-    if(g_bEnableSoundRadiusDraw || g_Manipulator3d.IsSelected(this))
+    if(g_Manipulator3d.IsSelected(this))
 	{
 		r3dColor clr = r3dColor::green;
 		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );

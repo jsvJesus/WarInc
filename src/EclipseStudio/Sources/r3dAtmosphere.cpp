@@ -15,23 +15,16 @@
 
 #include "XMLHelpers.h"
 
+#include "TrueNature/Sun.h"
+
 void WriteTimeCurve( FILE* fout, r3dTimeGradient2& curve, const char * szName );
 void ReadTimeCurveNew( Script_c &script, r3dTimeGradient2& curve );
 
 extern r3dCamera gCam ;
 
+extern r3dSun* Sun;
+
 #define PT_EMPTY_STR "<empty>"
-
-static float r3dClamp01Weather( float Value )
-{
-	if( Value < 0.0f )
-		return 0.0f;
-
-	if( Value > 1.0f )
-		return 1.0f;
-
-	return Value;
-}
 
 int GetAtmoDownScale()
 {
@@ -61,24 +54,26 @@ void r3dAtmosphere :: Reset()
 	}
 	RainParticleSystemName[ 0 ] = 0;
 
-	RainStrength = 0.0f;
-	Wetness = 0.0f;
+	for( int i = 0, e = SKY_PHASE_COUNT; i < e ; i ++ )
+	{
+		StaticSkyTextureNames[ i ] = "";
 
-	WetWeaponEnabled = 1;
-	WetWeaponAmount = 1.0f;
-	WetWeaponDark = 0.72f;
-	WetWeaponGlossBoost = 0.35f;
-	WetWeaponSpecMul = 1.65f;
-	WetWeaponStreaks = 0.85f;
-	WetWeaponStreakScale = 38.0f;
-	WetWeaponStreakSpeed = 0.35f;
+		StaticSkyGlowTextureNames[ i ] = "";
 
-	StaticSkyTexName = "" ;
+		StaticSkyIntensities[ i ] = 1.0f;
+	}
+
 	bStaticSkyEnable = false ;
 	bCustomStaticMeshEnable = false ;
 	bStaticSkyPlanarMapping = false ;
 
-	SunLightOn = 1 ;
+	SunLightOn = 1;
+
+	DawnStart	= 4.0f;
+	DawnEnd		= 7.0f;
+
+	DuskStart	= 20.f;
+	DuskEnd		= 22.f;
 
     ParticleShadingCoef = 0.7f;
 
@@ -89,8 +84,10 @@ void r3dAtmosphere :: Reset()
 	BacklightColor.Reset(255.0f);
 	
 	SunIntensity = 1.0f;
+	MoonIntensity = 1.0f;
+
 	SunColor.Reset(255.0f);
-	SkyColor.Reset(55.0f);
+	SunAmbientColor.Reset(55.0f);
 	LambdaCol.Reset(255.0f);
 	Fog_HeightFadeStart.Reset(100);
 	Fog_Density.Reset(0);
@@ -113,6 +110,12 @@ void r3dAtmosphere :: Reset()
 	BetaMieMultiplier.Reset(0.0006f);
 	SunIntensityCoef.Reset(1.0f);
 	Turbitity.Reset(1.0f);
+
+	SunSpotAmplify.Reset( 10.22f );
+	SunSpotPow.Reset( 96.0f );
+	SunSpotColor.Reset( 255.0f );
+	SunSpotIntensity.Reset( 3.0f );
+
 	SkyDomeWindFactor = 1.0f;
 	SkyDomeCloudsScale = 1.0f;
 	SkyDomeCloudsDensity = 0.5f;
@@ -127,6 +130,12 @@ void r3dAtmosphere :: Reset()
 	SkyCloudsFadeEnd = 1000;
 
 	SunElevationAngle = -5.8f;
+	SunDirectionAngle = 0.0f;
+
+	SunMovementAngleRange = 190.f;
+
+	MoonLongitude = 0.f;
+	MoonLatitude = 0.f;
 
 	SSSDiffuse = 0.0f;
 	SSSSpecular = 0.0f;
@@ -137,6 +146,8 @@ void r3dAtmosphere :: Reset()
 
 	StaticTexGetOffsetX = 0.5f;
 	StaticTexGetOffsetY = 0.5f;
+
+	SkyDomeRotationY = 0.f;
 
 }
 
@@ -162,14 +173,21 @@ int r3dAtmosphere :: SerializeXML( pugi::xml_node root )
 		SerializeXMLCurve3f<W>( "sun_backlightcolor_curve"				, atmoNode, &BacklightColor					);
 	
 		SerializeXMLCurve3f<W>( "sun_color_curve"				, atmoNode, &SunColor					);
-		SerializeXMLCurve3f<W>( "sky_color_curve"				, atmoNode, &SkyColor					);
+		SerializeXMLCurve3f<W>( "moon_color_curve"				, atmoNode, &MoonLightColor				);
+		SerializeXMLCurve3f<W>( "moon_ambi_curve"				, atmoNode, &MoonAmbientColor			);
+		SerializeXMLCurve3f<W>( "sky_color_curve"				, atmoNode, &SunAmbientColor			);
 		SerializeXMLCurve3f<W>( "lambda_col_curve"				, atmoNode, &LambdaCol					);
 		SerializeXMLCurve3f<W>( "hg_g_curve"					, atmoNode, &HGg						);
-		SerializeXMLCurve3f<W>( "inscattering_multiplier_curve"	, atmoNode, &InscatteringMultiplier	);
-		SerializeXMLCurve3f<W>( "beta_ray_multiplier_curve"		, atmoNode, &BetaRayMultiplier		);
-		SerializeXMLCurve3f<W>( "beta_mie_multiplier_curve"		, atmoNode, &BetaMieMultiplier		);
+		SerializeXMLCurve3f<W>( "inscattering_multiplier_curve"	, atmoNode, &InscatteringMultiplier		);
+		SerializeXMLCurve3f<W>( "beta_ray_multiplier_curve"		, atmoNode, &BetaRayMultiplier			);
+		SerializeXMLCurve3f<W>( "beta_mie_multiplier_curve"		, atmoNode, &BetaMieMultiplier			);
 		SerializeXMLCurve3f<W>( "sun_intensity_curve"			, atmoNode, &SunIntensityCoef			);
 		SerializeXMLCurve3f<W>( "turbitity_curve"				, atmoNode, &Turbitity					);
+
+		SerializeXMLCurve3f<W>( "sun_spot_amplify"				, atmoNode, &SunSpotAmplify			);
+		SerializeXMLCurve3f<W>( "sun_spot_pow"					, atmoNode, &SunSpotPow				);
+		SerializeXMLCurve3f<W>( "sun_spot_color"				, atmoNode, &SunSpotColor			);
+		SerializeXMLCurve3f<W>( "sun_spot_intensity"			, atmoNode, &SunSpotIntensity		);		
 
 		SerializeXMLVal<W>( "fog_version"						, atmoNode, &FogVersion			);
 
@@ -195,18 +213,57 @@ int r3dAtmosphere :: SerializeXML( pugi::xml_node root )
 		SerializeXMLVal<W>( "sky_clouds_fadestart"				, atmoNode, &SkyCloudsFadeStart		);
 		SerializeXMLVal<W>( "sky_clouds_fadeend"				, atmoNode, &SkyCloudsFadeEnd		);
 		SerializeXMLVal<W>( "sun_elevation_angle"				, atmoNode, &SunElevationAngle		);
+		SerializeXMLVal<W>( "sun_direction_angle"				, atmoNode, &SunDirectionAngle		);
+		SerializeXMLVal<W>( "moon_longitude"					, atmoNode, &MoonLongitude			);
+		SerializeXMLVal<W>( "moon_latitude"						, atmoNode, &MoonLatitude			);
 		SerializeXMLVal<W>( "sss_diffuse"						, atmoNode, &SSSDiffuse				);
 		SerializeXMLVal<W>( "sss_specular"						, atmoNode, &SSSSpecular				);
 		SerializeXMLVal<W>( "sss_specpower"						, atmoNode, &SSSSpecPower				);
-		SerializeXMLVal<W>( "have_new_simple_fog"				, atmoNode, &bVolumeFog			);
+		SerializeXMLVal<W>( "have_new_simple_fog"				, atmoNode, &bVolumeFog					);
 		SerializeXMLVal<W>( "fog_max_height"					, atmoNode, &Fog_MaxHeight				);
 		SerializeXMLVal<W>( "aerial_mip_bias"					, atmoNode, &Aerial_MipBias				);
 		SerializeXMLVal<W>( "sun_intensity"						, atmoNode, &SunIntensity				);
-		SerializeXMLVal<W>( "static_sky_tex_name"				, atmoNode, &StaticSkyTexName			);
+		SerializeXMLVal<W>( "moon_intensity"					, atmoNode, &MoonIntensity				);
+		SerializeXMLVal<W>( "skydome_rotation_y"				, atmoNode, &SkyDomeRotationY			);
+
+		if( !W )
+		{
+			r3dString prevVerStaticSkyTexture = "";
+
+			SerializeXMLVal<W>( "static_sky_tex_name"			, atmoNode, &prevVerStaticSkyTexture	);
+
+			if( prevVerStaticSkyTexture.Length() )
+			{
+				for( int i = 0, e = SKY_PHASE_COUNT; i < e ; i ++ )
+				{
+					StaticSkyTextureNames[ i ] = prevVerStaticSkyTexture;
+				}
+			}
+		}
+
+		for( int i = 0, e = SKY_PHASE_COUNT; i < e ; i ++ )
+		{
+			char name[ 64 ];
+
+			sprintf( name, "static_sky_tex_name_phase%d", i );
+			SerializeXMLVal<W>( name, atmoNode, &StaticSkyTextureNames[ i ] );
+
+			sprintf( name, "static_sky_glow_tex_name_phase%d", i );
+			SerializeXMLVal<W>( name, atmoNode, &StaticSkyGlowTextureNames[ i ] );
+
+			sprintf( name, "static_sky_intensity_phase%d", i );
+			SerializeXMLVal<W>( name, atmoNode, &StaticSkyIntensities[ i ] );
+		}
+
 		SerializeXMLVal<W>( "static_sky_mesh_name"				, atmoNode, &StaticSkyMeshName			);
 		SerializeXMLVal<W>( "static_sky_enable"					, atmoNode, &bStaticSkyEnable			);
 		SerializeXMLVal<W>( "static_sky_custom_mesh_enable"		, atmoNode, &bCustomStaticMeshEnable	);
 		SerializeXMLVal<W>( "static_sky_planar_mapping"			, atmoNode, &bStaticSkyPlanarMapping	);
+
+		SerializeXMLVal<W>( "static_sky_dawn_start"				, atmoNode, &DawnStart	);
+		SerializeXMLVal<W>( "static_sky_dawn_end"				, atmoNode, &DawnEnd	);
+		SerializeXMLVal<W>( "static_sky_dusk_start"				, atmoNode, &DuskStart	);
+		SerializeXMLVal<W>( "static_sky_dusk_end"				, atmoNode, &DuskEnd	);
 
 		SerializeXMLVal<W>( "static_texgenscale_x"				, atmoNode, &StaticTexGenScaleX			);
 		SerializeXMLVal<W>( "static_texgenscale_y"				, atmoNode, &StaticTexGenScaleY			);
@@ -214,25 +271,7 @@ int r3dAtmosphere :: SerializeXML( pugi::xml_node root )
 		SerializeXMLVal<W>( "static_texgetoffset_y"				, atmoNode, &StaticTexGetOffsetY		);
 
 		SerializeXMLVal<W>( "rain_particles"					, atmoNode, RainParticleSystemName		);
-		SerializeXMLVal<W>( "rain_strength"						, atmoNode, &RainStrength				);
-		SerializeXMLVal<W>( "wetness"							, atmoNode, &Wetness					);
-		SerializeXMLVal<W>( "wet_weapon_enabled"				, atmoNode, &WetWeaponEnabled			);
-		SerializeXMLVal<W>( "wet_weapon_amount"					, atmoNode, &WetWeaponAmount			);
-		SerializeXMLVal<W>( "wet_weapon_dark"					, atmoNode, &WetWeaponDark				);
-		SerializeXMLVal<W>( "wet_weapon_gloss_boost"			, atmoNode, &WetWeaponGlossBoost		);
-		SerializeXMLVal<W>( "wet_weapon_spec_mul"				, atmoNode, &WetWeaponSpecMul			);
-		SerializeXMLVal<W>( "wet_weapon_streaks"				, atmoNode, &WetWeaponStreaks			);
-		SerializeXMLVal<W>( "wet_weapon_streak_scale"			, atmoNode, &WetWeaponStreakScale		);
-		SerializeXMLVal<W>( "wet_weapon_streak_speed"			, atmoNode, &WetWeaponStreakSpeed		);
-
 		SerializeXMLVal<W>( "sunlight"							, atmoNode, &SunLightOn					);
-
-		if( !W )
-		{
-			ClampWeatherState();
-		}
-
-		SerializeXMLCmdVarF<W>("sky_intensity"					, atmoNode, r_sky_intensity				);
 
 		SerializeXMLVal<W>("particle_shading_coef"				, atmoNode, &ParticleShadingCoef		);
 		
@@ -280,7 +319,6 @@ int	r3dAtmosphere :: LoadFromXML( pugi::xml_node root )
 	}
 
 	SetRainParticle( RainParticleSystemName ) ;
-	ApplyRainStateToParticles();
 
 	return res ;
 }
@@ -294,14 +332,35 @@ int	r3dAtmosphere :: SaveToXML( pugi::xml_node root )
 void
 r3dAtmosphere::EnableStaticSky()
 {
-	if( StaticSkyTex )
+	for( int i = 0, e = SKY_PHASE_COUNT ; i < e ; i ++ )
 	{
-		r3dRenderer->DeleteTexture( StaticSkyTex ) ;
+		if( StaticSkyTextures[ i ] )
+		{
+			r3dRenderer->DeleteTexture( StaticSkyTextures[ i ] );
+			StaticSkyTextures[ i ] = NULL;
+		}
+
+		if( StaticSkyGlowTextures[ i ] )
+		{
+			r3dRenderer->DeleteTexture( StaticSkyGlowTextures[ i ] );
+			StaticSkyGlowTextures[ i ] = NULL;
+		}
 	}
 
-	StaticSkyTex = r3dRenderer->LoadTexture( StaticSkyTexName.c_str(), D3DFMT_UNKNOWN, false, GetAtmoDownScale() ) ;
+	for( int i = 0, e = SKY_PHASE_COUNT ; i < e ; i ++ )
+	{
+		if( StaticSkyTextureNames[ i ].Length() )
+		{
+			StaticSkyTextures[ i ] = r3dRenderer->LoadTexture( StaticSkyTextureNames[ i ].c_str(), D3DFMT_UNKNOWN, false, GetAtmoDownScale() );
+		}
 
-	SAFE_DELETE( StaticSkyMesh )  ;
+		if( StaticSkyGlowTextureNames[ i ].Length() )
+		{
+			StaticSkyGlowTextures[ i ] = r3dRenderer->LoadTexture( StaticSkyGlowTextureNames[ i ].c_str(), D3DFMT_UNKNOWN, false, GetAtmoDownScale() );
+		}
+	}
+
+	SAFE_DELETE( StaticSkyMesh );
 
 	if( bCustomStaticMeshEnable )
 	{
@@ -317,16 +376,25 @@ r3dAtmosphere::EnableStaticSky()
 		}
 	}
 
-	bStaticSkyEnable = 1 ;
+	bStaticSkyEnable = 1;
 }
 
 void
 r3dAtmosphere::DisableStaticSky()
 {
-	if( StaticSkyTex )
+	for( int i = 0, e = SKY_PHASE_COUNT ; i < e ; i ++ )
 	{
-		r3dRenderer->DeleteTexture( StaticSkyTex ) ;
-		StaticSkyTex = 0 ;
+		if( StaticSkyTextures[ i ] )
+		{
+			r3dRenderer->DeleteTexture( StaticSkyTextures[ i ] );
+			StaticSkyTextures[ i ] = NULL;
+		}
+
+		if( StaticSkyGlowTextures[ i ] )
+		{
+			r3dRenderer->DeleteTexture( StaticSkyGlowTextures[ i ] );
+			StaticSkyGlowTextures[ i ] = NULL;
+		}
 	}
 
 	if( StaticSkyMesh )
@@ -345,9 +413,10 @@ r3dAtmosphere::DisableStaticSky()
 }
 
 void
-r3dAtmosphere::SetStaticSkyTexture( const r3dString& textureName )
+r3dAtmosphere::SetStaticSkyTextures( const SkyPhaseTextureNames& textureNames, const SkyPhaseTextureNames& glowTextureNames )
 {
-	StaticSkyTexName = textureName ;
+	StaticSkyTextureNames		= textureNames;
+	StaticSkyGlowTextureNames	= glowTextureNames;
 
 	if( bStaticSkyEnable )
 	{
@@ -447,17 +516,18 @@ r3dAtmosphere::ConvertFog_V1()
 
 void r3dAtmosphere::ReloadTextures()
 {
-	atmoReloadTexture( StaticSkyTex  ) ;
+	for( int i = 0, e = SKY_PHASE_COUNT; i < e; i ++ )
+	{
+		atmoReloadTexture( StaticSkyTextures[ i ] );
+		atmoReloadTexture( StaticSkyGlowTextures[ i ] );
+	}
 }
 
 void r3dAtmosphere::Update()
 {
-	ClampWeatherState();
-
 	if( RainParticleSystem )
 	{
-		RainParticleSystem->SetPosition( gCam );
-		ApplyRainStateToParticles();
+		RainParticleSystem->SetPosition( gCam ) ;
 	}
 }
 
@@ -465,77 +535,290 @@ void r3dAtmosphere::SetRainParticle( const char* Name )
 {
 	if( RainParticleSystem )
 	{
-		GameWorld().DeleteObject( RainParticleSystem );
-		RainParticleSystem = 0;
+		GameWorld().DeleteObject( RainParticleSystem ) ;
+		RainParticleSystem = 0 ;
 	}
 
-	const char* SafeName = Name ? Name : PT_EMPTY_STR;
-
-	strncpy( RainParticleSystemName, SafeName, sizeof( RainParticleSystemName ) - 1 );
-	RainParticleSystemName[ sizeof( RainParticleSystemName ) - 1 ] = 0;
+	if( RainParticleSystemName != Name )
+	{
+		strcpy( RainParticleSystemName, Name ) ;
+	}
 
 	if( !stricmp( RainParticleSystemName, PT_EMPTY_STR ) || !strlen( RainParticleSystemName ) )
 	{
-		return;
+		return ;
 	}
 
-	RainParticleSystem = srv_CreateGameObject( "obj_ParticleSystem", RainParticleSystemName, gCam );
+	RainParticleSystem = srv_CreateGameObject( "obj_ParticleSystem", Name, gCam ) ;
 
-	RainParticleSystem->bPersistent = false;
+	// have to load/save separately
+	RainParticleSystem->bPersistent = false ;
 
-	obj_ParticleSystem* gem = static_cast<obj_ParticleSystem*>( RainParticleSystem );
-	gem->bKeepAlive		= true;
-	gem->bKillDelayed	= false;
-	gem->bKill			= false;
-
-	ApplyRainStateToParticles();
+	obj_ParticleSystem* gem = static_cast<obj_ParticleSystem*>( RainParticleSystem ) ;
+	gem->bKeepAlive		= true ;
+	gem->bKillDelayed	= false ;
+	gem->bKill			= false ;
 }
 
 void r3dAtmosphere::ClearRainParticle()
 {
-	SetRainParticle( PT_EMPTY_STR );
+	r3dGameLevel::Environment.__CurTime;
+	SetRainParticle( PT_EMPTY_STR ) ;
 }
 
-void r3dAtmosphere::SetRainStrength( float Value )
+void GetAdjecantSkyPhasesAndLerpT(	r3dAtmosphere::SkyPhase *oPhase0, 
+									r3dAtmosphere::SkyPhase *oPhase1,
+									float* oLerpT )
 {
-	RainStrength = r3dClamp01Weather( Value );
-	ApplyRainStateToParticles();
+	const r3dAtmosphere& atmo = r3dGameLevel::Environment;
+
+	float t = atmo.__CurTime;
+
+	float midDawn = ( atmo.DawnStart + atmo.DawnEnd ) * 0.5f;
+	float midDusk = ( atmo.DuskStart + atmo.DuskEnd ) * 0.5f;
+
+	if( t >= atmo.DuskEnd || t < atmo.DawnStart )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_NIGHT;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_NIGHT;
+		*oLerpT			= 0.f;
+	}
+	else
+	if( t >= atmo.DawnStart && t < midDawn )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_NIGHT;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_DAWN;
+		*oLerpT			= ( t - atmo.DawnStart ) / ( midDawn - atmo.DawnStart );
+	}
+	else
+	if( t >= midDawn && t < atmo.DawnEnd )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_DAWN;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_DAY;
+		*oLerpT			= ( t - midDawn ) / ( atmo.DawnEnd - midDawn );
+	}
+	else
+	if( t >= atmo.DawnEnd && t < atmo.DuskStart )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_DAY;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_DAY;
+		*oLerpT			= 0.f;
+	}
+	else
+	if( t >= atmo.DuskStart && t < midDusk )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_DAY;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_DUSK;
+		*oLerpT			= ( t - atmo.DuskStart ) / ( midDusk - atmo.DuskStart );
+	}
+	else
+	if( t >= midDusk && t < atmo.DuskEnd )
+	{
+		*oPhase0		= r3dAtmosphere::SKY_PHASE_DUSK;
+		*oPhase1		= r3dAtmosphere::SKY_PHASE_NIGHT;
+		*oLerpT			= ( t - midDusk ) / ( atmo.DuskEnd - midDusk );
+	}
 }
 
-void r3dAtmosphere::SetWetness( float Value )
+const char* SkyPhaseToName( r3dAtmosphere::SkyPhase phase )
 {
-	Wetness = r3dClamp01Weather( Value );
+	switch( phase )
+	{
+	case r3dAtmosphere::SKY_PHASE_DAWN:
+		return "Dawn";
+		break;
+	case r3dAtmosphere::SKY_PHASE_DAY:
+		return "Day";
+		break;
+	case r3dAtmosphere::SKY_PHASE_DUSK:
+		return "Dusk";
+		break;
+	case r3dAtmosphere::SKY_PHASE_NIGHT:
+		return "Night";
+		break;
+	}
+
+	return "Darkness";
 }
 
-void r3dAtmosphere::ClampWeatherState()
+
+r3dPoint3D GetMoonVec()
 {
-	RainStrength = r3dClamp01Weather( RainStrength );
-	Wetness = r3dClamp01Weather( Wetness );
+	float radLatitude = R3D_DEG2RAD( r3dGameLevel::Environment.MoonLatitude );
+	float redLongitude = R3D_DEG2RAD( r3dGameLevel::Environment.MoonLongitude );
 
-	WetWeaponEnabled = WetWeaponEnabled ? 1 : 0;
+	r3dPoint3D dir;
 
-	WetWeaponAmount = R3D_CLAMP( WetWeaponAmount, 0.0f, 2.0f );
-	WetWeaponDark = R3D_CLAMP( WetWeaponDark, 0.25f, 1.0f );
-	WetWeaponGlossBoost = R3D_CLAMP( WetWeaponGlossBoost, 0.0f, 1.0f );
-	WetWeaponSpecMul = R3D_CLAMP( WetWeaponSpecMul, 1.0f, 4.0f );
-	WetWeaponStreaks = R3D_CLAMP( WetWeaponStreaks, 0.0f, 2.0f );
-	WetWeaponStreakScale = R3D_CLAMP( WetWeaponStreakScale, 4.0f, 128.0f );
-	WetWeaponStreakSpeed = R3D_CLAMP( WetWeaponStreakSpeed, 0.0f, 4.0f );
+	dir.x = cosf( radLatitude ) * sinf( redLongitude );
+	dir.y = sinf( radLatitude );
+	dir.z = cosf( radLatitude ) * cosf( redLongitude );
+
+	return dir;
 }
 
-void r3dAtmosphere::ApplyRainStateToParticles()
+R3D_FORCEINLINE float GetDayNightLerpT()
 {
-	if( !RainParticleSystem )
-		return;
+	float t = r3dGameLevel::Environment.__CurTime;
 
-	obj_ParticleSystem* particleSystem = static_cast<obj_ParticleSystem*>( RainParticleSystem );
+	const r3dAtmosphere& atmo = r3dGameLevel::Environment;
 
-	const int enabled = RainStrength > 0.001f ? 1 : 0;
+	float lerpT = 1.f;
 
-	particleSystem->bRender = enabled;
+	if( t < atmo.DuskStart && t >= atmo.DawnEnd )
+	{
+		lerpT = 0.f;
+	}
+	else
+	if( t >= atmo.DawnStart && t < atmo.DawnEnd )
+	{
+		lerpT	= 1.0f - ( t - atmo.DawnStart ) / ( atmo.DawnEnd - atmo.DawnStart );
+	}
+	else
+	if( t >= atmo.DuskStart && t < atmo.DuskEnd )
+	{
+		lerpT	= ( t - atmo.DuskStart ) / ( atmo.DuskEnd - atmo.DuskStart );
+	}
 
-	const float particleScale = 0.35f + RainStrength * 1.65f;
-
-	particleSystem->RenderScale = particleScale;
-	particleSystem->GlobalScale = particleScale;
+	return lerpT;
 }
+
+bool IsNight()
+{
+	float lerpT = GetDayNightLerpT();
+
+	return lerpT > 0.999999f ;
+}
+
+r3dPoint3D GetEnvLightDir()
+{
+	r3dPoint3D moonVec = -GetMoonVec();
+
+	r3dPoint3D sunVec( 0, -1, 0 );
+
+	if( Sun )
+	{
+		sunVec = -Sun->GetCurrentSunVec();
+	}
+
+	const r3dAtmosphere& atmo = r3dGameLevel::Environment;
+
+	float lerpT = GetDayNightLerpT();
+
+	if( lerpT < 0.999999f )
+		lerpT = 0.f;
+
+	r3dPoint3D dir = R3D_LERP( sunVec, moonVec, lerpT );
+
+	dir.Normalize();
+
+	return dir;
+}
+
+//------------------------------------------------------------------------
+
+int g_OverrideAmbientAndIntensity;
+float g_OverrideIntensity;
+r3dColor g_OverrideAmbientColor;
+
+//------------------------------------------------------------------------
+
+float4 GetEnvLightColor()
+{
+	float moonT = EnvGetNightT();
+
+	r3dAtmosphere& atmo = r3dGameLevel::Environment;
+
+	r3dColor moonColr = atmo.GetCurrentMoonLightColor();
+	r3dColor sunColor = r3dColor::white;
+
+	if( Sun )
+	{
+		sunColor = atmo.GetCurrentSunColor();
+	}
+
+	float lerpT = GetDayNightLerpT();
+
+	r3dPoint3D sunColorV( sunColor.R / 255.f, sunColor.G / 255.f, sunColor.B / 255.f );
+
+	sunColorV *= g_OverrideAmbientAndIntensity ? g_OverrideIntensity : atmo.SunIntensity;
+
+	r3dPoint3D moonColrV( moonColr.R / 255.f, moonColr.G / 255.f, moonColr.B / 255.f );
+
+	moonColrV *= g_OverrideAmbientAndIntensity ? g_OverrideIntensity : atmo.MoonIntensity;
+
+	r3dPoint3D colorMix	= R3D_LERP( sunColorV, moonColrV, lerpT );
+
+	float4 res;
+	res.x = colorMix.x;
+	res.y = colorMix.y;
+	res.z = colorMix.z;
+	res.w = 1;
+
+	return res;
+}
+
+float4 GetEnvLightAmbient()
+{
+	if( g_OverrideAmbientAndIntensity )
+		return float4( g_OverrideAmbientColor.R / 255.0f, g_OverrideAmbientColor.G / 255.0f, g_OverrideAmbientColor.B / 255.0f, 1.0f );
+
+	r3dAtmosphere& atmo = r3dGameLevel::Environment;
+
+	r3dColor moonAmbi = atmo.GetCurrentMoonAmbientColor();
+	r3dColor sunAmbi = r3dColor::black;
+
+	if( Sun )
+	{
+		sunAmbi = atmo.GetCurrentSunAmbientColor();
+	}
+
+	float lerpT = GetDayNightLerpT();
+
+	r3dPoint3D sunAmbiV( sunAmbi.R / 255.f, sunAmbi.G / 255.f, sunAmbi.B / 255.f );
+
+	r3dPoint3D moonAmbiV( moonAmbi.R / 255.f, moonAmbi.G / 255.f, moonAmbi.B / 255.f );
+
+	r3dPoint3D ambiMix = R3D_LERP( sunAmbiV, moonAmbiV, lerpT );
+
+	float4 res;
+
+	res.x = ambiMix.x;
+	res.y = ambiMix.y;
+	res.z = ambiMix.z;
+	res.w = 1;
+
+	return res;
+}
+
+//------------------------------------------------------------------------
+
+r3dColor GetEnvBackLightColor()
+{
+	r3dColor backLightColor = r3dGameLevel::Environment.GetCurrentBacklightColor();
+
+	r3dPoint3D backLightColorV ( backLightColor.R, backLightColor.G, backLightColor.B );
+	r3dPoint3D blackColorV ( 0, 0, 0 );
+
+	r3dPoint3D lerpedColorV = R3D_LERP( backLightColorV, blackColorV, GetDayNightLerpT() );
+
+	return r3dColor(	R3D_MAX( R3D_MIN( (int)lerpedColorV.x, 255 ), 0 ),
+						R3D_MAX( R3D_MIN( (int)lerpedColorV.y, 255 ), 0 ),
+						R3D_MAX( R3D_MIN( (int)lerpedColorV.z, 255 ), 0 ) );
+						
+}
+
+//------------------------------------------------------------------------
+
+float GetEnvSkyIntensity()
+{
+	r3dAtmosphere::SkyPhase phase0, phase1;
+	float lerpT;
+
+	GetAdjecantSkyPhasesAndLerpT( &phase0, &phase1, &lerpT );
+
+	return R3D_LERP(	r3dGameLevel::Environment.StaticSkyIntensities[ phase0 ], 
+						r3dGameLevel::Environment.StaticSkyIntensities[ phase1 ],
+						lerpT ) ;
+}
+
+//------------------------------------------------------------------------

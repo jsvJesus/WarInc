@@ -13,6 +13,7 @@ extern  char	UPDATER_VERSION_SUFFIX[512];
 extern	char	UPDATER_BUILD[512];
 
 extern	char	EULA_URL[512];
+extern	char	TOS_URL[512];
 extern	char	GETSERVERINFO_URL[512];
 
 extern	bool	UPDATER_UPDATER_ENABLED;

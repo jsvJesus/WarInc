@@ -121,14 +121,12 @@ void PointLightsRenderer::ResetTileCache()
 
 void PointLightsRenderer::Init()
 {
-	extern D3DPOOL r3dDefaultTexturePool;
+
 	tileCacheVolumeTex = r3dRenderer->AllocateTexture();
 	lightParamsTex = r3dRenderer->AllocateTexture();
-	D3DPOOL origPool = r3dDefaultTexturePool;
-	r3dDefaultTexturePool = D3DPOOL_DEFAULT;
-	tileCacheVolumeTex->CreateVolume(LIGHT_TILE_TEXTURE_SIZE, LIGHT_TILE_TEXTURE_SIZE, LIGHT_TILE_TEXTURE_DEPTH, D3DFMT_L16, 1);
-	lightParamsTex->Create(LIGHT_PARAMS_TEXTURE_SIZE, LIGHT_PARAMS_TEXTURE_SIZE, D3DFMT_A32B32G32R32F, 1);
-	r3dDefaultTexturePool = origPool;
+
+	tileCacheVolumeTex->CreateVolume(LIGHT_TILE_TEXTURE_SIZE, LIGHT_TILE_TEXTURE_SIZE, LIGHT_TILE_TEXTURE_DEPTH, D3DFMT_L16, 1, D3DPOOL_DEFAULT);
+	lightParamsTex->Create(LIGHT_PARAMS_TEXTURE_SIZE, LIGHT_PARAMS_TEXTURE_SIZE, D3DFMT_A32B32G32R32F, 1, D3DPOOL_DEFAULT);
 
 	//	WARNING! Don't forget change size of this array if you change lightParamsTex texture format
 	lightParamsData = new float[lightParamsTex->GetWidth() * lightParamsTex->GetHeight() * 4];
@@ -282,8 +280,8 @@ void PointLightsRenderer::RenderLights()
 		D3DXVECTOR4(0, 0, 0, 0),
 		D3DXVECTOR4(1, 1, 0, 0)
 	};
-	r3dRenderer->SetVertexShaderConstantF(0, &consts[0].x, 1);
-	r3dRenderer->SetVertexShaderConstantF(1, &m[0]._11, 8);
+	d->SetVertexShaderConstantF(0, &consts[0].x, 1);
+	d->SetVertexShaderConstantF(1, &m[0]._11, 8);
 
 	consts[0].x = 1.0f / LIGHT_TILE_TEXTURE_DEPTH;
 	consts[0].y = 1.0f / LIGHT_PARAMS_TEXTURE_SIZE;
@@ -292,12 +290,7 @@ void PointLightsRenderer::RenderLights()
 
 	consts[1] = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 0);
 
-	if (r_half_scale_ssao->GetInt())
-	{
-		consts[2].x = 0.5f;
-		consts[2].y = 0.5f;
-	}
-	r3dRenderer->SetPixelShaderConstantF(0, &consts[0].x, _countof(consts));
+	d->SetPixelShaderConstantF(0, &consts[0].x, _countof(consts));
 
 #if 0
 	SetSSSParams(4, false);
@@ -387,10 +380,10 @@ void PointLightsRenderer::RasterizeLightToTileCache
 				tileCache[numLights].lightIDs[i][j] = static_cast<uint16_t>(lightID);
 				zMin = R3D_MIN(zMin, minZ);
 			}
-			//else
-			//{
-				//_asm nop;
-			//}
+			else
+			{
+				_asm nop;
+			}
 		}
 	}
 }

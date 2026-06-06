@@ -2,6 +2,7 @@
 
 #include "r3dProtect.h"
 
+// !!!sync this with obj_ServerPlayer.cpp on server!!!
 enum Playerstate_e
 {
 	PLAYER_INVALID = -1,
@@ -14,6 +15,11 @@ enum Playerstate_e
 	PLAYER_MOVE_WALK_AIM,
 	PLAYER_MOVE_RUN,
 	PLAYER_MOVE_SPRINT,
+	PLAYER_MOVE_PRONE,
+	PLAYER_PRONE_AIM,
+	PLAYER_PRONE_UP,
+	PLAYER_PRONE_DOWN,
+	PLAYER_PRONE_IDLE,
 
 	PLAYER_DIE,
 
@@ -56,6 +62,11 @@ class CUberData
 		AIDX_ShootWalk,
 		AIDX_ShootAim,
 		AIDX_ShootCrouch,
+		AIDX_ProneBlend,
+		AIDX_ProneAim,
+		AIDX_ReloadProne,
+		AIDX_ShootProne,
+		AIDX_IdleProne,
 		AIDX_COUNT,
 	};
 	std::string	blendStartBones_[AIDX_COUNT];
@@ -84,16 +95,24 @@ static	int		GetMoveDirFromAcceleration(const r3dPoint3D& accel);
 	  int		walk[ANIMDIR_COUNT];
 	  int		run[ANIMDIR_COUNT];
 	  int		sprint[ANIMDIR_COUNT];
-	  
+	  int		prone[ANIMDIR_COUNT];
+	  int		prone_up_weapon;
+	  int		prone_down_weapon;
+	  int		prone_up_noweapon;
+	  int		prone_down_noweapon;
+
 	  // misc ones
 	  int		turnins[5];
 	  int		grenades_tps[20];
 	  int		grenades_fps[20];
-	  int		bombs_tps[20];
-	  int		bombs_fps[20];
+	  //int		bombs_tps[20];
+	  //int		bombs_fps[20];
 	  int		jumps[20];
 	  int		deaths[20];
 	  int		UI_IdleNoWeapon;
+
+	  int		attmMenuRiseWeapon[6]; //6 - number of weapon types
+	  int		attmMenuIdleWeapon[6]; 
 	};
 	animIndices_s	aid_;
 	int		GetGrenadeAnimId(bool IsFPS, int PlayerState, int GrenadeState);
@@ -101,9 +120,10 @@ static	int		GetMoveDirFromAcceleration(const r3dPoint3D& accel);
 	
 	// default weapon animation indices
 	int		wpn1[AIDX_COUNT];
+	int		wpn1_fps[AIDX_COUNT];
 
   private:
-	friend class obj_AI_Player;
+	friend class obj_Player;
 	friend class obj_Zombie;
 	friend void AI_Player_LoadStuff();
 	friend void AI_Player_FreeStuff();
@@ -130,20 +150,19 @@ static	int		GetMoveDirFromAcceleration(const r3dPoint3D& accel);
 
 // class for holding and drawing eqipment
 class Gear;
-struct WeaponConfig;
+class WeaponConfig;
 class Weapon;
 
 enum ESlot
 {
-	SLOT_Body = 0,
+	SLOT_UpperBody = 0,
+	SLOT_LowerBody,
+	SLOT_Head,
 	SLOT_Armor,
-	SLOT_Head1,
-	SLOT_Head2,
-	SLOT_Head3,
+	SLOT_Helmet,
+	SLOT_Backpack,
 	SLOT_Weapon,
 	SLOT_WeaponBackRight,
-	SLOT_WeaponBackLeft,
-	SLOT_WeaponBackLeftRPG, // backleft and backleftRPG are on the same side, so they are mutually exclusive
 	SLOT_WeaponSide,
 	SLOT_Max,
 };
@@ -151,8 +170,7 @@ enum ESlot
 class CUberEquip
 {
 public:
-	obj_AI_Player* player;
-	bool	isFirstPerson;
+	obj_Player* player;
 	// equipped things
 	class slot_s
 	{
@@ -160,10 +178,12 @@ public:
 		// only one of those should be non null
 		Weapon*		wpn;	// NOT owning pointer, obj_Player own it.
 		Gear*		gear;	// owning pointer to gear
+		r3dMesh*	mesh;
 
 		slot_s() { 
 			gear = NULL;
 			wpn = NULL;
+			mesh = NULL;
 		}
 	};
 	slot_s		slots_[SLOT_Max];
@@ -181,20 +201,19 @@ private:
 	void		DrawSlotMesh(r3dMesh* mesh, const D3DXMATRIX& world, DrawType dt, bool skin);
 
 public:
-	CUberEquip(obj_AI_Player* plr);
+	CUberEquip(obj_Player* plr);
 	~CUberEquip();
 
 	void		SetSlot(ESlot slotId, Gear* gear);
 	void		SetSlot(ESlot slotId, Weapon* wpn);
+	void		SetSlot(ESlot slotId, r3dMesh* mesh);
 
 	D3DXMATRIX	getWeaponBone(const r3dSkeleton* skel, const D3DXMATRIX& offset);
 	r3dPoint3D	getBonePos(int BoneID, const r3dSkeleton* skel, const D3DXMATRIX& offset);
 	r3dMesh*	getSlotMesh(ESlot slotId);
 
 
-	void		Draw(const r3dSkeleton* skel, const D3DXMATRIX& CharMat, bool draw_weapon, DrawType dt, bool first_person);
-
-	void		ResetSlots();
+	void		Draw(const r3dSkeleton* skel, const D3DXMATRIX& CharMat, bool draw_weapon, DrawType dt, bool first_person );
 
 	int			IsLoaded() ;
 };
@@ -204,7 +223,7 @@ class CUberAnim
 {
   public:
 	CUberData*	data_;
-	obj_AI_Player* player;
+	obj_Player* player;
 	r3dAnimation	anim;
 	
 	bool		IsFPSMode();
@@ -227,8 +246,9 @@ class CUberAnim
 	bool		jumpWeInAir;     // flag that we finally in air (started to jump upward)
 	float		jumpAirTime;
 	int		jumpMoveTrackID; // track id of underlying lower body anim
+	int		jumpMoveTrackID2;// track id of underlying upper body anim
 
-	int		bombPlantingTrackID;
+	//int		bombPlantingTrackID;
 
 	int		AnimPlayerState;
 	int		AnimMoveDir;
@@ -250,18 +270,18 @@ class CUberAnim
 	void		SwitchToState(int PlayerState, int MoveDir);
 	
   public:
-	CUberAnim(obj_AI_Player* in_player, CUberData* in_data);
+	CUberAnim(obj_Player* in_player, CUberData* in_data);
 	~CUberAnim();
 
 	int		GetBoneID(const char* Name) const;
 
-	void		SyncAnimation(int PlayerState, int MoveDir, bool force, const Weapon* weap);
+	void		SyncAnimation(int PlayerState, int MoveDir, bool force, const Weapon* weap, bool isInAttmMenu);
 	void		StartGrenadePinPullAnimation();
 	void		StartGrenadeThrowAnimation();
 	void		StopGrenadeAnimations();
 	bool		IsGrenadeLaunched();
-	int		GetGrenadeAnimState();
-	void		StartBombPlantingAnimation(int bombState); // bombState: 0-start, 1-loop, 2-end, 3-stop everything
+	int			GetGrenadeAnimState();
+	//void		StartBombPlantingAnimation(int bombState); // bombState: 0-start, 1-loop, 2-end, 3-stop everything
 	void		StartTurnInPlaceAnim();
 	void		StopTurnInPlaceAnim();
 	void		UpdateTurnInPlaceAnim();

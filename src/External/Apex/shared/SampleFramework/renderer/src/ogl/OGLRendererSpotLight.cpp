@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,23 +32,26 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererSpotLight.h"
 #include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_OPENGL)
 
-OGLRendererSpotLight::OGLRendererSpotLight(const RendererSpotLightDesc &desc, OGLRenderer &renderer) :
+#include "OGLRendererSpotLight.h"
+
+using namespace SampleRenderer;
+
+OGLRendererSpotLight::OGLRendererSpotLight(const RendererSpotLightDesc &desc, OGLRenderer &renderer) 
+:	RendererSpotLight(desc)
 #if defined(RENDERER_ENABLE_CG)
-	m_cgenv(renderer.getCGEnvironment()),
+,	m_cgenv(renderer.getCGEnvironment())
 #endif
-	RendererSpotLight(desc)
 {
-	
+
 }
 
 OGLRendererSpotLight::~OGLRendererSpotLight(void)
 {
-	
+
 }
 
 void OGLRendererSpotLight::bind(void) const
@@ -64,4 +67,5 @@ void OGLRendererSpotLight::bind(void) const
 	cgSetParameter1f( m_cgenv.lightOuterCone,    m_outerCone);
 #endif
 }
+
 #endif

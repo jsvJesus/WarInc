@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -39,24 +39,28 @@
 #define RENDERER_TERRAIN_SHAPE_H
 
 #include <RendererShape.h>
-#include "PxSimpleTypes.h"
-#include "PxVec3.h"
 
-class RendererVertexBuffer;
-class RendererIndexBuffer;
-
-class RendererTerrainShape : public RendererShape
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+	class RendererIndexBuffer;
+
+	class RendererTerrainShape : public RendererShape
+	{
 	public:
 		RendererTerrainShape(Renderer &renderer, 
-							 physx::PxVec3 *verts, physx::PxU32 numVerts,
-							 physx::PxVec3 *normals, physx::PxU32 numNorms,
-							 physx::PxU16 *faces, physx::PxU32 numFaces);
+			PxVec3 *verts, PxU32 numVerts,
+			PxVec3 *normals, PxU32 numNorms,
+			PxU16 *faces, PxU32 numFaces,
+			PxF32 uvScale);
 		virtual ~RendererTerrainShape(void);
-		
+
 	private:
 		RendererVertexBuffer *m_vertexBuffer;
 		RendererIndexBuffer  *m_indexBuffer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

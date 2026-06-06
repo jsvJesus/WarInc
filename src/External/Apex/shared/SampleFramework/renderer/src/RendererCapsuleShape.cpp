@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,7 +35,9 @@
 //
 // RendererCapsuleShape : convenience class for generating a capsule mesh.
 //
-#include "PsShare.h"
+
+#include <PsUtilities.h>
+
 #include <RendererCapsuleShape.h>
 
 #include <Renderer.h>
@@ -49,183 +51,184 @@
 #include <RendererMesh.h>
 #include <RendererMeshDesc.h>
 
-#include "PxVec3.h"
+#include <RendererMemoryMacros.h>
+#include "PsUtilities.h"
 
+using namespace SampleRenderer;
 
-class CapsuleVertex
+namespace 
 {
-	public:
-		CapsuleVertex(const physx::PxVec3 &position, const physx::PxVec3 &normal)
+
+const PxU32 g_numSlices = 8;  // along lines of longitude
+const PxU32 g_numStacks = 16; // along lines of latitude
+
+const PxU32 g_numSphereVertices = (g_numSlices*2+1)*(g_numStacks+1);
+const PxU32 g_numSphereIndices = g_numSlices*2*g_numStacks*6;
+
+const PxU32 g_numConeVertices = (g_numSlices*2+1)*2;
+const PxU32 g_numConeIndices = g_numSlices*2*6;
+
+PxVec3 g_spherePositions[g_numSphereVertices];
+PxU16 g_sphereIndices[g_numSphereIndices];
+
+PxVec3 g_conePositions[g_numConeVertices];
+PxU16 g_coneIndices[g_numConeIndices];
+
+// total vertex count
+const PxU32 g_numCapsuleVertices = 2*g_numSphereVertices + g_numConeVertices;
+const PxU32 g_numCapsuleIndices = 2*g_numSphereIndices + g_numConeIndices;
+
+void generateSphereMesh(PxU16 slices, PxU16 stacks, PxVec3* positions, PxU16* indices)
+{
+	const PxF32 thetaStep = PxPi/stacks;
+	const PxF32 phiStep = PxTwoPi/(slices*2);
+
+	PxF32 theta = 0.0f;
+
+	// generate vertices
+	for (PxU16 y=0; y <= stacks; ++y)
+	{
+		PxF32 phi = 0.0f;
+
+		PxF32 cosTheta = PxCos(theta);
+		PxF32 sinTheta = PxSin(theta);
+
+		for (PxU16 x=0; x <= slices*2; ++x)
+		{			
+			PxF32 cosPhi = PxCos(phi);
+			PxF32 sinPhi = PxSin(phi);
+
+			PxVec3 p(cosPhi*sinTheta, cosTheta, sinPhi*sinTheta);
+
+			// write vertex
+			*(positions++)= p;
+
+			phi += phiStep;
+		}			
+
+		theta += thetaStep;
+	}
+
+	const PxU16 numRingQuads = 2*slices;
+	const PxU16 numRingVerts = 2*slices+1;
+
+	// add faces
+	for (PxU16 y=0; y < stacks; ++y)
+	{
+		for (PxU16 i=0; i < numRingQuads; ++i)
 		{
-			p = position;
-			n = normal;
-			n.normalize();
+			// add a quad
+			*(indices++) = (y+0)*numRingVerts + i;
+			*(indices++) = (y+1)*numRingVerts + i;
+			*(indices++) = (y+1)*numRingVerts + i + 1;
+
+			*(indices++) = (y+1)*numRingVerts + i + 1;
+			*(indices++) = (y+0)*numRingVerts + i + 1;
+			*(indices++) = (y+0)*numRingVerts + i;
 		}
-	
-	public:
-		physx::PxVec3 p;
-		physx::PxVec3 n;
-};
+	}
+}
 
-static const CapsuleVertex g_vertices[] =
+void generateConeMesh(PxU16 slices, PxVec3* positions, PxU16* indices, PxU16 offset)
 {
-	CapsuleVertex( physx::PxVec3(0.0000f, -2.0000f, -0.0000f), 	physx::PxVec3(0.0000f, -1.0000f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.3827f, -1.9239f, -0.0000f), 	physx::PxVec3(0.4226f, -0.9063f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.2706f, -1.9239f, 0.2706f), 		physx::PxVec3(0.2988f, -0.9063f, 0.2988f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, -1.9239f, 0.3827f), 	physx::PxVec3(0.0000f, -0.9063f, 0.4226f)),
-	CapsuleVertex( physx::PxVec3(-0.2706f, -1.9239f, 0.2706f), 	physx::PxVec3(-0.2988f, -0.9063f, 0.2988f)),
-	CapsuleVertex( physx::PxVec3(-0.3827f, -1.9239f, -0.0000f), 	physx::PxVec3(-0.4226f, -0.9063f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.2706f, -1.9239f, -0.2706f), 	physx::PxVec3(-0.2988f, -0.9063f, -0.2988f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, -1.9239f, -0.3827f), 	physx::PxVec3(-0.0000f, -0.9063f, -0.4226f)),
-	CapsuleVertex( physx::PxVec3(0.2706f, -1.9239f, -0.2706f), 	physx::PxVec3(0.2988f, -0.9063f, -0.2988f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, -1.7071f, -0.0000f), 	physx::PxVec3(0.7296f, -0.6839f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.5000f, -1.7071f, 0.5000f), 		physx::PxVec3(0.5159f, -0.6839f, 0.5159f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, -1.7071f, 0.7071f), 	physx::PxVec3(-0.0000f, -0.6839f, 0.7296f)),
-	CapsuleVertex( physx::PxVec3(-0.5000f, -1.7071f, 0.5000f), 	physx::PxVec3(-0.5159f, -0.6839f, 0.5159f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, -1.7071f, -0.0000f), 	physx::PxVec3(-0.7296f, -0.6839f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.5000f, -1.7071f, -0.5000f), 	physx::PxVec3(-0.5159f, -0.6839f, -0.5159f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, -1.7071f, -0.7071f), 	physx::PxVec3(-0.0000f, -0.6839f, -0.7296f)),
-	CapsuleVertex( physx::PxVec3(0.5000f, -1.7071f, -0.5000f), 	physx::PxVec3(0.5159f, -0.6839f, -0.5159f)),
-	CapsuleVertex( physx::PxVec3(0.9239f, -1.3827f, -0.0000f), 	physx::PxVec3(0.9303f, -0.3668f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.6533f, -1.3827f, 0.6533f), 		physx::PxVec3(0.6578f, -0.3668f, 0.6578f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, -1.3827f, 0.9239f), 	physx::PxVec3(0.0000f, -0.3668f, 0.9303f)),
-	CapsuleVertex( physx::PxVec3(-0.6533f, -1.3827f, 0.6533f), 	physx::PxVec3(-0.6578f, -0.3668f, 0.6578f)),
-	CapsuleVertex( physx::PxVec3(-0.9239f, -1.3827f, -0.0000f), 	physx::PxVec3(-0.9303f, -0.3668f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.6533f, -1.3827f, -0.6533f), 	physx::PxVec3(-0.6578f, -0.3668f, -0.6578f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, -1.3827f, -0.9239f), 	physx::PxVec3(-0.0000f, -0.3668f, -0.9303f)),
-	CapsuleVertex( physx::PxVec3(0.6533f, -1.3827f, -0.6533f), 	physx::PxVec3(0.6578f, -0.3668f, -0.6578f)),
-	CapsuleVertex( physx::PxVec3(1.0000f, -1.0000f, -0.0000f), 	physx::PxVec3(0.9954f, -0.0958f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, -1.0000f, 0.7071f), 		physx::PxVec3(0.7039f, -0.0958f, 0.7039f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, -1.0000f, 1.0000f), 	physx::PxVec3(-0.0000f, -0.0958f, 0.9954f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, -1.0000f, 0.7071f), 	physx::PxVec3(-0.7039f, -0.0958f, 0.7039f)),
-	CapsuleVertex( physx::PxVec3(-1.0000f, -1.0000f, -0.0000f), 	physx::PxVec3(-0.9954f, -0.0958f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, -1.0000f, -0.7071f), 	physx::PxVec3(-0.7039f, -0.0958f, -0.7039f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, -1.0000f, -1.0000f), 	physx::PxVec3(-0.0000f, -0.0958f, -0.9954f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, -1.0000f, -0.7071f), 	physx::PxVec3(0.7039f, -0.0958f, -0.7039f)),
-	CapsuleVertex( physx::PxVec3(1.0000f, 1.0000f, 0.0000f), 		physx::PxVec3(0.9954f, 0.0958f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, 1.0000f, 0.7071f), 		physx::PxVec3(0.7039f, 0.0958f, 0.7039f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, 1.0000f, 1.0000f), 		physx::PxVec3(-0.0000f, 0.0958f, 0.9954f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, 1.0000f, 0.7071f), 		physx::PxVec3(-0.7039f, 0.0958f, 0.7039f)),
-	CapsuleVertex( physx::PxVec3(-1.0000f, 1.0000f, -0.0000f),		physx::PxVec3(-0.9954f, 0.0958f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, 1.0000f, -0.7071f),		physx::PxVec3(-0.7039f, 0.0958f, -0.7039f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, 1.0000f, -1.0000f), 		physx::PxVec3(-0.0000f, 0.0958f, -0.9954f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, 1.0000f, -0.7071f), 		physx::PxVec3(0.7039f, 0.0958f, -0.7039f)),
-	CapsuleVertex( physx::PxVec3(0.9239f, 1.3827f, 0.0000f), 		physx::PxVec3(0.9303f, 0.3668f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.6533f, 1.3827f, 0.6533f), 		physx::PxVec3(0.6578f, 0.3668f, 0.6578f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, 1.3827f, 0.9239f), 		physx::PxVec3(-0.0000f, 0.3668f, 0.9303f)),
-	CapsuleVertex( physx::PxVec3(-0.6533f, 1.3827f, 0.6533f), 		physx::PxVec3(-0.6578f, 0.3668f, 0.6578f)),
-	CapsuleVertex( physx::PxVec3(-0.9239f, 1.3827f, -0.0000f),		physx::PxVec3(-0.9303f, 0.3668f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.6533f, 1.3827f, -0.6533f),		physx::PxVec3(-0.6578f, 0.3668f, -0.6578f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, 1.3827f, -0.9239f), 		physx::PxVec3(-0.0000f, 0.3668f, -0.9303f)),
-	CapsuleVertex( physx::PxVec3(0.6533f, 1.3827f, -0.6533f), 		physx::PxVec3(0.6578f, 0.3668f, -0.6578f)),
-	CapsuleVertex( physx::PxVec3(0.7071f, 1.7071f, 0.0000f), 		physx::PxVec3(0.7296f, 0.6839f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.5000f, 1.7071f, 0.5000f), 		physx::PxVec3(0.5159f, 0.6839f, 0.5159f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, 1.7071f, 0.7071f), 		physx::PxVec3(0.0000f, 0.6839f, 0.7296f)),
-	CapsuleVertex( physx::PxVec3(-0.5000f, 1.7071f, 0.5000f), 		physx::PxVec3(-0.5159f, 0.6839f, 0.5159f)),
-	CapsuleVertex( physx::PxVec3(-0.7071f, 1.7071f, 0.0000f), 		physx::PxVec3(-0.7296f, 0.6839f, -0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.5000f, 1.7071f, -0.5000f),		physx::PxVec3(-0.5159f, 0.6839f, -0.5159f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, 1.7071f, -0.7071f), 		physx::PxVec3(0.0000f, 0.6839f, -0.7296f)),
-	CapsuleVertex( physx::PxVec3(0.5000f, 1.7071f, -0.5000f), 		physx::PxVec3(0.5159f, 0.6839f, -0.5159f)),
-	CapsuleVertex( physx::PxVec3(0.3827f, 1.9239f, 0.0000f), 		physx::PxVec3(0.4226f, 0.9063f, 0.0000f)),
-	CapsuleVertex( physx::PxVec3(0.2706f, 1.9239f, 0.2706f), 		physx::PxVec3(0.2988f, 0.9063f, 0.2988f)),
-	CapsuleVertex( physx::PxVec3(-0.0000f, 1.9239f, 0.3827f), 		physx::PxVec3(-0.0000f, 0.9063f, 0.4226f)),
-	CapsuleVertex( physx::PxVec3(-0.2706f, 1.9239f, 0.2706f), 		physx::PxVec3(-0.2988f, 0.9063f, 0.2988f)),
-	CapsuleVertex( physx::PxVec3(-0.3827f, 1.9239f, 0.0000f), 		physx::PxVec3(-0.4226f, 0.9063f, 0.0000f)),
-	CapsuleVertex( physx::PxVec3(-0.2706f, 1.9239f, -0.2706f),		physx::PxVec3(-0.2988f, 0.9063f, -0.2988f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, 1.9239f, -0.3827f), 		physx::PxVec3(0.0000f, 0.9063f, -0.4226f)),
-	CapsuleVertex( physx::PxVec3(0.2706f, 1.9239f, -0.2706f), 		physx::PxVec3(0.2988f, 0.9063f, -0.2988f)),
-	CapsuleVertex( physx::PxVec3(0.0000f, 2.0000f, 0.0000f), 		physx::PxVec3(0.0000f, 1.0000f, 0.0000f)),
-};
-static const physx::PxU32 g_numVertices = sizeof(g_vertices) / sizeof(g_vertices[0]);
+	// generate vertices
+	const PxF32 phiStep = PxTwoPi/(slices*2);
+	PxF32 phi = 0.0f;
 
-static const physx::PxU16 g_indices[] =
+	// generate two rings of vertices for the cone ends
+	for (int i=0; i < 2; ++i)
+	{
+		for (PxU16 x=0; x <= slices*2; ++x)
+		{			
+			PxF32 cosPhi = PxCos(phi);
+			PxF32 sinPhi = PxSin(phi);
+
+			PxVec3 p(cosPhi, 0.0f, sinPhi);
+
+			// write vertex
+			*(positions++)= p;
+
+			phi += phiStep;
+		}			
+	}
+
+	const PxU16 numRingQuads = 2*slices;
+	const PxU16 numRingVerts = 2*slices+1;
+
+	// add faces
+	for (PxU16 i=0; i < numRingQuads; ++i)
+	{
+		// add a quad
+		*(indices++) = offset + i;
+		*(indices++) = offset + numRingVerts + i;
+		*(indices++) = offset + numRingVerts + i + 1;
+
+		*(indices++) = offset + numRingVerts + i + 1;
+		*(indices++) = offset + i + 1;
+		*(indices++) = offset + i;
+	}
+}
+
+void generateCapsuleMesh()
+{	
+	generateSphereMesh(g_numSlices, g_numStacks, g_spherePositions, g_sphereIndices);
+	generateConeMesh(g_numSlices, g_conePositions, g_coneIndices, g_numSphereVertices*2);	
+}
+
+} // anonymous namespace
+
+RendererCapsuleShape::RendererCapsuleShape(Renderer &renderer, PxF32 halfHeight, PxF32 radius) : RendererShape(renderer)
 {
-	1, 0, 2,  2, 0, 3,  3, 0, 4,  4, 0, 5,  5, 0, 6,  6, 0, 7,  7, 0, 8,
-	8, 0, 1,  9, 1, 10,  10, 1, 2,  10, 2, 11,  11, 2, 3,  11, 3, 12,
-	12, 3, 4,  12, 4, 13,  13, 4, 5,  13, 5, 14,  14, 5, 6,  14, 6, 15,
-	15, 6, 7,  15, 7, 16,  16, 7, 8,  16, 8, 9,  9, 8, 1,  17, 9, 18,
-	18, 9, 10,  18, 10, 19,  19, 10, 11,  19, 11, 20,  20, 11, 12,  20, 12, 21,
-	21, 12, 13,  21, 13, 22,  22, 13, 14,  22, 14, 23,  23, 14, 15,  23, 15, 24,
-	24, 15, 16,  24, 16, 17,  17, 16, 9,  25, 17, 26,  26, 17, 18,  26, 18, 27,
-	27, 18, 19,  27, 19, 28,  28, 19, 20,  28, 20, 29,  29, 20, 21,  29, 21, 30,
-	30, 21, 22,  30, 22, 31,  31, 22, 23,  31, 23, 32,  32, 23, 24,  32, 24, 25,
-	25, 24, 17,  33, 25, 34,  34, 25, 26,  34, 26, 35,  35, 26, 27,  35, 27, 36,
-	36, 27, 28,  36, 28, 37,  37, 28, 29,  37, 29, 38,  38, 29, 30,  38, 30, 39,
-	39, 30, 31,  39, 31, 40,  40, 31, 32,  40, 32, 33,  33, 32, 25,  41, 33, 42,
-	42, 33, 34,  42, 34, 43,  43, 34, 35,  43, 35, 44,  44, 35, 36,  44, 36, 45,
-	45, 36, 37,  45, 37, 46,  46, 37, 38,  46, 38, 47,  47, 38, 39,  47, 39, 48,
-	48, 39, 40,  48, 40, 41,  41, 40, 33,  49, 41, 50,  50, 41, 42,  50, 42, 51,
-	51, 42, 43,  51, 43, 52,  52, 43, 44,  52, 44, 53,  53, 44, 45,  53, 45, 54,
-	54, 45, 46,  54, 46, 55,  55, 46, 47,  55, 47, 56,  56, 47, 48,  56, 48, 49,
-	49, 48, 41,  57, 49, 58,  58, 49, 50,  58, 50, 59,  59, 50, 51,  59, 51, 60,
-	60, 51, 52,  60, 52, 61,  61, 52, 53,  61, 53, 62,  62, 53, 54,  62, 54, 63,
-	63, 54, 55,  63, 55, 64,  64, 55, 56,  64, 56, 57,  57, 56, 49,  65, 57, 58,
-	65, 58, 59,  65, 59, 60,  65, 60, 61,  65, 61, 62,  65, 62, 63,  65, 63, 64,
-	65, 64, 57,  
-};
-static const physx::PxU32 g_numIndices = sizeof(g_indices) / sizeof(g_indices[0]);
+	static bool meshValid = false;
+	if (!meshValid)
+	{
+		generateCapsuleMesh();
+		meshValid = true;
+	}
 
-
-RendererCapsuleShape::RendererCapsuleShape(Renderer &renderer, physx::PxF32 halfHeight, physx::PxF32 radius) :
-	RendererShape(renderer)
-{
 	RendererVertexBufferDesc vbdesc;
 	vbdesc.hint = RendererVertexBuffer::HINT_STATIC;
 	vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_POSITION] = RendererVertexBuffer::FORMAT_FLOAT3;
 	vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_NORMAL]   = RendererVertexBuffer::FORMAT_FLOAT3;
-	vbdesc.maxVertices = g_numVertices;
+	vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_TEXCOORD0] = RendererVertexBuffer::FORMAT_FLOAT2;
+	vbdesc.maxVertices = g_numCapsuleVertices;
 	m_vertexBuffer = m_renderer.createVertexBuffer(vbdesc);
 	RENDERER_ASSERT(m_vertexBuffer, "Failed to create Vertex Buffer.");
-	if(m_vertexBuffer)
-	{
-		physx::PxU32 positionStride = 0;
-		void *positions = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
-		physx::PxU32 normalStride = 0;
-		void *normals = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL, normalStride);
-		if(positions && normals)
-		{
-			for(physx::PxU32 i=0; i<g_numVertices; i++)
-			{
-				const CapsuleVertex &v = g_vertices[i];
-				
-				physx::PxVec3 &p = *(physx::PxVec3*)positions;
-				physx::PxVec3 &n = *(physx::PxVec3*)normals;
-				
-				p = v.p;
-				n = v.n;
-				
-				const physx::PxF32 sign = p.y > 0 ? 1.0f : -1.0f;
-				p.y -= sign;
-				p   *= radius;
-				p.y += halfHeight*sign;
-				
-				positions = ((physx::PxU8*)positions) + positionStride;
-				normals =   ((physx::PxU8*)normals)   + normalStride;
-			}
-		}
-		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL);
-		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
-	}
-	
+
 	RendererIndexBufferDesc ibdesc;
 	ibdesc.hint       = RendererIndexBuffer::HINT_STATIC;
 	ibdesc.format     = RendererIndexBuffer::FORMAT_UINT16;
-	ibdesc.maxIndices = g_numIndices;
+	ibdesc.maxIndices = g_numCapsuleIndices;
 	m_indexBuffer = m_renderer.createIndexBuffer(ibdesc);
 	RENDERER_ASSERT(m_indexBuffer, "Failed to create Index Buffer.");
+
+	// set position data
+	setDimensions(halfHeight, radius, radius);
+
 	if(m_indexBuffer)
 	{
-		physx::PxU16 *indices = (physx::PxU16*)m_indexBuffer->lock();
+		PxU16 *indices = (PxU16*)m_indexBuffer->lock();
 		if(indices)
 		{
-			for(physx::PxU32 i=0; i<g_numIndices; i++)
-			{
-				indices[i] = g_indices[i];
-			}
+			// first sphere
+			for (PxU32 i=0; i < g_numSphereIndices; ++i)
+				indices[i] = g_sphereIndices[i];
+
+			indices += g_numSphereIndices;
+
+			// second sphere
+			for (PxU32 i=0; i < g_numSphereIndices; ++i)
+				indices[i] = g_sphereIndices[i] + g_numSphereVertices;
+
+			indices += g_numSphereIndices;
+
+			// cone indices
+			for (PxU32 i=0; i < g_numConeIndices; ++i)
+				indices[i] = g_coneIndices[i];
 		}
 		m_indexBuffer->unlock();
 	}
-	
+
 	if(m_vertexBuffer && m_indexBuffer)
 	{
 		RendererMeshDesc meshdesc;
@@ -233,10 +236,10 @@ RendererCapsuleShape::RendererCapsuleShape(Renderer &renderer, physx::PxF32 half
 		meshdesc.vertexBuffers    = &m_vertexBuffer;
 		meshdesc.numVertexBuffers = 1;
 		meshdesc.firstVertex      = 0;
-		meshdesc.numVertices      = g_numVertices;
+		meshdesc.numVertices      = g_numCapsuleVertices;
 		meshdesc.indexBuffer      = m_indexBuffer;
 		meshdesc.firstIndex       = 0;
-		meshdesc.numIndices       = g_numIndices;
+		meshdesc.numIndices       = g_numCapsuleIndices;
 		m_mesh = m_renderer.createMesh(meshdesc);
 		RENDERER_ASSERT(m_mesh, "Failed to create Mesh.");
 	}
@@ -244,11 +247,74 @@ RendererCapsuleShape::RendererCapsuleShape(Renderer &renderer, physx::PxF32 half
 
 RendererCapsuleShape::~RendererCapsuleShape(void)
 {
-	if(m_vertexBuffer) m_vertexBuffer->release();
-	if(m_indexBuffer)  m_indexBuffer->release();
-	if(m_mesh)
+	SAFE_RELEASE(m_vertexBuffer);
+	SAFE_RELEASE(m_indexBuffer);
+	SAFE_RELEASE(m_mesh);
+}
+
+void RendererCapsuleShape::setDimensions(PxF32 halfHeight, PxF32 radius0, PxF32 radius1)
+{
+	if(m_vertexBuffer)
 	{
-		m_mesh->release();
-		m_mesh = 0;
+		PxU32 positionStride = 0;
+		PxVec3* positions = (PxVec3*)m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
+
+		PxU32 normalStride = 0;
+		PxVec3* normals = (PxVec3*)m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL, normalStride);
+
+		if (positions && normals)
+		{
+			const PxF32 radii[2] = { radius1, radius0};
+			const PxF32 offsets[2] = { halfHeight, -halfHeight };
+
+			// write two copies of the sphere mesh scaled and offset appropriately
+			for (PxU32 s=0; s < 2; ++s)
+			{
+				const PxF32 r = radii[s];
+				const PxF32 offset = offsets[s];
+
+				for (PxU32 i=0; i < g_numSphereVertices; ++i)
+				{
+					PxVec3 p = g_spherePositions[i]*r;
+					p.y += offset;
+
+					*positions = p;
+					*normals = g_spherePositions[i];
+
+					positions = (PxVec3*)(((PxU8*)positions)+positionStride);
+					normals = (PxVec3*)(((PxU8*)normals)+normalStride);
+				}
+			}
+
+			// calculate cone angle
+			PxF32 cosTheta = (radius0-radius1)/(halfHeight*2.0f);
+
+			// scale factor for normals to avoid re-normalizing each time
+			PxF32 nscale = PxSqrt(1.0f - cosTheta*cosTheta);
+
+			for (PxU32 s=0; s < 2; ++s)
+			{
+				const PxF32 y = radii[s]*cosTheta;
+				const PxF32 r = PxSqrt(radii[s]*radii[s] - y*y);
+				const PxF32 offset = offsets[s] + y;
+
+				for (PxU32 i=0; i < g_numConeVertices/2; ++i)
+				{		
+					PxVec3 p = g_conePositions[i]*r;
+					p.y += offset;
+					*positions = p;
+
+					PxVec3 n = g_conePositions[i]*nscale;
+					n.y = cosTheta;
+					*normals = n;
+
+					positions = (PxVec3*)(((PxU8*)positions)+positionStride);
+					normals = (PxVec3*)(((PxU8*)normals)+normalStride);
+				}
+			}
+		}
+	
+		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
+		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL);
 	}
 }

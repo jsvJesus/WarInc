@@ -33,9 +33,6 @@
 #include "HeightNormalVert.h"
 
 #include "r3dDeviceQueue.h"
-#if VEHICLES_ENABLED
-#include "PhysX/PhysXAPI/vehicle/PxVehicleUtils.h"
-#endif
 
 extern int __r3dDisplayMipLevels;
 #ifndef FINAL_BUILD
@@ -47,7 +44,6 @@ void AdvanceLoadingProgress( float );
 extern r3dSun		*Sun;
 
 #define CellGridSize 64
-#define CellGridSizePS3 64
 int Mod = 1;
 
 #define N_OVERTILES 2
@@ -77,11 +73,8 @@ void PrintSplatLocationPS3( char (& buf ) [ 1024 ], const char * szSourceFile );
 #define FNAME_TERRAIN_INI			"%s/terrain.ini"			// need move to *.h file
 #define FNAME_TERRAIN_HEIGHTMAP		"%s/terrain.heightmap"		// need move to *.h file
 
-#define FNAME_TERRAIN_DATA_PS3		"%s/terrain_data_ps3.bin"	// need move to *.h file
-
 #define TERRAIN_SIGNATURE			'RRET'
 #define TERRAIN_VERSION				5
-#define TERRAIN_VERSION_PS3			13
 
 void ReadTerrainHeader(r3dFile* file, uint32_t& dwSignature, uint32_t& dwVersion)
 {
@@ -381,7 +374,6 @@ namespace
 
 	int dLodSteps_PC[ LODDESC_COUNT ] = { 1, 2, 4, CellGridSize / 2 };
 	int dLodSteps_PC_LOW[ LODDESC_COUNT ] = { 1, 4, 8, CellGridSize / 2 };
-	int dLodSteps_PS3[ LODDESC_COUNT ] = { 1, 2, 4, CellGridSizePS3 };
 
 	static int CountConnectionIndices( int step, int prevStep, int sideLodConnections )
 	{
@@ -2109,10 +2101,7 @@ r3dTerrain::UpdatePhysHeightField ()
 		}
 	}
 
-	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		physicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc ); 
 
@@ -2126,7 +2115,7 @@ r3dTerrain::UpdatePhysHeightField ()
 	aHeightFieldShape->setSimulationFilterData(filterData);
 	PxFilterData qfilterData(1<<PHYSCOLL_STATIC_GEOMETRY, 0, 0, 0);
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 	aHeightFieldShape->setQueryFilterData(qfilterData);
 
@@ -2135,6 +2124,66 @@ r3dTerrain::UpdatePhysHeightField ()
 	UpdateHFShape();
 
 	r3d_assert(_CrtCheckMemory());
+
+/*	
+	r3d_assert( physicsHeightField );
+	const Floats& source = HeightFieldData;
+
+	r3d_assert( source.Count() == (int)Width * (int)Height );
+
+	r3d_assert(_CrtCheckMemory());
+	PreparePhysXHeightFieldDesc( physicsHeightFieldDesc );
+	r3d_assert(_CrtCheckMemory());
+
+	char* currentByte = (char*)physicsHeightFieldDesc.samples.data;
+
+	m_fMaxHeight = -FLT_MAX;
+	m_fMinHeight = FLT_MAX;
+
+	for( uint32_t i = 0, e = source.Count(); i < e; i ++ )
+	{
+		m_fMaxHeight = R3D_MAX( source[ i ], m_fMaxHeight );
+		m_fMinHeight = R3D_MIN( source[ i ], m_fMinHeight );
+	}
+
+	r3d_assert(_CrtCheckMemory());
+	SetupHFScale();
+
+	r3d_assert(_CrtCheckMemory());
+	float norm = m_HFScale;
+
+	PxU32	w = (PxU32)Width,
+		h = (PxU32)Height;
+
+	for (PxU32 column = 0; column < w; column++)
+	{
+		for (PxU32 row = 0; row < h; row++)
+		{
+			PxI16 height = (PxI32)( R3D_MIN( source[ row * w + column ] * norm + 0.5f, 32767.f ) );
+
+			PxHeightFieldSample* currentSample = (PxHeightFieldSample*)currentByte;
+			currentSample->height = height;
+			currentSample->materialIndex0 = 1;
+			currentSample->materialIndex1 = 1;
+			currentSample->clearTessFlag();
+			currentByte += physicsHeightFieldDesc.samples.stride;
+		}
+	}
+
+	r3d_assert(_CrtCheckMemory());
+
+	if(physicsHeightField)
+	{
+		physicsHeightField->release();
+		physicsHeightField = NULL;
+	}
+	r3d_assert(_CrtCheckMemory());
+	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
+r3d_assert(_CrtCheckMemory());
+	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
+r3d_assert(_CrtCheckMemory());
+	UpdateHFShape();
+	r3d_assert(_CrtCheckMemory());*/
 }
 
 //------------------------------------------------------------------------
@@ -2267,11 +2316,7 @@ r3dTerrain::UpdatePhysHeightField( PxU32* source )
 		physicsHeightField->release();
 		physicsHeightField = NULL;
 	}
-	
-	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		physicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
 
@@ -2310,10 +2355,7 @@ void r3dTerrain::CreateDefaultHeightField()
 		currentSample->clearTessFlag();
 	}
 
-	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		physicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc );
 }
 
@@ -2347,7 +2389,7 @@ void r3dTerrain::CreateDefaultPhysicsData()
 	aHeightFieldShape->setSimulationFilterData(filterData);
 	PxFilterData qfilterData(1<<PHYSCOLL_STATIC_GEOMETRY, 0, 0, 0);
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 	aHeightFieldShape->setQueryFilterData(qfilterData);
 	r3d_assert(_CrtCheckMemory());
@@ -2385,10 +2427,7 @@ void r3dTerrain::CreatePhysicsData ( const Shorts& source )
 		currentByte += physicsHeightFieldDesc.samples.stride;
 	}
 
-	physicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		physicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	physicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(physicsHeightFieldDesc);
 
 	FinishPhysXHeightFieldDesc( physicsHeightFieldDesc ); 
 
@@ -2402,7 +2441,7 @@ void r3dTerrain::CreatePhysicsData ( const Shorts& source )
 	aHeightFieldShape->setSimulationFilterData(filterData);
 	PxFilterData qfilterData(1<<PHYSCOLL_STATIC_GEOMETRY, 0, 0, 0);
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 	aHeightFieldShape->setQueryFilterData(qfilterData);
 
@@ -4209,209 +4248,6 @@ void r3dTerrain::SaveData( const char * fileName, bool writeCache )
 	}
 }
 
-//------------------------------------------------------------------------
-
-void
-r3dTerrain::SaveDataPS3	( const char * fileName )
-{
-	FILE * hFile;
-
-	hFile = fopen_for_write( Va( FNAME_TERRAIN_HEIGHTMAP, fileName ), "wb");
-	r3d_assert( hFile );
-	if ( ! hFile )
-		return;
-
-	ExtractHeightFieldData();
-
-	uint32_t dwSignature = TERRAIN_SIGNATURE;
-	uint32_t dwVersion = TERRAIN_VERSION_PS3;
-
-	fwrite( &dwSignature, sizeof( dwSignature ), 1, hFile );
-	fwrite( &dwVersion, sizeof( dwVersion ), 1, hFile );
-
-	float val = m_MinHeight;
-	ChangeEndianess( val );
-	fwrite( &val, sizeof val, 1, hFile );
-
-	val = m_MaxHeight;
-	ChangeEndianess( val );
-	fwrite( &val, sizeof val, 1, hFile );
-
-	r3d_assert( physicsHeightField );
-
-	uint32_t hmSize = GetHeightFieldDataSize( physicsHeightFieldDesc );
-
-	uint32_t paranoidHMSize = hmSize + 16;
-
-	// give extra and check if we 'guessed' the size right
-	Bytes sampleData( paranoidHMSize );
-
-	uint32_t numWritten = physicsHeightField->saveCells( &sampleData[0], paranoidHMSize );
-	r3d_assert( numWritten == hmSize );
-
-	r3dTL::TArray< PxI16 > shortSamples;
-	shortSamples.Resize( physicsHeightFieldDesc.nbColumns * physicsHeightFieldDesc.nbRows );
-
-	uint32_t sampleCount = shortSamples.Count();
-	ChangeEndianess( sampleCount );
-	fwrite( &sampleCount, sizeof sampleCount, 1, hFile );
-
-	PxHeightFieldSample* hfs = (PxHeightFieldSample*)&sampleData[ 0 ];
-	for( uint32_t i = 0, e = shortSamples.Count(); i < e; i ++, hfs ++ )
-	{
-		shortSamples[ i ] = hfs->height;
-		ChangeEndianess( shortSamples[ i ] );
-	}
-
-	fwrite( &shortSamples[0], sizeof( PxI16 ) * shortSamples.Count(), 1, hFile );
-
-	TerrainTiles tiles;
-
-	UpdateVertexDataSettings sts;
-
-	sts.CellGridDim = CellGridSizePS3;
-	sts.TileCountX	= ( Width ) / CellGridSizePS3;
-	sts.TileCountZ	= ( Height ) / CellGridSizePS3;
-
-	sts.UpdateTileXStart	= 0;
-	sts.UpdateTileXEnd		= sts.TileCountX - 1;
-
-	sts.UpdateTileZStart	= 0;
-	sts.UpdateTileZEnd		= sts.TileCountZ - 1;
-
-	sts.Tiles				= &tiles;
-	sts.Tiles->Resize( sts.TileCountX * sts.TileCountZ );
-
-	TerrainLodDesc desc[ LODDESC_COUNT ];
-	ConstructLodDescs( desc, dLodSteps_PS3, CellGridSizePS3 );
-
-	sts.dLods				= &desc;
-
-	sts.RemapOffset			= RemapOffsetPS3;
-
-	uint32_t VERT_COUNT = GetTotalVertexCount( sts.TileCountX, sts.TileCountZ, sts.CellGridDim );
-
-	sts.LockedBuffer		= new HeightNormalVert[ VERT_COUNT ];
-	sts.LockOffset			= 0;
-
-	UpdateVertexData( sts );
-
-	uint8_t LOD_STEPS = LODDESC_COUNT ;
-	fwrite( &LOD_STEPS, 1, 1, hFile );
-
-	uint16_t gridSize = CellGridSizePS3 ;
-	ChangeEndianess( gridSize );
-	fwrite( &gridSize, sizeof gridSize, 1, hFile );
-
-	for( int i = 0, e = LODDESC_COUNT; i < e; i ++ )
-	{
-		int val = dLodSteps_PS3[ i ];
-		ChangeEndianess( val );
-		fwrite( &val, sizeof val, 1, hFile );
-	}
-
-	uint32_t tilesCount = tiles.Count();
-	ChangeEndianess( tilesCount );
-	fwrite( &tilesCount, sizeof tilesCount, 1, hFile );
-
-	for( uint32_t i = 0, e = tiles.Count(); i < e; i ++ )
-	{
-		TerrainTile_c& tile = tiles[ i ];
-
-		ChangeEndianess( tile.m_HeightMin );
-		ChangeEndianess( tile.m_HeightMax );
-
-		fwrite( &tile, sizeof tile, 1, hFile );
-	}
-
-	HeightNormalVert* fullVert = (HeightNormalVert*)sts.LockedBuffer;
-	PackedPS3Vert_t* packedPS3Vert = new PackedPS3Vert_t[ VERT_COUNT ];
-	for( uint32_t i = 0, e = VERT_COUNT; i < e; i ++ )
-	{
-		ToPackedPS3Vert(  packedPS3Vert[ i ], fullVert[ i ], m_MinHeight, m_MaxHeight );
-	}
-
-	fwrite( packedPS3Vert, sizeof packedPS3Vert[ 0 ] * VERT_COUNT, 1, hFile );
-
-	delete [] fullVert;
-	delete [] packedPS3Vert;
-
-	TileLayerArr tileLayers;
-
-	UpdateTileArrayFromSplatTextures( tileLayers, sts.TileCountX, sts.TileCountZ, CellGridSizePS3, RemapOffsetPS3 );
-
-	{
-		uint32_t count = tileLayers.Count();
-		ChangeEndianess( count );
-		fwrite( &count, sizeof count, 1, hFile );
-	}
-
-	for( uint32_t i = 0, e = tileLayers.Count(); i < e; i ++ )
-	{
-		// up to MAX_SHADER_LAYERS on PS3
-		fwrite( &tileLayers[ i ][ 0 ], MAX_SHADER_LAYERS * sizeof tileLayers[ i ][ 0 ], 1, hFile );		
-	}
-
-	r3d_assert( g_bEditMode ); // if this fails you should prolly make terrain vbuffer perma readable
-
-	uint32_t countPerTile = CellGridSizePS3 * CellGridSizePS3 * 2 / 4;
-
-	r3dTL::TArray< uint8_t > OrientData( countPerTile * sts.TileCountX * sts.TileCountZ );
-	r3dTL::TArray< uint8_t > TileOrientData( sts.TileCountX * sts.TileCountZ );
-
-	TerraFaceOrientStats stats = { 0 };
-
-	{
-		uint32_t count = OrientData.Count();
-		ChangeEndianess( count );
-		fwrite( &count, sizeof count, 1, hFile );
-	}
-
-	for( uint32_t j = 0, t = 0, e = sts.TileCountZ; j < e; j ++ )
-	{
-		for( uint32_t i = 0, e = sts.TileCountX; i < e; i ++, t += countPerTile )
-		{
-			TerraFaceOrientStats tstats;
-
-			CalculateTileFaceOrients( &OrientData[ t ], i, j, CellGridSizePS3, 1, tstats );
-
-			uint8_t& tileOrientData = TileOrientData[ i + j * sts.TileCountX ];
-
-			r3d_assert( tstats.FullXOrient + tstats.FullYOrient + tstats.FullZOrient + tstats.FullMultiOrient <= 1 );
-
-			tileOrientData = MIXED;
-
-			if( tstats.FullXOrient )		tileOrientData = X_ORIENT;
-			if( tstats.FullYOrient )		tileOrientData = Y_ORIENT;
-			if( tstats.FullZOrient )		tileOrientData = Z_ORIENT;
-			if( tstats.FullMultiOrient )	tileOrientData = MULT_ORIENT;
-
-			stats.XOrient			+= tstats.XOrient;
-			stats.YOrient			+= tstats.YOrient;
-			stats.ZOrient			+= tstats.ZOrient;
-			stats.MultiOrient		+= tstats.MultiOrient;
-
-			stats.FullXOrient		+= tstats.FullXOrient;
-			stats.FullYOrient		+= tstats.FullYOrient;
-			stats.FullZOrient		+= tstats.FullZOrient;
-			stats.FullMultiOrient	+= tstats.FullMultiOrient;
-		}
-	}
-
-	fwrite( &OrientData[ 0 ], OrientData.Count(), 1, hFile );
-
-	uint32_t count = TileOrientData.Count();
-
-	ChangeEndianess( count );
-
-	fwrite( &count, sizeof count, 1, hFile );
-
-	fwrite( &TileOrientData[ 0 ], TileOrientData.Count(), 1, hFile );
-
-	fclose( hFile );
-
-}
-
 //--------------------------------------------------------------------------------------------------------
 void r3dTerrain::SaveLayerToScript( FILE * hFile, const Layer_t &layer, char * tab )
 {
@@ -4654,7 +4490,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 		- m_fShaderLODFadeStart / ( m_fShaderLODFadeEnd - m_fShaderLODFadeStart ) )
 	};
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF(  25, (float *)&vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(  25, (float *)&vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 	d3dc._SetDecl( r_terrain_quality->GetInt() == 1 ? m_HeightNormalVDeclLQ : m_HeightNormalVDecl );
 
@@ -4739,7 +4575,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 
 				vConsts[ 2 ][ 0 ] = 64.f * ( m_nTileCountX + m_nTileCountZ );
 
-				D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
+				D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vConsts[0], sizeof vConsts / sizeof vConsts[ 0 ] ) );
 
 				r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, VertCount, IndexOffset, TriangleCount );
 		}
@@ -4930,7 +4766,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 
 					r3d_assert( MultiShaderID >= 0 || needLQ && LQShaderID >= 0 );
 
-					D3D_V( r3dRenderer->SetPixelShaderConstantF( 1, psConsts[0], sizeof psConsts / sizeof psConsts[ 0 ] ) );
+					D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 1, psConsts[0], sizeof psConsts / sizeof psConsts[ 0 ] ) );
 
 					float vsConsts[ 4 ][ 4 ];
 
@@ -4948,7 +4784,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						if( oriData.XCount )
 						{
 							FillXVSConstants( vsConsts );
-							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ] ) );
+							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ] ) );
 							r3dRenderer->SetPixelShader( SingleShaderID );
 							singleShaderSet = true;
 							r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, m_nVertPerTile, oriData.XOffset, oriData.XCount );
@@ -4959,7 +4795,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						if( oriData.YCount )
 						{
 							FillYVSConstants( vsConsts );
-							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							if( !singleShaderSet )
 							{
@@ -4976,7 +4812,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillZVSConstants( vsConsts );
 
-							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							if( !singleShaderSet )
 							{
@@ -4993,7 +4829,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillMultiVSConstants( vsConsts );
 
-							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 							r3dRenderer->SetPixelShader( MultiShaderID );
 
@@ -5031,7 +4867,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 							}
 						}
 
-						D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+						D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 
 						if( needLQ )
 						{
@@ -5055,7 +4891,7 @@ r3dTerrain::DrawTile( const VisibleTile &tile, const r3dCamera& Cam, bool Second
 						{
 							FillMultiVSConstants( vsConsts );
 							r3dRenderer->SetPixelShader( MultiShaderID );
-							D3D_V( r3dRenderer->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
+							D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 31, vsConsts[0], sizeof vsConsts  / sizeof vsConsts [ 0 ]  ) );
 						}
 #endif
 						r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, VertCount, IndexOffset, TriangleCount );
@@ -5910,11 +5746,11 @@ r3dTerrain::DrawOrthographicTerrain( r3dCamera const &Cam, bool UseZ ) /*OVERRID
 	else
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
-	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 );
+	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, r3dRenderer->GetClearZValue(), 0 ) );
 
 	// need white alpha or else our d3dxsave/d3dxload bezzle produces enterily black dxt1...
-	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 													D3DCOLORWRITEENABLE_BLUE ) );
 
 	for( int tz = 0, e = m_nTileCountZ; tz < e; tz++ )
@@ -5952,8 +5788,8 @@ r3dTerrain::DrawOrthographicTerrain( r3dCamera const &Cam, bool UseZ ) /*OVERRID
 
 	DrawEndMP();
 
-	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 													D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
 	return true;
@@ -5967,10 +5803,10 @@ r3dTerrain::SetupCommonConstants( const r3dCamera& Cam )
 	D3DXMATRIX ShaderMat;
 
 	D3DXMatrixTranspose( &ShaderMat, &r3dRenderer->ViewProjMatrix );
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	D3DXVECTOR4 vCam ( Cam.x, Cam.y, Cam.z, 0 );
-	r3dRenderer->SetVertexShaderConstantF(  15, (float *)&vCam, 1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  15, (float *)&vCam, 1 );
 
 }
 
@@ -5983,10 +5819,10 @@ r3dTerrain::SetupCommonConstantsMP( const r3dCamera& Cam )
 
 	float fWorldSizeInv = 1.f / WorldSize;
 	D3DXVECTOR4 uv0( fWorldSizeInv, 0.f, 0.f, 0.f );
-	r3dRenderer->SetVertexShaderConstantF(  24, (float *)&uv0,	1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  24, (float *)&uv0,	1 );
 
 	D3DXVECTOR4 vCam ( Cam.x, Cam.y, Cam.z, 1.f / SplitDistance );
-	r3dRenderer->SetPixelShaderConstantF(  0, (float *)&vCam,	1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&vCam,	1 );
 }
 
 //------------------------------------------------------------------------
@@ -6001,18 +5837,18 @@ r3dTerrain::SetupMaterial( int idx )
 		m_dMatLayers[ idx ][ 1 ].fScale * fWorldSizeInv,
 		m_dMatLayers[ idx ][ 2 ].fScale * fWorldSizeInv );
 
-	r3dRenderer->SetVertexShaderConstantF(  20, (float *)&uv0,	1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  20, (float *)&uv0,	1 );
 
 
 
 	D3DXVECTOR4 vGloss( m_tBaseLayer.fGloss, 0, 0, 0 );
-	r3dRenderer->SetPixelShaderConstantF( 14, (float *)&vGloss, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 14, (float *)&vGloss, 1 );
 
 	vGloss = D3DXVECTOR4( m_dMatLayers[ idx ][ 0 ].fGloss, m_dMatLayers[ idx ][ 1 ].fGloss, m_dMatLayers[ idx ][ 2 ].fGloss, m_dMatLayers[ idx ][ 3 ].fGloss );
-	r3dRenderer->SetPixelShaderConstantF( 15, (float *)&vGloss, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 15, (float *)&vGloss, 1 );
 
 	D3DXVECTOR4 v3( m_dMatLayers[ idx ][ 2 ].fScale * fWorldSizeInv, -m_dMatLayers[idx][ 2 ].fScale * fWorldSizeInv, m_dMatLayers[idx][ 3 ].fScale * fWorldSizeInv, -m_dMatLayers[ idx ][ 3 ].fScale * fWorldSizeInv ); 
-	r3dRenderer->SetPixelShaderConstantF( 7, (float *)&v3, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 7, (float *)&v3, 1 );
 
 	D3DXVECTOR4 vSplit; 
 	vSplit = D3DXVECTOR4(		1.0f/m_dMatLayers[ idx ][0].fSplit, 
@@ -6020,7 +5856,7 @@ r3dTerrain::SetupMaterial( int idx )
 		1.0f/m_dMatLayers[ idx ][2].fSplit, 
 		1.0f/m_dMatLayers[ idx ][3].fSplit );
 
-	r3dRenderer->SetPixelShaderConstantF(  6, (float *)&vSplit, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  6, (float *)&vSplit, 1 );
 
 
 #ifndef FINAL_BUILD
@@ -6082,16 +5918,16 @@ r3dTerrain::DrawStartMP( const r3dCamera &Cam )
 
 	for ( int i = 0; i < 8; i ++ )
 	{
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 		r3dSetFiltering( R3D_ANISOTROPIC, i );
 	}
 
 	for ( int i = 8; i < 12; i ++ )
 	{
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 		r3dRenderer->SetMipMapBias( -6, i );
 
@@ -6185,24 +6021,24 @@ r3dTerrain::DrawDeferredMultipass()
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA ) );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE2, 0 ) );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE3, 0 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE2, 0 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE3, 0 ) );
 
 	SetMP2VertexShader();
 
 	DrawTerrain( Cam, true, false, TRM_SPLIT, false, true );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE1, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE2, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE3, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();
@@ -6241,7 +6077,7 @@ r3dTerrain::DrawMaterialHeavyness()
 
 	D3DPERF_BeginEvent( 0x0, L"r3dTerrain::DrawMaterialHeavyness" );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE ) );
 
 	DrawStartMP( Cam );
 
@@ -6252,7 +6088,7 @@ r3dTerrain::DrawMaterialHeavyness()
 
 	DrawTerrain( Cam, false, false, TRM_HEAVYNESS, false, true );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 
@@ -6322,7 +6158,7 @@ void r3dTerrain::DrawDepth()
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	SetupCommonConstants( gCam );
 
 	DrawTerrain( gCam, false, true, TRM_SIMPLE, true, false );
@@ -6369,7 +6205,7 @@ void r3dTerrain::DrawBlack(const r3dCamera &Cam, int bSetShader)
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	SetupCommonConstants( Cam );
 
 	DrawTerrain( Cam, false, true, TRM_SIMPLE, true, true );
@@ -6403,7 +6239,7 @@ bool r3dTerrain::ImportHeightmap( const char * fileName, float yScale )
 	if( !fileName[ 0 ] )
 		return false;
 
-	r3dTexture *TempTex = r3dRenderer->LoadTexture( fileName );
+	r3dTexture *TempTex = r3dRenderer->LoadTexture( fileName, D3DFMT_UNKNOWN, false, 1, 1, D3DPOOL_SYSTEMMEM );
 	if ( ! TempTex )
 		return false;
 

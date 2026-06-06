@@ -2,7 +2,7 @@
 #ifndef SAMPLE_MATERIAL_ASSET_H
 #define SAMPLE_MATERIAL_ASSET_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,41 +38,50 @@
 #include <SampleAsset.h>
 #include <vector>
 
-namespace rapidxml
+namespace FAST_XML
 {
-	template<typename Ch> class xml_node;
+	class xml_node;
 }
 
-class SampleAssetManager;
-class RendererMaterial;
-class RendererMaterialInstance;
-
-class SampleMaterialAsset : public SampleAsset
+namespace SampleRenderer
 {
-	friend class SampleAssetManager;
+	class RendererMaterial;
+	class RendererMaterialInstance;
+}
+
+namespace SampleFramework
+{
+	class SampleAssetManager;
+
+	class SampleMaterialAsset : public SampleAsset
+	{
+		friend class SampleAssetManager;
 	protected:
-		SampleMaterialAsset(SampleAssetManager &assetManager, rapidxml::xml_node<char> &xmlroot, const char *path);
+		SampleMaterialAsset(SampleAssetManager &assetManager, FAST_XML::xml_node &xmlroot, const char *path);
+		SampleMaterialAsset(SampleAssetManager &assetManager, Type type, const char *path);
 		virtual ~SampleMaterialAsset(void);
-		
+
 	public:
-		size_t                    getNumVertexShaders() const;
-		RendererMaterial         *getMaterial(size_t vertexShaderIndex = 0);
-		RendererMaterialInstance *getMaterialInstance(size_t vertexShaderIndex = 0);
-		unsigned int              getMaxBones(size_t vertexShaderIndex) const;
-	
+		size_t                                    getNumVertexShaders() const;
+		SampleRenderer::RendererMaterial         *getMaterial(size_t vertexShaderIndex = 0);
+		SampleRenderer::RendererMaterialInstance *getMaterialInstance(size_t vertexShaderIndex = 0);
+		unsigned int                              getMaxBones(size_t vertexShaderIndex) const;
+
 	public:
 		virtual bool isOk(void) const;
-		
-	private:
+
+	protected:
 		SampleAssetManager       &m_assetManager;
 		struct MaterialStruct
 		{
-			RendererMaterial         *m_material;
-			RendererMaterialInstance *m_materialInstance;
-			unsigned int              m_maxBones;
+			SampleRenderer::RendererMaterial         *m_material;
+			SampleRenderer::RendererMaterialInstance *m_materialInstance;
+			unsigned int                              m_maxBones;
 		};
 		std::vector<MaterialStruct> m_vertexShaders;
 		std::vector<SampleAsset*> m_assets;
-};
+	};
+
+} // namespace SampleFramework
 
 #endif

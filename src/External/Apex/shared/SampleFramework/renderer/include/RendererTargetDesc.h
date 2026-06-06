@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,22 +36,24 @@
 #define RENDERER_TARGET_DESC_H
 
 #include <RendererConfig.h>
-#include "PxSimpleTypes.h"
 
-class RendererTexture2D;
-
-class RendererTargetDesc
+namespace SampleRenderer
 {
+
+	class RendererTargetDesc
+	{
 	public:
 		RendererTexture2D **textures;
-		physx::PxU32               numTextures;
-		
+		PxU32               numTextures;
+
 		RendererTexture2D  *depthStencilSurface;
-		
+
 	public:
 		RendererTargetDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

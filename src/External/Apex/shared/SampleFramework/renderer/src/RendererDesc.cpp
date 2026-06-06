@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,24 +34,34 @@
  */
 #include <RendererDesc.h>
 
+using namespace SampleRenderer;
+
 RendererDesc::RendererDesc(void)
 {
 #if defined(RENDERER_ENABLE_OPENGL)
 	driver = Renderer::DRIVER_OPENGL;
+#elif defined(RENDERER_ENABLE_GLES2)
+	driver = Renderer::DRIVER_GLES2;
 #elif defined(RENDERER_ENABLE_DIRECT3D9)
 	driver = Renderer::DRIVER_DIRECT3D9;
-#elif defined(RENDERER_ENABLE_DIRECT3D10)
-	driver = Renderer::DRIVER_DIRECT3D10;
+#elif defined(RENDERER_ENABLE_DIRECT3D11)
+	driver = Renderer::DRIVER_DIRECT3D11;
 #elif defined(RENDERER_ENABLE_LIBGCM)
 	driver = Renderer::DRIVER_LIBGCM;
+#elif defined(RENDERER_ENABLE_LIBGXM)
+	driver = Renderer::DRIVER_LIBGXM;
 #else
-	#error "No Renderer Drivers support!"
+#error "No Renderer Drivers support!"
 #endif
 	windowHandle   = 0;
 
-	outputStream = 0;
+	errorCallback = 0;
+
+	vsync = false;
+
+	multipassDepthBias = false;
 }
-		
+
 bool RendererDesc::isValid(void) const
 {
 	bool ok = true;

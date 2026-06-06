@@ -94,9 +94,6 @@ public:
         DoHideMouse,
         DoSetMouseCursor,
 
-        EnableClipping,
-        DisableClipping,
-
         Char,
         IME
     };
@@ -112,9 +109,7 @@ public:
 	unsigned EventClassSize;
 #endif
 
-    // must be explicit ctor but for compatibility reasons commenting 
-    // 'explicit' out.
-    /*explicit*/ Event(EventType eventType = Unknown)
+    Event(EventType eventType = Unknown)
     {
         Type = eventType;
         SF_DEBUG_EXPR(EventClassSize = sizeof(Event));
@@ -274,12 +269,6 @@ public:
 	}
 };
 
-class ClippingEvent : public Event
-{
-public:
-    ClippingEvent() : Event(Event::EnableClipping) {}
-    ClippingEvent(EventType eventType) : Event(eventType) {}
-};
 
 class MouseCursorEvent : public Event
 {
@@ -574,19 +563,15 @@ public:
     // State of special keys
     KeyModifiers KeysStates[GFX_MAX_KEYBOARD_SUPPORTED];
 
-    SetFocusEvent() : Event(SetFocus) {}
-
     SetFocusEvent(KeyModifiers specialKeysState) : 
-      Event(SetFocus, specialKeysState) { KeysStates[0] = specialKeysState; }
+      Event(SetFocus, specialKeysState) {}
 
-    SetFocusEvent(unsigned numKeyboards, KeyModifiers* specialKeysStates) 
-      : Event(SetFocus) 
-    {
-        if (numKeyboards > 0)
-            Modifiers = specialKeysStates[0];
-        for (unsigned i = 0, n = Alg::Min(unsigned(GFX_MAX_KEYBOARD_SUPPORTED), numKeyboards); i < n; ++i)
-            KeysStates[i] = specialKeysStates[i];
-    }
+      SetFocusEvent(unsigned numKeyboards, KeyModifiers* specialKeysStates) 
+          : Event(SetFocus) 
+      {
+          for (unsigned i = 0, n = Alg::Min(unsigned(GFX_MAX_KEYBOARD_SUPPORTED), numKeyboards); i < n; ++i)
+              KeysStates[i] = specialKeysStates[i];
+      }
 };
 
 }} // Scaleform::GFx

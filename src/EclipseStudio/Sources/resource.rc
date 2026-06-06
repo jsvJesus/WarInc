@@ -7,13 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-
-#include <windows.h>
-#include <winres.h>
-
-#ifndef IDC_STATIC
-#define IDC_STATIC (-1)
-#endif
+#include "afxres.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -52,13 +46,6 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Bitmap
-//
-
-IDB_BACK                BITMAP                  "widu.bmp"
 #endif    // Russian resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -79,42 +66,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_FIRESTORM           ICON                    "firestorm.ico"
-IDI_WARINC              ICON                    "WarIncBattleZoneIcon.ico"
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Dialog
-//
-
-IDD_DIALOG DIALOGEX 0, 0, 220, 94
-STYLE DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "War Inc. Battle Zone Driver Updater"
-FONT 12, "Microsoft Sans Serif", 400, 0, 0xCC
-BEGIN
-    DEFPUSHBUTTON   "Follow URL",IDOK,24,68,73,14
-    LTEXT           "text",IDC_MESS,10,7,198,57
-    PUSHBUTTON      "Skip",IDIGNORE,120,68,65,14
-    CONTROL         "Don not show this message again until new driver is required",IDC_CHECK1,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,12,83,208,10
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
-BEGIN
-    IDD_DIALOG, DIALOG
-    BEGIN
-        BOTTOMMARGIN, 93
-    END
-END
-#endif    // APSTUDIO_INVOKED
-
+IDI_WARZ              ICON                    "WarZIcon.ico"
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////
 

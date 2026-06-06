@@ -1,52 +1,46 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
 
 /*!
-\file
 \brief NxParameterized inline implementation
 */
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
 
-
 #define IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
 #define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
 #define IS_ALPHANUM(c) (IS_ALPHA(c) || IS_DIGIT(c))
 #define IS_IDENTCHAR(c) (IS_ALPHANUM(c) || (c) == ' ' || (c) == '_')
 
+/**
+\brief Enum of tokenizer result types
+*/
 enum TokenizerResultType
 {
    TOKENIZER_RESULT_NONE,
@@ -56,7 +50,9 @@ enum TokenizerResultType
    TOKENIZER_RESULT_ARRAY_INDEX,
 };
 
-
+/**
+\brief Get struct member token
+*/
 PX_INLINE TokenizerResultType getStructMemberToken(const char *long_name,
                                                 char *token,
                                                 physx::PxU32 max_token_len,
@@ -89,6 +85,9 @@ PX_INLINE TokenizerResultType getStructMemberToken(const char *long_name,
     return(TOKENIZER_RESULT_STRUCT_MEMBER);
 }
 
+/**
+\brief Get array member token
+*/
 PX_INLINE TokenizerResultType getArrayMemberToken(const char *long_name,
                                                char *token,
                                                physx::PxU32 max_token_len,
@@ -120,6 +119,9 @@ PX_INLINE TokenizerResultType getArrayMemberToken(const char *long_name,
     return(TOKENIZER_RESULT_ARRAY_INDEX);
 }
 
+/**
+\brief Get next token
+*/
 PX_INLINE TokenizerResultType getNextToken(const char *long_name,
                                         char *token,
                                         physx::PxU32 max_token_len,
@@ -141,11 +143,20 @@ PX_INLINE TokenizerResultType getNextToken(const char *long_name,
     return(TOKENIZER_RESULT_SYNTAX_ERROR);
 }
 
+#undef IS_ALPHA
+#undef IS_DIGIT
+#undef IS_ALPHANUM
+#undef IS_IDENTCHAR
+
 /*
- The local_strcat_s function appends strSource to strDestination and terminates the resulting string with a 
- null character. The initial character of strSource overwrites the terminating null character of 
- strDestination. The behavior of strcat_s is undefined if the source and destination strings overlap.
- Note that the second parameter is the total size of the buffer, not the remaining size
+ The local_strcat_s function appends strSource to strDestination and terminates the resulting string with a null character. 
+ The initial character of strSource overwrites the terminating null character of  strDestination. The behavior of strcat_s is 
+ undefined if the source and destination strings overlap. Note that the second parameter is the total size of the buffer, not 
+ the remaining size
+*/
+
+/**
+\brief The local_strcat_s function appends strSource to strDestination and terminates the resulting string with a null character.
 */
 PX_INLINE int local_strcat_s(char* dest, size_t size, const char* src)
 {
@@ -173,10 +184,30 @@ PX_INLINE int local_strcat_s(char* dest, size_t size, const char* src)
 	return 0;
 }
 
+/**
+\brief The local_sprintf_s function wraps the va_list functionality required for PxVxprintf
+*/
+PX_INLINE physx::PxI32 local_sprintf_s( char * _DstBuf, size_t _DstSize, const char * _Format, ...)
+{
+	if ( _DstBuf == NULL || _Format == NULL )
+	{
+		return -1;
+	}
+
+	va_list arg;
+	va_start( arg, _Format );
+	physx::PxI32 r = physx::PxVsprintf( _DstBuf, _DstSize, _Format, arg );
+	va_end(arg);
+
+	return r;
+}
+
+
 PX_INLINE Handle::Handle(::NxParameterized::Interface *iface)
 {
 	reset();
 	mInterface = iface;
+	mIsConst = false;
 	if (mInterface != NULL)
 		mParameterDefinition = mInterface->rootParameterDefinition();
 }
@@ -185,14 +216,15 @@ PX_INLINE Handle::Handle(::NxParameterized::Interface &iface)
 {
     reset();
 	mInterface = &iface;
+	mIsConst = false;
 	mParameterDefinition = mInterface->rootParameterDefinition();
 }
 
 PX_INLINE Handle::Handle(const ::NxParameterized::Interface &iface)
 {
     reset();
-	// PH: Evil, we need to make sure that the handle is in readonly mode!
 	mInterface = const_cast< ::NxParameterized::Interface * >(&iface);
+	mIsConst = true;
 	mParameterDefinition = mInterface->rootParameterDefinition();
 }
 
@@ -206,19 +238,27 @@ PX_INLINE Handle::Handle(const Handle &param_handle)
         memcpy(mIndexList, param_handle.mIndexList, sizeof(physx::PxI32) * mNumIndexes);
         mParameterDefinition = param_handle.mParameterDefinition;
         mIsValid = param_handle.mIsValid;
+		mIsConst = param_handle.mIsConst;
 		mInterface = param_handle.mInterface;
     }
     else
-        mIsValid = false;
+        mIsConst = mIsValid = false;
 }
 
 
 PX_INLINE Handle::Handle(::NxParameterized::Interface &instance,const char *longName)
 {
 	mInterface = &instance;
+	mIsConst = false;
     mInterface->getParameterHandle(longName, *this);
 }
 
+PX_INLINE Handle::Handle(const ::NxParameterized::Interface &instance,const char *longName)
+{
+	mInterface = const_cast< ::NxParameterized::Interface *>(&instance);
+	mIsConst = true;
+    mInterface->getParameterHandle(longName, *this);
+}
 
 PX_INLINE ErrorType Handle::getChildHandle(const ::NxParameterized::Interface *instance,const char *child_long_name,
                                                          Handle &handle)
@@ -288,7 +328,6 @@ PX_INLINE ErrorType Handle::set(const ::NxParameterized::Interface *instance,con
 
             case TOKENIZER_RESULT_SYNTAX_ERROR:
                 return(ERROR_SYNTAX_ERROR_IN_NAME);
-                break;
 
             case TOKENIZER_RESULT_STRUCT_MEMBER:
                 {
@@ -440,11 +479,9 @@ PX_INLINE bool Handle::getLongName(char *str, physx::PxU32 max_str_len) const
 
             case TYPE_ARRAY:
                 local_strcat_s(str, max_str_len, "[");
-#if defined(PX_GNUC)
-				snprintf(tmpStr, 10, "%d", index(i-1));
-#else
-				itoa(index(i-1),tmpStr,10);
-#endif				
+
+				local_sprintf_s(tmpStr, sizeof(tmpStr), "%d", index(i-1));
+
                 local_strcat_s(str, max_str_len, tmpStr);
                 local_strcat_s(str, max_str_len, "]");
                 break;
@@ -507,14 +544,17 @@ PX_INLINE physx::PxI32 Handle::popIndex(physx::PxI32 levels)
     return(-1);
 }
 
-PX_INLINE ErrorType Handle::initParamRef(const char *chosenRefStr)
+PX_INLINE ErrorType Handle::initParamRef(const char *chosenRefStr, bool doDestroyOld)
 {
 	PX_ASSERT(mInterface);
-	return mInterface->initParamRef(*this,chosenRefStr);
+	return mInterface->initParamRef(*this, chosenRefStr, doDestroyOld);
 }
 
 // These functions wrap the raw(Get|Set)XXXXX() methods.  They deal with
 // error handling and casting.
+
+#define CHECK_CONST_HANDLE if( mIsConst ) return ERROR_MODIFY_CONST_HANDLE;
+
 PX_INLINE ErrorType Handle::getParamBool(bool &val) const
 {
 	PX_ASSERT(mInterface);
@@ -524,6 +564,7 @@ PX_INLINE ErrorType Handle::getParamBool(bool &val) const
 PX_INLINE ErrorType Handle::setParamBool(bool val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamBool(*this,val);
 }
 
@@ -536,6 +577,7 @@ PX_INLINE ErrorType Handle::getParamBoolArray(bool *array, physx::PxI32 n, physx
 PX_INLINE ErrorType Handle::setParamBoolArray(const bool *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamBoolArray(*this,array,n,offset);
 }
 
@@ -548,6 +590,7 @@ PX_INLINE ErrorType Handle::getParamString(const char *&val) const
 PX_INLINE ErrorType Handle::setParamString(const char *val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamString(*this,val);
 }
 
@@ -560,6 +603,7 @@ PX_INLINE ErrorType Handle::getParamStringArray(char **array, physx::PxI32 n, ph
 PX_INLINE ErrorType Handle::setParamStringArray(const char **array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamStringArray(*this,array,n,offset);
 }
 
@@ -573,6 +617,7 @@ PX_INLINE ErrorType Handle::getParamEnum(const char *&val) const
 PX_INLINE ErrorType Handle::setParamEnum(const char *val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamEnum(*this,val);
 }
 
@@ -585,6 +630,7 @@ PX_INLINE ErrorType Handle::getParamEnumArray(char **array, physx::PxI32 n, phys
 PX_INLINE ErrorType Handle::setParamEnumArray(const char **array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamEnumArray(*this,array,n,offset);
 }
 
@@ -595,22 +641,24 @@ PX_INLINE ErrorType Handle::getParamRef(::NxParameterized::Interface *&val) cons
 	return mInterface->getParamRef(*this,val);
 }
 
-PX_INLINE ErrorType Handle::setParamRef(::NxParameterized::Interface * val)
+PX_INLINE ErrorType Handle::setParamRef(::NxParameterized::Interface *val, bool doDestroyOld)
 {
 	PX_ASSERT(mInterface);
-	return mInterface->setParamRef(*this,val);
+	CHECK_CONST_HANDLE
+	return mInterface->setParamRef(*this, val, doDestroyOld);
 }
 
-PX_INLINE ErrorType Handle::getParamRefArray(::NxParameterized::Interface **array, physx::PxI32 n, physx::PxI32 offset ) const
+PX_INLINE ErrorType Handle::getParamRefArray(::NxParameterized::Interface **array, physx::PxI32 n, physx::PxI32 offset) const
 {
 	PX_ASSERT(mInterface);
 	return mInterface->getParamRefArray(*this,array,n,offset);
 }
 
-PX_INLINE ErrorType Handle::setParamRefArray(::NxParameterized::Interface **array, physx::PxI32 n, physx::PxI32 offset )
+PX_INLINE ErrorType Handle::setParamRefArray(::NxParameterized::Interface **array, physx::PxI32 n, physx::PxI32 offset, bool doDestroyOld)
 {
 	PX_ASSERT(mInterface);
-	return mInterface->setParamRefArray(*this,array,n,offset);
+	CHECK_CONST_HANDLE
+	return mInterface->setParamRefArray(*this,array,n,offset,doDestroyOld);
 }
 
 PX_INLINE ErrorType Handle::getParamI8(physx::PxI8 &val) const
@@ -622,6 +670,7 @@ PX_INLINE ErrorType Handle::getParamI8(physx::PxI8 &val) const
 PX_INLINE ErrorType Handle::setParamI8(physx::PxI8 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI8(*this,val);
 }
 
@@ -634,6 +683,7 @@ PX_INLINE ErrorType Handle::getParamI8Array(physx::PxI8 *_array, physx::PxI32 n,
 PX_INLINE ErrorType Handle::setParamI8Array(const physx::PxI8 *val, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI8Array(*this,val,n,offset);
 }
 
@@ -647,6 +697,7 @@ PX_INLINE ErrorType Handle::getParamI16(physx::PxI16 &val) const
 PX_INLINE ErrorType Handle::setParamI16(physx::PxI16 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI16(*this,val);
 }
 
@@ -659,6 +710,7 @@ PX_INLINE ErrorType Handle::getParamI16Array(physx::PxI16 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamI16Array(const physx::PxI16 *val, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI16Array(*this,val,n,offset);
 }
 
@@ -672,6 +724,7 @@ PX_INLINE ErrorType Handle::getParamI32(physx::PxI32 &val) const
 PX_INLINE ErrorType Handle::setParamI32(physx::PxI32 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI32(*this,val);
 }
 
@@ -684,6 +737,7 @@ PX_INLINE ErrorType Handle::getParamI32Array(physx::PxI32 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamI32Array(const physx::PxI32 *val, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI32Array(*this,val,n,offset);
 }
 
@@ -697,6 +751,7 @@ PX_INLINE ErrorType Handle::getParamI64(physx::PxI64 &val) const
 PX_INLINE ErrorType Handle::setParamI64(physx::PxI64 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI64(*this,val);
 }
 
@@ -709,6 +764,7 @@ PX_INLINE ErrorType Handle::getParamI64Array(physx::PxI64 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamI64Array(const physx::PxI64 *val, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamI64Array(*this,val,n,offset);
 }
 
@@ -722,6 +778,7 @@ PX_INLINE ErrorType Handle::getParamU8(physx::PxU8 &val) const
 PX_INLINE ErrorType Handle::setParamU8(physx::PxU8 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU8(*this,val);
 }
 
@@ -734,6 +791,7 @@ PX_INLINE ErrorType Handle::getParamU8Array(physx::PxU8 *array, physx::PxI32 n, 
 PX_INLINE ErrorType Handle::setParamU8Array(const physx::PxU8 *val, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU8Array(*this,val,n,offset);
 }
 
@@ -747,6 +805,7 @@ PX_INLINE ErrorType Handle::getParamU16(physx::PxU16 &val) const
 PX_INLINE ErrorType Handle::setParamU16(physx::PxU16 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU16(*this,val);
 }
 
@@ -759,6 +818,7 @@ PX_INLINE ErrorType Handle::getParamU16Array(physx::PxU16 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamU16Array(const physx::PxU16 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU16Array(*this,array,n,offset);
 }
 
@@ -772,6 +832,7 @@ PX_INLINE ErrorType Handle::getParamU32(physx::PxU32 &val) const
 PX_INLINE ErrorType Handle::setParamU32(physx::PxU32 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU32(*this,val);
 }
 
@@ -784,6 +845,7 @@ PX_INLINE ErrorType Handle::getParamU32Array(physx::PxU32 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamU32Array(const physx::PxU32 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU32Array(*this,array,n,offset);
 }
 
@@ -797,6 +859,7 @@ PX_INLINE ErrorType Handle::getParamU64(physx::PxU64 &val) const
 PX_INLINE ErrorType Handle::setParamU64(physx::PxU64 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU64(*this,val);
 }
 
@@ -809,6 +872,7 @@ PX_INLINE ErrorType Handle::getParamU64Array(physx::PxU64 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamU64Array(const physx::PxU64 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamU64Array(*this,array,n,offset);
 }
 
@@ -821,6 +885,7 @@ PX_INLINE ErrorType Handle::getParamF32(physx::PxF32 &val) const
 PX_INLINE ErrorType Handle::setParamF32(physx::PxF32 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamF32(*this,val);
 }
 
@@ -833,6 +898,7 @@ PX_INLINE ErrorType Handle::getParamF32Array(physx::PxF32 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamF32Array(const physx::PxF32 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamF32Array(*this,array,n,offset);
 }
 
@@ -846,6 +912,7 @@ PX_INLINE ErrorType Handle::getParamF64(physx::PxF64 &val) const
 PX_INLINE ErrorType Handle::setParamF64(physx::PxF64 val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamF64(*this,val);
 }
 
@@ -858,6 +925,7 @@ PX_INLINE ErrorType Handle::getParamF64Array(physx::PxF64 *array, physx::PxI32 n
 PX_INLINE ErrorType Handle::setParamF64Array(const physx::PxF64 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamF64Array(*this,array,n,offset);
 }
 
@@ -865,6 +933,7 @@ PX_INLINE ErrorType Handle::setParamF64Array(const physx::PxF64 *array, physx::P
 PX_INLINE ErrorType Handle::setParamVec2(const physx::PxVec2 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec2(*this,val);
 }
 
@@ -883,6 +952,7 @@ PX_INLINE ErrorType Handle::getParamVec2Array(physx::PxVec2 *array, physx::PxI32
 PX_INLINE ErrorType Handle::setParamVec2Array(const physx::PxVec2 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec2Array(*this,array,n,offset);
 }
 
@@ -890,6 +960,7 @@ PX_INLINE ErrorType Handle::setParamVec2Array(const physx::PxVec2 *array, physx:
 PX_INLINE ErrorType Handle::setParamVec3(const physx::PxVec3 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec3(*this,val);
 }
 
@@ -908,6 +979,7 @@ PX_INLINE ErrorType Handle::getParamVec3Array(physx::PxVec3 *array, physx::PxI32
 PX_INLINE ErrorType Handle::setParamVec3Array(const physx::PxVec3 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec3Array(*this,array,n,offset);
 }
 
@@ -915,6 +987,7 @@ PX_INLINE ErrorType Handle::setParamVec3Array(const physx::PxVec3 *array, physx:
 PX_INLINE ErrorType Handle::setParamVec4(const physx::PxVec4 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec4(*this,val);
 }
 
@@ -933,6 +1006,7 @@ PX_INLINE ErrorType Handle::getParamVec4Array(physx::PxVec4 *array, physx::PxI32
 PX_INLINE ErrorType Handle::setParamVec4Array(const physx::PxVec4 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamVec4Array(*this,array,n,offset);
 }
 
@@ -940,6 +1014,7 @@ PX_INLINE ErrorType Handle::setParamVec4Array(const physx::PxVec4 *array, physx:
 PX_INLINE ErrorType Handle::setParamQuat(const physx::PxQuat &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamQuat(*this,val);
 }
 
@@ -958,12 +1033,14 @@ PX_INLINE ErrorType Handle::getParamQuatArray(physx::PxQuat *array, physx::PxI32
 PX_INLINE ErrorType Handle::setParamQuatArray(const physx::PxQuat *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamQuatArray(*this,array,n,offset);
 }
 
 PX_INLINE ErrorType Handle::setParamMat33(const physx::PxMat33 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamMat33(*this,val);
 }
 
@@ -982,12 +1059,14 @@ PX_INLINE ErrorType Handle::getParamMat33Array(physx::PxMat33 *array, physx::PxI
 PX_INLINE ErrorType Handle::setParamMat33Array(const physx::PxMat33 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamMat33Array(*this,array,n,offset);
 }
 
 PX_INLINE ErrorType Handle::setParamMat34(const physx::PxMat44 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamMat44(*this,val);
 }
 
@@ -1012,7 +1091,7 @@ PX_INLINE ErrorType Handle::getParamMat34Array(physx::PxMat44 *array, physx::PxI
 		if( ::NxParameterized::ERROR_NONE != (error = childHandle.set(i)) )
 			return error;
 
-		if( ::NxParameterized::ERROR_NONE != (error = childHandle.getParamMat44(array[i])) )
+		if( ::NxParameterized::ERROR_NONE != (error = childHandle.getParamMat44(array[i - offset])) )
 			return error;
 
 		childHandle.popIndex();
@@ -1023,6 +1102,7 @@ PX_INLINE ErrorType Handle::getParamMat34Array(physx::PxMat44 *array, physx::PxI
 
 PX_INLINE ErrorType Handle::setParamMat34Array(const physx::PxMat44 *array, physx::PxI32 n, physx::PxI32 offset)
 {
+	CHECK_CONST_HANDLE
 
 	Handle childHandle(*this);
 
@@ -1037,7 +1117,7 @@ PX_INLINE ErrorType Handle::setParamMat34Array(const physx::PxMat44 *array, phys
 		if( ::NxParameterized::ERROR_NONE != (error = childHandle.set(i)) )
 			return error;
 
-		if( ::NxParameterized::ERROR_NONE != (error = childHandle.setParamMat44(array[i])) )
+		if( ::NxParameterized::ERROR_NONE != (error = childHandle.setParamMat44(array[i - offset])) )
 			return error;
 
 		childHandle.popIndex();
@@ -1049,6 +1129,7 @@ PX_INLINE ErrorType Handle::setParamMat34Array(const physx::PxMat44 *array, phys
 PX_INLINE ErrorType Handle::setParamMat44(const physx::PxMat44 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamMat44(*this,val);
 }
 
@@ -1067,6 +1148,7 @@ PX_INLINE ErrorType Handle::getParamMat44Array(physx::PxMat44 *array, physx::PxI
 PX_INLINE ErrorType Handle::setParamMat44Array(const physx::PxMat44 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamMat44Array(*this,array,n,offset);
 }
 
@@ -1074,6 +1156,7 @@ PX_INLINE ErrorType Handle::setParamMat44Array(const physx::PxMat44 *array, phys
 PX_INLINE ErrorType Handle::setParamBounds3(const physx::PxBounds3 &val)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamBounds3(*this,val);
 }
 
@@ -1092,8 +1175,37 @@ PX_INLINE ErrorType Handle::getParamBounds3Array(physx::PxBounds3 *array, physx:
 PX_INLINE ErrorType Handle::setParamBounds3Array(const physx::PxBounds3 *array, physx::PxI32 n, physx::PxI32 offset)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->setParamBounds3Array(*this,array,n,offset);
 }
+
+PX_INLINE ErrorType Handle::setParamTransform(const physx::PxTransform &val)
+{
+	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
+		return mInterface->setParamTransform(*this,val);
+}
+
+PX_INLINE ErrorType Handle::getParamTransform(physx::PxTransform &val) const
+{
+	PX_ASSERT(mInterface);
+	return mInterface->getParamTransform(*this,val);
+}
+
+PX_INLINE ErrorType Handle::getParamTransformArray(physx::PxTransform *array, physx::PxI32 n, physx::PxI32 offset ) const
+{
+	PX_ASSERT(mInterface);
+	return mInterface->getParamTransformArray(*this,array,n,offset );
+}
+
+PX_INLINE ErrorType Handle::setParamTransformArray(const physx::PxTransform *array, physx::PxI32 n, physx::PxI32 offset)
+{
+	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
+		return mInterface->setParamTransformArray(*this,array,n,offset);
+}
+
+
 
 #define NX_PARAMETERIZED_TYPES_NO_LEGACY_TYPES
 #define NX_PARAMETERIZED_TYPES_ONLY_SIMPLE_TYPES
@@ -1105,22 +1217,24 @@ PX_INLINE ErrorType Handle::setParamBounds3Array(const physx::PxBounds3 *array, 
 	template <> PX_INLINE ::NxParameterized::ErrorType Handle::setParamArray<c_type>(const c_type *array, physx::PxI32 n, physx::PxI32 offset) { return setParam##type_name##Array(array, n, offset); }
 #include "NxParameterized_types.h"
 
-PX_INLINE ErrorType Handle::valueToStr(char *str, physx::PxU32 n, const char *&ret)
+PX_INLINE ErrorType Handle::valueToStr(char *buf, physx::PxU32 bufSize, const char *&ret)
 {
 	PX_ASSERT(mInterface);
-	return mInterface->valueToStr(*this,str,n,ret);
+	return mInterface->valueToStr(*this, buf, bufSize, ret);
 }
 
 PX_INLINE ErrorType Handle::strToValue(const char *str, const char **endptr) // assigns this string to the valu
 {
 	PX_ASSERT(mInterface);
-	return mInterface->strToValue(*this,str, endptr); // assigns this string to the valu;
+	CHECK_CONST_HANDLE
+	return mInterface->strToValue(*this,str, endptr); // assigns this string to the value
 }
 
 
 PX_INLINE ErrorType Handle::resizeArray(physx::PxI32 new_size)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->resizeArray(*this,new_size);
 }
 
@@ -1133,6 +1247,7 @@ PX_INLINE ErrorType Handle::getArraySize(physx::PxI32 &size, physx::PxI32 dimens
 PX_INLINE ErrorType Handle::swapArrayElements(physx::PxU32 firstElement, physx::PxU32 secondElement)
 {
 	PX_ASSERT(mInterface);
+	CHECK_CONST_HANDLE
 	return mInterface->swapArrayElements(*this, firstElement, secondElement);
 }
 
@@ -1140,5 +1255,6 @@ PX_INLINE ErrorType Handle::swapArrayElements(physx::PxU32 firstElement, physx::
 #undef IS_DIGIT
 #undef IS_ALPHANUM
 #undef IS_IDENTCHAR
+#undef CHECK_CONST_HANDLE
 
 #pragma warning(pop)

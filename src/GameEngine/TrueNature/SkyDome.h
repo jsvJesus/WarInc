@@ -24,20 +24,38 @@ struct StaticSkySettings
 	int				bEnabled;
 	int				bPlanarMapping;
 
-	r3dTexture*		tex;
+	r3dTexture*		tex0;
+	r3dTexture*		tex1;
+
+	r3dTexture*		glowTex0;
+	r3dTexture*		glowTex1;
+
+	float			texLerpT;
+
 	r3dMesh*		mesh;
 
 	float 			texScaleX;
 	float 			texScaleY;
 	float 			texOffsetX;
 	float 			texOffsetY;
+
+	float			SunCtrlX;
+	float			SunCtrlY;
+
+	r3dColor		SunSpotColor;
+	float			SunSpotIntensity;
+	float			dayT;
+
+	int				bIsNight;
+
+	float			SunIntensity;
+
+	float			DomeRotationY;
 };
 
 class r3dSkyDome : public r3dIResource
 {
 public:
-	int			StatidSkyPS_ID ;
-	int			StatidSky_Norm_PS_ID ;
 	int			StatidSkyVS_ID ;
 	int			StatidSkyTexgVS_ID ;
 
@@ -64,15 +82,17 @@ public:
 	void	RefreshTexture();
 
 	void	Update(const r3dCamera &Cam);
-	void	Draw(const r3dCamera &Cam, bool normals, float amplify, bool hemisphere );
-	void	DrawDome( const r3dCamera &Cam, const D3DXMATRIX& viewProj, float mieScale, bool normals, float amplify, bool hemisphere );
+	void	Draw(const r3dCamera &Cam, bool normals, bool hemisphere );
+	void	DrawDome( const r3dCamera &Cam, const D3DXMATRIX& viewProj, float mieScale, bool normals, bool hemisphere, bool hdr );
 
 	virtual	void		D3DCreateResource();
 	virtual	void		D3DReleaseResource();
 
 	r3dScreenBuffer* cubemap;
-	r3dScreenBuffer* tempRt0 ;
-	r3dScreenBuffer* tempRt1 ;
+
+	r3dScreenBuffer* faceRTs[ 6 ];
+
+	r3dScreenBuffer* tempRt0;
 
 private:
 	float	m_fCloadAnim;

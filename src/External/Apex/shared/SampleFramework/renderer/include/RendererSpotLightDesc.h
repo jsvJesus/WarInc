@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,26 +36,30 @@
 #define RENDERER_SPOT_LIGHT_DESC_H
 
 #include <RendererLightDesc.h>
-#include <PxVec3.h>
 
-class RendererSpotLightDesc : public RendererLightDesc
+namespace SampleRenderer
 {
+
+	class RendererSpotLightDesc : public RendererLightDesc
+	{
 	public:
-		physx::PxVec3	   position;
-		physx::PxVec3	   direction;
-		
-		physx::PxF32             innerRadius;
-		physx::PxF32             outerRadius;
-		
+		PxVec3	   position;
+		PxVec3	   direction;
+
+		PxF32      innerRadius;
+		PxF32      outerRadius;
+
 		// cone = dot(direction, directionToFragment);
 		// so cone value of 0 is completely open and value of 1 is completely closed.
-		physx::PxF32             innerCone;
-		physx::PxF32             outerCone;
-		
+		PxF32      innerCone;
+		PxF32      outerCone;
+
 	public:
 		RendererSpotLightDesc(void);
-		
+
 		virtual bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

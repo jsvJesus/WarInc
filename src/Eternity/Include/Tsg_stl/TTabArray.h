@@ -109,7 +109,7 @@ namespace r3dTL
 	template< typename T, uint32_t TAB >
 	TTabArray<T,TAB>::~TTabArray()
 	{
-		TL_STATIC_ASSERT( TAB >= sizeof(T) );
+		COMPILE_ASSERT( TAB >= sizeof(T) );
 
 		Destruct( mElems, mCount );
 		Free( mElems );
@@ -223,7 +223,7 @@ namespace r3dTL
 	void
 	TTabArray<T,TAB>::PushBack( const U& val )
 	{
-		TL_STATIC_ASSERT( sizeof val <= TAB );
+		COMPILE_ASSERT( sizeof val <= TAB );
 		const T* checkDerivancy = &val; (void)checkDerivancy;
 
 		// still require POD

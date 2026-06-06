@@ -60,3 +60,28 @@ public:
 	}
 };
 
+struct WaterPlaneSettingsTracker;
+
+class WatterPlaneSettingsUndo: public IUndoItem
+{
+	obj_WaterPlane::Settings prevValue;
+	obj_WaterPlane::Settings curValue;
+	obj_WaterPlane *waterPlane;
+
+	static const UndoAction_e ms_eActionID = UA_WATERPLANE_SETTINGS_CHANGE;
+
+public:
+	WatterPlaneSettingsUndo();
+
+	void			Release			();
+	UndoAction_e	GetActionID		();
+
+	void			Undo			();
+	void			Redo			();
+
+	void			SetValues( const obj_WaterPlane::Settings& oldV, const obj_WaterPlane::Settings& newV );
+	void			SetWaterPlane( obj_WaterPlane *plane );
+
+	static IUndoItem * CreateUndoItem	();
+	static void Register();
+};

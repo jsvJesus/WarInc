@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -33,7 +33,6 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 
-#include "PsShare.h"
 #include <RendererMeshShape.h>
 
 #include <Renderer.h>
@@ -47,16 +46,16 @@
 #include <RendererMesh.h>
 #include <RendererMeshDesc.h>
 
-#include "PxVec3.h"
+#include <RendererMemoryMacros.h>
 
-using namespace physx;
+using namespace SampleRenderer;
 
 RendererMeshShape::RendererMeshShape(	Renderer& renderer, 
-										const PxVec3* verts, PxU32 numVerts, 
-										const PxVec3* normals,
-										const PxReal* uvs,
-										const PxU16* faces, PxU32 numFaces, bool flipWinding) :
-	RendererShape(renderer)
+	const PxVec3* verts, PxU32 numVerts, 
+	const PxVec3* normals,
+	const PxReal* uvs,
+	const PxU16* faces, PxU32 numFaces, bool flipWinding) :
+RendererShape(renderer)
 {
 	RendererVertexBufferDesc vbdesc;
 	vbdesc.hint = RendererVertexBuffer::HINT_STATIC;
@@ -103,7 +102,7 @@ RendererMeshShape::RendererMeshShape(	Renderer& renderer,
 	}
 
 	const PxU32 numIndices = numFaces*3;
-	
+
 	RendererIndexBufferDesc ibdesc;
 	ibdesc.hint       = RendererIndexBuffer::HINT_STATIC;
 	ibdesc.format     = RendererIndexBuffer::FORMAT_UINT16;
@@ -124,11 +123,14 @@ RendererMeshShape::RendererMeshShape(	Renderer& renderer,
 					indices[i*3+2] = faces[i*3+1];
 				}
 			}
-			else memcpy(indices, faces, sizeof(*faces)*numFaces*3);
+			else
+			{
+				memcpy(indices, faces, sizeof(*faces)*numFaces*3);
+			}
 		}
 		m_indexBuffer->unlock();
 	}
-	
+
 	if(m_vertexBuffer && m_indexBuffer)
 	{
 		RendererMeshDesc meshdesc;
@@ -147,11 +149,7 @@ RendererMeshShape::RendererMeshShape(	Renderer& renderer,
 
 RendererMeshShape::~RendererMeshShape(void)
 {
-	if(m_vertexBuffer) m_vertexBuffer->release();
-	if(m_indexBuffer)  m_indexBuffer->release();
-	if(m_mesh)
-	{
-		m_mesh->release();
-		m_mesh = 0;
-	}
+	SAFE_RELEASE(m_vertexBuffer);
+	SAFE_RELEASE(m_indexBuffer);
+	SAFE_RELEASE(m_mesh);
 }

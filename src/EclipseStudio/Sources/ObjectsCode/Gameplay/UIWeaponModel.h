@@ -2,6 +2,7 @@
 
 #include "GameCommon.h"
 
+/* disabled for now. need temp player to draw it, easy, but class isn't used now
 class UIWeaponModel : public GameObject
 {
 	DECLARE_CLASS(UIWeaponModel, GameObject)
@@ -21,4 +22,4 @@ public:
 	virtual void		AppendRenderables( RenderArray ( & render_arrays  )[ rsCount ], const r3dCamera& Cam );
 
 	virtual BOOL		Update();
-};
+};*/

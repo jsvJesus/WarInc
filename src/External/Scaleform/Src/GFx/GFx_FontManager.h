@@ -237,7 +237,6 @@ public:
 
     void                    SetIMECandidateFont(FontHandle* pfont);
 
-    MovieDefImpl*           GetDefImpl() const { return pDefImpl; }
 #if defined(SF_BUILD_DEBUG) || defined(SF_BUILD_DEBUGOPT)
     // Required for AS3::ObjectCollector only. Don't use for anything else!
     const FontSet&          GetCreatedFonts() const { return CreatedFonts; }

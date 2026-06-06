@@ -62,16 +62,16 @@ template<class TYPE, DWORD CRYPT_KEY> class r3dSec_type
 
 	__forceinline TYPE get() const {
 		datamix_u t = data;
-		t.crypt.b1 ^= ((CRYPT_KEY >>  0) & 0xFF);
-		t.crypt.b3 ^= ((CRYPT_KEY >> 16) & 0xFF);
+		t.crypt.b1 ^= ((CRYPT_KEY >> 16) & 0xFF);
+		t.crypt.b3 ^= ((CRYPT_KEY >>  0) & 0xFF);
 		t.crypt.b2 ^= ((CRYPT_KEY >>  8) & 0xFF);
 		t.crypt.b4 ^= ((CRYPT_KEY >> 24) & 0xFF);
 		return t.val;
 	}
 	__forceinline r3dSec_type& set(const TYPE rhs) {
 		data.val = rhs;
-		data.crypt.b1 ^= ((CRYPT_KEY >>  0) & 0xFF);
-		data.crypt.b3 ^= ((CRYPT_KEY >> 16) & 0xFF);
+		data.crypt.b1 ^= ((CRYPT_KEY >> 16) & 0xFF);
+		data.crypt.b3 ^= ((CRYPT_KEY >>  0) & 0xFF);
 		data.crypt.b2 ^= ((CRYPT_KEY >>  8) & 0xFF);
 		data.crypt.b4 ^= ((CRYPT_KEY >> 24) & 0xFF);
 #ifdef _DEBUG		

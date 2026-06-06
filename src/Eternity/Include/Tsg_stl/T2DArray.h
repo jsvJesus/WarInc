@@ -33,10 +33,12 @@ namespace r3dTL
 
 		void		Resize( uint32_t width, uint32_t height, const T& val = T() );
 
-		T&			At( uint32_t x, uint32_t z ) ;
+		T&			At( uint32_t x, uint32_t z );
+		T&			AtIndex( uint32_t idx );
 
-		const void*	GetDataPtr() const ;
-		void		Swap( TData& data, uint32_t width, uint32_t height ) ;
+		const void*	GetDataPtr() const;
+		void*		GetDataPtr();
+		void		Swap( TData& data, uint32_t width, uint32_t height );
 
 		// data
 	private:
@@ -171,7 +173,17 @@ namespace r3dTL
 	T&
 	T2DArray<T>::At( uint32_t x, uint32_t z )
 	{
-		return mData[ x + z * mWidth ] ;
+		return mData[ x + z * mWidth ];
+	}
+
+	//------------------------------------------------------------------------
+
+	template< typename T >
+	R3D_FORCEINLINE
+	T&
+	T2DArray<T>::AtIndex( uint32_t idx )
+	{
+		return mData[ idx ];
 	}
 
 	//------------------------------------------------------------------------
@@ -182,9 +194,19 @@ namespace r3dTL
 	T2DArray<T>::GetDataPtr() const
 	{
 		if( mData.Count() )
-			return &mData[ 0 ] ;
+			return &mData[ 0 ];
 		else
-			return NULL ;
+			return NULL;
+	}
+
+	//------------------------------------------------------------------------
+
+	template< typename T >
+	R3D_FORCEINLINE
+	void*
+	T2DArray<T>::GetDataPtr()
+	{
+		return &mData[ 0 ];
 	}
 
 	//------------------------------------------------------------------------
@@ -194,12 +216,12 @@ namespace r3dTL
 	void
 	T2DArray<T>::Swap( TData& data, uint32_t width, uint32_t height )
 	{
-		data.Swap( mData ) ;
+		data.Swap( mData );
 
-		mWidth = width ;
-		mHeight = height ;
+		mWidth = width;
+		mHeight = height;
 
-		r3d_assert( mData.Count() == mWidth * mHeight ) ;
+		r3d_assert( mData.Count() == mWidth * mHeight );
 	}
 
 	//------------------------------------------------------------------------

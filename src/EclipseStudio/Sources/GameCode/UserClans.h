@@ -22,7 +22,7 @@ class CUserClans
 	28 - clan tag already exist
 */
 	};
-	int		GetResultCode2(const char* apiName, CWOBackendReq& req);
+	static int	GetResultCode2(const char* apiName, CWOBackendReq& req);
 	
 	enum EClanEvents
 	{
@@ -100,7 +100,7 @@ class CUserClans
 	  char		ClanTag[16]; // utf8
 	  int		ClanTagColor;
 	  int		ClanEmblemID;
-	  int		ClanEmblemColor;
+	  int		ClanEmblemColor; // for denis: not needed
 	  
 	  CreateParams_s()
 	  {
@@ -115,7 +115,7 @@ class CUserClans
 	//
 	struct ClanMember_s
 	{
-	  int		CustomerID;
+	  int		CharID;
 	  char		gamertag[64]; // utf8
 	  int		ClanRank;
 	  int		ContributedXP;
@@ -123,7 +123,7 @@ class CUserClans
 	  wiStats	stats;
 	};
 	typedef std::list<ClanMember_s> TClanMemberList;
-	void		ParseClanMember(pugi::xml_node& xmlNode, ClanMember_s& member);
+	static void	ParseClanMember(pugi::xml_node& xmlNode, ClanMember_s& member);
 	
 	//
 	// clan information
@@ -152,14 +152,14 @@ class CUserClans
 	    memset(this, 0, sizeof(*this));
 	  }
 	};
-	void		ParseClanInfo(pugi::xml_node& xmlNode, ClanInfo_s& clan);
+	static void	ParseClanInfo(pugi::xml_node& xmlNode, ClanInfo_s& clan);
 
 	// our current clan info and members
 	ClanInfo_s	clanInfo_;
 	TClanMemberList	clanMembers_;
 
 	// retreive clan info. if out_members is set, then members structure will be filled as well
-	int		ApiClanGetInfo(int ClanID, ClanInfo_s* out_info, TClanMemberList* out_members);
+	static int	ApiClanGetInfo(int ClanID, ClanInfo_s* out_info, TClanMemberList* out_members);
 	
 	// leaderboards - all clan info
 	std::list<ClanInfo_s> leaderboard_;
@@ -192,11 +192,8 @@ class CUserClans
 	int		ApiClanApplyToJoin(int ClanID, const char* note);
 	int		ApiClanApplyAnswer(int ClanApplID, bool Accept);
 	
-	//
-	// pereodically updated data from LoginSessionPoller
-	// NOTE: access to all vars inside must be guarded with csClans_
-	//
-	volatile bool	gotNewData;
+	// retreive current clan status (in clanCurData_) and invites/applications lists
+	int		ApiGetClanStatus();
 	void		SetCurrentData(pugi::xml_node& xmlNode);
 
 	// current clan data, should be used for join/leave/new members check
@@ -226,7 +223,7 @@ class CUserClans
 	  std::string	Gamertag;	// gamertag of who invited you
 	  
 	  std::string	ClanName;
-	  int		ClanLevel;
+	  int		ClanLevel; // FOR DENIS: change to how many members in clan, also add clan description
 	  int		ClanEmblemID;
 	  int		ClanEmblemColor;
 	};

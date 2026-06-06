@@ -295,7 +295,7 @@ BOOL obj_LightMesh::OnCreate()
 	if(!g_bEditMode)
 #endif
 	{
-		NetworkID = gClientLogic().net_lastFreeId++;
+		SetNetworkID(gClientLogic().net_lastFreeId++);
 		NetworkLocal = false;
 	}
 
@@ -421,6 +421,13 @@ BOOL obj_LightMesh::OnNetReceive(DWORD EventID, const void* packetData, int pack
 		return TRUE;
 	}
 	return FALSE;
+}
+
+//------------------------------------------------------------------------
+
+int	obj_LightMesh::IsStatic()
+{
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////

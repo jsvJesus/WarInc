@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,26 +42,33 @@
 #include <RendererMesh.h>
 #include "D3D9Renderer.h"
 
-class D3D9RendererMesh : public RendererMesh
+namespace SampleRenderer
 {
+
+	class D3D9RendererMesh : public RendererMesh
+	{
 	public:
 		D3D9RendererMesh(D3D9Renderer &renderer, const RendererMeshDesc &desc);
 		virtual ~D3D9RendererMesh(void);
-	
+
 	public:
-		virtual void renderIndices(physx::PxU32 numVertices, physx::PxU32 firstIndex, physx::PxU32 numIndices, RendererIndexBuffer::Format indexFormat) const;
-		virtual void renderVertices(physx::PxU32 numVertices) const;
-		
-		virtual void renderIndicesInstanced(physx::PxU32 numVertices, physx::PxU32 firstIndex, physx::PxU32 numIndices, RendererIndexBuffer::Format indexFormat,RendererMaterial *material) const;
-		virtual void renderVerticesInstanced(physx::PxU32 numVertices,RendererMaterial *material) const;
-	
-	private:
+		virtual void renderIndices(PxU32 numVertices, PxU32 firstIndex, PxU32 numIndices, RendererIndexBuffer::Format indexFormat,RendererMaterial *material) const;
+		virtual void renderVertices(PxU32 numVertices,RendererMaterial *material) const;
+
+		virtual void renderIndicesInstanced(PxU32 numVertices, PxU32 firstIndex, PxU32 numIndices, RendererIndexBuffer::Format indexFormat,RendererMaterial *material) const;
+		virtual void renderVerticesInstanced(PxU32 numVertices,RendererMaterial *material) const;
+
+	protected:
 		D3D9RendererMesh &operator=(const D3D9RendererMesh &) { return *this; }
-	
+
+		Renderer& renderer() { return m_renderer; }
+
 	private:
 		D3D9Renderer                &m_renderer;
 		IDirect3DVertexDeclaration9 *m_d3dVertexDecl;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

@@ -5,13 +5,6 @@
 #include "PFX_Fill.h"
 #include "CommonPostFX.h"
 #include "HUDFilters.h"
-#include "GameLevel.h"
-
-#ifndef WO_SERVER
-#include "r3dDX11.h"
-#endif
-
-void ReloadCCLUT3DTexture(const char* newName, HUDFilters filter);
 
 PFX_1DLUTColorCorrection	gPFX_1DLUTColorCorrectionRGB( false );
 PFX_1DLUTColorCorrection	gPFX_1DLUTColorCorrectionHSV( true );
@@ -33,7 +26,7 @@ PFX_AnaglyphComposite		gPFX_AnaglyphComposite;
 
 BlurOptimizedFilterArray gPFX_BlurH ;
 
-BlurOptimizedFilterArray gPFX_BlurV ;									 
+BlurOptimizedFilterArray gPFX_BlurV ;
 
 PFX_DirectionalDepthBlur	gPFX_DepthBlurH[ BT_DOF_COUNT ] = 
 {
@@ -111,8 +104,6 @@ PFX_MinExpand				gPFX_MinExpand;
 
 PFX_FXAA					gPFX_FXAA;
 PFX_FXAA_LumPass			gPFX_FXAA_LumPass;
-PFX_ReShadeLook				gPFX_ReShadeLook;
-PFX_ScreenRainDrops			gPFX_ScreenRainDrops;
 
 PFX_FilmTone				gPFX_FilmTone ;
 PFX_CopyOutput				gPFX_CopyOutput ;
@@ -121,6 +112,9 @@ PFX_ConvertToLDR			gPFX_ConvertToLDR ;
 PFX_DownSample				gPFX_DownSample;
 PFX_CalcLuma				gPFX_CalcLuma ;
 PFX_ExposureBlend			gPFX_ExposureBlend ;
+
+ComposeMultibloomArray		gPFX_ComposeMultibloom;
+
 
 int DepthOfField_NearTaps	= 6;
 int DepthOfField_FarTaps	= 8;
@@ -145,439 +139,6 @@ int LevelSunRays	= 0;
 
 int FilmGrainOn		= 0 ;
 PFX_FilmGrain::Settings gFilmGrainSettings ;
-
-//------------------------------------------------------------------------
-// Modern Graphics Tuning
-//------------------------------------------------------------------------
-
-static float ModernClampFloat(float v, float minV, float maxV)
-{
-	if(v < minV)
-		return minV;
-
-	if(v > maxV)
-		return maxV;
-
-	return v;
-}
-
-static int ModernClampInt(int v, int minV, int maxV)
-{
-	if(v < minV)
-		return minV;
-
-	if(v > maxV)
-		return maxV;
-
-	return v;
-}
-
-static int ModernColorByte(float v)
-{
-	return ModernClampInt((int)(v + 0.5f), 0, 255);
-}
-
-static bool ModernSameColor(const r3dColor& a, const r3dColor& b)
-{
-	return a.R == b.R && a.G == b.G && a.B == b.B && a.A == b.A;
-}
-
-static r3dColor ModernMultiplyColor(const r3dColor& color, float rMul, float gMul, float bMul, float aMul)
-{
-	return r3dColor(
-		ModernColorByte(color.R * rMul),
-		ModernColorByte(color.G * gMul),
-		ModernColorByte(color.B * bMul),
-		ModernColorByte(color.A * aMul)
-	);
-}
-
-static void ApplyModernFeatureSwitches()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(!r_modern_force_postfx->GetBool())
-		return;
-
-	const int ssaoEnabled = r_modern_ssao_radius->GetFloat() > 0.001f ? 1 : 0;
-	const int bloomEnabled = r_modern_bloom_power->GetFloat() > 0.001f ? 1 : 0;
-	const int fxaaEnabled = r_modern_fxaa->GetBool() ? 1 : 0;
-
-	LevelBloom = bloomEnabled;
-	LevelSunRays = 0;
-	LevelDOF = 0;
-	FilmGrainOn = 0;
-
-	r_ssao->SetInt(ssaoEnabled);
-	r_bloom->SetInt(bloomEnabled);
-	r_glow->SetInt(0);
-	r_sun_rays->SetInt(0);
-	r_dof->SetInt(0);
-	r_film_grain->SetInt(0);
-
-	r_fxaa->SetInt(fxaaEnabled);
-	r_mlaa->SetInt(0);
-
-	if(ssaoEnabled)
-	{
-		r_ssao_method->SetInt(SSM_HQ);
-		r_optimized_ssao->SetInt(1);
-		r_half_scale_ssao->SetInt(0);
-
-		extern int __SSAOBlurEnable;
-		__SSAOBlurEnable = 1;
-	}
-}
-
-static bool DisableModernGraphicsForNativeDX11()
-{
-#ifndef WO_SERVER
-	if(r3dRenderer &&
-		g_r3dDX11.IsInitialized() &&
-		!r3dRenderer->GetUseD3D9Present())
-	{
-		r_modern_graphics->SetInt(0);
-		r_modern_force_postfx->SetInt(0);
-		r_modern_fxaa->SetInt(0);
-		r_modern_reshade_look->SetInt(0);
-		return true;
-	}
-#endif
-
-	return false;
-}
-
-static void ApplyModernFilmToneConstants()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	r_film_tone_a->SetFloat(ModernClampFloat(r_modern_film_a->GetFloat(), 0.01f, 1.00f));
-	r_film_tone_b->SetFloat(ModernClampFloat(r_modern_film_b->GetFloat(), 0.01f, 1.00f));
-	r_film_tone_c->SetFloat(ModernClampFloat(r_modern_film_c->GetFloat(), 0.00f, 1.00f));
-	r_film_tone_d->SetFloat(ModernClampFloat(r_modern_film_d->GetFloat(), 0.00f, 1.00f));
-	r_film_tone_e->SetFloat(ModernClampFloat(r_modern_film_e->GetFloat(), 0.00f, 1.00f));
-	r_film_tone_f->SetFloat(ModernClampFloat(r_modern_film_f->GetFloat(), 0.01f, 1.00f));
-
-	r_exposure_bias->SetFloat(ModernClampFloat(r_modern_exposure_bias->GetFloat(), -2.00f, 2.00f));
-	r_white_level->SetFloat(ModernClampFloat(r_modern_white_level->GetFloat(), 1.00f, 32.00f));
-
-	r_light_adapt_speed_pos->SetFloat(1.35f);
-	r_light_adapt_speed_neg->SetFloat(1.15f);
-}
-
-static void ApplyModernSSAOTuningTo(SSAOSettings& sts, int detail)
-{
-	const float radius = ModernClampFloat(r_modern_ssao_radius->GetFloat(), 0.05f, 1.50f);
-	const float depthRange = ModernClampFloat(r_modern_ssao_depth_range->GetFloat(), 0.05f, 2.00f);
-	const float brightness = ModernClampFloat(r_modern_ssao_brightness->GetFloat(), 0.05f, 2.00f);
-	const float contrast = ModernClampFloat(r_modern_ssao_contrast->GetFloat(), 0.10f, 2.50f);
-	const float detailStrength = ModernClampFloat(r_modern_ssao_detail_strength->GetFloat(), 0.00f, 1.50f);
-	const float blurStrength = ModernClampFloat(r_modern_ssao_blur_strength->GetFloat(), 0.00f, 1.00f);
-
-	sts.Radius = radius;
-	sts.DepthRange = depthRange;
-	sts.Brightness = brightness;
-	sts.Contrast = contrast;
-
-	sts.BlurDepthSensitivity = 18.0f;
-	sts.BlurStrength = blurStrength;
-	sts.RadiusExpandStart = 22.0f;
-	sts.RadiusExpandCoef = 0.014f;
-
-	sts.TemporalTolerance = 3.0f;
-	sts.TemporalHistoryDepth = 8.0f;
-
-	sts.DetailPathEnable = detail ? 1 : 0;
-	sts.DetailStrength = detail ? detailStrength : 0.0f;
-	sts.DetailRadius = 0.22f;
-	sts.DetailDepthRange = 2.20f;
-	sts.DetailRadiusExpandStart = 0.0f;
-	sts.DetailRadiusExpandCoef = 0.0f;
-	sts.DetailFadeOut = 18.0f;
-
-	sts.BlurTapCount = 4;
-	sts.BlurPassCount = 1;
-}
-
-static void ApplyModernSSAOTuning()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(r_modern_ssao_radius->GetFloat() <= 0.001f)
-		return;
-
-	ApplyModernSSAOTuningTo(g_SSAOSettings[SSM_REF], 0);
-	ApplyModernSSAOTuningTo(g_SSAOSettings[SSM_DEFAULT], 1);
-	ApplyModernSSAOTuningTo(g_SSAOSettings[SSM_HQ], 1);
-}
-
-void ApplyModernBloomSettings()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	PFX_ExtractBloom::Settings bloom = gPFX_ExtractBloom.GetDefaultSettings();
-
-	bloom.Power = ModernClampFloat(r_modern_bloom_power->GetFloat(), 0.00f, 0.35f);
-	bloom.Threshold = ModernClampFloat(r_modern_bloom_threshold->GetFloat(), 1.50f, 3.00f);
-	bloom.GlowAmplify = 0.0f;
-	bloom.GlowThreshold = 3.0f;
-
-	bloom.MultiplyColor = r3dColor(255, 245, 232);
-	bloom.GlowTint = r3dColor(255, 245, 232);
-
-	gPFX_ExtractBloom.SetDefaultSettings(bloom);
-
-	extern int _UsedBloomBlurPasses;
-	extern int _UsedBloomBlurTaps;
-
-	_UsedBloomBlurPasses = 1;
-	_UsedBloomBlurTaps = 0;
-
-	DirectionalStreaks_Strength = 0.0f;
-	DirectionalStreaks_Length = 0.0f;
-	DirectionalStreaksOnOffCoef = 0.0f;
-}
-
-static void ApplyModernSunGlareSettings()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(!r_modern_sun_glare->GetBool())
-		return;
-
-	PFX_SunGlare::Settings sunGlare;
-
-	sunGlare.NumSunglares = ModernClampInt(r_modern_sun_glare_count->GetInt(), 1, MAX_SUNGLARES);
-
-	const float baseOpacity = ModernClampFloat(r_modern_sun_glare_opacity->GetFloat(), 0.00f, 0.50f);
-	const float baseScale = ModernClampFloat(r_modern_sun_glare_scale->GetFloat(), 0.10f, 4.00f);
-	const float baseThreshold = ModernClampFloat(r_modern_sun_glare_threshold->GetFloat(), 0.20f, 2.00f);
-
-	for(int i = 0; i < MAX_SUNGLARES; ++i)
-	{
-		const float indexMul = 1.0f + i * 0.30f;
-
-		sunGlare.Tint[i] = r3dColor(255, 232, 198, 255);
-		sunGlare.Opacity[i] = baseOpacity / (1.0f + i * 0.75f);
-		sunGlare.TexScale[i] = baseScale * indexMul;
-		sunGlare.BlurScale[i] = 0.10f;
-		sunGlare.Threshold[i] = baseThreshold + i * 0.08f;
-	}
-
-	gPFX_SunGlare.SetSettings(sunGlare);
-}
-
-static void ApplyModernColorCorrection()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(!r_modern_color_lut->GetBool())
-	{
-		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
-		return;
-	}
-
-	const char* lutName = r_modern_lut_name->GetString();
-
-	if(!lutName || !lutName[0])
-	{
-		r3dOutToLog("ModernGraphics: LUT disabled, empty r_modern_lut_name\n");
-		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
-		r_modern_color_lut->SetInt(0);
-		return;
-	}
-
-	if(!r3dFileExists(lutName))
-	{
-		r3dOutToLog("ModernGraphics: LUT '%s' not found, color LUT disabled\n", lutName);
-		gHUDFilterSettings[HUDFilter_Default].enableColorCorrection = 0;
-		r_modern_color_lut->SetInt(0);
-		return;
-	}
-
-	g_ColorCorrectionSettings.scheme = ColorCorrectionSettings::CCS_CUSTOM_3DLUT;
-
-	static char lastLUTName[256] = "";
-
-	HUDFilterSettings& hfs = gHUDFilterSettings[HUDFilter_Default];
-
-	if(!hfs.colorCorrectionTex || strcmpi(lastLUTName, lutName))
-	{
-		ReloadCCLUT3DTexture(lutName, HUDFilter_Default);
-
-		strncpy(lastLUTName, lutName, sizeof(lastLUTName) - 1);
-		lastLUTName[sizeof(lastLUTName) - 1] = 0;
-	}
-
-	hfs.enableColorCorrection = 1;
-}
-
-void AddReShadeLookStack()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(!r_modern_reshade_look->GetBool())
-		return;
-
-	PFX_ReShadeLook::Settings sts;
-
-	sts.PHDRStrength = ModernClampFloat(r_modern_reshade_phdr_strength->GetFloat(), 0.00f, 1.00f);
-	sts.PHDRExposure = ModernClampFloat(r_modern_reshade_phdr_exposure->GetFloat(), -1.00f, 1.00f);
-
-	sts.JaSharpen = ModernClampFloat(r_modern_reshade_jasharpen->GetFloat(), 0.00f, 2.00f);
-	sts.UnsharpAmount = ModernClampFloat(r_modern_reshade_unsharp->GetFloat(), 0.00f, 2.00f);
-	sts.UnsharpBlurScale = ModernClampFloat(r_modern_reshade_unsharp_blur->GetFloat(), 0.25f, 4.00f);
-
-	sts.VignetteAmount = ModernClampFloat(r_modern_reshade_vignette_amount->GetFloat(), -1.00f, 1.00f);
-	sts.VignetteRadius = ModernClampFloat(r_modern_reshade_vignette_radius->GetFloat(), 0.10f, 4.00f);
-	sts.VignetteSlope = ModernClampFloat(r_modern_reshade_vignette_slope->GetFloat(), 0.10f, 8.00f);
-	sts.VignetteRatio = ModernClampFloat(r_modern_reshade_vignette_ratio->GetFloat(), 0.25f, 4.00f);
-
-	gPFX_ReShadeLook.PushSettings(sts);
-	g_pPostFXChief->AddFX(gPFX_ReShadeLook);
-	g_pPostFXChief->AddSwapBuffers();
-}
-
-void AddScreenRainDropsStack()
-{
-	if(!r_screen_rain_drops->GetBool())
-		return;
-
-	const float rainStrength = r3dGameLevel::Environment.GetRainStrength();
-
-	if(rainStrength <= 0.001f)
-		return;
-
-	PFX_ScreenRainDrops::Settings sts;
-
-	sts.Amount = ModernClampFloat(rainStrength * r_screen_rain_amount->GetFloat(), 0.0f, 1.0f);
-	sts.Distortion = ModernClampFloat(r_screen_rain_distort->GetFloat(), 0.0f, 0.15f);
-	sts.SlideSpeed = ModernClampFloat(r_screen_rain_slide_speed->GetFloat(), 0.0f, 3.0f);
-	sts.Scale = ModernClampFloat(r_screen_rain_scale->GetFloat(), 0.25f, 4.0f);
-	sts.Streaks = ModernClampFloat(r_screen_rain_streaks->GetFloat(), 0.0f, 2.0f);
-	sts.Wetness = ModernClampFloat(r3dGameLevel::Environment.GetWetness(), 0.0f, 1.0f);
-
-	if(sts.Amount <= 0.001f)
-		return;
-
-	gPFX_ScreenRainDrops.PushSettings(sts);
-	g_pPostFXChief->AddFX(gPFX_ScreenRainDrops);
-	g_pPostFXChief->AddSwapBuffers();
-}
-
-void AddModernFinalColorStack()
-{
-	if(r_modern_graphics->GetBool())
-	{
-		AddReShadeLookStack();
-
-		const float brightness = ModernClampFloat(r_modern_brightness->GetFloat(), -0.20f, 0.20f);
-		const float contrast = ModernClampFloat(r_modern_contrast->GetFloat(), 0.50f, 1.75f);
-		const float gamma = ModernClampFloat(r_modern_gamma->GetFloat(), 0.65f, 1.50f);
-
-		if(fabsf(brightness) > 0.0001f || fabsf(contrast - 1.0f) > 0.0001f)
-		{
-			PFX_BrightnessContrast::Settings sts;
-			sts.brightness = brightness;
-			sts.constrast = contrast;
-
-			gPFX_BrightnessContrast.PushSettings(sts);
-			g_pPostFXChief->AddFX(gPFX_BrightnessContrast);
-			g_pPostFXChief->AddSwapBuffers();
-		}
-
-		if(fabsf(gamma - 1.0f) > 0.0001f)
-		{
-			gPFX_GammaCorrect.SetPower(gamma);
-			g_pPostFXChief->AddFX(gPFX_GammaCorrect);
-			g_pPostFXChief->AddSwapBuffers();
-		}
-	}
-
-	AddScreenRainDropsStack();
-}
-
-void ApplyModernFogAndAmbientTuning()
-{
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	if(!r_modern_fog->GetBool())
-		return;
-
-	static int hasCachedFog = 0;
-	static r3dColor cachedFogInput;
-	static r3dColor cachedFogOutput;
-
-	static int hasCachedAmbient = 0;
-	static r3dColor cachedAmbientInput;
-	static r3dColor cachedAmbientOutput;
-
-	const float fogMul = ModernClampFloat(r_modern_fog_mul->GetFloat(), 0.05f, 2.00f);
-	const float fogR = ModernClampFloat(r_modern_fog_tint_r->GetFloat(), 0.25f, 2.00f);
-	const float fogG = ModernClampFloat(r_modern_fog_tint_g->GetFloat(), 0.25f, 2.00f);
-	const float fogB = ModernClampFloat(r_modern_fog_tint_b->GetFloat(), 0.25f, 2.00f);
-	const float ambientMul = ModernClampFloat(r_modern_ambient_mul->GetFloat(), 0.10f, 2.00f);
-
-	r3dColor fogSource = r3dRenderer->Fog.Color;
-	r3dColor ambientSource = r3dRenderer->AmbientColor;
-
-	if(hasCachedFog && ModernSameColor(fogSource, cachedFogOutput))
-		fogSource = cachedFogInput;
-
-	if(hasCachedAmbient && ModernSameColor(ambientSource, cachedAmbientOutput))
-		ambientSource = cachedAmbientInput;
-
-	r3dColor fogResult = ModernMultiplyColor(
-		fogSource,
-		fogMul * fogR,
-		fogMul * fogG,
-		fogMul * fogB,
-		1.0f
-	);
-
-	r3dColor ambientResult = ModernMultiplyColor(
-		ambientSource,
-		ambientMul,
-		ambientMul,
-		ambientMul,
-		1.0f
-	);
-
-	r3dRenderer->Fog.Color = fogResult;
-	r3dRenderer->AmbientColor = ambientResult;
-
-	cachedFogInput = fogSource;
-	cachedFogOutput = fogResult;
-	hasCachedFog = 1;
-
-	cachedAmbientInput = ambientSource;
-	cachedAmbientOutput = ambientResult;
-	hasCachedAmbient = 1;
-}
-
-void ApplyModernGraphicsTuning()
-{
-	if(DisableModernGraphicsForNativeDX11())
-		return;
-
-	if(!r_modern_graphics->GetBool())
-		return;
-
-	ApplyModernFeatureSwitches();
-	ApplyModernFilmToneConstants();
-	ApplyModernSSAOTuning();
-	ApplyModernBloomSettings();
-	ApplyModernSunGlareSettings();
-	ApplyModernColorCorrection();
-}
 
 //------------------------------------------------------------------------
 
@@ -632,7 +193,6 @@ void InitCommonPostFX()
 	gPFX_StereoReproject.Init();
 	gPFX_FXAA.Init();
 	gPFX_FXAA_LumPass.Init();
-	gPFX_ReShadeLook.Init();
 
 	gPFX_3DLUTColorCorrection.Init();
 	gPFX_BlackWhiteColorCorrection.Init();
@@ -701,6 +261,12 @@ void InitCommonPostFX()
 	gPFX_DownSample.Init() ;
 	gPFX_CalcLuma.Init() ;
 	gPFX_ExposureBlend.Init() ;
+
+	for (int i = 0; i < gPFX_ComposeMultibloom.COUNT; ++i)
+	{
+		gPFX_ComposeMultibloom[i] = new PFX_ComposeMultibloom(i);
+		gPFX_ComposeMultibloom[i]->Init();
+	}
 }
 
 void CloseCommonPostFX()
@@ -732,7 +298,6 @@ void CloseCommonPostFX()
 	gPFX_StereoReproject.Close();
 	gPFX_FXAA.Close();
 	gPFX_FXAA_LumPass.Close();
-	gPFX_ReShadeLook.Close();
 
 	gPFX_3DLUTColorCorrection.Close();
 	gPFX_BlackWhiteColorCorrection.Close();
@@ -802,6 +367,12 @@ void CloseCommonPostFX()
 	gPFX_DownSample.Close() ;
 	gPFX_CalcLuma.Close() ;
 	gPFX_ExposureBlend.Close() ;
+
+	for (int i = 0; i < gPFX_ComposeMultibloom.COUNT; ++i)
+	{
+		gPFX_ComposeMultibloom[i]->Close();
+		SAFE_DELETE(gPFX_ComposeMultibloom[i]);
+	}
 }
 
 void AddCalcAvarageLumaStack()
@@ -977,27 +548,50 @@ void AddDepthOfFieldStack()
 
 void AddBloomStack()
 {
-	if(r_modern_graphics->GetBool())
-		ApplyModernBloomSettings();
+	g_pPostFXChief->AddFX( gPFX_ExtractBloom, PostFXChief::RTT_ONEFOURTH0_64BIT, PostFXChief::RTT_PINGPONG_LAST );
 
-	if(r_modern_bloom_power->GetFloat() <= 0.001f && r_modern_glow_amplify->GetFloat() <= 0.001f)
-		return;
+	extern int _UsedBloomBlurPasses ;
+	extern int _UsedBloomBlurTaps ;
 
-	g_pPostFXChief->AddFX(gPFX_ExtractBloom, PostFXChief::RTT_ONEFOURTH0_64BIT, PostFXChief::RTT_PINGPONG_LAST);
-
-	extern int _UsedBloomBlurPasses;
-	extern int _UsedBloomBlurTaps;
-
-	_UsedBloomBlurPasses = ModernClampInt(_UsedBloomBlurPasses, 1, 4);
-	_UsedBloomBlurTaps = ModernClampInt(_UsedBloomBlurTaps, 0, BT_COUNT - 1);
-
-	for(int i = 0; i < _UsedBloomBlurPasses; ++i)
+	PFX_Copy::Settings copySts;
+	PFX_ComposeMultibloom::Settings sts;
+	
+	PostFXChief::RTType steps[] =
 	{
-		g_pPostFXChief->AddFX(*gPFX_BlurH[_UsedBloomBlurTaps], PostFXChief::RTT_ONEFOURTH1_64BIT, PostFXChief::RTT_ONEFOURTH0_64BIT);
-		g_pPostFXChief->AddFX(*gPFX_BlurV[_UsedBloomBlurTaps], PostFXChief::RTT_ONEFOURTH0_64BIT, PostFXChief::RTT_ONEFOURTH1_64BIT);
+		PostFXChief::RTT_COUNT, PostFXChief::RTT_ONEFOURTH1_64BIT, PostFXChief::RTT_ONEFOURTH0_64BIT,
+		PostFXChief::RTT_ONEFOURTH0_64BIT, PostFXChief::RTT_ONE8_1_64BIT, PostFXChief::RTT_ONE8_0_64BIT,
+		PostFXChief::RTT_ONE8_0_64BIT, PostFXChief::RTT_ONE16_1_64BIT, PostFXChief::RTT_ONE16_0_64BIT,
+		PostFXChief::RTT_ONE16_0_64BIT, PostFXChief::RTT_ONE32_1_64BIT, PostFXChief::RTT_ONE32_0_64BIT,
+		PostFXChief::RTT_ONE32_0_64BIT, PostFXChief::RTT_ONE64_1_64BIT, PostFXChief::RTT_ONE64_0_64BIT
+	};
+
+	const int cnt = R3D_MIN<int>(_UsedBloomBlurPasses, gPFX_ComposeMultibloom.COUNT);
+
+	int k = 0;
+	for (int i = 0; i < cnt; ++i)
+	{
+		PostFXChief::RTType r0 = steps[i * 3 + 0];
+		PostFXChief::RTType r1 = steps[i * 3 + 1];
+		PostFXChief::RTType r2 = steps[i * 3 + 2];
+
+		if (r0 != PostFXChief::RTT_COUNT)
+		{
+			copySts.TexOffsetX = 1 / g_pPostFXChief->GetBuffer(r0)->Width;
+			copySts.TexOffsetY = 1 / g_pPostFXChief->GetBuffer(r0)->Height;
+			gPFX_Copy.PushSettings(copySts);
+			g_pPostFXChief->AddFX( gPFX_Copy, r2, r0 );
+
+			sts.bloomParts[k++] = r2;
+		}
+		g_pPostFXChief->AddFX( *gPFX_BlurH[ _UsedBloomBlurTaps ], r1, r2 );
+		g_pPostFXChief->AddFX( *gPFX_BlurV[ _UsedBloomBlurTaps ], r2, r1 );
+
 	}
 
-	g_pPostFXChief->AddFX(gPFX_AddRGB, PostFXChief::RTT_PINGPONG_LAST, PostFXChief::RTT_ONEFOURTH0_64BIT);
+	PFX_ComposeMultibloom *cmb = gPFX_ComposeMultibloom[cnt - 1];
+	cmb->PushSettings(sts);
+
+	g_pPostFXChief->AddFX( *cmb, PostFXChief::RTT_PINGPONG_LAST,	PostFXChief::RTT_ONEFOURTH0_64BIT );
 }
 
 void AddObjectMotionBlurStack()
@@ -1179,22 +773,18 @@ void InitPostFX()
 	r3d_assert(g_pPostFXChief == 0);
 	g_pPostFXChief = new PostFXChief();
 	g_pPostFXChief->Init();
-	gPFX_ScreenRainDrops.Init();
 
 	InitSSAO();
 	InitColorCorrection();
 
 	InitCommonPostFX();
 	InitHudFilters();
-
-	ApplyModernGraphicsTuning();
 }
 
 void ClosePostFX()
 {
 	CloseCommonPostFX();
 	g_pPostFXChief->Close();
-	gPFX_ScreenRainDrops.Close();
 	SAFE_DELETE(g_pPostFXChief);
 }
 

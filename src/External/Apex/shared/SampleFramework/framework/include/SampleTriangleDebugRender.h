@@ -2,7 +2,7 @@
 #ifndef SAMPLE_TRIANGLE_DEBUG_RENDER_H
 #define SAMPLE_TRIANGLE_DEBUG_RENDER_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,54 +36,65 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 #include <RendererMeshContext.h>
-#include "Px.h"
-#include "PxVec3.h"
+#include <FrameworkFoundation.h>
 
-class Renderer;
-class RendererColor;
-class RendererVertexBuffer;
-class SampleAssetManager;
-class SampleMaterialAsset;
-
-class SampleTriangleDebugRender
+namespace SampleRenderer
 {
+	class Renderer;
+	class RendererColor;
+	class RendererVertexBuffer;
+}
+
+namespace SampleFramework
+{
+
+	class SampleAssetManager;
+	class SampleMaterialAsset;
+
+	class SampleTriangleDebugRender
+	{
+	public:
+		void addTriangle(const PxVec3 &p0, const PxVec3 &p1, const PxVec3 &p2, const SampleRenderer::RendererColor &color);
+		void addTriangle(const PxVec3 &p0, const PxVec3 &p1, const PxVec3 &p2, const PxVec3& n0, const PxVec3& n1, const PxVec3& n2, const SampleRenderer::RendererColor &color);
+
 	protected:
-		SampleTriangleDebugRender(Renderer &renderer, SampleAssetManager &assetmanager);
+		SampleTriangleDebugRender(SampleRenderer::Renderer &renderer, SampleAssetManager &assetmanager);
 		virtual ~SampleTriangleDebugRender(void);
-			
-		void checkResizeTriangle(physx::PxU32 maxVerts);
+
+		void checkResizeTriangle(PxU32 maxVerts);
 		void queueForRenderTriangle(void);
 		void clearTriangle(void);
-		void addTriangle(const physx::PxVec3 &p0, const physx::PxVec3 &p1, const physx::PxVec3 &p2, const RendererColor &color);
 
 	private:
 		void checkLock(void);
 		void checkUnlock(void);
-		void addVert(const physx::PxVec3 &p, const physx::PxVec3 &n, const RendererColor &color);
-	
+		void addVert(const PxVec3 &p, const PxVec3 &n, const SampleRenderer::RendererColor &color);
+
 	private:
 		SampleTriangleDebugRender &operator=(const SampleTriangleDebugRender&) { return *this; }
-		
-	private:
-		Renderer             &m_renderer;
-		SampleAssetManager   &m_assetmanager;
-		
-		SampleMaterialAsset  *m_material;
-		
-		physx::PxU32                 m_maxVerts;
-		physx::PxU32                 m_numVerts;
-		RendererVertexBuffer *m_vertexbuffer;
-		RendererMesh         *m_mesh;
-		RendererMeshContext   m_meshContext;
-		
-		void                 *m_lockedPositions;
-		physx::PxU32                 m_positionStride;
 
-		void                 *m_lockedNormals;
-		physx::PxU32                 m_normalStride;
-		
-		void                 *m_lockedColors;
-		physx::PxU32                 m_colorStride;
-};
+	private:
+		SampleRenderer::Renderer             &m_renderer;
+		SampleAssetManager                   &m_assetmanager;
+
+		SampleMaterialAsset                  *m_material;
+
+		PxU32                                 m_maxVerts;
+		PxU32                                 m_numVerts;
+		SampleRenderer::RendererVertexBuffer *m_vertexbuffer;
+		SampleRenderer::RendererMesh         *m_mesh;
+		SampleRenderer::RendererMeshContext   m_meshContext;
+
+		void                                 *m_lockedPositions;
+		PxU32                                 m_positionStride;
+
+		void                                 *m_lockedNormals;
+		PxU32                                 m_normalStride;
+
+		void                                 *m_lockedColors;
+		PxU32                                 m_colorStride;
+	};
+
+} // namespace SampleFramework
 
 #endif

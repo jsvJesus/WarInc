@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,45 +42,49 @@
 #include <RendererTexture2D.h>
 #include "D3D9Renderer.h"
 
-class RendererTexture2DDesc;
-
-class D3D9RendererTexture2D : public RendererTexture2D, public D3D9RendererResource
+namespace SampleRenderer
 {
-	friend class D3D9RendererTarget;
-	friend class D3D9RendererSpotLight;
+
+	class D3D9RendererTexture2D : public RendererTexture2D, public D3D9RendererResource
+	{
+		friend class D3D9RendererTarget;
+		friend class D3D9RendererSpotLight;
 	public:
 		D3D9RendererTexture2D(IDirect3DDevice9 &d3dDevice, const RendererTexture2DDesc &desc);
 		virtual ~D3D9RendererTexture2D(void);
-	
-	public:
-		virtual void *lockLevel(physx::PxU32 level, physx::PxU32 &pitch);
-		virtual void  unlockLevel(physx::PxU32 level);
-		
-		void bind(physx::PxU32 samplerIndex);
 
-		virtual	void	select(physx::PxU32 stageIndex)
+	public:
+		virtual void *lockLevel(PxU32 level, PxU32 &pitch);
+		virtual void  unlockLevel(PxU32 level);
+
+		void bind(PxU32 samplerIndex);
+
+		virtual	void	select(PxU32 stageIndex)
 		{
 			bind(stageIndex);
 		}
 
 	private:
+
 		virtual void onDeviceLost(void);
 		virtual void onDeviceReset(void);
-		
+
 	private:
 		IDirect3DDevice9          &m_d3dDevice;
 		IDirect3DTexture9         *m_d3dTexture;
-		
+
 		DWORD                      m_usage;
 		D3DPOOL                    m_pool;
 		D3DFORMAT                  m_format;
-		
+
 		D3DTEXTUREFILTERTYPE       m_d3dMinFilter;
 		D3DTEXTUREFILTERTYPE       m_d3dMagFilter;
 		D3DTEXTUREFILTERTYPE       m_d3dMipFilter;
 		D3DTEXTUREADDRESS          m_d3dAddressingU;
 		D3DTEXTUREADDRESS          m_d3dAddressingV;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

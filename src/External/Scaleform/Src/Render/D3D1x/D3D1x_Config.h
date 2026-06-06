@@ -21,14 +21,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #error SF_D3D_VERSION must be defined, and must be 10 or 11.
 #endif
 
-// In VS2011+ d3d11_1.h should exist. Include d3d11_1.h unconditionally (even in D3D10), because
-// d3d10.h does not include the common ID3DUserAnnotation interfaces.
-#if defined(SF_OS_WINMETRO)
-    #include <d3d11_1.h>
-#elif defined(SF_ENABLE_D3D11_1) && (_MSC_VER >= 1700)
-    #include <d3d11_1.h>
-#endif
-
 #if (SF_D3D_VERSION == 10 )
     #include <d3d10_1.h>
     #include <d3d10.h>
@@ -57,11 +49,6 @@ otherwise accompanies this software in either electronic or hard copy form.
         pDeviceContext->VSSetShader( Shader );
     #define D3D1xPSSetShader( pDeviceContext, Shader ) \
         pDeviceContext->PSSetShader( Shader );
-    #define D3D1xCSSetShader( pDeviceContext, Shader) // No Compute Shader D3D10.
-    #define D3D1xDSSetShader( pDeviceContext, Shader) // No Domain Shader D3D10.
-    #define D3D1xGSSetShader( pDeviceContext, Shader) \
-        pDeviceContext->GSSetShader(Shader)
-    #define D3D1xHSSetShader( pDeviceContext, Shader) // No Hull Shader D3D10
     #define D3D1xEndAsynchronous( pDeviceContext, Query ) \
         Query->End();
     #define D3D1xGetDataAsynchronous( pDeviceContext, Query, Data, DataSize, Flags ) \
@@ -77,9 +64,11 @@ otherwise accompanies this software in either electronic or hard copy form.
     };
 
 #elif (SF_D3D_VERSION == 11 )
-    #if !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
-        #include <d3d11.h>
-    #endif
+#ifdef SF_OS_WINMETRO
+    #include <d3d11_1.h>
+#else
+    #include <d3d11.h>
+#endif
 
     #define D3D10(...)    
     #define D3D11(...)        __VA_ARGS__
@@ -105,14 +94,6 @@ otherwise accompanies this software in either electronic or hard copy form.
         pDeviceContext->VSSetShader( Shader, 0, 0)
     #define D3D1xPSSetShader( pDeviceContext, Shader ) \
         pDeviceContext->PSSetShader( Shader, 0, 0)
-    #define D3D1xCSSetShader( pDeviceContext, Shader) \
-        pDeviceContext->CSSetShader(Shader, 0, 0)
-    #define D3D1xDSSetShader( pDeviceContext, Shader) \
-        pDeviceContext->DSSetShader(Shader, 0, 0)
-    #define D3D1xGSSetShader( pDeviceContext, Shader) \
-        pDeviceContext->GSSetShader(Shader, 0, 0)
-    #define D3D1xHSSetShader( pDeviceContext, Shader) \
-        pDeviceContext->HSSetShader(Shader, 0, 0)
     #define D3D1xEndAsynchronous( pDeviceContext, Query ) \
         pDeviceContext->End(Query);
     #define D3D1xGetDataAsynchronous( pDeviceContext, Query, Data, DataSize, Flags ) \

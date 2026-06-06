@@ -72,7 +72,7 @@ PFX_Combine::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*OV
 
 	r3dRenderer->SetTex( sts.mask->Tex, PostFXChief::FREE_TEX_STAGE_START );
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, sts.choseChannel, 1 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, sts.choseChannel, 1 ) );
 
 	mSettings.Erase( 0 );
 
@@ -80,7 +80,7 @@ PFX_Combine::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*OV
 
 	if( mColorWriteMask != PostFXChief::DEFAULT_COLOR_WRITE_MASK )
 	{		
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, mColorWriteMask ) );
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, mColorWriteMask ) );
 	}
 }
 

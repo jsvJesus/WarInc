@@ -1,5 +1,4 @@
-#ifndef __GRENADE_H__
-#define __GRENADE_H__
+#pragma once
 
 #include "GameCommon.h"
 #include "Ammo.h"
@@ -14,7 +13,6 @@ private:
 	void		onExplode();
 	r3dPoint3D	lastCollisionNormal;
 	bool		bHadCollided;
-	Scaleform::GFx::Value m_GrenadeIcon;
 public:
 	obj_Grenade();
 
@@ -26,5 +24,3 @@ public:
 	virtual r3dMesh*	GetObjectMesh();
 	virtual r3dMesh*	GetObjectLodMesh() OVERRIDE;
 };
-
-#endif	// __GRENADE_H__

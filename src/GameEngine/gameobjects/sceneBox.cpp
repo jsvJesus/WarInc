@@ -1,6 +1,5 @@
 #include "r3dPCH.h"
 #include "r3d.h"
-#include "r3dBuffer.h"
 
 #include "GameObj.h"
 #include "sceneBox.h"
@@ -27,7 +26,7 @@ SceneBox::SceneBox()
 	m_bEmpty = false;
 	m_ID = m_Level = -1;
 	memset(m_Objects,0,SCENEBOX_MAXOBJECTS*sizeof(GameObject*));
-	query = NULL;
+	queryIndex = -1;
 	visible = false;
 	needQuery = false;
 	lastVisited = 0;
@@ -45,7 +44,7 @@ SceneBox::SceneBox(const r3dPoint3D& centerPos, const r3dVector& halfSize)
 	m_bEmpty = false;
 	m_ID = m_Level = -1;
 	memset(m_Objects,0,SCENEBOX_MAXOBJECTS*sizeof(GameObject*));
-	query = NULL;
+	queryIndex = -1;
 	visible = false;
 	needQuery = false;
 	lastVisited = 0;
@@ -62,13 +61,13 @@ SceneBox::~SceneBox()
 float gSceneBox_LevelBase = 10.0f;
 unsigned int gSceneBox_MinObjCount = 1;
 #define LEVEL_COUNT 5
-unsigned int LevelMask[LEVEL_COUNT] =
+int LevelMask[LEVEL_COUNT] =
 {
-	0xfff0fff0u,
-	0xfff8fff8u,
-	0xfffcfffcu,
-	0xfffefffeu,
-	0xffffffffu,
+	0xfff0fff0,
+	0xfff8fff8,
+	0xfffcfffc,
+	0xfffefffe,
+	0xffffffff,
 };
 
 int LevelFromSize(float radius)
@@ -266,6 +265,7 @@ void SceneBox::Move(GameObject* obj)
 
 void SceneBox::PrepareForRender()
 {
+	R3DPROFILE_FUNCTION("PrepareForRender");
 	for(int i=0; i<numDeleteNodesDeferred; ++i)
 	{
 		if((--deleteNodesDeferred[i]->deleteCounter)<0)
@@ -275,7 +275,9 @@ void SceneBox::PrepareForRender()
 			deleteNodesDeferred[i] = deleteNodesDeferred[numDeleteNodesDeferred];
 		}
 	}
+	R3DPROFILE_START("SetupBox");
 	SetupBox();
+	R3DPROFILE_END("SetupBox");
 }
 
 void SceneBox::MarkDirty()
@@ -352,7 +354,7 @@ bool SceneBox::SetupBox()
 	{
 		r3d_assert(m_Objects[i]);
 
-		if( m_Objects[i]->ObjFlags & OBJFLAG_SkipOcclusionCheck && 
+		if( m_Objects[i]->wasSetSkipOcclusionCheck && 
 			!( m_Objects[i]->ObjFlags & OBJFLAG_ForceSceneBoxBBox ) )
 			continue;
 
@@ -461,20 +463,32 @@ void SceneBox::TraverseDebug(const r3dCamera& Cam, int isFullyInside)
 void SceneBox::TraverseTree(const r3dCamera& Cam, struct draw_s* result, int& numObjects, int isFullyInside)
 {
 	R3DPROFILE_FUNCTION("SceneBox::TraverseTree");
+
+	float defDrawDistanceSq = r_default_draw_distance->GetFloat() * r_default_draw_distance->GetFloat();
+
+	r3dPoint3D cullRefPos = r3dRenderer->DistanceCullRefPos;
+
 	for (uint32_t i=0; i<m_ObjectCount; ++i)
 	{
-		if(!m_Objects[i]->isActive() || m_Objects[i]->ObjFlags & OBJFLAG_SkipDraw || m_Objects[i]->ObjFlags & OBJFLAG_JustCreated || m_Objects[i]->ObjFlags & OBJFLAG_Removed || !m_Objects[i]->isDetailedVisible())
+		GameObject* obj = m_Objects[ i ];
+
+		if(!obj->isActive() || obj->ObjFlags & OBJFLAG_SkipDraw || obj->ObjFlags & OBJFLAG_JustCreated || obj->ObjFlags & OBJFLAG_Removed || !obj->isDetailedVisible())
 			continue;
 
-		if(!(m_Objects[i]->ObjFlags & (OBJFLAG_SkipOcclusionCheck | OBJFLAG_AlwaysDraw)))
+		if(!(obj->wasSetSkipOcclusionCheck && (obj->ObjFlags & OBJFLAG_AlwaysDraw)))
 			if(isFullyInside==2) // intersects with frustum
-				if(!r3dRenderer->IsSphereInsideFrustum(m_Objects[i]->GetPosition(), m_Objects[i]->GetObjectsRadius()))
+				if(!r3dRenderer->IsSphereInsideFrustum(obj->GetPosition(), obj->GetObjectsRadius()))
 					continue;
 
+		float cullDistSq = ( cullRefPos - obj->GetPosition() ).LengthSq();
+
+		if( !CheckObjectDistance( obj, cullDistSq, defDrawDistanceSq ) )
+			continue;
+
 		r3d_assert(numObjects < OBJECTMANAGER_MAXOBJECTS);
-		result[numObjects].obj = m_Objects[i];
-		result[numObjects].dist = (m_Objects[i]->GetPosition() - Cam).LengthSq();
-		result[numObjects].shadow_slice = getShadowSliceBit( m_Objects[i], Cam );
+		result[numObjects].obj = obj;
+		result[numObjects].distSq = (obj->GetPosition() - Cam).LengthSq();
+		result[numObjects].shadow_slice = getShadowSliceBit( obj, Cam );
 		++numObjects;
 	}
 
@@ -527,8 +541,9 @@ public:
 	}
 };
 
-SceneBox* TraversalList[2048];
+SceneBox* TraversalList[8192];
 int numTraversalList = 0;
+
 
 typedef std::list<SceneBox*> SceneBoxList ;
 SceneBoxList	PrevFrameQueryList; // non critical queries from prev.frame
@@ -546,13 +561,13 @@ bool isQueryResultAvailable(const SceneBox& node)
 {
 	R3DPROFILE_FUNCTION("isQueryResultAvailable");
 
-	if( node.query )
+	if( node.queryIndex >= 0 )
 	{
 		int temp;
 
 		HRESULT hr = D3DERR_DEVICELOST ;
 
-		hr = node.query->GetData( &temp, sizeof(DWORD), D3DGETDATA_FLUSH );
+		hr = r3dGetOcclusionQuery( node.queryIndex )->GetData( &temp, sizeof(DWORD), D3DGETDATA_FLUSH );
 
 		switch( hr )
 		{
@@ -580,7 +595,7 @@ int getQueryResult(const SceneBox& node)
 
 	const int DEFAULT_RESULT = 8192 ;
 
-	if( node.query )
+	if( node.queryIndex >= 0 )
 	{
 		if( r3dRenderer->IsDeviceLost() )
 			return DEFAULT_RESULT;
@@ -592,7 +607,7 @@ int getQueryResult(const SceneBox& node)
 
 		for( ; ; )
 		{
-			int ret = node.query->GetData(&result, sizeof(DWORD), D3DGETDATA_FLUSH);
+			int ret = r3dGetOcclusionQuery( node.queryIndex )->GetData(&result, sizeof(DWORD), D3DGETDATA_FLUSH);
 
 			switch( ret )
 			{
@@ -653,16 +668,27 @@ void renderNode( SceneBox& node, const r3dCamera& Cam )
 	if(node.m_ObjectCount == 0)
 		return;
 
+	float defDrawDistanceSq = r_default_draw_distance->GetFloat() * r_default_draw_distance->GetFloat();
+	r3dPoint3D cullRefPos = r3dRenderer->DistanceCullRefPos;
+
 //	int prev_draw = n_draw;
 	for (uint32_t i=0; i<node.m_ObjectCount; ++i)
 	{
-		if(!node.m_Objects[i]->isActive() || node.m_Objects[i]->ObjFlags & OBJFLAG_SkipOcclusionCheck || node.m_Objects[i]->ObjFlags & OBJFLAG_SkipDraw || node.m_Objects[i]->ObjFlags & OBJFLAG_JustCreated || node.m_Objects[i]->ObjFlags & OBJFLAG_Removed || !node.m_Objects[i]->isDetailedVisible())
+		GameObject* obj = node.m_Objects[ i ];
+
+		if(!obj->isActive() || obj->wasSetSkipOcclusionCheck || obj->ObjFlags & OBJFLAG_SkipDraw || obj->ObjFlags & OBJFLAG_JustCreated || node.m_Objects[i]->ObjFlags & OBJFLAG_Removed || !obj->isDetailedVisible())
+			continue;
+
+		float cullDistSq = (obj->GetPosition() - cullRefPos).LengthSq();
+		float cmpDistSq = obj->DrawDistanceSq ? obj->DrawDistanceSq : defDrawDistanceSq;
+
+		if( !CheckObjectDistance( obj, cullDistSq, defDrawDistanceSq ) )
 			continue;
 
 		r3d_assert(n_draw < OBJECTMANAGER_MAXOBJECTS);
-		draw[n_draw].obj = node.m_Objects[i];
-		draw[n_draw].dist = (node.m_Objects[i]->GetPosition() - Cam).LengthSq();
-		draw[n_draw].shadow_slice = getShadowSliceBit( node.m_Objects[i], Cam );
+		draw[n_draw].obj = obj;
+		draw[n_draw].distSq = (obj->GetPosition() - Cam).LengthSq();
+		draw[n_draw].shadow_slice = getShadowSliceBit( obj, Cam );
 		++n_draw;
 
 	}
@@ -675,15 +701,69 @@ static int curVisGridCellZ ;
 
 static int enableVisGrid ;
 
+static int g_TraversalOverflowMessageShown = 0 ;
+
+void freeQueries( SceneBox& node )
+{
+	if( node.queryIndex >= 0 )
+		r3dFreeOcclusionQuery( node.queryIndex );
+
+	SceneBox* child = node.GetChild();
+	while( child )
+	{
+		freeQueries(*child);
+
+		child = child->GetSibling();
+	}
+}
+
 void traverseNode(SceneBox& node)
 {
 	node.distance = (gCam-node.m_CenterPos).Length();
 
+	if (numTraversalList >= _countof(TraversalList))
+	{
+		r3dOutToLog("WARNING: Traversal list overflow\n");
+
+#ifndef FINAL_BUILD
+		if( !g_TraversalOverflowMessageShown )
+		{
+			MessageBoxA( r3dRenderer->HLibWin, "Traversal list overflow! Some objects may disappear on this level. Please contact programmers.", "WARNING", MB_ICONEXCLAMATION );
+			g_TraversalOverflowMessageShown = 1;
+		}
+#endif
+
+		return;
+	}
+
 	if(node.m_ObjectCount>0)
 	{
-		TraversalList[numTraversalList++] = &node;		
+		r3dPoint3D refPos = r3dRenderer->DistanceCullRefPos;
+		float defDrawDistanceSq = r_default_draw_distance->GetFloat();
+
+		defDrawDistanceSq *= defDrawDistanceSq;
+
+		int hasVisibleObjects = 0;
+
+		for( int i = 0, e = (int)node.m_ObjectCount; i < e ; i ++ )
+		{
+			GameObject* obj = node.m_Objects[ i ];
+
+			float distSq = ( obj->GetPosition() - refPos ).LengthSq();
+
+			if( CheckObjectDistance( obj, distSq, defDrawDistanceSq ) )
+			{
+				hasVisibleObjects = 1;
+				break;
+			}
+		}
+
+		if( hasVisibleObjects )
+		{
+			TraversalList[numTraversalList++] = &node;		
+		}
 	}
-	r3d_assert(numTraversalList < 2048);
+
 	SceneBox* child = node.GetChild();
 	while(child)
 	{
@@ -728,8 +808,27 @@ namespace
 	r3dVertexBuffer * oqVertexBuffer;
 
 	uint32_t oqVertexBufferOffset;
-
 	
+}
+
+SceneTraversalStats::SceneTraversalStats()
+: NumTraversedNodes( 0 )
+, MaxTraversedNodes( 0 )
+{
+	
+}
+
+static SceneTraversalStats g_SceneTraversalStats;
+
+void UpdateSceneTraversalStats()
+{
+	g_SceneTraversalStats.NumTraversedNodes = numTraversalList;
+	g_SceneTraversalStats.MaxTraversedNodes = R3D_MAX( g_SceneTraversalStats.NumTraversedNodes, g_SceneTraversalStats.MaxTraversedNodes );
+}
+
+SceneTraversalStats GetSceneTraversalStats()
+{
+	return g_SceneTraversalStats;
 }
 
 uint16_t* g_temproraritetness;
@@ -876,7 +975,7 @@ void buildOBBox( r3dPoint3D* buffer, GameObject* object )
 }
 
 extern int	g_OcclusionQueryCounter;
-extern r3dD3DQuery* g_pOcclusionQueries[1000];
+extern IDirect3DQuery9* g_pOcclusionQueries[R3D_NUM_OCCLUSION_QUERIES];
 
 void startConsequtiveOcclusionQueries()
 {
@@ -884,10 +983,10 @@ void startConsequtiveOcclusionQueries()
 
 	r3dRenderer->Flush();
 
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, 0);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, 0);
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, 0);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, 0);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, 0);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, 0);
 
 	oqVertexBuffer->Set( 0 );
 	oqIndexBuffer->Set();
@@ -900,11 +999,11 @@ void startConsequtiveOcclusionQueries()
 
 	// temp, just do not render bbox that are inside of camera
 	r3dRenderer->SetCullMode( D3DCULL_CCW );
-	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE );
 
 	D3DXMATRIX matWVP;
 	D3DXMatrixTranspose( &matWVP, &r3dRenderer->ViewProjMatrix );
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&matWVP,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&matWVP,  4 );
 }
 
 void endConsequitiveOcclusionQueries()
@@ -914,12 +1013,12 @@ void endConsequitiveOcclusionQueries()
 	DWORD enableAllColors =	D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 							D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA;
 
-	r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, TRUE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, TRUE );
 
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE, enableAllColors );
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE1, enableAllColors );
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE2, enableAllColors );
-	r3dRenderer->SetRenderState(D3DRS_COLORWRITEENABLE3, enableAllColors );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE, enableAllColors );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE1, enableAllColors );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE2, enableAllColors );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_COLORWRITEENABLE3, enableAllColors );
 	r3dRenderer->SetVertexShader();
 	r3dRenderer->SetPixelShader();	
 }
@@ -928,10 +1027,14 @@ void makeQueryD3DCalls( SceneBox& node, uint32_t numVertices )
 {
 	R3DPROFILE_FUNCTION("makeQueryD3DCalls");
 
-	D3D_V( node.query->Issue( D3DISSUE_BEGIN ) ) ;
+	IDirect3DQuery9* query = r3dGetOcclusionQuery( node.queryIndex );
+
+	D3D_V( query->Issue( D3DISSUE_BEGIN ) ) ;
 	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, oqVertexBufferOffset, 0, numVertices, 0, numVertices / VERTS_PER_BOX * INDICES_PER_BOX / 3 );
-	D3D_V( node.query->Issue( D3DISSUE_END) ); 
+	D3D_V( query->Issue( D3DISSUE_END) ); 
 }
+
+int g_QueryOverflowReported = 0;
 
 void issueConsequtiveOcclusionQuery( SceneBox& node, const r3dCamera& Cam, float nearPlaneDoubleRadius )
 {
@@ -985,15 +1088,27 @@ void issueConsequtiveOcclusionQuery( SceneBox& node, const r3dCamera& Cam, float
 		memcpy( locked, vertexBufferData, sizeof vertexBufferData[ 0 ] * numVertices );
 		oqVertexBuffer->Unlock();
 
-		node.query = g_pOcclusionQueries[g_OcclusionQueryCounter++];
-		g_OcclusionQueryCounter = g_OcclusionQueryCounter%1000;
+		node.queryIndex = r3dAllocateOcclusionQuery();
 
-		makeQueryD3DCalls( node, numVertices );
+		if( node.queryIndex >= 0 )
+		{
+			makeQueryD3DCalls( node, numVertices );
 
-		oqVertexBufferOffset += numVertices;
+			oqVertexBufferOffset += numVertices;
 
-		r3dRenderer->Stats.AddNumOcclusionQueries( 1 ) ;
+			r3dRenderer->Stats.AddNumOcclusionQueries( 1 );
+		}
+		else
+		{
+			if( !g_QueryOverflowReported )
+			{
+				r3dOutToLog( "WARNING: issueConsequtiveOcclusionQuery: occlussion query overflow!\n" );
+				g_QueryOverflowReported = 1;
+			}
 
+			node.needQuery = 0;
+			node.visible = 1;
+		}
 
 	}
 	else 
@@ -1054,6 +1169,11 @@ SceneBox::TraverseAndPrepareForOcclusionQueries( const r3dCamera& Cam, int frame
 
 			node.needQuery = false;
 
+			if( node.queryIndex >= 0 )
+			{
+				r3dFreeOcclusionQuery( node.queryIndex );
+			}
+
 			if(visiblePixels > gVisibilityTreshold)
 			{
 				pullUpVisibility( node );
@@ -1069,7 +1189,10 @@ SceneBox::TraverseAndPrepareForOcclusionQueries( const r3dCamera& Cam, int frame
 	else
 	{
 		// pointers too old - objects could be deleted.
-		PrevFrameQueryList.clear() ;
+		PrevFrameQueryList.clear();
+
+		freeQueries( *this );
+
 #ifndef FINAL_BUILD
 		r3dOutToLog( "Warning: skipped frames between GameWorld().Update() and SceneBox::TraverseAndPrepareForOcclusionQueries\n" ) ;
 #endif
@@ -1092,17 +1215,14 @@ SceneBox::TraverseAndPrepareForOcclusionQueries( const r3dCamera& Cam, int frame
 	// part 2: hierarchical traversal
 	R3DPROFILE_START("part2");
 
+	r3dPoint3D refPos = r3dRenderer->DistanceCullRefPos;
+	float defDrawDistanceSq = r_default_draw_distance->GetFloat() * r_default_draw_distance->GetFloat();
+
 	while(numTL)
 	{
 		SceneBox& node = *TraversalList[numTL-1]; --numTL;
 
 		node.UpdateHeuristicScreenSpaceVisibilty();
-
-		// identify previously visible nodes
-		bool wasVisible = node.visible;
-
-		// identify nodes that we cannot skip queries for
-		bool leafOrWasInvisible = !wasVisible || isLeaf(node);
 
 		if(node.counter == 0)
 		{
@@ -1130,21 +1250,13 @@ SceneBox::TraverseAndPrepareForOcclusionQueries( const r3dCamera& Cam, int frame
 			}
 			else
 				node.counter		= 1;
-		}
-		else
-		{
-			leafOrWasInvisible = false; // do not issue query
-		}
 
-		// skip testing previously visible interior nodes
-		if ( leafOrWasInvisible ) 
-		{
 			node.needQuery = true;
 			PrevFrameQueryList.push_back(&node);
 		}
 
 		// always traverse a node if it was visible
-		if ( wasVisible )
+		if ( node.visible )
 		{
 			renderNode( node, Cam );
 		}
@@ -1188,7 +1300,8 @@ void SceneBox::onResetDevice()
 {
 	if(GetParent()==0)
 		PrevFrameQueryList.clear();
-	query = 0;
+	queryIndex = -1;
+
 	SceneBox* child = GetChild();
 	while(child)
 	{
@@ -1275,4 +1388,14 @@ void AdvanceQueryBalancer()
 	}
 
 	OcclusionQueryLoad[ i ] = 0;
+}
+
+//------------------------------------------------------------------------
+
+void SceneBoxOnUpdate()
+{
+	R3DPROFILE_FUNCTION("SceneBoxOnUpdate");
+	AdvanceQueryBalancer();
+
+	g_QueryOverflowReported = 0;
 }

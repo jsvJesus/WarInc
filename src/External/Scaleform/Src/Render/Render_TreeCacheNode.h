@@ -351,15 +351,9 @@ public:
                                    MaskEffectState oldState, unsigned flags);
 
     // Calculate the local mask bounds + bounding area matrix to use in filter rendering;
-    enum FilterBoundResult
-    {
-        FilterBoundResult_CompletelyClipped,
-        FilterBoundResult_PartiallyClipped,
-        FilterBoundResult_FullyVisible
-    };
-    FilterBoundResult calcFilterBounds(RectF* filterBounds, Matrix2F* boundAreaMatrix, 
-                                       const Matrix3F& viewMatrix, const Matrix4F& viewProjMatrix, 
-                                       RectF* cullRect = 0);
+    bool calcFilterBounds(RectF* filterBounds, Matrix2F* boundAreaMatrix, 
+                          const Matrix3F& viewMatrix, const Matrix4F& viewProjMatrix, 
+                          RectF* cullRect = 0);
 
     /*    
     void            CalcScale9GridParameters(RectF* s9gRect, Matrix2F* shapeMtx) const;
@@ -367,7 +361,6 @@ public:
 
     void            CalcViewMatrix(Matrix2F* pviewMatrix) const;
     void            CalcViewMatrix(Matrix3F* pviewMatrix, Matrix4F *pviewProj) const;
-    void            CalcCxform(Cxform& dest) const;
     bool            CalcFilterFlag() const;
 
     Matrix4F        GetViewProj() const;
@@ -505,12 +498,40 @@ public:
         DepthUpdatesChained = false;
     }    
 
-    void AddToUpdate(TreeCacheNode *pnode, unsigned flags);
+    inline void AddToUpdate(TreeCacheNode *pnode, unsigned flags)
+    {
+        SF_ASSERT(flags && pnode->pNode && (DepthUpdatesChained == false));
+        if (!(pnode->UpdateFlags & Update_InList))
+        {
+            pnode->pNextUpdate = pUpdateList;
+            pUpdateList = pnode;
+            flags |= Update_InList;
+        }
+        pnode->UpdateFlags |= flags;
+    }
 
     // Adds node directly to depth update array. Can also be used after
     // ChainUpdatesByDepth was called for original updates.
     // Intended to tree update rebuilding.
-    void AddToDepthUpdate(TreeCacheNode *pnode, unsigned flags);
+    inline void AddToDepthUpdate(TreeCacheNode *pnode, unsigned flags)
+    {
+        SF_ASSERT(flags && pnode->pNode);
+        if (!(pnode->UpdateFlags & Update_InList))
+        {
+            if (DepthUpdatesChained)
+            {
+                DepthUpdates.Link(pnode->Depth, &pnode->pNextUpdate, pnode);
+            }
+            else
+            {
+                pnode->pNextUpdate = pUpdateList;
+                pUpdateList = pnode;
+            }
+            
+            flags |= Update_InList;
+        }
+        pnode->UpdateFlags |= flags;
+    }
 
     virtual void HandleChanges(unsigned changeBits);
 

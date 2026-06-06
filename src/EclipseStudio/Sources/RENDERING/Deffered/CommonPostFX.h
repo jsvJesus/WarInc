@@ -38,14 +38,13 @@
 #include "PFX_MixIn.h"
 #include "PFX_NightVision.h"
 #include "PFX_FXAA.h"
-#include "PFX_ReShadeLook.h"
-#include "PFX_ScreenRainDrops.h"
 #include "PFX_FilmTone.h"
 #include "PFX_CopyOutput.h"
 #include "PFX_ConvertToLDR.h"
 #include "PFX_DownSample.h"
 #include "PFX_CalcLuma.h"
 #include "PFX_ExposureBlend.h"
+#include "PFX_ComposeMultibloom.h"
 
 extern PFX_1DLUTColorCorrection			gPFX_1DLUTColorCorrectionRGB;
 extern PFX_1DLUTColorCorrection			gPFX_1DLUTColorCorrectionHSV;
@@ -97,6 +96,9 @@ typedef r3dTL::TFixedArray< PFX_DirectionalBlurOptimized*, BT_COUNT > BlurOptimi
 extern BlurOptimizedFilterArray gPFX_BlurH ;
 extern BlurOptimizedFilterArray gPFX_BlurV ;
 
+typedef r3dTL::TFixedArray< PFX_ComposeMultibloom*, 5 > ComposeMultibloomArray ;
+extern ComposeMultibloomArray gPFX_ComposeMultibloom;
+
 extern PFX_FilmGrain			gPFX_FilmGrain;
 extern PFX_RadialBlur			gPFX_RadialBlur;
 extern PFX_ExtractBloom			gPFX_ExtractBloom;
@@ -143,8 +145,6 @@ extern PFX_DirectionalBloomWithGlowBlur gPFX_DirectionalBloomWithGlowBlurH;
 extern PFX_MixIn gPFX_MixIn ;
 extern PFX_FXAA gPFX_FXAA;
 extern PFX_FXAA_LumPass gPFX_FXAA_LumPass;
-extern PFX_ReShadeLook gPFX_ReShadeLook;
-extern PFX_ScreenRainDrops gPFX_ScreenRainDrops;
 
 extern PFX_ScopeEffect gPFX_ScopeEffect;
 
@@ -170,12 +170,6 @@ void AddScopeEffectStack();
 void AddDirectionalStreaksStack(PostFXChief::RTType bloomImageID);
 void AddNightVisionStack();
 void AddFXAAStack();
-void ApplyModernGraphicsTuning();
-void ApplyModernBloomSettings();
-void ApplyModernFogAndAmbientTuning();
-void AddModernFinalColorStack();
-void AddReShadeLookStack();
-void AddScreenRainDropsStack();
 
 void AddSeparateEyesStereoReprojectionStack(PostFXChief::RTType srcImage, PostFXChief::RTType dstLeft, PostFXChief::RTType dstRight);
 
@@ -184,7 +178,6 @@ enum SSAOMethod
 	SSM_REF,
 	SSM_DEFAULT,
 	SSM_HQ,
-	SSM_HBAO_PLUS,
 	SSM_COUNT
 };
 
@@ -274,27 +267,27 @@ struct ColorCorrectionSettings
 	int					uiScheme;
 	int					uiTexDim;
 
-	void ResetCurvesRGB()
+	void	ResetCurvesRGB()
 	{
-		for( int i = 0, e = 3; i < e; i++ )
+		for( int i = 0, e = 3; i < e; i ++ )
 		{
-			RGBCurves[ i ].Reset();
-			RGBCurves[ i ].Values[ 0 ].val[ 0 ] = 0.0f;
-			RGBCurves[ i ].Values[ 1 ].val[ 0 ] = 1.0f;
+			g_ColorCorrectionSettings.RGBCurves[ i ].Reset();
+			g_ColorCorrectionSettings.RGBCurves[ i ].Values[ 0 ].val[0] = 0.0f;
+			g_ColorCorrectionSettings.RGBCurves[ i ].Values[ 1 ].val[0] = 1.0f;
 		}
 	}
 
-	void ResetCurvesHSV()
+	void	ResetCurvesHSV()
 	{
-		for( int i = 0, e = 3; i < e; i++ )
+		for( int i = 0, e = 3; i < e; i ++ )
 		{
-			HSVCurves[ i ].Reset();
-			HSVCurves[ i ].Values[ 0 ].val[ 0 ] = 0.0f;
-			HSVCurves[ i ].Values[ 1 ].val[ 0 ] = 1.0f;
+			g_ColorCorrectionSettings.HSVCurves[ i ].Reset();
+			g_ColorCorrectionSettings.HSVCurves[ i ].Values[ 0 ].val[0] = 0.0f;
+			g_ColorCorrectionSettings.HSVCurves[ i ].Values[ 1 ].val[0] = 1.0f;
 		}
 
-		HSVCurves[ 0 ].Values[ 0 ].val[ 0 ] = 0.0f;
-		HSVCurves[ 0 ].Values[ 1 ].val[ 0 ] = 0.0f;
+		g_ColorCorrectionSettings.HSVCurves[ 0 ].Values[ 0 ].val[0] = 0.0f;
+		g_ColorCorrectionSettings.HSVCurves[ 0 ].Values[ 1 ].val[0] = 0.0f;
 	}
 
 	ColorCorrectionSettings();

@@ -73,6 +73,7 @@ compile_commands.json
 *.phx
 *.mpx
 *.cpx
+*.fla
 
 # Optional scripts
 *.bat

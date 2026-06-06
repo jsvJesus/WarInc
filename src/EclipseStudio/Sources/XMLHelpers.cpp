@@ -204,8 +204,6 @@ int GetXMLVal( const char* Name, pugi::xml_node& node, r3dPoint2D* oVal )
 
 int GetXMLCurve3f( const char* Name, pugi::xml_node& node, r3dTimeGradient2* oTimeGradient )
 {
-	oTimeGradient->Reset() ;
-
 	if( node.empty() )
 		return  0;
 
@@ -213,6 +211,8 @@ int GetXMLCurve3f( const char* Name, pugi::xml_node& node, r3dTimeGradient2* oTi
 
 	if( curveNode.empty() )
 		return 0 ;
+
+	oTimeGradient->Reset() ;
 
 	oTimeGradient->Smooth = curveNode.attribute( "smooth" ).as_int() ? 1 : 0 ;
 
@@ -262,7 +262,7 @@ int GetXMLCurve3f( const char* Name, pugi::xml_node& node, class r3dBezierGradie
 
 //------------------------------------------------------------------------
 
-int SetXMLVal( const char* Name, pugi::xml_node& node, float* val )
+int SetXMLVal( const char* Name, pugi::xml_node& node, const float* val )
 {
 	pugi::xml_node valNode = node.append_child();
 	
@@ -500,49 +500,18 @@ int SetXMLCmdVarI( const char* Name, pugi::xml_node& node, CmdVar * var )
 
 //------------------------------------------------------------------------
 
-int ParseXMLInMemory( r3dFile* f, Bytes* xmlFileBuffer, pugi::xml_document* doc )
+int ParseXMLInMemory( r3dFile* f,  Bytes * xmlFileBuffer, pugi::xml_document* doc )
 {
-	if( !f )
-	{
-		r3dOutToLog( "ParseXMLInMemory FAILED: null file\n" );
-		return 0;
-	}
-
-	if( !xmlFileBuffer || !doc )
-	{
-		r3dOutToLog( "ParseXMLInMemory FAILED: null output pointer for '%s'\n", f->GetFileName() );
-		return 0;
-	}
-
-	if( f->size <= 0 )
-	{
-		r3dOutToLog( "ParseXMLInMemory FAILED: empty file '%s'\n", f->GetFileName() );
-		return 0;
-	}
-
 	xmlFileBuffer->Resize( f->size + 1 );
 
-	size_t readed = fread( &(*xmlFileBuffer)[0], 1, f->size, f );
+	fread( &(*xmlFileBuffer)[ 0 ], f->size, 1, f );
 	(*xmlFileBuffer)[ f->size ] = 0;
-
-	if( readed != (size_t)f->size )
-	{
-		r3dOutToLog( "ParseXMLInMemory FAILED: fread failed for '%s', readed=%u expected=%u\n",
-			f->GetFileName(),
-			(unsigned int)readed,
-			(unsigned int)f->size );
-		return 0;
-	}
 
 	pugi::xml_parse_result parseResult = doc->load_buffer_inplace( &(*xmlFileBuffer)[0], f->size );
 
 	if( !parseResult )
 	{
-		r3dOutToLog( "ParseXMLInMemory FAILED: '%s', offset=%u, error='%s'\n",
-			f->GetFileName(),
-			(unsigned int)parseResult.offset,
-			parseResult.description() );
-
+		r3dError( "LoadLevel: Failed to parse %s, error: %s", f->GetFileName(), parseResult.description() );
 		return 0;
 	}
 

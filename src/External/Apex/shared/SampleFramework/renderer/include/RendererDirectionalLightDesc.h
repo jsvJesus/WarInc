@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,17 +36,21 @@
 #define RENDERER_DIRECTIONAL_LIGHT_DESC_H
 
 #include <RendererLightDesc.h>
-#include <PxVec3.h>
 
-class RendererDirectionalLightDesc : public RendererLightDesc
+namespace SampleRenderer
 {
+
+	class RendererDirectionalLightDesc : public RendererLightDesc
+	{
 	public:
-		physx::PxVec3 direction;
-		
+		PxVec3 direction;
+
 	public:
 		RendererDirectionalLightDesc(void);
-		
+
 		virtual bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

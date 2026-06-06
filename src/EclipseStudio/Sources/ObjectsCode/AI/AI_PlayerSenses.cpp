@@ -6,8 +6,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
-#if ENABLE_ZOMBIES
-
 #include "AI_PlayerSenses.h"
 #include "../Gameplay/obj_Zombie.h"
 #include "AI_Player.H"
@@ -46,7 +44,7 @@ namespace
 
 //////////////////////////////////////////////////////////////////////////
 
-PlayerLifeProps::PlayerLifeProps(obj_AI_Player *o)
+PlayerLifeProps::PlayerLifeProps(obj_Player *o)
 : standStillVisiblity(20.0f)
 , walkVisibility(50.0f)
 , runVisibility(70.0f)
@@ -60,7 +58,9 @@ PlayerLifeProps::PlayerLifeProps(obj_AI_Player *o)
 , owner(o)
 {
 	r3d_assert(owner);
+#ifndef FINAL_BUILD
 	LoadAISettingsXML();
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,6 +81,7 @@ bool PlayerLifeProps::DetectByZombie(const obj_Zombie &z, bool &hardLock)
 	float plrNoise = GetPlayerRawNoise();
 	float plrVis = GetPlayerRawVisibility();
 
+/* //@
 	const obj_Zombie::Config &cfg = z.GetAIConfig();
 
 	hardLock = false;
@@ -98,22 +99,11 @@ bool PlayerLifeProps::DetectByZombie(const obj_Zombie &z, bool &hardLock)
 		{
 			//	Issue raycast query to check visibility occluders
 			PxVec3 origin(zombiePos.x, zombiePos.y + 1.0f, zombiePos.z);
-			PxVec3 rayDir(-dir.x, -dir.y, -dir.z);
-
-			PxRaycastBuffer hit;
-			PxQueryFilterData filter(
-				PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0),
-				PxQueryFlag::eDYNAMIC | PxQueryFlag::eSTATIC | PxQueryFlag::eANY_HIT
-			);
-
-			if (!g_pPhysicsWorld->PhysXScene->raycast(
-				origin,
-				rayDir,
-				dist,
-				hit,
-				PxHitFlag::eDISTANCE,
-				filter
-			))
+			PxVec3 dir(-dir.x, -dir.y, -dir.z);
+			PxSceneQueryFlags flags = PxSceneQueryFlag::eDISTANCE;
+			PxRaycastHit h;
+			PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlags(PxSceneQueryFilterFlag::eDYNAMIC | PxSceneQueryFilterFlag::eSTATIC));
+			if (!g_pPhysicsWorld->PhysXScene->raycastSingle(origin, dir, dist, flags, h, filter))
 			{
 				detected = true;
 			}
@@ -126,6 +116,7 @@ bool PlayerLifeProps::DetectByZombie(const obj_Zombie &z, bool &hardLock)
 		hardLock = true;
 
 	detected |= plrNoise + cfg.detectionRadius > dist;
+*/
 
 	return detected;
 }
@@ -154,6 +145,7 @@ float PlayerLifeProps::GetPlayerRawNoise() const
 		case PLAYER_MOVE_CROUCH:
 		case PLAYER_MOVE_CROUCH_AIM:
 		case PLAYER_MOVE_WALK_AIM:
+		case PLAYER_MOVE_PRONE:
 			noise = walkNoise;
 			break;
 		case PLAYER_MOVE_RUN:
@@ -194,6 +186,16 @@ float PlayerLifeProps::GetPlayerRawVisibility() const
 	return vis;
 }
 
+float PlayerLifeProps::getPlayerVisibility()
+{
+	return GetPlayerRawVisibility()/100.0f;
+}
+
+float PlayerLifeProps::getPlayerHearRadius()
+{
+	return GetPlayerRawNoise()/100.0f;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef FINAL_BUILD
@@ -212,7 +214,7 @@ void PlayerLifeProps::DebugVisualizeRanges()
 	//	Visibility dist
 	r3dDrawCircle3D(owner->GetPosition()+r3dPoint3D(0,0.2f,0), GetPlayerRawVisibility(), gCam, 0.1f, r3dColor::blue);
 	//	Smell dist
-	r3dDrawCircle3D(owner->GetPosition()+r3dPoint3D(0,0.2f,0), GetPlayerRawSmell(), gCam, 0.1f, r3dColor::yellow);
+	//r3dDrawCircle3D(owner->GetPosition()+r3dPoint3D(0,0.2f,0), GetPlayerRawSmell(), gCam, 0.1f, r3dColor::yellow);
 	//	Noise dist
 	r3dDrawCircle3D(owner->GetPosition()+r3dPoint3D(0,0.2f,0), GetPlayerRawNoise(), gCam, 0.1f, r3dColor::green);
 
@@ -291,4 +293,3 @@ bool PlayerLifeProps::LoadAISettingsXML()
 
 #endif
 
-#endif // ENABLE_ZOMBIES

@@ -24,8 +24,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "../AS3_StringManager.h"
 #include "GFx/GFx_PlayerStats.h"
 
-// #define VERSION_AIR
-// #define SF_AS3_16BIT_ABC_INDEX
+//#define VERSION_AIR
 
 #ifdef SF_BUILD_DEBUG
 #define GFX_AS3_TRACE
@@ -113,7 +112,6 @@ class Object;
 class Class;
 class Value;
 class VM;
-class VMAppDomain;
 
 /////////////////////////////////////////////////////////////////////////// 
 
@@ -241,10 +239,9 @@ public:
         if (p != pObject)
         {
             SF_ASSERT(p == NULL || (Scaleform::UPInt)p > 4);
-
+            Release();
             if (p)
                 p->AddRef();
-            Release();
 
             pObject = p;
         }
@@ -255,8 +252,8 @@ public:
     {
         if (&other != this)
         {
-            other.AddRef();
             Release();
+            other.AddRef();
 
             pObject = other.pObject;
         }
@@ -303,10 +300,7 @@ private:
             if ((Scaleform::UPInt)pObject & 1)
                 pObject = (ObjType*)((Scaleform::UPInt)pObject - 1);
             else
-            {
                 pObject->Release();
-                // SF_DEBUG_CODE(pObject = NULL);
-            }
         }
     }
 
@@ -329,47 +323,32 @@ struct TypeInfo
         ObjectTypeOffset = 1,
         ImplTypeOffset = 2,
         FinalTypeOffset = 3,
-        ClassTypeOffset = 4,
-        // CW compatibility flags.
-        NotImplTypeOffset = 5,
     };
     enum {
         TimeTypeMask = 1 << TimeTypeOffset,
         ObjectTypeMask = 1 << ObjectTypeOffset,
         ImplTypeMask = 1 << ImplTypeOffset,
         FinalTypeMask = 1 << FinalTypeOffset,
-        ClassTypeMask = 1 << ClassTypeOffset,
-        NotImplTypeMask = 1 << NotImplTypeOffset,
     };
 
-    enum TimeType {RunTime = 0, CompileTime = TimeTypeMask};
-    enum ObjectType {SealedObject = 0, DynamicObject = ObjectTypeMask};
-    enum ImplType {Cpp = 0, Abc = ImplTypeMask};
-    enum FinalType {Alterable = 0, Final = FinalTypeMask};
-    enum ClassType {TypeClass = 0, TypeInterface = ClassTypeMask};
-    enum NotImplType {Implemented = 0, NotImplemented = NotImplTypeMask};
-
-    static const TypeInfo* None[];
+    enum TimeType {RunTime = 0, CompileTime = 1 << TimeTypeOffset};
+    enum ObjectType {SealedObject = 0, DynamicObject = 1 << ObjectTypeOffset};
+    enum ImplType {Cpp = 0, Abc = 1 << ImplTypeOffset};
+    enum FinalType {Alterable = 0, Final = 1 << FinalTypeOffset};
 
     bool IsCompileTime() const { return (Flags & TimeTypeMask) != 0; }
     bool IsDynamicObject() const { return (Flags & ObjectTypeMask) != 0; }
     bool IsAbcObject() const { return (Flags & ImplTypeMask) != 0; }
     bool IsFinalType() const { return (Flags & FinalTypeMask) != 0; }
-    bool IsInterface() const { return (Flags & ClassTypeMask) != 0; }
-    bool IsClass() const { return (Flags & ClassTypeMask) == 0; }
-    // CW compatibility flags.
-    bool IsNotImplemented() const { return (Flags & NotImplTypeMask) != 0; }
-    bool IsImplemented() const { return (Flags & NotImplTypeMask) == 0; }
 
     const char* GetName() const { return Name; }
     const char* GetPkgName() const { return PkgName; }
     const TypeInfo* GetParent() const { return Parent; }
 
-    UPInt               Flags;
-    const char*         Name;
-    const char*         PkgName;
-    const TypeInfo*     Parent;
-    const TypeInfo**    Implements; // An array of pointers. Last record should be NULL.
+    UPInt           Flags;
+    const char*     Name;
+    const char*     PkgName;
+    const TypeInfo* Parent;
 };
 
 struct ThunkInfo;
@@ -383,8 +362,6 @@ struct ClassInfo
     UInt8               ClassMemberNum;
     UInt8               InstanceMethodNum;
     UInt8               InstanceMemberNum;
-    // Future development.
-    // UInt16              InstanceSize;
     const ThunkInfo*    ClassMethod;
     const MemberInfo*   ClassMember;
     const ThunkInfo*    InstanceMethod;
@@ -394,9 +371,6 @@ struct ClassInfo
     bool IsDynamicObject() const { return Type->IsDynamicObject(); }
     bool IsAbcObject() const { return Type->IsAbcObject(); }
     bool IsFinalType() const { return Type->IsFinalType(); }
-    // CW compatibility flags.
-    bool IsNotImplemented() const { return Type->IsNotImplemented(); }
-    bool IsImplemented() const { return Type->IsImplemented(); }
 
     const char* GetName() const { return Type->GetName(); }
     const char* GetPkgName() const { return Type->GetPkgName(); }
@@ -431,60 +405,6 @@ namespace Abc
         NS_Private,  // Private NS shouldn't be interned (private namespaces don't match).
         NS_Explicit, // What is this for? Perhaps it identifies NSs with explicit URIs?
         NS_PackageInternal
-    };
-
-    ///////////////////////////////////////////////////////////////////////////
-#ifdef SF_AS3_16BIT_ABC_INDEX
-    typedef SInt16 SInd;
-    typedef UInt16 UInd;
-#else
-    typedef SInt32 SInd;
-    typedef UInt32 UInd;
-#endif
-
-    ///////////////////////////////////////////////////////////////////////////
-    // MethodInfo index
-    class MiInd
-    {
-    public:
-        explicit MiInd(SInd ind = -1) : Ind(ind) {}
-        bool operator ==(const MiInd& other) const { return Ind == other.Ind; }
-
-    public:
-        SInd Get() const
-        {
-            return Ind;
-        }
-
-        bool IsValid() const
-        {
-            return Ind >= 0;
-        }
-
-    private:
-        SInd    Ind;
-    };
-
-    // MethodBodyInfo index
-    class MbiInd
-    {
-    public:
-        explicit MbiInd(SInd ind = -1) : Ind(ind) {}
-        bool operator ==(const MbiInd& other) const { return Ind == other.Ind; }
-
-    public:
-        SInd Get() const
-        {
-            return Ind;
-        }
-
-        bool IsValid() const
-        {
-            return Ind >= 0;
-        }
-
-    private:
-        SInd    Ind;
     };
 
 }

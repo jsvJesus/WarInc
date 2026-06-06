@@ -15,11 +15,11 @@ void LoadWorldLights(const char* Name);
 
 
 
-static void LoadWorld(const char* Name, int maxPlayers )
+static void LoadWorld(const char* Name, float startLoadingProgress, int maxPlayers, bool isMenuLevel )
 {
  char 	TempStr1[128];
 
- SetLoadingProgress( 0.f );
+ SetLoadingProgress( startLoadingProgress );
 
  //**********************************************************
  //*
@@ -45,8 +45,7 @@ static void LoadWorld(const char* Name, int maxPlayers )
 
  if (Sun->bLoaded)
  {
-  SunVector = Sun->SunLight.Direction;
-  SunVector.Normalize();
+	 SunVector = GetEnvLightDir();
 
   Sun->SunLight.bCastShadows = 1;
 
@@ -66,16 +65,16 @@ static void LoadWorld(const char* Name, int maxPlayers )
  // LoadWorldLights(Name);
 
  SetLoadingPhase( "Loading" );
- SetLoadingProgress( PROGRESS_LOAD_LEVEL_START * 0.33F );
+ SetLoadingProgress( startLoadingProgress + PROGRESS_LOAD_LEVEL_START * 0.33F );
 
  SkyDome = new r3dSkyDome( r3dIntegrityGuardian() );
  SkyDome->Load(Name);
 
- SetLoadingProgress( PROGRESS_LOAD_LEVEL_START * 0.66F );
+ SetLoadingProgress( startLoadingProgress + PROGRESS_LOAD_LEVEL_START * 0.66F );
 
  LightPreset::LoadFromScript( FNAME_LIGHT_PRESETS );
 
- SetLoadingProgress( PROGRESS_LOAD_LEVEL_START );
+ SetLoadingProgress( startLoadingProgress + PROGRESS_LOAD_LEVEL_START );
 
 
  //**********************************************************
@@ -84,9 +83,9 @@ static void LoadWorld(const char* Name, int maxPlayers )
  //*
  //**********************************************************
 
- extern  int LoadLevel();
+ extern  int LoadLevel( float startLoadingProgress );
 
- LoadLevel();
+ LoadLevel( startLoadingProgress + PROGRESS_LOAD_LEVEL_START );
 
  // volume fog params for skydome
  r3dColor	fogColor  = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
@@ -102,8 +101,15 @@ static void LoadWorld(const char* Name, int maxPlayers )
   obj = srv_CreateGameObject("obj_Tree", "Tree1", pos);
 
   SetLoadingProgress( PROGRESS_LOAD_LEVEL_END );
+ 
+  r3dOutToLog( "Building skeleton cache.." );
+  InitializePhysSkeletonCache( maxPlayers, PROGRESS_LOAD_LEVEL_END, PLAYER_CACHE_INIT_END ) ;
+  
+  r3dOutToLog("Building obstacles cache..");
+  InitializePhysObstacleCache(1024);
+  
 
-  InitializePhysSkeletonCache( maxPlayers, PROGRESS_LOAD_LEVEL_END, 1.0f ) ;
+  r3dOutToLog( "done." );
 
  return;  
 }

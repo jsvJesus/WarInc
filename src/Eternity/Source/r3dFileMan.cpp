@@ -119,11 +119,13 @@ r3dFile* r3dFile_IntOpen(const char* fname, const char* mode)
   r3dCSHolder csHolder(g_FileSysCritSection);
   bool allowDirectAccess = true;
 
-#ifdef FINAL_BUILD
+// DNC UnCommented (disabled all data files during Final build)
+ #ifdef FINAL_BUILD
   // disable all data/ files in final build
   if(strnicmp(fname, "data/", 5) == 0)
     allowDirectAccess = false;
-#endif
+ #endif
+
 
   // check for direct file
   FILE* stream;
@@ -160,7 +162,7 @@ r3dFile* r3dFile_IntOpen(const char* fname, const char* mode)
     r3dFile* f = new r3dFile();
     sprintf(f->Location.FileName, "%s", fname);
     f->Location.Where  = FILELOC_Resource;
-    f->Location.id     = reinterpret_cast<UINT_PTR>(fe);
+    f->Location.id     = (DWORD)fe;
     f->data = data;
     f->size = (int)dwsize;
     return f;
@@ -288,33 +290,23 @@ char* fgets(char* s, int n, r3dFile *f)
 
 size_t fread(void *ptr, size_t size, size_t n, r3dFile *f)
 {
-    if(f->stream) {
-        size_t val = fread(ptr, size, n, f->stream);
-        return val;
-    }
+  if(f->stream) {
+    size_t val = fread(ptr, size, n, f->stream);
+    return val;
+  }
 
-    if(size == 0 || n == 0)
-        return 0;
+  size_t len = n * size;
 
-    size_t len = n * size;
-
-    const size_t pos = static_cast<size_t>(f->pos);
-    const size_t fileSize = static_cast<size_t>(f->size);
-
-    if(pos >= fileSize)
-        return 0;
-
-    if(pos + len >= fileSize)
-        len = fileSize - pos;
-
-    if(len == 0)
-        return 0;
-
-    memcpy(ptr, f->data + f->pos, len);
-
-    f->pos += static_cast<int>(len);
-
-    return len / size;
+  // NOTE:
+  //  add \r removal in text-mode reading..
+  //  i'm not sure it's needed, but it's needed for full compatibility
+  if(f->pos + len >= (size_t) f->size)
+    len = f->size - f->pos;
+  if(len == 0)
+    return 0;
+  memcpy(ptr, f->data + f->pos, len);
+  f->pos += len;
+  return len / size;
 }
 
 int r3dFileManager_OpenArchive(const char* fname)
@@ -396,13 +388,100 @@ bool r3dFileExists(const char* fname)
   return r3d_access(fname, 0) == 0;
 }
 
+const char* GetErnoString()
+{
+	switch( errno )
+	{
+	case EPERM:
+		return "Operation not permitted";
+	case ENOENT:
+		return "No such file or directory";
+	case ESRCH:
+		return "No such process";
+	case EINTR:
+		return "Interrupted function";
+	case EIO:
+		return "I/O error";
+	case ENXIO:
+		return "No such device or address";
+	case E2BIG:
+		return "Argument list too long";
+	case ENOEXEC:
+		return "Exec format error";
+	case EBADF:
+		return "Bad file number";
+	case ECHILD:
+		return "No spawned processes";
+	case EAGAIN:
+		return "No more processes or not enough memory or maximum nesting level reached";
+	case ENOMEM:
+		return "Not enough memory";
+	case EACCES:
+		return "Permission denied";
+	case EFAULT:
+		return "Bad address";
+	case EBUSY:
+		return "Device or resource busy";
+	case EEXIST:
+		return "File exists";
+	case EXDEV:
+		return "Cross-device link";
+	case ENODEV:
+		return "No such device";
+	case ENOTDIR:
+		return "Not a directory";
+	case EISDIR:
+		return "Is a directory";
+	case EINVAL:
+		return "Invalid argument";
+	case ENFILE:
+		return "Too many files open in system";
+	case EMFILE:
+		return "Too many open files";
+	case ENOTTY:
+		return "Inappropriate I/O control operation";
+	case EFBIG:
+		return "File too large";
+	case ENOSPC:
+		return "No space left on device";
+	case ESPIPE:
+		return "Invalid seek";
+	case EROFS:
+		return "Read-only file system";
+	case EMLINK:
+		return "Too many links";
+	case EPIPE:
+		return "Broken pipe";
+	case EDOM:
+		return "Math argument";
+	case ERANGE:
+		return "Result too large";
+	case EDEADLK:
+		return "Resource deadlock would occur";
+	case ENAMETOOLONG:
+		return "Filename too long";
+	case ENOLCK:
+		return "No locks available";
+	case ENOSYS:
+		return "Function not supported";
+	case ENOTEMPTY:
+		return "Directory not empty";
+	case EILSEQ:
+		return "Illegal byte sequence";
+	case STRUNCATE:
+		return "String was truncated";
+	}
+
+	return "Unknown error";
+}
+
 FILE* fopen_for_write(const char* fname, const char* mode)
 {
   ::SetFileAttributes(fname, FILE_ATTRIBUTE_NORMAL);
 
   FILE* f = fopen(fname, mode);
   if(f == NULL) {
-    r3dError("!!warning!!! can't open %s for writing\n", fname);
+	  r3dError("!!warning!!! can't open %s for writing\nError: %s(%d)\n", fname, GetErnoString(), errno );
   }
   
   return f;
@@ -453,7 +532,7 @@ bool CreateConfigPath(char* dest)
 	{
 		strcat( dest, "\\Arktos\\" );
 		mkdir( dest );
-		strcat( dest, "WarInc\\" );
+		strcat( dest, "WarZ\\" );
 		mkdir( dest );
 
 		return true;
@@ -468,7 +547,7 @@ bool CreateWorkPath(char* dest)
 	{
 		strcat( dest, "\\Arktos\\" );
 		mkdir( dest );
-		strcat( dest, "WarInc\\" );
+		strcat( dest, "WarZ\\" );
 		mkdir( dest );
 
 		return true;
@@ -501,51 +580,44 @@ static int do_mkdir( const char *path )
 
 int r3d_create_path( const char *path )
 {
-    char drive[ 16 ], dir[ MAX_PATH * 3 ], file[ MAX_PATH * 3 ], ext[ MAX_PATH * 3 ];
+	char drive[ 16 ], dir[ MAX_PATH * 3 ], file[ MAX_PATH * 3 ], ext[ MAX_PATH * 3 ] ;
 
-    drive[ 0 ] = 0;
+	drive[ 0 ] = 0 ;
 
-    _splitpath( path, drive, dir, file, ext );
+	_splitpath( path, drive, dir, file, ext ) ;
 
-    char* pp;
-    char* sp;
-    int status;
+	char           *pp;
+	char           *sp;
+	int             status;
+	// we may get trick folder with date (extensionesque) - treat it as a folder
 
-    strcat( dir, file );
-    strcat( dir, ext );
+	strcat ( dir, file ) ;
+	strcat ( dir, ext ) ;
+	char           *copypath = strdup( dir );
 
-    char* copypath = strdup( dir );
-    if( !copypath )
-        return -1;
+	for( int i = 0, e = strlen( copypath ) ; i < e ; i ++ )
+	{
+		if( copypath[ i ] == '\\' )
+			copypath[ i ] = '/' ;
+	}
 
-    const int pathLen = static_cast<int>( strlen( copypath ) );
-
-    for( int i = 0; i < pathLen; i++ )
-    {
-        if( copypath[ i ] == '\\' )
-            copypath[ i ] = '/';
-    }
-
-    status = 0;
-    pp = copypath;
-
-    while( status == 0 && ( sp = strchr( pp, '/' ) ) != 0 )
-    {
-        if( sp != pp )
-        {
-            *sp = '\0';
-            status = do_mkdir( drive[0] ? ( r3dString( drive ) + copypath ).c_str() : copypath );
-            *sp = '/';
-        }
-
-        pp = sp + 1;
-    }
-
-    if( status == 0 )
-        status = do_mkdir( drive[0] ? ( r3dString( drive ) + dir ).c_str() : path );
-
-    free( copypath );
-    return status;
+	status = 0;
+	pp = copypath;
+	while (status == 0 && (sp = strchr(pp, '/')) != 0)
+	{
+		if (sp != pp)
+		{
+			/* Neither root nor double slash in path */
+			*sp = '\0';
+			status = do_mkdir( drive[0] ? ( r3dString( drive ) + copypath ).c_str() : copypath );
+			*sp = '/';
+		}
+		pp = sp + 1;
+	}
+	if (status == 0)
+		status = do_mkdir( drive[0] ? ( r3dString( drive ) + dir ).c_str() : path );
+	free(copypath);
+	return (status);
 }
 
 //------------------------------------------------------------------------

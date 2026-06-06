@@ -1,46 +1,37 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "NxParamUtils.h"
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
 #include "NxParameterized.h"
+#include "NxParameterizedTraits.h"
 
 namespace NxParameterized
 {
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
-
 
 #define MAX_SEARCH_NAME 1024
 #define MAX_SEARCH_NAMES 32
@@ -76,7 +67,7 @@ struct ParameterFind
 			if ( *str == '[' )
 			{
 				*dest++ = 0;
-				*str++;
+				str++;
 				if ( isDigit(*str) )
 				{
 					physx::PxU32 v = 0;
@@ -115,7 +106,7 @@ struct ParameterFind
 							mArrayIndex[mNameCount] = -1;
 						}
 						*dest++ = 0;
-						*str++;
+						str++;
 						head = dest;
 					}
 					else
@@ -140,7 +131,7 @@ struct ParameterFind
 				mSearchNames[mNameCount] = head;
 				mNameCount++;
 				*dest++ = 0;
-				*str++;
+				str++;
 				head = dest;
 			}
 			else
@@ -173,8 +164,13 @@ struct ParameterFind
 #if defined(PX_GNUC)
 			if ( strcasecmp(longName,mSearchNames[mNameIndex]) == 0 )
 #else
+#pragma warning(push)
+#pragma warning(disable: 4996)
+
 			if ( stricmp(longName,mSearchNames[mNameIndex]) == 0 )
-#endif				
+
+#pragma warning(pop)
+#endif	
 			{
 				ret = true;
 			}
@@ -249,8 +245,7 @@ PX_INLINE void findParameter(const NxParameterized::Interface &obj,
 			{
 				if ( pf.pushNameMatch() )
 				{
-					Handle newHandle(*paramPtr);
-					paramPtr->getParameterHandle("", newHandle);
+					Handle newHandle(*paramPtr, "");
 					findParameter(*paramPtr,newHandle,pf);
 					pf.popNameMatch();
 				}
@@ -320,10 +315,10 @@ PX_INLINE void findParameter(const NxParameterized::Interface &obj,
 	}
 }
 
-PX_INLINE NxParameterized::Interface * findParam(const Interface &i,const char *long_name, Handle &result)
+PX_INLINE const Interface *findParam(const Interface &i,const char *long_name, Handle &result)
 {
-	NxParameterized::Interface *ret = 0;
-	result.setInterface((NxParameterized::Interface *)0);
+	const Interface *ret = 0;
+	result.setInterface((const NxParameterized::Interface *)0);
 
 	ParameterFind pf(i);
 	if ( pf.setSearchName(long_name) )
@@ -331,11 +326,18 @@ PX_INLINE NxParameterized::Interface * findParam(const Interface &i,const char *
 		Handle handle(i);
 		findParameter(i,handle,pf);
 		result 	= pf.mResult;
-		ret 	= (NxParameterized::Interface *)pf.mInterface;
+		ret 	= pf.mInterface;
 	}
 	return ret;
 }
 
+PX_INLINE Interface *findParam(Interface &i,const char *long_name, Handle &result)
+{
+	Interface *ret = const_cast<Interface *>(
+		findParam(const_cast<const Interface &>(i),long_name,result));
+	result.setInterface(ret); // Give write access to handle
+	return ret;
+}
 
 struct ParameterList
 {
@@ -420,7 +422,7 @@ struct ParameterList
 				local_strcat_s(temp, len+1, scratch);
 				longName = temp;
 				if ( type == TYPE_ARRAY )
-				{ 
+				{
 					handle.getArraySize(arrayIndex);
 				}
 			}
@@ -536,10 +538,10 @@ PX_INLINE void listParameters(const NxParameterized::Interface &obj,
 				{
 					handle.set(i);
 					listParameters(obj,handle,pf,arraySize);
-					const Definition *pd = handle.parameterDefinition();
-					DataType t = pd->type();
+					const Definition *elemPd = handle.parameterDefinition();
+					DataType elemType = elemPd->type();
 					handle.popIndex();
-					if ( !(t == TYPE_STRUCT || t == TYPE_ARRAY || t == TYPE_REF) )
+					if ( !(elemType == TYPE_STRUCT || elemType == TYPE_ARRAY || elemType == TYPE_REF) )
 					{
 						break;
 					}
@@ -552,8 +554,7 @@ PX_INLINE void listParameters(const NxParameterized::Interface &obj,
 			{
 				if ( pf.pushName(name,parentArraySize) )
 				{
-     				Handle newHandle(*paramPtr);
-     				paramPtr->getParameterHandle("", newHandle);
+     				Handle newHandle(*paramPtr, "");
      				listParameters(*paramPtr,newHandle,pf,0);
      				pf.popNameMatch();
      			}
@@ -598,92 +599,128 @@ PX_INLINE void	releaseParamList(physx::PxU32 resultCount,const ParamResult *resu
 	}
 }
 
-PX_INLINE void getNamedReferences(const NxParameterized::Interface &obj,
-								  Handle &handle,
-								  physx::PxU32 &refCount,
-								  NamedReferenceInterface &namedReference,
-								  bool isRecursive)
+/// Calls back for every reference.
+PX_INLINE void getReferences(const Interface &iface,
+										  Handle &handle,
+										  ReferenceInterface &cb,
+										  bool named,
+										  bool included,
+										  bool recursive)
 {
 	if ( handle.numIndexes() < 1 )
-	{
-		obj.getParameterHandle("",handle);
-	}
+		iface.getParameterHandle("",handle);
+
+	NxParameterized::Interface *paramPtr = 0;
+
 	const Definition *pd = handle.parameterDefinition();
-	DataType t = pd->type();
+	switch( pd->type() )
 	{
-		NxParameterized::Interface *paramPtr = 0;
-		if ( t == TYPE_REF )
+	case TYPE_REF:
+		handle.getParamRef(paramPtr);
+		if ( !paramPtr )
+			break;
+
+		if ( !pd->isIncludedRef() )
 		{
-			handle.getParamRef(paramPtr);
-			if ( paramPtr )
+			if( named )
+				cb.referenceCallback(handle);
+		}
+		else
+		{
+			if( included )
+				cb.referenceCallback(handle);
+
+			if ( recursive )
 			{
-				if ( !pd->isIncludedRef() )
-				{
-					// ok, it is a named reference!
-					if ( paramPtr->name() )
-					{
-						const char *remap = namedReference.namedReferenceCallback(paramPtr->className(),paramPtr->name(),handle);
-						if ( remap )
-						{
-							paramPtr->setName(remap);
-							refCount++;
-						}
-					}
-				}
-				else if ( isRecursive )
-				{
-					Handle newHandle(*paramPtr);
-					paramPtr->getParameterHandle("", newHandle);
-					getNamedReferences(*paramPtr,newHandle,refCount,namedReference,isRecursive);
-				}
+				Handle newHandle(*paramPtr, "");
+				getReferences(*paramPtr,newHandle,cb,named,included,recursive);
 			}
 		}
-		else if ( t == TYPE_STRUCT )
+		break;
+
+	case TYPE_STRUCT:
 		{
 			physx::PxU32 count = (physx::PxU32)pd->numChildren();
 			for (physx::PxU32 i=0; i<count; i++)
 			{
 				handle.set(i);
-				getNamedReferences(obj,handle,refCount,namedReference,isRecursive);
+				getReferences(iface,handle,cb,named,included,recursive);
 				handle.popIndex();
 			}
+
+			break;
 		}
-		else if ( t == TYPE_ARRAY )
+
+	case TYPE_ARRAY:
 		{
 			physx::PxI32 arraySize;
 			handle.getArraySize(arraySize);
-			if ( arraySize > 0 )
+			if ( arraySize <= 0 )
+				break;
+
+			const Definition *elemPd = pd->child(0);
+			bool scan = elemPd->type() == TYPE_ARRAY || elemPd->type() == TYPE_REF || elemPd->type() == TYPE_STRUCT;
+
+			if ( scan )
 			{
-				bool scan = false;
-				handle.set(0);
-				const Definition *pd = handle.parameterDefinition();
-				if ( pd->type() == TYPE_ARRAY || pd->type() == TYPE_REF || pd->type() == TYPE_STRUCT )
+				for (physx::PxI32 i=0; i<arraySize; i++)
 				{
-					scan = true;
-				}
-				handle.popIndex();
-				if ( scan )
-				{
-					for (physx::PxI32 i=0; i<arraySize; i++)
-					{
-						handle.set(i);
-						getNamedReferences(obj,handle,refCount,namedReference,isRecursive);
-						handle.popIndex();
-					}
+					handle.set(i);
+					getReferences(iface,handle,cb,named,included,recursive);
+					handle.popIndex();
 				}
 			}
+
+			break;
 		}
+
+	default:
+		break;
 	}
 }
+
+PX_INLINE void getReferences(const Interface &i,
+									 ReferenceInterface &cb,
+									 bool named,
+									 bool included,
+									 bool recursive)
+{
+	Handle handle(i);
+	getReferences(i,handle,cb,named,included,recursive);
+}
+
+class WrappedNamedReference: public ReferenceInterface
+{
+	NamedReferenceInterface &wrappedReference;
+
+	//Silence warnings on unable to generate assignment operator
+	template<typename T> void operator =(T) {}
+	void operator =(WrappedNamedReference) {}
+public:
+	physx::PxU32 refCount;
+
+	WrappedNamedReference(NamedReferenceInterface &wrappedReference_): wrappedReference(wrappedReference_), refCount(0) {}
+
+	void referenceCallback(Handle &handle)
+	{
+		Interface *iface;
+		handle.getParamRef(iface);
+		const char *name = wrappedReference.namedReferenceCallback(iface->className(), iface->name(), handle);
+		if( name )
+		{
+			iface->setName(name);
+			++refCount;
+		}
+	}
+};
 
 PX_INLINE physx::PxU32 getNamedReferences(const Interface &i,
 										  NamedReferenceInterface &namedReference,
 										  bool recursive)
 {
-	Handle handle(i);
-	physx::PxU32 refCount=0;
-	getNamedReferences(i,handle,refCount,namedReference,recursive);
-	return refCount;
+	WrappedNamedReference reference(namedReference);
+	getReferences(i, reference, true, false, recursive);
+	return reference.refCount;
 }
 
 
@@ -692,12 +729,11 @@ PX_INLINE bool getParamBool(const Interface &pm, const char *name, bool &value)
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamBool(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -710,7 +746,6 @@ PX_INLINE bool setParamBool(Interface &pm, const char *name, bool value)
 	{
 		ret = handle.setParamBool(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -719,12 +754,11 @@ PX_INLINE bool getParamString(const Interface &pm, const char *name, const char 
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamString(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -737,7 +771,6 @@ PX_INLINE bool setParamString(Interface &pm, const char *name, const char *value
 	{
 		ret = handle.setParamString(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -746,12 +779,11 @@ PX_INLINE bool getParamEnum(const Interface &pm, const char *name,  const char *
 {																   
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;   
 	NxParameterized::Handle handle(pm);							   
-	NxParameterized::Interface *iface = findParam(pm,name,handle);   
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);   
 	if ( iface )												   
 	{															   
 		ret = handle.getParamEnum(value);						   
 	}															   
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);				   
 	return (ret == NxParameterized::ERROR_NONE);													   
 }																   
 																   
@@ -764,7 +796,6 @@ PX_INLINE bool setParamEnum(Interface &pm, const char *name,  const char *value)
 	{
 		ret = handle.setParamEnum(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -773,25 +804,51 @@ PX_INLINE bool getParamRef(const Interface &pm, const char *name, NxParameterize
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamRef(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
-PX_INLINE bool setParamRef(Interface &pm, const char *name,  NxParameterized::Interface *value)
+PX_INLINE bool setParamRef(Interface &pm, const char *name,  NxParameterized::Interface *value, bool doDestroyOld)
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
 	NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
-		ret = handle.setParamRef(value);
+		ret = handle.setParamRef(value, doDestroyOld);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
+	return (ret == NxParameterized::ERROR_NONE);
+}
+
+PX_INLINE bool initParamRef(Interface &pm, const char *name, const char *className, bool doDestroyOld)
+{
+	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
+	NxParameterized::Handle handle(pm);
+	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	if ( iface )
+	{
+		ret = handle.initParamRef(className, doDestroyOld);
+	}
+	return (ret == NxParameterized::ERROR_NONE);
+}
+
+PX_INLINE bool initParamRef(Interface &pm, const char *name, const char *className, const char *objName, bool doDestroyOld)
+{
+	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
+	NxParameterized::Handle handle(pm);
+	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	if ( iface )
+	{
+		ret = handle.initParamRef(className, doDestroyOld);
+		NxParameterized::Interface *ref;
+		handle.getParamRef(ref);
+		if (ref)
+			ref->setName(objName);
+	}
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -800,12 +857,11 @@ PX_INLINE bool getParamI8(const Interface &pm, const char *name, physx::PxI8 &va
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamI8(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -818,7 +874,6 @@ PX_INLINE bool setParamI8(Interface &pm, const char *name, physx::PxI8 value)
 	{
 		ret = handle.setParamI8(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -827,12 +882,11 @@ PX_INLINE bool getParamI16(const Interface &pm, const char *name, physx::PxI16 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamI16(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -845,7 +899,6 @@ PX_INLINE bool setParamI16(Interface &pm, const char *name, physx::PxI16 value)
 	{
 		ret = handle.setParamI16(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -854,12 +907,11 @@ PX_INLINE bool getParamI32(const Interface &pm, const char *name, physx::PxI32 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamI32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -872,7 +924,6 @@ PX_INLINE bool setParamI32(Interface &pm, const char *name, physx::PxI32 value)
 	{
 		ret = handle.setParamI32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -881,12 +932,11 @@ PX_INLINE bool getParamI64(const Interface &pm, const char *name, physx::PxI64 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamI64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -899,7 +949,6 @@ PX_INLINE bool setParamI64(Interface &pm, const char *name, physx::PxI64 value)
 	{
 		ret = handle.setParamI64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -908,12 +957,11 @@ PX_INLINE bool getParamU8(const Interface &pm, const char *name, physx::PxU8 &va
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamU8(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -926,7 +974,6 @@ PX_INLINE bool setParamU8(Interface &pm, const char *name, physx::PxU8 value)
 	{
 		ret = handle.setParamU8(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -935,12 +982,11 @@ PX_INLINE bool getParamU16(const Interface &pm, const char *name, physx::PxU16 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamU16(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -953,7 +999,6 @@ PX_INLINE bool setParamU16(Interface &pm, const char *name, physx::PxU16 value)
 	{
 		ret = handle.setParamU16(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -962,12 +1007,11 @@ PX_INLINE bool getParamU32(const Interface &pm, const char *name, physx::PxU32 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamU32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -980,7 +1024,6 @@ PX_INLINE bool setParamU32(Interface &pm, const char *name, physx::PxU32 value)
 	{
 		ret = handle.setParamU32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -989,12 +1032,11 @@ PX_INLINE bool getParamU64(const Interface &pm, const char *name, physx::PxU64 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamU64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1007,7 +1049,6 @@ PX_INLINE bool setParamU64(Interface &pm, const char *name, physx::PxU64 value)
 	{
 		ret = handle.setParamU64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1016,12 +1057,11 @@ PX_INLINE bool getParamF32(const Interface &pm, const char *name, physx::PxF32 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamF32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1034,7 +1074,6 @@ PX_INLINE bool setParamF32(Interface &pm, const char *name, physx::PxF32 value)
 	{
 		ret = handle.setParamF32(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1043,12 +1082,11 @@ PX_INLINE bool getParamF64(const Interface &pm, const char *name, physx::PxF64 &
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamF64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1061,7 +1099,6 @@ PX_INLINE bool setParamF64(Interface &pm, const char *name, physx::PxF64 value)
 	{
 		ret = handle.setParamF64(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1070,12 +1107,11 @@ PX_INLINE bool getParamVec2(const Interface &pm, const char *name, physx::PxVec2
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamVec2(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1088,7 +1124,6 @@ PX_INLINE bool setParamVec2(Interface &pm, const char *name, const physx::PxVec2
 	{
 		ret = handle.setParamVec2(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1097,12 +1132,11 @@ PX_INLINE bool getParamVec3(const Interface &pm, const char *name, physx::PxVec3
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamVec3(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1115,7 +1149,6 @@ PX_INLINE bool setParamVec3(Interface &pm, const char *name, const physx::PxVec3
 	{
 		ret = handle.setParamVec3(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1124,12 +1157,11 @@ PX_INLINE bool getParamVec4(const Interface &pm, const char *name, physx::PxVec4
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamVec4(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1142,7 +1174,6 @@ PX_INLINE bool setParamVec4(Interface &pm, const char *name, const physx::PxVec4
 	{
 		ret = handle.setParamVec4(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1151,12 +1182,11 @@ PX_INLINE bool getParamQuat(const Interface &pm, const char *name, physx::PxQuat
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamQuat(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1169,7 +1199,6 @@ PX_INLINE bool setParamQuat(Interface &pm, const char *name, const physx::PxQuat
 	{
 		ret = handle.setParamQuat(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1178,12 +1207,11 @@ PX_INLINE bool getParamBounds3(const Interface &pm, const char *name, physx::PxB
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamBounds3(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1196,7 +1224,6 @@ PX_INLINE bool setParamBounds3(Interface &pm, const char *name, const physx::PxB
 	{
 		ret = handle.setParamBounds3(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1205,12 +1232,11 @@ PX_INLINE bool getParamMat33(const Interface &pm, const char *name, physx::PxMat
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamMat33(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1223,7 +1249,6 @@ PX_INLINE bool setParamMat33(Interface &pm, const char *name, const physx::PxMat
 	{
 		ret = handle.setParamMat33(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1232,12 +1257,11 @@ PX_INLINE bool getParamMat34(const Interface &pm, const char *name, physx::PxMat
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamMat34(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1250,7 +1274,6 @@ PX_INLINE bool setParamMat34(Interface &pm, const char *name, const physx::PxMat
 	{
 		ret = handle.setParamMat34(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1259,12 +1282,11 @@ PX_INLINE bool getParamMat44(const Interface &pm, const char *name, physx::PxMat
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
-	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
 		ret = handle.getParamMat44(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
@@ -1277,23 +1299,60 @@ PX_INLINE bool setParamMat44(Interface &pm, const char *name, const physx::PxMat
 	{
 		ret = handle.setParamMat44(value);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
-PX_INLINE bool getParamArraySize(const Interface &pm, const char *name, physx::PxI32 &arraySize)
+// Transform
+PX_INLINE bool getParamTransform(const Interface &pm, const char *name, physx::PxTransform &value)
+{
+	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
+	NxParameterized::Handle handle(pm);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
+	if ( iface )
+	{
+		ret = handle.getParamTransform(value);
+	}
+	return (ret == NxParameterized::ERROR_NONE);
+}
+
+PX_INLINE bool setParamTransform(Interface &pm, const char *name, const physx::PxTransform &value)
 {
 	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
 	NxParameterized::Handle handle(pm);
 	NxParameterized::Interface *iface = findParam(pm,name,handle);
 	if ( iface )
 	{
+		handle.setInterface( iface );	// set mIsConst to false
+		ret = handle.setParamTransform(value);
+	}
+	return (ret == NxParameterized::ERROR_NONE);
+}
+
+
+PX_INLINE bool getParamArraySize(const Interface &pm, const char *name, physx::PxI32 &arraySize)
+{
+	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
+	NxParameterized::Handle handle(pm);
+	const NxParameterized::Interface *iface = findParam(pm,name,handle);
+	if ( iface )
+	{
 		ret = handle.getArraySize(arraySize);
 	}
-	PX_ASSERT(ret == NxParameterized::ERROR_NONE);
+	return (ret == NxParameterized::ERROR_NONE);
+}
+
+PX_INLINE bool resizeParamArray(Interface &pm, const char *name, physx::PxI32 newSize)
+{
+	ErrorType ret = NxParameterized::ERROR_INVALID_PARAMETER_NAME;
+	NxParameterized::Handle handle(pm);
+	NxParameterized::Interface *iface = findParam(pm,name,handle);
+	if ( iface )
+	{
+		ret = handle.resizeArray(newSize);
+	}
 	return (ret == NxParameterized::ERROR_NONE);
 }
 
 #pragma warning(pop)
 
-};
+}

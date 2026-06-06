@@ -27,17 +27,13 @@
 #include "multiplayer/MasterServerLogic.h"
 #include "multiplayer/LoginSessionPoller.h"
 
-#include "ObjectsCode/Gameplay/BaseControlPoint.h"
-#include "ObjectsCode/Gameplay/obj_SupplyCrate.h"
-#include "ObjectsCode/Gameplay/obj_SiegeObjective.h"
-#include "ObjectsCode/Gameplay/obj_BombPlacement.h"
+#include "ObjectsCode/Gameplay/BasePlayerSpawnPoint.h"
+#include "ObjectsCode/Gameplay/BaseItemSpawnPoint.h"
 
-#include "UI\m_EndRound.h"
-#include "UI\FrontEndNew.h"
-#include "UI\m_Login.h"
-#include "UI\m_LoginGNA.h"
+#include "UI\FrontEndWarZ.h"
 #include "UI\m_LoadingScreen.h"
-#include "UI\WelcomePackage.h"
+
+#include "Editors/CollectionsManager.h"
 
 	char		_p2p_masterHost[MAX_PATH] = ""; // master server ip
 	int		_p2p_masterPort = GBNET_CLIENT_PORT;
@@ -84,6 +80,7 @@ static bool ConnectToGameServer()
 	return gClientLogic().Connect(_p2p_gameHost, _p2p_gamePort);
 }
 
+#ifndef FINAL_BUILD
 static void MasterServerQuckJoin()
 {
 	r3d_assert(_p2p_masterHost[0]);
@@ -92,29 +89,27 @@ static void MasterServerQuckJoin()
 	if(!DoConnectScreen(&gMasterServerLogic, &MasterServerLogic::IsConnected, gLangMngr.getString("WaitConnectingToServer"), 30.f ) )
 		r3dError("can't connect to master server\n");
 
-	gMasterServerLogic.RequestGameList();
-	gMasterServerLogic.WaitForGameList();
+	NetPacketsGameBrowser::GBPKT_C2M_QuickGameReq_s n;
+	n.CustomerID = gUserProfile.CustomerID;
+	n.gameMap    = d_use_test_map->GetInt();
+	n.region     = 0xFF;
+		
+	gMasterServerLogic.SendJoinQuickGame(n);
+	
+	const float endTime = r3dGetTime() + 60.0f;
+	while(r3dGetTime() < endTime)
+	{
+		::Sleep(10);
+		gMasterServerLogic.Tick();
 
-	if(gMasterServerLogic.games_.size() > 0) 
-	{
-		gMasterServerLogic.SendJoinGame(0);
-	} 
-#ifndef FINAL_BUILD
-	else
-	{
-		NetPacketsGameBrowser::GBPKT_C2M_CreateGame_s n;
-		n.mapId           = GBGameInfo::MAPID_Editor_Particles;
-		n.mapType         = GBGameInfo::MAPT_Conquest;
-		n.maxPlayers   = 16;
-		n.timeLimitVar    = 3;
-		n.numRoundsVar	 = 0;
-		n.friendlyFire    = 0;
-		n.autoBalance     = 1;
-		n.isBasicGame	= 0;
-		gMasterServerLogic.SendCreateGame(n);
+		if(!gMasterServerLogic.IsConnected())
+			break;
+
+		if(gMasterServerLogic.gameJoinAnswered_)
+		{
+			break;
+		}
 	}
-#endif
-	gMasterServerLogic.WaitForGameJoin();
 
 	if(gMasterServerLogic.gameJoinAnswer_.result != GBPKT_M2C_JoinGameAns_s::rOk)
 		r3dError("failed to join game: res %d\n", gMasterServerLogic.gameJoinAnswer_.result);
@@ -122,60 +117,26 @@ static void MasterServerQuckJoin()
 	gMasterServerLogic.GetJoinedGameServer(_p2p_gameHost, &_p2p_gamePort, &_p2p_gameSessionId);
 
 	gMasterServerLogic.Disconnect();
+	
+	extern bool g_bDisableP2PSendToHost;
+	g_bDisableP2PSendToHost = false;
 }
-
-static int processMenu(UIMenu* menu)
-{
-	r3dSetAsyncLoading( 0 ) ;
-	menu->Load();
-	int res = 0;
-	if(menu->Initialize())
-	{
-		while(res == 0) {
-			res = menu->Update();
-
-			FileTrackDoWork();
-		}
-	}
-	menu->Unload();
-	SAFE_DELETE(menu);
-	return res;
-}
-
-static int showLoginMenu(const wchar_t* showMessage)
-{
-	const char* swf = "data\\menu\\LoginMenu.swf";
-
-	extern int RUS_CLIENT;
-	if(RUS_CLIENT && g_test_rus_client->GetBool()==false)
-	{
-		CLoginGNAMenu* menu = new CLoginGNAMenu(swf);
-		menu->m_ShowMessageIfAny = showMessage;
-		return processMenu(menu);
-	}
-	CLoginMenu* menu = new CLoginMenu(swf);
-	menu->m_ShowMessageIfAny = showMessage;
-	return processMenu(menu);
-}
-
-static int showFrontEndMenu(EGameResult gameResult)
-{
-	UIMenu* frontend = NULL;
-	frontend = new FrontendUI("data\\menu\\Frontend_New.swf", gameResult);
-//	else
-//		frontend = new CFrontendMenu("data\\menu\\Frontend.swf", gameResult);
-	return processMenu(frontend);
-}
-
-static int showWelcomePackageMenu()
-{
-	const char* swf = "data\\menu\\WelcomePackage2.swf";
-	WelcomePackageMenu* menu = new WelcomePackageMenu(swf);
-	return processMenu(menu);
-}
+#endif
 
 void* MainMenuSoundEvent = 0;
-extern int RUS_CLIENT;
+
+static FrontendWarZ* frontend = NULL; // static to prevent extern
+
+void loadFrontend()
+{
+	r3d_assert(frontend == NULL);
+
+	frontend = new FrontendWarZ("data\\menu\\Frontend.swf");
+	r3dSetAsyncLoading( 0 ) ;
+	frontend->Load();
+	frontend->Initialize();
+}
+
 void ExecuteNetworkGame()
 {
 	// make sure that our login session poller will be terminated on function exit
@@ -196,11 +157,8 @@ void ExecuteNetworkGame()
 	}
 
 	int mainmenuTheme = -1;
-	//if(!RUS_CLIENT)
-	//	mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/mainmenu_theme");
-	//else
-		mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_MENU_MUSIC");
-	MainMenuSoundEvent = snd_PlaySound(mainmenuTheme, r3dPoint3D(0,0,0));
+	mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_MENU_MUSIC");
+	MainMenuSoundEvent = SoundSys.Play(mainmenuTheme, r3dPoint3D(0,0,0));
 
 	r3dscpy(_p2p_masterHost, g_serverip->GetString());
 
@@ -213,46 +171,43 @@ void ExecuteNetworkGame()
 	g_trees->SetBool(true);
 	d_mouse_window_lock->SetBool(true);
 
-#if 0 // buy packs is disabled for now!
-	extern int RUS_CLIENT;
-	int numRans = g_num_game_executed2->GetInt();
-	if(/*((numRans%10==0||numRans == 1) && !RUS_CLIENT) ||*/ (RUS_CLIENT && numRans%3==0))
-		FrontendUI::frontendRequestShowBuyPack = true;
-#endif
-
 	const wchar_t* showLoginErrorMsg = 0;
 
+	EGameResult gameResult = GRESULT_Unknown;
+
 repeat_the_login:
+	if(!frontend && !quickGameJoin)
+		loadFrontend();
 	gLoginSessionPoller.Stop();
 
 	if(!quickGameJoin)
 	{
-		int login_ret = showLoginMenu(showLoginErrorMsg);
+		int res = 0;
+		frontend->initLoginStep(showLoginErrorMsg);
+		while(res == 0) {
+			res = frontend->Update();
+		}
 		showLoginErrorMsg = 0;
-		if(login_ret == CLoginMenu::RET_Exit)
+		if(res == FrontEndShared::RET_Exit)
 			return;
 
 		gLoginSessionPoller.Start(gUserProfile.CustomerID, gUserProfile.SessionID);
 	}
-	FrontendUI::frontendFirstTimeInit = true; // each time after login menu, show welcome screen
 
-	EGameResult gameResult = GRESULT_Unknown;
 repeat_the_menu:
+	if(!frontend)
+		loadFrontend();
 	if(!quickGameJoin)
 	{
-		int res;
-		if(gUserProfile.AccountStatus==100) // just registered, show welcome package
-		{
-			res = showWelcomePackageMenu();
-			if(res == WelcomePackageMenu::RET_Exit || res == 0)
-				return;
-			gameResult = GRESULT_ShownWelcomePackage;
+		int res=0;
+		frontend->postLoginStepInit(gameResult);
+		while(res == 0) {
+			res = frontend->Update();
+			FileTrackDoWork();
 		}
 
-		if(gameResult != GRESULT_Finished_ReadyNextRound)
-			res = showFrontEndMenu(gameResult);
-		else
-			res = FrontEndShared::RET_JoinGame;
+		frontend->Unload();
+		SAFE_DELETE(frontend);
 
 		gMasterServerLogic.Disconnect();
 
@@ -278,20 +233,19 @@ repeat_the_menu:
 	}
 	else
 	{
-		// this code path is used only for testing when quickGameJoin is true.
-		SetNewLogFile();
+#ifndef FINAL_BUILD
+		FrontendWarZ_LoginProcessThread(frontend);
+		if(gUserProfile.CustomerID == 0)
+			r3dError("bad login");
+
+		if(gUserProfile.GetProfile() != 0)
+			r3dError("unable to get profile");
+		gUserProfile.SelectedCharID = 0;
 
 		StartLoadingScreen();
 		MasterServerQuckJoin();
 		StopLoadingScreen();
-
-		// game server now require customer ID
-		// so this is valid line because we skipped frontend/login in this code path
-		gUserProfile.CustomerID = 1282052887;
-
-		// fill temporary profile, for spawn menu rendering
-		gUserProfile.ProfileData.ArmorySlots[0].LoadoutID = 1;
-		gUserProfile.ProfileData.ArmorySlots[0].PrimaryWeaponID = 101001;
+#endif		
 	}
 
 	r3dEnsureDeviceAvailable();
@@ -324,11 +278,10 @@ repeat_the_menu:
 			goto repeat_the_login;
 		}
 	}
-	gLoginSessionPoller.ForceTick(); // force to update that we joined the game
 
 	r3dEnsureDeviceAvailable();
 
-	if(gClientLogic().WaitForLevelName() == 0)
+	if(!gClientLogic().RequestToJoinGame())
 	{
 		gClientLogic().Disconnect();
 
@@ -337,91 +290,21 @@ repeat_the_menu:
 		goto repeat_the_menu;
 	}
 
+	gLoginSessionPoller.ForceTick(); // force to update that we joined the game
+
 	switch(gClientLogic().m_gameInfo.mapId) 
 	{
 	default: 
 		r3dError("invalid map id\n");
 	case GBGameInfo::MAPID_Editor_Particles: 
-		r3dGameLevel::SetHomeDir("Editor_Particles"); 
+		r3dGameLevel::SetHomeDir("WorkInProgress\\Editor_Particles"); 
 		break;
-	case GBGameInfo::MAPID_WO_Crossroads16: 
-		r3dGameLevel::SetHomeDir("WO_Crossroads16"); 
+	case GBGameInfo::MAPID_ServerTest:
+		r3dGameLevel::SetHomeDir("WorkInProgress\\ServerTest");
 		break;
-	case GBGameInfo::MAPID_WO_Crossroads2: 
-		r3dGameLevel::SetHomeDir("WO_Crossroads2"); 
+	case GBGameInfo::MAPID_WZ_Colorado: 
+		r3dGameLevel::SetHomeDir("WZ_Colorado"); 
 		break;
-	case GBGameInfo::MAPID_WO_Nightfall_CQ: 
-		r3dGameLevel::SetHomeDir("wo_nightfall_cq"); 
-		break;
-	case GBGameInfo::MAPID_WO_Grozny:
-		r3dGameLevel::SetHomeDir("WO_Grozny"); 
-		break;
-	case GBGameInfo::MAPID_WO_Grozny_CQ:
-		r3dGameLevel::SetHomeDir("WO_Grozny_CQ"); 
-		break;
-	case GBGameInfo::MAPID_WO_Torn: 
-		r3dGameLevel::SetHomeDir("wo_torn_cq"); 
-		break;
-	case GBGameInfo::MAPID_WO_Torn_CT: 
-		r3dGameLevel::SetHomeDir("WO_Torn_ct"); 
-		break;
-	case GBGameInfo::MAPID_WO_Shipyard: 
-		r3dGameLevel::SetHomeDir("wo_shippingyard"); 
-		break;
-	case GBGameInfo::MAPID_WO_Wasteland: 
-		r3dGameLevel::SetHomeDir("wo_wasteland"); 
-		break;
-    case GBGameInfo::MAPID_wo_wasteland_classic: 
-		r3dGameLevel::SetHomeDir("wo_wasteland_classic"); 
-		break;
-	case GBGameInfo::MAPID_WO_EasternBunkerTDM: 
-		r3dGameLevel::SetHomeDir("wo_eastern_bunker_tdm"); 
-		break;
-	case GBGameInfo::MAPID_wo_TornTown_tdm: 
-		r3dGameLevel::SetHomeDir("wo_TornTown_tdm"); 
-		break;
-	case GBGameInfo::MAPID_wo_valley: 
-		r3dGameLevel::SetHomeDir("wo_valley"); 
-		break;
-	case GBGameInfo::MAPID_wr_dust_old:
-		r3dGameLevel::SetHomeDir("wr_dust_old"); 
-		break;
-    case GBGameInfo::MAPID_WO_Inferno:
-		r3dGameLevel::SetHomeDir("wo_inferno"); 
-		break;
-	case GBGameInfo::MAPID_WO_Jungle02:
-		r3dGameLevel::SetHomeDir("wo_jungleruins");
-		break;
-	case GBGameInfo::MAPID_WO_Citadel_DM:
-		r3dGameLevel::SetHomeDir("wo_citadel_dm");
-		break;
-	case GBGameInfo::MAPID_WO_TestConquest: 
-		r3dGameLevel::SetHomeDir("WorkInProgress/TestConquest");
-		break;
-	case GBGameInfo::MAPID_WO_TestDeathmatch: 
-		r3dGameLevel::SetHomeDir("WorkInProgress/TestDeathmatch");
-		break;
-	case GBGameInfo::MAPID_WO_TestSabotage: 
-		r3dGameLevel::SetHomeDir("WorkInProgress/TestSabotage");
-		break;
-	case GBGameInfo::MAPID_BurningSea: 
-		r3dGameLevel::SetHomeDir("WO_Burning_Sea");
-        break;
-	case GBGameInfo::MAPID_WO_Torn_classic: 
-		r3dGameLevel::SetHomeDir("WO_Torn_classic");
-        break;
-	case GBGameInfo::MAPID_wo_dm_shippingyard2: 
-		r3dGameLevel::SetHomeDir("wo_dm_shippingyard2");
-        break;
-	case GBGameInfo::MAPID_wo_crossroadsredux_cq: 
-		r3dGameLevel::SetHomeDir("wo_crossroadsredux_cq");
-        break;
-	case GBGameInfo::MAPID_WO_Burning_Sea_classic: 
-		r3dGameLevel::SetHomeDir("WO_Burning_Sea_classic");
-        break;
-	case GBGameInfo::MAPID_MC_NukeTownDM: 
-		r3dGameLevel::SetHomeDir("MC_NukeTownDM");
-        break;
 	}
 
 	// start the game
@@ -445,6 +328,10 @@ repeat_the_menu:
 		showLoginErrorMsg = gLangMngr.getString("LoginMenu_DoubleLogin");
 		goto repeat_the_login;
 	}
+	if(gameResult == GRESULT_Unsync) {
+		showLoginErrorMsg = gLangMngr.getString("ClientMustBeUpdated");
+		goto repeat_the_login;
+	}
 
 	if(gameResult != GRESULT_Exit)
 		goto repeat_the_menu;
@@ -453,38 +340,13 @@ repeat_the_menu:
 
 static EGameResult PlayNetworkGame()
 {
-	gCPMgr.Reset();
-	gSiegeObjMgr.Reset();
-	g_SupplyCrateMngr.Reset();
-	gBombPlacementMgr.Reset();
-
 	r3d_assert(GameWorld().bInited == 0);
-	r3d_assert(GameWorld().GetFirstObject() == NULL);
-	r3d_assert(gCPMgr.NumCP() == 0);
-	r3d_assert(g_SupplyCrateMngr.getNumCrates() == 0);
 
 	r_hud_filter_mode->SetInt(0); // turn off NVG
-
-	if(!gClientLogic().RequestToJoinGame())
-	{
-		gClientLogic().Disconnect();
-		return GRESULT_Failed_To_Join_Game;
-	}
 
 	r3dEnsureDeviceAvailable();
 
 	InitGame();
-
-	if(gClientLogic().m_gameInfo.mapType == GBGameInfo::MAPT_Bomb)
-	{
-		r3d_assert(gClientLogic().m_DroppedBomb == NULL);
-		gClientLogic().m_DroppedBomb = (obj_DroppedBomb*)srv_CreateGameObject("obj_DroppedBomb", "droppedBomb", r3dPoint3D(0,0,0));
-	}
-
-	extern void Do_Collection_Editor_Init();
-	Do_Collection_Editor_Init();
-
-	gCPMgr.CheckForNeededPoints();
 
 	extern void TPSGameHUD_OnStartGame();
 	TPSGameHUD_OnStartGame();
@@ -531,9 +393,17 @@ static EGameResult PlayNetworkGame()
 
 			GameFrameStart();
 
-			if(!gClientLogic().serverConnected_ && !gClientLogic().gameFinished_)
+			if(!gClientLogic().serverConnected_)
 			{
-				gameResult = GRESULT_Disconnect;
+				if(gClientLogic().disconnectStatus_ == 2)
+				{
+					// disconnect was acked, game is finished
+					gameResult = GRESULT_Finished;
+				}
+				else
+				{
+					gameResult = GRESULT_Disconnect;
+				}
 				continue;
 			}
 
@@ -541,15 +411,16 @@ static EGameResult PlayNetworkGame()
 
 			R3DPROFILE_END("Game Frame");
 
-			if(gClientLogic().gameReadyToExit)
-			{
-				gameResult = GRESULT_Finished;
-				if(gClientLogic().gameReadyForNextRound)
-					gameResult = GRESULT_Finished_ReadyNextRound;
-			}
-
 			if(IsNeedExit())
-				gameResult = GRESULT_Exit;
+			{
+				// we should not allow quick exit from game
+				// we can't just exit, because RakNet will properly disconnect immidiately.
+				//- gameResult = GRESULT_Exit;
+
+				// so we either need to request exit with PKT_C2S_DisconnectReq and wait
+				// or terminate application so player will be disconnected on timeout
+				TerminateProcess(r3d_CurrentProcess, 0);
+			}
 
 			// check for double login.
 			#ifdef FINAL_BUILD
@@ -561,33 +432,39 @@ static EGameResult PlayNetworkGame()
 		} 
 	}
 	else // failed to connect
-		gameResult = GRESULT_Disconnect;
-	
-	if(gameResult == GRESULT_Finished || gameResult == GRESULT_Finished_ReadyNextRound) // wait for server to update sql
 	{
-		if(gClientLogic().gameFinished_) // if game has finished, we need to wait for server before grabbing our profile
+		switch(gClientLogic().gameStartResult_)
 		{
-			DoConnectScreen( (ClientGameLogic*)&gClientLogic(), &ClientGameLogic::wait_GameClosed, gLangMngr.getString("WaitServerCloseGame"), 60.f );
-		}
+		case PKT_S2C_StartGameAns_s::RES_Timeout:
+			gameResult = GRESULT_Timeout;
+			break;
+		case PKT_S2C_StartGameAns_s::RES_Failed:
+			gameResult = GRESULT_Failed_To_Join_Game;
+			break;
+		case PKT_S2C_StartGameAns_s::RES_UNSYNC:
+			gameResult = GRESULT_Unsync;
+			break;
+		case PKT_S2C_StartGameAns_s::RES_InvalidLogin:
+			gameResult = GRESULT_DoubleLogin;
+			break;
+		case PKT_S2C_StartGameAns_s::RES_StillInGame:
+			gameResult = GRESULT_StillInGame;
+			break;
+		default:
+			gameResult = GRESULT_Disconnect;
+			break;
+		}		
 	}
-
+	
 	gClientLogic().Disconnect();
 
-	extern void Unload_Collections();
-	Unload_Collections();
-
 	DestroyGame();
-
-	gClientLogic().m_DroppedBomb = NULL;
 
 	if(gameResult != GRESULT_Exit)
 	{
 		int mainmenuTheme = -1;
-		//if(!RUS_CLIENT)
-		//	mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/mainmenu_theme");
-		//else
-			mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_MENU_MUSIC");
-		MainMenuSoundEvent = snd_PlaySound(mainmenuTheme, r3dPoint3D(0,0,0));
+		mainmenuTheme = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_MENU_MUSIC");
+		MainMenuSoundEvent = SoundSys.Play(mainmenuTheme, r3dPoint3D(0,0,0));
 	}
 
 	return gameResult;

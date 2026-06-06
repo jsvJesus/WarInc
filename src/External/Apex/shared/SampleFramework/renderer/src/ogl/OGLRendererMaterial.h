@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -43,66 +43,72 @@
 
 #include "OGLRenderer.h"
 
-class OGLRendererMaterial : public RendererMaterial
+namespace SampleRenderer
 {
-	friend class OGLRendererMesh;
+
+	class OGLRendererMaterial : public RendererMaterial
+	{
+		friend class OGLRendererMesh;
 	public:
 		OGLRendererMaterial(OGLRenderer &renderer, const RendererMaterialDesc &desc);
 		virtual ~OGLRendererMaterial(void);
-		virtual void setModelMatrix(const physx::PxF32 *matrix) 
+		virtual void setModelMatrix(const float *matrix) 
 		{
 			PX_FORCE_PARAMETER_REFERENCE(matrix);
 			PX_ALWAYS_ASSERT();
 		}
-		
+
 	private:
+		virtual const Renderer& getRenderer() const { return m_renderer; }
 		virtual void bind(RendererMaterial::Pass pass, RendererMaterialInstance *materialInstance, bool instanced) const;
 		virtual void bindMeshState(bool instanced) const;
 		virtual void unbind(void) const;
 		virtual void bindVariable(Pass pass, const Variable &variable, const void *data) const;
-		
-	#if defined(RENDERER_ENABLE_CG)
+
+#if defined(RENDERER_ENABLE_CG)
 		void loadCustomConstants(CGprogram program, Pass pass);
-	#endif
-	
+#endif
+
 	private:
-	#if defined(RENDERER_ENABLE_CG)
+#if defined(RENDERER_ENABLE_CG)
 		class CGVariable : public Variable
 		{
 			friend class OGLRendererMaterial;
-			public:
-				CGVariable(const char *name, VariableType type, physx::PxU32 offset);
-				virtual ~CGVariable(void);
-				
-				void addVertexHandle(CGparameter handle);
-				void addFragmentHandle(CGparameter handle, Pass pass);
-				
-			private:
-				CGparameter m_vertexHandle;
-				CGparameter m_fragmentHandles[NUM_PASSES];
+		public:
+			CGVariable(const char *name, VariableType type, PxU32 offset);
+			virtual ~CGVariable(void);
+
+			void addVertexHandle(CGparameter handle);
+			void addFragmentHandle(CGparameter handle, Pass pass);
+
+		private:
+			CGparameter m_vertexHandle;
+			CGparameter m_fragmentHandles[NUM_PASSES];
 		};
-	#endif
-	
+#endif
+
 	private:
 		OGLRendererMaterial &operator=(const OGLRendererMaterial&) { return *this; }
-		
+
 	private:
 		OGLRenderer &m_renderer;
-		
+
 		GLenum       m_glAlphaTestFunc;
-		
-	#if defined(RENDERER_ENABLE_CG)
+
+#if defined(RENDERER_ENABLE_CG)
 		CGprofile    m_vertexProfile;
 		CGprogram    m_vertexProgram;
-		
+
 		CGprofile    m_fragmentProfile;
 		CGprogram    m_fragmentPrograms[NUM_PASSES];
-	#if defined(RENDERER_PS3)
-public:
-	CGprogram GetVertexProgramPS3(){ return m_vertexProgram;}
-	#endif
-	#endif
-};
+#if defined(RENDERER_PS3)
+	public:
+		CGprogram GetVertexProgramPS3(){ return m_vertexProgram;}
+#endif
+#endif
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

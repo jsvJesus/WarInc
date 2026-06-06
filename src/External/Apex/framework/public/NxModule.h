@@ -1,46 +1,41 @@
-#include "NxApex.h"
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
 
-#ifndef __NX_MODULE_H__
-#define __NX_MODULE_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+#ifndef NX_MODULE_H
+#define NX_MODULE_H
 
 /*!
 \file
 \brief APEX Module API
 */
+
+#include "NxApexInterface.h"
+#include "NxApexSDK.h"
+#include "foundation/PxSimpleTypes.h"
 
 namespace physx
 {
@@ -49,6 +44,8 @@ namespace apex
 
 PX_PUSH_PACK_DEFAULT
 
+class NxApexRenderableIterator;
+
 /**
 \brief A structure that holds two templated values, a min and a max
 */
@@ -56,14 +53,26 @@ template <typename T>
 struct NxRange
 {
 	NxRange() {};
+	/**
+	\brief Constructor, sets min amd max values
+	*/
 	NxRange(T inMin, T inMax) : minimum(inMin), maximum(inMax) {};
 
+	/**
+	\brief operator ==
+	*/
 	bool operator== (const NxRange& r) const
 	{
 		return minimum == r.minimum && maximum == r.maximum;
 	}
 
+	/**
+	\brief Minimal value
+	*/
 	T minimum;
+	/**
+	\brief Maximal value
+	*/
 	T maximum;
 };
 
@@ -75,10 +84,24 @@ struct NxApexParameter
 {
 	NxApexParameter() : name(NULL), current(0) {};
 
+	/**
+	\brief Constructor, sets name, range and current value
+	*/
 	NxApexParameter(const char* inName, NxRange<physx::PxU32> inRange) : name(inName), range(inRange), current(inRange.minimum) {}
 
+	/**
+	\brief Name of the parameter
+	*/
 	const char* name;
+
+	/**
+	\brief Range for the parameter value
+	*/
 	NxRange<physx::PxU32> range;
+
+	/**
+	\brief Range for the parameter value
+	*/
 	physx::PxU32 current;
 };
 
@@ -88,6 +111,9 @@ struct NxApexParameter
 class NxInterpolator
 {
 public:
+	/**
+	\brief Scales a value from one range to another
+	*/
 	virtual physx::PxF32 interpolate(physx::PxF32 inCurrent, physx::PxF32 inMin, physx::PxF32 inMax, physx::PxF32 outMin, physx::PxF32 outMax) = 0;
 };
 
@@ -153,17 +179,34 @@ public:
 	virtual NxApexRenderableIterator* createRenderableIterator(const NxApexScene&) = 0;
 
 	/**
-	\brief Set module LOD weights
-
-	Sets scaling factors that determine how the units of benefit and resource used by
-	this module relate to those of other modules.
+	\brief Get the cost of one LOD aspect unit.
 	*/
-	virtual void setLODWeights(physx::PxF32 benefitWeight, physx::PxF32 resourceWeight) = 0;
+	virtual physx::PxF32 getLODUnitCost() const = 0;
 
 	/**
-	\brief Retrieves the currently used LOD Weights.
+	\brief Set the cost of one LOD aspect unit.
 	*/
-	virtual void getLODWeights(physx::PxF32& benefitWeight, physx::PxF32& resourceWeight) const = 0;
+	virtual void setLODUnitCost(physx::PxF32) = 0;
+
+	/**
+	\brief Get the resource value of one unit of benefit.
+	*/
+	virtual physx::PxF32 getLODBenefitValue() const = 0;
+
+	/**
+	\brief Set the resource value of one unit of benefit.
+	*/
+	virtual void setLODBenefitValue(physx::PxF32) = 0;
+
+	/**
+	\brief Get enabled/disabled state of automatic LOD system.
+	*/
+	virtual bool getLODEnabled() const = 0;
+
+	/**
+	\brief Set enabled/disabled state of automatic LOD system.
+	*/
+	virtual void setLODEnabled(bool) = 0;
 };
 
 PX_POP_PACK

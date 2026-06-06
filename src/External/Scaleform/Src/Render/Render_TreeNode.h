@@ -254,13 +254,6 @@ public:
         return state ? state->GetFilters() : 0;
     }
 
-    void              SetOrigScale9Parent(TreeNode* origParent);
-    TreeNode*         GetOrigScale9Parent() const
-    {
-        const OrigScale9ParentState* state = GetState<OrigScale9ParentState>();
-        return state ? state->GetNode() : 0;
-    }
-
     // Treat this TreeNode as 2D only
     void        Clear3D();
     // Determine if this TreeNode has a 3D transform

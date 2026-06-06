@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,10 +34,12 @@
  */
 #include <RendererDirectionalLightDesc.h>
 
+using namespace SampleRenderer;
+
 RendererDirectionalLightDesc::RendererDirectionalLightDesc(void) :
-	RendererLightDesc(RendererLight::TYPE_DIRECTIONAL)
+RendererLightDesc(RendererLight::TYPE_DIRECTIONAL)
 {
-	direction = physx::PxVec3(0,0,0);
+	direction = PxVec3(0,0,0);
 }
 
 bool RendererDirectionalLightDesc::isValid(void) const

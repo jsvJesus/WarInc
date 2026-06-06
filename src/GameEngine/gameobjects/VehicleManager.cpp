@@ -12,14 +12,11 @@
 #include "PhysXWorld.h"
 #include "PhysXRepXHelpers.h"
 #include "ObjManag.h"
-#include "vehicle/PxVehicle.h"
+#include "vehicle/PxVehicleSDK.h"
 #include "geometry/PxConvexMeshGeometry.h"
 #include "PxBatchQueryDesc.h"
 
 #include "VehicleManager.h"
-
-#include <memory>
-
 #include "obj_Vehicle.h"
 #include "VehicleDescriptor.h"
 
@@ -28,13 +25,14 @@
 namespace
 {
 	void ConvertCoordinateSystems(PxRigidDynamic *a);
+
 	physx::PxVehicleDrivableSurfaceType PX_ALIGN(16, drivableSurfaceType);
 
-	const int MAX_NUM_SURFACE_TYPES = 2;
-	const int MAX_NUM_TYRE_TYPES = 2;
-	PxF32 PX_ALIGN(16, gTyreFrictionMultipliers[MAX_NUM_SURFACE_TYPES][MAX_NUM_TYRE_TYPES])=
+	const int MAX_NUM_SURFACE_TYPES = 1;
+	const int MAX_NUM_TYRE_TYPES = 1;
+	PxF32 gTyreFrictionMultipliers[MAX_NUM_SURFACE_TYPES][MAX_NUM_TYRE_TYPES] =
 	{
-		2.0f, 1.5f, 1.5f, 1.5f
+		3.0f//, 1.5f, 1.5f, 1.5f
 	};
 
 //////////////////////////////////////////////////////////////////////////
@@ -87,7 +85,7 @@ namespace
 
 //////////////////////////////////////////////////////////////////////////
 
-	void ComputeWheelWidthsAndRadii(PxConvexMesh** wheelConvexMeshes, PxF32* wheelWidths, PxF32* wheelRadii, PxU32 numWheels)
+	void ComputeWheelWidthsAndRadii(const PxConvexMesh** wheelConvexMeshes, PxF32* wheelWidths, PxF32* wheelRadii, PxU32 numWheels)
 	{
 		for(PxU32 i=0;i<numWheels;i++)
 		{
@@ -104,8 +102,8 @@ namespace
 				wheelMax.y=PxMax(wheelMax.y,wheelVerts[j].y);
 				wheelMax.z=PxMax(wheelMax.z,wheelVerts[j].z);
 			}
-			wheelWidths[i]=wheelMax.x-wheelMin.x;
-			wheelRadii[i]=PxMax(wheelMax.y,wheelMax.z);//*0.975f;
+			wheelWidths[i] = wheelMax.x - wheelMin.x;
+			wheelRadii[i] = PxMax(wheelMax.y,wheelMax.z) * 0.975f;
 		}
 	}
 
@@ -131,74 +129,19 @@ namespace
 	}
 
 //////////////////////////////////////////////////////////////////////////
-
-	void SetVehicleGeometricData
-	(
-		const PxVec3 &chassisDims,
-		const PxVec3* const wheelCentreOffsets,
-		const PxF32* const wheelWidths,
-		const PxF32* const wheelRadii,
-		PxVehicle4WSimpleSetup& simpleSetup
-	)
-	{
-		//Chassis descriptor.
-		simpleSetup.mChassisDims = chassisDims;
-		simpleSetup.mChassisCMOffset=PxVec3(0.0f,-chassisDims.y*0.5f+0.65f,0.25f);
-
-		//Wheels descriptor.
-		for(PxU32 i=0;i<PxVehicle4WSimulationData::eNUM_WHEELS;i++)
-		{
-			simpleSetup.mWheelCentreCMOffsets[i]=wheelCentreOffsets[i]-simpleSetup.mChassisCMOffset;
-		}
-		simpleSetup.mFrontWheelWidth=wheelWidths[0];
-		simpleSetup.mFrontWheelRadius=wheelRadii[0];
-		simpleSetup.mRearWheelWidth=wheelWidths[2];
-		simpleSetup.mRearWheelRadius=wheelRadii[2];
-
-		//Suspension descriptor.
-		simpleSetup.mFrontSuspensionTravelDir=PxVec3(0.0f,-1.0f,0.0f);
-		simpleSetup.mRearSuspensionTravelDir=PxVec3(0.0f,-1.0f,0.0f);
-	}
-
-//////////////////////////////////////////////////////////////////////////
 	
 	PxVec3 ComputeChassisMOI(const PxVec3& chassisDims, const PxF32 chassisMass)
 	{
 		//We can approximately work out the chassis moment of inertia from the aabb.
 		PxVec3 chassisMOI
-			(chassisDims.y*chassisDims.y + chassisDims.z*chassisDims.z,
-			chassisDims.x*chassisDims.x + chassisDims.z*chassisDims.z,
-			chassisDims.x*chassisDims.x + chassisDims.y*chassisDims.y);
-		chassisMOI*=chassisMass*0.0833f;
+		(
+			(chassisDims.y * chassisDims.y + chassisDims.z * chassisDims.z) * chassisMass / 12.0f,
+			(chassisDims.x * chassisDims.x + chassisDims.z * chassisDims.z) * chassisMass / 12.0f,
+			(chassisDims.x * chassisDims.x + chassisDims.y * chassisDims.y) * chassisMass / 12.0f
+		);
 		//Well, the AABB moi gives rather sluggish behaviour so lets let the car turn a bit quicker.
-		chassisMOI.y*=0.8f;//
+		chassisMOI.y *= 0.8f;//
 		return chassisMOI;
-	}
-
-//////////////////////////////////////////////////////////////////////////
-
-	void SetOptionalVehicleData(PxVehicle4WSimpleSetup& simpleSetup)
-	{
-		//Tyres descriptor.
-		simpleSetup.mFrontTyreType=0;
-		simpleSetup.mRearTyreType=0;
-
-		//Diff descriptor.
-		simpleSetup.mDiffType=PxVehicleDifferential4WData::eDIFF_TYPE_LS_4WD;
-	}
-
-//////////////////////////////////////////////////////////////////////////
-
-	void SetVehicleMassData
-	(
-		const PxF32 chassisMass, const PxVec3& chassisMOI,
-		PxVehicle4WSimpleSetup& simpleSetup
-	)
-	{
-		simpleSetup.mChassisMass=chassisMass;
-		simpleSetup.mChassisMOI=chassisMOI;
-		simpleSetup.mFrontWheelMass=20.0f;
-		simpleSetup.mRearWheelMass=20.0f;
 	}
 
 //////////////////////////////////////////////////////////////////////////
@@ -236,10 +179,10 @@ namespace
 		convexDesc.flags				= PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eINFLATE_CONVEX;
 
 		PxConvexMesh* convexMesh = NULL;
-		MemoryWriteBuffer buf;
+		PhysxUserMemoryWriteStream buf;
 		if(cooking.cookConvexMesh(convexDesc, buf))
 		{
-			convexMesh = physics.createConvexMesh(MemoryReadBuffer(buf.data));
+			convexMesh = physics.createConvexMesh(PhysxUserMemoryReadStream(buf.getData(), buf.getSize()));
 		}
 
 		return convexMesh;
@@ -296,7 +239,7 @@ namespace
 
 	void SetupShapesUserData(const VehicleDescriptor &vd)
 	{
-		PxRigidDynamic *a = vd.vehicle->mActor;
+		PxRigidDynamic *a = vd.vehicle->getRigidDynamicActor();
 		if (!a)
 			return;
 
@@ -323,11 +266,188 @@ namespace
 
 //////////////////////////////////////////////////////////////////////////
 
-	void dampVec3(const PxVec3& oldPosition, PxVec3& newPosition, PxF32 timestep)
+	void DampVec3(const PxVec3& oldPosition, PxVec3& newPosition, PxF32 timestep)
 	{
 		PxF32 t = 0.7f * timestep * 8.0f;
 		t = PxMin(t, 1.0f);
 		newPosition = oldPosition * (1 - t) + newPosition * t;
+	}
+
+//////////////////////////////////////////////////////////////////////////
+
+	void SetupActor
+	(
+		PxRigidDynamic* vehActor, 
+		const PxFilterData& vehQryFilterData,
+		const PxConvexMeshGeometry* wheelGeometries, const PxTransform* wheelLocalPoses, const PxU32 numWheelGeometries, const PxMaterial* wheelMaterial, const PxFilterData& wheelCollFilterData,
+		const PxConvexMeshGeometry* chassisGeometries, const PxTransform* chassisLocalPoses, const PxU32 numChassisGeometries, const PxMaterial* chassisMaterial, const PxFilterData& chassisCollFilterData,
+		const PxVehicleChassisData& chassisData
+	)
+	{
+		//Add all the wheel shapes to the actor.
+		for (PxU32 i = 0; i < numWheelGeometries; i++)
+		{
+			PxShape* wheelShape = vehActor->createShape(wheelGeometries[i], *wheelMaterial);
+			wheelShape->setQueryFilterData(vehQryFilterData);
+			wheelShape->setSimulationFilterData(wheelCollFilterData);
+			wheelShape->setLocalPose(wheelLocalPoses[i]);
+		}
+
+		//Add the chassis shapes to the actor.
+		for (PxU32 i = 0; i < numChassisGeometries; i++)
+		{
+			PxShape* chassisShape = vehActor->createShape(chassisGeometries[i], *chassisMaterial);
+			chassisShape->setQueryFilterData(vehQryFilterData);
+			chassisShape->setSimulationFilterData(chassisCollFilterData);
+			chassisShape->setLocalPose(chassisLocalPoses[i]);
+		}
+
+		vehActor->setMass(chassisData.mMass);
+		vehActor->setMassSpaceInertiaTensor(chassisData.mMOI);
+		vehActor->setCMassLocalPose(PxTransform(chassisData.mCMOffset,PxQuat::createIdentity()));
+	}
+
+//////////////////////////////////////////////////////////////////////////
+
+	bool CreateVehicleSimData(VehicleDescriptor &vd, const PxConvexMesh &chassisMesh, const PxConvexMesh **wheelMeshes, PxVehicleWheelsSimData &wheelsData, PxVehicleDriveSimData4W &driveData)
+	{
+		//Extract the chassis AABB dimensions from the chassis convex mesh.
+		const PxVec3 chassisDims = ComputeChassisAABBDimensions(&chassisMesh);
+
+		//The origin is at the center of the chassis mesh.
+		//Set the center of mass to be below this point and a little towards the front.
+		const PxVec3 chassisCMOffset = PxVec3(0.0f, -chassisDims.y * 0.5f + 0.65f, 0.25f);
+
+		//Now compute the chassis mass and moment of inertia.
+		//Use the moment of inertia of a cuboid as an approximate value for the chassis moi.
+		PxVec3 chassisMOI = ComputeChassisMOI(chassisDims, vd.chassisData.mMass);
+
+		//Let's set up the chassis data structure now.
+		vd.chassisData.mMOI = chassisMOI;
+		vd.chassisData.mCMOffset = chassisCMOffset;
+		const float chassisMass = vd.chassisData.mMass;
+
+		//Work out the front/rear mass split from the cm offset.
+		//This is a very approximate calculation with lots of assumptions. 
+		//massRear*zRear + massFront*zFront = mass*cm		(1)
+		//massRear       + massFront        = mass			(2)
+		//Rearrange (2)
+		//massFront = mass - massRear						(3)
+		//Substitute (3) into (1)
+		//massRear(zRear - zFront) + mass*zFront = mass*cm	(4)
+		//Solve (4) for massRear
+		//massRear = mass(cm - zFront)/(zRear-zFront)		(5)
+		//Now we also have
+		//zFront = (z-cm)/2									(6a)
+		//zRear = (-z-cm)/2									(6b)
+		//Substituting (6a-b) into (5) gives
+		//massRear = 0.5*mass*(z-3cm)/z						(7)
+		const PxF32 massRear = 0.5f * chassisMass * (chassisDims.z - 3 * chassisCMOffset.z) / chassisDims.z;
+		const PxF32 massFront = chassisMass - massRear;
+
+		//Extract the wheel radius and width from the wheel convex meshes.
+		PxF32 wheelWidths[MAX_WHEELS_COUNT];
+		PxF32 wheelRadii[MAX_WHEELS_COUNT];
+		ComputeWheelWidthsAndRadii(wheelMeshes, wheelWidths, wheelRadii, vd.numWheels);
+
+		//Now compute the wheel masses and inertias components around the axle's axis.
+		//http://en.wikipedia.org/wiki/List_of_moments_of_inertia
+		PxF32 wheelMOIs[MAX_WHEELS_COUNT];
+		for(PxU32 i = 0; i < vd.numWheels; i++)
+		{
+			wheelMOIs[i] = 0.5f * vd.wheelsData[i].wheelData.mMass * wheelRadii[i] * wheelRadii[i];
+		}
+		//Let's set up the wheel data structures now with radius, mass, and moi.
+		for(PxU32 i = 0; i < vd.numWheels; i++)
+		{
+			PxVehicleWheelData &wd = vd.wheelsData[i].wheelData;
+			wd.mRadius = wheelRadii[i];
+			wd.mMOI = wheelMOIs[i];
+			wd.mWidth = wheelWidths[i];
+
+			PxVehicleSuspensionData &sd = vd.wheelsData[i].suspensionData;
+			sd.mSprungMass = chassisMass / vd.numWheels;
+		}
+
+		//We need to set up geometry data for the suspension, wheels, and tires.
+		//We already know the wheel centers described as offsets from the rigid body centre of mass.
+		//From here we can approximate application points for the tire and suspension forces.
+		//Lets assume that the suspension travel directions are absolutely vertical.
+		//Also assume that we apply the tire and suspension forces 30cm below the centre of mass.
+		PxVec3 wheelCentreCMOffsets[MAX_WHEELS_COUNT];
+		PxVec3 suspForceAppCMOffsets[MAX_WHEELS_COUNT];
+		PxVec3 tireForceAppCMOffsets[MAX_WHEELS_COUNT];
+		const PxVec3 *wheelCenterOffsets = vd.wheelCenterOffsets;
+		for(PxU32 i = 0; i < vd.numWheels; i++)
+		{
+			wheelCentreCMOffsets[i] = wheelCenterOffsets[i] - chassisCMOffset;
+			suspForceAppCMOffsets[i] = PxVec3(wheelCentreCMOffsets[i].x, -0.3f, wheelCentreCMOffsets[i].z);
+			tireForceAppCMOffsets[i] = PxVec3(wheelCentreCMOffsets[i].x, -0.3f, wheelCentreCMOffsets[i].z);
+		}
+
+		//Now add the wheel, tire and suspension data.
+		for(PxU32 i = 0; i < vd.numWheels; i++)
+		{
+			wheelsData.setWheelCentreOffset(i, wheelCentreCMOffsets[i]);
+			wheelsData.setSuspForceAppPointOffset(i, suspForceAppCMOffsets[i]);
+			wheelsData.setTireForceAppPointOffset(i, tireForceAppCMOffsets[i]);
+		}
+
+		//Ackermann steer accuracy
+		PxVehicleAckermannGeometryData &ackermann = vd.ackermannData;
+		ackermann.mAxleSeparation = std::abs(wheelCenterOffsets[PxVehicleDrive4W::eFRONT_LEFT_WHEEL].z - wheelCenterOffsets[PxVehicleDrive4W::eREAR_LEFT_WHEEL].z);
+		ackermann.mFrontWidth = std::abs(wheelCenterOffsets[PxVehicleDrive4W::eFRONT_RIGHT_WHEEL].x - wheelCenterOffsets[PxVehicleDrive4W::eFRONT_LEFT_WHEEL].x);
+		ackermann.mRearWidth = std::abs(wheelCenterOffsets[PxVehicleDrive4W::eREAR_RIGHT_WHEEL].x - wheelCenterOffsets[PxVehicleDrive4W::eREAR_LEFT_WHEEL].x);
+
+		vd.ConfigureVehicleSimulationData(&driveData, &wheelsData);
+
+		return true;
+	}
+
+//////////////////////////////////////////////////////////////////////////
+
+	PxRigidDynamic * CreateVehicleActor(const VehicleDescriptor &vd, PxConvexMesh &hull, PxConvexMesh **wheels)
+	{
+		//We need a rigid body actor for the vehicle.
+		//Don't forget to add the actor the scene after setting up the associated vehicle.
+		PxRigidDynamic* vehActor = g_pPhysicsWorld->PhysXSDK->createRigidDynamic(PxTransform::createIdentity());
+
+		//We need to add wheel collision shapes, a material for the wheels, and a simulation filter for the wheels.
+		r3dTL::TFixedArray<PxConvexMeshGeometry, MAX_WHEELS_COUNT> wheelGeoms;
+		r3dTL::TFixedArray<PxTransform, MAX_WHEELS_COUNT> wheelLocalPoses;
+		for (uint32_t i = 0; i < vd.numWheels; ++i)
+		{
+			wheelGeoms[i] = PxConvexMeshGeometry(wheels[i]);
+			wheelLocalPoses[i] = PxTransform::createIdentity();
+		}
+		PxMaterial& wheelMaterial = *g_pPhysicsWorld->defaultMaterial;
+		PxFilterData wheelCollFilterData;
+		wheelCollFilterData.word0 = PHYSCOLL_VEHICLE_WHEEL;
+
+		//We need to add chassis collision shapes, their local poses, a material for the chassis, and a simulation filter for the chassis.
+		PxConvexMeshGeometry chassisConvexGeom(&hull);
+
+		//We need to specify the local poses of the chassis composite shapes.
+		PxTransform chassisLocalPoses[1] = {PxTransform::createIdentity()};
+
+		PxMaterial& chassisMaterial = *g_pPhysicsWorld->defaultMaterial;
+		PxFilterData chassisCollFilterData;
+		chassisCollFilterData.word0 = PHYSCOLL_STATIC_GEOMETRY;
+
+		//Create a query filter data for the car to ensure that cars
+		//do not attempt to drive on themselves.
+		PxFilterData vehQryFilterData;
+		VehicleSetupNonDrivableShapeQueryFilterData(vehQryFilterData);
+
+		SetupActor
+		(
+			vehActor,
+			vehQryFilterData,
+			&wheelGeoms[0], &wheelLocalPoses[0], vd.numWheels, &wheelMaterial, wheelCollFilterData,
+			&chassisConvexGeom, &chassisLocalPoses[0], vd.numHullParts, &chassisMaterial, chassisCollFilterData,
+			vd.chassisData
+		);
+		return vehActor;
 	}
 
 } // unnamed namespace
@@ -343,6 +463,7 @@ VehicleManager::VehicleManager()
 , mAtRestUnderBraking(true)
 , mTimeElapsedSinceAtRestUnderBraking(0.0f)
 , mInReverseMode(false)
+, surfaceTypePairs(0)
 {
 	r3d_assert(g_pPhysicsWorld);
 	r3d_assert(g_pPhysicsWorld->PhysXSDK);
@@ -350,8 +471,17 @@ VehicleManager::VehicleManager()
 
 	d_drive_vehicles->SetChangeCallback(&DriveVehiclesChangeCallback);
 
-	drivableSurfaceType.mType = 0;
-	g_pPhysicsWorld->defaultMaterial->userData = &drivableSurfaceType;
+	PxInitVehicleSDK(*g_pPhysicsWorld->PhysXSDK);
+
+	const PxMaterial *mats[] = {g_pPhysicsWorld->defaultMaterial};
+	surfaceTypePairs = PxVehicleDrivableSurfaceToTireFrictionPairs::create(MAX_NUM_TYRE_TYPES, MAX_NUM_SURFACE_TYPES, mats, &drivableSurfaceType);
+	for (PxU32 i = 0; i < MAX_NUM_SURFACE_TYPES; i++)
+	{
+		for (PxU32 j = 0; j < MAX_NUM_TYRE_TYPES; j++)
+		{
+			surfaceTypePairs->setTypePairFriction(i, j, gTyreFrictionMultipliers[i][j]);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -364,6 +494,12 @@ VehicleManager::~VehicleManager()
 	{
 		DeleteCar(vehicles.GetFirst());
 	}
+
+	if (surfaceTypePairs)
+	{
+		surfaceTypePairs->release();
+	}
+	PxCloseVehicleSDK();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -386,13 +522,10 @@ void VehicleManager::Update(float timeStep)
 
 	DoUserCarControl(timeStep);	
 
-	PxVehicle4WSuspensionRaycasts(batchSuspensionRaycasts, vehicles.Count(), &batchQueryResults.GetFirst(), &physxVehs[0]);
+	PxVehicleSuspensionRaycasts(batchSuspensionRaycasts, vehicles.Count(), &physxVehs.GetFirst(), batchQueryResults.Count(), &batchQueryResults.GetFirst());
 
-	PxVehicleDrivableSurfaceToTyreFrictionPairs surfaceTyrePairs;
-	surfaceTyrePairs.mPairs = &gTyreFrictionMultipliers[0][0];
-	surfaceTyrePairs.mNumSurfaceTypes=MAX_NUM_SURFACE_TYPES;
-	surfaceTyrePairs.mNumTyreTypes=MAX_NUM_TYRE_TYPES;
-	PxVehicle4WUpdate(timeStep,g_pPhysicsWorld->PhysXScene->getGravity(),surfaceTyrePairs,vehicles.Count(),&physxVehs[0]);
+	PxVec3 gravity = g_pPhysicsWorld->PhysXScene->getGravity();
+	PxVehicleUpdates(timeStep, gravity, *surfaceTypePairs, physxVehs.Count(), &physxVehs[0]);
 
 	cameraContoller.Update(timeStep);
 }
@@ -404,11 +537,11 @@ void VehicleManager::DoUserCarControl(float timeStep)
 	if (!drivableCar)
 		return;
 
-	PxVehicle4W &car = *drivableCar->vehicle;
+	PxVehicleDrive4W &car = *drivableCar->vehicle;
 
 	//Work out if the car is to flip from reverse to forward gear or from forward gear to reverse.
 	bool toggleAutoReverse = false;
-	if(PxVehicle4WGetUseAutoGears(car))
+	if (car.mDriveDynData.getUseAutoGears())
 	{
 		toggleAutoReverse = ProcessAutoReverse(timeStep);
 	}
@@ -420,11 +553,11 @@ void VehicleManager::DoUserCarControl(float timeStep)
 
 		if(mInReverseMode)
 		{
-			PxVehicle4WForceGearChange(PxVehicleGearsData::eREVERSE, car);
+			car.mDriveDynData.forceGearChange(PxVehicleGearsData::eREVERSE);
 		}
 		else
 		{
-			PxVehicle4WForceGearChange(PxVehicleGearsData::eFIRST, car);
+			car.mDriveDynData.forceGearChange(PxVehicleGearsData::eFIRST);
 		}
 	}
 
@@ -437,7 +570,7 @@ void VehicleManager::DoUserCarControl(float timeStep)
 		carControlData.setDigitalBrake(accel);
 	}
 
-	PxVehicle4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, carControlData, timeStep, car);
+	PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, carControlData, timeStep, car);
 	clearInputData = true;
 }
 
@@ -451,7 +584,7 @@ bool VehicleManager::ProcessAutoReverse(float timestep)
 	if (!drivableCar || !drivableCar->vehicle)
 		return false;
 
-	PxVehicle4W &car = *drivableCar->vehicle;
+	PxVehicleDrive4W &car = *drivableCar->vehicle;
 
 	bool accelRaw, brakeRaw;
 	accelRaw = carControlData.getDigitalAccel();
@@ -464,9 +597,9 @@ bool VehicleManager::ProcessAutoReverse(float timestep)
 	bool justRaisedFlag = false;
 	if(brake && !mAtRestUnderBraking)
 	{
-		bool isInAir = PxVehicle4WIsInAir(car);
-		PxF32 forwardSpeed = PxAbs(PxVehicle4WComputeForwardSpeed(car));
-		PxF32 sidewaysSpeed = PxAbs(PxVehicle4WComputeSidewaysSpeed(car));
+		bool isInAir = car.isInAir();
+		PxF32 forwardSpeed = PxAbs(car.computeForwardSpeed());
+		PxF32 sidewaysSpeed = PxAbs(car.computeSidewaysSpeed());
 
 		if(!isInAir && forwardSpeed < THRESHOLD_FORWARD_SPEED && sidewaysSpeed < THRESHOLD_SIDEWAYS_SPEED)
 		{
@@ -514,8 +647,9 @@ void VehicleManager::UpdateInput()
 	}
 	carControlData.setDigitalAccel(carControlData.getDigitalAccel() || Keyboard->IsPressed(kbsUp));
 	carControlData.setDigitalBrake(carControlData.getDigitalBrake() || Keyboard->IsPressed(kbsDown));
-	carControlData.setDigitalSteerLeft(carControlData.getDigitalSteerLeft() || Keyboard->IsPressed(kbsLeft));
-	carControlData.setDigitalSteerRight(carControlData.getDigitalSteerRight() || Keyboard->IsPressed(kbsRight));
+	//	Left and right are switched intentionally
+	carControlData.setDigitalSteerLeft(carControlData.getDigitalSteerLeft() || Keyboard->IsPressed(kbsRight));
+	carControlData.setDigitalSteerRight(carControlData.getDigitalSteerRight() || Keyboard->IsPressed(kbsLeft));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -588,86 +722,31 @@ VehicleDescriptor * VehicleManager::CreateVehicle(const r3dMesh *m)
 		wheels[i] = CreateWheelConvexMesh(&v[0], v.Count());
 	}
 
-	const PxVec3 chasisDims = ComputeChassisAABBDimensions(hull);
-	const PxVec3 chassisMOI = ComputeChassisMOI(chasisDims, vd->chassisData.mMass);
+	PxVehicleWheelsSimData *wheelsData = PxVehicleWheelsSimData::allocate(vd->numWheels);
+	PxVehicleDriveSimData4W driveData;
 
-	PxVehicle4WSimpleSetup simpleSetup;
-	PxF32 wheelWidths[MAX_WHEELS_COUNT];
-	PxF32 wheelRadii[MAX_WHEELS_COUNT];
-	ComputeWheelWidthsAndRadii(wheels,wheelWidths,wheelRadii, vd->numWheels);
-	SetVehicleGeometricData(chasisDims, vd->wheelCenterOffsets, wheelWidths, wheelRadii, simpleSetup);
-	SetVehicleMassData(vd->chassisData.mMass, chassisMOI, simpleSetup);
-	SetOptionalVehicleData(simpleSetup);
+	bool result = CreateVehicleSimData(*vd, *hull, const_cast<const PxConvexMesh**>(wheels), *wheelsData, driveData); result;
+	r3d_assert(result);
 
-	PxVehicle4WSimulationData vehSimulationData=PxCreateVehicle4WSimulationData(simpleSetup);
+	PxRigidDynamic *vehActor = CreateVehicleActor(*vd, *hull, wheels);
+	r3d_assert(vehActor);
 
-	r3d_assert(vd->wheelsData.Count() <= PxVehicle4WSimulationData::eNUM_WHEELS);
-	for (uint32_t i = 0; i < vd->wheelsData.Count(); ++i)
-	{
-		VehicleDescriptor::WheelData &wd = vd->wheelsData[i];
-		wd.wheelData.mWidth = wheelWidths[i];
-		wd.wheelData.mRadius = wheelRadii[i];
-		wd.wheelData.mMOI = vehSimulationData.getWheelData(i).mMOI;
-		wd.suspensionData.mSprungMass = vehSimulationData.getSuspensionData(i).mSprungMass;
-	}
-
-	vd->chassisData.mCMOffset += vehSimulationData.getChassisData().mCMOffset;
-	vd->chassisData.mMOI = chassisMOI;
-
-	//We need a rigid body actor for the vehicle.
-	//Don't forget to add the actor the scene after setting up the associated vehicle.
-	PxRigidDynamic* vehActor = g_pPhysicsWorld->PhysXSDK->createRigidDynamic(PxTransform::createIdentity());
-
-	//We need to add wheel collision shapes, a material for the wheels, and a simulation filter for the wheels.
-	PxConvexMeshGeometry frontLeftWheelGeom(wheels[0]);
-	PxConvexMeshGeometry frontRightWheelGeom(wheels[1]);
-	PxConvexMeshGeometry rearLeftWheelGeom(wheels[2]);
-	PxConvexMeshGeometry rearRightWheelGeom(wheels[3]);
-	PxMaterial& wheelMaterial=*g_pPhysicsWorld->defaultMaterial;
-	PxFilterData wheelCollFilterData;
-	wheelCollFilterData.word0=PHYSCOLL_VEHICLE_WHEEL;
-
-	//We need to add chassis collision shapes, their local poses, a material for the chassis, and a simulation filter for the chassis.
-	PxConvexMeshGeometry chassisConvexGeom(hull);
-	PxGeometry* chassisGeoms[1]={&chassisConvexGeom};
-
-	//We need to specify the local poses of the chassis composite shapes.
-	PxTransform chassisLocalPoses[1]={PxTransform::createIdentity()};
-
-	PxMaterial& chassisMaterial=*g_pPhysicsWorld->defaultMaterial;
-	PxFilterData chassisCollFilterData;
-	chassisCollFilterData.word0=PHYSCOLL_STATIC_GEOMETRY;
-
-	//Create a query filter data for the car to ensure that cars
-	//do not attempt to drive on themselves.
-	const PxU32 vehIndex = vehicles.Count() + 1;
-	PxFilterData vehQryFilterData;
-	PxSetupVehicleShapeQueryFilterData(vehIndex,&vehQryFilterData);
-
-	//Create a car.
-	vd->vehicle = new PxVehicle4W;
-	PxVehicle4WSetup(
-		vehSimulationData,
-		vehQryFilterData,vehActor,
-		frontLeftWheelGeom,frontRightWheelGeom,rearLeftWheelGeom,rearRightWheelGeom,&wheelMaterial,wheelCollFilterData,
-		chassisGeoms,chassisLocalPoses,1,&chassisMaterial,chassisCollFilterData,
-		g_pPhysicsWorld->PhysXSDK,
-		vd->vehicle);
+	vd->vehicle = PxVehicleDrive4W::allocate(vd->numWheels);
+	vd->vehicle->setup(g_pPhysicsWorld->PhysXSDK, vehActor, *wheelsData, driveData, std::max<int>(vd->numWheels - 4, 0));
 
 	//Don't forget to add the actor to the scene.
 	g_pPhysicsWorld->PhysXScene->addActor(*vehActor);
 
-	PxVehicle4WSetUseAutoGears(true, *vd->vehicle);
+	vd->vehicle->setToRestState();
+	vd->vehicle->mDriveDynData.forceGearChange(PxVehicleGearsData::eFIRST);
 	ConfigureSuspensionRaycasts(*vd);
 
 	SetupShapesUserData(*vd);
 
-	PxVehicle4WSetToRestState(*vd->vehicle);
-
-	vd->ApplyDynamicChanges();
-
 	VehicleDescriptor *rv = vd.release();
 	vehicles.PushBack(rv);
+
+	wheelsData->free();
 
 	return rv;
 }
@@ -715,7 +794,7 @@ void VehicleManager::DeleteCar(VehicleDescriptor *car)
 			batchHits.Resize(batchHits.Count() - numWheels);
 			batchQueryResults.Resize(batchQueryResults.Count() - numWheels);
 			ClearSuspensionRaycatsQuery();
-			PxRigidDynamic *a = car->vehicle->mActor;
+			PxRigidDynamic *a = car->vehicle->getRigidDynamicActor();
 			g_pPhysicsWorld->PhysXScene->removeActor(*a);
 			a->release();
 
@@ -723,8 +802,7 @@ void VehicleManager::DeleteCar(VehicleDescriptor *car)
 			if (drivableCar == car)
 				drivableCar = 0;
 
-			/**	This is intended memory leak, because SDK release method is crashing if we delete PxVehicle4W*. PhysX 3.2 does not have this error, so waiting for upgrade. */
-			//delete car;
+			delete car;
 			break;
 		}
 	}
@@ -747,7 +825,7 @@ void VehicleManager::DriveCar(VehicleDescriptor *car)
 {
 	drivableCar = car;
 	if (car)
-		cameraContoller.SetDrivenVehicle(car->vehicle->mActor);
+		cameraContoller.SetDrivenVehicle(car->vehicle->getRigidDynamicActor());
 	else
 		cameraContoller.SetDrivenVehicle(0);
 }
@@ -899,8 +977,8 @@ void VehicleCameraController::Update(float dtime)
 
 	if (mCameraInit)
 	{
-		dampVec3(mCameraPos, position, dtime);
-		dampVec3(mCameraTargetPos, target, dtime);
+		DampVec3(mCameraPos, position, dtime);
+		DampVec3(mCameraTargetPos, target, dtime);
 	}
 
 	mCameraPos = position;

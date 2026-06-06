@@ -54,7 +54,7 @@ public:
 	{
 	};
 	
-	virtual void ShutDown() { pMovie = 0; };
+	virtual void ShutDown(){};
 	class IMEFuncHandler : public GFx::FunctionHandler
 	{
 	public:

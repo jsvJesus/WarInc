@@ -5,20 +5,20 @@
 
 class Menu_Main : public MenuLayer
 {
-public:
+  public:
 	START_MENU_ENUMS
 		bEditor,
 		bQuit
 	};
 
-protected:	
-void		Draw();
+  protected:	
+	void		Draw();
 
-public:
-Menu_Main();
-~Menu_Main();
+  public:
+	Menu_Main();
+	~Menu_Main();
 	
-int		DoModal();
+	int		DoModal();
 };
 
 #endif

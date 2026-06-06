@@ -1,2 +1,0 @@
-svn://svn.noesisengine.com/Noesis/NoesisSDK/branches/Editor/Native
-0.2.292-beta (r17081)

@@ -227,7 +227,7 @@ public:
     HMatrix                 BoundsMatrix;
 
     HMatrix                GetBoundsMatrix() const { return BoundsMatrix; }
-    bool                   UpdateMatrix(const Matrix2F& boundsMatrix, const Matrix2F& nodeMatrix, bool forceUncache = false);
+    void                   UpdateMatrix(const Matrix2F& boundsMatrix);
     void                   UpdateCxform(const Cxform& cx);
     virtual StateType      GetType() const { return State_Filter; }
     virtual TreeCacheNode* GetSourceNode() const { return StartEntry.pSourceNode; }

@@ -69,14 +69,9 @@ bool r3dIniFileReader::ValidateFileName(const char* lpFileName)
     return false;
   }
   
-  const size_t bytesRead = fread(buf_, 1, MAX_INI_SIZE - 2, f);
-
-  if(bytesRead >= MAX_INI_SIZE - 2)
-    r3dError("ini file %s is too big\n", lpFileName);
-
-  len_ = static_cast<int>(bytesRead);
+  len_ = fread(buf_, 1, MAX_INI_SIZE-2, f);
+  if(len_ >= MAX_INI_SIZE-2) r3dError("ini file %s is too big\n", lpFileName);
   buf_[len_] = 0;
-
   fclose(f);
 
   goodIniFile_ = true;
@@ -106,7 +101,7 @@ void r3dIniFileReader::Preprocess()
 
 const char* r3dIniFileReader::GetNextLine(const char* line)
 {
-  int i = static_cast<int>(line - buf_);
+  int i = line - buf_;
 
   // find first end of string
   for(; i<len_; i++) {
@@ -124,66 +119,69 @@ const char* r3dIniFileReader::GetNextLine(const char* line)
 
 
 bool r3dIniFileReader::GetPrivateProfileString(const char* lpAppName, const char* lpKeyName, 
-        const char* lpDefault, char* lpReturnedString, int nSize, 
-                    const char* lpFileName)
+			  const char* lpDefault, char* lpReturnedString, int nSize, 
+	                  const char* lpFileName)
 {
   Init();
 
   r3dscpy(lpReturnedString, lpDefault);
-
+  
   if(!ValidateFileName(lpFileName))
     return false;
-
+    
+  // those 2 can't be null in this implementation - we must have section & key
   assert(lpAppName);
   assert(lpKeyName);
+  
+  int len = strlen(lpAppName);
 
-  int len = static_cast<int>(strlen(lpAppName));
-
+  // search for section
   const char* section = NULL;
-
   for(const char* line = buf_; line; line = GetNextLine(line)) 
   {
     if(line[0] == ';') 
       continue;
 
     if(line[0] == '[') {
-      if(_strnicmp(line + 1, lpAppName, len) == 0) {
-        if(line[len + 1] == ']') {
+      if(_strnicmp(line+1, lpAppName, len) == NULL) {
+        if(line[len+1] == ']') {
           section = line;
           break;
         }
       }
     }
   }
-
+  
   if(!section) {
     return false;
   }
 
-  len = static_cast<int>(strlen(lpKeyName));
-
+  // search for actual key
+  len = strlen(lpKeyName);
   for(const char* line = GetNextLine(section); line; line = GetNextLine(line)) 
   {
     if(line[0] == ';') 
       continue;
 
     if(line[0] == '[') {
+      // found new section, abort
       return false;
     }
 
-    if(_strnicmp(line, lpKeyName, len) != 0) 
+    if(_strnicmp(line, lpKeyName, len) != NULL) 
       continue;
-
+      
+    // skip whitelines
     const char* p = line + len;
-
     for(; *p == ' ' || *p == '\t'; ++p) ;
-
+    
     if(*p != '=') {
       r3dArtBug("ini: malformed string '%s' in file %s\n", line, curIni_);
       return false;
     }
 
-    for(p = p + 1; *p == ' ' || *p == '\t'; ++p) ;
+    // skip whitespaces after '='
+    for(p = p+1; *p == ' ' || *p == '\t'; ++p) ;
 
     r3dscpy(lpReturnedString, p);
     return true;

@@ -6,6 +6,8 @@
 #include "r3dBinMat.h"
 #include "../../../GameEngine/TrueNature/Sun.h"
 
+const char* DigitToCString( int digit );
+
 static	int 	r3dMaterialIDGenerator = 100;
 extern 	int 	CurrentTexID[16];
 
@@ -15,35 +17,15 @@ extern 	int 	CurrentTexID[16];
 const static char* DEPOT_TAG  = "data/objectsdepot";
 const static int   DEPOT_TLEN = 17;
 
-int VS_FOREST_ID										= -1 ;
-int VS_FOREST_NONINSTANCED_ID							= -1 ;
-int VS_FOREST_NOANIM_ID									= -1 ;
-int VS_FOREST_NOANIM_NONINSTANCED_ID					= -1 ;
 int VS_SKIN_ID											= -1 ;
 int VS_SKIN_DEPTH_ID									= -1 ;
 int VS_DEPTH_ID											= -1 ;
-int VS_SMSKIN_ORTHO_ID									= -1 ;
-int VS_SMSKIN_PROJ_ID									= -1 ;
 int VS_DEPTH_PREPASS_ID									= -1 ;
 int VS_FILLGBUFFER_ID									= -1 ;
+int VS_FILLGBUFFER_EXTRUDE_ID							= -1 ;
 int VS_FILLGBUFFER_DISP_ID								= -1 ;
 int VS_FILLGBUFFER_APEX_ID								= -1 ;
 int VS_FILLGBUFFER_INSTANCED_ID							= -1 ;
-int VS_SMDEPTHPASS_ORTHO_ID								= -1 ;
-int VS_SMDEPTHPASS_PROJ_ID								= -1 ;
-int VS_SMDEPTHPASS_PARABOLOID_PROJ_ID					= -1 ;
-int VS_SMDEPTHPASS_ORTHO_INSTANCED_ID					= -1 ;
-int VS_SMDEPTHPASS_PROJ_INSTANCED_ID					= -1 ;
-int VS_SMDEPTHPATH_FOREST_ORTHO_ID						= -1 ;
-int VS_SMDEPTHPATH_FOREST_ORTHO_NONINSTANCED_ID			= -1 ;
-int VS_SMDEPTHPATH_FOREST_PROJ_ID						= -1 ;
-int VS_SMDEPTHPATH_FOREST_PROJ_NONINSTANCED_ID			= -1 ;
-int VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_ID				= -1 ;
-int VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_NONINSTANCED_ID	= -1 ;
-int VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_ID				= -1 ;
-int VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_NONINSTANCED_ID	= -1 ;
-int VS_SMDEPTHPATH_APEX_ORTHO_ID						= -1 ;
-int VS_SMDEPTHPATH_APEX_PROJ_ID							= -1 ;
 
 int VS_TRANSPARENT_ID[2][MAX_LIGHTS_FOR_TRANSPARENT] = 
 {
@@ -51,14 +33,11 @@ int VS_TRANSPARENT_ID[2][MAX_LIGHTS_FOR_TRANSPARENT] =
 	{ -1, -1, -1 } 
 };
 
-int PS_DEPTH_ID							= -1 ;
-int PS_SMDEPTHPATH_ID					= -1 ;
-int PS_SMDEPTHPATH_HW_ID				= -1 ;
-int PS_SMDEPTHPATH_NORMAL_OFFSET_ID		= -1 ;
-int PS_TRANSPARENT_ID					= -1 ;
-int PS_TRANSPARENT_AURA_ID				= -1 ;
-int PS_TRANSPARENT_CAMOUFLAGE_ID		= -1 ;
-int PS_TRANSPARENT_CAMOUFLAGE_FP_ID		= -1 ;
+int PS_DEPTH_ID							= -1;
+int PS_TRANSPARENT_ID					= -1;
+int PS_TRANSPARENT_AURA_ID				= -1;
+int PS_TRANSPARENT_CAMOUFLAGE_ID		= -1;
+int PS_TRANSPARENT_CAMOUFLAGE_FP_ID		= -1;
 
 static r3dMaterial* gPrevMaterial = NULL ;
 static r3dMaterial* gPrevShadowMaterial = NULL ;
@@ -78,6 +57,29 @@ void SetFillGBufferPixelShader( FillbufferShaderKey k )
 	r3dRenderer->SetPixelShader( id );
 }
 
+void SetFillGBufferConstantPixelShader( const r3dColor& color, float colorAmplify, const r3dPoint3D& normal, float metalness, float chromness, float glow, float specPower )
+{
+	const float CA = colorAmplify;
+
+	float vsConsts[ 3 ][ 4 ] =
+	{
+		// float3 gColor_DefSSAO                        : register( c0 );
+		{ CA * color.R / 255.0f, CA * color.G / 255.0f, CA * color.B / 255.0f, r_ssao_clear_val->GetFloat() },
+		// float4 gMetalness_Chromeness_Glow_SpecPower  : register( c1 );
+		{ metalness, chromness, glow, specPower },
+		// float3 gNormal                               : register( c2 );
+		{ normal.x * 0.5f + 0.5f, normal.y * 0.5f + 0.5f, normal.z * 0.5f + 0.5f }
+	};
+
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, vsConsts[ 0 ], R3D_ARRAYSIZE( vsConsts ) ) );
+
+	FillGBufferConstantId psid;
+	psid.aux = r_lighting_quality->GetInt() != 1;
+
+	r3dRenderer->SetPixelShader( gFillGBufferConstantPSIds[ psid.Id ] );
+
+}
+
 int gMatFrameScores[MAX_MAT_FRAME_SCORES];
 
 // pointer to envmap probes function
@@ -86,6 +88,38 @@ r3dTexture* (*r3dMat_EnvmapProbes_GetClosestTexture)(const r3dPoint3D& pos) = NU
 const r3dMaterial::CamoData& (*r3dMat_gCamouflageDataManager_GetCurrentData)() = NULL;
              
 void ( *g_SetupFilmToneConstants )( int reg ) ;
+
+//------------------------------------------------------------------------
+
+FillGBufferConstantId::FillGBufferConstantId()
+{
+	Id = 0;
+}
+
+//------------------------------------------------------------------------
+
+void FillGBufferConstantId::ToString( char* str )
+{
+	strcpy( str, "PS_FILLBUFFER_CONSTANT" );
+	if( aux )
+	{
+		strcat( str, "_AUX" );
+	}
+}
+
+//------------------------------------------------------------------------
+
+FillGBufferConstantPSIds gFillGBufferConstantPSIds;
+
+//------------------------------------------------------------------------
+
+void FillGBufferConstantId::FillMacros( ShaderMacros& defines )
+{
+	defines.Resize( 1 );
+
+	defines[ 0 ].Name		= "AUX";
+	defines[ 0 ].Definition	= aux ? "1" : "0";
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -256,7 +290,7 @@ static int VSShaderMap	[ R3D_MATVS_COUNT ]
 						;
 
 static int VSShadowShaderMap	[ R3D_MATVS_COUNT ]
-								[ 2 ] // perspective or ortho
+								[ SMVSTYPE_COUNT ] // perspective or ortho
 								;
 
 
@@ -268,44 +302,185 @@ enum
 
 static void FillVSShaderMaps()
 {
-	//------------------------------------------------------------------------
-	VSShaderMap	[ R3D_MATVS_DEFAULT							][ DISPLACE_OFF		] = VS_FILLGBUFFER_ID;
-	VSShaderMap	[ R3D_MATVS_SKIN							][ DISPLACE_OFF		] = VS_SKIN_ID ;
-	VSShaderMap	[ R3D_MATVS_FOREST							][ DISPLACE_OFF		] = VS_FOREST_NOANIM_ID ;
-	VSShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ DISPLACE_OFF		] = VS_FOREST_NOANIM_NONINSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ DISPLACE_OFF		] = VS_FOREST_ID ;
-	VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ DISPLACE_OFF		] = VS_FOREST_NONINSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_INSTANCING						][ DISPLACE_OFF		] = VS_FILLGBUFFER_INSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ DISPLACE_OFF		] = VS_FILLGBUFFER_APEX_ID;
 
-	VSShaderMap	[ R3D_MATVS_DEFAULT							][ DISPLACE_ON		] = VS_FILLGBUFFER_DISP_ID ;
-	VSShaderMap	[ R3D_MATVS_SKIN							][ DISPLACE_ON		] = VS_SKIN_ID ;
-	VSShaderMap	[ R3D_MATVS_FOREST							][ DISPLACE_ON		] = VS_FOREST_NOANIM_ID ;
-	VSShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ DISPLACE_ON		] = VS_FOREST_NOANIM_NONINSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ DISPLACE_ON		] = VS_FOREST_ID ;
-	VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ DISPLACE_ON		] = VS_FOREST_NONINSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_INSTANCING						][ DISPLACE_ON		] = VS_FILLGBUFFER_INSTANCED_ID ;
-	VSShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ DISPLACE_ON		] = VS_FILLGBUFFER_APEX_ID;
 
 	//------------------------------------------------------------------------
+	{
+		VSShaderMap	[ R3D_MATVS_DEFAULT							][ DISPLACE_OFF		] = VS_FILLGBUFFER_ID;
+		VSShaderMap	[ R3D_MATVS_SKIN							][ DISPLACE_OFF		] = VS_SKIN_ID;
+	}
 
-	VSShadowShaderMap	[ R3D_MATVS_DEFAULT							][ SPT_ORTHO ] = VS_SMDEPTHPASS_ORTHO_ID;
-	VSShadowShaderMap	[ R3D_MATVS_SKIN							][ SPT_ORTHO ] = VS_SMSKIN_ORTHO_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_FOREST							][ SPT_ORTHO ] = VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ SPT_ORTHO ] = VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_NONINSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ SPT_ORTHO ] = VS_SMDEPTHPATH_FOREST_ORTHO_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ SPT_ORTHO ] = VS_SMDEPTHPATH_FOREST_ORTHO_NONINSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_INSTANCING						][ SPT_ORTHO ] = VS_SMDEPTHPASS_ORTHO_INSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ SPT_ORTHO ] = VS_SMDEPTHPATH_APEX_ORTHO_ID;
-						
-	VSShadowShaderMap	[ R3D_MATVS_DEFAULT							][ SPT_PROJ	] = VS_SMDEPTHPASS_PROJ_ID;
-	VSShadowShaderMap	[ R3D_MATVS_SKIN							][ SPT_PROJ	] = VS_SMSKIN_PROJ_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_FOREST							][ SPT_PROJ	] = VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ SPT_PROJ	] = VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_NONINSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ SPT_PROJ	] = VS_SMDEPTHPATH_FOREST_PROJ_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ SPT_PROJ	] = VS_SMDEPTHPATH_FOREST_PROJ_NONINSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_INSTANCING						][ SPT_PROJ	] = VS_SMDEPTHPASS_PROJ_INSTANCED_ID ;
-	VSShadowShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ SPT_PROJ ] = VS_SMDEPTHPATH_APEX_PROJ_ID;
+	{
+		VSShaderMap	[ R3D_MATVS_FOREST							][ DISPLACE_OFF		] = gForestVSIds[ ForestVShaderID().Id ];
+	}
+
+	{
+		ForestVShaderID vsid;	vsid.animated = 0;	vsid.noninstanced = 1;
+		VSShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ DISPLACE_OFF		] = gForestVSIds[ vsid.Id ];
+	}
+
+	{
+		ForestVShaderID vsid;	vsid.animated = 1;
+		VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ DISPLACE_OFF		] = gForestVSIds[ vsid.Id ] ;
+	}
+
+	{
+		ForestVShaderID vsid;	vsid.animated = 1;	vsid.noninstanced = 1;
+		VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ DISPLACE_OFF		] = gForestVSIds[ vsid.Id ] ;
+	}
+
+	{
+		VSShaderMap	[ R3D_MATVS_INSTANCING						][ DISPLACE_OFF		] = VS_FILLGBUFFER_INSTANCED_ID ;
+		VSShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ DISPLACE_OFF		] = VS_FILLGBUFFER_APEX_ID;
+
+		VSShaderMap	[ R3D_MATVS_DEFAULT							][ DISPLACE_ON		] = VS_FILLGBUFFER_DISP_ID ;
+		VSShaderMap	[ R3D_MATVS_SKIN							][ DISPLACE_ON		] = VS_SKIN_ID ;
+		VSShaderMap	[ R3D_MATVS_FOREST							][ DISPLACE_ON		] = VSShaderMap	[ R3D_MATVS_FOREST						][ DISPLACE_OFF ];
+		VSShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED				][ DISPLACE_ON		] = VSShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED			][ DISPLACE_OFF ];
+		VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST					][ DISPLACE_ON		] = VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST				][ DISPLACE_OFF ];
+		VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED		][ DISPLACE_ON		] = VSShaderMap	[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED	][ DISPLACE_OFF ];
+		VSShaderMap	[ R3D_MATVS_INSTANCING						][ DISPLACE_ON		] = VS_FILLGBUFFER_INSTANCED_ID ;
+		VSShaderMap	[ R3D_MATVS_APEX_DESTRUCTIBLE				][ DISPLACE_ON		] = VS_FILLGBUFFER_APEX_ID;
+	}
+
+	//------------------------------------------------------------------------
+	{
+		SMDepthVShaderID vsid;
+
+		vsid.type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_DEFAULT		][ SPT_PERSP				]	= gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_DEFAULT		][ SPT_PERSP_PARABOLOID	]	= gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_DEFAULT		][ SPT_ORTHO			]	= gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_DEFAULT		][ SPT_ORTHO_WARPED		]	= gSMDepthVSIds[ vsid.Id ];
+	}
+
+	{
+		SkinSMDepthVShaderID vsid;
+
+		vsid.type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_SKIN			][ SPT_PERSP				] = gSkinSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_SKIN			][ SPT_PERSP_PARABOLOID	] = gSkinSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_SKIN			][ SPT_ORTHO			] = gSkinSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_SKIN			][ SPT_ORTHO_WARPED		] = gSkinSMDepthVSIds[ vsid.Id ];
+	}
+
+	{
+		ForestVShaderID vsid;
+		vsid.shadows = 1;
+
+		vsid.shadow_type = SMVSTYPE_PERSP;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST		][ SPT_PERSP				] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST		][ SPT_PERSP_PARABOLOID	] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST		][ SPT_ORTHO			] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST		][ SPT_ORTHO_WARPED		] = gForestVSIds[ vsid.Id ];
+	}
+
+	{
+		ForestVShaderID vsid;
+		vsid.shadows = 1;
+		vsid.noninstanced = 1;
+
+		vsid.shadow_type = SMVSTYPE_PERSP;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED		][ SPT_PERSP				] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED		][ SPT_PERSP_PARABOLOID	] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED		][ SPT_ORTHO			] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap	[ R3D_MATVS_FOREST_NONINSTANCED		][ SPT_ORTHO_WARPED		] = gForestVSIds[ vsid.Id ];
+	}
+
+	{
+		ForestVShaderID vsid;
+		vsid.shadows = 1;
+		vsid.animated = 1;
+
+		vsid.shadow_type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST ][ SPT_PERSP				] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST ][ SPT_PERSP_PARABOLOID	] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST ][ SPT_ORTHO			] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST ][ SPT_ORTHO_WARPED		] = gForestVSIds[ vsid.Id ];
+	}
+
+	{
+		ForestVShaderID vsid;
+		vsid.shadows = 1;
+		vsid.animated = 1;
+		vsid.noninstanced = 1;
+		
+		vsid.shadow_type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED ][ SPT_PERSP			] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED ][ SPT_PERSP_PARABOLOID	] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED ][ SPT_ORTHO			] = gForestVSIds[ vsid.Id ];
+
+		vsid.shadow_type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_ANIMATEDFOREST_NONINSTANCED ][ SPT_ORTHO_WARPED	] = gForestVSIds[ vsid.Id ];
+	}
+
+	{
+		SMDepthVShaderID vsid;
+		vsid.intanced = 1;
+
+		vsid.type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_INSTANCING ][ SPT_PERSP				] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_INSTANCING ][ SPT_PERSP_PARABOLOID	] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_INSTANCING ][ SPT_ORTHO			] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_INSTANCING ][ SPT_ORTHO_WARPED		] = gSMDepthVSIds[ vsid.Id ];
+	}
+
+	{
+		SMDepthVShaderID vsid;
+		vsid.apex = 1;
+
+		vsid.type = SMVSTYPE_PERSP;
+		VSShadowShaderMap[ R3D_MATVS_APEX_DESTRUCTIBLE ][ SPT_PERSP				] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_PERSP_PARABOLOID;
+		VSShadowShaderMap[ R3D_MATVS_APEX_DESTRUCTIBLE ][ SPT_PERSP_PARABOLOID	] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO;
+		VSShadowShaderMap[ R3D_MATVS_APEX_DESTRUCTIBLE ][ SPT_ORTHO				] = gSMDepthVSIds[ vsid.Id ];
+
+		vsid.type = SMVSTYPE_ORTHO_WARPED;
+		VSShadowShaderMap[ R3D_MATVS_APEX_DESTRUCTIBLE ][ SPT_ORTHO_WARPED		] = gSMDepthVSIds[ vsid.Id ];
+	}
 }
 
 void r3dMaterial::SetVertexShader( r3dMatVSType VSType, int DoDisplace )
@@ -331,7 +506,7 @@ void r3dMaterial::SetupTransparentStates( int UseSkins, int psID )
 	else
 		r3dRenderer->SetVertexShader();
 
-	if( g_SetupFilmToneConstants  )
+	if( g_SetupFilmToneConstants )
 		g_SetupFilmToneConstants ( 24 ) ;
 
 	r3dTransparentSetDistort( 1 ) ;
@@ -354,7 +529,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 	{
 		D3DXVECTOR4 diffuse ;
 		SetupCompoundDiffuse( &diffuse, Flags & R3D_MAT_TRANSPARENT ) ;
-		D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_MAT_DIFFUSE, (float*)&diffuse, 1 ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_MAT_DIFFUSE, (float*)&diffuse, 1 ) ) ;
 		return;
 	}
 	else
@@ -482,7 +657,7 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 			camoLerpF = r3dTL::Clamp(camoLerpF, 0.0f, 1.0f);
 
 			D3DXVECTOR4 v(camoLerpF, 0, 0, 0);
-			r3dRenderer->SetPixelShaderConstantF(MC_CAMOINTERPOLATOR, &v.x, 1);
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMOINTERPOLATOR, &v.x, 1);
 		}
 		else
 		{
@@ -553,20 +728,20 @@ void r3dMaterial::Start( r3dMatVSType VSType, UINT SetupFlags )
 
 		SetupCompoundDiffuse( &vConsts[ 1 ], Flags & R3D_MAT_TRANSPARENT ) ;
 
-		D3D_V( r3dRenderer->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)vConsts,  R3D_ARRAYSIZE( vConsts ) ) );
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(  MC_MATERIAL_PARAMS, (float *)vConsts,  R3D_ARRAYSIZE( vConsts ) ) );
 
-		TL_STATIC_ASSERT( MC_MAT_DIFFUSE - MC_MATERIAL_PARAMS >= 0 ) ;
-		TL_STATIC_ASSERT( MC_MAT_SPECULAR - MC_MATERIAL_PARAMS >= 0 ) ;
-		TL_STATIC_ASSERT( MC_MAT_GLOW - MC_MATERIAL_PARAMS >= 0 ) ;
+		COMPILE_ASSERT( MC_MAT_DIFFUSE - MC_MATERIAL_PARAMS >= 0 ) ;
+		COMPILE_ASSERT( MC_MAT_SPECULAR - MC_MATERIAL_PARAMS >= 0 ) ;
+		COMPILE_ASSERT( MC_MAT_GLOW - MC_MATERIAL_PARAMS >= 0 ) ;
 
-		TL_STATIC_ASSERT( MC_MAT_DIFFUSE - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
-		TL_STATIC_ASSERT( MC_MAT_SPECULAR - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
-		TL_STATIC_ASSERT( MC_MAT_GLOW - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
+		COMPILE_ASSERT( MC_MAT_DIFFUSE - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
+		COMPILE_ASSERT( MC_MAT_SPECULAR - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
+		COMPILE_ASSERT( MC_MAT_GLOW - MC_MATERIAL_PARAMS < R3D_ARRAYSIZE( vConsts ) ) ;
 
 		if ( m_DoDispl )
 		{
 			D3DXVECTOR4 v = D3DXVECTOR4( m_DisplDepthVal, 0, 0, 0 );
-			D3D_V( r3dRenderer->SetPixelShaderConstantF( MC_DISPLACE, (float*)&v, 1 ) );
+			D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( MC_DISPLACE, (float*)&v, 1 ) );
 		}
 	}
 
@@ -587,7 +762,12 @@ void r3dMaterial::End()
 void r3dMaterial::StartShadows( r3dMatVSType VSType )
 {
 	SetShadowVertexShader( VSType );
-	r3dRenderer->SetPixelShader( PS_SMDEPTHPATH_ID );
+
+	SMDepthPShaderID psid;
+
+	psid.type = SMPSTYPE_DEFAULT;
+
+	r3dRenderer->SetPixelShader( gSMDepthPSIds[ psid.Id ] );
 
 	StartCommonProperties();
 
@@ -621,7 +801,7 @@ void r3dMaterial::StartTransparent()
 		D3DXVECTOR4 vecs[3];
 		vecs[0] = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
 		// float3 vCamera					: register( c17 );
-		r3dRenderer->SetVertexShaderConstantF(17, &vecs[0].x, 1);
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF(17, &vecs[0].x, 1);
 		if (Sun)
 		{
 			r3dVector v(-Sun->SunDir);
@@ -637,20 +817,20 @@ void r3dMaterial::StartTransparent()
 		if (!(Flags & (R3D_MAT_TRANSPARENT_CAMOUFLAGE | R3D_MAT_TRANSPARENT_CAMO_FP ) ) )
 		{
 			float extrudeAmount[4] = {0};
-			D3D_V(r3dRenderer->SetVertexShaderConstantF(23, &extrudeAmount[0], 1));
+			D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(23, &extrudeAmount[0], 1));
 		}
 		
-		D3D_V( r3dRenderer->SetPixelShaderConstantF(MC_SUNDIR, &vecs[0].x, R3D_ARRAYSIZE(vecs)) );
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_SUNDIR, &vecs[0].x, R3D_ARRAYSIZE(vecs)) );
 
-		TL_STATIC_ASSERT( MC_SUNCOLOR - MC_SUNDIR >= 0 ) ;
-		TL_STATIC_ASSERT( MC_AMBIENTCOLOR - MC_SUNDIR >= 0 ) ;
+		COMPILE_ASSERT( MC_SUNCOLOR - MC_SUNDIR >= 0 ) ;
+		COMPILE_ASSERT( MC_AMBIENTCOLOR - MC_SUNDIR >= 0 ) ;
 
-		TL_STATIC_ASSERT( MC_SUNCOLOR - MC_SUNDIR < R3D_ARRAYSIZE(vecs) ) ;
-		TL_STATIC_ASSERT( MC_AMBIENTCOLOR - MC_SUNDIR < R3D_ARRAYSIZE(vecs) ) ;
+		COMPILE_ASSERT( MC_SUNCOLOR - MC_SUNDIR < R3D_ARRAYSIZE(vecs) ) ;
+		COMPILE_ASSERT( MC_AMBIENTCOLOR - MC_SUNDIR < R3D_ARRAYSIZE(vecs) ) ;
 
 		vecs[0] = D3DXVECTOR4(SpecularPower1, SpecularPower, ReflectionPower, 0.0f);
 
-		D3D_V( r3dRenderer->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &vecs[0].x, 1) );
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_MATERIAL_PARAMS, &vecs[0].x, 1) );
 	}
 }
 
@@ -781,7 +961,12 @@ r3dTexture* r3dMaterial::MatLoadTexture(const char* fname, const char* slot, int
 		r3dscpy(TempPath + strlen(TempPath) - 3, "dds");
 	}
 
-	r3dTexture* tex = r3dRenderer->LoadTexture( TempPath, D3DFMT_UNKNOWN, false, DownScale, MinDownScaleDim, 0, player ? PlayerTexMem : TexMem );
+	D3DPOOL pool = D3DPOOL_MANAGED;
+
+	if( r_no_managed_textures->GetInt() )
+		pool = D3DPOOL_DEFAULT;
+
+	r3dTexture* tex = r3dRenderer->LoadTexture( TempPath, D3DFMT_UNKNOWN, false, DownScale, MinDownScaleDim, pool, player ? PlayerTexMem : TexMem );
 
 	if(tex == NULL)
 		r3dArtBug( "Material: %s texture %s cannot be loaded\n", slot, TempPath );
@@ -1123,8 +1308,13 @@ static void mlReloadTexture( r3dTexture*& tex, TexType tt )
 	r3dscpy( FileName, tex->getFileLoc().FileName );
 	FileName[ 1023 ] = 0;
 
+	D3DPOOL pool = D3DPOOL_MANAGED;
+
+	if( tex->GetFlags() & r3dTexture::fPoolDefault )
+		pool = D3DPOOL_DEFAULT;
+
 	tex->Unload();
-	tex->Load( FileName, D3DFMT_FROM_FILE, GetDownScale( tt ) );
+	tex->Load( FileName, D3DFMT_FROM_FILE, GetDownScale( tt ), GetMinScaleDim( tt ), pool );
 }
 
 void r3dMaterial::ReloadTextures()
@@ -1185,8 +1375,9 @@ void ResetMatFrameScores()
 
 void r3dMaterialLibrary::Reset()
 {
+#ifndef WO_SERVER
 	r3dCSHolderWithDeviceQueue csholder( g_ResourceCritSection ) ; (void)csholder ;
-
+#endif
 	ResetMatFrameScores();
 
 	r3d_assert(NumManagedMaterialsInLibrary == 0);
@@ -1547,4 +1738,195 @@ void r3dInitMaterials()
 void r3dCloseMaterials()
 {
 
+}
+
+//------------------------------------------------------------------------
+
+//------------------------------------------------------------------------
+
+SMDepthVShaderID::SMDepthVShaderID()
+{
+	Id = 0;
+}
+
+//------------------------------------------------------------------------
+
+void SMDepthVShaderID::ToString( char* str )
+{
+	strcpy( str, "VS_SMDEPTH" );
+
+	if( apex )
+	{
+		strcat( str, "_APEX" );
+	}
+
+	if( intanced )
+	{
+		strcat( str, "_INSTANCED" );
+	}
+
+	strcat( str, "_TYPE" );
+	strcat( str, DigitToCString( type ) );
+}
+
+//------------------------------------------------------------------------
+
+void SMDepthVShaderID::FillMacros( ShaderMacros& defines )
+{
+	defines.Resize( 3 );
+
+	defines[ 0 ].Name		= "APEX";
+	defines[ 0 ].Definition	= DigitToCString( apex );
+
+	defines[ 1 ].Name		= "INSTANCED";
+	defines[ 1 ].Definition	= DigitToCString( apex );
+
+	defines[ 2 ].Name		= "SHADOW_TYPE";
+	defines[ 2 ].Definition	= DigitToCString( type );
+}
+
+//------------------------------------------------------------------------
+
+SMDepthVShaderIDs gSMDepthVSIds;
+
+//------------------------------------------------------------------------
+
+SkinSMDepthVShaderID::SkinSMDepthVShaderID()
+{
+	Id = 0;
+}
+
+//------------------------------------------------------------------------
+
+void SkinSMDepthVShaderID::ToString( char* str )
+{
+	strcpy( str, "VS_SKIN_SMDEPTH" );
+
+	strcat( str, "_TYPE" );
+	strcat( str, DigitToCString( type ) );
+}
+
+//------------------------------------------------------------------------
+
+void SkinSMDepthVShaderID::FillMacros( ShaderMacros& defines )
+{
+	defines.Resize( 1 );
+
+	defines[ 0 ].Name		= "SHADOW_TYPE";
+	defines[ 0 ].Definition	= DigitToCString( type );
+}
+
+//------------------------------------------------------------------------
+
+SkinSMDepthVShaderIDs gSkinSMDepthVSIds;
+
+//------------------------------------------------------------------------
+
+ForestVShaderID::ForestVShaderID()
+{
+	Id = 0;
+}
+
+//------------------------------------------------------------------------
+
+void ForestVShaderID::ToString( char* str )
+{
+	strcpy( str, "VS_FOREST" );
+
+	if( noninstanced )
+	{
+		strcat( str, "_NONINSTANCED" );
+	}
+
+	if( animated )
+	{
+		strcat( str, "_ANIMATED" );
+	}
+
+	if( shadows )
+	{
+		strcat( str, "_SHADOWS" );
+	}
+
+	strcat( str, "_SHADOWTYPE" );
+	strcat( str, DigitToCString(shadow_type) );
+}
+
+//------------------------------------------------------------------------
+
+void ForestVShaderID::FillMacros( ShaderMacros& defines )
+{
+	defines.Resize( 4 );
+
+	defines[ 0 ].Name		= "NONINSTANCED_RENDER";
+	defines[ 0 ].Definition	= DigitToCString( noninstanced );
+
+	defines[ 1 ].Name		= "ANIMATED";
+	defines[ 1 ].Definition	= DigitToCString( animated );
+
+	defines[ 2 ].Name		= "SHADOW_PASS";
+	defines[ 2 ].Definition	= DigitToCString( shadows );
+
+	defines[ 3 ].Name		= "SHADOW_TYPE";
+	defines[ 3 ].Definition	= DigitToCString( shadow_type );
+}
+
+//------------------------------------------------------------------------
+
+ForestVShaderIDs gForestVSIds;
+
+//------------------------------------------------------------------------
+
+SMDepthPShaderID::SMDepthPShaderID()
+{
+	Id = 0;
+}
+
+//------------------------------------------------------------------------
+
+void SMDepthPShaderID::ToString( char* str )
+{
+	strcpy( str, "PS_SMDEPTH" );
+
+	strcat( str, "_TYPE" );
+	strcat( str, DigitToCString( type ) );
+}
+
+//------------------------------------------------------------------------
+
+void SMDepthPShaderID::FillMacros( ShaderMacros& defines )
+{
+	defines.Resize( 1 );
+
+	defines[ 0 ].Name		= "SHADOW_TYPE";
+	defines[ 0 ].Definition = DigitToCString( type );
+}
+
+//------------------------------------------------------------------------
+
+SMDepthPShaderIDs gSMDepthPSIds;
+
+//------------------------------------------------------------------------
+
+const char* DigitToCString( int digit )
+{
+	r3d_assert( digit < 10 && digit >= 0 ) ;
+
+#define DIG_CASE(num) case num: return #num ;
+	switch( digit )
+	{
+		DIG_CASE(0)
+			DIG_CASE(1)
+			DIG_CASE(2)
+			DIG_CASE(3)
+			DIG_CASE(4)
+			DIG_CASE(5)
+			DIG_CASE(6)
+			DIG_CASE(7)
+			DIG_CASE(8)
+			DIG_CASE(9)
+	}
+#undef DIG_CASE
+
+	return "" ;
 }

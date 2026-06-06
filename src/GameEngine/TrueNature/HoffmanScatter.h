@@ -68,7 +68,8 @@ public:
                                             , r3dPoint2D tCloudsDim
                                             , bool normals
                                             , float mie
-											, float amplify
+											, float angle
+											, float angle_range
 											, bool setShaders
                                             );
 
@@ -87,7 +88,8 @@ public:
                                             , r3dColor fogColor
 											, r3dPoint2D tCloudsDim
 											, float mie
-											, float amplify
+											, float angle
+											, float angle_range
 											);
 
 public:
@@ -110,7 +112,7 @@ public:
 
     //! \brief  Computes the sun attenuation for the specified sun angle
     //! \param  [in] The sun angle to use
-    void            computeAttenuation      ( const float a_theta );
+    void            computeAttenuation      ( const float a_theta, float angle_range );
     //! \brief  Updates the shader constants
     //! \param  [in] The camera to use
     //! \param  [in] The current sun direction
@@ -142,6 +144,8 @@ public:
 	float		m_fSkySunsetStartCoef;
 	float		m_fSkyCloudsFadeStart;
 	float		m_fSkyCloudsFadeEnd;
+
+	float		m_fSkyIntensity;
 
     r3dPoint3D    m_betaRay;                  //!< Rayleigh total scattering coefficient
     r3dPoint3D    m_betaDashRay;              //!< Rayleigh angular scattering coefficient without phase term

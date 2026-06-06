@@ -19,14 +19,12 @@ class GameObject;
 #pragma pack(push)
 #pragma pack(1)
 
-#define P2PNET_VERSION		(0x00000274 + GBWEAPINFO_VERSION + GBGAMEINFO_VERSION + GAMEPLAYPARAM_VERSION)
+#define P2PNET_VERSION		(0x0000004A + GBWEAPINFO_VERSION + GBGAMEINFO_VERSION + GAMEPLAYPARAM_VERSION)
 
-#define NETID_PLAYERS_START	1		// players [1--99]
-#define NETID_CONTROLS_START	100		// control points [100-150]
-#define NETID_SIEGEOBJ_START	151		// siege objective [151-199]
-#define NETID_OBJECTS_START	200		// various spawned objects [200-0xffff]
+#define NETID_PLAYERS_START	1		// players [1--255]
+#define NETID_OBJECTS_START	300		// various spawned objects [400-0xffff]
 
-static const int NUM_WEAPONS_ON_PLAYER = 7;
+static const int NUM_WEAPONS_ON_PLAYER = wiCharDataFull::CHAR_LOADOUT_ITEM4 + 1;
 
 enum pkttype_e
 {
@@ -34,39 +32,23 @@ enum pkttype_e
 
   PKT_C2C_PacketBarrier,		// server<->client per object packet indicating logical barrier for received packets
 
-  PKT_S2C_LevelInfo,
-  
   PKT_C2S_JoinGameReq,
   PKT_S2C_JoinGameAns,
   PKT_S2C_ShutdownNote,
   PKT_S2C_SetGamePlayParams,
-  PKT_S2C_CreatePlayer,
-  PKT_S2C_DropPlayer,
   
   PKT_C2S_StartGameReq,
   PKT_S2C_StartGameAns,
+  PKT_C2S_DisconnectReq,		// server<-> client disconnect request
 
-  PKT_S2C_GameAboutToStart,
-  PKT_S2C_GameStarted,
+  PKT_S2C_PlayerNameJoined,
+  PKT_S2C_PlayerNameLeft,
 
-  // bomb mode
-  PKT_S2C_Bomb_ConnectedPlayer,
-  PKT_S2C_Bomb_DisconnectedPlayer,
-  PKT_C2S_Bomb_RequestPlayerKick,
-  PKT_C2S_Bomb_PlayerReady,
-  PKT_S2C_Bomb_PlayerReady,
-  PKT_S2C_Bomb_PlayerHasBomb, 
-  PKT_C2S_Bomb_RequestBombPlacement,
-  PKT_S2C_Bomb_BombPlaced,
-  PKT_S2C_Bomb_Exploded,
-  PKT_S2C_Bomb_WonRound,
-  PKT_S2C_Bomb_Dropped,
-  PKT_C2S_Bomb_RequestDrop,
-  PKT_C2S_Bomb_RequestBombPickup,
-  PKT_C2S_Bomb_RequestTeamChange,
-  PKT_C2S_Bomb_ChatMsg,
-  PKT_S2C_Bomb_ChatMsg,
-  
+  PKT_S2C_CreatePlayer,
+
+  PKT_C2C_PlayerReadyGrenade,
+  PKT_C2C_PlayerThrewGrenade,
+  PKT_C2C_PlayerReload,
   // weapon fire packets
   PKT_C2C_PlayerFired,		// player fired event. play muzzle effect, etc. actual HIT event is separate event.
 							// this will increment server side counter, and HIT packet will decrement it. So, need to make sure that for each FIRE packet
@@ -77,18 +59,40 @@ enum pkttype_e
   PKT_C2C_PlayerHitStaticPierced, // hit static geometry and pierced through it, will be followed up by another HIT event
   PKT_C2C_PlayerHitDynamic, // hit something that can be damaged (player, UAV, etc)
 
+  PKT_S2C_SetPlayerVitals,
+  PKT_S2C_SetPlayerLoadout,	// indicate loadout change for not local players
+  PKT_S2C_SetPlayerAttachments,
+  PKT_S2C_SetPlayerWorldFlags,
+  PKT_C2S_PlayerEquipAttachment,// equip weapon attachment
+  PKT_C2S_PlayerRemoveAttachment,
   PKT_C2C_PlayerSwitchWeapon,
   PKT_C2C_PlayerUseItem,
+  PKT_S2C_PlayerUsedItemAns, // this packet is sent for immediate action items, like bandages, or morphine shot
+  PKT_C2S_PlayerChangeBackpack,
+  PKT_C2S_BackpackDrop,		// player backpack operation
+  PKT_C2S_BackpackSwap,
+  PKT_C2S_BackpackJoin,
+  PKT_S2C_BackpackAddNew,	// item added to backpack
+  PKT_S2C_BackpackModify,	// item quantity changed in backpack
+  PKT_C2S_InventoryOp,		// player inventory operation
   PKT_S2C_CreateNetObject,
   PKT_S2C_DestroyNetObject,
-  PKT_S2C_PlayerUsedItemAns, // this packet is sent for immediate action items, like bandages, or morphine shot
+  PKT_C2S_UseNetObject,
+  // special packet for special server objects (we still have NetIds so lets use different packets)
+  PKT_S2C_CreateDroppedItem,
 
-  PKT_C2C_PlayerReadyGrenade,
-  PKT_C2S_CreateExplosion, // grenades as well as mines. 
-
-  PKT_C2S_MarkTarget,
-  PKT_S2C_TargetMarked,
-
+  // server notes
+  PKT_C2S_CreateNote,
+  PKT_S2C_CreateNote,
+  PKT_S2C_SetNoteData,
+  
+  // server zombies
+  PKT_S2C_CreateZombie,
+  PKT_S2C_ZombieSetState,
+  PKT_S2C_ZombieAttack,
+  PKT_C2S_Zombie_DBG_AIReq,
+  PKT_S2C_Zombie_DBG_AIInfo,
+  
   // movement packets
   PKT_S2C_MoveTeleport,
   PKT_C2C_MoveSetCell,			// set cell origin for PKT_C2C_MoveRel updates
@@ -101,75 +105,17 @@ enum pkttype_e
   PKT_S2C_Damage,
   PKT_S2C_KillPlayer,
   
-  PKT_S2C_SetPlayerScore,		// broadcasting message used to set score for player
   PKT_S2C_AddScore,			// single player message to display hp/gp gain
-  PKT_S2C_UnlockAchievement,
 
-  PKT_C2S_SetRespawnData,
-  PKT_S2C_RespawnPlayer,
-  
   PKT_S2C_SpawnExplosion, // spawn visual effect of explosion only
 
-  PKT_C2S_RequestAirstrike,
-  PKT_S2C_Airstrike,
-
-  PKT_S2C_ControlPointUpdate,
-
-  PKT_C2S_Siege_Activate,
-  PKT_S2C_SiegeUpdate,
-
-  PKT_C2S_ResupplyRequest,
-  PKT_S2C_ResupplyPlayer,
-  
-  PKT_S2C_GameAbort,			// might be used for master server game termination request
-  PKT_S2C_GameFinish,			// game is finished
-  PKT_S2C_RoundStats,			// per player packet containing current round statistics
-  PKT_S2C_GameClose,			// actual game close packet, all profiles is updated at this moment
-
   PKT_C2C_ChatMessage,			// client sends to server chat message, server will relay it to everyone except for sender
-
-  PKT_C2C_VoiceCommand,
-  PKT_C2C_CommRoseCommand,
-  
-  // UAV packets
-  PKT_S2C_UAVSetState,
-
-  // Conquest logic packets
-  PKT_S2C_TicketsUpdate,
-
-  // team switch
-  PKT_S2C_TeamSwitchError,
 
   // data update packets
   PKT_C2S_DataUpdateReq,
   PKT_S2C_UpdateWeaponData,
   PKT_S2C_UpdateGearData,
   
-  // abilities
-  PKT_S2C_BerserkerAbility,
-  PKT_S2C_BigSurpriseAbility,
-
-  // weapon drop
-  PKT_S2C_SpawnDroppedWeapon,
-  PKT_S2C_DestroyDroppedWeapon,
-  PKT_C2S_RequestWeaponPickup, // request pick up
-  PKT_S2C_WeaponPickedUp, // server replies this if you are able to pickup that weapon
-  PKT_C2C_ConfirmWeaponPickup, // client has to confirm that weapon was picked up and let server and everyone else know that now it shoots with new weapon
-
-  // loot drop
-  PKT_S2C_SpawnDroppedLootBox,
-  PKT_S2C_DestroyDroppedLootBox,
-  PKT_S2C_LootBoxPickedUp, // informs client that it picked up loot box
-
-  // mines
-  PKT_C2S_PlayerCreateMine,
-  PKT_S2C_SpawnMine,
-  PKT_C2S_TriggerMine, // for now we have to trust clients to send us correct trigger :(
-  PKT_S2C_ExplodeMine, // if mine exploded and destroyed, server will NOT send separate DestroyMine packet
-  PKT_S2C_DestroyMine, // if mine silently destroyed, without explosion
-  PKT_S2C_NewOwnerMine, // when mine switched its owner
-  PKT_C2C_PlayerSwitchMine, // switch owner of the mine, used by The Fixer ability. if user able to do this, server will relay packet to everyone else
-
   // light meshes
   PKT_S2C_LightMeshStatus, // sends this when we need to turn off light in light mesh
 
@@ -181,12 +127,14 @@ enum pkttype_e
   
   // admin
   PKT_C2S_Admin_PlayerKick,
+  PKT_C2S_Admin_GiveItem,
 
   // some test things
   PKT_C2S_TEST_SpawnDummyReq,
-  PKT_C2S_TEST_PlayerSetWeapon,
   PKT_C2S_DBG_LogMessage,
-  
+
+  PKT_S2C_SetPlayerReputation,
+
   PKT_LAST_PACKET_ID,
 };
 
@@ -198,13 +146,14 @@ enum pkttype_e
   case xxx: { \
     const xxx##_s&n = *(xxx##_s*)packetData; \
     if(packetSize != sizeof(n)) { \
-      r3dOutToLog("!!!!errror!!!! %s packetSize %d != %d\n", #xxx, packetSize, sizeof(n)); \
+      r3dOutToLog("!!!!errror!!!! %d packetSize %d != %d\n", xxx, packetSize, sizeof(n)); \
       return TRUE; \
     } \
     bool needPassThru = false; \
     On##xxx(n, fromObj, peerId, needPassThru); \
     return needPassThru ? FALSE : TRUE; \
   }
+
 
 struct PKT_C2S_ValidateConnectingPeer_s : public DefaultPacketMixin<PKT_C2S_ValidateConnectingPeer>
 {
@@ -217,23 +166,20 @@ struct PKT_C2C_PacketBarrier_s : public DefaultPacketMixin<PKT_C2C_PacketBarrier
 {
 };
 
-struct PKT_S2C_LevelInfo_s : public DefaultPacketMixin<PKT_S2C_LevelInfo>
-{
-	GBGameInfo	gameInfo;
-};
-
 struct PKT_C2S_JoinGameReq_s : public DefaultPacketMixin<PKT_C2S_JoinGameReq>
 {
 	DWORD		CustomerID;
 	DWORD		SessionID;
+	DWORD		CharID;		// character id of 
 };
 
 struct PKT_S2C_JoinGameAns_s : public DefaultPacketMixin<PKT_S2C_JoinGameAns>
 {
 	BYTE		success;
 	BYTE		playerIdx;
-	float		gameTimeLeft;
-	float		gameStartTime;
+
+	GBGameInfo	gameInfo;
+	__int64		gameTime;	// UTC game time
 };
 
 struct PKT_S2C_ShutdownNote_s : public DefaultPacketMixin<PKT_S2C_ShutdownNote>
@@ -246,157 +192,116 @@ struct PKT_S2C_SetGamePlayParams_s : public DefaultPacketMixin<PKT_S2C_SetGamePl
 {
 	DWORD		GPP_Seed;	// per-session value used to xor crc of gpp
 	CGamePlayParams	GPP_Data;
-	float		airstrike_cooldowns[10]; // from AirstrikeShared.cpp: g_NumAirstrikesInArray*2 + 2 for team cooldowns
-};
-
-struct PKT_S2C_CreatePlayer_s : public DefaultPacketMixin<PKT_S2C_CreatePlayer>
-{
-	BYTE		playerIdx;
-	BYTE		teamId;
-	BYTE		bDying;
-	BYTE		isPremium;
-	BYTE		slotNum;	// index of loadout slot
-	char		userName[64];
-	r3dPoint3D	spawnPos;
-	float		spawnDir;
-	float		spawnProteciton;
-	r3dPoint3D	moveCell;	// cell position from PKT_C2C_MoveSetCell
-	int		weapIndex; // index of equipped weapon (-1 for default)
-	wiLoadoutSlot	lslot;
-	wiWeaponAttachments attms;
-	int		score; // for kill tag and scoreboard
-	int		wins;
-	int		losses;
-	int		ClanID;
-	char		ClanTag[5*2]; // utf8
-	int		ClanTagColor;
-};
-
-struct PKT_S2C_DropPlayer_s : public DefaultPacketMixin<PKT_S2C_DropPlayer>
-{
-	BYTE		playerIdx;
-	BYTE		reason;
 };
 
 struct PKT_C2S_StartGameReq_s : public DefaultPacketMixin<PKT_C2S_StartGameReq>
 {
-	DWORD lastNetID; // to check sync
-	bool  requestSpectator;
+	DWORD		lastNetID; // to check sync
+	DWORD		ArmoryItems;
 };
 
 struct PKT_S2C_StartGameAns_s : public DefaultPacketMixin<PKT_S2C_StartGameAns>
 {
 	enum EResult {
-	  RES_Ok = 0,
-	  RES_Pending = 1,		// server still getting your profile
-	  RES_Failed = 2,		// server was unable to get your profile
-	  RES_UNSYNC = 3,
+	  RES_Unactive,
+	  RES_Ok      = 1,
+	  RES_Pending = 2,		// server still getting your profile
+	  RES_Timeout = 3,		// server was unable to get your profile
+	  RES_Failed  = 4,
+	  RES_UNSYNC  = 5,
+	  RES_InvalidLogin = 6,
+	  RES_StillInGame  = 7,
 	};
 	BYTE		result;		// status of joining
-	BYTE		gameStarted;
-	BYTE		autoplacedTeamId; // to which team server assigned this player on joining
 };
 
-struct PKT_S2C_GameAboutToStart_s : public DefaultPacketMixin<PKT_S2C_GameAboutToStart>
-{
-	float		gameTimeLeft;
-};
-
-struct PKT_S2C_GameStarted_s : public DefaultPacketMixin<PKT_S2C_GameStarted>
-{
-	r3dPoint3D	teleport_pos;
-	float		dir;
-};
-
-struct PKT_S2C_Bomb_ConnectedPlayer_s : public DefaultPacketMixin<PKT_S2C_Bomb_ConnectedPlayer>
-{
-	DWORD peerID; // to ID players
-	char  userName[64];
-	BYTE  teamID;
-	BYTE  isReady;
-	BYTE  plrLevel;
-	BYTE  isMaster; // set to true only for player who created game, he can start game and kick other players
-	BYTE  isSpectator;
-};
-
-struct PKT_C2S_Bomb_PlayerReady_s : public DefaultPacketMixin<PKT_C2S_Bomb_PlayerReady>
-{
-	BYTE selectedLoadoutSlot;
-};
-
-struct PKT_S2C_Bomb_PlayerReady_s : public DefaultPacketMixin<PKT_S2C_Bomb_PlayerReady>
-{
-	DWORD peerID;
-	BYTE isReady;
-};
-
-struct PKT_S2C_Bomb_PlayerHasBomb_s : public DefaultPacketMixin<PKT_S2C_Bomb_PlayerHasBomb>
-{
-	gp2pnetid_t playerID; 
-};
-
-struct PKT_C2S_Bomb_RequestBombPlacement_s : public DefaultPacketMixin<PKT_C2S_Bomb_RequestBombPlacement>
-{
-	gp2pnetid_t bombID;
-	r3dPoint3D pos;
-};
-
-struct PKT_S2C_Bomb_BombPlaced_s : public DefaultPacketMixin<PKT_S2C_Bomb_BombPlaced>
-{
-	r3dPoint3D pos;
-};
-
-struct PKT_S2C_Bomb_Exploded_s : public DefaultPacketMixin<PKT_S2C_Bomb_Exploded>
+struct PKT_C2S_DisconnectReq_s : public DefaultPacketMixin<PKT_C2S_DisconnectReq>
 {
 };
 
-struct PKT_S2C_Bomb_Dropped_s : public DefaultPacketMixin<PKT_S2C_Bomb_Dropped>
+struct PKT_S2C_PlayerNameJoined_s : public DefaultPacketMixin<PKT_S2C_PlayerNameJoined>
 {
-	r3dPoint3D pos;
+	BYTE		peerId;
+	char		gamertag[32*2];
+	BYTE		flags; // 1=isLegend
 };
 
-struct PKT_C2S_Bomb_RequestDrop_s : public DefaultPacketMixin<PKT_C2S_Bomb_RequestDrop>
+struct PKT_S2C_PlayerNameLeft_s : public DefaultPacketMixin<PKT_S2C_PlayerNameLeft>
 {
+	BYTE		peerId;
 };
 
-struct PKT_C2S_Bomb_RequestBombPickup_s : public DefaultPacketMixin<PKT_C2S_Bomb_RequestBombPickup>
+// struct used to pass network weapon attachments that affect remote player
+struct wiNetWeaponAttm
 {
+	DWORD		LeftRailID;
+	DWORD		MuzzleID;
+	
+	wiNetWeaponAttm()
+	{
+	  LeftRailID = 0;
+	  MuzzleID   = 0;
+	}
 };
 
-struct PKT_C2S_Bomb_RequestTeamChange_s : public DefaultPacketMixin<PKT_C2S_Bomb_RequestTeamChange>
+struct PKT_S2C_CreatePlayer_s : public DefaultPacketMixin<PKT_S2C_CreatePlayer>
 {
-	BYTE requestSpectator;
+	BYTE		playerIdx;
+	char		gamertag[32*2];
+	r3dPoint3D	spawnPos;
+	float		spawnDir;
+	r3dPoint3D	moveCell;	// cell position from PKT_C2C_MoveSetCell
+	int		weapIndex;	// index of equipped weapon (-1 for default)
+	BYTE		isFreeHands;
+
+	DWORD		HeroItemID;	// ItemID of base character
+	BYTE		HeadIdx;
+	BYTE		BodyIdx;
+	BYTE		LegsIdx;
+	
+	// equipped things
+	DWORD		WeaponID0;
+	DWORD		WeaponID1;
+	DWORD		ArmorID;
+	DWORD		HeadGearID;
+	DWORD		Item0;
+	DWORD		Item1;
+	DWORD		Item2;
+	DWORD		Item3;
+	DWORD		BackpackID;
+	
+	// used for remote player creation
+	wiNetWeaponAttm	Attm0;
+	wiNetWeaponAttm	Attm1;
+
+	DWORD		CustomerID;	// for our in-game admin purposes
+
+	int		ClanID;
+	char		ClanTag[5*2]; // utf8
+	int		ClanTagColor;
+
+	int Reputation;
 };
 
-// separate chat packets for lobby, as we don't have players in lobby, only server knows who is connected
-// they are quite heavy, but hopefully ppl will not be spending too much time in lobby
-struct PKT_C2S_Bomb_ChatMsg_s : public DefaultPacketMixin<PKT_C2S_Bomb_ChatMsg>
+struct PKT_C2C_PlayerReadyGrenade_s : public DefaultPacketMixin<PKT_C2C_PlayerReadyGrenade>
 {
-	bool isTeam;
-	char msg[128]; // actual text
+	BYTE		wid;
 };
 
-struct PKT_S2C_Bomb_ChatMsg_s : public DefaultPacketMixin<PKT_S2C_Bomb_ChatMsg>
+struct PKT_C2C_PlayerThrewGrenade_s : public DefaultPacketMixin<PKT_C2C_PlayerThrewGrenade>
 {
-	bool isTeam; // if this is a team only chat message (for UI purposes)
-	bool isAlly;
-	int senderPeerId;
-	char msg[128];
+	r3dPoint3D	fire_from; // position of character when he is firing
+	r3dPoint3D	fire_to;
+	float		holding_delay; // if any, used for grenades. THIS IS TEMP until grenades are moved to server(!!)
+	BYTE		slotFrom;	// backpack slot
+	BYTE		debug_wid;
 };
 
-struct PKT_S2C_Bomb_WonRound_s : public DefaultPacketMixin<PKT_S2C_Bomb_WonRound>
+struct PKT_C2C_PlayerReload_s : public DefaultPacketMixin<PKT_C2C_PlayerReload>
 {
-	BYTE teamID; // which team won this round
-};
-
-struct PKT_S2C_Bomb_DisconnectedPlayer_s : public DefaultPacketMixin<PKT_S2C_Bomb_DisconnectedPlayer>
-{
-	DWORD peerID;
-};
-
-struct PKT_C2S_Bomb_RequestPlayerKick_s : public DefaultPacketMixin<PKT_C2S_Bomb_RequestPlayerKick>
-{
-	DWORD peerIDtoKick;
+	BYTE		WeaponSlot;
+	BYTE		AmmoSlot;
+	BYTE		dbg_Amount;	// actual number of bullets reloaded
 };
 
 struct PKT_C2C_PlayerFired_s : public DefaultPacketMixin<PKT_C2C_PlayerFired>
@@ -406,6 +311,7 @@ struct PKT_C2C_PlayerFired_s : public DefaultPacketMixin<PKT_C2C_PlayerFired>
 	float		holding_delay; // if any, used for grenades. THIS IS TEMP until grenades are moved to server(!!)
 	BYTE		debug_wid;	// weapon index for debug
 	BYTE		wasAiming; // if player was aiming when shot. needed for some achievements
+	BYTE		execWeaponFire;
 };
 
 struct PKT_C2C_PlayerHitNothing_s : public DefaultPacketMixin<PKT_C2C_PlayerHitNothing>
@@ -434,6 +340,7 @@ struct PKT_C2C_PlayerHitStaticPierced_s : public DefaultPacketMixin<PKT_C2C_Play
 
 struct PKT_C2C_PlayerHitDynamic_s : public DefaultPacketMixin<PKT_C2C_PlayerHitDynamic>
 {
+	r3dPoint3D	muzzler_pos; // for anti cheat
 	r3dPoint3D	hit_pos; // where your bullet hit
 	gp2pnetid_t	targetId; // what you hit
 	BYTE		hit_body_bone; // which bone we hit (for ragdoll)
@@ -475,20 +382,85 @@ struct PKT_C2C_PlayerJump_s : public DefaultPacketMixin<PKT_C2C_PlayerJump>
 {
 };
 
-struct PKT_C2C_PlayerSwitchWeapon_s : public DefaultPacketMixin<PKT_C2C_PlayerSwitchWeapon>
+struct PKT_S2C_SetPlayerVitals_s : public DefaultPacketMixin<PKT_S2C_SetPlayerVitals>
+{
+	BYTE		Health;
+	BYTE		Thirst;
+	BYTE		Hunger;
+	BYTE		Toxic;
+	
+	void FromChar(const wiCharDataFull* slot)
+	{
+		Health = (BYTE)slot->Health;
+		Thirst = (BYTE)slot->Thirst;
+		Hunger = (BYTE)slot->Hunger;
+		Toxic  = (BYTE)slot->Toxic;
+	}
+	bool operator==(const PKT_S2C_SetPlayerVitals_s& rhs) const
+	{
+		if(Health != rhs.Health) return false;
+		if(Thirst != rhs.Thirst) return false;
+		if(Hunger != rhs.Hunger) return false;
+		if(Toxic  != rhs.Toxic)  return false;
+		return true;
+	}
+	bool operator!=(const PKT_S2C_SetPlayerVitals_s& rhs) const { return !((*this)==rhs); }
+};
+
+struct PKT_S2C_SetPlayerLoadout_s : public DefaultPacketMixin<PKT_S2C_SetPlayerLoadout>
+{
+	DWORD		WeaponID0;
+	DWORD		WeaponID1;
+	DWORD		QuickSlot1;
+	DWORD		QuickSlot2;
+	DWORD		QuickSlot3;
+	DWORD		QuickSlot4;
+	DWORD		ArmorID;
+	DWORD		HeadGearID;
+	DWORD		BackpackID;
+};
+
+struct PKT_S2C_SetPlayerAttachments_s : public DefaultPacketMixin<PKT_S2C_SetPlayerAttachments>
 {
 	BYTE		wid;
+	wiNetWeaponAttm	Attm;
+};
+
+struct PKT_S2C_SetPlayerWorldFlags_s : public DefaultPacketMixin<PKT_S2C_SetPlayerWorldFlags>
+{
+	DWORD		flags;
+};
+
+struct PKT_C2S_PlayerEquipAttachment_s : public DefaultPacketMixin<PKT_C2S_PlayerEquipAttachment>
+{
+	BYTE		wid;
+	BYTE		AttmSlot;
+	DWORD		dbg_WeaponID;
+	DWORD		dbg_AttmID;
+	BYTE		dbg_Amount;	// in case of clip attachment - number of bullets
+};
+
+struct PKT_C2S_PlayerRemoveAttachment_s : public DefaultPacketMixin<PKT_C2S_PlayerRemoveAttachment>
+{
+	BYTE		wid;
+	BYTE		WpnAttmType;	// of WeaponAttachmentTypeEnum
+};
+
+struct PKT_C2C_PlayerSwitchWeapon_s : public DefaultPacketMixin<PKT_C2C_PlayerSwitchWeapon>
+{
+	BYTE		wid; // 255 - means empty hands
 };
 
 struct PKT_C2C_PlayerUseItem_s : public DefaultPacketMixin<PKT_C2C_PlayerUseItem>
 {
-	DWORD		itemId;
+	BYTE		SlotFrom;	// backpack slot
+	DWORD		dbg_ItemID;
 	r3dPoint3D	pos;
 	// various parameters for items
 	float		var1;
 	float		var2;
 	float		var3;
-	float		var4;
+	DWORD		var4;
 };
 
 struct PKT_S2C_PlayerUsedItemAns_s : public DefaultPacketMixin<PKT_S2C_PlayerUsedItemAns>
@@ -501,7 +473,58 @@ struct PKT_S2C_PlayerUsedItemAns_s : public DefaultPacketMixin<PKT_S2C_PlayerUse
 	float		var4;
 };
 
-//NOTE: packet must be sent from player object
+struct PKT_C2S_PlayerChangeBackpack_s : public DefaultPacketMixin<PKT_C2S_PlayerChangeBackpack>
+{
+	BYTE		SlotFrom;
+	BYTE		BackpackSize;	// to verify against server
+};
+
+struct PKT_C2S_BackpackDrop_s : public DefaultPacketMixin<PKT_C2S_BackpackDrop>
+{
+	BYTE		SlotFrom;
+	r3dPoint3D	pos;
+};
+
+struct PKT_C2S_BackpackSwap_s : public DefaultPacketMixin<PKT_C2S_BackpackSwap>
+{
+	BYTE		SlotFrom;
+	BYTE		SlotTo;
+};
+
+struct PKT_C2S_BackpackJoin_s : public DefaultPacketMixin<PKT_C2S_BackpackJoin>
+{
+	BYTE		SlotFrom;
+	BYTE		SlotTo;
+};
+
+struct PKT_S2C_BackpackAddNew_s : public DefaultPacketMixin<PKT_S2C_BackpackAddNew>
+{
+	BYTE		SlotTo;
+	wiInventoryItem	Item;
+};
+
+struct PKT_S2C_BackpackModify_s : public DefaultPacketMixin<PKT_S2C_BackpackModify>
+{
+	BYTE		SlotTo;		// or 0xFF when there is NO free slot
+	WORD		Quantity;	// target quantity, 0 for removing item
+	
+	DWORD		dbg_ItemID;	// to check
+};
+
+struct PKT_C2S_InventoryOp_s : public DefaultPacketMixin<PKT_C2S_InventoryOp>
+{
+	enum EOps
+	{
+	  OP_TOINV,
+	  OP_FROMINV,
+	};
+
+	BYTE		op;
+	BYTE		Slot;
+	__int64		InventoryID;
+	int		Quantity;
+};
+
 struct PKT_S2C_CreateNetObject_s : public DefaultPacketMixin<PKT_S2C_CreateNetObject>
 {
 	gp2pnetid_t	spawnID;
@@ -518,38 +541,92 @@ struct PKT_S2C_CreateNetObject_s : public DefaultPacketMixin<PKT_S2C_CreateNetOb
 
 struct PKT_S2C_DestroyNetObject_s : public DefaultPacketMixin<PKT_S2C_DestroyNetObject>
 {
-	gp2pnetid_t spawnID;
+	gp2pnetid_t	spawnID;
 };
 
-struct PKT_C2C_PlayerReadyGrenade_s : public DefaultPacketMixin<PKT_C2C_PlayerReadyGrenade>
+struct PKT_C2S_UseNetObject_s : public DefaultPacketMixin<PKT_C2S_UseNetObject>
 {
-	BYTE		wid;
+	gp2pnetid_t	spawnID;
 };
 
-struct PKT_C2S_MarkTarget_s : public DefaultPacketMixin<PKT_C2S_MarkTarget>
+struct PKT_S2C_CreateDroppedItem_s : public DefaultPacketMixin<PKT_S2C_CreateDroppedItem>
 {
-	gp2pnetid_t targetID;
+	gp2pnetid_t	spawnID;
+	r3dPoint3D	pos;
+	
+	wiInventoryItem	Item;
 };
 
-struct PKT_S2C_TargetMarked_s : public DefaultPacketMixin<PKT_S2C_TargetMarked>
+struct PKT_C2S_CreateNote_s : public DefaultPacketMixin<PKT_C2S_CreateNote>
 {
-	gp2pnetid_t targetID;
-	float time; // how long it will stay marked
+	static const int DEFAULT_PLAYER_NOTE_EXPIRE_TIME = 60*24; // in minutes (24 hours of real time (not in-game) expire time)
+	BYTE		SlotFrom;	// backpack slot
+	r3dPoint3D	pos;
+	int		ExpMins;
+	char		TextFrom[128];
+	char		TextSubj[1024];
 };
 
+struct PKT_S2C_CreateNote_s : public DefaultPacketMixin<PKT_S2C_CreateNote>
+{
+	gp2pnetid_t	spawnID;
+	r3dPoint3D	pos;
+};
+
+struct PKT_S2C_SetNoteData_s : public DefaultPacketMixin<PKT_S2C_SetNoteData>
+{
+	char		TextFrom[128];
+	char		TextSubj[1024];
+};
+
+struct PKT_S2C_CreateZombie_s : public DefaultPacketMixin<PKT_S2C_CreateZombie>
+{
+	gp2pnetid_t	spawnID;
+	r3dPoint3D	spawnPos;
+	float		spawnDir;
+	r3dPoint3D	moveCell;	// cell position from PKT_C2C_MoveSetCell
+	DWORD		HeroItemID;	// ItemID of base character
+	BYTE		HeadIdx;
+	BYTE		BodyIdx;
+	BYTE		LegsIdx;
+	BYTE		State;		// ZombieStates::EZombieStates
+	BYTE		FastZombie;
+	float		WalkSpeed;
+	float		RunSpeed;
+};
+
+struct PKT_S2C_ZombieSetState_s : public DefaultPacketMixin<PKT_S2C_ZombieSetState>
+{
+	BYTE		State;		// ZombieStates::EZombieStates
+};
+
+struct PKT_S2C_ZombieAttack_s : public DefaultPacketMixin<PKT_S2C_ZombieAttack>
+{
+	gp2pnetid_t	targetId;
+};
+
+struct PKT_C2S_Zombie_DBG_AIReq_s : public DefaultPacketMixin<PKT_C2S_Zombie_DBG_AIReq>
+{
+};
+
+struct PKT_S2C_Zombie_DBG_AIInfo_s : public DefaultPacketMixin<PKT_S2C_Zombie_DBG_AIInfo>
+{
+	r3dPoint3D	from;
+	r3dPoint3D	to;
+};
 
 //This packet will always apply damage, even to friendlies!!!
 struct PKT_C2S_Temp_Damage_s : public DefaultPacketMixin<PKT_C2S_Temp_Damage>
 {
 	gp2pnetid_t	targetId;
-    BYTE        wpnIdx;
-    BYTE        damagePercentage;
-	r3dPoint3D  explosion_pos;
+	BYTE		wpnIdx;
+	BYTE		damagePercentage;
+	r3dPoint3D	explosion_pos;
 };
 
 struct PKT_C2S_FallingDamage_s : public DefaultPacketMixin<PKT_C2S_FallingDamage>
 {
-    float damage;
+	float		damage;
 };
 
 struct PKT_S2C_Damage_s : public DefaultPacketMixin<PKT_S2C_Damage>
@@ -569,13 +646,6 @@ struct PKT_S2C_KillPlayer_s : public DefaultPacketMixin<PKT_S2C_KillPlayer>
 	bool		forced_by_server;
 };
 
-struct PKT_S2C_SetPlayerScore_s : public DefaultPacketMixin<PKT_S2C_SetPlayerScore>
-{
-	int		score;
-	WORD		kills;
-	WORD		deaths;
-};
-
 struct PKT_S2C_AddScore_s : public DefaultPacketMixin<PKT_S2C_AddScore>
 {
 	PKT_S2C_AddScore_s& operator= (const PKT_S2C_AddScore_s& rhs) {
@@ -584,154 +654,16 @@ struct PKT_S2C_AddScore_s : public DefaultPacketMixin<PKT_S2C_AddScore>
 	}
 
 	WORD		ID;	// id of reward (defined in UserRewards.h for now)
-	signed short	HP;	// honor points
-	WORD		GD;	// game dollars
-};
-
-struct PKT_S2C_UnlockAchievement_s : public DefaultPacketMixin<PKT_S2C_UnlockAchievement>
-{
-	WORD		achiIdx;	// index of achievment
-};
-
-struct PKT_C2S_SetRespawnData_s : public DefaultPacketMixin<PKT_C2S_SetRespawnData>
-{
-	DWORD		spawnId;	// spawnID can be NetwordID for respawn beacons usage
-	BYTE		teamId;
-	BYTE		slotNum;
-};
-
-struct PKT_S2C_RespawnPlayer_s : public DefaultPacketMixin<PKT_S2C_RespawnPlayer>
-{
-	r3dPoint3D	pos;
-	float		dir;
-	float		spawnProtection;
-	BYTE		teamId;
-	BYTE		slotNum;
-	wiLoadoutSlot	lslot;
-	wiWeaponAttachments attms;
-};
-
-struct PKT_S2C_ControlPointUpdate_s : public DefaultPacketMixin<PKT_S2C_ControlPointUpdate>
-{
-	BYTE		packet_status;		// -1: red team, 0
-
-	void		pack(float status) {
-	  status = R3D_CLAMP(status, -1.0f, 1.0f);
-	  status = ((status + 1.0f) * 127);
-	  packet_status = BYTE(status);
-	}
-	float		unpack() const {
-	  float status = float(packet_status);
-	  status /= 127;
-	  status -= 1.0f;
-	  status = R3D_CLAMP(status, -1.0f, 1.0f);
-	  return status;
-	}
-};
-
-struct PKT_S2C_ResupplyPlayer_s : public DefaultPacketMixin<PKT_S2C_ResupplyPlayer>
-{
-	int result; // 0-fail, 1-success, 2-timer, 3-radius, 4-key
-	float timeLeft; // time left until next resupply allowed
-};
-
-struct PKT_C2S_ResupplyRequest_s : public DefaultPacketMixin<PKT_C2S_ResupplyRequest>
-{
-};
-
-struct PKT_C2S_Siege_Activate_s : public DefaultPacketMixin<PKT_C2S_Siege_Activate>
-{
-	gp2pnetid_t ObjectiveID;
-};
-
-struct PKT_S2C_SiegeUpdate_s : public DefaultPacketMixin<PKT_S2C_SiegeUpdate>
-{
-	BYTE status;
-	float destruction_timer;
-};
-
-struct PKT_S2C_GameAbort_s : public DefaultPacketMixin<PKT_S2C_GameAbort>
-{
-};
-
-struct PKT_S2C_RoundStats_s : public DefaultPacketMixin<PKT_S2C_RoundStats>
-{
-	wiStats		rstat;
-	wiStatsTracking	rscore;
-	BYTE levelUpMin; // 0 - no levelup
-	BYTE levelUpMax;
-	BYTE oneTimeReward; // one time reward from server: 0-100WP, 1-LootBox1, 2-LootBox2, 3-LootBox3, 4-2xWP for 20min, 5-2xXP for 20min
-};
-
-struct PKT_S2C_GameFinish_s : public DefaultPacketMixin<PKT_S2C_GameFinish>
-{
-	PKT_S2C_GameFinish_s& operator= (const PKT_S2C_GameFinish_s& rhs) {
-	  memcpy(this, &rhs, sizeof(*this));
-	  return *this;
-	}
-
-	enum EReasons {
-	  REASON_Timeout,
-	  REASON_Ticket,
-	  REASON_Draw,	// noone win
-	};
-	BYTE		reason;
-	BYTE		winTeam;
-};
-
-struct PKT_S2C_GameClose_s : public DefaultPacketMixin<PKT_S2C_GameClose>
-{
-	BYTE		res;
-};
-
-struct PKT_S2C_TicketsUpdate_s : public DefaultPacketMixin<PKT_S2C_TicketsUpdate>
-{
-	WORD		tickets[2];
-};
-
-struct PKT_S2C_TeamSwitchError_s : public DefaultPacketMixin<PKT_S2C_TeamSwitchError>
-{
-	enum ERROR_TYPE
-	{
-		ERR_TOO_EARLY=0,
-		ERR_ALMOST_FINISHED,
-		ERR_JOINING_WINNING_TEAM,
-		ERR_JOINING_TEAM_WITH_MORE_PLAYERS,
-		
-		OK_MOVED_TEAM0 = 0x20,	// special case when server forcibly switched team
-		OK_MOVED_TEAM1 = 0x21,	// special case when server forcibly switched team
-	};
-	BYTE		errorType; 
+	signed short	XP;
+	WORD		GD;
 };
 
 struct PKT_C2C_ChatMessage_s : public DefaultPacketMixin<PKT_C2C_ChatMessage>
 {
-#define CHAT_MSGTYPE_GENERAL 0
-#define CHAT_MSGTYPE_TEAM 1
-#define CHAT_MSGTYPE_WHISPER 2
-#define CHAT_MSGTYPE_CLAN 3
-#define CHAT_MSGTYPE_SUICIDE 129
-
-	BYTE		msgType;  // 0 - public, 1-team, 2-whisper 129 - Suicide
-	gp2pnetid_t	target;   // in case if it is a private message, target will be to whom this message is addressed
+	BYTE		msgChannel; // 0-proximity, 1-global
+	BYTE		userFlag; // 1-Legend
+	char		gamertag[32*2];
 	char		msg[128]; // actual text
-};
-
-struct PKT_C2C_VoiceCommand_s : public DefaultPacketMixin<PKT_C2C_VoiceCommand>
-{
-	BYTE id;
-};
-
-struct PKT_C2C_CommRoseCommand_s : public DefaultPacketMixin<PKT_C2C_CommRoseCommand>
-{
-	BYTE id;
-	r3dVector pos;
-};
-
-struct PKT_S2C_UAVSetState_s : public DefaultPacketMixin<PKT_S2C_UAVSetState>
-{
-	BYTE		state;		// 0 - active, 1 - damaged, 2 - killed
-	gp2pnetid_t	killerId;
 };
 
 struct PKT_C2S_DataUpdateReq_s : public DefaultPacketMixin<PKT_C2S_DataUpdateReq>
@@ -750,33 +682,10 @@ struct PKT_S2C_UpdateGearData_s : public DefaultPacketMixin<PKT_S2C_UpdateGearDa
 	GBGearInfo	gi;
 };
 
-struct PKT_S2C_BerserkerAbility_s : public DefaultPacketMixin<PKT_S2C_BerserkerAbility>
-{
-	float time;
-};
-
-struct PKT_S2C_BigSurpriseAbility_s : public DefaultPacketMixin<PKT_S2C_BigSurpriseAbility>
-{
-};
-
 struct PKT_S2C_SpawnExplosion_s : public DefaultPacketMixin<PKT_S2C_SpawnExplosion>
 {
 	r3dPoint3D pos;
-    float radius;
-};
-
-struct PKT_C2S_RequestAirstrike_s : public DefaultPacketMixin<PKT_C2S_RequestAirstrike>
-{
-	r3dPoint3D pos; // pos of where airstrike should hit (todo: that should be calculated on server after physics will be on server)
-	int itemID; // itemID of the airstrike
-};
-
-// server sends confirmed airstrike to everyone, and then damage packets after that
-struct PKT_S2C_Airstrike_s : public DefaultPacketMixin<PKT_S2C_Airstrike>
-{
-	r3dPoint3D pos;
-	int itemID; // if itemID == 0 - unknown error, itemID=1 - GP, itemID=2-cooldown, itemID=3-not authorized 100 - success
-	float heightOffset; // >1000 - spawn explosion
+	float radius;
 };
 
 struct PKT_C2S_SecurityRep_s : public DefaultPacketMixin<PKT_C2S_SecurityRep>
@@ -792,84 +701,35 @@ struct PKT_C2S_PlayerWeapDataRep_s : public DefaultPacketMixin<PKT_C2S_PlayerWea
 {
 	static const int REPORT_PERIOD = 15; // we should send report every <this> sec
 	
-	DWORD		weaponsDataHash[NUM_WEAPONS_ON_PLAYER];
-	DWORD		debug_wid[NUM_WEAPONS_ON_PLAYER];
-	GBWeaponInfo	debug_winfo[NUM_WEAPONS_ON_PLAYER];
+	// for CHAR_LOADOUT_WEAPON1 and CHAR_LOADOUT_WEAPON2
+	DWORD		weaponsDataHash[2];
+	DWORD		debug_wid[2];
+	GBWeaponInfo	debug_winfo[2];
 };
 
 struct PKT_S2C_CheatWarning_s : public DefaultPacketMixin<PKT_S2C_CheatWarning>
 {
 	enum ECheatId {
-		CHEAT_SpeedHack = 1,
+		CHEAT_Protocol = 1,
+		CHEAT_Data,
+		CHEAT_SpeedHack,
 		CHEAT_NumShots,
 		CHEAT_BadWeapData,
 		CHEAT_Wireframe,
 		CHEAT_WeaponPickup,
-		CHEAT_MineSwitch,
 		CHEAT_GPP,	// game player parameters mismatch
-		CHEAT_HighKDRatio,
 		CHEAT_ShootDistance,
 		CHEAT_FastMove,
-		CHEAT_LootboxPickup,
 		CHEAT_AFK,
 		CHEAT_UseItem,
+		CHEAT_Api,
+		CHEAT_Flying,
+		CHEAT_NoGeomtryFiring,
+		CHEAT_Stamina,
+		CHEAT_Network,
 	};
 
 	BYTE		cheatId;
-};
-
-struct PKT_S2C_SpawnDroppedWeapon_s : public DefaultPacketMixin<PKT_S2C_SpawnDroppedWeapon>
-{
-	gp2pnetid_t spawnID;
-	r3dVector	pos;
-	r3dVector	rot;
-	uint32_t	itemID;
-	WORD		numBullets; // num bullets in the gun that left
-	wiWeaponAttachment attms;
-};
-
-struct PKT_S2C_DestroyDroppedWeapon_s : public DefaultPacketMixin<PKT_S2C_DestroyDroppedWeapon>
-{
-	gp2pnetid_t spawnID;
-};
-
-struct PKT_C2S_RequestWeaponPickup_s : public DefaultPacketMixin<PKT_C2S_RequestWeaponPickup>
-{
-	static const int PICKUP_RADIUS = 3; // radius in meters to allow pickup
-	gp2pnetid_t spawnID; // what weapon we are trying to pick up
-};
-
-struct PKT_S2C_WeaponPickedUp_s : public DefaultPacketMixin<PKT_S2C_WeaponPickedUp>
-{
-	uint32_t itemID; // itemID of the weapon. send it directly in case if it will timeout right after this packet
-	WORD	numBullets; // num bullets in the gun that left
-	BYTE secretCode; // client has to confirm pickup with this code
-	GBWeaponInfo	wi;	// updated weapon info
-	wiWeaponAttachment attms;
-};
-
-struct PKT_C2C_ConfirmWeaponPickup_s : public DefaultPacketMixin<PKT_C2C_ConfirmWeaponPickup>
-{
-	uint32_t itemID;
-	BYTE secretCode; // server will check this code and remove it when resending it to everyone else
-};
-
-struct PKT_S2C_SpawnDroppedLootBox_s : public DefaultPacketMixin<PKT_S2C_SpawnDroppedLootBox>
-{
-	gp2pnetid_t spawnID;
-	r3dVector	pos;
-	r3dVector	rot;
-	uint32_t	itemID;
-};
-
-struct PKT_S2C_DestroyDroppedLootBox_s : public DefaultPacketMixin<PKT_S2C_DestroyDroppedLootBox>
-{
-	gp2pnetid_t spawnID;
-};
-
-struct PKT_S2C_LootBoxPickedUp_s : public DefaultPacketMixin<PKT_S2C_LootBoxPickedUp>
-{
-	uint32_t itemID; // itemID of the box
 };
 
 struct PKT_C2S_ScreenshotData_s : public DefaultPacketMixin<PKT_C2S_ScreenshotData>
@@ -885,71 +745,28 @@ struct PKT_C2S_Admin_PlayerKick_s : public DefaultPacketMixin<PKT_C2S_Admin_Play
 	gp2pnetid_t netID; // netID of who to kick
 };
 
+struct PKT_C2S_Admin_GiveItem_s : public DefaultPacketMixin<PKT_C2S_Admin_GiveItem>
+{
+	DWORD		ItemID;;
+};
+
 struct PKT_C2S_TEST_SpawnDummyReq_s : public DefaultPacketMixin<PKT_C2S_TEST_SpawnDummyReq>
 {
 	r3dPoint3D	pos;
-};
-
-struct PKT_C2S_TEST_PlayerSetWeapon_s : public DefaultPacketMixin<PKT_C2S_TEST_PlayerSetWeapon>
-{
-	DWORD		weapId;
-};
-
-// mines
-struct PKT_C2S_PlayerCreateMine_s : public DefaultPacketMixin<PKT_C2S_PlayerCreateMine>
-{
-	BYTE wid;
-	r3dVector pos;
-	r3dVector rot;
-};
-
-struct PKT_S2C_SpawnMine_s : public DefaultPacketMixin<PKT_S2C_SpawnMine>
-{
-	gp2pnetid_t spawnID;
-	uint32_t itemID;
-	r3dVector pos;
-	r3dVector rot;
-};
-
-struct PKT_C2S_TriggerMine_s : public DefaultPacketMixin<PKT_C2S_TriggerMine>
-{
-};
-
-struct PKT_S2C_ExplodeMine_s : public DefaultPacketMixin<PKT_S2C_ExplodeMine>
-{
-};
-
-struct PKT_S2C_DestroyMine_s : public DefaultPacketMixin<PKT_S2C_DestroyMine>
-{
-};
-
-struct PKT_S2C_NewOwnerMine_s : public DefaultPacketMixin<PKT_S2C_NewOwnerMine>
-{
-	gp2pnetid_t newOwnerID;
-};
-
-struct PKT_C2C_PlayerSwitchMine_s : public DefaultPacketMixin<PKT_C2C_PlayerSwitchMine>
-{
-	gp2pnetid_t mineID;
 };
 
 struct PKT_S2C_LightMeshStatus_s : public DefaultPacketMixin<PKT_S2C_LightMeshStatus>
 {
 };
 
-struct PKT_C2S_CreateExplosion_s: public DefaultPacketMixin<PKT_C2S_CreateExplosion>
-{
-	r3dVector pos;
-	float radius;
-	int wpnIndex;
-	// for claymores. 
-	r3dVector forwVector;
-	float direction;
-};
-
 struct PKT_C2S_DBG_LogMessage_s : public DefaultPacketMixin<PKT_C2S_DBG_LogMessage>
 {
 	char	msg[128];
+};
+
+struct PKT_S2C_SetPlayerReputation_s : public DefaultPacketMixin<PKT_S2C_SetPlayerReputation>
+{
+	int	reputation;
 };
 
 #pragma pack(pop)

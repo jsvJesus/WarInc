@@ -5,7 +5,7 @@
 #include "multiplayer/P2PMessages.h"
 
 class GameObject;
-class obj_AI_Player;
+class obj_Player;
 
 #include "../../ServerNetPackets/NetPacketsGameInfo.h"
 
@@ -25,46 +25,38 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 
 	// player struct for hiding actual player pointer
 	struct {
-		DWORD pad1;
-		r3dSec_type<obj_AI_Player*, 0xFA643FB3> ptr;
-		DWORD pad2;
-		DWORD pad3;
+		r3dSec_type<obj_Player*, 0xDAFF31C3> ptr;
 	}		players2_[MAX_NUM_PLAYERS];
-	obj_AI_Player*	GetPlayer(int idx) const;
-	void		SetPlayerPtr(int idx, obj_AI_Player* ptr);
+	obj_Player*	GetPlayer(int idx) const;
+	void		SetPlayerPtr(int idx, obj_Player* ptr);
 	int		CurMaxPlayerIdx;	// current max used index in players2_
+	
+	// list of players on server
+	struct PlayerName_s
+	{
+		char	Gamertag[32*2];
+		bool	isLegend;
+		bool	isDev;
+	};
+	PlayerName_s	playerNames[256]; // playername by server peer index
 
 	DWORD		net_lastFreeId; // !!!ONLY use it for assigning networkID during loading map!!!
-	r3dSec_type<obj_AI_Player*, 0xA3BFBAB7> localPlayer_;
 	float		localPlayerConnectedTime; // used for calculating how much time player was playing
 
-	bool		requestToJoinAsSpectator;
-
-	// BOMB MODE - LOBBY
-	enum { MAX_NUM_LOBBY_PLAYERS = 64};
-	struct LobbyPlayerDesc
-	{
-		char userName[64];
-		DWORD peerID;
-		BYTE desiredTeam;
-		BYTE isReady;
-		BYTE isSpectator;
-		BYTE level;
-		LobbyPlayerDesc() : peerID(-1) {}
-	};
-	LobbyPlayerDesc lobbyPlayers[MAX_NUM_LOBBY_PLAYERS];
-
-	class obj_DroppedBomb* m_DroppedBomb;
-	bool		m_isSpectator;
-
 	bool		serverConnected_;
+	r3dSec_type<obj_Player*, 0x13DFB1B7> localPlayer_;
 	volatile LONG	serverVersionStatus_;
 	volatile bool	gameJoinAnswered_;
 	int		localPlayerIdx_;
 	volatile bool	gameStartAnswered_;
-	volatile bool	m_gameHasStarted;
 	int		gameStartResult_; // as PKT_S2C_StartGameAns_s::EResult
 	GBGameInfo	m_gameInfo;
+
+	__int64		gameStartUtcTime_;
+	float		lastShadowCacheReset_;
+	float		gameStartTime_;
+	__int64		GetServerGameTime() const;
+	void		UpdateTimeOfDay();
 	
 	__int64		m_sessionId;
 	__int64		GetGameSessionID() {
@@ -76,23 +68,10 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 
 	float	m_highPingTimer;
 
-	float	showCoolThingTimer;
-
-	BYTE	m_onJoinServerAssignedTeamId;
+	int		disconnectStatus_;	// 0 - playing, 1 - requested, 2 - acked
+	float		disconnectReqTime_;	// time when disconnect was requested
 	
-	PKT_S2C_GameFinish_s finishData_;
-	bool		gameFinished_;		// game is finished, we should receive 
-	bool		gameClosed_;
 	bool		gameShuttedDown_;
-	
-	wiStats		curRoundStat_;
-	wiStatsTracking	curRoundScore_;
-	BYTE		curRoundLevelUpMin;
-	BYTE		curRoundLevelUpMax;
-	BYTE		curRoundRewardIdx;
-
-	bool		gameReadyToExit; // after we showed player end of round menu, we are ready to get back to main menu
-	bool		gameReadyForNextRound;
 	
 	// cheat things
 	bool		cheatAttemptReceived_;	// true if server detected cheating
@@ -100,6 +79,7 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 	DWORD		nextSecTimeReport_;	// time when we need send next PKT_C2S_SecurityRep_s
 	DWORD		gppDataSeed_;		// seed for sending crc of game player parameters
 	bool		d3dCheatSent_;		// if we sended d3d cheat screenshot yet
+	bool		d3dCheatSent2_;
 	
 	#define DEFINE_PACKET_FUNC(XX) \
 	  void On##XX(const XX##_s& n, GameObject* fromObj, DWORD peerId, bool& needPassThru);
@@ -109,52 +89,28 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 	int		ProcessWorldEvent(GameObject* fromObj, DWORD eventId, DWORD peerId, const void* packetData, int packetSize);
 	 DEFINE_PACKET_FUNC(PKT_C2S_ValidateConnectingPeer);
 	 DEFINE_PACKET_FUNC(PKT_C2C_PacketBarrier);
-	 DEFINE_PACKET_FUNC(PKT_S2C_LevelInfo);
 	 DEFINE_PACKET_FUNC(PKT_S2C_JoinGameAns);
 	 DEFINE_PACKET_FUNC(PKT_S2C_ShutdownNote);
 	 DEFINE_PACKET_FUNC(PKT_S2C_SetGamePlayParams);
 	 DEFINE_PACKET_FUNC(PKT_S2C_StartGameAns);
+	 DEFINE_PACKET_FUNC(PKT_S2C_PlayerNameJoined);
+	 DEFINE_PACKET_FUNC(PKT_S2C_PlayerNameLeft);
 	 DEFINE_PACKET_FUNC(PKT_S2C_CreatePlayer);
-	 DEFINE_PACKET_FUNC(PKT_S2C_DropPlayer);
 	 DEFINE_PACKET_FUNC(PKT_S2C_Damage);
+	 DEFINE_PACKET_FUNC(PKT_S2C_ZombieAttack);
 	 DEFINE_PACKET_FUNC(PKT_S2C_KillPlayer);
-	 DEFINE_PACKET_FUNC(PKT_S2C_RespawnPlayer);
-	 DEFINE_PACKET_FUNC(PKT_S2C_TicketsUpdate);
-	 DEFINE_PACKET_FUNC(PKT_S2C_GameAbort);
-	 DEFINE_PACKET_FUNC(PKT_S2C_GameFinish);
-	 DEFINE_PACKET_FUNC(PKT_S2C_GameClose);
-	 DEFINE_PACKET_FUNC(PKT_S2C_RoundStats);
-	 DEFINE_PACKET_FUNC(PKT_S2C_GameAboutToStart);
-	 DEFINE_PACKET_FUNC(PKT_S2C_GameStarted);
+	 DEFINE_PACKET_FUNC(PKT_C2S_DisconnectReq);
 	 DEFINE_PACKET_FUNC(PKT_C2C_ChatMessage);
-	 DEFINE_PACKET_FUNC(PKT_C2C_VoiceCommand);
-	 DEFINE_PACKET_FUNC(PKT_C2C_CommRoseCommand);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Airstrike);
 	 DEFINE_PACKET_FUNC(PKT_S2C_UpdateWeaponData);
 	 DEFINE_PACKET_FUNC(PKT_S2C_UpdateGearData);
 	 DEFINE_PACKET_FUNC(PKT_S2C_CreateNetObject);
 	 DEFINE_PACKET_FUNC(PKT_S2C_DestroyNetObject);
+	 DEFINE_PACKET_FUNC(PKT_S2C_CreateDroppedItem);
+	 DEFINE_PACKET_FUNC(PKT_S2C_CreateNote);
+	 DEFINE_PACKET_FUNC(PKT_S2C_SetNoteData);
+	 DEFINE_PACKET_FUNC(PKT_S2C_CreateZombie);
 	 DEFINE_PACKET_FUNC(PKT_S2C_CheatWarning);
-	 DEFINE_PACKET_FUNC(PKT_S2C_SpawnDroppedWeapon);
-	 DEFINE_PACKET_FUNC(PKT_S2C_DestroyDroppedWeapon);
-	 DEFINE_PACKET_FUNC(PKT_S2C_SpawnDroppedLootBox);
-	 DEFINE_PACKET_FUNC(PKT_S2C_DestroyDroppedLootBox);
-	 DEFINE_PACKET_FUNC(PKT_S2C_SpawnMine);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_ConnectedPlayer);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_DisconnectedPlayer);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_PlayerReady);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_PlayerHasBomb);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_WonRound);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_Dropped);
-	 DEFINE_PACKET_FUNC(PKT_S2C_Bomb_ChatMsg);
-	 DEFINE_PACKET_FUNC(PKT_S2C_TargetMarked);
-	 
-	// GLM_Conquest
-	int		tickets_[2];
-	float		gameTimeEnd_;		// expected end of game round
-	float		m_gameStartTime; // time when game has started
-	float		m_gameLocalStartTime; // just a time when game has started on a client
-	
+
 	r3dPoint3D	AdjustSpawnPositionToGround(const r3dPoint3D& pos);
 
   protected:
@@ -168,16 +124,10 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 	bool		wait_ValidateVersion() {
           return serverVersionStatus_ != 0;
         }
-	bool		wait_GetLevelName() {
-	  return m_gameInfo.mapId != 0xFF;
-	}
 	bool		wait_GameJoin() {
 	  return gameJoinAnswered_;
 	}
 	bool		wait_GameStart();
-
-  public:
-	bool		wait_GameClosed() {  return gameClosed_; }
 
   private:	
 	// make copy constructor and assignment operator inaccessible
@@ -195,22 +145,21 @@ virtual	void		OnNetData(DWORD peerId, const r3dNetPacketHeader* packetData, int 
 
 	void		Reset();
 
-	bool	Connect(const char* host, int port);
-	void	Disconnect();
+	bool		Connect(const char* host, int port);
+	void		Disconnect();
 
 	int		RequestToJoinGame();
+
 	int		RequestToStartGame();
 	int		ValidateServerVersion(__int64 sessionId);
-	int		WaitForLevelName();
-
-	void	ApplyExplosionDamage(const r3dVector& pos, float radius, int wpnIdx, const r3dVector& forwVector = R3D_ZERO_VECTOR, float direction = FULL_AREA_EXPLOSION );
 	
-	void	Tick();
-	void		SendScreenshot();
-	void		 SendScreenshotFailed(int code);
+	void		RequestToDisconnect();
 
-	//int	CheckTeamSkillAvailable(obj_AI_Player* plr, int skill);
-	bool CheckTeamAbilityAvailable(const obj_AI_Player* teamPlayer, int ability, float radius) const;
+	void		ApplyExplosionDamage(const r3dVector& pos, float radius, int wpnIdx, const r3dVector& forwVector = R3D_ZERO_VECTOR, float direction = FULL_AREA_EXPLOSION );
+	
+	void		Tick();
+	void		SendScreenshot(IDirect3DTexture9* texture);
+	void		 SendScreenshotFailed(int code);
 };
 
 __forceinline ClientGameLogic& gClientLogic() {

@@ -104,7 +104,7 @@ protected:
 
     enum VersionType
     {
-        Version_Latest = 33
+        Version_Latest = 32
     };
 
     UInt32                      Version;

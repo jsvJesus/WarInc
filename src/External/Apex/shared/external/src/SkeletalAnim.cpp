@@ -1,46 +1,40 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "PsShare.h"
-#include "AutoGeometry.h"
-#include "MeshImport.h"
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+#include <PsShare.h>
+#include <PsMathUtils.h>
+#include <PxFileBuffer.h>
+#include <MeshImport.h>
+#include <AutoGeometry.h>
+#include <PsFile.h>
+#include <PsString.h>
+
 #include "SkeletalAnim.h"
 #include "TriangleMesh.h"
-#include "PsFile.h"
 #include "NxFromPx.h"
-#include "PsMathUtils.h"
-#include "PxFileBuffer.h"
 #include <NxApexRenderDebug.h>
 
 namespace Samples
@@ -56,7 +50,7 @@ void SkeletalBone::clear()
 	invBindWorldPose.id();
 	currentWorldPose.id();
 
-	scale.set(1.0f, 1.0f, 1.0f);
+	scale = physx::PxVec3(1.0f, 1.0f, 1.0f);
 	parent = -1;
 	firstChild = -1;
 	numChildren = 0;
@@ -69,14 +63,16 @@ void SkeletalBone::clear()
 	allowPrimitives = true;
 	dirtyParams = false;
 	manualShapes = false;
+	isRoot = false;
+	isRootLock = false;
 }
 
 // -------------------------------------------------------------------
-void BoneKeyFrame::clear() 
+void BoneKeyFrame::clear()
 {
 	relPose.id();
 	time = 0.0f;
-	scale.set(1.0f, 1.0f, 1.0f);
+	scale = physx::PxVec3(1.0f, 1.0f, 1.0f);
 }
 
 // -------------------------------------------------------------------
@@ -116,7 +112,9 @@ void SkeletalAnim::clear()
 	mBones.resize(0);
 
 	for (int i = 0; i < (int)mAnimations.size(); i++)
+	{
 		delete mAnimations[i];
+	}
 
 	mAnimations.clear();
 	mAnimations.resize(0);
@@ -135,41 +133,58 @@ void SkeletalAnim::clear()
 // -------------------------------------------------------------------
 int SkeletalAnim::findBone(const std::string& name)
 {
-	for (int i = 0; i < (int)mBones.size(); i++) {
+	for (int i = 0; i < (int)mBones.size(); i++)
+	{
 		if (mBones[i].name == name)
+		{
 			return i;
+		}
 	}
 	return -1;
 }
 
 // -------------------------------------------------------------------
-void SkeletalAnim::interpolateBonePose(int animNr, int boneNr, float time, physx::PxMat34Legacy &pose, physx::PxVec3 &scale)
+void SkeletalAnim::interpolateBonePose(int animNr, int boneNr, float time, physx::PxMat34Legacy& pose, physx::PxVec3& scale)
 {
 	// the default
-	pose.id();	
-	scale.set(1.0f, 1.0f, 1.0f);
+	pose.id();
+	scale = physx::PxVec3(1.0f, 1.0f, 1.0f);
 
 	const std::vector<SkeletalAnimation*>& animations = mParent == NULL ? mAnimations : mParent->mAnimations;
 	const std::vector<BoneKeyFrame>& keyFrames = mParent == NULL ? mKeyFrames : mParent->mKeyFrames;
 
 	if (animNr < 0 || animNr >= (int)animations.size())
+	{
 		return;
+	}
 	if (boneNr < 0 || boneNr >= (int)animations[animNr]->mBoneTracks.size())
+	{
 		return;
+	}
 
-	BoneTrack &t = animations[animNr]->mBoneTracks[boneNr];
-	if (t.numFrames == 0) return;
+	BoneTrack& t = animations[animNr]->mBoneTracks[boneNr];
+	if (t.numFrames == 0)
+	{
+		return;
+	}
 
 	// special cases
 	int frameNr = -1;
-	if (t.numFrames == 1) 
+	if (t.numFrames == 1)
+	{
 		frameNr = t.firstFrame;
+	}
 	else if (time <= keyFrames[t.firstFrame].time)
+	{
 		frameNr = t.firstFrame;
-	else if (time >= keyFrames[t.firstFrame + t.numFrames-1].time)
-		frameNr = t.firstFrame + t.numFrames-1;
+	}
+	else if (time >= keyFrames[t.firstFrame + t.numFrames - 1].time)
+	{
+		frameNr = t.firstFrame + t.numFrames - 1;
+	}
 
-	if (frameNr >= 0) {
+	if (frameNr >= 0)
+	{
 		pose = keyFrames[frameNr].relPose;
 		scale = keyFrames[frameNr].scale;
 		return;
@@ -177,21 +192,28 @@ void SkeletalAnim::interpolateBonePose(int animNr, int boneNr, float time, physx
 	// binary search
 	int l = t.firstFrame;
 	int r = t.firstFrame + t.numFrames - 1;
-	while (r > l+1) {
-		int m = (l+r) / 2;
-		if (keyFrames[m].time == time) {
+	while (r > l + 1)
+	{
+		int m = (l + r) / 2;
+		if (keyFrames[m].time == time)
+		{
 			pose = keyFrames[m].relPose;
 			scale = keyFrames[m].scale;
 			return;
 		}
 		else if (keyFrames[m].time > time)
+		{
 			r = m;
-		else 
+		}
+		else
+		{
 			l = m;
+		}
 	}
 	float dt = keyFrames[r].time - keyFrames[l].time;
 	// avoid singular case
-	if (dt == 0.0f) {
+	if (dt == 0.0f)
+	{
 		pose = keyFrames[l].relPose;
 		scale = keyFrames[l].scale;
 	}
@@ -204,18 +226,18 @@ void SkeletalAnim::interpolateBonePose(int animNr, int boneNr, float time, physx
 	pose.t = keyFrames[l].relPose.t * sl + keyFrames[r].relPose.t * sr;
 	physx::PxQuat ql = physx::PxQuat(keyFrames[l].relPose.M);
 	physx::PxQuat qr = physx::PxQuat(keyFrames[r].relPose.M);
-	physx::PxQuat q = physx::slerp(sr, ql,qr);
+	physx::PxQuat q = physx::slerp(sr, ql, qr);
 	pose.M.fromQuat(q);
 }
 
 // -------------------------------------------------------------------
 void SkeletalAnim::setBindPose()
 {
-	assert(mBones.size() == mSkinningMatrices.size());
-	assert(mBones.size() == mSkinningMatricesWorld.size());
+	PX_ASSERT(mBones.size() == mSkinningMatrices.size());
+	PX_ASSERT(mBones.size() == mSkinningMatricesWorld.size());
 	for (physx::PxU32 i = 0; i < mBones.size(); i++)
 	{
-		mSkinningMatrices[i] = physx::PxMat44::identity();
+		mSkinningMatrices[i] = physx::PxMat44::createIdentity();
 		mBones[i].currentWorldPose = mBones[i].bindWorldPose;
 		mSkinningMatricesWorld[i] = mBones[i].currentWorldPose;
 	}
@@ -234,11 +256,11 @@ void SkeletalAnim::setAnimPose(int animNr, float time, bool lockRootbone /* = fa
 			}
 		}
 
-		assert(mBones.size() == mSkinningMatrices.size());
-		assert(mBones.size() == mSkinningMatricesWorld.size());
+		PX_ASSERT(mBones.size() == mSkinningMatrices.size());
+		PX_ASSERT(mBones.size() == mSkinningMatricesWorld.size());
 		for (physx::PxU32 i = 0; i < mBones.size(); i++)
 		{
-			SkeletalBone &b = mBones[i];
+			SkeletalBone& b = mBones[i];
 			mSkinningMatrices[i] = b.currentWorldPose * b.invBindWorldPose;
 			mSkinningMatricesWorld[i] = b.currentWorldPose;
 		}
@@ -247,7 +269,7 @@ void SkeletalAnim::setAnimPose(int animNr, float time, bool lockRootbone /* = fa
 	{
 		for (physx::PxU32 i = 0; i < mBones.size(); i++)
 		{
-			mSkinningMatrices[i] = physx::PxMat44::identity();
+			mSkinningMatrices[i] = physx::PxMat44::createIdentity();
 			mSkinningMatricesWorld[i] = mBones[i].bindWorldPose;
 		}
 	}
@@ -266,10 +288,14 @@ void SkeletalAnim::setBoneCollision(physx::PxU32 boneNr, int option)
 			{
 				mBones[current].dirtyParams = true;
 				if (mBones[current].boneOption != physx::BO_COLLAPSE)
+				{
 					break;
+				}
 
 				if (mBones[current].parent == current)
+				{
 					break;
+				}
 
 				current = mBones[current].parent;
 			}
@@ -279,24 +305,32 @@ void SkeletalAnim::setBoneCollision(physx::PxU32 boneNr, int option)
 		// Find all children that collapse into this bone and mark them dirty
 		for (physx::PxU32 i = 0; i < mBones.size(); i++)
 		{
-			// See whether boneNr is one of it's parents
+			// See whether boneNr is one of its parents
 			bool found = false;
-			int current = i;
-			while (current != -1 && !found)
+			physx::PxU32 current = i;
+			while (current != (physx::PxU32)-1 && !found)
 			{
 				if (current == boneNr)
+				{
 					found = true;
+				}
 
 				if (mBones[current].boneOption != physx::BO_COLLAPSE)
+				{
 					break;
+				}
 
-				if (current == mBones[current].parent)
+				if ((int)current == mBones[current].parent)
+				{
 					break;
+				}
 
 				current = mBones[current].parent;
 			}
 			if (found)
+			{
 				mBones[i].dirtyParams = true;
+			}
 		}
 	}
 
@@ -306,20 +340,21 @@ void SkeletalAnim::setBoneCollision(physx::PxU32 boneNr, int option)
 // -------------------------------------------------------------------
 void SkeletalAnim::setAnimPoseRec(int animNr, int boneNr, float time, bool lockBoneTranslation)
 {
-	SkeletalBone &b = mBones[boneNr];
+	SkeletalBone& b = mBones[boneNr];
 
 	{
 		physx::PxMat34Legacy keyPose;
 		physx::PxVec3 keyScale;
-		interpolateBonePose(animNr, boneNr, time, keyPose, keyScale);
+
+		// query the first frame instead of the current one if you want to lock this bone
+		float myTime = (lockBoneTranslation && b.isRootLock) ? 0.0f : time;
+		interpolateBonePose(animNr, boneNr, myTime, keyPose, keyScale);
 
 		// todo: consider scale
 		physx::PxMat34Legacy combinedPose;
-		combinedPose.t = b.pose.t;
-		if (!lockBoneTranslation)
-			combinedPose.t += keyPose.t;
-
+		combinedPose.t = b.pose.t + keyPose.t;
 		combinedPose.M = b.pose.M * keyPose.M;
+
 		if (b.parent < 0)
 		{
 			b.currentWorldPose = combinedPose;
@@ -333,35 +368,116 @@ void SkeletalAnim::setAnimPoseRec(int animNr, int boneNr, float time, bool lockB
 	const int* children = mParent == NULL ? &mChildren[0] : &mParent->mChildren[0];
 	for (int i = b.firstChild; i < b.firstChild + b.numChildren; i++)
 	{
-		setAnimPoseRec(animNr, children[i], time, false);
+		setAnimPoseRec(animNr, children[i], time, lockBoneTranslation);
 	}
 }
 
 // -------------------------------------------------------------------
-bool SkeletalAnim::loadFromMeshImport(physx::MeshSystemContainer *msc, std::string& error)
+bool SkeletalAnim::loadFromMeshImport(mimp::MeshSystemContainer* msc, std::string& error, bool onlyAddAnimation)
 {
 	bool ret = false;
 
-	mBones.clear();
-	mSkinningMatrices.clear();
-	mSkinningMatricesWorld.clear();
-	for (unsigned int i=0; i<mAnimations.size(); i++)
+	if (!onlyAddAnimation)
 	{
-		SkeletalAnimation *a = mAnimations[i];
-		delete a;
-	}
-	mAnimations.clear();
+		mBones.clear();
+		mSkinningMatrices.clear();
+		mSkinningMatricesWorld.clear();
 
-	if ( msc )
-	{
-		physx::MeshSystem *ms = physx::gMeshImport->getMeshSystem(msc);
-		if ( ms->mSkeletonCount )
+		for (unsigned int i = 0; i < mAnimations.size(); i++)
 		{
-			physx::MeshSkeleton *sk = ms->mSkeletons[0];
+			SkeletalAnimation* a = mAnimations[i];
+			delete a;
+		}
+		mAnimations.clear();
+	}
 
-			for (int i=0; i<sk->mBoneCount; i++)
+	bool addAnimation = true;
+
+	if (msc)
+	{
+		mimp::MeshSystem* ms = mimp::gMeshImport->getMeshSystem(msc);
+		if (onlyAddAnimation && ms->mSkeletonCount > 0)
+		{
+			std::vector<int> overwriteBindPose(ms->mSkeletons[0]->mBoneCount, -1);
+			// figure out how those bones map to each other.
+			int numNotEqual = 0;
+			int numNonZeroMatches = 0;
+			for (int i = 0; i < ms->mSkeletons[0]->mBoneCount; i++)
 			{
-				physx::MeshBone &b = sk->mBones[i];
+				mimp::MeshBone& bone = ms->mSkeletons[0]->mBones[i];
+				for (size_t j = 0; j < mBones.size(); j++)
+				{
+					if (mBones[j].name.compare(ms->mSkeletons[0]->mBones[i].mName) == 0)
+					{
+						// found one, but let's see if the bind pose also matches more or less
+						physx::PxTransform inputPose;
+						inputPose.p = *(physx::PxVec3*)bone.mPosition;
+						inputPose.q = *(physx::PxQuat*)bone.mOrientation;
+
+
+						physx::general_shared3::PxMat34Legacy pose(inputPose);
+
+						physx::general_shared3::PxMat34Legacy poseOld(mBones[j].pose);
+
+						bool equal = (pose.t - poseOld.t).magnitude() <= ((0.5f * pose.t + 0.5f * poseOld.t).magnitude() * 0.01f);
+
+						if (equal && !pose.t.isZero())
+						{
+							numNonZeroMatches++;
+						}
+
+						if (!equal && (inputPose.p.isZero() || numNonZeroMatches > 0))
+						{
+							// identity, skip the new bone's bind pose
+							continue;
+						}
+
+						if (!equal)
+						{
+							char buf[128];
+							physx::string::sprintf_s(buf, 128, "Bone %d (%s) does not match bind pose\n", (int)i, ms->mSkeletons[0]->mBones[i].mName);
+							error.append(buf);
+
+							numNotEqual++;
+						}
+
+						overwriteBindPose[i] = (int)j;
+						break;
+					}
+				}
+			}
+
+			if (numNotEqual > 0)
+			{
+				error = std::string("Failed to load animation:\n") + error;
+				addAnimation = false;
+			}
+			else
+			{
+				// reset all bind poses exactly, now that we know they match pretty well
+				for (int i = 0; i < ms->mSkeletons[0]->mBoneCount; i++)
+				{
+					mimp::MeshBone& bone = ms->mSkeletons[0]->mBones[i];
+
+					if (overwriteBindPose[i] != -1)
+					{
+						physx::PxTransform inputPose;
+						inputPose.p = *(physx::PxVec3*)bone.mPosition;
+						inputPose.q = *(physx::PxQuat*)bone.mOrientation;
+						physx::general_shared3::PxMat34Legacy pose(inputPose);
+
+						mBones[overwriteBindPose[i]].pose = pose;
+					}
+				}
+			}
+		}
+		else if (ms->mSkeletonCount)
+		{
+			mimp::MeshSkeleton* sk = ms->mSkeletons[0];
+
+			for (int i = 0; i < sk->mBoneCount; i++)
+			{
+				mimp::MeshBone& b = sk->mBones[i];
 				SkeletalBone sb;
 				sb.clear();
 				sb.name = b.mName;
@@ -369,19 +485,22 @@ bool SkeletalAnim::loadFromMeshImport(physx::MeshSystemContainer *msc, std::stri
 				sb.parent = b.mParentIndex;
 				sb.firstChild = 0;
 				sb.numChildren = 0;
+				sb.isRootLock = b.mParentIndex == 0; // lock the second bone in the hierarchy, first one is the scene root, not the anim root (for fbx files)
 
 				physx::PxQuat q;
-				physx::PxQuatFromArray( q, b.mOrientation );
+				physx::PxQuatFromArray(q, b.mOrientation);
 				sb.pose.M.fromQuat(q);
-				physx::PxVec3FromArray( sb.pose.t, b.mPosition );
-				physx::PxVec3FromArray( sb.scale, b.mScale );
+				physx::PxVec3FromArray(sb.pose.t, b.mPosition);
+				physx::PxVec3FromArray(sb.scale, b.mScale);
 
 				for (physx::PxU32 bi = 0; bi < mBones.size(); bi++)
 				{
 					if (mBones[bi].name == b.mName)
 					{
 						if (error.empty())
+						{
 							error = "Duplicated Bone Names, rename one:\n";
+						}
 
 						error.append(b.mName);
 						error.append("\n");
@@ -390,30 +509,42 @@ bool SkeletalAnim::loadFromMeshImport(physx::MeshSystemContainer *msc, std::stri
 
 				mBones.push_back(sb);
 			}
+
+			ret = true; // allow loading a skeleton without animation
 		}
 
-		if ( ms->mAnimationCount )
+		if (ms->mAnimationCount && addAnimation)
 		{
-			for (unsigned int i=0; i<ms->mAnimationCount; i++)
+			for (unsigned int i = 0; i < ms->mAnimationCount; i++)
 			{
-				physx::MeshAnimation *a = ms->mAnimations[i];
-				SkeletalAnimation *anim = new SkeletalAnimation;
+				mimp::MeshAnimation* animation = ms->mAnimations[i];
+				SkeletalAnimation* anim = new SkeletalAnimation;
 				anim->clear();
-				anim->name = a->mName;
-
-				int numBones = (physx::PxU32)mBones.size();
-				anim->mBoneTracks.resize(numBones);
-				for (int j=0; j<numBones; j++)
-					anim->mBoneTracks[j].clear();
-
-				for (int j=0; j<a->mTrackCount; j++)
+				if (ms->mAnimationCount == 1 && ms->mAssetName != NULL)
 				{
-					physx::MeshAnimTrack *track = a->mTracks[j];
+					const char* lastDir = std::max(strrchr(ms->mAssetName, '/'), strrchr(ms->mAssetName, '\\'));
+					anim->name = lastDir != NULL ? lastDir + 1 : ms->mAssetName;
+				}
+				else
+				{
+					anim->name = animation->mName;
+				}
+
+				int numBones = (int)mBones.size();
+				anim->mBoneTracks.resize(numBones);
+				for (int j = 0; j < numBones; j++)
+				{
+					anim->mBoneTracks[j].clear();
+				}
+
+				for (int j = 0; j < animation->mTrackCount; j++)
+				{
+					mimp::MeshAnimTrack* track = animation->mTracks[j];
 					std::string boneName = track->mName;
 					int boneNr = findBone(boneName);
-					if ( boneNr >= 0 && boneNr < numBones )
+					if (boneNr >= 0 && boneNr < numBones)
 					{
-						anim->mBoneTracks[boneNr].firstFrame = (int)(mKeyFrames.size());
+						anim->mBoneTracks[boneNr].firstFrame = (int)mKeyFrames.size();
 						anim->mBoneTracks[boneNr].numFrames  = track->mFrameCount;
 
 						physx::PxMat34Legacy parent = mBones[boneNr].pose;
@@ -422,75 +553,200 @@ bool SkeletalAnim::loadFromMeshImport(physx::MeshSystemContainer *msc, std::stri
 
 						float ftime = 0;
 
-						for (int k=0; k<track->mFrameCount; k++)
+						for (int k = 0; k < track->mFrameCount; k++)
 						{
-							physx::MeshAnimPose &p = track->mPose[k];
+							mimp::MeshAnimPose& pose = track->mPose[k];
 							BoneKeyFrame frame;
 							frame.clear();
 
 							physx::PxMat34Legacy mat;
 
 							physx::PxQuat q;
-							physx::PxQuatFromArray( q, p.mQuat );
+							physx::PxQuatFromArray(q, pose.mQuat);
 
 							mat.M.fromQuat(q);
-							physx::PxVec3FromArray( mat.t,p.mPos );
+							physx::PxVec3FromArray(mat.t, pose.mPos);
 
 							frame.time = ftime;
-							physx::PxVec3FromArray( frame.scale, p.mScale );
+							physx::PxVec3FromArray(frame.scale, pose.mScale);
 
 							frame.relPose.t = mat.t - parent.t;
-							frame.relPose.M.multiply(pinverse,mat.M);
+							frame.relPose.M.multiply(pinverse, mat.M);
 
 							mKeyFrames.push_back(frame);
 
 							// eazymesh samples at 60 Hz, not 1s
-							ftime+=track->mDtime / 200.f;
+							ftime += track->mDtime / 200.f;
 						}
 					}
-					else
+					else if (!onlyAddAnimation)
 					{
-						assert(0);
+						// if onlyAddAnimation is set, the bone count does not have to match up, additional bones are just ignored
+						PX_ASSERT(0);
 					}
 
 				}
 
 				mAnimations.push_back(anim);
 			}
+
+			ret = true;
 		}
 
-		ret = true;
-		physx::PxMat34Legacy matId; matId.id();
+		physx::PxMat34Legacy matId;
+		matId.id();
 		mSkinningMatrices.resize((physx::PxU32)mBones.size(), matId);
 		mSkinningMatricesWorld.resize((physx::PxU32)mBones.size(), matId);
-		init();
+		init(!onlyAddAnimation);
 	}
 
 	return ret;
 }
 
 // -------------------------------------------------------------------
+bool SkeletalAnim::saveToMeshImport(mimp::MeshSystemContainer* msc)
+{
+#ifndef PX_WINDOWS
+	PX_UNUSED(msc);
+	return false;
+#else
+
+	if (msc == NULL)
+	{
+		return false;
+	}
+
+	mimp::MeshSystem* ms = mimp::gMeshImport->getMeshSystem(msc);
+	if (ms == NULL)
+	{
+		return false;
+	}
+
+	ms->mSkeletonCount = 1;
+	ms->mSkeletons = (mimp::MeshSkeleton**)::malloc(sizeof(mimp::MeshSkeleton*));
+	ms->mSkeletons[0] = new mimp::MeshSkeleton;
+
+	ms->mSkeletons[0]->mBoneCount = (int)mBones.size();
+	ms->mSkeletons[0]->mBones = (mimp::MeshBone*)::malloc(sizeof(mimp::MeshBone) * mBones.size());
+	for (size_t i = 0; i < mBones.size(); i++)
+	{
+		mimp::MeshBone& bone = ms->mSkeletons[0]->mBones[i];
+
+		size_t nameLen = mBones[i].name.length() + 1;
+		bone.mName = (char*)::malloc(sizeof(char) * nameLen);
+		strcpy_s((char*)bone.mName, nameLen, mBones[i].name.c_str());
+
+		(physx::PxQuat&)bone.mOrientation = mBones[i].pose.M.toQuat();
+		
+		bone.mParentIndex = mBones[i].parent;
+
+		(physx::PxVec3&)bone.mPosition = mBones[i].pose.t;
+
+		(physx::PxVec3&)bone.mScale = mBones[i].scale;
+	}
+
+	ms->mAnimationCount = (unsigned int)mAnimations.size();
+	ms->mAnimations = (mimp::MeshAnimation**)::malloc(sizeof(mimp::MeshAnimation*) * mAnimations.size());
+	for (unsigned int a = 0; a < ms->mAnimationCount; a++)
+	{
+		ms->mAnimations[a] = new mimp::MeshAnimation;
+
+		PX_ASSERT(mAnimations[a] != NULL);
+		size_t nameLen = mAnimations[a]->name.length() + 1;
+		ms->mAnimations[a]->mName = (char*)::malloc(sizeof(char) * nameLen);
+		strcpy_s((char*)ms->mAnimations[a]->mName, nameLen, mAnimations[a]->name.c_str());
+
+		unsigned int trackCount = 0;
+		for (size_t i = 0; i < mBones.size(); i++)
+		{
+			trackCount += mAnimations[a]->mBoneTracks[i].numFrames > 0 ? 1 : 0;
+		}
+
+		ms->mAnimations[a]->mTrackCount = trackCount;
+		ms->mAnimations[a]->mTracks = (mimp::MeshAnimTrack**)::malloc(sizeof(mimp::MeshAnimTrack*) * trackCount);
+		ms->mAnimations[a]->mDuration = 0.0f;
+		ms->mAnimations[a]->mDtime = 0.0f;
+
+		unsigned int curTrack = 0;
+		for (size_t t = 0; t < mBones.size(); t++)
+		{
+			if (mAnimations[a]->mBoneTracks[t].numFrames <= 0)
+			{
+				continue;
+			}
+
+			mimp::MeshAnimTrack* track = ms->mAnimations[a]->mTracks[curTrack++] = new mimp::MeshAnimTrack;
+
+			track->mName = ms->mSkeletons[0]->mBones[t].mName; // just use the same name as the bone array already does
+			const unsigned int firstFrame = mAnimations[a]->mBoneTracks[t].firstFrame;
+			track->mFrameCount = mAnimations[a]->mBoneTracks[t].numFrames;
+			ms->mAnimations[a]->mFrameCount = std::max(ms->mAnimations[a]->mFrameCount, track->mFrameCount);
+
+			track->mPose = (mimp::MeshAnimPose*)::malloc(sizeof(mimp::MeshAnimPose) * track->mFrameCount);
+
+			track->mDuration = 0.0f;
+
+			for (int f  = 0; f < track->mFrameCount; f++)
+			{
+				mimp::MeshAnimPose& pose = track->mPose[f];
+				BoneKeyFrame& frame = mKeyFrames[firstFrame + f];
+
+				physx::PxMat34Legacy mat;
+
+				mat.M.multiply(frame.relPose.M, mBones[t].pose.M);
+				mat.t = frame.relPose.t + mBones[t].pose.t;
+
+				(physx::PxVec3&)pose.mScale = frame.scale;
+				(physx::PxVec3&)pose.mPos = mat.t;
+
+				(physx::PxQuat&)pose.mQuat = mat.M.toQuat();
+
+				track->mDuration = std::max(track->mDuration, frame.time);
+			}
+
+			track->mDtime = track->mDuration / (float)track->mFrameCount * 200.0f;
+
+			ms->mAnimations[a]->mDuration = std::max(ms->mAnimations[a]->mDuration, track->mDuration);
+			ms->mAnimations[a]->mDtime = std::max(ms->mAnimations[a]->mDtime, track->mDtime);
+		}
+	}
+
+	return true;
+#endif
+}
+
+// -------------------------------------------------------------------
 bool SkeletalAnim::initFrom(physx::apex::NxRenderMeshAssetAuthoring& mesh)
 {
-	assert(mesh.getPartCount() == 1);
+	PX_ASSERT(mesh.getPartCount() == 1);
 
 	physx::PxU32 numBones = 0;
 	for (physx::PxU32 submeshIndex = 0; submeshIndex < mesh.getSubmeshCount(); submeshIndex++)
 	{
 		const physx::NxVertexBuffer& vb = mesh.getSubmesh(submeshIndex).getVertexBuffer();
 		const physx::NxVertexFormat& vf = vb.getFormat();
-		physx::PxU32 bufferIndex = vf.getBufferIndexFromID( vf.getSemanticID( physx::apex::NxRenderVertexSemantic::BONE_INDEX ) );
+		physx::PxU32 bufferIndex = vf.getBufferIndexFromID(vf.getSemanticID(physx::apex::NxRenderVertexSemantic::BONE_INDEX));
 
 		physx::apex::NxRenderDataFormat::Enum format;
-		const physx::PxU16* boneIndices = (const physx::PxU16*)vb.getBufferAndFormat( format, bufferIndex );
+		const physx::PxU16* boneIndices = (const physx::PxU16*)vb.getBufferAndFormat(format, bufferIndex);
 
 		unsigned int numBonesPerVertex = 0;
 		switch (format)
 		{
-		case physx::apex::NxRenderDataFormat::USHORT1: numBonesPerVertex = 1; break;
-		case physx::apex::NxRenderDataFormat::USHORT2: numBonesPerVertex = 2; break;
-		case physx::apex::NxRenderDataFormat::USHORT3: numBonesPerVertex = 3; break;
-		case physx::apex::NxRenderDataFormat::USHORT4: numBonesPerVertex = 4; break;
+		case physx::apex::NxRenderDataFormat::USHORT1:
+			numBonesPerVertex = 1;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT2:
+			numBonesPerVertex = 2;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT3:
+			numBonesPerVertex = 3;
+			break;
+		case physx::apex::NxRenderDataFormat::USHORT4:
+			numBonesPerVertex = 4;
+			break;
+		default:
+			break;
 		}
 
 		if (boneIndices == NULL || numBonesPerVertex == 0)
@@ -502,7 +758,7 @@ bool SkeletalAnim::initFrom(physx::apex::NxRenderMeshAssetAuthoring& mesh)
 
 		for (unsigned int i = 0; i < numElements; i++)
 		{
-			numBones = std::max(numBones, boneIndices[i]+1u);
+			numBones = std::max(numBones, boneIndices[i] + 1u);
 		}
 	}
 
@@ -518,18 +774,17 @@ bool SkeletalAnim::initFrom(physx::apex::NxRenderMeshAssetAuthoring& mesh)
 	mSkinningMatrices.resize(numBones);
 	mSkinningMatricesWorld.resize(numBones);
 
-	init();
+	init(true);
 
 	return numBones > 0;
 }
-
 
 // -------------------------------------------------------------------
 bool SkeletalAnim::loadFromXML(const std::string& xmlFile, std::string& error)
 {
 	clear();
 
-	physx::PxFileBuffer fb(xmlFile.c_str(),physx::PxFileBuf::OPEN_READ_ONLY);
+	physx::PxFileBuffer fb(xmlFile.c_str(), physx::PxFileBuf::OPEN_READ_ONLY);
 	if (!fb.isOpen())
 	{
 		return false;
@@ -550,11 +805,12 @@ bool SkeletalAnim::loadFromXML(const std::string& xmlFile, std::string& error)
 
 	fastXml->release();
 
-	physx::PxMat34Legacy matId; matId.id();
+	physx::PxMat34Legacy matId;
+	matId.id();
 	mSkinningMatrices.resize((physx::PxU32)mBones.size(), matId);
 	mSkinningMatricesWorld.resize((physx::PxU32)mBones.size(), matId);
 
-	init();
+	init(true);
 	return true;
 }
 
@@ -562,12 +818,15 @@ bool SkeletalAnim::loadFromXML(const std::string& xmlFile, std::string& error)
 bool SkeletalAnim::loadFromParent(const SkeletalAnim* parent)
 {
 	if (parent == NULL)
+	{
 		return false;
+	}
 
 	mParent = parent;
 
 	mBones.resize(mParent->mBones.size());
-	physx::PxMat34Legacy matId; matId.id();
+	physx::PxMat34Legacy matId;
+	matId.id();
 	mSkinningMatrices.resize((physx::PxU32)mBones.size(), matId);
 	mSkinningMatricesWorld.resize((physx::PxU32)mBones.size(), matId);
 	for (physx::PxU32 i = 0; i < mBones.size(); i++)
@@ -581,59 +840,70 @@ bool SkeletalAnim::loadFromParent(const SkeletalAnim* parent)
 // -------------------------------------------------------------------
 bool SkeletalAnim::saveToXML(const std::string& xmlFile) const
 {
-	FILE *f;
+	FILE* f = 0;
 	if (physx::fopen_s(&f, xmlFile.c_str(), "w") != 0)
+	{
 		return false;
+	}
 
 	fprintf(f, "<skeleton>\n\n");
 
 	fprintf(f, "  <bones>\n");
-	for (int i = 0; i < (int)mBones.size(); i++) {
-		const SkeletalBone &bone = mBones[i];
+	for (int i = 0; i < (int)mBones.size(); i++)
+	{
+		const SkeletalBone& bone = mBones[i];
 
 		physx::PxQuat q(bone.pose.M);
 		float angle;
 		physx::PxVec3 axis;
 		q.toRadiansAndUnitAxis(angle, axis);
-		angle = q.getAngle();	
+		angle = q.getAngle();
 
 		fprintf(f, "    <bone id = \"%i\" name = \"%s\">\n", bone.id, bone.name.c_str());
 		fprintf(f, "      <position x=\"%f\" y=\"%f\" z=\"%f\" />\n", bone.pose.t.x, bone.pose.t.y, bone.pose.t.z);
 		fprintf(f, "      <rotation angle=\"%f\">\n", angle);
 		fprintf(f, "        <axis x=\"%f\" y=\"%f\" z=\"%f\" />\n", axis.x, axis.y, axis.z);
 		fprintf(f, "      </rotation>\n");
-		fprintf(f, "      <scale x=\"%f\" y=\"%f\" z=\"%f\" />\n", 1.0f, 1.0f, 1.0f);		
+		fprintf(f, "      <scale x=\"%f\" y=\"%f\" z=\"%f\" />\n", 1.0f, 1.0f, 1.0f);
 //		dont' use bone.scale.x, bone.scale.y, bone.scale.z because the length is baked into the bones
 		fprintf(f, "    </bone>\n");
 	}
 	fprintf(f, "  </bones>\n\n");
 
 	fprintf(f, "  <bonehierarchy>\n");
-	for (int i = 0; i < (int)mBones.size(); i++) {
-		const SkeletalBone &bone = mBones[i];
+	for (int i = 0; i < (int)mBones.size(); i++)
+	{
+		const SkeletalBone& bone = mBones[i];
 		if (bone.parent < 0)
+		{
 			continue;
+		}
 		fprintf(f, "    <boneparent bone=\"%s\" parent=\"%s\" />\n", bone.name.c_str(), mBones[bone.parent].name.c_str());
 	}
 	fprintf(f, "  </bonehierarchy>\n\n");
 
 	fprintf(f, "  <animations>\n");
-	for (int i = 0; i < (int)mAnimations.size(); i++) {
-		const SkeletalAnimation *anim = mAnimations[i];
+	for (int i = 0; i < (int)mAnimations.size(); i++)
+	{
+		const SkeletalAnimation* anim = mAnimations[i];
 
 		fprintf(f, "    <animation name = \"%s\" length=\"%f\">\n", anim->name.c_str(), anim->maxTime);
 		fprintf(f, "      <tracks>\n");
 
-		for (int j = 0; j < (int)anim->mBoneTracks.size(); j++) {
-			const BoneTrack &track = anim->mBoneTracks[j];
+		for (int j = 0; j < (int)anim->mBoneTracks.size(); j++)
+		{
+			const BoneTrack& track = anim->mBoneTracks[j];
 			if (track.numFrames == 0)
+			{
 				continue;
+			}
 
 			fprintf(f, "        <track bone = \"%s\">\n", mBones[j].name.c_str());
 			fprintf(f, "          <keyframes>\n");
 
-			for (int k = track.firstFrame; k < track.firstFrame + track.numFrames; k++) {
-				const BoneKeyFrame &frame = mKeyFrames[k];
+			for (int k = track.firstFrame; k < track.firstFrame + track.numFrames; k++)
+			{
+				const BoneKeyFrame& frame = mKeyFrames[k];
 				physx::PxQuat q(frame.relPose.M);
 				float angle;
 				physx::PxVec3 axis;
@@ -656,7 +926,7 @@ bool SkeletalAnim::saveToXML(const std::string& xmlFile) const
 	}
 	fprintf(f, "  </animations>\n");
 	fprintf(f, "</skeleton>\n\n");
-	  
+
 	fclose(f);
 
 
@@ -664,59 +934,73 @@ bool SkeletalAnim::saveToXML(const std::string& xmlFile) const
 }
 
 // -------------------------------------------------------------------
-void SkeletalAnim::init()
+void SkeletalAnim::init(bool firstTime)
 {
-	setupConnectivity();
-
-	// init bind poses
-	physx::PxVec3 oneOneOne(1.0f, 1.0f, 1.0f);
-	for (int i = 0; i < (int)mBones.size(); i++)
+	if (firstTime)
 	{
-		if (mBones[i].parent < 0)
-			initBindPoses(i, oneOneOne);
+		setupConnectivity();
 
-		// collapse finger and toes
-		if (
-			mBones[i].name.find("finger") != std::string::npos ||
-			mBones[i].name.find("Finger") != std::string::npos ||
-			mBones[i].name.find("FINGER") != std::string::npos ||
-			mBones[i].name.find("toe") != std::string::npos ||
-			mBones[i].name.find("Toe") != std::string::npos ||
-			mBones[i].name.find("TOE") != std::string::npos)
+		// init bind poses
+		physx::PxVec3 oneOneOne(1.0f, 1.0f, 1.0f);
+		for (int i = 0; i < (int)mBones.size(); i++)
 		{
-			mBones[i].boneOption = 2; // this is collapse
+			if (mBones[i].parent < 0)
+			{
+				initBindPoses(i, oneOneOne);
+			}
+
+			// collapse finger and toes
+			if (
+				mBones[i].name.find("finger") != std::string::npos ||
+				mBones[i].name.find("Finger") != std::string::npos ||
+				mBones[i].name.find("FINGER") != std::string::npos ||
+				mBones[i].name.find("toe") != std::string::npos ||
+				mBones[i].name.find("Toe") != std::string::npos ||
+				mBones[i].name.find("TOE") != std::string::npos)
+			{
+				mBones[i].boneOption = 2; // this is collapse
+			}
 		}
-
-
 	}
 
-	assert(mBones.size() == mSkinningMatrices.size());
-	assert(mBones.size() == mSkinningMatricesWorld.size());
+	PX_ASSERT(mBones.size() == mSkinningMatrices.size());
+	PX_ASSERT(mBones.size() == mSkinningMatricesWorld.size());
 	for (physx::PxU32 i = 0; i < mBones.size(); i++)
 	{
-		SkeletalBone &b = mBones[i];
+		SkeletalBone& b = mBones[i];
 		b.bindWorldPose.getInverseRT(b.invBindWorldPose);
 		b.currentWorldPose = mBones[i].bindWorldPose;
-		mSkinningMatrices[i] = physx::PxMat44::identity();
+		mSkinningMatrices[i] = physx::PxMat44::createIdentity();
 		mSkinningMatricesWorld[i] = b.currentWorldPose;
 	}
 
 	// init time interval of animations
-	for (int i = 0; i < (int)mAnimations.size(); i++) {
-		SkeletalAnimation *a = mAnimations[i];
+	for (int i = 0; i < (int)mAnimations.size(); i++)
+	{
+		SkeletalAnimation* a = mAnimations[i];
 		bool first = true;
-		for (int j = 0; j < (int)a->mBoneTracks.size(); j++) {
-			BoneTrack &b = a->mBoneTracks[j];
-			for (int k = b.firstFrame; k < b.firstFrame + b.numFrames; k++) {
+		for (int j = 0; j < (int)a->mBoneTracks.size(); j++)
+		{
+			BoneTrack& b = a->mBoneTracks[j];
+			for (int k = b.firstFrame; k < b.firstFrame + b.numFrames; k++)
+			{
 				float time = mKeyFrames[k].time;
-				if (first) {
+				if (first)
+				{
 					a->minTime = time;
 					a->maxTime = time;
 					first = false;
 				}
-				else {
-					if (time < a->minTime) a->minTime = time;
-					if (time > a->maxTime) a->maxTime = time;
+				else
+				{
+					if (time < a->minTime)
+					{
+						a->minTime = time;
+					}
+					if (time > a->maxTime)
+					{
+						a->maxTime = time;
+					}
 				}
 			}
 		}
@@ -726,10 +1010,10 @@ void SkeletalAnim::init()
 // -------------------------------------------------------------------
 void SkeletalAnim::initBindPoses(int boneNr, const physx::PxVec3& scale)
 {
-	SkeletalBone &b = mBones[boneNr];
-	b.pose.t = b.pose.t.arrayMultiply(scale);
+	SkeletalBone& b = mBones[boneNr];
+	b.pose.t = b.pose.t.multiply(scale);
 
-	physx::PxVec3 newScale = scale.arrayMultiply(b.scale);
+	physx::PxVec3 newScale = scale.multiply(b.scale);
 
 	if (b.parent < 0)
 	{
@@ -751,22 +1035,32 @@ void SkeletalAnim::setupConnectivity()
 {
 	int i;
 	int numBones = (physx::PxU32)mBones.size();
-	for (i = 0; i < numBones; i++) {
-		SkeletalBone &b = mBones[i];
-		if (b.parent >= 0) mBones[b.parent].numChildren++;
+	for (i = 0; i < numBones; i++)
+	{
+		SkeletalBone& b = mBones[i];
+		if (b.parent >= 0)
+		{
+			mBones[b.parent].numChildren++;
+		}
 	}
 	int first = 0;
-	for (i = 0; i < numBones; i++) {
+	for (i = 0; i < numBones; i++)
+	{
 		mBones[i].firstChild = first;
 		first += mBones[i].numChildren;
 	}
 	mChildren.resize(first);
-	for (i = 0; i < numBones; i++) {
-		if (mBones[i].parent < 0) continue;
-		SkeletalBone &p = mBones[mBones[i].parent];
+	for (i = 0; i < numBones; i++)
+	{
+		if (mBones[i].parent < 0)
+		{
+			continue;
+		}
+		SkeletalBone& p = mBones[mBones[i].parent];
 		mChildren[p.firstChild++] = i;
 	}
-	for (i = 0; i < numBones; i++) {
+	for (i = 0; i < numBones; i++)
+	{
 		mBones[i].firstChild -= mBones[i].numChildren;
 	}
 }
@@ -774,9 +1068,11 @@ void SkeletalAnim::setupConnectivity()
 // -------------------------------------------------------------------
 void SkeletalAnim::draw(physx::NxApexRenderDebug* batcher)
 {
-	assert(batcher != NULL);
+	PX_ASSERT(batcher != NULL);
 	if (batcher == NULL)
+	{
 		return;
+	}
 
 	const physx::PxU32 colorWhite = batcher->getDebugColor(physx::DebugColors::White);
 	const physx::PxU32 colorBlack = batcher->getDebugColor(physx::DebugColors::Black);
@@ -797,41 +1093,54 @@ void SkeletalAnim::draw(physx::NxApexRenderDebug* batcher)
 }
 
 // -------------------------------------------------------------------
-void SkeletalAnim::copyFrom(const SkeletalAnim &anim)
+void SkeletalAnim::copyFrom(const SkeletalAnim& anim)
 {
 	clear();
 
 	mBones.resize(anim.mBones.size());
 	for (int i = 0; i < (int)anim.mBones.size(); i++)
+	{
 		mBones[i] = anim.mBones[i];
+	}
 
 	mSkinningMatrices.resize(anim.mSkinningMatrices.size());
 	for (int i = 0; i < (int)anim.mSkinningMatrices.size(); i++)
+	{
 		mSkinningMatrices[i] = anim.mSkinningMatrices[i];
+	}
 
 	mSkinningMatricesWorld.resize(anim.mSkinningMatricesWorld.size());
 	for (int i = 0; i < (int)anim.mSkinningMatricesWorld.size(); i++)
+	{
 		mSkinningMatricesWorld[i] = anim.mSkinningMatricesWorld[i];
+	}
 
 	mChildren.resize(anim.mChildren.size());
 	for (int i = 0; i < (int)anim.mChildren.size(); i++)
+	{
 		mChildren[i] = anim.mChildren[i];
+	}
 
-	for (int i = 0; i < (int)anim.mAnimations.size(); i++) {
-		SkeletalAnimation *a = anim.mAnimations[i];
-		SkeletalAnimation *na = new SkeletalAnimation();
+	for (int i = 0; i < (int)anim.mAnimations.size(); i++)
+	{
+		SkeletalAnimation* a = anim.mAnimations[i];
+		SkeletalAnimation* na = new SkeletalAnimation();
 		na->minTime = a->minTime;
 		na->maxTime = a->maxTime;
 		na->name = a->name;
 		na->mBoneTracks.resize(a->mBoneTracks.size());
 		for (int j = 0; j < (int)a->mBoneTracks.size(); j++)
+		{
 			na->mBoneTracks[j] = a->mBoneTracks[j];
+		}
 		mAnimations.push_back(na);
 	}
 
 	mKeyFrames.resize(anim.mKeyFrames.size());
 	for (int i = 0; i < (int)anim.mKeyFrames.size(); i++)
+	{
 		mKeyFrames[i] = anim.mKeyFrames[i];
+	}
 }
 
 
@@ -847,7 +1156,7 @@ void SkeletalAnim::clearShapeCount(int boneIndex)
 	}
 	else
 	{
-		assert((physx::PxU32)boneIndex < mBones.size());
+		PX_ASSERT((physx::PxU32)boneIndex < mBones.size());
 		mBones[boneIndex].numShapes = 0;
 	}
 }
@@ -856,7 +1165,9 @@ void SkeletalAnim::clearShapeCount(int boneIndex)
 void SkeletalAnim::incShapeCount(int boneIndex)
 {
 	if (boneIndex >= 0 && (physx::PxU32)boneIndex < mBones.size())
+	{
 		mBones[boneIndex].numShapes++;
+	}
 }
 
 // -------------------------------------------------------------------
@@ -864,12 +1175,12 @@ void SkeletalAnim::decShapeCount(int boneIndex)
 {
 	if (boneIndex >= 0 && (physx::PxU32)boneIndex < mBones.size())
 	{
-		assert(mBones[boneIndex].numShapes > 0);
+		PX_ASSERT(mBones[boneIndex].numShapes > 0);
 		mBones[boneIndex].numShapes--;
 	}
 }
 // -------------------------------------------------------------------
-bool SkeletalAnim::processElement(const char *elementName, int argc, const char **argv, const char *elementData, int lineno)
+bool SkeletalAnim::processElement(const char* elementName, int argc, const char** argv, const char* /*elementData*/, int /*lineno*/)
 {
 	static int activeBoneTrack = -1;
 	static BoneKeyFrame* activeKeyFrame;
@@ -885,9 +1196,9 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "bone") == 0)
 	{
-		assert(argc == 4);
-		assert(strcmp(argv[0], "id") == 0);
-		assert(strcmp(argv[2], "name") == 0);
+		PX_ASSERT(argc == 4);
+		PX_ASSERT(strcmp(argv[0], "id") == 0);
+		PX_ASSERT(strcmp(argv[2], "name") == 0);
 		SkeletalBone bone;
 		bone.clear();
 		bone.id = atoi(argv[1]);
@@ -896,10 +1207,10 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "position") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 pos;
 		pos.x = (physx::PxF32)atof(argv[1]);
 		pos.y = (physx::PxF32)atof(argv[3]);
@@ -908,17 +1219,17 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "rotation") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "angle") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "angle") == 0);
 		mBones.back().pose.M(0, 0) = (physx::PxF32)atof(argv[1]);
 		isAnimation = false;
 	}
 	else if (strcmp(elementName, "axis") == 0 && !isAnimation)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 axis;
 		axis.x = (physx::PxF32)atof(argv[1]);
 		axis.y = (physx::PxF32)atof(argv[3]);
@@ -929,10 +1240,10 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "scale") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 scale;
 		scale.x = (physx::PxF32)atof(argv[1]);
 		scale.y = (physx::PxF32)atof(argv[3]);
@@ -945,13 +1256,15 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "boneparent") == 0)
 	{
-		assert(argc == 4);
-		assert(strcmp(argv[0], "bone") == 0);
-		assert(strcmp(argv[2], "parent") == 0);
+		PX_ASSERT(argc == 4);
+		PX_ASSERT(strcmp(argv[0], "bone") == 0);
+		PX_ASSERT(strcmp(argv[2], "parent") == 0);
 		int child = findBone(argv[1]);
 		int parent = findBone(argv[3]);
 		if (child >= 0 && child < (int)mBones.size() && parent >= 0 && parent < (int)mBones.size())
+		{
 			mBones[child].parent = parent;
+		}
 	}
 	else if (strcmp(elementName, "animations") == 0)
 	{
@@ -959,8 +1272,8 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "animation") == 0)
 	{
-		assert(argc == 4);
-		assert(strcmp(argv[0], "name") == 0);
+		PX_ASSERT(argc == 4);
+		PX_ASSERT(strcmp(argv[0], "name") == 0);
 
 		SkeletalAnimation* anim = new SkeletalAnimation;
 		anim->clear();
@@ -975,8 +1288,8 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "track") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "bone") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "bone") == 0);
 		activeBoneTrack = findBone(argv[1]);
 		if (activeBoneTrack >= 0 && activeBoneTrack < (int)mBones.size())
 		{
@@ -990,11 +1303,11 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "keyframe") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "time") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "time") == 0);
 
 		mAnimations.back()->mBoneTracks[activeBoneTrack].numFrames++;
-		
+
 		mKeyFrames.push_back(BoneKeyFrame());
 		activeKeyFrame = &mKeyFrames.back();
 		activeKeyFrame->clear();
@@ -1002,27 +1315,27 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 	}
 	else if (strcmp(elementName, "translate") == 0)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		activeKeyFrame->relPose.t.x = (physx::PxF32)atof(argv[1]);
 		activeKeyFrame->relPose.t.y = (physx::PxF32)atof(argv[3]);
 		activeKeyFrame->relPose.t.z = (physx::PxF32)atof(argv[5]);
 	}
 	else if (strcmp(elementName, "rotate") == 0)
 	{
-		assert(argc == 2);
-		assert(strcmp(argv[0], "angle") == 0);
+		PX_ASSERT(argc == 2);
+		PX_ASSERT(strcmp(argv[0], "angle") == 0);
 		activeKeyFrame->relPose.M(0, 0) = (physx::PxF32)atof(argv[1]);
 		isAnimation = true;
 	}
 	else if (strcmp(elementName, "axis") == 0 && isAnimation)
 	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
+		PX_ASSERT(argc == 6);
+		PX_ASSERT(strcmp(argv[0], "x") == 0);
+		PX_ASSERT(strcmp(argv[2], "y") == 0);
+		PX_ASSERT(strcmp(argv[4], "z") == 0);
 		physx::PxVec3 axis;
 		axis.x = (physx::PxF32)atof(argv[1]);
 		axis.y = (physx::PxF32)atof(argv[3]);
@@ -1032,20 +1345,10 @@ bool SkeletalAnim::processElement(const char *elementName, int argc, const char 
 		physx::PxQuat quat(angle, axis);
 		activeKeyFrame->relPose.M.fromQuat(quat);
 	}
-	else if (strcmp(elementName, "scale") == 0)
-	{
-		assert(argc == 6);
-		assert(strcmp(argv[0], "x") == 0);
-		assert(strcmp(argv[2], "y") == 0);
-		assert(strcmp(argv[4], "z") == 0);
-		activeKeyFrame->scale.x = (physx::PxF32)atof(argv[1]);
-		activeKeyFrame->scale.y = (physx::PxF32)atof(argv[3]);
-		activeKeyFrame->scale.z = (physx::PxF32)atof(argv[5]);
-	}
 	else
 	{
 		// always break here, at least in debug mode
-		assert(0);
+		PX_ALWAYS_ASSERT();
 	}
 
 	return true;

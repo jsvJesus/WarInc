@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -33,12 +33,14 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 #include <RendererInstanceBufferDesc.h>
-#include "PxAssert.h"
+#include "foundation/PxAssert.h"
+
+using namespace SampleRenderer;
 
 RendererInstanceBufferDesc::RendererInstanceBufferDesc(void)
 {
 	hint = RendererInstanceBuffer::HINT_STATIC;
-	for(physx::PxU32 i=0; i<RendererInstanceBuffer::NUM_SEMANTICS; i++)
+	for(PxU32 i=0; i<RendererInstanceBuffer::NUM_SEMANTICS; i++)
 	{
 		semanticFormats[i] = RendererInstanceBuffer::NUM_FORMATS;
 	}
@@ -61,7 +63,12 @@ bool RendererInstanceBufferDesc::isValid(void) const
 
 	if(semanticFormats[RendererInstanceBuffer::SEMANTIC_POSITION] != RendererInstanceBuffer::FORMAT_FLOAT3) bValidTurbulence = false;
 	if(semanticFormats[RendererInstanceBuffer::SEMANTIC_VELOCITY_LIFE] != RendererInstanceBuffer::FORMAT_FLOAT4) bValidTurbulence = false;
-	
+
+	if((semanticFormats[RendererInstanceBuffer::SEMANTIC_UV_OFFSET]    != RendererInstanceBuffer::FORMAT_FLOAT2) &&
+	   (semanticFormats[RendererInstanceBuffer::SEMANTIC_UV_OFFSET]    != RendererInstanceBuffer::NUM_FORMATS)) ok = false;
+	if((semanticFormats[RendererInstanceBuffer::SEMANTIC_LOCAL_OFFSET] != RendererInstanceBuffer::FORMAT_FLOAT3) &&
+	   (semanticFormats[RendererInstanceBuffer::SEMANTIC_LOCAL_OFFSET] != RendererInstanceBuffer::NUM_FORMATS)) ok = false;
+
 	if(registerInCUDA && !interopContext)
 		ok = false;
 

@@ -308,7 +308,7 @@ public:
     }
 
     // Utility.
-    void                    DoMouseDrag(unsigned mouseIndex);
+    void                    DoMouseDrag();
 
     // Returns 0 if nothing to do
     // 1 - if need to add to optimized play list

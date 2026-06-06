@@ -1,6 +1,3 @@
-#ifndef PX_FILE_RENDER_DEBUG_H
-
-#define PX_FILE_RENDER_DEBUG_H
 /*
  * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
  *
@@ -35,12 +32,16 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
+
+#ifndef PX_FILE_RENDER_DEBUG_H
+#define PX_FILE_RENDER_DEBUG_H
+
 #include "PxProcessRenderDebug.h"
 
 namespace physx
 {
-	namespace shdfnd2
-	{
+namespace general_renderdebug4
+{
 
 class PxFileRenderDebug : public PxProcessRenderDebug
 {
@@ -57,7 +58,8 @@ PxFileRenderDebug * createFileRenderDebug(const char *fileName,
 										  bool readAccess,
 										  bool echoLocally);
 
-	};
+};
+using namespace general_renderdebug4;
 };
 
 #endif

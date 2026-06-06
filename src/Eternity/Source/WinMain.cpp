@@ -174,7 +174,7 @@ void win::HandleDeactivate()
 	//    return;
 	win::bSuspended = 1;
 
-	if( !r_render_on_deactivation || !r_render_on_deactivation->GetInt() )
+	if( !(r_render_on_deactivation && r_render_on_deactivation->GetInt()) )
 		win::bNeedRender = 0;
 	else
 		win::bNeedRender = 1;
@@ -255,18 +255,18 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   //r3dOutToLog("uMsg %x\n", uMsg);
   switch(uMsg) 
   {
-  case WM_CLOSE:
-      {
-          r3dOutToLog("alt-f4 pressed\n");
-          r3dOutToLog("...terminating application\n");
+    case WM_CLOSE:
+    {
+      r3dOutToLog("alt-f4 pressed\n");
+      r3dOutToLog("...terminating application\n");
 
-          ClipCursor(NULL);
+      ClipCursor(NULL);
+      
+      //HRESULT res = TerminateProcess(r3d_CurrentProcess, 0);
 
-          r3dDebugMarkNormalExit();
-
-          g_bExit = true;
-          return 0;
-      }
+	  g_bExit = true;
+      return 0;
+    }
     
     case WM_CONTEXTMENU:
       // disable context menu
@@ -414,11 +414,11 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       }
       break;
 
-  case WM_KEYDOWN:
-      {
-          EngineConsole::ProcessKey( static_cast<uint8_t>( wParam & 0xFF ) );
-          break;
-      }
+	case WM_KEYDOWN:
+	{
+		EngineConsole::ProcessKey( wParam );
+		break;
+	}
 
 	case WM_LBUTTONDBLCLK:
 		if( OnDblClick )
@@ -426,20 +426,18 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
     // store char to input stream
-  case WM_CHAR:
-      {
-          const int ch = static_cast<int>( wParam & 0xFFFF );
+    case WM_CHAR:
+    {
+		EngineConsole::ProcessChar( wParam );
 
-          EngineConsole::ProcessChar( static_cast<char>( ch & 0xFF ) );
+        int	ch;
 
-          input_StackTail = input_StackHead;
-          *(input_StackHead++) = ch;
-
-          if(input_StackHead >= input_ScanStack + INPUT_KBD_STACK)
-              input_StackHead = input_ScanStack;
-
-          break;
-      }
+      ch              = (TCHAR)wParam;
+      *(input_StackHead++) = ch;
+      if(input_StackHead >= input_ScanStack + INPUT_KBD_STACK)
+	input_StackHead = input_ScanStack;
+      break;
+    }
 
     case WM_PAINT:
     {
@@ -452,9 +450,9 @@ LRESULT CALLBACK win__WndFunc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       break;
     }
 
-  case WM_DESTROY:
-      r3dDebugMarkNormalExit();
-      g_bExit = true;
+    case WM_DESTROY:
+      //PostQuitMessage (0);
+		g_bExit = true;
       break;
   }
 
@@ -560,48 +558,20 @@ int win::ProcessSuspended()
   return TRUE;
 }
 
-// see this blog post: http://www.altdevblogaday.com/2012/07/06/when-even-crashing-doesnt-work/
-// this is for 64-bit windows, when it silently skips crashes when they happen inside of kernel callback. don't think it might happen with us, but good to have it here
-void EnableCrashingOnCrashes() 
-{ 
-#ifndef FINAL_BUILD
-	typedef BOOL (WINAPI *tGetPolicy)(LPDWORD lpFlags); 
-	typedef BOOL (WINAPI *tSetPolicy)(DWORD dwFlags); 
-	const DWORD EXCEPTION_SWALLOWING = 0x1;
-
-	HMODULE kernel32 = LoadLibraryA("kernel32.dll"); 
-	tGetPolicy pGetPolicy = (tGetPolicy)GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy"); 
-	tSetPolicy pSetPolicy = (tSetPolicy)GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy"); 
-	if (pGetPolicy && pSetPolicy) 
-	{ 
-		DWORD dwFlags; 
-		if (pGetPolicy(&dwFlags)) 
-		{ 
-			// Turn off the filter 
-			pSetPolicy(dwFlags & ~EXCEPTION_SWALLOWING); 
-		} 
-	} 
-#endif
-}
 
 static void startupFunc(DWORD in)
 {
-    //  in = in;
+//  in = in;
+  
+  game::PreInit();  
 
-    // ptumik: disabled. causing weird exception inside of chromium due to RPC cancel.
-    //EnableCrashingOnCrashes();
+  win::Init();
 
-    game::PreInit();
+  game::Init();
 
-    win::Init();
+  game::MainLoop();
 
-    game::Init();
-
-    game::MainLoop();
-
-    r3dDebugMarkNormalExit();
-
-    game::Shutdown();
+  game::Shutdown();
 }
 
 //

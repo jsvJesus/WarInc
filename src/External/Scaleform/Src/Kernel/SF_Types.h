@@ -41,11 +41,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 //    IPHONE   - iPhone
 //    XBOX360  - Xbox 360 console
 //    PS3      - Playstation 3 console
-//    PSVITA   - PSVITA handheld console
+//    PSVITA      - PSVITA handheld console
 //    WII      - Wii console
 //    3DS      - 3DS handheld console
-
-#if ( !defined(SF_OS_WIIU) ) // XXX HACK: WF Hack for WIIU until the sf sdk is fixed or we get a better way to do it
 
 #if (defined(__APPLE__) && (defined(__GNUC__) || defined(__xlC__) || defined(__xlc__))) || defined(__MACOS__)
 #if (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) || defined(__IPHONE_OS_VERSION_MIN_REQUIRED))
@@ -55,9 +53,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 # define SF_OS_MAC
 #endif
 #elif defined(_XBOX)
-# if defined(NOD3D) || defined(NONET)
-#  error Cannot have NOD3D or NONET defined when including Scaleform GFx headers.
-# endif
 # include <xtl.h>
 // Xbox360 and XBox both share _XBOX definition
 #if (_XBOX_VER >= 200)
@@ -73,8 +68,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 # define SF_OS_LINUX
 #elif defined(__PPU__)
 # define SF_OS_PS3
-#elif defined(__ORBIS__)
-# define SF_OS_ORBIS
 #elif defined(RVL)
 # define SF_OS_WII
 #elif defined(__psp2__)
@@ -89,7 +82,6 @@ otherwise accompanies this software in either electronic or hard copy form.
  # define SF_OS_ANDROID
 #endif
 
-#endif
 
 // ***** CPU Architecture
 //
@@ -101,14 +93,13 @@ otherwise accompanies this software in either electronic or hard copy form.
 //    PPC        - PowerPC
 //    PPC64      - PowerPC64
 //    MIPS       - MIPS
-//    ARM        - ARM based CPU
 //    OTHER      - CPU for which no special support is present or needed
 
 
 #if defined(__x86_64__) || defined(WIN64) || defined(_WIN64) || defined(__WIN64__)
 #  define SF_CPU_X86_64
 #  define SF_64BIT_POINTERS
-#elif defined(__i386__) || (defined(SF_OS_WIN32) && !defined(_M_ARM_FP)) || defined(SF_OS_XBOX)
+#elif defined(__i386__) || defined(SF_OS_WIN32) || defined(SF_OS_XBOX)
 #  define SF_CPU_X86
 #elif defined(__powerpc64__) || defined(SF_OS_PS3) || defined(SF_OS_XBOX360) || defined(SF_OS_WII)
 #  define SF_CPU_PPC64
@@ -117,7 +108,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #  define SF_CPU_PPC
 #elif defined(__mips__) || defined(__MIPSEL__)
 #  define SF_CPU_MIPS
-#elif defined(__arm__) || defined(_M_ARM_FP)
+#elif defined(__arm__)
 #  define SF_CPU_ARM
 #else
 #  define SF_CPU_OTHER
@@ -134,7 +125,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 //                 an extended Altivec feature set.
 //    Neon       - Available on some armv7+ processors.
 
-#if defined(__SSE__) || (defined(SF_OS_WIN32) && !defined(_M_ARM_FP))
+#if defined(__SSE__) || defined(SF_OS_WIN32)
 #  define  SF_CPU_SSE
 #endif // __SSE__
 
@@ -189,7 +180,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 // MSVC 8.0 (VC2005)            = 1400
 // MSVC 9.0 (VC2008)            = 1500
 // MSVC 10.0 (VC2010)           = 1600
-// MSVC 11.0 (VC2012)           = 1700
 # define SF_CC_MSVC        _MSC_VER
 
 #elif defined(__MWERKS__)
@@ -509,7 +499,7 @@ typedef unsigned int UInt32 __attribute__((__mode__ (__SI__)));
 typedef int          SInt64 __attribute__((__mode__ (__DI__)));
 typedef unsigned int UInt64 __attribute__((__mode__ (__DI__)));
 
-#elif defined(SF_CC_GNU) || defined(SF_CC_SNC) || defined(SF_OS_ORBIS)
+#elif defined(SF_CC_GNU) || defined(SF_CC_SNC)
 
 typedef int          SInt8  __attribute__((__mode__ (__QI__)));
 typedef unsigned int UInt8  __attribute__((__mode__ (__QI__)));
@@ -547,10 +537,7 @@ typedef s64             SInt64;
 typedef u64             UInt64;
 
 #else
-
-} // Scaleform
 #include <sys/types.h>
-namespace Scaleform {
 
 // 8 bit Integer (Byte)
 typedef int8_t              SInt8;
@@ -643,9 +630,6 @@ namespace BaseTypes
     #if defined(_PREFAST_)
         #define SF_ASSERT(p)       do { BOOL res = (BOOL)((p) != 0); __analysis_assume(res); if (!(res))  { SF_DEBUG_BREAK; } } while(0)
     #endif
-#elif defined(SF_OS_ORBIS)
-    #include <libdbg.h>
-    #define SF_DEBUG_BREAK     do { SCE_BREAK(); } while(0)
 #elif defined(SF_CC_CLANG)
     #define SF_DEBUG_BREAK     do { __builtin_trap(); } while(0)
 #elif defined(SF_CPU_X86)
@@ -672,11 +656,7 @@ namespace BaseTypes
 //
 //---------------------------------------------------------------------------
 // Compile-time assert.  Thanks to Jon Jagger (http://www.jaggersoft.com) for this trick.
-// Improved from stack overflow (http://stackoverflow.com/questions/807244/c-compiler-asserts-how-to-implement)
-#define SF_COMPILER_ASSERT(predicate) _impl_CASSERT_LINE(predicate,__LINE__,__FILE__)
-#define _impl_PASTE(a,b) a##b
-#define _impl_CASSERT_LINE(predicate, line, file) \
-    typedef char _impl_PASTE(assertion_failed_##file##_,line)[2*!!(predicate)-1];
+#define SF_COMPILER_ASSERT(x)   { int assertVar = 0; switch(assertVar){case 0: case x:;} }
 
 // Handy macro to quiet compiler warnings about unused parameters/variables.
 #if defined(SF_CC_GNU) || defined(SF_CC_CLANG)
@@ -793,9 +773,7 @@ SF_INLINE void*   operator new        (Scaleform::UPInt n, void *ptr)   { return
 SF_INLINE void    operator delete     (void *ptr, void *ptr2)           { return; SF_UNUSED2(ptr,ptr2); }
 #else
 // Needed for placement on many platforms including PSP.
-#ifndef WF_ENGINE
 #include <new>
-#endif
 #endif
 
 #endif // __PLACEMENT_NEW_INLINE

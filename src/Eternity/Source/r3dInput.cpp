@@ -966,52 +966,45 @@ r3dInputMappingMngr::r3dInputMappingMngr()
 	m_Mapping[KS_CROUCH] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbsLeftControl, "$HUD_Cntrl_Crouch");
 	m_Mapping[KS_INTERACT] =				KeyboardMapping(INPUTMAP_KEYBOARD, kbsE, "$HUD_Cntrl_Interact");
 	m_Mapping[KS_RELOAD] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbsR, "$HUD_Cntrl_Reload");
-	m_Mapping[KS_CHANGE_RATE_FIRE] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsK, "$HUD_Cntrl_ChangeFireRate");
+	m_Mapping[KS_CHANGE_RATE_FIRE] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsX, "$HUD_Cntrl_ChangeFireRate");
 
 	m_Mapping[KS_PRIMARY_WEAPON] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbs1, "$HUD_Cntrl_PrimaryWeapon");
-	m_Mapping[KS_SECONDARY_WEAPON] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbs2, "$HUD_Cntrl_SecondaryWeapon");
-	m_Mapping[KS_HANDGUN_WEAPON] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbs3, "$HUD_Cntrl_Handgun");
-	m_Mapping[KS_ITEM1] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs4, "$HUD_Cntrl_Item1");
-	m_Mapping[KS_ITEM2] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs5, "$HUD_Cntrl_Item2");
-	m_Mapping[KS_ITEM3] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs6, "$HUD_Cntrl_Item3");
-	m_Mapping[KS_ITEM4] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs7, "$HUD_Cntrl_Item4");
+	m_Mapping[KS_HANDGUN_WEAPON] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbs2, "$HUD_Cntrl_Handgun");
+	m_Mapping[KS_ITEM1] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs3, "$HUD_Cntrl_Item1");
+	m_Mapping[KS_ITEM2] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs4, "$HUD_Cntrl_Item2");
+	m_Mapping[KS_ITEM3] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs5, "$HUD_Cntrl_Item3");
+	m_Mapping[KS_ITEM4] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbs6, "$HUD_Cntrl_Item4");
 	m_Mapping[KS_NEXTITEM] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsGrave, "$HUD_Cntrl_NextItem");
 
 	m_Mapping[KS_HOLD_BREATH] =				KeyboardMapping(INPUTMAP_KEYBOARD, kbsLeftShift, "$HUD_Cntrl_SteadyAim");
 
 	m_Mapping[KS_CHAT] =					KeyboardMapping(INPUTMAP_KEYBOARD, kbsEnter, "$HUD_Cntrl_Chat");
 	m_Mapping[KS_SWITCH_MINIMAP] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsM, "$HUD_Cntrl_SwitchMinimap");
-	m_Mapping[KS_SHOW_SCORE] =				KeyboardMapping(INPUTMAP_KEYBOARD, kbsTab, "$HUD_Cntrl_ShowScore");
 
 	m_Mapping[KS_QUICK_SWITCH_WEAPON] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsQ, "$HUD_Cntrl_QuickSwitch");
-	m_Mapping[KS_THROW_GRENADE] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsF, "$HUD_Cntrl_ThrowGrenade");
 	m_Mapping[KS_TOGGLE_NIGHTVISION] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsN, "$HUD_Cntrl_ToggleNightvision");
 
-	m_Mapping[KS_DROP_BOMB] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsG, "$HUD_Cntrl_DropBomb");
-	
-	m_Mapping[KS_UAV_TARGET] =		KeyboardMapping(INPUTMAP_MOUSE, r3dMouse::mLeftButton, "$HUD_Cntrl_UAVTarget");
-	m_Mapping[KS_UAV_UP] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsQ, "$HUD_Cntrl_UAVUp");
-	m_Mapping[KS_UAV_DOWN] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsZ, "$HUD_Cntrl_UAVDown");
+	m_Mapping[KS_SWITCH_FPS_TPS] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsC, "$HUD_Switch_FPS_TPS");
 
-	m_Mapping[KS_COMMAND_Z] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsZ, "$HUD_Cntrl_CommandZ");
-	m_Mapping[KS_COMMAND_X] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsX, "$HUD_Cntrl_CommandX");
-	m_Mapping[KS_COMMAND_C] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsC, "$HUD_Cntrl_CommandC");
+	m_Mapping[KS_INVENTORY] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsI, "$HUD_Cntrl_Inventory");
 
-	m_Mapping[KS_COMMROSE] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsT, "$HUD_Cntrl_CommRose");
+	m_Mapping[KS_CHAT_CHANNEL1] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsF1, "$HUD_Cntrl_Chat1");
+	m_Mapping[KS_CHAT_CHANNEL2] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsF2, "$HUD_Cntrl_Chat2");
+	m_Mapping[KS_CHAT_CHANNEL3] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsF3, "$HUD_Cntrl_Chat3");
 
-	m_Mapping[KS_LASER_VIEW_UP] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsQ, "$HUD_Cntrl_LaserViewUp");
-	m_Mapping[KS_LASER_VIEW_DOWN] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsZ, "$HUD_Cntrl_LaserViewDown");
+	m_Mapping[KS_SHOW_ATTACHMENTS] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsF6, "$HUD_Cntrl_ShowAttachments");
+
+	m_Mapping[KS_FREE_HANDS] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsBACK, "$HUD_Cntrl_FreeHands");
+
+	m_Mapping[KS_PRONE] =			KeyboardMapping(INPUTMAP_KEYBOARD, kbsZ, "$HUD_Cntrl_Prone");
+
+	m_Mapping[KS_SHOW_PLAYERS] =		KeyboardMapping(INPUTMAP_KEYBOARD, kbsTab, "$HUD_Cntrl_ShowPlayers");
+
 
 }
 
 r3dInputMappingMngr::~r3dInputMappingMngr()
 {
-}
-
-void r3dInputMappingMngr::resetKeyMappingsToDefault()
-{
-	for(int i=0; i<KS_NUM; ++i)
-		m_Mapping[i].key = m_Mapping[i].default_key;
 }
 
 bool r3dInputMappingMngr::isPressed(KeybordShortcuts shortcut)
@@ -1053,6 +1046,8 @@ bool r3dInputMappingMngr::wasReleased(KeybordShortcuts shortcut)
 	return false;
 }
 
+static const int INPUT_MAPPING_FILE_VERSION = 4;
+
 void r3dInputMappingMngr::saveMapping(const char* path)
 {
 	r3d_assert(path);
@@ -1062,15 +1057,15 @@ void r3dInputMappingMngr::saveMapping(const char* path)
 	xmlMappingFile.append_child(pugi::node_comment).set_value("Input mapping");
 	pugi::xml_node xmlMappings = xmlMappingFile.append_child();
 	xmlMappings.set_name("mappings");
-	xmlMappings.append_attribute("version") = 1;
+	xmlMappings.append_attribute("version") = INPUT_MAPPING_FILE_VERSION;
 	xmlMappings.append_attribute("num_maps") = KS_NUM;
 	
 	for(int i =0; i<KS_NUM; ++i)
 	{
 		pugi::xml_node xmlMap = xmlMappings.append_child();
 		xmlMap.set_name("map");
-		xmlMap.append_attribute("type") = m_Mapping[i].type;
-		xmlMap.append_attribute("key") = m_Mapping[i].key;
+		xmlMap.append_attribute("type") = int(m_Mapping[i].type);
+		xmlMap.append_attribute("key") = int(m_Mapping[i].key);
 	}
 
 	xmlMappingFile.save_file(path);
@@ -1100,21 +1095,48 @@ void r3dInputMappingMngr::loadMapping(const char* path)
 	pugi::xml_node xmlMappings = xmlMappingFile.child("mappings");
 
 	// check for version
-	if(xmlMappings.attribute("version").as_int() != 1)
+	if(xmlMappings.attribute("version").as_int() != INPUT_MAPPING_FILE_VERSION)
 	{
-		r3dOutToLog("Incompatible key mapping file\n");
+		r3dOutToLog("Incompatible key mapping file, switching to default key map\n");
+		delete [] fileBuffer;
 		return;
 	}
 
 	int numMaps = xmlMappings.attribute("num_maps").as_int();
-	numMaps = R3D_MIN(numMaps, (int)KS_NUM);
+	if(numMaps != KS_NUM)
+	{
+		r3dOutToLog("Incompatible key mapping file, numMaps=%d versus required %d, switching to default key map\n", numMaps, KS_NUM);
+		delete [] fileBuffer;
+		return;
+	}
+
+	// validate data is correct in xml file
+	{
+		bool data_valid = true;
+		pugi::xml_node xmlMap = xmlMappings.child("map");
+		for(int i=0; i<numMaps; ++i)
+		{
+			int type = (InputMapType)xmlMap.attribute("type").as_int();
+			if(type != INPUTMAP_KEYBOARD && type != INPUTMAP_MOUSE)
+			{
+				data_valid = false;
+				break;
+			}
+			xmlMap = xmlMap.next_sibling();
+		}
+		if(!data_valid)
+		{
+			r3dOutToLog("Corrupted key mapping file, switching to default key map\n");
+			delete [] fileBuffer;
+			return;
+		}
+	}
 
 	pugi::xml_node xmlMap = xmlMappings.child("map");
 	for(int i=0; i<numMaps; ++i)
 	{
 		m_Mapping[i].type = (InputMapType)xmlMap.attribute("type").as_int();
 		m_Mapping[i].key = xmlMap.attribute("key").as_int();
-		
 		xmlMap = xmlMap.next_sibling();
 	}
 
@@ -1161,19 +1183,24 @@ const char* r3dInputMappingMngr::getKeyName(KeybordShortcuts shortcut)
 	return "unknown key";
 }
 
-void r3dInputMappingMngr::mapKey(KeybordShortcuts shortcut, InputMapType type, int key)
+bool r3dInputMappingMngr::attemptRemapKey(KeybordShortcuts shortcut, bool& conflict)
 {
-	m_Mapping[shortcut].type = type;
-	m_Mapping[shortcut].key = key;
-}
-
-bool r3dInputMappingMngr::attemptRemapKey(KeybordShortcuts shortcut)
-{
+	r3d_assert(int(shortcut)>=0 && int(shortcut)<r3dInputMappingMngr::KS_NUM);
+	conflict = false;
 	// check mouse firstly
 	for(int i=0; i<8; ++i)
 	{
 		if(MbdReleased[i])
 		{
+			// check for conflicts
+			for(int j=0; j<KS_NUM; ++j)
+			{
+				if(j!=shortcut && m_Mapping[j].key == i && m_Mapping[j].type == INPUTMAP_MOUSE)
+				{
+					conflict = true;
+					return true;
+				}
+			}
 			m_Mapping[shortcut].type = INPUTMAP_MOUSE;
 			m_Mapping[shortcut].key = i;
 			return true;
@@ -1182,8 +1209,17 @@ bool r3dInputMappingMngr::attemptRemapKey(KeybordShortcuts shortcut)
 
 	for(int i=0; i<256; ++i)
 	{
-		if(KbdReleased[i])
+		if(KbdReleased[i] && i!=kbsEsc && i!=kbsLWin && i!=kbsRWin) // do not allow to remap to Esc key, win keys
 		{
+			// check for conflicts
+			for(int j=0; j<KS_NUM; ++j)
+			{
+				if(j!=shortcut && m_Mapping[j].key == i && m_Mapping[j].type == INPUTMAP_KEYBOARD)
+				{
+					conflict = true;
+					return true;
+				}
+			}
 			m_Mapping[shortcut].type = INPUTMAP_KEYBOARD;
 			m_Mapping[shortcut].key = i;
 			return true;

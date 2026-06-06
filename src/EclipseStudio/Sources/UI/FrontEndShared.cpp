@@ -5,6 +5,12 @@
 #include "../ObjectsCode/weapons/Weapon.h"
 #include "APIScaleformGfx.h"
 
+#include "../ObjectsCode/weapons/WeaponArmory.h"
+#include "../ObjectsCode/weapons/Weapon.h"
+#include "../ObjectsCode/weapons/Ammo.h"
+#include "../ObjectsCode/weapons/Gear.h"
+
+
 // disconnect from master server after this seconds of unactivity
 float		_p2p_idleTime  = 10.0f; 
 
@@ -100,6 +106,8 @@ DWORD GraphSettingsToVars( const GraphicSettings& settings )
 		r_ssao_quality->SetInt( settings.ssao_quality );
 	}
 
+	r_decals_proximity_multiplier->SetFloat(1 - float(settings.decoration_quality) / (S_ULTRA + 1));
+
 	return flags;
 }
 
@@ -182,10 +190,115 @@ DWORD SetDefaultSettings( r3dDevStrength strength )
 
 	r_overall_quality->SetInt( strength + 1 );
 	r_apex_enabled->SetBool(r_overall_quality->GetInt() == 4);
-	float fltStr = static_cast<float>(strength);
-	r_decals_proximity_multiplier->SetFloat(1 - fltStr / (S_ULTRA + 1));
 
 	return GraphSettingsToVars( settings );
+}
+
+DWORD SetCustomSettings( const GraphicSettings& settings )
+{
+	r_apex_enabled->SetBool( false );
+
+	r_overall_quality->SetInt( 5 );
+
+	return GraphSettingsToVars( settings );
+}
+
+bool CreateFullIniPath( char* dest, bool old );
+
+#define CUSTOM_INI_FILE "CustomSettings.ini"
+
+void FillIniPath( char* target )
+{
+	bool useLocal = true;
+
+	if( CreateConfigPath( target ) )
+	{
+		strcat( target, CUSTOM_INI_FILE );
+		useLocal = false;
+	}
+
+	if( useLocal )
+	{
+		strcpy( target, CUSTOM_INI_FILE );
+	}
+}
+
+void SaveCustomSettings( const GraphicSettings& settings )
+{
+	char fullPath[ MAX_PATH * 2 ];
+
+	FillIniPath( fullPath );
+
+	r3dOutToLog( "SaveCustomSettings: using file %s\n", fullPath );
+
+	FILE* fout = fopen_for_write( fullPath, "wt");
+
+	fprintf( fout, "%s %d\n", r_mesh_quality->GetName(), settings.mesh_quality );
+	fprintf( fout, "%s %d\n", r_texture_quality->GetName(), settings.texture_quality );
+	fprintf( fout, "%s %d\n", r_terrain_quality->GetName(), settings.terrain_quality );
+	fprintf( fout, "%s %d\n", r_water_quality->GetName(), settings.water_quality );
+	fprintf( fout, "%s %d\n", r_shadows_quality->GetName(), settings.shadows_quality );
+	fprintf( fout, "%s %d\n", r_lighting_quality->GetName(), settings.lighting_quality );
+	fprintf( fout, "%s %d\n", r_particles_quality->GetName(), settings.particles_quality );
+	fprintf( fout, "%s %d\n", r_decoration_quality->GetName(), settings.decoration_quality );
+	fprintf( fout, "%s %d\n", r_antialiasing_quality->GetName(), settings.antialiasing_quality );
+	fprintf( fout, "%s %d\n", r_anisotropy_quality->GetName(), settings.anisotropy_quality );
+	fprintf( fout, "%s %d\n", r_postprocess_quality->GetName(), settings.postprocess_quality );
+	fprintf( fout, "%s %d\n", r_ssao_quality->GetName(), settings.ssao_quality );
+
+	fclose( fout );
+}
+
+static void CheckOption( const char* line, const CmdVar* var, int* target )
+{
+	int val;
+	char scanfline[ 512 ];
+
+	sprintf( scanfline, "%s %%d", var->GetName() );
+	
+	if( sscanf( line, scanfline, &val ) == 1 ) 
+		*target = val;
+}
+
+GraphicSettings GetCustomSettings()
+{
+	GraphicSettings settings;
+
+	char fullPath[ MAX_PATH * 2 ];
+
+	FillIniPath( fullPath );
+
+	r3dOutToLog( "GetCustomSettings: using file %s\n", fullPath );
+
+	if( FILE* fin = fopen( fullPath, "rt") )
+	{
+		for( ; !feof( fin ) ; )
+		{
+			char line[ 1024 ] = { 0 };
+
+			fgets( line, sizeof line - 1, fin );
+
+			if( strlen( line ) )
+			{
+				CheckOption( line, r_mesh_quality, &settings.mesh_quality );
+				CheckOption( line, r_texture_quality, &settings.texture_quality );
+				CheckOption( line, r_terrain_quality, &settings.terrain_quality );
+				CheckOption( line, r_water_quality, &settings.water_quality );
+				CheckOption( line, r_shadows_quality, &settings.shadows_quality );
+				CheckOption( line, r_lighting_quality, &settings.lighting_quality );
+				CheckOption( line, r_particles_quality, &settings.particles_quality );
+				CheckOption( line, r_decoration_quality, &settings.decoration_quality );
+				CheckOption( line, r_antialiasing_quality, &settings.antialiasing_quality );
+				CheckOption( line, r_anisotropy_quality, &settings.anisotropy_quality );
+				CheckOption( line, r_postprocess_quality, &settings.postprocess_quality );
+				CheckOption( line, r_ssao_quality, &settings.ssao_quality );
+			}
+		}
+
+		fclose( fin );
+	}
+
+	return settings;
 }
 
 void FillSettingsFromVars ( GraphicSettings& settings )
@@ -244,12 +357,6 @@ void getWeaponParamForUI(const WeaponConfig* wc, int* damage, int* spread, int* 
 		fr1 = 10;  fr2 = 200;
 		re1 = 1.0f;  re2 = 13.0f;
 		break;
-
-	case storecat_GRENADES:
-	case storecat_SUPPORT:
-		d1  = 100;  d2  = 400;  
-		fr1 = 0;  fr2 = 100;
-		break;
 	default:
 		break;
 	}
@@ -304,14 +411,6 @@ void getWeaponStatMinMaxForUI(const WeaponConfig* wc, int* mindamage, int* maxda
 		c1 = 1; c2 = 50;
 		r1 = 100; r2 = 1000;
 		break;
-
-	case storecat_GRENADES:
-	case storecat_SUPPORT:
-		d1  = 100;  d2  = 400;  
-		fr1 = 0;  fr2 = 100;
-		c1 = 1; c2 = 10;
-		r1 = 0; r2 = 500;
-		break;
 	default:
 		break;
 	}
@@ -335,4 +434,40 @@ void getWeaponStatMinMaxForUI(const WeaponConfig* wc, int* mindamage, int* maxda
 		*minrange = r1;
 	if(maxrange)
 		*maxrange = r2;
+}
+
+void getAdditionalDescForItem(uint32_t itemID, int Var1, int Var2, char* res)
+{
+	const WeaponConfig* wc = g_pWeaponArmory->getWeaponConfig(itemID);
+	const WeaponAttachmentConfig* wac = g_pWeaponArmory->getAttachmentConfig(itemID);
+	if(wc && wc->category != storecat_UsableItem && wc->category != storecat_GRENADE && wc->category!=storecat_MELEE) // weapon
+	{
+		const WeaponAttachmentConfig* clip = g_pWeaponArmory->getAttachmentConfig(Var2<0?(wc->FPSDefaultID[WPN_ATTM_CLIP]):(Var2));
+		if(clip)
+		{
+			int ammoLeft = Var1<0?clip->m_Clipsize:Var1;
+			if(ammoLeft > 0)
+			{
+				if(ammoLeft == 1)
+					sprintf(res, "%s: %d bullet left", clip->m_StoreName, ammoLeft);
+				else
+					sprintf(res, "%s: %d bullets left", clip->m_StoreName, ammoLeft);
+			}
+			else
+				sprintf(res, "%s", "NO AMMO");
+		}
+	}
+	else if(wac)
+	{
+		int ammoLeft = Var1<0?wac->m_Clipsize:Var1;
+		if(ammoLeft > 0)
+		{
+			if(ammoLeft == 1)
+				sprintf(res, "%d bullet left", ammoLeft);
+			else
+				sprintf(res, "%d bullets left", ammoLeft);
+		}
+		else
+			sprintf(res, "%s", "EMPTY CLIP");
+	}
 }

@@ -32,7 +32,6 @@ class VertexBuffer;
 class IndexBuffer;
 class MeshCache;
 class HAL;
-class ShaderManager;
 
 
 // D3D1x version of MeshCacheItem. In D3D1x index and vertex buffers
@@ -372,9 +371,8 @@ class MeshCache : public Render::MeshCache
         MinSupportedGranularity = 16*1024,
     };
 
-    Ptr<ID3D1x(Device)>         pDevice;
-    Ptr<ID3D1x(DeviceContext)>  pDeviceContext;
-    ShaderManager*              pShaderManager;
+    Ptr<ID3D1x(Device)>           pDevice;
+    Ptr<ID3D1x(DeviceContext)>    pDeviceContext;
     MeshCacheListSet            CacheList;
     
     // Handles synchronization between CPU writing of GPU resources
@@ -435,7 +433,7 @@ public:
 
     // Initializes MeshCache for operation, including allocation of the reserve
     // buffer. Typically called from SetVideoMode.
-    bool            Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext, ShaderManager* psm);
+    bool            Initialize(ID3D1x(Device)* pdevice, ID3D1x(DeviceContext) *pcontext);
     // Resets MeshCache, releasing all buffers.
     void            Reset();    
 

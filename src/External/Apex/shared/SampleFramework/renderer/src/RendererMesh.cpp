@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,27 +35,31 @@
 #include <RendererMesh.h>
 #include <RendererMeshDesc.h>
 
+#include <Renderer.h>
 #include <RendererVertexBuffer.h>
 #include <RendererIndexBuffer.h>
 #include <RendererInstanceBuffer.h>
 
+
+using namespace SampleRenderer;
+
 RendererMesh::RendererMesh(const RendererMeshDesc &desc)
 {
 	m_primitives = desc.primitives;
-	
+
 	m_numVertexBuffers = desc.numVertexBuffers;
 	m_vertexBuffers = new RendererVertexBuffer*[m_numVertexBuffers];
-	for(physx::PxU32 i=0; i<m_numVertexBuffers; i++)
+	for(PxU32 i=0; i<m_numVertexBuffers; i++)
 	{
 		m_vertexBuffers[i] = desc.vertexBuffers[i];
 	}
 	m_firstVertex    = desc.firstVertex;
 	m_numVertices    = desc.numVertices;
-	
+
 	m_indexBuffer    = desc.indexBuffer;
 	m_firstIndex     = desc.firstIndex;
 	m_numIndices     = desc.numIndices;
-	
+
 	m_instanceBuffer = desc.instanceBuffer;
 	m_firstInstance  = desc.firstInstance;
 	m_numInstances   = desc.numInstances;
@@ -66,48 +70,54 @@ RendererMesh::~RendererMesh(void)
 	delete [] m_vertexBuffers;
 }
 
+void SampleRenderer::RendererMesh::release(void)
+{
+	renderer().removeMeshFromRenderQueue(*this);
+	delete this;
+}
+
 RendererMesh::Primitive RendererMesh::getPrimitives(void) const
 {
 	return m_primitives;
 }
 
-physx::PxU32 RendererMesh::getNumVertices(void) const
+PxU32 RendererMesh::getNumVertices(void) const
 {
 	return m_numVertices;
 }
 
-physx::PxU32 RendererMesh::getNumIndices(void) const
+PxU32 RendererMesh::getNumIndices(void) const
 {
 	return m_numIndices;
 }
 
-physx::PxU32 RendererMesh::getNumInstances(void) const
+PxU32 RendererMesh::getNumInstances(void) const
 {
 	return m_numInstances;
 }
 
-void RendererMesh::setVertexBufferRange(physx::PxU32 firstVertex, physx::PxU32 numVertices)
+void RendererMesh::setVertexBufferRange(PxU32 firstVertex, PxU32 numVertices)
 {
 	// TODO: Check for valid range...
 	m_firstVertex = firstVertex;
 	m_numVertices = numVertices;
 }
 
-void RendererMesh::setIndexBufferRange(physx::PxU32 firstIndex, physx::PxU32 numIndices)
+void RendererMesh::setIndexBufferRange(PxU32 firstIndex, PxU32 numIndices)
 {
 	// TODO: Check for valid range...
 	m_firstIndex = firstIndex;
 	m_numIndices = numIndices;
 }
 
-void RendererMesh::setInstanceBufferRange(physx::PxU32 firstInstance, physx::PxU32 numInstances)
+void RendererMesh::setInstanceBufferRange(PxU32 firstInstance, PxU32 numInstances)
 {
 	// TODO: Check for valid range...
 	m_firstInstance = firstInstance;
 	m_numInstances  = numInstances;
 }
 
-physx::PxU32 RendererMesh::getNumVertexBuffers(void) const
+PxU32 RendererMesh::getNumVertexBuffers(void) const
 {
 	return m_numVertexBuffers;
 }
@@ -129,10 +139,13 @@ const RendererInstanceBuffer *RendererMesh::getInstanceBuffer(void) const
 
 void RendererMesh::bind(void) const
 {
-	for(physx::PxU32 i=0; i<m_numVertexBuffers; i++)
+	for(PxU32 i=0; i<m_numVertexBuffers; i++)
 	{
-		RENDERER_ASSERT(m_vertexBuffers[i]->checkBufferWritten(), "Vertex buffer is empty!");
-		m_vertexBuffers[i]->bind(i, m_firstVertex);
+		//RENDERER_ASSERT(m_vertexBuffers[i]->checkBufferWritten(), "Vertex buffer is empty!");
+		if (m_vertexBuffers[i]->checkBufferWritten())
+		{
+			m_vertexBuffers[i]->bind(i, m_firstVertex);
+		}
 	}
 	if(m_instanceBuffer)
 	{
@@ -150,22 +163,22 @@ void RendererMesh::render(RendererMaterial *material) const
 	{
 		if(m_indexBuffer)
 		{
-			renderIndicesInstanced(m_numVertices, m_firstIndex, m_numIndices, m_indexBuffer->getFormat(),material);
+			renderIndicesInstanced(m_numVertices, m_firstIndex, m_numIndices, m_indexBuffer->getFormat(), material);
 		}
 		else if(m_numVertices)
 		{
-			renderVerticesInstanced(m_numVertices,material);
+			renderVerticesInstanced(m_numVertices, material);
 		}
 	}
 	else
 	{
 		if(m_indexBuffer)
 		{
-			renderIndices(m_numVertices, m_firstIndex, m_numIndices, m_indexBuffer->getFormat());
+			renderIndices(m_numVertices, m_firstIndex, m_numIndices, m_indexBuffer->getFormat(), material);
 		}
 		else if(m_numVertices)
 		{
-			renderVertices(m_numVertices);
+			renderVertices(m_numVertices, material);
 		}
 	}
 }
@@ -180,8 +193,9 @@ void RendererMesh::unbind(void) const
 	{
 		m_instanceBuffer->unbind(m_numVertexBuffers);
 	}
-	for(physx::PxU32 i=0; i<m_numVertexBuffers; i++)
+	for(PxU32 i=0; i<m_numVertexBuffers; i++)
 	{
 		m_vertexBuffers[i]->unbind(i);
 	}
 }
+

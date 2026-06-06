@@ -15,6 +15,7 @@ extern	int		imgui_lbp;
 extern	int		imgui_rbp;
 extern	int		imgui_lbr;
 extern	int		imgui_rbr;
+extern	int		g_imgui_InDrag;
 
 void r3dDrawVLine(float x, float y, float length, const r3dColor& clr)
 {
@@ -35,7 +36,7 @@ void r3dDrawLine2D(float x1, float y1, float x2, float y2, float w, const r3dCol
   R3D_SCREEN_VERTEX V[4];
   for(int i=0; i<4; i++) {
     V[i].color = clr.GetPacked();
-    V[i].z     = 0;
+    V[i].z     = r3dRenderer->GetNearPlaneZValue();
     V[i].rwh   = 1.0f;
   }
 
@@ -268,7 +269,7 @@ void UICurveEditor::DrawFloatPoints(const r3dTimeGradient2& grad, bool useSelect
 	if( y < fy || y > fy + fh )
 		continue ;
 
-    if(useSelect && fabs(x - imgui_mx) < 5 && fabs(y - imgui_my) < 5) {
+    if(!g_imgui_InDrag && useSelect && fabs(x - imgui_mx) < 5 && fabs(y - imgui_my) < 5) {
       selectedPnt = i;
     }
     
@@ -295,7 +296,7 @@ void UICurveEditor::DrawBezierPoints(const r3dBezierGradient& grad, bool useSele
 		float x, y;
 		CalcFromValue(grad.Values[i], x, y);
 
-		if(useSelect && fabs(x - imgui_mx) < 5 && fabs(y - imgui_my) < 5) {
+		if(!g_imgui_InDrag && useSelect && fabs(x - imgui_mx) < 5 && fabs(y - imgui_my) < 5) {
 			selectedPnt = i;
 		}
 
@@ -327,7 +328,7 @@ void UICurveEditor::DrawBezierPoints(const r3dBezierGradient& grad, bool useSele
 
 void UICurveEditor::DrawIM(	float in_x, float in_y, float in_w, float in_h, const char *Title, r3dTimeGradient2* edit_val, float* pVertScale,
 							float in_minVal, float in_maxVal, int x_steps /*= 10*/, int y_steps /*= 10*/,
-							int x_precision /*= 2*/, int y_precision /*= 2*/, bool bUseDesktop )
+							int x_precision /*= 2*/, int y_precision /*= 2*/, float currentTime /*= -1.0f*/, bool bUseDesktop )
 {
 	if ( bUseDesktop )
 	{
@@ -461,13 +462,19 @@ void UICurveEditor::DrawIM(	float in_x, float in_y, float in_w, float in_h, cons
   DrawFloatCurve(*edit_val);
   DrawFloatPoints(*edit_val, imgui_val == NULL);
 
+  if( currentTime >= 0.f && currentTime <= 1.0f )
+  {
+    float lx = fx + fw * currentTime;
+	r3dDrawVLine( lx, fy, fh, r3dColor::green );
+  }
+
   if(imgui_disabled)
     return;
   if(imgui_val && imgui_val != edit_val)
     return;
 
   // draw mouseover lines && current coordinate/value
-  if(imgui_mx >= fx && imgui_mx <= fx+fw && imgui_my >= fy && imgui_my <= fy+fh && (imgui_val == NULL || imgui_val == edit_val)) {
+  if(!g_imgui_InDrag && imgui_mx >= fx && imgui_mx <= fx+fw && imgui_my >= fy && imgui_my <= fy+fh && (imgui_val == NULL || imgui_val == edit_val)) {
     r3dDrawHLine(fx, imgui_my, fw, clr_selline);
     r3dDrawVLine(imgui_mx, fy, fh, clr_selline);
 
@@ -488,8 +495,8 @@ void UICurveEditor::DrawIM(	float in_x, float in_y, float in_w, float in_h, cons
     MenuFont_Editor->PrintF(ui_x+0, ui_y-2, r3dColor::white, "[%.2f]:%.4f", gv.time, gv.val[0]);
   }
   
-  bool act1 = imgui_lbp && !Keyboard->IsPressed(kbsLeftControl);
-  bool act2 = imgui_lbp && Keyboard->IsPressed(kbsLeftControl);
+  bool act1 = !g_imgui_InDrag && imgui_lbp && !Keyboard->IsPressed(kbsLeftControl);
+  bool act2 = !g_imgui_InDrag && imgui_lbp && Keyboard->IsPressed(kbsLeftControl);
   
  // 
  // point dragging
@@ -700,7 +707,7 @@ void UICurveEditor::DrawBezier(	float in_x, float in_y, float in_w, float in_h, 
 		return;
 
 	// draw mouseover lines && current coordinate/value
-	if(imgui_mx >= fx && imgui_mx <= fx+fw && imgui_my >= fy && imgui_my <= fy+fh && (imgui_val == NULL || imgui_val == edit_val)) {
+	if(!g_imgui_InDrag && imgui_mx >= fx && imgui_mx <= fx+fw && imgui_my >= fy && imgui_my <= fy+fh && (imgui_val == NULL || imgui_val == edit_val)) {
 		r3dDrawHLine(fx, imgui_my, fw, clr_selline);
 		r3dDrawVLine(imgui_mx, fy, fh, clr_selline);
 
@@ -721,8 +728,8 @@ void UICurveEditor::DrawBezier(	float in_x, float in_y, float in_w, float in_h, 
 		MenuFont_Editor->PrintF(ui_x+0, ui_y-2, r3dColor::white, "[%.2f]:%.4f", gv.time, gv.val[0]);
 	}
 
-	bool act1 = imgui_lbp && !Keyboard->IsPressed(kbsLeftControl);
-	bool act2 = imgui_lbp && Keyboard->IsPressed(kbsLeftControl);
+	bool act1 = !g_imgui_InDrag && imgui_lbp && !Keyboard->IsPressed(kbsLeftControl);
+	bool act2 = !g_imgui_InDrag && imgui_lbp && Keyboard->IsPressed(kbsLeftControl);
 
 	// 
 	// point dragging

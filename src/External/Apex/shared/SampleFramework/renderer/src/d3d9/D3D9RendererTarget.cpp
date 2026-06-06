@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,6 +32,11 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
+
+// suppress LNK4221 on Xbox
+namespace {char dummySymbol; }
+
+#include <RendererConfig.h>
 #include "D3D9RendererTarget.h"
 
 #if defined(RENDERER_ENABLE_DIRECT3D9) && defined(RENDERER_ENABLE_DIRECT3D9_TARGET)
@@ -39,13 +44,15 @@
 #include <RendererTargetDesc.h>
 #include "D3D9RendererTexture2D.h"
 
+using namespace SampleRenderer;
+
 D3D9RendererTarget::D3D9RendererTarget(IDirect3DDevice9 &d3dDevice, const RendererTargetDesc &desc) :
 	m_d3dDevice(d3dDevice)
 {
 	m_d3dLastSurface = 0;
 	m_d3dLastDepthStencilSurface = 0;
 	m_d3dDepthStencilSurface = 0;
-	for(physx::PxU32 i=0; i<desc.numTextures; i++)
+	for(PxU32 i=0; i<desc.numTextures; i++)
 	{
 		D3D9RendererTexture2D &texture = *static_cast<D3D9RendererTexture2D*>(desc.textures[i]);
 		m_textures.push_back(&texture);
@@ -67,12 +74,12 @@ void D3D9RendererTarget::bind(void)
 	{
 		m_d3dDevice.GetRenderTarget(0, &m_d3dLastSurface);
 		m_d3dDevice.GetDepthStencilSurface(&m_d3dLastDepthStencilSurface);
-		const physx::PxU32 numTextures = (physx::PxU32)m_textures.size();
-		for(physx::PxU32 i=0; i<numTextures; i++)
+		const PxU32 numTextures = (PxU32)m_textures.size();
+		for(PxU32 i=0; i<numTextures; i++)
 		{
 			IDirect3DSurface9 *d3dSurcace = 0;
 			D3D9RendererTexture2D &texture = *m_textures[i];
-            /* HRESULT result = */ texture.m_d3dTexture->GetSurfaceLevel(0, &d3dSurcace);
+			/* HRESULT result = */ texture.m_d3dTexture->GetSurfaceLevel(0, &d3dSurcace);
 			RENDERER_ASSERT(d3dSurcace, "Cannot get Texture Surface!");
 			if(d3dSurcace)
 			{
@@ -101,8 +108,8 @@ void D3D9RendererTarget::unbind(void)
 	{
 		m_d3dDevice.SetDepthStencilSurface(m_d3dLastDepthStencilSurface);
 		m_d3dDevice.SetRenderTarget(0, m_d3dLastSurface);
-		const physx::PxU32 numTextures = (physx::PxU32)m_textures.size();
-		for(physx::PxU32 i=1; i<numTextures; i++)
+		const PxU32 numTextures = (PxU32)m_textures.size();
+		for(PxU32 i=1; i<numTextures; i++)
 		{
 			m_d3dDevice.SetRenderTarget(i, 0);
 		}

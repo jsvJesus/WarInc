@@ -1,18 +1,24 @@
 #pragma once
 // interface to the Scaleform GFX flash player
 
-struct ID3D11Texture2D;
 
 namespace Scaleform {
+	namespace GFx {
+		class MovieDef;
+		class Movie;
+		class Value;
+	}
 	namespace Render
 	{
-		class Texture;
+		namespace D3D9
+		{
+			class Texture;
+		}
 	}
 }
-
-#ifdef FINAL_BUILD
+/*#ifdef FINAL_BUILD
 #define SF_BUILD_SHIPPING 1
-#endif
+#endif*/
 #include "GFxConfig.h"
 #include "GFx.h"
 
@@ -31,6 +37,8 @@ private:
 
 	float timeForNextUpdate;
 	float timePrevUpdate;
+
+	int byteSize;
 
 
 public:
@@ -91,7 +99,7 @@ public:
 	bool		Load(const char* fname, bool set_keyboard_focus);
 	void		Unload();
 
-	void		SetKeyboardCapture();
+	r3dScaleformMovie*		SetKeyboardCapture();
 
 	int			GetMovieWidth() const { return movieW; }
 	int			GetMovieHeight() const { return movieH; }
@@ -115,7 +123,7 @@ public:
 
 	void		UpdateAndDraw(bool skipDraw=false);
 
-	Scaleform::Render::Texture*				BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight);
+	Scaleform::Render::D3D9::Texture*		BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight);
 	void		UpdateTextureMatrices(const char* resName, int RTWidth, int RTHeight);
 
 	BOOL		RegisterEventHandler(const char* EventString, void* data, fn_gfxEventHandler1 Fnc);

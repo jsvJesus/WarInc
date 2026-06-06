@@ -174,6 +174,9 @@ enum r3dKeyboardScanCodes_e {
   kbsPgDn               = DIK_NEXT,
   kbsIns                = DIK_INSERT,
   kbsDel                = DIK_DELETE,
+
+  kbsLWin				= DIK_LWIN,
+  kbsRWin				= DIK_RWIN,
 };
 
 
@@ -258,7 +261,6 @@ public:
 		KS_HOLD_BREATH, 
 
 		KS_PRIMARY_WEAPON,
-		KS_SECONDARY_WEAPON,
 		KS_HANDGUN_WEAPON,
 		KS_ITEM1,
 		KS_ITEM2,
@@ -266,34 +268,33 @@ public:
 		KS_SWITCH_MINIMAP,
 
 		KS_CHAT,
-		KS_SHOW_SCORE,
 
 		KS_QUICK_SWITCH_WEAPON,
-		KS_THROW_GRENADE,
 
 		KS_TOGGLE_NIGHTVISION,
-
-		KS_DROP_BOMB,
-
-		KS_UAV_TARGET,
-		KS_UAV_UP,
-		KS_UAV_DOWN,
-
-		KS_COMMAND_Z,
-		KS_COMMAND_X,
-		KS_COMMAND_C,
-
-		KS_COMMROSE,
-
-		KS_LASER_VIEW_UP,
-		KS_LASER_VIEW_DOWN,
 
 		KS_ITEM3,
 		KS_ITEM4,
 		
 		KS_NEXTITEM,
 
-		// append new mappings ONLY at the end of file, to make it easier to read previous versions
+		KS_SWITCH_FPS_TPS,
+
+		KS_INVENTORY,
+
+		KS_CHAT_CHANNEL1,
+		KS_CHAT_CHANNEL2,
+		KS_CHAT_CHANNEL3,
+
+		KS_SHOW_ATTACHMENTS,
+
+		KS_FREE_HANDS,
+
+		KS_PRONE,
+
+		KS_SHOW_PLAYERS,
+
+		// don't forget to increment INPUT_MAPPING_FILE_VERSION after making any changes here
 
 		KS_NUM,
 	};
@@ -313,16 +314,11 @@ public:
 	bool wasPressed(KeybordShortcuts shortcut);
 	bool wasReleased(KeybordShortcuts shortcut);
 
-	// map shortcut to mouse/keyboard
-	void mapKey(KeybordShortcuts shortcut, InputMapType type, int key);
-
 	const char* getMapName(KeybordShortcuts shortcut);
 	const char* getKeyName(KeybordShortcuts shortcut);
 
 	// will query input devices for input and if any will remap and return true, otherwise false
-	bool attemptRemapKey(KeybordShortcuts shortcut);
-
-	void resetKeyMappingsToDefault();
+	bool attemptRemapKey(KeybordShortcuts shortcut, bool& conflict);
 
 	// save/load mapping
 	void loadMapping(const char* path);
@@ -331,11 +327,10 @@ private:
 	struct KeyboardMapping
 	{
 		InputMapType	type;
-		int		default_key;
 		int		key; // maps to actual keyboard or mouse key
 		const char* name; // name this we will show in UI
-		KeyboardMapping():type(INPUTMAP_INVALID), key(0), default_key(0), name(0) {}
-		KeyboardMapping(InputMapType t, int k, const char* n):type(t), key(k), default_key(k), name(n) {}
+		KeyboardMapping():type(INPUTMAP_INVALID), key(0), name(0) {}
+		KeyboardMapping(InputMapType t, int k, const char* n):type(t), key(k), name(n) {}
 	};
 
 	KeyboardMapping	m_Mapping[KS_NUM];

@@ -4,7 +4,6 @@
 
 #include "r3d.h"
 #include "r3dStats.h"
-#include "r3dBuffer.h"
 
 struct r3dSampleQueryLink
 {
@@ -12,8 +11,8 @@ struct r3dSampleQueryLink
 
 	void Init();
 
-	r3dD3DQuery*	Start ;
-	r3dD3DQuery*	End ;
+	IDirect3DQuery9*	Start ;
+	IDirect3DQuery9*	End ;
 	int					Frame ;
 	r3dSampleQueryLink*	Next ;
 };
@@ -37,15 +36,15 @@ class QueryPool : public r3dIResource
 {
 public:
 	static const UINT MAX_QUERY_COUNT = 8192 ;
-	typedef r3dTL::TFixedArray< r3dD3DQuery*, MAX_QUERY_COUNT > Queries ;
+	typedef r3dTL::TFixedArray< IDirect3DQuery9*, MAX_QUERY_COUNT > Queries ;
 	typedef r3dTL::TFixedArray< r3dSampleQueryLink, MAX_QUERY_COUNT * 2 > QueryLinks ;
-	typedef r3dTL::TFixedArray< r3dD3DQuery*, NUM_D3D_PROFILE_FRAMES > FreqQueries ;
+	typedef r3dTL::TFixedArray< IDirect3DQuery9*, NUM_D3D_PROFILE_FRAMES > FreqQueries ;
 
 	struct NamedQueries
 	{
 		r3dString				name ;
-		r3dD3DQuery*	start_query ;
-		r3dD3DQuery*	end_query ;
+		IDirect3DQuery9*	start_query ;
+		IDirect3DQuery9*	end_query ;
 		LONGLONG			last_value ;
 		int					open_guard ;
 
@@ -65,10 +64,10 @@ public:
 
 public:
 	r3dSampleQueryLink*	AquireLink() ;
-	r3dD3DQuery*	GetLastQuery() const ;
-	r3dD3DQuery*	GetNextQuery() ;
+	IDirect3DQuery9*	GetLastQuery() const ;
+	IDirect3DQuery9*	GetNextQuery() ;
 
-	r3dD3DQuery*	GetFreqQuery( uint32_t frame ) const;
+	IDirect3DQuery9*	GetFreqQuery( uint32_t frame ) const;
 
 	void Reset();
 
@@ -147,7 +146,7 @@ QueryPool::AquireLink()
 
 //------------------------------------------------------------------------
 
-r3dD3DQuery*
+IDirect3DQuery9*
 QueryPool::GetLastQuery() const
 {
 	r3d_assert( mLastQuery );
@@ -157,7 +156,7 @@ QueryPool::GetLastQuery() const
 
 //------------------------------------------------------------------------
 
-r3dD3DQuery*
+IDirect3DQuery9*
 QueryPool::GetNextQuery() 
 {
 	return mQueries[ gFrame ][ mLastQuery ++ ];
@@ -165,7 +164,7 @@ QueryPool::GetNextQuery()
 
 //------------------------------------------------------------------------
 
-r3dD3DQuery*
+IDirect3DQuery9*
 QueryPool::GetFreqQuery( uint32_t frame ) const
 {
 	return mFreqQueries[ frame ];
@@ -190,8 +189,8 @@ int QueryPool::CreateNamedQuery( const char* name )
 
 	if( r3dRenderer->SupportsStampQueries && r_allow_gpu_timestamps)
 	{
-		r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.start_query ) ;
-		r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.end_query ) ;
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.start_query ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &q.end_query ) ) ;
 
 		q.flushed = true ;
 	}
@@ -339,21 +338,21 @@ QueryPool::D3DCreateResource()  /*OVERRIDE*/
 			for( UINT i = 0, e = Queries::COUNT; i < e; i ++ )
 			{
 				r3d_assert( !mQueries[ j ][ i ] );
-				r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMP, &mQueries[ j ][ i ] ) ;
+				D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMP, &mQueries[ j ][ i ] ) ) ;
 			}
 		}
 
 		for( UINT i = 0, e = FreqQueries::COUNT; i < e; i ++ )
 		{
-			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &mFreqQueries[ i ] );
+			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &mFreqQueries[ i ] ) );
 		}
 
 		for( UINT i = 0, e = mNamedQueries.Count() ; i < e ; i ++ )
 		{
 			NamedQueries& q = mNamedQueries[ i ] ;
 
-			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.start_query );
-			r3dDeviceTunnel::CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.end_query );
+			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.start_query ) );
+			D3D_V( r3dRenderer->pd3ddev->CreateQuery( D3DQUERYTYPE_TIMESTAMPFREQ, &q.end_query ) );
 
 			q.flushed = true ;
 		}
@@ -900,7 +899,7 @@ void r3dProfiler::EndFrame()
 
 	if( ( profileRenderOn || g_ShowD3DMarks ) && r3dRenderer->SupportsStampQueries  )
 	{
-		r3dD3DQuery* q = g_pQueryPool->GetFreqQuery( diametricFrame );
+		IDirect3DQuery9* q = g_pQueryPool->GetFreqQuery( diametricFrame );
 		for( ; S_OK != q->GetData( &NewGPUFreq, sizeof NewGPUFreq, 0 ) ; ) 
 			q->GetData( 0, 0, D3DGETDATA_FLUSH ) ;
 		InvGPUFreq = 1.f / NewGPUFreq;

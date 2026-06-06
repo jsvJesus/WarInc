@@ -163,12 +163,12 @@ SysVertexFormat::SysVertexFormat(ID3D1x(Device)* pdevice, const VertexFormat* vf
     memcpy(VertexElements, builder.Elements, sizeof VertexElements);
 }
 
-bool ShaderInterface::SetStaticShader(ShaderDesc::ShaderType shader, const VertexFormat* pformat)
+bool ShaderInterface::SetStaticShader(VertexShaderDesc::ShaderType vshader, FragShaderDesc::ShaderType shader, const VertexFormat* pformat)
 {
     CurShaders.pVFormat = pformat;
-    CurShaders.pVS      = &pHal->SManager.StaticVShaders[VertexShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel)];
+    CurShaders.pVS      = &pHal->StaticVShaders[VertexShaderDesc::GetShaderIndex(vshader)];
     CurShaders.pVDesc   = CurShaders.pVS->pDesc;
-    CurShaders.pFS      = &pHal->SManager.StaticFShaders[FragShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel)];
+    CurShaders.pFS      = &pHal->StaticFShaders[FragShaderDesc::GetShaderIndex(shader)];
     CurShaders.pFDesc   = CurShaders.pFS->pDesc;
 
     if ( pformat && !pformat->pSysFormat )
@@ -275,32 +275,10 @@ void ShaderInterface::Finish(unsigned meshCount)
     }
 }
 
-void ShaderInterface::BeginScene()
-{
-    // Disable compute, domain, geometry and hull pipeline stages.
-    ID3D1x(DeviceContext)* pdevice = pHal->pDeviceContext;
-    D3D1xCSSetShader(pdevice, 0);
-    D3D1xDSSetShader(pdevice, 0);
-    D3D1xGSSetShader(pdevice, 0);
-    D3D1xHSSetShader(pdevice, 0);
-
-    pLastVS = 0;
-    pLastDecl = 0;
-    pLastFS = 0;
-}
-
 // *** ShaderManager
-ShaderManager::ShaderManager( ProfileViews* prof ) : 
-    StaticShaderManager(prof), pDevice(0), ShaderModel(ShaderDesc::ShaderVersion_Default)
-{
-    memset(StaticVShaders, 0, sizeof(StaticVShaders));
-    memset(StaticFShaders, 0, sizeof(StaticFShaders));
-}
-
 bool ShaderManager::HasInstancingSupport() const
 {
-    // Only FeatureLevel 10.0+ has instancing (but it always has it).
-    return ShaderModel >= ShaderDesc::ShaderVersion_D3D1xFL10X;
+    return true;
 }
 
 void ShaderManager::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
@@ -336,100 +314,15 @@ void ShaderManager::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* 
     floatPositionElements[i].Offset    = 0;
 
     // Now let the base class actually do the mapping.
-    Base::MapVertexFormat(fill, &floatPositionFormat, single, batch, instanced, 
-        (HasInstancingSupport() ? MVF_HasInstancing : 0) | MVF_Align);
+    StaticShaderManager::MapVertexFormat(fill, &floatPositionFormat, single, batch, instanced, MVF_HasInstancing | MVF_Align);
+
+    // TEMP
+    //*instanced = 0;
 }
 
 bool ShaderManager::Initialize(HAL* phal)
 {
     pDevice = phal->GetDevice();
-
-#if (SF_D3D_VERSION == 10 )
-    // We should be compiling with D3D10.1 header at least, so we should be able to query 
-    // if the device is a 10, or 10.1 device. If it is only 10, we must have FL 10, otherwise,
-    // we may have a lower feature level and require lower level shaders.
-    Ptr<ID3D1x(Device1)> d3d10Device1;
-    ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL10X;
-    if ( SUCCEEDED(pDevice->QueryInterface(IID_ID3D10Device1, (void**)&d3d10Device1.GetRawRef())) && d3d10Device1)
-    {
-        D3D10_FEATURE_LEVEL1 featureLevel = pDevice->GetFeatureLevel();
-        switch(featureLevel)
-        {
-        case D3D10_FEATURE_LEVEL_9_1:
-        case D3D10_FEATURE_LEVEL_9_2:
-            ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL91;
-            break;
-        case D3D10_FEATURE_LEVEL_9_3:
-            ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL93;
-            break;
-        default:
-            break;
-        }
-    }
-#elif (SF_D3D_VERSION == 11)
-    ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL11X;
-    switch(pDevice->GetFeatureLevel())
-    {
-    case D3D_FEATURE_LEVEL_9_1:
-    case D3D_FEATURE_LEVEL_9_2:
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL91;
-        break;
-    case D3D_FEATURE_LEVEL_9_3:
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL93;
-        break;
-    case D3D_FEATURE_LEVEL_10_0:
-    case D3D_FEATURE_LEVEL_10_1:
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL10X;
-        break;
-    default:
-        break;
-    }
-#else
-    #error SF_D3D_VERSION must be 10 or 11.
-#endif
-
-    if ( ShaderModel == ShaderDesc::ShaderVersion_D3D1xFL11X && !ShaderDesc::IsShaderVersionSupported(ShaderModel))
-    {
-        SF_DEBUG_MESSAGE(1, "Support for D3D_FEATURE_LEVEL_11_0+ was not included when running GFxShaderMaker. Trying D3D_FEATURE_LEVEL_10_0.");
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL10X;
-    }
-    if ( ShaderModel == ShaderDesc::ShaderVersion_D3D1xFL10X && !ShaderDesc::IsShaderVersionSupported(ShaderModel))
-    {
-        SF_DEBUG_MESSAGE(1, "Support for D3D_FEATURE_LEVEL_10_0+ was not included when running GFxShaderMaker. Trying D3D_FEATURE_LEVEL_9_3.");
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL93;
-    }
-    if ( ShaderModel == ShaderDesc::ShaderVersion_D3D1xFL93 && !ShaderDesc::IsShaderVersionSupported(ShaderModel))
-    {
-        SF_DEBUG_MESSAGE(1, "Support for D3D_FEATURE_LEVEL_9_3 was not included when running GFxShaderMaker. Trying D3D_FEATURE_LEVEL_9_1.");
-        ShaderModel = ShaderDesc::ShaderVersion_D3D1xFL91;
-    }
-    if ( ShaderModel == ShaderDesc::ShaderVersion_D3D1xFL91 && !ShaderDesc::IsShaderVersionSupported(ShaderModel))
-    {
-        SF_DEBUG_MESSAGE(1, "Support for D3D_FEATURE_LEVEL_9_1 was not included when running GFxShaderMaker. Failing.");
-        return false;
-    }
-
-    // Now, initialize all the shaders that use our current ShaderModel version.
-    for (unsigned i = 0; i < VertexShaderDesc::VSI_Count; i++)
-    {
-        const VertexShaderDesc* desc = VertexShaderDesc::Descs[i];
-        if ( desc && desc->Version == ShaderModel && desc->pBinary)
-        {
-            if (!StaticVShaders[i].Init(pDevice, desc))
-                return false;
-        }
-    }
-
-    for (unsigned i = 0; i < FragShaderDesc::FSI_Count; i++)
-    {
-        const FragShaderDesc* desc = FragShaderDesc::Descs[i];
-        if (desc && desc->Version == ShaderModel && desc->pBinary)
-        {
-            if ( !StaticFShaders[i].Init(pDevice, desc) )
-                return false;
-        }
-    }
-
     return true;
 }
 
@@ -445,20 +338,6 @@ void ShaderManager::EndScene()
 
 void ShaderManager::Reset()
 {
-    for (unsigned i = 0; i < VertexShaderDesc::VSI_Count; i++)
-    {
-        const VertexShaderDesc* desc = VertexShaderDesc::Descs[i];
-        if ( desc && desc->pBinary)
-            StaticVShaders[i].Shutdown();
-    }
-
-    for (unsigned i = 0; i < FragShaderDesc::FSI_Count; i++)
-    {
-        const FragShaderDesc* desc = FragShaderDesc::Descs[i];
-        if (desc && desc->pBinary)
-            StaticFShaders[i].Shutdown();
-    }
-
     pDevice = 0;
     VFormats.Clear();
 }

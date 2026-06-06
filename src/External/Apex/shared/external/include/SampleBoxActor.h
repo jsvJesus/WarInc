@@ -1,199 +1,133 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
 #ifndef __SAMPLE_BOX_ACTOR_H__
 #define __SAMPLE_BOX_ACTOR_H__
 
-#include "SampleActor.h"
+#include "SampleShapeActor.h"
+#include "RendererBoxShape.h"
 
+#if NX_SDK_VERSION_MAJOR == 2
 #include "NxActor.h"
 #include "NxActorDesc.h"
-#include "NxApexRenderDebug.h"
 #include "NxBodyDesc.h"
 #include "NxBoxShapeDesc.h"
 #include "NxScene.h"
 #include "NxFromPx.h"
+#elif NX_SDK_VERSION_MAJOR == 3
+#include "PxActor.h"
+#include "PxScene.h"
+#include "PxRigidDynamic.h"
+#include "PxRigidStatic.h"
+#include "geometry/PxBoxGeometry.h"
+#include "extensions/PxExtensionsAPI.h"
+namespace physx
+{
+class PxMaterial;
+}
+#endif
 
+#include "NxApexRenderDebug.h"
 #include <Renderer.h>
 #include <RendererMeshContext.h>
 
+#if NX_SDK_VERSION_MAJOR == 2
 
-
-class SampleBoxActor : public SampleActor
+class SampleBoxActor : public SampleShapeActor
 {
 public:
-	SampleBoxActor(physx::apex::NxApexRenderDebug *rdebug, NxScene &physxScene,
-		const physx::PxVec3 &pos, const physx::PxVec3 &vel, const physx::PxVec3 &extents, physx::PxF32 density,
-		bool useGroupsMask, bool showDebugName=true, const RendererColor boxColor=RendererColor(200,200,200,255)) :
-	mBlockId(-1),
-	mPhysxActor(NULL),
-	mApexRenderDebug(rdebug),
-	mRenderer(NULL),
-	mRendererBoxShape(NULL)
+	SampleBoxActor(SampleRenderer::Renderer* renderer,
+	               SampleFramework::SampleMaterialAsset& material,
+	               NxScene& physxScene,
+	               const physx::PxVec3& pos,
+	               const physx::PxVec3& vel,
+	               const physx::PxVec3& extents,
+	               physx::PxF32 density,
+	               void* nxmaterial,
+	               bool useGroupsMask,
+	               physx::apex::NxApexRenderDebug* rdebug = NULL)
+		: SampleShapeActor(rdebug)
+		, mRendererBoxShape(NULL)
 	{
+		PX_FORCE_PARAMETER_REFERENCE(nxmaterial);
+		mRenderer = renderer;
+
 		createActor(physxScene, pos, vel, extents, density, useGroupsMask);
 
-		if(mPhysxActor)
-		{
-			const physx::PxF32 skinWidth = mPhysxActor->getShapes()[0]->getSkinWidth();
-
-			physx::PxVec3 bmin = -extents + physx::PxVec3(skinWidth, skinWidth, skinWidth);
-			physx::PxVec3 bmax =  extents - physx::PxVec3(skinWidth, skinWidth, skinWidth);
-
-			physx::apex::PxFromNxMat34(mTransform, mPhysxActor->getGlobalPose());
-
-			mBlockId = rdebug->beginDrawGroup(mTransform);
-
-			rdebug->addToCurrentState(physx::DebugRenderState::SolidShaded);
-			rdebug->setCurrentColor(*(const physx::PxU32*)&boxColor);
-			rdebug->debugBound(bmin,bmax);
-
-			if ( showDebugName )
-			{
-				static physx::PxU32 bcount = 0;
-				rdebug->setCurrentColor(0xFFFFFF);
-				rdebug->setCurrentTextScale(0.5f);
-				rdebug->addToCurrentState(physx::DebugRenderState::CenterText);
-				rdebug->addToCurrentState(physx::DebugRenderState::CameraFacing);
-				rdebug->debugText(physx::PxVec3(0,extents.y+0.01f,0),"Sample Box:%d",bcount++);
-			}
-
-			rdebug->endDrawGroup();
-		}
-	}
-
-	SampleBoxActor(Renderer *renderer, SampleMaterialAsset &material,
-		NxScene &physxScene, const physx::PxVec3 &pos, const physx::PxVec3 &vel, 
-		const physx::PxVec3 &extents, physx::PxF32 density, bool useGroupsMask, physx::apex::NxApexRenderDebug *rdebug=0) :
-	mBlockId(-1),
-	mPhysxActor(NULL),
-	mApexRenderDebug(rdebug),
-	mRenderer(renderer),
-	mRendererBoxShape(NULL)
-	{
-		createActor(physxScene, pos, vel, extents, density, useGroupsMask);
-
-		mRendererBoxShape = new RendererBoxShape(*mRenderer, extents);
+		mRendererBoxShape = new SampleRenderer::RendererBoxShape(*mRenderer, extents);
 
 		mRendererMeshContext.material         = material.getMaterial();
 		mRendererMeshContext.materialInstance = material.getMaterialInstance();
 		mRendererMeshContext.mesh             = mRendererBoxShape->getMesh();
 		mRendererMeshContext.transform        = &mTransform;
 
-
-		if ( rdebug )
+		if (rdebug)
 		{
 			mBlockId = rdebug->beginDrawGroup(mTransform);
 			rdebug->addToCurrentState(physx::DebugRenderState::SolidShaded);
-			static physx::PxU32 bcount = 0;
+			static physx::PxU32 bcount /* = 0 */;
 			rdebug->setCurrentColor(0xFFFFFF);
 			rdebug->setCurrentTextScale(0.5f);
 			rdebug->addToCurrentState(physx::DebugRenderState::CenterText);
 			rdebug->addToCurrentState(physx::DebugRenderState::CameraFacing);
-			rdebug->debugText(physx::PxVec3(0,extents.y+0.01f,0),"Sample Box:%d",bcount++);
+			rdebug->debugText(physx::PxVec3(0, extents.y + 0.01f, 0), "Sample Box:%d", bcount++);
 			rdebug->endDrawGroup();
 		}
-
-
 	}
 
-	virtual ~SampleBoxActor(void)
+	virtual ~SampleBoxActor()
 	{
-		if (mApexRenderDebug != NULL)
-		{
-			mApexRenderDebug->reset(mBlockId);
-		}
-		if (mRendererBoxShape != NULL)
+		if (mRendererBoxShape)
 		{
 			delete mRendererBoxShape;
 			mRendererBoxShape = NULL;
 		}
-		if(mPhysxActor)
-		{
-			mPhysxActor->getScene().releaseActor(*mPhysxActor);
-		}
 	}
-
-	void setGroupsMask(const NxGroupsMask &mask)
-	{
-		const physx::PxU32    numShapes = mPhysxActor->getNbShapes();
-		NxShape *const*shapes    = mPhysxActor->getShapes();
-		for(physx::PxU32 i=0; i<numShapes; i++)
-		{
-			shapes[i]->setGroupsMask(mask);
-		}
-	}
-
-	NxActor* getPhysXActor() { return mPhysxActor; }
 
 private:
-	virtual void tick(float dtime, bool /*rewriteBuffers*/)
+	void createActor(NxScene& physxScene,
+	                 const physx::PxVec3& pos,
+	                 const physx::PxVec3& vel,
+	                 const physx::PxVec3& extents,
+	                 physx::PxF32 density,
+	                 bool useGroupsMask)
 	{
-		if(!mPhysxActor->isSleeping())
-		{
-			physx::apex::PxFromNxMat34(mTransform, mPhysxActor->getGlobalPose());
-			if (mApexRenderDebug != NULL)
-			{
-				mApexRenderDebug->setDrawGroupPose(mBlockId, mTransform);
-			}
-		}
-	}
-
-	virtual void render(bool /*rewriteBuffers*/)
-	{
-		if (mRenderer != NULL)
-		{
-			mRenderer->queueMeshForRender(mRendererMeshContext);
-		}
-	}
-
-	void createActor(NxScene& physxScene, const physx::PxVec3& pos, const physx::PxVec3& vel, const physx::PxVec3& extents, physx::PxF32 density, bool useGroupsMask)
-	{
-		mTransform.id();
-		mTransform.t = pos;
-
+		mTransform = physx::PxMat44::createIdentity();
+		mTransform.setPosition(pos);
 
 		NxBodyDesc     bodyDesc;
 		NxBoxShapeDesc shapeDesc;
 		NxActorDesc    actorDesc;
 
 		physx::apex::NxFromPxVec3(bodyDesc.linearVelocity, vel);
-		bodyDesc.flags          = NX_BF_VISUALIZATION;
+		bodyDesc.flags = NX_BF_VISUALIZATION;
 
 		physx::apex::NxFromPxVec3(shapeDesc.dimensions, extents);
-		shapeDesc.shapeFlags       = NX_SF_VISUALIZATION | NX_SF_CLOTH_TWOWAY;
-		shapeDesc.materialIndex    = 0;
+		shapeDesc.shapeFlags = NX_SF_VISUALIZATION | NX_SF_CLOTH_TWOWAY;
+		shapeDesc.materialIndex = 0;
 
 		if (useGroupsMask)
 		{
@@ -202,28 +136,123 @@ private:
 		}
 
 		physx::apex::NxFromPxMat34(actorDesc.globalPose, mTransform);
-		if(density>0)
+		if (density > 0)
 		{
-			actorDesc.body          = &bodyDesc;
-			actorDesc.density       = density;
+			actorDesc.body = &bodyDesc;
+			actorDesc.density = density;
 		}
-		actorDesc.flags         = 0;
+		actorDesc.flags = 0;
 		actorDesc.shapes.push_back(&shapeDesc);
 
 		mPhysxActor = physxScene.createActor(actorDesc);
-
 		PX_ASSERT(mPhysxActor);
 	}
 
 private:
-	physx::PxI32					 mBlockId;
-	NxActor							*mPhysxActor;
-	physx::apex::NxApexRenderDebug	*mApexRenderDebug;
-	Renderer						*mRenderer;
-	RendererBoxShape				*mRendererBoxShape;
-	RendererMeshContext				mRendererMeshContext;
-	physx::PxMat34Legacy			 mTransform;
+	SampleRenderer::RendererBoxShape* mRendererBoxShape;
 };
 
+#elif NX_SDK_VERSION_MAJOR == 3
+
+class SampleBoxActor : public SampleShapeActor
+{
+public:
+	SampleBoxActor(SampleRenderer::Renderer* renderer,
+	               SampleFramework::SampleMaterialAsset& material,
+	               physx::PxScene& physxScene,
+	               const physx::PxVec3& pos,
+	               const physx::PxVec3& vel,
+	               const physx::PxVec3& extents,
+	               physx::PxF32 density,
+	               physx::PxMaterial* pxmaterial,
+	               bool useGroupsMask,
+	               physx::apex::NxApexRenderDebug* rdebug = NULL)
+		: SampleShapeActor(rdebug)
+		, mRendererBoxShape(NULL)
+	{
+		mRenderer = renderer;
+		if (!pxmaterial)
+			physxScene.getPhysics().getMaterials(&pxmaterial, 1);
+		createActor(physxScene, pos, vel, extents, density, pxmaterial, useGroupsMask);
+
+		mRendererBoxShape = new SampleRenderer::RendererBoxShape(*mRenderer, extents);
+
+		mRendererMeshContext.material         = material.getMaterial();
+		mRendererMeshContext.materialInstance = material.getMaterialInstance();
+		mRendererMeshContext.mesh             = mRendererBoxShape->getMesh();
+		mRendererMeshContext.transform        = &mTransform;
+
+		if (rdebug)
+		{
+			mBlockId = rdebug->beginDrawGroup(mTransform);
+			rdebug->addToCurrentState(physx::DebugRenderState::SolidShaded);
+			static physx::PxU32 bcount /* = 0 */;
+			rdebug->setCurrentColor(0xFFFFFF);
+			rdebug->setCurrentTextScale(0.5f);
+			rdebug->addToCurrentState(physx::DebugRenderState::CenterText);
+			rdebug->addToCurrentState(physx::DebugRenderState::CameraFacing);
+			rdebug->debugText(physx::PxVec3(0, extents.y + 0.01f, 0), "Sample Box:%d", bcount++);
+			rdebug->endDrawGroup();
+		}
+	}
+
+	virtual ~SampleBoxActor()
+	{
+		if (mRendererBoxShape)
+		{
+			delete mRendererBoxShape;
+			mRendererBoxShape = NULL;
+		}
+	}
+
+private:
+	void createActor(physx::PxScene& physxScene,
+	                 const physx::PxVec3& pos,
+	                 const physx::PxVec3& vel,
+	                 const physx::PxVec3& extents,
+	                 physx::PxF32 density,
+	                 physx::PxMaterial* pxmaterial,
+	                 bool useGroupsMask)
+	{
+		mTransform = physx::PxMat44::createIdentity();
+		mTransform.setPosition(pos);
+
+		physx::PxRigidActor* actor = NULL;
+		if (density > 0)
+		{
+			actor = physxScene.getPhysics().createRigidDynamic(physx::PxTransform(mTransform));
+			((physx::PxRigidDynamic*)actor)->setAngularDamping(0.5f);
+			((physx::PxRigidDynamic*)actor)->setLinearVelocity(vel);
+		}
+		else
+		{
+			actor = physxScene.getPhysics().createRigidStatic(physx::PxTransform(mTransform));
+		}
+		
+		PX_ASSERT(actor);
+
+		physx::PxBoxGeometry boxGeom(extents);
+		physx::PxShape* shape = actor->createShape(boxGeom, *pxmaterial);
+		PX_ASSERT(shape);
+		if (shape && useGroupsMask)
+		{
+			shape->setSimulationFilterData(physx::PxFilterData(1, 0, ~0, 0));
+			shape->setQueryFilterData(physx::PxFilterData(1, 0, ~0, 0));
+		}
+
+		if (density > 0)
+		{
+			physx::PxRigidBodyExt::updateMassAndInertia(*((physx::PxRigidDynamic*)actor), density);
+		}
+
+		physxScene.addActor(*actor);
+		mPhysxActor = actor;
+	}
+
+private:
+	SampleRenderer::RendererBoxShape* mRendererBoxShape;
+};
+
+#endif // NX_SDK_VERSION_MAJOR == 3
 
 #endif

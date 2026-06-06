@@ -35,5 +35,7 @@ private:
 	// data
 private:
 	Settings mSettings;
+	DWORD prevAddressU;
+	DWORD prevAddressV;
 
 };

@@ -130,10 +130,6 @@ public:
     {
         PushCall(&RenderThread::setToleranceParams, params);
     }
-	void    GetToleranceParams(Render::ToleranceParams* params)
-	{
-		PushCallAndWait(&RenderThread::getToleranceParams, params);
-	}
 
     unsigned GetGlyphRasterizationCount() const;
     void     ResetRasterizationCount();
@@ -150,7 +146,6 @@ protected:
     
     void    setGlyphCacheParams(const Render::GlyphCacheParams& params);
     void    setToleranceParams(const Render::ToleranceParams& params);
-	void    getToleranceParams(Render::ToleranceParams* params);
 
 
     virtual void updateConfiguration()
@@ -176,7 +171,6 @@ protected:
 
     DisplayWindow* createWindowData(Device::Window* win) const { return SF_NEW DisplayWindow(win); }
 
-    virtual void finishFrame();
     virtual void drawFrame();
     virtual void drawFrame(DisplayWindow* pdispwin);
     virtual void drawFrame1(DisplayWindow* pdispwin, bool capture);

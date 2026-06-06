@@ -154,25 +154,13 @@ public:
     // This struct will not be allocated (NULL) for 2D objects and 
     // 3D objects which do not override their parents perspective settings.
     // struct members can be set to 0 to indicate that the particular member is not used.
-	// except in the case of ProjectionCenter, which should be set to NaN (0,0 is a valid value).
     struct PerspectiveDataType : public NewOverrideBase<StatMV_MovieClip_Mem>
     {
         Double                  FieldOfView;	    // 3D perspective field of view in degrees
         Double                  FocalLength;		// 3D perspective focal length, in TWIPS
         PointF				    ProjectionCenter;	// 3D center of projection (vanishing point) in stage coord TWIPS
         Matrix3F                ViewMatrix3D;       // This is the ViewMatrix3D without the viewport adjustment (for Flash hit test).
-        PerspectiveDataType() : FieldOfView(0), FocalLength(0)
-        {
-            ProjectionCenter.x = (float)NumberUtil::NaN();
-            ProjectionCenter.y = (float)NumberUtil::NaN();
-        }
-
-        // Returns whether the the View and Perspective matrices should be calculated from the FOV/FL, or
-        // whether the values set using the DAPI (SetViewMatrix3D/SetProjectionMatrix3D) should be used.
-        bool UpdateViewAndPerspectiveFromData() const
-        {
-            return FieldOfView != 0 || FocalLength != 0;
-        }
+        PerspectiveDataType() : FieldOfView(0), FocalLength(0), ProjectionCenter(0,0) { }
     };
 
 protected:
@@ -277,12 +265,6 @@ public:
         (v) ? Flags |= Mask_Scale9GridExists : Flags &= (~Mask_Scale9GridExists); 
     }
     bool                    DoesScale9GridExist() const         { return (Flags & Mask_Scale9GridExists) != 0; }
-    virtual void            SetScale9Grid(const RectF& rect);
-    RectF                   GetScale9Grid() const;
-    bool                    HasScale9Grid() const { return !GetScale9Grid().IsEmpty(); }
-    virtual void            PropagateScale9GridExists() {}
-    Render::Scale9GridInfo* CreateScale9Grid() const;
-
     bool                    IsTopmostLevelFlagSet() const       { return (Flags & Mask_TopmostLevel) != 0; }
 
     // sets coordinate X, specified in pixels.
@@ -346,9 +328,6 @@ public:
     // in external logic.
     virtual void            SetAcceptAnimMoves(bool accept)     { SF_UNUSED(accept); SF_ASSERT(0); }
   
-    virtual bool            GetCacheAsBitmap() const;
-    virtual void            SetCacheAsBitmap(bool enable);
-
     virtual void            SetFilters(const FilterSet* filters);
     virtual const FilterSet*GetFilters() const;
 
@@ -456,11 +435,10 @@ public:
 
         // "in"
         const InteractiveObject*    pIgnoreMC;
-        const DisplayObject*        pHitArea;
-        unsigned                    ControllerIdx;
         bool                        TestAll;
+        unsigned                    ControllerIdx;
 
-        TopMostDescr():pIgnoreMC(NULL), pHitArea(NULL), ControllerIdx(0), TestAll(false) {}
+        TopMostDescr():pIgnoreMC(NULL), TestAll(false), ControllerIdx(0) {}
     };
     enum TopMostResult
     {
@@ -899,6 +877,10 @@ public:
         (v) ? Flags |= Mask_TimelineObject : Flags &= (~Mask_TimelineObject); 
     }
     bool                    IsTimelineObjectFlagSet() const     { return (Flags & Mask_TimelineObject) != 0; }
+
+    void                    SetScale9Grid(const RectF& rect);
+    RectF                   GetScale9Grid() const;
+    bool                    HasScale9Grid() { return !GetScale9Grid().IsEmpty(); }
 
     virtual void            DoDisplayCallback() {}
 

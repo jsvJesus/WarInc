@@ -7,7 +7,7 @@
 #include "../weapons/WeaponArmory.h"
 #include "../weapons/Weapon.h"
 
-
+#if 0
 IMPLEMENT_CLASS(UIWeaponModel, "UIWeaponModel", "Object");
 AUTOREGISTER_CLASS(UIWeaponModel);
 
@@ -34,7 +34,8 @@ BOOL UIWeaponModel::OnCreate()
 	GameObject::OnCreate();
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck | OBJFLAG_DisableShadows ;
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows ;
 
 	r3dBoundBox bboxLocal ;
 
@@ -59,7 +60,7 @@ void UIWeaponModel::setWeaponModel(uint32_t itemID, GameObject* owner)
 {
 	SAFE_DELETE(m_CurrentWeapon);
 
-	m_CurrentWeapon = gWeaponArmory.createWeapon(itemID, owner, true, true);
+	m_CurrentWeapon = g_pWeaponArmory->createWeapon(itemID, owner, true, true);
 	m_CurrentWeapon->getModel(false, true);
 	m_CurrentWeapon->checkForSkeleton();
 }
@@ -82,17 +83,16 @@ struct UIWeaponModelRenderable : Renderable
 			world = scale * world;
 			
 			bool skinned = false;
-			r3dSkeleton* wpnSkel = false;
+			r3dSkeleton* wpnSkel = NULL;
 			{
-				r3dMesh* msh = curWpn->getModel(false, false);
-				msh->IsSkeletal(); 
-				curWpn->getConfig()->getSkeleton();
+				r3dMesh* msh = curWpn->getModel(false, true);
+				r3d_assert(msh->IsSkeletal() && curWpn->getConfig()->getSkeleton());
 
-				//curWpn->getAnimation()->Recalc();
-				//curWpn->getAnimation()->GetCurrentSkeleton()->SetShaderConstants();
-				wpnSkel = curWpn->getConfig()->getSkeleton();
+				curWpn->getAnimation()->Recalc();
+				curWpn->getAnimation()->GetCurrentSkeleton()->SetShaderConstants();
+				wpnSkel = curWpn->getAnimation()->GetCurrentSkeleton();
 
-				DrawSlotMesh(msh, world, false);
+				DrawSlotMesh(msh, world, true);
 
 				{
 					for(int i=0; i<WPN_ATTM_MAX; ++i)
@@ -122,7 +122,7 @@ struct UIWeaponModelRenderable : Renderable
 			// NOTE : needed for transparent camo only..
 			// float4   WorldScale  		: register(c24);
 			D3DXVECTOR4 scale(mesh->unpackScale.x, mesh->unpackScale.y, mesh->unpackScale.z, 0.f) ;
-			D3D_V(r3dRenderer->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
+			D3D_V(r3dRenderer->pd3ddev->SetVertexShaderConstantF(24, (float*)&scale, 1)) ;
 		}
 
 		{
@@ -153,3 +153,5 @@ void UIWeaponModel::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount
 	render_arrays[ rsFillGBuffer ].PushBack( rend );
 
 }
+
+#endif

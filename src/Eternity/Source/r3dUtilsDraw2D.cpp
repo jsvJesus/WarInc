@@ -1,53 +1,89 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+void r3dDrawLine3DInternal(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dCamera &Cam, float Width, const r3dColor24& clr, r3dTexture *Tex)
+{
+	// make vector perpendicular to line and to camera vectors
+	r3dVector V2 = (P2  - P1).Cross(Cam - P1);
+	V2.Normalize();
+
+	R3D_DEBUG_VERTEX V[3];
+
+	// V[2].Pos.Assign(P1 - V2 * Width / 2);
+	// V[1].Pos.Assign(P2 + V2 * Width / 2);
+	// V[0].Pos.Assign(P1 + V2 * Width / 2);
+
+	V[0].color = clr;
+	V[1].color = clr;
+	V[2].color = clr;
+
+	V[0].Pos.Assign(P1 - V2 * Width / 2);
+	V[1].Pos.Assign(P1 + V2 * Width / 2);
+	V[2].Pos.Assign(P2 + V2 * Width / 2);
+
+	V[0].tu   = 0; V[0].tv = 0;
+	V[1].tu   = 1; V[1].tv = 0;
+	V[2].tu   = 1; V[2].tv = 1;
+
+	//r3dRenderer->SetRenderingMode(R3D_BLEND_NZ | R3D_BLEND_PUSH);
+	R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
+	r3dRenderer->Fill3DPolygon(3, V);
+
+	V[0].tu   = 1; V[0].tv = 1;
+	V[1].tu   = 0; V[1].tv = 1;
+	V[2].tu   = 0; V[2].tv = 0;
+
+	V[0].Pos.Assign(P2 + V2 * Width / 2);
+	V[1].Pos.Assign(P2 - V2 * Width / 2);
+	V[2].Pos.Assign(P1 - V2 * Width / 2);
+
+	R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
+
+	r3dRenderer->Fill3DPolygon(3, V);
+
+	// r3dRenderer->Flush();
+	//r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
+}
 
 void r3dDrawLine3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dCamera &Cam, float Width, const r3dColor24& clr, r3dTexture *Tex)
 {
-  // make vector perpendicular to line and to camera vectors
-  r3dVector V2 = (P2  - P1).Cross(Cam - P1);
-  V2.Normalize();
-
- R3D_DEBUG_VERTEX V[3];
-
-// V[2].Pos.Assign(P1 - V2 * Width / 2);
-// V[1].Pos.Assign(P2 + V2 * Width / 2);
-// V[0].Pos.Assign(P1 + V2 * Width / 2);
-
- V[0].color = clr;
- V[1].color = clr;
- V[2].color = clr;
-
- V[0].Pos.Assign(P1 - V2 * Width / 2);
- V[1].Pos.Assign(P1 + V2 * Width / 2);
- V[2].Pos.Assign(P2 + V2 * Width / 2);
-
- V[0].tu   = 0; V[0].tv = 0;
- V[1].tu   = 1; V[1].tv = 0;
- V[2].tu   = 1; V[2].tv = 1;
-
- //r3dRenderer->SetRenderingMode(R3D_BLEND_NZ | R3D_BLEND_PUSH);
- r3dRenderer->SetTex(Tex);
- R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
- r3dRenderer->Render3DPolygon(3, V);
-
- V[0].tu   = 1; V[0].tv = 1;
- V[1].tu   = 0; V[1].tv = 1;
- V[2].tu   = 0; V[2].tv = 0;
-
- V[0].Pos.Assign(P2 + V2 * Width / 2);
- V[1].Pos.Assign(P2 - V2 * Width / 2);
- V[2].Pos.Assign(P1 - V2 * Width / 2);
-
- R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
-
- r3dRenderer->Render3DPolygon(3, V);
-
-// r3dRenderer->Flush();
- //r3dRenderer->SetRenderingMode(R3D_BLEND_POP);
-
-  return;
+	r3dRenderer->BeginFill3DPolygon(6);
+	r3dRenderer->SetTex(Tex);
+	r3dDrawLine3DInternal(P1, P2, Cam, Width, clr, Tex);
+	r3dRenderer->EndFill3DPolygon();
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+void r3dDrawLineList3D(const r3dDrawLineDesc *lines, int numLines, const r3dCamera &Cam, r3dTexture *Tex)
+{
+	if (!lines)
+		return;
+
+	int verticesInLine = 6;
+	int maxLines = r3dRenderer->GetPolygon3DBufferCapacity() / verticesInLine;
+	int batch = R3D_MIN(numLines, maxLines);
+	int remainder = numLines - batch;
+	int startLine = 0;
+
+	while (batch > 0)
+	{
+		r3dRenderer->BeginFill3DPolygon(batch * verticesInLine);
+		r3dRenderer->SetTex(Tex);
+		for (int i = startLine; i < startLine + batch; ++i)
+		{
+			const r3dDrawLineDesc &l = lines[i];
+			r3dDrawLine3DInternal(l.p1, l.p2, Cam, l.width, l.c, Tex);
+		}
+		r3dRenderer->EndFill3DPolygon();
+
+		startLine += batch;
+		batch = R3D_MIN(remainder, maxLines);
+		remainder -= batch;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 void r3dDrawLine3DColors(const r3dPoint3D& P1, const r3dPoint3D& P2, r3dCamera &Cam, float Width, const r3dColor24& clr, const r3dColor24& clr2, r3dTexture *Tex)
 {
@@ -297,7 +333,7 @@ void r3dDrawUniformSphere(r3dVector const & vPos, float fRadius, r3dCamera &Cam,
 "    |/_____|/        "
 "   (1)    (2)        "
 */
-void r3dDrawUniformBoundBox( const r3dBoundBox &Box, r3dCamera &Cam, const r3dColor24& clr )
+void r3dDrawUniformBoundBox( const r3dBoundBox &Box, const r3dCamera &Cam, const r3dColor24& clr )
 {
 	r3dPoint3D 	p1, p2;
 
@@ -412,7 +448,7 @@ void r3dDrawSphereSolid(r3dVector const & vPos, float fRadius, const r3dCamera &
 	}
 }
 
-void r3dDrawBoundBox( const r3dBoundBox &Box, const r3dCamera &Cam, const r3dColor24& clr, float fLineWidth)
+void r3dDrawBoundBox( const r3dBoundBox &Box, const r3dCamera &Cam, const r3dColor24& clr, float fLineWidth, bool flush )
 {
 	r3dPoint3D 	p1, p2;
 
@@ -472,7 +508,10 @@ void r3dDrawBoundBox( const r3dBoundBox &Box, const r3dCamera &Cam, const r3dCol
 	p2.y -= Box.Size.y;
 	r3dDrawLine3D(p1, p2, Cam, fLineWidth, clr);
 
-	r3dRenderer->Flush();
+	if( flush )
+	{
+		r3dRenderer->Flush();
+	}
 	return;
 }
 
@@ -552,7 +591,9 @@ void r3dDrawGridPlane( const r3dPoint3D& centrePos, const r3dCamera &Cam, float 
 	}
 }
 
-void r3dDrawTriangle3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dPoint3D& P3, const r3dCamera &Cam, const r3dColor24& clr, r3dTexture *Tex, float *TC, bool bDontDot )
+//////////////////////////////////////////////////////////////////////////
+
+void r3dDrawTriangle3DInternal(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dPoint3D& P3, const r3dCamera &Cam, const r3dColor24& clr, r3dTexture *Tex, float *TC, bool bDontDot)
 {
 	// make vector perpendicular to line and to camera vectors
 	r3dVector norm = (P2  - P1).Cross(P3 - P1);
@@ -564,10 +605,10 @@ void r3dDrawTriangle3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dPoin
 	V[0].color = clr * LdotN;
 	V[1].color = clr * LdotN;
 	V[2].color = clr * LdotN;
-	
-//	V[0].Normal = norm;
-//	V[1].Normal = norm;
-//	V[2].Normal = norm;
+
+	//	V[0].Normal = norm;
+	//	V[1].Normal = norm;
+	//	V[2].Normal = norm;
 
 	V[0].Pos = P1;
 	V[1].Pos = P2;
@@ -585,10 +626,50 @@ void r3dDrawTriangle3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dPoin
 	}
 
 	R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
-	r3dRenderer->SetTex(Tex);
-	r3dRenderer->Render3DPolygon(3, V);
+	r3dRenderer->Fill3DPolygon(3, V);
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+void r3dDrawTriangle3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dPoint3D& P3, const r3dCamera &Cam, const r3dColor24& clr, r3dTexture *Tex, float *TC, bool bDontDot )
+{
+	r3dRenderer->SetTex(Tex);
+	r3dRenderer->BeginFill3DPolygon(3);
+	r3dDrawTriangle3DInternal(P1, P2, P3, Cam, clr, Tex, TC, bDontDot);
+	r3dRenderer->EndFill3DPolygon();
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+void r3dDrawTriangleList3D(const r3dDrawTriDesc *tris, int numTris, const r3dCamera &Cam, r3dTexture *Tex, bool bDontDot)
+{
+	if (!tris)
+		return;
+
+	int verticesInTri = 3;
+	int maxTris = r3dRenderer->GetPolygon3DBufferCapacity() / verticesInTri;
+	int batch = R3D_MIN(numTris, maxTris);
+	int remainder = numTris - batch;
+	int startTri = 0;
+
+	while (batch > 0)
+	{
+		r3dRenderer->BeginFill3DPolygon(batch * verticesInTri);
+		r3dRenderer->SetTex(Tex);
+		for (int i = startTri; i < startTri + batch; ++i)
+		{
+			const r3dDrawTriDesc &t = tris[i];
+			r3dDrawTriangle3DInternal(t.p1, t.p2, t.p3, Cam, t.c, Tex, 0, bDontDot);
+		}
+		r3dRenderer->EndFill3DPolygon();
+
+		startTri += batch;
+		batch = R3D_MIN(remainder, maxTris);
+		remainder -= batch;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 void r3dDrawBox3D(float x, float y, float z, float w, float h, float d, const r3dColor24& clr )
 {
@@ -669,7 +750,7 @@ void r3dDrawBox2D(float x, float y, float w, float h, const r3dColor24& clr, r3d
  for(i=0; i<4; i++)
  {
   V[i].color    = clr.GetPacked();
-  V[i].z   = 0;    //Z;
+  V[i].z   = r3dRenderer->GetNearPlaneZValue();    //Z;
   V[i].rwh = 1.0f; //Z;//1.0f / Z;
  }
 
@@ -718,7 +799,7 @@ void 		r3dDrawBox2D         ( r3dPoint2D p0, r3dPoint2D p1, r3dPoint2D p2, r3dPo
  for(i=0; i<4; i++)
  {
   V[i].color    = clr.GetPacked();
-  V[i].z   = 0;    //Z;
+  V[i].z   = r3dRenderer->GetNearPlaneZValue();    //Z;
   V[i].rwh = 1.0f; //Z;//1.0f / Z;
  }
 
@@ -777,7 +858,7 @@ void r3dDrawBoxFS ( float w, float h, const r3dColor24& clr, r3dTexture *Tex /*=
 	for(i=0; i<4; i++)
 	{
 		V[i].color    = clr.GetPacked();
-		V[i].z   = 0;    //Z;
+		V[i].z   = r3dRenderer->GetNearPlaneZValue();    //Z;
 		V[i].rwh = 1.0f; //Z;//1.0f / Z;
 	}
 
@@ -815,7 +896,7 @@ void r3dDrawBox2DNoTex(float x, float y, float w, float h, const r3dColor24& clr
  for(i=0; i<4; i++)
  {
   V[i].color    = clr.GetPacked();
-  V[i].z   = 0;    //Z;
+  V[i].z   = r3dRenderer->GetNearPlaneZValue();    //Z;
   V[i].rwh = 1.0f; //Z;//1.0f / Z;
  }
 
@@ -864,7 +945,7 @@ void r3dDrawBox2DRotate(float center_x, float center_y, float w, float h, float 
   for(int i=0; i<4; i++)
   {
     V[i].color  = clr.GetPacked();
-    V[i].z      = 0;    //Z;
+    V[i].z      = r3dRenderer->GetNearPlaneZValue();    //Z;
     V[i].rwh    = 1.0f; //1.0f / Z;
   }
 
@@ -1214,42 +1295,55 @@ int dx=0, dy;
 	pFont->PrintF(x+dx,y+dy, clr, pText);
 }
 
-void r3dDrawCircle2D(const r3dPoint3D& pos, float radius, const r3dColor& clr1, const r3dColor& clr2)
+void r3dDrawCircle2D(const r3dPoint2D& pos, float radius, const r3dColor& clr1, const r3dColor& clr2)
 {
   const int iters = 20;
   
   if(radius < 0.001f)
     return;
   
-  r3dPoint3D fv[iters+1];
+  r3dPoint2D fv[iters+1];
 
   for(int i=0; i<iters; i++) {
-    fv[i].y = pos.y;
     fv[i].x = pos.x + sinf(R3D_PI*2 * float(i) / float(iters)) * radius;
-    fv[i].z = pos.z + cosf(R3D_PI*2 * float(i) / float(iters)) * radius;
+    fv[i].y = pos.y + cosf(R3D_PI*2 * float(i) / float(iters)) * radius;
   }
 
-  R3D_DEBUG_VERTEX V[3];
+  R3D_SCREEN_VERTEX V[3];
   V[0].tu  = 0; V[0].tv = 0;
   V[1].tu  = 1; V[1].tv = 0;
   V[2].tu  = 1; V[2].tv = 1;
 
-  V[0].Pos  = pos;
-  V[0].color = clr1;
-  V[1].color = clr2;
-  V[2].color = clr2;
+  V[0].x = pos.x;
+  V[0].y = pos.y;
+  V[0].z = r3dRenderer->GetNearPlaneZValue();
+  V[1].z = r3dRenderer->GetNearPlaneZValue();
+  V[2].z = r3dRenderer->GetNearPlaneZValue();
+
+  V[0].rwh = 1.0f;
+  V[1].rwh = 1.0f;
+  V[2].rwh = 1.0f;
+
+  V[0].color = clr1.GetPacked();
+  V[1].color = clr2.GetPacked();
+  V[2].color = clr2.GetPacked();
 
   for(int i=1; i<iters; i++) {
-    V[1].Pos  = fv[i-1];
-    V[2].Pos  = fv[i];
-    r3dRenderer->Render3DPolygon(3, V);
+    V[2].x  = fv[i-1].x;
+	V[2].y  = fv[i-1].y;
+
+	V[1].x  = fv[i].x;
+	V[1].y  = fv[i].y;
+    r3dRenderer->Render2DPolygon(3, V);
   }
 
-  V[1].Pos  = fv[iters-1];
-  V[2].Pos  = fv[0];
+  V[2].x = fv[iters-1].x;
+  V[2].y = fv[iters-1].y;
+  V[1].x = fv[0].x;
+  V[1].y = fv[0].y;
 
-  R3D_DEBUG_VERTEX::ComputeNormals(V, 3);
-  r3dRenderer->Render3DPolygon(3, V);
+
+  r3dRenderer->Render2DPolygon(3, V);
   
   r3dRenderer->Flush();
 }

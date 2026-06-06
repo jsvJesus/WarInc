@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,25 +42,28 @@
 #include <RendererInstanceBuffer.h>
 #include "D3D9Renderer.h"
 
-class D3D9RendererInstanceBuffer : public RendererInstanceBuffer, public D3D9RendererResource
+namespace SampleRenderer
 {
+
+	class D3D9RendererInstanceBuffer : public RendererInstanceBuffer, public D3D9RendererResource
+	{
 	public:
 		D3D9RendererInstanceBuffer(IDirect3DDevice9 &d3dDevice, const RendererInstanceBufferDesc &desc);
 		virtual ~D3D9RendererInstanceBuffer(void);
-		
-		void addVertexElements(physx::PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const;
-		
+
+		void addVertexElements(PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const;
+
 	protected:
 		virtual void *lock(void);
 		virtual void  unlock(void);
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstInstance) const;
-		virtual void  unbind(physx::PxU32 streamID) const;
-	
+
+		virtual void  bind(PxU32 streamID, PxU32 firstInstance) const;
+		virtual void  unbind(PxU32 streamID) const;
+
 	private:
 		virtual void onDeviceLost(void);
 		virtual void onDeviceReset(void);
-	
+
 	private:
 #if RENDERER_INSTANCING
 		IDirect3DDevice9       &m_d3dDevice;
@@ -71,7 +74,9 @@ class D3D9RendererInstanceBuffer : public RendererInstanceBuffer, public D3D9Ren
 		DWORD                   m_usage;
 		D3DPOOL                 m_pool;
 		UINT                    m_bufferSize;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

@@ -50,8 +50,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Kernel/SF_HeapNew.h"
 
 #include "GFx/GFx_Input.h"
-
-
 #include "GFx/GFx_ASMovieRootBase.h"
 #include "GFx/AMP/Amp_ViewStats.h"
 
@@ -66,10 +64,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Render/Render_TreeNode.h"
 #include "Render/Render_TreeText.h"
 #include "Render/FontProvider/Render_FontProviderHUD.h"
-#endif
-
-#ifdef GFX_GESTURE_RECOGNIZE
-#include "GFx/GFx_Gesture.h"
 #endif
 
 #define GFX_MAX_CONTROLLERS_SUPPORTED 16
@@ -104,10 +98,6 @@ class RemoveObject2Tag;
 class SetBackgroundColorTag;
 // class GASDoAction;           - in GFxAction.cpp
 // class GFxStartSoundTag;      - in GFxSound.cpp
-
-#ifdef GFX_GESTURE_RECOGNIZE
-	class GestureRecognizer
-#endif
 
 // ***** External Classes
 class Loader;
@@ -582,14 +572,12 @@ public:
 
     
     // Dragging support.
-    void                SetDragState(const DragState& st);
-    void                GetDragState(unsigned mouseIndex, DragState* st);
-    void                StopAllDrags();
-    void                StopDrag(unsigned mouseIndex);
-    bool                IsDragging(unsigned mi) const;
-    bool                IsDraggingCharacter(const InteractiveObject* ch, unsigned* pmouseIndex = 0) const;
-    void                StopDragCharacter(const InteractiveObject* ch);
-    bool                IsDraggingMouseIndex(unsigned mouseIndex) const;
+    void                SetDragState(const DragState& st)   { CurrentDragState = st; }
+    void                GetDragState(DragState* st)         { *st = CurrentDragState; }
+    void                StopDrag()                          { CurrentDragState.pCharacter = NULL; CurrentDragState.MouseIndex = ~0u; }
+    bool                IsDragging() const                  { return CurrentDragState.pCharacter != NULL; }
+    bool                IsDraggingCharacter(const InteractiveObject* ch) const { return CurrentDragState.pCharacter == ch; }
+    bool                IsDraggingMouseIndex(unsigned mi) const { return CurrentDragState.MouseIndex == mi; }
 
 	// Internal use by the AS3 VM to force Shapes into TreeShapes
 	void				UpdateAllRenderNodes();
@@ -734,10 +722,7 @@ public:
 
     // ShutdownRendering support.
     virtual void    ShutdownRendering(bool wait) { RenderContext.Shutdown(wait); }
-    virtual bool    IsShutdownRenderingComplete() const 
-	{ 
-		return (RenderContext.IsShutdownComplete() && (!DIContext || DIContext->IsShutdownComplete())); 
-	}
+    virtual bool    IsShutdownRenderingComplete() const { return RenderContext.IsShutdownComplete(); }
 
 
     // An internal method that advances frames for movieroot's sprites
@@ -842,22 +827,15 @@ public:
     virtual MemoryHeap* GetHeap() const { return pHeap; }
 
     // Forces to run garbage collection, if it is enabled. Does nothing otherwise.
-    // 'gcFlags' parameter allows to control the speed of GC. GCF_Quick is fastest
-    // but less memory is recovered, whereas GCF_Full is slowest but all possible 
-    // memory is recovered.
-    virtual void        ForceCollectGarbage(unsigned gcFlags = GCF_Full);
+    virtual void        ForceCollectGarbage();
 
     // Additional GC control functions. 
     // SuspendGC suspends/resumes garbage collection. It is counted operation, meaning
     // if it was suspended N-times then it should be re-enabled N-times to restore normal operation.
     virtual void        SuspendGC(bool suspend);
-
     // Schedule garbage collection. Unlike ForceCollectGarbage it doesn't execute collection immediately;
     // instead, it will be executed when next Advance is called.
-    // 'gcFlags' parameter allows to control the speed of GC. GCF_Quick is fastest
-    // but less memory is recovered, whereas GCF_Full is slowest but all possible 
-    // memory is recovered.
-    virtual void        ScheduleGC(unsigned gcFlags = GCF_Full);
+    virtual void        ScheduleGC();
 
     // Prints out a report about objects and links between them.
     virtual void        PrintObjectsReport(UInt32 flags = 0, 
@@ -1286,11 +1264,7 @@ public: // data
 
     unsigned                    ForceFrameCatchUp;
 
-    GFx::InputEventsQueue			InputEventsQueue;
-
-#ifdef GFX_GESTURE_RECOGNIZE
-	GFx::GestureRecognizer			GestureRecognizer;
-#endif
+    GFx::InputEventsQueue       InputEventsQueue;
 
     Color                       BackgroundColor;
     MouseState                  mMouseState[GFX_MAX_MICE_SUPPORTED];
@@ -1311,7 +1285,7 @@ public:
     // Instance name assignment counter.
     UInt32                      InstanceNameCount;
 
-    DragState                   CurrentDragStates[GFX_MAX_MICE_SUPPORTED];
+    DragState                   CurrentDragState;   // @@ fold this into GFxMouseButtonState?
 
     // Sticky variable clip hash table.
     ASStringHash<StickyVarNode*> StickyVariables;

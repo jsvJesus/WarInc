@@ -5,11 +5,18 @@ class obj_AmbientSound : public GameObject
 {
 	DECLARE_CLASS(obj_AmbientSound, GameObject)
 private:
-	char  SoundFilename[256];
+	static int forceShowSoundBubble;
+protected:
 	int   sndID;
-	void *sndEvent;	
+	void *sndEvent;
 
-	void LoadNewSound(int stdID, bool paused);
+    float min3DDist;
+    float max3DDist;
+	float masterVolume;
+
+	float startTime;
+	float endTime;
+	float fadeTime;
 
 public:
 	void DoDraw();
@@ -21,6 +28,8 @@ public:
 	void				UpdateSound( const std::string& soundPath ) ;
 	virtual	float		DrawPropertyEditor(float scrx, float scry, float scrw, float scrh, const AClass* startClass, const GameObjects& selected) OVERRIDE;
 #endif
+
+	virtual GameObject*	Clone ();
 
 	virtual	BOOL		Load(const char *name);
 

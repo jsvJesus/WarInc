@@ -1,5 +1,4 @@
-#ifndef __FRONTENDSHARED_H__
-#define __FRONTENDSHARED_H__
+#pragma once
 
 // temp file to make it easier to port to new frontend UI
 
@@ -11,8 +10,10 @@ enum EGameResult {
 	GRESULT_Disconnect,	// game server disconnected by itself
 	GRESULT_DoubleLogin,
 	GRESULT_Failed_To_Join_Game,
-	GRESULT_Finished_ReadyNextRound, // ready for next round
 	GRESULT_ShownWelcomePackage,
+	GRESULT_Timeout,
+	GRESULT_Unsync,
+	GRESULT_StillInGame,
 };
 
 struct GraphicSettings
@@ -35,6 +36,9 @@ struct GraphicSettings
 
 void FillDefaultSettings( GraphicSettings& settings, r3dDevStrength strength );
 DWORD	SetDefaultSettings( r3dDevStrength strength );
+DWORD	SetCustomSettings( const GraphicSettings& settings );
+void			SaveCustomSettings( const GraphicSettings& settings );
+GraphicSettings GetCustomSettings();
 DWORD	GraphSettingsToVars( const GraphicSettings& settings );
 void	FillSettingsFromVars ( GraphicSettings& settings );
 
@@ -42,8 +46,11 @@ class r3dScaleformMovie;
 
 void GetInterfaceSize(int& width, int& height, int& y_shift, const r3dScaleformMovie &m);
 float GetOptimalDist(const r3dPoint3D& boxSize, float halfFovInDegrees);
-void getWeaponParamForUI(const struct WeaponConfig* wc, int* damage, int* spread, int* firerate, int *recoil);
+void getWeaponParamForUI(const class WeaponConfig* wc, int* damage, int* spread, int* firerate, int *recoil);
 void getWeaponStatMinMaxForUI(const WeaponConfig* wc, int* mindamage, int* maxdamage, int* minfirerate, int* maxfirerate, int* minclip, int* maxclip, int* minrange, int* maxrange);
+
+void getAdditionalDescForItem(uint32_t itemID, int Var1, int Var2, char* res);
+
 extern float		_p2p_idleTime;
 
 enum EBuyType
@@ -80,7 +87,6 @@ struct FrontEndShared
 		RET_Diconnected,
 		RET_DoubleLogin,
 		RET_Banned,
+		RET_LoggedIn,
 	};
 };
-
-#endif //__FRONTENDSHARED_H__

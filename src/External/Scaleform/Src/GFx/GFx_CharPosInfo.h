@@ -36,7 +36,6 @@ struct CharPosInfoFlags
         Flags_HasClipDepth      = 0x040,
         Flags_HasBlendMode      = 0x080,
         Flags_HasClassName      = 0x100,
-        Flags_HasVisibility     = 0x200,
     };
 
     UInt16               Flags;
@@ -53,7 +52,6 @@ struct CharPosInfoFlags
     SF_INLINE void SetRatioFlag()         { Flags |= Flags_HasRatio; }
     SF_INLINE void SetCharacterIdFlag()   { Flags |= Flags_HasCharacterId; }
     SF_INLINE void SetClassNameFlag()     { Flags |= Flags_HasClassName; }
-    SF_INLINE void SetVisibilityFlag()    { Flags |= Flags_HasVisibility; }
 
     SF_INLINE bool HasMatrix() const      { return (Flags & Flags_HasMatrix) != 0; }
     SF_INLINE bool HasCxform() const      { return (Flags & Flags_HasCxform) != 0; }
@@ -64,7 +62,6 @@ struct CharPosInfoFlags
     SF_INLINE bool HasRatio() const       { return (Flags & Flags_HasRatio) != 0; }
     SF_INLINE bool HasCharacterId() const { return (Flags & Flags_HasCharacterId) != 0; }
     SF_INLINE bool HasClassName() const   { return (Flags & Flags_HasClassName) != 0; }
-    SF_INLINE bool HasVisibility() const  { return (Flags & Flags_HasVisibility) != 0; }
 };
 
 
@@ -108,7 +105,6 @@ public:
     UInt16              ClipDepth;
     CharPosInfoFlags    Flags;
     UInt8               BlendMode;          // [PPS] Only requires 4bits for storage
-    UInt8               Visible;            // Only requires 1bit for storage.
   
     CharPosInfo()
     {
@@ -117,7 +113,6 @@ public:
         ClipDepth   = 0;
         BlendMode   = Render::Blend_None;
         ClassName   = NULL;
-        Visible     = 1;
     }
 
     CharPosInfo(ResourceId chId, int depth,
@@ -140,7 +135,6 @@ public:
         ClipDepth   = clipDepth;
         BlendMode   = (UInt8)blend;        
         ClassName   = className;
-        Visible     = 1;
     }
 
     SF_INLINE void SetMatrixFlag()        { Flags.SetMatrixFlag(); }
@@ -152,7 +146,6 @@ public:
     SF_INLINE void SetRatioFlag()         { Flags.SetRatioFlag(); }
     SF_INLINE void SetCharacterIdFlag()   { Flags.SetCharacterIdFlag(); }
     SF_INLINE void SetClassNameFlag()     { Flags.SetClassNameFlag(); }
-    SF_INLINE void SetVisibilityFlag()    { Flags.SetVisibilityFlag(); }
 
     SF_INLINE bool HasMatrix() const      { return Flags.HasMatrix(); }
     SF_INLINE bool HasCxform() const      { return Flags.HasCxform(); }
@@ -163,7 +156,6 @@ public:
     SF_INLINE bool HasRatio() const       { return Flags.HasRatio(); }
     SF_INLINE bool HasCharacterId() const { return Flags.HasCharacterId(); }
     SF_INLINE bool HasClassName() const   { return Flags.HasClassName(); }
-    SF_INLINE bool HasVisibility() const  { return Flags.HasVisibility(); }
 };
 
 }} // namespace Scaleform::GFx

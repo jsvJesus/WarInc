@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,21 +37,26 @@
 
 #include <RendererInstanceBuffer.h>
 
-class RendererInstanceBufferDesc
+namespace SampleRenderer
 {
+
+	class RendererInstanceBufferDesc
+	{
 	public:
 		RendererInstanceBuffer::Hint   hint;
 		RendererInstanceBuffer::Format semanticFormats[RendererInstanceBuffer::NUM_SEMANTICS];
-		
-		physx::PxU32                          maxInstances;
-		
-		bool						 registerInCUDA;
-		physx::pxtask::CudaContextManager *		 interopContext;
-		
+
+		PxU32                              maxInstances;
+
+		bool                               registerInCUDA;
+		physx::pxtask::CudaContextManager *interopContext;
+
 	public:
 		RendererInstanceBufferDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

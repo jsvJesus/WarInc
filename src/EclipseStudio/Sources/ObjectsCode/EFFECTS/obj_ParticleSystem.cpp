@@ -80,9 +80,6 @@ BOOL obj_ParticleSystem::Load(const char* fname)
 
 	if(!Torch) return FALSE;
 
-	LT.Assign(GetPosition().x,GetPosition().y+10,GetPosition().z);
-	LT.SetType(R3D_OMNI_LIGHT);
-
 	return TRUE;
 }
 
@@ -91,17 +88,6 @@ void obj_ParticleSystem::SetScale(const r3dBoundBox &Box)
 	RenderScale = Box.Size.Y / 80.0f;
 	if(RenderScale < 1.0f ) RenderScale = 1.0f;
 }
-
-void obj_ParticleSystem::SetLightProperties(float r1, float r2, r3dColor color)
-{
-	LT.SetRadius(r1, r2);
-	LT.SetColor(color);
-	LT.bCastShadows = false; // too expensive. on explosion from 40fps to 25fps.
-
-	if(LT.pLightSystem == NULL)
-		WorldLightSystem.Add(&LT); 
-}
-
 
 //-----------------------------------------------------------------------
 void obj_ParticleSystem::Reload()
@@ -134,12 +120,8 @@ BOOL obj_ParticleSystem::OnCreate()
 {
 	parent::OnCreate();
 
-	ObjFlags |= OBJFLAG_SkipOcclusionCheck		 // until proper aabb will be generated for particles!!
-					|
-				OBJFLAG_DisableShadows 
-					|
-				OBJFLAG_ForceSleep
-				;
+	setSkipOcclusionCheck(true); // until proper aabb will be generated for particles!!
+	ObjFlags |= OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	UpdateTime = r3dGetTime();
 	Torch->GlobalScale = GlobalScale;
@@ -165,8 +147,6 @@ BOOL obj_ParticleSystem::OnCreate()
 BOOL obj_ParticleSystem::OnDestroy()
 {
 	SAFE_DELETE(Torch);
-	if(LT.pLightSystem)
-		WorldLightSystem.Remove(&LT); 
 
 	return parent::OnDestroy();
 }
@@ -366,7 +346,10 @@ obj_ParticleSystem::AppendRenderables( RenderArray ( & render_arrays  )[ rsCount
 #ifndef FINAL_BUILD
 	// helper
 	extern int CurHUDID;
-	if(CurHUDID == 0 && !r_hide_icons->GetInt())
+
+	float idd = r_icons_draw_distance->GetFloat();
+
+	if(CurHUDID == 0 && !r_hide_icons->GetInt() && ( Cam - GetPosition() ).LengthSq() < idd * idd )
 	{
 		ParticleHelperRenderable rend;
 		rend.Init();
@@ -389,7 +372,7 @@ obj_ParticleSystem::DrawParticles( const r3dCamera& Cam )
 	if(HackedFOV > 0)
 	{
 		Cam1.FOV = HackedFOV;
-		r3dRenderer->SetCamera(Cam1);
+		r3dRenderer->SetCamera(Cam1, false);
 	}
 
 	Torch->Draw(Cam1, false);
@@ -398,7 +381,7 @@ obj_ParticleSystem::DrawParticles( const r3dCamera& Cam )
 	r3dRenderer->SetMaterial(NULL);
 
 	if(HackedFOV > 0)
-		r3dRenderer->SetCamera(Cam);
+		r3dRenderer->SetCamera(Cam, false);
 
 	Torch->GlobalRenderScale = 1.0f;
 
@@ -490,7 +473,14 @@ void obj_ParticleSystem::OnPickerRotated()
 	D3DXMATRIX mRot = GetRotationMatrix();
 	r3dVector yDir(mRot._21, mRot._22, mRot._23);
 	if(Torch)
+	{
 		Torch->Direction.Assign(yDir);
+
+		for( int i = 0, e = Torch->ArraySize ; i < e ; i ++ )
+		{
+			Torch->Array[ i ].Direction.Assign( yDir );
+		}
+	}
 }
 
 BOOL obj_ParticleSystem::Update()
@@ -531,12 +521,6 @@ BOOL obj_ParticleSystem::Update()
 	R3DPROFILE_START("Particles: Update");
 	// update particle emitter position
 	Torch->Position = GetPosition();
-	LT.Assign(GetPosition().x,GetPosition().y,GetPosition().z);
-
-	if(time_LifeTime < LightLifetime)
-		LT.Intensity = 1.0f-(time_LifeTime/LightLifetime);
-	else
-		LT.Intensity = 0.0f;
 
 	do {
 		if(BindID == invalidGameObjectID) 

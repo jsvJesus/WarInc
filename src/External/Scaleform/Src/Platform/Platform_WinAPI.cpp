@@ -262,8 +262,6 @@ public:
 
     virtual bool    IsMultitouchSupported() const { return MultitouchSupported; }
 
-    virtual void    ProcessUrl(const String& url);
-
 protected:
     virtual void    updateConfig();
 
@@ -583,10 +581,6 @@ void AppImpl::InitArgDescriptions(Args* args)
         {"ndp",     "NoDebugPopups",  Args::Flag,           "", "Disable Windows debug popups"},
         {"dump",    "Minidump",       Args::StringOption,   "", "Creates a minidump when unhandled exceptions occur (implies -ndp)."},
         {"sbuf",    "StaticBuffers",  Args::Flag,           "", "Uses static vertex/index buffers, instead of dynamic ones."},
-        {"sm20",    "ShaderModel20",  Args::Flag,           "", "Forces the use of shader model 2.0 shaders (D3D9)"},
-#if defined(FXPLAYER_RENDER_OPENGL)
-        {"gl20",    "OpenGL20",       Args::Flag,           "", "Use a legacy GL 2.x context instead of GL 3.x" },
-#endif
         {"",        "",               Args::ArgEnd,         "", ""}
     };
     args->AddDesriptions(options);
@@ -597,12 +591,6 @@ void AppImpl::ApplyViewConfigArgs(ViewConfig* config, const Args& args)
     AppImplBase::ApplyViewConfigArgs(config, args);
     if (args.GetBool("StaticBuffers"))
         config->ViewFlags |= View_StaticBuffers;
-#if defined(FXPLAYER_RENDER_OPENGL)
-    if (args.GetBool("OpenGL20"))
-        config->ViewFlags |= View_GL20;
-#endif
-    if (args.GetBool("ShaderModel20"))
-        config->ViewFlags |= View_ShaderModel20;
 }
 
 void AppImpl::SetWindowTitle(const String& title)
@@ -826,11 +814,6 @@ void AppImpl::processChangeCBChain(WPARAM wParam, LPARAM lParam)
         SendMessage(hWndNextViewer, WM_CHANGECBCHAIN, wParam, lParam); 
 }
 
-
-void    AppImpl::ProcessUrl(const String& url)
-{
-    ShellExecute(NULL, "open", url.ToCStr(), NULL, NULL, SW_SHOWNORMAL);
-}
 
 LRESULT AppImpl::MemberWndProc(UINT message, WPARAM wParam, LPARAM lParam)
 {

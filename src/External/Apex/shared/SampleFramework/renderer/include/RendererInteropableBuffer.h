@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,45 +35,45 @@
 #ifndef RENDERER_INTEROPABLE_BUFFER_H
 #define RENDERER_INTEROPABLE_BUFFER_H
 
-namespace physx
-{
-namespace pxtask
-{
-	class CudaContextManager;
-}
-};
+#include <RendererConfig.h>
 
 typedef struct CUgraphicsResource_st *CUgraphicsResource;
 
-class RendererInteropableBuffer
+namespace SampleRenderer
 {
-public:
-	RendererInteropableBuffer(bool mustBeRegistered, physx::pxtask::CudaContextManager *interopContext)
-		: m_mustBeRegisteredInCUDA(mustBeRegistered)
-		, m_interopContext(interopContext)
-		, m_registeredInCUDA(false)
-		, m_InteropHandle(NULL)
-	{
-	}
 
-	bool getInteropResourceHandle(CUgraphicsResource &handle)
+	class RendererInteropableBuffer
 	{
-		if(m_registeredInCUDA && m_InteropHandle)
+	public:
+		RendererInteropableBuffer(bool mustBeRegistered, physx::pxtask::CudaContextManager *interopContext)
+			: m_mustBeRegisteredInCUDA(mustBeRegistered)
+			, m_registeredInCUDA(false)
+			, m_interopContext(interopContext)			
+			, m_InteropHandle(NULL)
+			
 		{
-			handle = m_InteropHandle;
-
-			return true;
 		}
 
-		return false;
-	}
+		bool getInteropResourceHandle(CUgraphicsResource &handle)
+		{
+			if(m_registeredInCUDA && m_InteropHandle)
+			{
+				handle = m_InteropHandle;
 
-protected:
+				return true;
+			}
 
-	bool		 m_mustBeRegisteredInCUDA;
-	bool		 m_registeredInCUDA;
-	physx::pxtask::CudaContextManager *m_interopContext;
-	CUgraphicsResource	m_InteropHandle;
-};
+			return false;
+		}
+
+	protected:
+
+		bool		 m_mustBeRegisteredInCUDA;
+		bool		 m_registeredInCUDA;
+		physx::pxtask::CudaContextManager *m_interopContext;
+		CUgraphicsResource	m_InteropHandle;
+	};
+
+} // namespace SampleRenderer
 
 #endif

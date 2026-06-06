@@ -16,37 +16,33 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Russian resources
+// Russian (Russia) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
-#ifdef _WIN32
 LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 #pragma code_page(1251)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // String Table
 //
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_STRING_REGIONLOCK_CIS 
-                            "По условиям лицензионного соглашения Вы не можете играть на этом сервере с Вашего IP.\n\nДля игры пожалуйста перейдите на сайт www.warinc.ru"
+                            "По условиям лицензионного соглашения Вы не можете играть на этом сервере с Вашего IP.\n\nДля игры пожалуйста перейдите на сайт"
 END
 
-#endif    // Russian resources
+#endif    // Russian (Russia) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -55,9 +51,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_WARINC              ICON                    "res\\WarIncBattleZoneIcon.ico"
-IDI_WARINC_FULL         ICON                    "res\\WarIncBattleZoneIcon_Full.ico"
-IDI_WARINC_SMALL        ICON                    "res\\warinc_small.ico"
+IDI_WARINC              ICON                    "res\\warz_icon_01.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -110,13 +104,14 @@ END
 // Dialog
 //
 
-IDD_DIALOG_EULA DIALOGEX 0, 0, 361, 293
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "War Inc. Battle Zone TOS"
+IDD_DIALOG_EULA DIALOGEX 0, 0, 477, 426
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WarZ Legal Agreement"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "I Accept",IDOK,151,275,50,14,WS_DISABLED
-    CONTROL         "",IDC_RICHEDIT_EULA,"RichEdit20A",ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL | WS_TABSTOP,0,0,361,271
+    PUSHBUTTON      "Accept",IDOK,143,406,50,14,WS_DISABLED
+    CONTROL         "",IDC_RICHEDIT_EULA,"RichEdit20A",ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL | WS_TABSTOP,0,0,477,400
+    DEFPUSHBUTTON   "Decline",IDCANCEL,275,407,50,14
 END
 
 
@@ -142,14 +137,14 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "Comments", "http://thewarinc.com/"
+            VALUE "Comments", "http://localhost/"
             VALUE "CompanyName", "Arktos Entertainment Group"
-            VALUE "FileDescription", "War Inc. Battle Zone Launcher"
+            VALUE "FileDescription", "WarZ Launcher"
             VALUE "FileVersion", "1.0.0.1"
             VALUE "InternalName", "RSUpdate.exe"
             VALUE "LegalCopyright", "(c) Arktos Entertainment Group.  All rights reserved."
             VALUE "OriginalFilename", "RSUpdate.exe"
-            VALUE "ProductName", "War Inc. Battle Zone Launcher"
+            VALUE "ProductName", "WarZ Launcher"
             VALUE "ProductVersion", "1.0.0.1"
         END
     END
@@ -173,7 +168,8 @@ IDR_IMAGE_BTN_PG_ON     IMAGE                   "gfx\\btn_pg_on.png"
 IDR_IMAGE_BTN_PG_HOVER  IMAGE                   "gfx\\btn_pg_hover.png"
 IDR_IMAGE_BACK_LOGIN    IMAGE                   "gfx\\back_login.png"
 IDR_IMAGE_BACK_UPDATE   IMAGE                   "gfx\\back_update.png"
-IDR_IMAGE_BACK_REGISTER IMAGE                   "gfx\\back_register.png"
+IDR_IMAGE_BACK_REGISTER IMAGE                   "gfx\\back_register_2.png"
+IDR_IMAGE_BACK_SERIALCHECK IMAGE                   "gfx\\back_register.png"
 IDR_IMAGE_BACK_STARTING IMAGE                   "gfx\\back_starting.png"
 IDR_IMAGE_BTN_LOGIN_HOVER IMAGE                   "gfx\\btn_login_hover.png"
 IDR_IMAGE_BTN_HOWTO_HOVER IMAGE                   "gfx\\btn_howto_hover.png"
@@ -182,10 +178,31 @@ IDR_IMAGE_BTN_FORUMS_HOVER IMAGE                   "gfx\\btn_forums_hover.png"
 IDR_IMAGE_BTN_BLOG_HOVER IMAGE                   "gfx\\btn_blog_hover.png"
 IDR_IMAGE_BTN_SUPPORT_HOVER IMAGE                   "gfx\\btn_support_hover.png"
 IDR_IMAGE_BTN_REGISTER_HOVER IMAGE                   "gfx\\btn_register_hover.png"
+IDR_IMAGE_BTN_REGISTER_NEW_HOVER IMAGE                   "gfx\\btn_register_new_hover.png"
+IDR_IMAGE_BTN_VALIDATE_HOVER IMAGE                   "gfx\\btn_validate_hover.png"
+IDR_IMAGE_BTN_GETSERIAL_HOVER IMAGE                   "gfx\\btn_get_serial_hover.png"
 IDR_IMAGE_BTN_YOUTUBE_HOVER IMAGE                   "gfx\\btn_yt_hover.png"
 IDR_IMAGE_BTN_FACEBOOK_HOVER IMAGE                   "gfx\\btn_fb_hover.png"
 IDR_IMAGE_BTN_TWITTER_HOVER IMAGE                   "gfx\\btn_t_hover.png"
-#endif    // English (U.S.) resources
+IDR_IMAGE_BACK_EXPIRED  IMAGE                   "gfx\\back_expired.png"
+IDR_IMAGE_BTN_GETNEWKEY_HOVER IMAGE                   "gfx\\btn_getnewkey_hover.png"
+IDR_IMAGE_BTN_APPLYNEWKEY_HOVER IMAGE                   "gfx\\btn_applynewkey_hover.png"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_DIALOG_EULA, DIALOG
+    BEGIN
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

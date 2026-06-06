@@ -3,13 +3,11 @@
 #pragma pack(push)
 #pragma pack(1)
 
-#define MAX_POSSIBLE_PLAYERS	128
-
-#define SBNET_MASTER_PORT	35000	// default port for master server
-#define GBNET_CLIENT_PORT	35001	// default port for game browser master server (client requests)
-#define SBNET_MASTER_WATCH_PORT	35005	// watch port for master server
-#define SBNET_SUPER_WATCH_PORT	35006	// watch port for supervisor server
-#define SBNET_GAME_PORT		35010
+#define SBNET_MASTER_PORT	34000	// default port for master server
+#define GBNET_CLIENT_PORT	34001	// default port for game browser master server (client requests)
+#define SBNET_MASTER_WATCH_PORT	34005	// watch port for master server
+#define SBNET_SUPER_WATCH_PORT	34006	// watch port for supervisor server
+#define SBNET_GAME_PORT		34010
 
 enum EGBGameRegion
 {
@@ -21,185 +19,68 @@ enum EGBGameRegion
 };
 
 // MAKE SURE to increase GBGAMEINFO_VERSION after changing following structs
-#define GBGAMEINFO_VERSION 0x00000008
+#define GBGAMEINFO_VERSION 0x00000003
 
 struct GBGameInfo
 {
 	enum EMapId
 	{
 	  MAPID_Editor_Particles = 0,
-	  MAPID_WO_Crossroads, // not used
-	  MAPID_WO_Crossroads16,
-	  MAPID_WO_Grozny,
-	  MAPID_WO_Torn,
-	  MAPID_WO_Jungle02,
-	  MAPID_WO_Shipyard,
-	  MAPID_WO_TestConquest,
-	  MAPID_WO_TestDeathmatch,
-	  MAPID_WO_Nightfall_CQ,
-	  MAPID_BurningSea,
-	  MAPID_WO_Torn_CT,
-	  MAPID_WO_Grozny_CQ,
-	  MAPID_WO_CrossroadsRedux, // not used
-	  MAPID_WO_Inferno,
-      MAPID_wr_dust_old,
-	  MAPID_WO_Wasteland,
-      MAPID_wo_wasteland_classic,
-	  MAPID_WO_EasternBunkerTDM, 
-	  MAPID_WO_Crossroads2, 
-	  MAPID_WO_NightfallPAX, // not used
-	  MAPID_wo_TornTown_tdm,
-	  MAPID_wo_valley, // not used
-	  MAPID_WO_TestSabotage,
-	  MAPID_WO_Citadel_DM,
-      MAPID_WO_Torn_classic,
-      MAPID_wo_dm_shippingyard2,
-      MAPID_wo_crossroadsredux_cq,
-      MAPID_WO_Burning_Sea_classic,
-      MAPID_MC_NukeTownDM,
-      MAPID_MC_ForceCity,
+	  MAPID_ServerTest,
+	  MAPID_WZ_Colorado,
 	  // NOTE: do *NOT* add maps inside current IDs, add ONLY at the end
 	  // otherwise current map statistics in DB will be broken
 	  MAPID_MAX_ID,
 	};
 
-	enum EMapType
-	{
-		MAPT_Conquest=0,
-		MAPT_Deathmatch,
-		MAPT_Siege,
-		MAPT_Bomb, 
-	};
-
 	char	name[16];
 	BYTE	mapId;
-	BYTE	mapType;
 	BYTE	maxPlayers;
-	BYTE	minPlayers; // min players to start the game
-	WORD	startTickets;
-	WORD	timeLimit;
-	WORD	respawnDelay; // numRounds in bomb mode
-	BYTE	friendlyFire;
-	BYTE	autoBalance;
-	BYTE	permGameIdx;
-
-	// min/max player level to join this game. not need to pass via command line
-	BYTE	minLevel;
-	BYTE	maxLevel;
-
-	// game region
-	BYTE	region;
+	BYTE	flags;		// some game flags
+	DWORD	gameServerId;	// unique server ID in our DB
+	BYTE	region;		// game region
 	
 	GBGameInfo()
 	{
-		sprintf_s(
-		  name,
-		  sizeof(name),
-		  "g%08X",
-		  static_cast<unsigned int>(reinterpret_cast<ULONG_PTR>(this) & 0xFFFFFFFFu)
-		);
-
-		mapId = 0xFF;
-		mapType = 0xFF;
-		maxPlayers = 0;
-		minPlayers = 0;
-		startTickets = 100;
-		timeLimit = 0;
-		respawnDelay = 0;
-		friendlyFire = 0;
-		autoBalance = 0;
-		permGameIdx = 0;
-		minLevel = 0;
-		maxLevel = 99;
-		region = GBNET_REGION_Unknown;
+	  sprintf(name, "g%08X", this);
+	  mapId = 0xFF;
+	  maxPlayers = 0;
+	  flags = 0;
+	  gameServerId = 0;
+	  region = GBNET_REGION_Unknown;
 	}
 	
 	bool IsValid() const
 	{
 	  if(mapId == 0xFF) return false;
-	  if(mapType == 0xFF) return false;
 	  if(maxPlayers == 0) return false;
-	  if(minPlayers == 0) return false;
-	  if(timeLimit == 0) return false;
-	  if(respawnDelay == 0) return false;
+	  if(gameServerId == 0) return false;
 	  return true;
 	}
 	
-	bool FromString(const char* arg)
+	bool FromString(const char* arg) 
 	{
-		int v[13];
-
-		int args = sscanf_s(
-		  arg,
-		  "%d %d %d %d %d %d %d %d %d %d %d %d %d",
-		  &v[0],
-		  &v[1],
-		  &v[2],
-		  &v[3],
-		  &v[4],
-		  &v[5],
-		  &v[6],
-		  &v[7],
-		  &v[8],
-		  &v[9],
-		  &v[10],
-		  &v[11],
-		  &v[12]
-		);
-
-		if(args != 13)
-			return false;
-
-		mapId        = static_cast<BYTE>(v[0]);
-		maxPlayers   = static_cast<BYTE>(v[1]);
-		timeLimit    = static_cast<WORD>(v[2]);
-		respawnDelay = static_cast<WORD>(v[3]);
-		friendlyFire = static_cast<BYTE>(v[4]);
-		autoBalance  = static_cast<BYTE>(v[5]);
-		permGameIdx  = static_cast<BYTE>(v[6]);
-		mapType      = static_cast<BYTE>(v[7]);
-		minPlayers   = static_cast<BYTE>(v[8]);
-		region       = static_cast<BYTE>(v[9]);
-		minLevel     = static_cast<BYTE>(v[10]);
-		maxLevel     = static_cast<BYTE>(v[11]);
-		startTickets = static_cast<WORD>(v[12]);
-
-		return true;
+	  int v[14];
+	  int args = sscanf(arg, "%d %d %d %d %d", 
+	    &v[0], &v[1], &v[2], &v[3], &v[4]);
+	  if(args != 5) return false;
+	  
+	  mapId         = (BYTE)v[0];
+	  maxPlayers    = (BYTE)v[1];
+	  flags         = (BYTE)v[2];
+	  gameServerId  = (DWORD)v[3];
+	  region        = (BYTE)v[4];
+	  return true;
 	}
-
+	
 	void ToString(char* arg) const
 	{
-		sprintf_s(
-		  arg,
-		  128,
-		  "%u %u %u %u %u %u %u %u %u %u %u %u %u",
-		  static_cast<unsigned int>(mapId),
-		  static_cast<unsigned int>(maxPlayers),
-		  static_cast<unsigned int>(timeLimit),
-		  static_cast<unsigned int>(respawnDelay),
-		  static_cast<unsigned int>(friendlyFire),
-		  static_cast<unsigned int>(autoBalance),
-		  static_cast<unsigned int>(permGameIdx),
-		  static_cast<unsigned int>(mapType),
-		  static_cast<unsigned int>(minPlayers),
-		  static_cast<unsigned int>(region),
-		  static_cast<unsigned int>(minLevel),
-		  static_cast<unsigned int>(maxLevel),
-		  static_cast<unsigned int>(startTickets)
-		);
-	}
-};
-
-// MAKE SURE to increase GBGAMEINFO_VERSION
-struct GBUserInfo
-{
-	BYTE	teamId;
-	DWORD	CustomerID;
-	char	gbUserName[16];
-	
-	GBUserInfo()
-	{
-	  gbUserName[0] = 0;
+	  sprintf(arg, "%d %d %d %d %d", 
+	    mapId,
+	    maxPlayers,
+	    flags,
+	    gameServerId,
+	    region);
 	}
 };
 

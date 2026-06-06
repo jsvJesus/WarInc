@@ -31,7 +31,10 @@ public:
 	float	 		MeshLODDistSq[ NUM_LODS - 1 ];
 	r3dColor24		m_ObjectColor;
 	int				m_HitPoints;
-	DamageLibEntry*	m_pDamageLibEntry ;
+	DamageLibEntry*	m_pDamageLibEntry;
+
+	int				m_FillGBufferTarget;
+
 
 public:
 	MeshGameObject();
@@ -51,7 +54,7 @@ public:
 
 	virtual void		UpdateDestructionData();
 
-	std::string			GetDestructionKey() const ;
+	std::string			GetMeshLibKey() const ;
 
 	virtual r3dMesh*GetObjectMesh() { return MeshLOD[ 0 ] ; };
 	
@@ -88,6 +91,10 @@ public:
 	/**	From physics callback object. */
 	virtual r3dMaterial * GetMaterial(uint32_t faceID);
 
+	void				OnDrawDistanceChanged();
+
+	virtual	void		OnFinishedLoadingMeshes();
+
 protected:
 	r3dMesh* ( & GetPreferredMeshLODSet() ) [ NUM_LODS ] ;
 	BOOL DoLoad(	r3dMesh* (TargetLODs)[ NUM_LODS ],
@@ -103,8 +110,6 @@ R3D_FORCEINLINE r3dMesh* ( & MeshGameObject::GetPreferredMeshLODSet() ) [ NUM_LO
 		return MeshLOD ;
 }
 
-extern r3dMesh * gob_MeshFactoryCache[2048];
-
 typedef r3dTL::TArray< r3dPoint3D > Positions ;
 
 extern Positions gDEBUG_DrawPositions ;
@@ -116,5 +121,15 @@ void		r3dProcessReleasedMeshes() ;
 void		r3dFlushReleasedMeshes() ;
 
 void	r3dUpdateMeshMaterials();
+
+struct MeshObjDeferredHighlightRenderable : MeshDeferredHighlightRenderable
+{
+	typedef MeshDeferredHighlightRenderable ParentType;
+
+	void Init( r3dMesh* mesh, MeshGameObject* parent );
+	static void Draw( Renderable* RThis, const r3dCamera& Cam );
+
+	MeshGameObject* Parent;
+};
 
 #endif	// __PWAR_OBJ_MESH_H

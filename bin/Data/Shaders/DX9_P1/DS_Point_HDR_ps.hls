@@ -1,4 +1,27 @@
 //
+sampler AlbedoTex 	: register (s0);
+sampler NormalTex 	: register (s1);
+sampler DepthTex 	: register (s2);
+sampler AuxData	 	: register (s3);
+
+sampler ShadowMap	: register (s4);
+sampler ProjTex		: register (s6);
+
+sampler EnvCubeMap 	: register (s8);
+
+#ifndef DIFFUSE_ONLY
+#define DIFFUSE_ONLY 0
+#endif
+
+#include "DS_Point_IO_ps.hls"
+#include "Lib\LightHelper.hls"
+#include "Lib\SSS_Helper.hls"
+#include "System\Paraboloid.hls"
+
+
+#ifndef SSS_ON
+#define SSS_ON 0
+#endif
 
 #define SHADOW_MODE_NONE 0
 #define SHADOW_MODE_NORMAL 1
@@ -16,67 +39,6 @@
 #define PCF 0
 #endif
 
-#ifdef R3D_DX11
-#include "Lib/DX11_Compat.hlsli"
-
-Texture2D AlbedoTex_Texture : register(t0);
-SamplerState AlbedoTex : register(s0);
-Texture2D NormalTex_Texture : register(t1);
-SamplerState NormalTex : register(s1);
-Texture2D DepthTex_Texture : register(t2);
-SamplerState DepthTex : register(s2);
-Texture2D AuxData_Texture : register(t3);
-SamplerState AuxData : register(s3);
-
-#if SHADOW_MODE == SHADOW_MODE_PARABOLOID || SHADOW_MODE == SHADOW_MODE_SSM
-Texture2D ShadowMap_Texture : register(t4);
-#else
-TextureCube ShadowMap_Texture : register(t4);
-#endif
-
-SamplerState ShadowMap : register(s4);
-TextureCube ProjTex_Texture : register(t6);
-SamplerState ProjTex : register(s6);
-TextureCube EnvCubeMap_Texture : register(t8);
-SamplerState EnvCubeMap : register(s8);
-
-#else
-
-sampler AlbedoTex 	: register (s0);
-sampler NormalTex 	: register (s1);
-sampler DepthTex 	: register (s2);
-sampler AuxData	 	: register (s3);
-
-sampler ShadowMap	: register (s4);
-sampler ProjTex		: register (s6);
-
-sampler EnvCubeMap 	: register (s8);
-
-#endif // R3D_DX11
-
-#ifndef DIFFUSE_ONLY
-#define DIFFUSE_ONLY 0
-#endif
-
-#ifndef PBR_ENABLED
-#define PBR_ENABLED 0
-#endif
-
-#ifndef PBR_AMBIENT_SPECULAR
-#define PBR_AMBIENT_SPECULAR 0
-#endif
-
-#include "DS_Point_IO_ps.hls"
-#include "Lib\LightHelper.hls"
-#include "Lib\SSS_Helper.hls"
-#include "System\Paraboloid.hls"
-
-
-#ifndef SSS_ON
-#define SSS_ON 0
-#endif
-
-#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
 float GetCubemapShadow( float3 V, float3 VN )
 {
  float ShadowK;
@@ -193,9 +155,7 @@ float GetCubemapShadow( float3 V, float3 VN )
 #endif
  return ShadowK;
 }
-#endif
 
-#if SHADOW_MODE == SHADOW_MODE_PARABOLOID
 float GetParaboloidShadow( float3 WPos )
 {
 	float3 LPos = mul( float4( WPos, 1 ), vLightViewMtx );
@@ -223,16 +183,11 @@ float GetParaboloidShadow( float3 WPos )
 	
 	return smDepth < abs( PPos.z ) - 0.0005 ? 0 : 1 ;
 }
-#endif
 
 float4 main(float4 PPos 	: TEXCOORD0, 
 			float3 WPos		: TEXCOORD1,
 			float2 SPos		: TEXCOORD2
-#ifdef R3D_DX11
-	) : SV_Target
-#else
 	) : COLOR
-#endif
 {
  float invFadeDistance = vLightDistanceParams.x;
  float startFadeMulInvFadeDistance = vLightDistanceParams.y;
@@ -266,7 +221,7 @@ float4 main(float4 PPos 	: TEXCOORD0,
 #ifdef USE_PROJ_MAP
  half3 projMult = texCUBE( ProjTex, mul( -(half3)VN, (half3x3)mLightMtx ) ).rgb;
 #else
- float3 projMult = 1.0;
+ half3 projMult = 1.0h;
 #endif
 
 float3 ViewVec = normalize(Cam - RealPos.xyz);
@@ -313,58 +268,6 @@ half Thickness = 1-auxData.b ;
  float4 linearColor = Color;
 
 
-	// Shadow calculation (shared by both paths)
-	float ShadowK = 1.0;
-
-#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
-	ShadowK = GetCubemapShadow( V, VN );
-#elif SHADOW_MODE == SHADOW_MODE_PARABOLOID
-	ShadowK = GetParaboloidShadow( RealPos );
-#elif SHADOW_MODE == SHADOW_MODE_SSM
-	ShadowK = tex2Dproj( ShadowMap, PPos );
-#endif
-
-
-if (PBR_ENABLED)
-{
-
-	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);
-	float metalness = MetalnessMap;
-	float3 baseColor = TexCol.rgb;
-
-	float3 N = Normal.rgb;
-	float3 V = ViewVec;
-	float3 L = VN;
-	float NdotL = saturate(dot(N, L));
-
-	PBR_LightParams pbr;
-	pbr.N = N;
-	pbr.V = V;
-	pbr.L = L;
-	pbr.baseColor = baseColor;
-	pbr.metalness = metalness;
-	pbr.roughness = roughness;
-	pbr.lightColor = linearColor.rgb;
-	pbr.attenuation = AttnDist;
-	pbr.NdotL = NdotL;
-
-	#ifdef R3D_DX11
-    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap_Texture, EnvCubeMap, 7.0);
-    #else
-    	float4 PBRColor = PBR_CalcLightingWithRefl(pbr, EnvCubeMap, 7.0);
-    #endif
-
-	float4 FinalColor;
-	FinalColor.rgb = (PBRColor.rgb + AddVal.rgb) * ShadowK;
-	FinalColor.rgb = lerp(FinalColor.rgb, float3(0,0,0), SelfIllum);
-	FinalColor.a = 0;
-
-	return FinalColor;
-
-} 
-else // legacy Blinn-Phong
-{
-
 	light_Params  DLight;
 
 	DLight.vLight 		= VN;
@@ -394,11 +297,23 @@ else // legacy Blinn-Phong
 
 
 
-	float4 FinalColor;
+ float ShadowK = 1.0;
+
+
+#if SHADOW_MODE == SHADOW_MODE_NORMAL || SHADOW_MODE == SHADOW_MODE_NORMAL_PCF
+ ShadowK = GetCubemapShadow( V, VN );
+#elif SHADOW_MODE == SHADOW_MODE_PARABOLOID
+ ShadowK = GetParaboloidShadow( RealPos );
+#elif SHADOW_MODE == SHADOW_MODE_SSM
+ ShadowK = tex2Dproj( ShadowMap, PPos );
+#endif
+
+
+ float4 FinalColor;
 
 #if DIFFUSE_ONLY
-	FinalColor.rgb = DiffuseColor* TexCol;
-	FinalColor.rgb = lerp (FinalColor.rgb, float3(0,0,0),MetalnessMap); 
+ FinalColor.rgb = DiffuseColor* TexCol;
+ FinalColor.rgb = lerp (FinalColor.rgb, float3(0,0,0),MetalnessMap); 
 #else
 
 	float4 FinalDiffuse = DiffuseColor;
@@ -413,9 +328,7 @@ else // legacy Blinn-Phong
 #endif
 
 
-	FinalColor.a = 0;
+ FinalColor.a = 0;
 
-	return FinalColor * ShadowK;
-
-}
+ return FinalColor * ShadowK;
 }

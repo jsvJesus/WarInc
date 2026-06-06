@@ -76,13 +76,13 @@ public:
     Matrix2F            Orient2D;
     Matrix4F            Orient3D;
 
-    Rect<int>           ViewRectOriginal;       // 'full screen' view rectangle.
-    mutable Rect<int>   ViewRect;               // Current viewport rectangle.
+    Rect<int>           ViewRectOriginal;      // 'full screen' view rectangle.
+    mutable Rect<int>   ViewRect;              // Current viewport rectangle.
 
-    mutable Matrix2F    UserView;               // 'Final' concattenated User x View x Orientation matrix (for 2D shapes).
-    mutable Matrix4F    UVPO;                   // 'Final' concattenated User x View x Projection x Orientation matrix (for 3D shapes).
+    mutable Matrix2F    UserView;
+    mutable Matrix4F    UVPO;
 
-    mutable Matrix4F    ViewRectCompensated3D;  // Matrix compensating for cullrect changes (reduced sized viewports).
+    mutable Matrix4F    ViewRectCompensated3D; // Matrix compensating for cullrect changes.
 
     mutable bool        UVPOChanged;
     bool                OrientationSet;
@@ -93,12 +93,28 @@ public:
 
     HAL*                pHAL;
 
-    MatrixState(HAL* phal);
-    MatrixState();
+    MatrixState(HAL* phal) : UVPOChanged(0), OrientationSet(0), S3DDisplay(StereoCenter), pHAL(phal)
+    { }
 
-    const Matrix4F&     GetUVP() const;
-    const Matrix4F&     GetUVP( const Rect<int> & viewRect ) const;
-    virtual Matrix2F&   GetFullViewportMatrix();
+    MatrixState() : UVPOChanged(0), OrientationSet(0), S3DDisplay(StereoCenter), pHAL(NULL)
+    { }
+
+    const Matrix4F& GetUVP() const
+    {
+        recalculateUVPOC();
+        return UVPO;
+    }
+
+    const Matrix4F& GetUVP( const Rect<int> & viewRect ) const
+    {
+        if ( viewRect != ViewRect )
+        {
+            ViewRect = viewRect;
+            UVPOChanged = true;
+        }
+        recalculateUVPOC();
+        return UVPO;
+    }
 
     virtual void        SetUserMatrix(const Matrix2F& user);
     virtual void        SetViewportMatrix(const Matrix2F& vp);
@@ -115,7 +131,6 @@ protected:
     void                getStereoProjectionMatrix(Matrix4F *left, Matrix4F *right, const Matrix4F &original, float screenDist, float factor = 1.0f) const;
     const               Matrix4F& updateStereoProjection(float factor = 1.0f) const;
 
-    Matrix2F            FullViewportMVP;        // MVP for a 2D quad to fill the entire viewport.
 };
 
 
@@ -362,14 +377,14 @@ public:
 
 protected:
 
-    // initHAL - a platform-specific function provided in every back end. Must be 
-    // called before initialization. The base class implementation does very basic 
-    // initialization.
-    virtual bool initHAL(const HALInitParams& params);
+    // initHAL - a non-virtual platform-specific function provided in every
+    // back end. Must be called before initialization. The base class implementation
+    // does very basic initialization.
+    bool        initHAL(const HALInitParams& params);
 
     // Platform-specific function called to shutdown an initialized HAL;
     // implemented in every back-end.
-    virtual bool shutdownHAL();
+    bool        shutdownHAL();
 
 public:
 
@@ -384,7 +399,6 @@ public:
     // must always be called around BeginScene/EndScene.
     virtual bool        BeginFrame();
     virtual void        EndFrame();
-    virtual void        FinishFrame();
 
     // Flush performs all queued rendering. This must be called for any rendering results
     // to be displayed (generally before Present is called). It is called automatically from
@@ -414,9 +428,6 @@ public:
     // Set "User" matrix that is applied to shift the view just before viewport.
     // Should be called before BeginDisplay.
     virtual void        SetUserMatrix(const Matrix& m) { Matrices->SetUserMatrix(m); }
-
-    // Caclulates the 2D view/projection matrix, given a view rectangle, and a window offset.
-    virtual void        CalcHWViewMatrix(unsigned vpFlags, Matrix* pmatrix, const Rect<int>& viewRect, int dx, int dy);
 
     // Get the matrix used to adjust the viewport. The inverse of this is useful for translating
     // input mouse/touch position.
@@ -475,8 +486,11 @@ public:
     // Destroys the default render targets.
     virtual void    destroyRenderBuffers();
 
-	// Allocates a PrimitiveFill initialized with the given data.
-    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data);    
+    // Creates / Destroys mesh and DP data 
+
+    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data) = 0;    
+
+
 
     // Most platforms do not require the prepass step (except X360/Wii), their HALs override this function. 
     // Otherwise, if both passes are requested at once, (and prepass is not required), the prepass rendering 
@@ -526,7 +540,6 @@ public:
         BlendFactor_SRCALPHA,
         BlendFactor_INVSRCALPHA,
         BlendFactor_DESTCOLOR,
-        BlendFactor_INVDESTCOLOR,
         BlendFactor_Count
     };
     struct BlendModeDescriptor
@@ -582,6 +595,10 @@ public:
     virtual void        DrawablePaletteMap( Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
                                             unsigned channelMask, const UInt32* values) 
                         { SF_UNUSED5( tex, texgen, mvp, channelMask, values ); }
+    virtual void        DrawableThreshold(Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                          DrawableImage::OperationType op, UInt32 threshold, UInt32 color, 
+                                          UInt32 mask, bool copySource) 
+                        { SF_UNUSED8( tex, texgen, mvp, op, threshold, color, mask, copySource); }
     virtual void        DrawableCopyback( Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen ) 
                         { SF_UNUSED3(tex, mvp, texgen); }
 
@@ -647,13 +664,26 @@ public:
     { Matrices->S3DDisplay = sDisplay;  Matrices->UVPOChanged = 1; SF_UNUSED(setstate); }
 
     // Pushes a 3D view matrix onto the stack when rendering.  Generally used along with 3D perspective.
-    void PushView3D(const Matrix3F &m);
+    void PushView3D(const Matrix3F &m) { Matrices->View3D = m; Matrices->UVPOChanged = 1; ViewMatrix3DStack.PushBack(m); }
+
     // Pushes a 3D projection matrix onto the stack when rendering.  Generally used for 3D perspective.
-    void PushProj3D(const Matrix4F &m);
+    void PushProj3D(const Matrix4F &m) { Matrices->Proj3D = m; Matrices->UVPOChanged = 1; ProjectionMatrix3DStack.PushBack(m); }
+
     // Restore previous 3D View matrix.
-    void PopView3D();
+    void PopView3D() 
+    { 
+        ViewMatrix3DStack.PopBack(); 
+        Matrices->View3D = ViewMatrix3DStack.GetSize() ? ViewMatrix3DStack.Back() : Matrix3F::Identity;  
+        Matrices->UVPOChanged = 1;  
+    }
+
     // Restore previous 3D projection matrix.
-    void PopProj3D();
+    void PopProj3D() 
+    { 
+        ProjectionMatrix3DStack.PopBack(); 
+        Matrices->Proj3D = ProjectionMatrix3DStack.GetSize() ? ProjectionMatrix3DStack.Back() : Matrix4F::Identity;  
+        Matrices->UVPOChanged = 1; 
+    }
 
     void SetFullViewRect(const Rect<int> &r) { Matrices->ViewRectOriginal = r; Matrices->UVPOChanged = 1; }
 
@@ -740,9 +770,6 @@ protected:
     // By default, always return true. Platforms can override this if they have conditional support
     // for filters.
     virtual bool shouldRenderFilters(const FilterPrimitive*) const { return true; }
-
-    // Simply sets a quad vertex buffer and draws (uniforms, etc, need to be set already).
-    virtual void drawScreenQuad() = 0;
 
 
     unsigned                 HALState;       // See HALStateFlags above

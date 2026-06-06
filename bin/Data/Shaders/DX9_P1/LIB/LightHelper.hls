@@ -1,12 +1,7 @@
 
 
-#ifdef R3D_DX11
-#include "Lib/DX11_Compat.hlsli"
-#endif
-#include "Lib/PBR_Helper.hlsli"
-
- float4 fresnelReflectance ( float Dot, float4 CSpec ) {
-           return CSpec+(1.0-CSpec)*pow(1.0-Dot,5.0)*CSpec;
+ half4 fresnelReflectance ( half Dot, half4 CSpec ) {
+           return CSpec+(1.h-CSpec)*pow(1.h-Dot,5.h)*CSpec;
 
     }
 
@@ -32,25 +27,25 @@ struct light_Params
 	float3 vLight;		// Direction TO THE  light source
 	float3 vNormal;		// Normal
 	float3 vEyeVec;		
-	float4  vLightColor;
-	float   vDistanceAttn;	// distance attenuation
-	float  vPower;
+	half4  vLightColor;
+	half   vDistanceAttn;	// distance attenuation
+	half  vPower;
 };
 
 
-float4 light_CalcSpecular(light_Params Param)
+half4 light_CalcSpecular(light_Params Param)
 {
-  float3 vhalf = normalize(Param.vEyeVec + Param.vLight);
+  half3 vhalf = normalize(Param.vEyeVec + Param.vLight);
 
-  float ViewDot = dot(Param.vNormal.rgb, vhalf);
+  half ViewDot = dot(Param.vNormal.rgb, vhalf);
 
-  float Power = pow(2.0, 1.0+Param.vPower*10.0);
+  half Power = pow(2.0h, 1.0h+Param.vPower*10.0h);
 
-  float SpecularPower = pow(ViewDot, Power );
+  half SpecularPower = pow(ViewDot, Power );
 
-  float EnergyConservation = (Power+2.0)/(2.0*3.1415926);
+  half EnergyConservation = (Power+2.h)/(2.h*3.1415926h);
 
-  float Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.01f;
+  half Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.01f;
   Dim = saturate(Dim);
 
   float base = 1.0f - dot(Param.vEyeVec,normalize(vhalf));//Param.vNormal.rgb);//vhalf);
@@ -65,140 +60,12 @@ float4 light_CalcSpecular(light_Params Param)
 
 
 
-float4 light_CalcDiffuse(light_Params Param)
+half4 light_CalcDiffuse(light_Params Param)
 {
-	float Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.0f;
+	half Dim = dot(normalize(Param.vLight), Param.vNormal.rgb)+0.0f;
 //	float Dim = 0.5f + 0.5f*(dot(normalize(Param.vLight), Param.vNormal.rgb));
 	Dim = saturate(Dim);
 
 	return Dim * Param.vDistanceAttn * Param.vLightColor;
 }
-
-
-// ═══════════════════════════════════════════════════════════════
-// PBR Lighting (GGX + Smith + Fresnel)
-// ═══════════════════════════════════════════════════════════════
-
-#ifndef PBR_ENABLED
-#define PBR_ENABLED 0
-#endif
-
-#if PBR_ENABLED
-
-#include "Lib/PBR_Helper.hlsli"
-
-#ifndef PBR_AMBIENT_SPECULAR
-#define PBR_AMBIENT_SPECULAR 0
-#endif
-
-struct PBR_LightParams
-{
-	float3 N;
-	float3 V;
-	float3 L;
-	float3 baseColor;
-	float  metalness;
-	float  roughness;
-	float3 lightColor;
-	float  attenuation;
-	float  NdotL;
-};
-
-float4 PBR_CalcLighting(in PBR_LightParams p)
-{
-	float3 diffuse;
-	float3 specular;
-
-	PBR_Params brdf;
-	brdf.N = p.N;
-	brdf.V = p.V;
-	brdf.L = p.L;
-	brdf.baseColor = p.baseColor;
-	brdf.metalness = p.metalness;
-	brdf.roughness = p.roughness;
-	brdf.lightColor = p.lightColor;
-	brdf.NdotL = p.NdotL;
-
-	PBR_Evaluate(brdf, diffuse, specular);
-
-	float3 result = (diffuse + specular) * p.attenuation;
-	return float4(result, 0.0f);
-}
-
-#ifdef R3D_DX11
-
-float4 PBR_CalcLightingWithRefl(
-	in PBR_LightParams p,
-	in TextureCube EnvCube_Texture,
-	in SamplerState EnvCube,
-	in float maxMip)
-{
-	float3 diffuse;
-	float3 specular;
-
-	PBR_Params brdf;
-	brdf.N = p.N;
-	brdf.V = p.V;
-	brdf.L = p.L;
-	brdf.baseColor = p.baseColor;
-	brdf.metalness = p.metalness;
-	brdf.roughness = p.roughness;
-	brdf.lightColor = p.lightColor;
-	brdf.NdotL = p.NdotL;
-
-	PBR_Evaluate(brdf, diffuse, specular);
-
-	float3 iblDiff = PBR_IBL_Diffuse(p.N, p.baseColor, p.metalness, EnvCube_Texture, EnvCube);
-	float3 iblSpec = PBR_IBL_Specular(p.N, p.V, p.baseColor, p.metalness, p.roughness, EnvCube_Texture, EnvCube, maxMip);
-
-	float3 result = (diffuse + specular) * p.attenuation;
-
-#if PBR_AMBIENT_SPECULAR
-	result += iblDiff * 0.3f + iblSpec;
-#else
-	result += iblDiff * 0.15f;
-#endif
-
-	return float4(result, 0.0f);
-}
-
-#else
-
-float4 PBR_CalcLightingWithRefl(
-	in PBR_LightParams p,
-	in samplerCUBE EnvCube,
-	in float maxMip)
-{
-	float3 diffuse;
-	float3 specular;
-
-	PBR_Params brdf;
-	brdf.N = p.N;
-	brdf.V = p.V;
-	brdf.L = p.L;
-	brdf.baseColor = p.baseColor;
-	brdf.metalness = p.metalness;
-	brdf.roughness = p.roughness;
-	brdf.lightColor = p.lightColor;
-	brdf.NdotL = p.NdotL;
-
-	PBR_Evaluate(brdf, diffuse, specular);
-
-	float3 iblDiff = PBR_IBL_Diffuse(p.N, p.baseColor, p.metalness, EnvCube);
-	float3 iblSpec = PBR_IBL_Specular(p.N, p.V, p.baseColor, p.metalness, p.roughness, EnvCube, maxMip);
-
-	float3 result = (diffuse + specular) * p.attenuation;
-
-#if PBR_AMBIENT_SPECULAR
-	result += iblDiff * 0.3f + iblSpec;
-#else
-	result += iblDiff * 0.15f;
-#endif
-
-	return float4(result, 0.0f);
-}
-
-#endif
-
-#endif
 

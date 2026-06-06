@@ -3,8 +3,6 @@
 #include <intrin.h>
 #include <IPTypes.h>
 #include <iphlpapi.h>
-#include <winternl.h>
-
 #pragma comment(lib, "Iphlpapi.lib")
 
 #include "HWInfo.h"
@@ -193,23 +191,9 @@ void CHWInfo::CheckIfCapsOk(const D3DCAPS9& caps)
 
 void CHWInfo::GetOSInfo()
 {
-  OSVERSIONINFOEXW osvi;
-  ZeroMemory(&osvi, sizeof(osvi));
+  OSVERSIONINFO osvi = {0};
   osvi.dwOSVersionInfoSize = sizeof(osvi);
-
-  HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-
-  if(ntdll)
-  {
-    typedef LONG (WINAPI* RtlGetVersionFunc)(PRTL_OSVERSIONINFOW);
-    RtlGetVersionFunc RtlGetVersionPtr = (RtlGetVersionFunc)GetProcAddress(ntdll, "RtlGetVersion");
-
-    if(RtlGetVersionPtr)
-    {
-      RtlGetVersionPtr((PRTL_OSVERSIONINFOW)&osvi);
-      sprintf(OSVersion, "%lu.%lu.%lu", osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
-      return;
-    }
-  }
-  sprintf(OSVersion, "0.0.0");   
+  GetVersionEx(&osvi);
+  
+  sprintf(OSVersion, "%d.%d.%d", osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
 }

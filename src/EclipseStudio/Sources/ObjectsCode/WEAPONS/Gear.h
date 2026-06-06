@@ -6,7 +6,7 @@
 #endif
 
 #include "..\..\GameCode\UserProfile.h"
-#include "WeaponConfig.h"
+#include "GearConfig.h"
 
 class Gear
 {
@@ -15,13 +15,11 @@ public:
 	Gear(const GearConfig* conf);
 	~Gear();
 
-	void Reset();
-
 	r3dMesh*	getModel(bool firstPersonModel) const 
 	{
 		// always load regular model, as we need it in FPS mode too
 		r3dMesh* res = m_pConfig->getMesh();
-		if(firstPersonModel && (m_pConfig->category == storecat_Characters || m_pConfig->category == storecat_Heroes)) // only body/heroes have FPS models, armor,heads,etc isn't rendered in fps mode
+		if(firstPersonModel && (m_pConfig->category == storecat_HeroPackage)) // only body/heroes have FPS models, armor,heads,etc isn't rendered in fps mode
 		{
 			r3dMesh* fres = m_pConfig->getFirstPersonMesh();
 			if(fres)

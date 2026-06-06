@@ -1,75 +1,49 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
+#include "fmod/SoundSys.h"
+
 #include "APIScaleformGfx.h"
 
 #undef SetStreamSourceFreq
 
-#ifdef SetRenderTarget
-#undef SetRenderTarget
-#endif
-
-#ifdef GetRenderTarget
-#undef GetRenderTarget
-#endif
-
-#ifdef SetDepthStencilSurface
-#undef SetDepthStencilSurface
-#endif
-
-#ifdef GetDepthStencilSurface
-#undef GetDepthStencilSurface
-#endif
-
-#ifdef SetViewport
-#undef SetViewport
-#endif
-
-#ifdef GetViewport
-#undef GetViewport
-#endif
-
-#ifndef SF_D3D_VERSION
-#define SF_D3D_VERSION 9
-#endif
-
 #include "GFx_Kernel.h"
 #include "GFx_Renderer_D3D9.h"
 #include "GFx_FontProvider_Win32.h"
-#include "Render/Renderer2D.h"
+#include "GFX/AS3/AS3_Global.h"
 
+// See r3dRender.h
 #define SetStreamSourceFreq DoSetStreamSourceFreq
 
 #include "Render/ImageFiles/PNG_ImageFile.h"
 #include "Render/ImageFiles/DDS_ImageFile.h"
 
+
 #include "LangMngr.h"
 
-#include "WarIncScaleformLink.h"
+// libs
+#pragma comment(lib, "libpng.lib")
+#pragma comment(lib, "libjpeg.lib")
+#pragma comment(lib, "pcre.lib")
 
-static bool r3dScaleformShouldUseDX9UI()
-{
-	if(!r3dRenderer)
-		return false;
+#ifdef _DEBUG
+#pragma comment(lib, "libgfx_DebugOpt.lib")
+#pragma comment(lib, "libgfx_as3_DebugOpt.lib")
+#pragma comment(lib, "libgfxexpat_DebugOpt.lib")
+#elif defined(FINAL_BUILD)
+#pragma comment(lib, "libgfx_Release.lib")
+#pragma comment(lib, "libgfx_as3_Release.lib")
+#pragma comment(lib, "libgfxexpat_Release.lib")
+//#pragma comment(lib, "libgfx_Shipping.lib")
+//#pragma comment(lib, "libgfx_as3_Shipping.lib")
+//#pragma comment(lib, "libgfxexpat_Shipping.lib")
+#else // RELEASE
+#pragma comment(lib, "libgfx_Release.lib")
+#pragma comment(lib, "libgfx_as3_Release.lib")
+#pragma comment(lib, "libgfxexpat_Release.lib")
+#endif
 
-	if(!r3dRenderer->IsDX9UIEnabled())
-		return false;
-
-	IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
-	if(!dev9)
-		return false;
-
-	return true;
-}
-
-static bool r3dScaleformShouldUseNativeDX11()
-{
-	return r3dRenderer &&
-		!r3dRenderer->GetUseD3D9Present() &&
-		g_r3dDX11.IsInitialized() &&
-		g_r3dDX11.GetDevice() &&
-		g_r3dDX11.GetContext();
-}
+//////////////////////////////////////////////////////////////////////////
 
 void r3dAddUITextureMemoryStats(int w, int h, int d, int mips, D3DFORMAT fmt)
 {
@@ -234,6 +208,177 @@ public:
 	virtual	void Callback(Scaleform::GFx::Movie* pmovie, const char* methodName, const Scaleform::GFx::Value* args, unsigned argCount);
 };
 
+//class r3dGFxImageCreator : public Scaleform::GFx::ImageCreator
+//{
+//public:
+//	virtual Scaleform::Render::Image*  LoadProtocolImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url);
+//	virtual Scaleform::Render::Image*  LoadImageFile(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url);
+//	virtual Scaleform::Render::Image*  LoadExportedImage(const Scaleform::GFx::ImageCreateExportInfo& info, const Scaleform::String& url);
+//	//virtual Scaleform::Render::Image*  CreateImage(const Scaleform::GFx::ImageCreateInfo& info, Scaleform::Render::ImageSource* source);
+//
+//private:
+//	Scaleform::Render::Image* LoadTextureFromFile(r3dFile* src_file); // this fn will close the file!
+//};
+//
+//Scaleform::Render::Image* r3dGFxImageCreator::LoadTextureFromFile(r3dFile* src_file)
+//{
+//	r3d_assert(src_file);
+//
+//	D3DXIMAGE_INFO pInfo;
+//	ZeroMemory(&pInfo, sizeof (pInfo));
+//
+//	uint32_t fileSize = src_file->size;
+//	BYTE* imgData = new BYTE[fileSize+1];
+//	fread(imgData, fileSize, 1, src_file);
+//	fclose(src_file);
+//
+//	HRESULT hr;
+//	hr = D3DXGetImageInfoFromFileInMemory(imgData, fileSize, &pInfo);
+//
+//	Scaleform::Render::ImageFormat gfxFormat = Scaleform::Render::ImageFormat::Image_None;
+//	switch(pInfo.Format) 
+//	{
+//	case D3DFMT_X8R8G8B8: 
+//	case D3DFMT_R8G8B8:   
+//	case D3DFMT_A8R8G8B8: 
+//		// load them as 32bit argb
+//		pInfo.Format = D3DFMT_A8R8G8B8;
+//		gfxFormat    = Scaleform::Render::ImageFormat::Image_R8G8B8A8; 
+//		break;
+//	case D3DFMT_DXT1:     gfxFormat = Scaleform::Render::ImageFormat::Image_DXT1;      break;
+//	case D3DFMT_DXT3:	  gfxFormat = Scaleform::Render::ImageFormat::Image_DXT3;      break;
+//	case D3DFMT_DXT5:	  gfxFormat = Scaleform::Render::ImageFormat::Image_DXT5;      break;
+//	default: 
+//		r3dError("Scaleform: image load callback - texture %s have unsupported format %d for scaleform\n", fname, pInfo.Format);
+//		break;
+//	}
+//
+//	if(gfxFormat == Scaleform::Render::ImageFormat::Image_None) {
+//		delete[] imgData;
+//		return NULL;
+//	}
+//
+//	r3dOutToLog("GFX load tex '%s', width=%d\n", fname, pInfo.Width);
+//
+//	IDirect3DTexture9* pTex = NULL;
+//	hr = D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, imgData, fileSize, pInfo.Width, pInfo.Height, 1, 0, pInfo.Format, D3DPOOL_SYSTEMMEM,
+//		D3DX_DEFAULT, D3DX_DEFAULT, 0x00000000, /*&pInfo*/NULL, NULL, &pTex);
+//
+//	delete[] imgData;
+//
+//	if(hr != D3D_OK) {
+//		r3dOutToLog("img:// callback - can't create texture\n");
+//	}
+//
+//	Scaleform::Render::RawImage* pimage = new Scaleform::Render::RawImage::Create(gfxFormat, pInfo.MipLevels, Scaleform::Render::ImageSize(pInfo.Width, pInfo.Height), 0); 
+//	Scaleform::Render::ImageData* imageData = NULL;
+//	pimage->GetImageData(imageData);
+//	r3d_assert(imageData);
+//
+//	// lock the d3d texture, and copy image data to scaleform class.
+//	// please note, that by some reasons lr.lPitch is invalid for DXT compressed textures. so, we'll using pimage->DataSize instead
+//	D3DLOCKED_RECT lr;
+//	hr = pTex->LockRect(0, &lr, NULL, 0);
+//	Scaleform::Render::ImagePlane& imgPlane = imageData->GetPlaneRef();
+//	r3d_assert(imgPlane.pData);
+//	memcpy(imgPlane.pData, lr.pBits, imgPlane.DataSize); 
+//
+//	// by some weird reason scaleform using abgr, regardless of what it format saying
+//	/*if(pInfo.Format == D3DFMT_A8R8G8B8) 
+//	{
+//		DWORD* bits = (DWORD*)pimage->pData;
+//		for(unsigned int i=0; i<pimage->DataSize/4; i++) {
+//			int a = (bits[i] >> 24) & 0xff;
+//			int r = (bits[i] >> 16) & 0xff;
+//			int g = (bits[i] >> 8 ) & 0xff;
+//			int b = (bits[i]      ) & 0xff;
+//			bits[i] = (a<<24) | (b<<16) | (g<<8) | (r);
+//		}
+//	}*/
+//
+//	pTex->UnlockRect(0);
+//	pTex->Release();
+//
+//	return pimage;
+//}
+//
+//Scaleform::Render::Image* r3dGFxImageCreator::LoadImageFile(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
+//{
+//	R3D_ENSURE_MAIN_THREAD();
+//
+//	r3dOutToLog("GFx::LoadImageFile: requested %s\n", url.ToCStr());
+//
+//	char fname[MAX_PATH];
+//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr());
+//	const char* abs_fname = detect_gfx_absolute_path(fname);
+//	r3dFile* imgf = r3d_open(abs_fname, "rb");
+//	if(!imgf)
+//	{
+//		abs_fname = detect_gfx_absolute_path(url.ToCStr());
+//		imgf = r3d_open(abs_fname, "rb");
+//	}
+//
+//	if(!imgf) {
+//		r3dOutToLog("GFx::LoadImageFile: can't open %s\n", fname);
+//		return NULL;
+//	}
+//
+//	return this::LoadTextureFromFile(imgf);
+//} 
+//
+//Scaleform::Render::Image* r3dGFxImageCreator::LoadProtocolImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
+//{
+//	R3D_ENSURE_MAIN_THREAD();
+//
+//	r3dOutToLog("GFx::LoadImageFile: requested %s\n", url.ToCStr());
+//
+//	if(strnicmp(url.ToCStr(), "img://", 6) != NULL)
+//		return NULL;
+//
+//	char fname[MAX_PATH];
+//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr() + 6);
+//	const char* abs_fname = detect_gfx_absolute_path(fname);
+//	r3dFile* imgf = r3d_open(abs_fname, "rb");
+//	if(!imgf)
+//	{
+//		abs_fname = detect_gfx_absolute_path(url.ToCStr() + 6);
+//		imgf = r3d_open(abs_fname, "rb");
+//	}
+//
+//	if(!imgf) {
+//		r3dOutToLog("GFx::LoadProtocolImage: can't open %s\n", fname);
+//		return NULL;
+//	}
+//
+//	return this::LoadTextureFromFile(imgf);
+//} 
+//
+//Scaleform::Render::Image* r3dGFxImageCreator::LoadExportedImage(const Scaleform::GFx::ImageCreateInfo& info, const Scaleform::String& url)
+//{
+//	R3D_ENSURE_MAIN_THREAD();
+//
+//	r3dOutToLog("GFx::LoadExportedImage: requested %s\n", url.ToCStr());
+//
+//	char fname[MAX_PATH];
+//	sprintf(fname, "%s\\%s", _sGfx_DefaultImagePath, url.ToCStr());
+//	const char* abs_fname = detect_gfx_absolute_path(fname);
+//	r3dFile* imgf = r3d_open(abs_fname, "rb");
+//	if(!imgf)
+//	{
+//		abs_fname = detect_gfx_absolute_path(url.ToCStr());
+//		imgf = r3d_open(abs_fname, "rb");
+//	}
+//
+//	if(!imgf) {
+//		r3dOutToLog("GFx::LoadExportedImage: can't open %s\n", fname);
+//		return NULL;
+//	}
+//
+//	return this::LoadTextureFromFile(imgf);
+//} 
+
+
+
 // user event handler
 class r3dGFxUserEventHandler : public Scaleform::GFx::UserEventHandler
 {
@@ -252,6 +397,9 @@ class TranslatorImpl : public Scaleform::GFx::Translator
 	virtual void Translate(Scaleform::GFx::Translator::TranslateInfo* ptranslateInfo)
 	{
 		const char* instanceName = ptranslateInfo->GetInstanceName();
+		if(strcmp(instanceName, "ChatOutputText")==0) // hack noTranslate
+			return;
+
 		const wchar_t* keyName = ptranslateInfo->GetKey();
 		// check if instance name has $ sign
 		if (instanceName[0] == '$')
@@ -259,16 +407,32 @@ class TranslatorImpl : public Scaleform::GFx::Translator
 			ptranslateInfo->SetResult(gLangMngr.getString(instanceName));
 		}
 		// also check if text value has $ sign, as in some cases it is easier to mark it that way, rather than change instance name in flash
-		else if(keyName[0] == L'$')
+		else if(wcschr(keyName, L'$'))
 		{
-			ptranslateInfo->SetResult(gLangMngr.getString(wideToUtf8(keyName)));
+			wchar_t tmpStrResult[2048] = {0};
+			wchar_t tokenStr[2048] = {0};
+			r3dscpy(tokenStr, keyName);
+			wchar_t* token = wcstok(tokenStr, L" ");
+			while(token != NULL)
+			{
+				if(token[0] == L'$')
+				{
+					wcscat(tmpStrResult, gLangMngr.getString(wideToUtf8(token)));
+				}
+				else
+					wcscat(tmpStrResult, token);
+				token = wcstok(NULL, L" ");
+				if(token != NULL)
+					wcscat(tmpStrResult, L" ");
+			}
+			ptranslateInfo->SetResult(tmpStrResult);
 		}
 		
 		if (instanceName[0] == '%')
 		{
 			ptranslateInfo->SetResultHtml(gLangMngr.getString(instanceName));
 		}
-		// also check if text value has $ sign, as in some cases it is easier to mark it that way, rather than change instance name in flash
+		// also check if text value has % sign, as in some cases it is easier to mark it that way, rather than change instance name in flash
 		else if(keyName[0] == L'%')
 		{
 			ptranslateInfo->SetResultHtml(gLangMngr.getString(wideToUtf8(keyName)));
@@ -279,15 +443,14 @@ class TranslatorImpl : public Scaleform::GFx::Translator
 class APIScaleformGfx : public r3dIResource
 {
 	friend void r3dScaleformReset();
-
 public:
 	Scaleform::GFx::Loader loader;
-	Scaleform::Ptr<Scaleform::Render::D3D9::HAL> RendererHAL9;
-	Scaleform::Ptr<Scaleform::Render::Renderer2D> Renderer;
+	Scaleform::Ptr<Scaleform::Render::D3D9::HAL>  RendererHAL;
+	Scaleform::Ptr<Scaleform::Render::Renderer2D>  Renderer;
 
-	r3dScaleformMovie*		pCurMovie;
-	r3dScaleformMovie*		pKbdCaptureMovie;
-	bool					UseDX9HAL;
+	LPDIRECT3DSTATEBLOCK9   pStateBlock;
+	r3dScaleformMovie*		pCurMovie;		// movie currently being processed
+	r3dScaleformMovie*		pKbdCaptureMovie;	// movie to receive keyboard input
 
 protected:
 	virtual	void		D3DCreateResource();
@@ -300,8 +463,16 @@ public:
 	bool		Create();
 	void		Destroy();
 	void		SetFontLib();
-	Scaleform::Render::HAL* GetHAL() const;
+
+	// ui sounds IDs
+	int			sndMenuBtnClick;
+	int			sndMenuBtnUse;
+	int			sndMenuClose;
+	int			sndMenuOpen;
+	int			sndWeaponAttach;
+	int			sndWeaponQuickChange;
 };
+
 
 APIScaleformGfx*	gAPIScaleformGfx = NULL;
 
@@ -537,35 +708,34 @@ bool r3dScaleformGfxWinProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 APIScaleformGfx::APIScaleformGfx( const r3dIntegrityGuardian& ig ) : 
 r3dIResource( ig ),
+pStateBlock(NULL),
 pCurMovie(NULL),
-pKbdCaptureMovie(NULL),
-UseDX9HAL(false)
+pKbdCaptureMovie(NULL)
 {
 }
 
 APIScaleformGfx::~APIScaleformGfx()
 {
+	r3d_assert(pStateBlock == NULL);
 }
 
 void APIScaleformGfx::D3DCreateResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(RendererHAL9)
-		RendererHAL9->RestoreAfterReset();
+	RendererHAL->RestoreAfterReset();
+
+	// create state block
+	D3D_V( r3dRenderer->pd3ddev->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 }
 
 void APIScaleformGfx::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(RendererHAL9)
-		RendererHAL9->PrepareForReset();
-}
+	SAFE_RELEASE(pStateBlock);
 
-Scaleform::Render::HAL* APIScaleformGfx::GetHAL() const
-{
-	return (Scaleform::Render::HAL*)RendererHAL9.GetPtr();
+	RendererHAL->PrepareForReset();
 }
 
 bool APIScaleformGfx::Create()
@@ -576,69 +746,68 @@ bool APIScaleformGfx::Create()
 	Scaleform::Ptr<r3dGFxFSCommandHandler> fxFSCommandHandler = *new r3dGFxFSCommandHandler();
 	Scaleform::Ptr<r3dGFxExternalInterface> fxEICommandHandler = *new r3dGFxExternalInterface();
 	Scaleform::Ptr<r3dGFxUserEventHandler> fxEventHandler = *new r3dGFxUserEventHandler();
+	//Scaleform::Ptr<r3dGFxImageCreator> fxImageCreator = *new r3dGFxImageCreator();
 	Scaleform::Ptr<r3dGFxLog> fxLog = *new r3dGFxLog();
-	Scaleform::Ptr<Scaleform::GFx::ASSupport> pAS2Support = *new Scaleform::GFx::AS2Support();
+	//Scaleform::Ptr<Scaleform::GFx::ASSupport> pAS2Support = *new Scaleform::GFx::AS2Support();
+	Scaleform::Ptr<Scaleform::GFx::ASSupport> pAS3Support = *new Scaleform::GFx::AS3Support();
 	Scaleform::Ptr<Scaleform::GFx::ImageFileHandlerRegistry> fxImageFileRegistry = *new Scaleform::GFx::ImageFileHandlerRegistry();
 
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::JPEG::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::PNG::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::TGA::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::DDS::FileReader::Instance);
-
 	loader.SetImageFileHandlerRegistry(fxImageFileRegistry);
-	loader.SetAS2Support(pAS2Support);
-	loader.SetFileOpener(fxFileOpener);
+
+
+	//loader.SetAS2Support(pAS2Support);
+	loader.SetAS3Support(pAS3Support);
+	loader.SetFileOpener(fxFileOpener); 
 	loader.SetFSCommandHandler(fxFSCommandHandler);
 	loader.SetExternalInterface(fxEICommandHandler);
 	loader.SetUserEventHandler(fxEventHandler);
+	//loader.SetImageCreator(fxImageCreator);
 	loader.SetLog(fxLog);
+
 
 	Scaleform::Ptr<TranslatorImpl> ptranslator = *new TranslatorImpl();
 	loader.SetTranslator(ptranslator);
 
+	// for dynamic font caching, required for text effects to work
+// 	GFxFontCacheManager::TextureConfig fontCacheConfig; 
+// 	fontCacheConfig.TextureWidth   = 1024; 
+// 	fontCacheConfig.TextureHeight  = 1024; 
+// 	fontCacheConfig.MaxNumTextures = 6; // trying to increase, should help with a bug when stuck on a login page and UI doesn't show up
+// 	fontCacheConfig.MaxSlotHeight  = 48; 
+// 	fontCacheConfig.SlotPadding    = 2; 
+// 	loader.GetFontCacheManager()->SetTextureConfig(fontCacheConfig); 
+// 	loader.GetFontCacheManager()->EnableDynamicCache(true); 
+// 	loader.GetFontCacheManager()->SetMaxRasterScale(1.2f);
+
+	// load font library
 	SetFontLib();
 
+	// For D3D, it is good to override image creator to keep image data,
+	// so that it can be restored in case of a lost device.
 	Scaleform::Ptr<Scaleform::GFx::ImageCreator> fxImageCreator = *new Scaleform::GFx::ImageCreator();
 	loader.SetImageCreator(fxImageCreator);
 
-	UseDX9HAL = r3dScaleformShouldUseDX9UI();
-
-	if(!UseDX9HAL)
+	// Create renderer.
+	RendererHAL = new Scaleform::Render::D3D9::HAL();
+	if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL.GetPtr())))
 	{
-		r3dError("GFx: DX9 UI renderer is required\n");
+		r3dError("GFx: Failed to create Renderer2D\n");
 		return false;
 	}
 
-	IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
+	// create state block
+	D3D_V( r3dRenderer->pd3ddev->CreateStateBlock( D3DSBT_ALL, &pStateBlock ) );
 
-	RendererHAL9 = *new Scaleform::Render::D3D9::HAL();
+	Scaleform::Render::D3D9::HALInitParams initParams(r3dRenderer->pd3ddev, r3dRenderer->d3dpp, Scaleform::Render::D3D9::HALConfig_NoSceneCalls);
+	RendererHAL->InitHAL(initParams);	
 
-	if(!RendererHAL9)
-	{
-		r3dError("GFx: Failed to create D3D9 HAL\n");
-		return false;
-	}
+	//D3DCreateResource();
 
-	Scaleform::Render::D3D9::HALInitParams initParams(
-		dev9,
-		r3dRenderer->d3dpp,
-		0
-	);
-
-	if(!RendererHAL9->InitHAL(initParams))
-	{
-		r3dError("GFx: D3D9 HAL InitHAL failed\n");
-		return false;
-	}
-
-	if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL9.GetPtr())))
-	{
-		r3dError("GFx: Failed to create D3D9 Renderer2D\n");
-		return false;
-	}
-
-	r3dOutToLog("GFx: initialized DX9 UI renderer\n");
-
+	// PT: fucks up loading of Cyrillic fonts (crash inside of scaleform)
 	if(0)
 	{
 		Scaleform::Ptr<Scaleform::GFx::FontProviderWin32> fontProvider = *new Scaleform::GFx::FontProviderWin32(::GetDC(0));
@@ -648,16 +817,23 @@ bool APIScaleformGfx::Create()
 	void RegisterMsgProc (Win32MsgProc_fn);
 	RegisterMsgProc ( r3dScaleformGfxWinProc );
 
-#ifdef FINAL_BUILD
-#else
+#ifndef FINAL_BUILD
 #ifdef SF_AMP_SERVER
 	Scaleform::AmpServer::GetInstance().SetListeningPort(7534);
-	Scaleform::AmpServer::GetInstance().SetConnectedApp("WarInc");
+	Scaleform::AmpServer::GetInstance().SetConnectedApp("WarZ");
 	Scaleform::AmpServer::GetInstance().OpenConnection();
-#endif
-#endif
+#endif //SF_AMP_SERVER
+#endif // FINAL_BUILD
 
-	return true;
+	// load UI sounds
+	sndMenuBtnClick = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_menu_button_click");
+	sndMenuBtnUse = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_menu_button_use");
+	sndMenuClose = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_menu_close");
+	sndMenuOpen = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_menu_open");
+	sndWeaponAttach = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_weapon_attach");
+	sndWeaponQuickChange = SoundSys.GetEventIDByPath("Sounds/MainMenu GUI/UI_weapon_quick_change");
+
+	return true;    
 }
 
 void APIScaleformGfx::SetFontLib()
@@ -668,8 +844,9 @@ void APIScaleformGfx::SetFontLib()
 	Scaleform::Ptr<Scaleform::GFx::FontMap> fontMap = *new Scaleform::GFx::FontMap;
 	loader.SetFontMap(fontMap);
 
-	fontMap->MapFont("$WIHUDFontPrimary", "HelveticaNeueLT W1G 57 Cn", Scaleform::GFx::FontMap::MFF_Normal);
-	fontMap->MapFont("$WIHUDFontPrimaryBold", "HelveticaNeueLT W1G 57 Cn", Scaleform::GFx::FontMap::MFF_Bold);
+	fontMap->MapFont("$InfFontPrimary", "Bebas Neue Cyrillic", Scaleform::GFx::FontMap::MFF_Normal);
+	fontMap->MapFont("$InfFontSecondary", "Driver Gothic Pro", Scaleform::GFx::FontMap::MFF_Normal);
+	fontMap->MapFont("$InfFontChat", "Tahoma", Scaleform::GFx::FontMap::MFF_Normal);
 
 	Scaleform::Ptr<Scaleform::GFx::FontLib> fontLib = *new Scaleform::GFx::FontLib;
 	loader.SetFontLib(fontLib);
@@ -691,21 +868,20 @@ void APIScaleformGfx::SetFontLib()
 
 void APIScaleformGfx::Destroy()
 {
-	R3D_ENSURE_MAIN_THREAD();
 
-#ifdef FINAL_BUILD
-#else
+	R3D_ENSURE_MAIN_THREAD();
+#ifndef FINAL_BUILD
 #ifdef SF_AMP_SERVER
 	Scaleform::AmpServer::GetInstance().CloseConnection();
-#endif
-#endif
+#endif //SF_AMP_SERVER
+#endif // FINAL_BUILD
+	
+	SAFE_RELEASE(pStateBlock);
+	//D3DReleaseResource();
 
-	if(RendererHAL9)
-		RendererHAL9->ShutdownHAL();
-
-	Renderer = NULL;
-	RendererHAL9 = NULL;
-	UseDX9HAL = false;
+	// release it here, because of static ptr
+	RendererHAL->ShutdownHAL();
+	RendererHAL = NULL;
 
 	void UnregisterMsgProc (Win32MsgProc_fn);
 	UnregisterMsgProc ( r3dScaleformGfxWinProc );
@@ -719,6 +895,7 @@ pMovie(NULL),
 movieH(0),
 movieW(0)
 {
+	byteSize = 0;
 	NumGfxEvents = 0;
 	ConvertMouseCoords = 0;
 }
@@ -750,6 +927,9 @@ void r3dScaleformMovie::Unload()
 	}
 	NumGfxEvents = 0;
 
+	r3dRenderer->Stats.AddUITexMem( -byteSize );
+	byteSize = 0;
+
 	return;
 }
 
@@ -759,7 +939,7 @@ bool r3dScaleformMovie::Load(const char* fname, bool set_keyboard_focus)
 
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::Load");
 	r3d_assert(gAPIScaleformGfx);
-	r3d_assert(gAPIScaleformGfx->UseDX9HAL);
+	r3d_assert(gAPIScaleformGfx->pStateBlock);
 
 	Unload();
 
@@ -767,11 +947,45 @@ bool r3dScaleformMovie::Load(const char* fname, bool set_keyboard_focus)
 	r3dOutToLog("Loading SWF %s\n", fname);
 #endif
 
+#ifndef FINAL_BUILD
+	struct ReVisit : Scaleform::GFx::MovieDef::ResourceVisitor
+	{
+		ReVisit()
+		{
+			memcount = 0;
+		}
+
+		virtual void    Visit(	Scaleform::GFx::MovieDef* pmovieDef, Scaleform::GFx::Resource* presource,
+								Scaleform::GFx::ResourceId rid, const char* pexportName ) OVERRIDE
+		{
+			if( presource->GetResourceType() == Scaleform::GFx::Resource::RT_Image )
+			{
+				Scaleform::GFx::ImageResource* imgRes = static_cast< Scaleform::GFx::ImageResource* >( presource );
+
+				Scaleform::Render::ImageBase* img = imgRes->GetImage();
+
+				int byteSize = Scaleform::Render::ImageData::GetMipLevelsSize( img->GetFormat(), img->GetSize(), img->GetMipmapCount() );
+
+				memcount += byteSize;
+			}
+		}
+
+		int memcount;
+
+	} revisit ;
+#endif
+
 	if(!(pMovieDef = gAPIScaleformGfx->loader.CreateMovie(fname, Scaleform::GFx::Loader::LoadAll))) 
 	{
 		r3dOutToLog("r3dScaleformMovie::Load() '%s' load failed\n", fname);
 		return false;
 	}
+
+#ifndef FINAL_BUILD
+	pMovieDef->VisitResources( &revisit );
+	byteSize = revisit.memcount;
+	r3dRenderer->Stats.AddUITexMem( byteSize );
+#endif
 
 	if(!(pMovie = pMovieDef->CreateInstance(true))) 
 	{
@@ -805,11 +1019,12 @@ bool r3dScaleformMovie::Load(const char* fname, bool set_keyboard_focus)
 	return true;
 }
 
-void r3dScaleformMovie::SetKeyboardCapture()
+r3dScaleformMovie* r3dScaleformMovie::SetKeyboardCapture()
 {
+	r3dScaleformMovie* prevCapture = gAPIScaleformGfx->pKbdCaptureMovie;
 	gAPIScaleformGfx->pKbdCaptureMovie = this;
 
-	return;
+	return prevCapture;
 }
 
 void r3dScaleformMovie::GetViewport(int* x, int* y, int* w, int* h) const
@@ -868,59 +1083,32 @@ void UpdateImageTextureMatrix(const Scaleform::Render::ImageSize &origSize, cons
 	pti->SetMatrix(origMat);
 }
 
-static Scaleform::GFx::ImageResource* r3dScaleformGetImageResource(Scaleform::GFx::MovieDef* movieDef, const char* resName)
+Scaleform::Render::D3D9::Texture* r3dScaleformMovie::BoundRTToImage(const char* resName, LPDIRECT3DTEXTURE9 pRenderTarget, int RTWidth, int RTHeight)
 {
-	if(!movieDef || !resName)
-		return NULL;
-
-	Scaleform::GFx::Resource* pres = movieDef->GetResource(resName);
+	Scaleform::GFx::Resource*      pres = pMovieDef->GetResource(resName);
+	Scaleform::GFx::ImageResource* pimageRes = 0;
 	if (pres && pres->GetResourceType() == Scaleform::GFx::Resource::RT_Image)
-		return (Scaleform::GFx::ImageResource*)pres;
+		pimageRes = (Scaleform::GFx::ImageResource*)pres;
 
-	return NULL;
-}
 
-static Scaleform::Render::Texture* r3dScaleformSetImageTexture(
-	Scaleform::GFx::ImageResource* pimageRes,
-	Scaleform::Render::Texture* pHWTexture,
-	int RTWidth,
-	int RTHeight)
-{
-	if(!pimageRes || !pHWTexture)
-		return NULL;
+	Scaleform::Render::D3D9::Texture* pHWTexture = NULL;
 
-	Scaleform::Render::ImageBase* pimageOrig = pimageRes->GetImage();
-	if(!pimageOrig)
+	if (pimageRes)
 	{
-		pHWTexture->Release();
-		return NULL;
+		Scaleform::Render::ImageBase* pimageOrig = pimageRes->GetImage();
+		if (pimageOrig)
+		{
+			Scaleform::Render::D3D9::TextureManager* pmanager = (Scaleform::Render::D3D9::TextureManager*)gAPIScaleformGfx->RendererHAL->GetTextureManager();
+			pHWTexture = (Scaleform::Render::D3D9::Texture*)pmanager->CreateTexture( pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
+
+			Scaleform::Ptr<Scaleform::Render::TextureImage> pti = * new Scaleform::Render::TextureImage(Scaleform::Render::Image_R8G8B8, pHWTexture->GetSize(), 0, pHWTexture);
+
+			UpdateImageTextureMatrix(pimageOrig->GetSize(), Scaleform::Render::ImageSize(RTWidth, RTHeight), pti);
+			pimageRes->SetImage(pti);
+		}
 	}
-
-	Scaleform::Ptr<Scaleform::Render::TextureImage> pti =
-		*new Scaleform::Render::TextureImage(pHWTexture->GetImageFormat(), pHWTexture->GetSize(), 0, pHWTexture);
-
-	UpdateImageTextureMatrix(pimageOrig->GetSize(), Scaleform::Render::ImageSize(RTWidth, RTHeight), pti);
-	pimageRes->SetImage(pti);
 
 	return pHWTexture;
-}
-
-Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight)
-{
-#ifndef FINAL_BUILD
-	static int s_logged = 0;
-	if(!s_logged)
-	{
-		r3dOutToLog("GFx: BoundRTToImageDX11 disabled in DX9 UI mode. res=%s size=%dx%d\n",
-			resName ? resName : "",
-			RTWidth,
-			RTHeight
-		);
-		s_logged = 1;
-	}
-#endif
-
-	return NULL;
 }
 
 void r3dScaleformMovie::UpdateTextureMatrices(const char* resName, int RTWidth, int RTHeight)
@@ -949,21 +1137,11 @@ int g_ScaleFormUpdateAndDrawCount ;
 void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 {
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::UpdateAndDraw");
-
 	if(!pMovie)
 		return;
 
-	if(!gAPIScaleformGfx)
-		return;
-
-	if(!gAPIScaleformGfx->GetHAL())
-		return;
-
-	if(!gAPIScaleformGfx->Renderer)
-		return;
-
 #ifndef FINAL_BUILD
-	float updateStart = r3dGetTime();
+	float updateStart = r3dGetTime() ;
 #endif
 
 	gAPIScaleformGfx->pCurMovie = this;
@@ -972,63 +1150,108 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 	Mouse->GetXY(mx, my);
 	mb = Mouse->GetRawMouseData();
 
-	if(ConvertMouseCoords)
+	// translate to local coords
+	if( ConvertMouseCoords )
 	{
-		float VX, VY, VW, VH;
-		r3dRenderer->GetBackBufferViewport(&VX, &VY, &VW, &VH);
+		float VX, VY, VW, VH ;
+		r3dRenderer->GetBackBufferViewport( &VX, &VY, &VW, &VH );
 
-		if(VW > 0.0f && VH > 0.0f)
-		{
-			mx = int((mx - VX) / VW * viewW + 0.5f);
-			my = int((my - VY) / VH * viewH + 0.5f);
-		}
+		mx = int( (mx - VX) / VW * viewW + 0.5f );
+		my = int( (my - VY) / VH * viewH + 0.5f );
 	}
 
 	pMovie->NotifyMouseState(float(mx - viewX), float(my - viewY), mb);
 
+	// Advance time
+	// pt: we need to call Advance exactly at movie's frame rate, otherwise flash onInterval isn't working properly, or sometimes not working at all.
 	float curTime = r3dGetTime();
-
 	if(timeForNextUpdate < curTime)
 	{
-		float frameRate = pMovie->GetFrameRate();
-
-		if(frameRate <= 0.0f)
-			frameRate = 30.0f;
-
-		float delta = curTime - timePrevUpdate;
-		float maxDelta = 1.0f / frameRate;
-
-		if(delta > maxDelta)
-			delta = maxDelta;
-
+		float delta = curTime-timePrevUpdate;
+		if(delta > (1.0f/pMovie->GetFrameRate()))
+			delta = 1.0f/pMovie->GetFrameRate();
 		timePrevUpdate = curTime;
-
 		float timeTillNextTicks = pMovie->Advance(delta, 2, !skipDraw);
 		timeForNextUpdate = curTime + timeTillNextTicks;
-
-		if(timeForNextUpdate < curTime)
+		if (timeForNextUpdate < curTime) // wrap-around check.
 			timeForNextUpdate = curTime;
 	}
 	else
-	{
 		pMovie->Advance(0.0f, 0, !skipDraw);
-	}
 
 	if(!skipDraw)
 	{
-		gAPIScaleformGfx->Renderer->BeginFrame();
+		if(gAPIScaleformGfx->pStateBlock)
+			gAPIScaleformGfx->pStateBlock->Capture();
 
-		if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
-			gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
+		r3dRenderer->Flush();
 
-		gAPIScaleformGfx->Renderer->EndFrame();
+		LPDIRECT3DSURFACE9 pRT = NULL;
+		LPDIRECT3DSURFACE9 pSS = NULL;
+		r3dRenderer->GetRT(0, &pRT);
+		r3dRenderer->GetDSS(&pSS);
+
+		int refCountRT = pRT->AddRef(); refCountRT = pRT->Release();
+		int refCountSS = pSS->AddRef(); refCountSS = pSS->Release();
+
+		static Scaleform::Render::RenderTarget* gfxRT = new Scaleform::Render::RenderTarget(NULL, Scaleform::Render::RBuffer_User, Scaleform::Render::ImageSize((uint32_t)r3dRenderer->ScreenW, (uint32_t)r3dRenderer->ScreenH));
+		static Scaleform::Render::DepthStencilBuffer* gfxDSB = new Scaleform::Render::DepthStencilBuffer(NULL, Scaleform::Render::ImageSize((uint32_t)r3dRenderer->ScreenW, (uint32_t)r3dRenderer->ScreenH));
+
+		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, pRT, gfxDSB, pSS);
+
+		Scaleform::Render::RenderTarget* defRT = gAPIScaleformGfx->RendererHAL->GetDefaultRenderTarget();
+
+		uint32_t numPasses = (r3dRenderer->GetPresentEye() == R3D_STEREO_EYE_MONO ? 1 : 2);
+		for (UINT i = 0; i < numPasses; ++i)
+		{
+			gAPIScaleformGfx->RendererHAL->SetRenderTarget(gfxRT, 1);
+			if (numPasses > 1)
+				r3dRenderer->SetEye(i == 0 ? R3D_STEREO_EYE_LEFT : R3D_STEREO_EYE_RIGHT);
+
+			{
+				gAPIScaleformGfx->Renderer->BeginFrame();
+				if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
+				{
+					gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
+				}
+				gAPIScaleformGfx->Renderer->EndFrame();
+			}
+
+			gAPIScaleformGfx->RendererHAL->SetRenderTarget(defRT, 1);
+		}
+
+		if (numPasses > 1)
+			r3dRenderer->SetEye(R3D_STEREO_EYE_MONO);
+
+		Scaleform::Render::D3D9::RenderTargetData::UpdateData(gfxRT, NULL, gfxDSB, NULL);
+
+		//SAFE_DELETE(gfxRT);
+		//SAFE_DELETE(gfxDSB);
+
+		int refCountRT1 = pRT->AddRef(); refCountRT1 = pRT->Release();
+		int refCountSS1 = pSS->AddRef(); refCountSS1 = pSS->Release();
+
+		SAFE_RELEASE(pRT);
+		SAFE_RELEASE(pSS);
+
+		if(gAPIScaleformGfx->pStateBlock)
+			gAPIScaleformGfx->pStateBlock->Apply();
 	}
 
 	gAPIScaleformGfx->pCurMovie = NULL;
 
+	pMovie->ForceCollectGarbage();
+
 #ifndef FINAL_BUILD
-	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart;
-	g_ScaleFormUpdateAndDrawCount++;
+#ifdef SF_AMP_SERVER
+	SF_AMP_CODE(Scaleform::AmpServer::GetInstance().AdvanceFrame());
+#endif //SF_AMP_SERVER
+#endif // FINAL_BUILD
+
+#ifndef FINAL_BUILD
+	g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart ;
+
+	g_ScaleFormUpdateAndDrawCount ++ ;
 #endif
 
 	return;
@@ -1091,6 +1314,26 @@ void r3dScaleformMovie::OnCommandCallback(const char* command, const char* arg)
 
 void r3dScaleformMovie::OnCommandCallback(const char* methodName, const Scaleform::GFx::Value* args, unsigned argCount)
 {
+	if(strstr(methodName, "eventSoundPlay"))
+	{
+		r3d_assert(argCount==1);
+		const char* soundName = args[0].GetString();
+		if(strcmp(soundName, "menu_click")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndMenuBtnClick, r3dPoint3D(0,0,0));
+		else if(strcmp(soundName, "menu_use")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndMenuBtnUse, r3dPoint3D(0,0,0));
+		else if(strcmp(soundName, "menu_close")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndMenuClose, r3dPoint3D(0,0,0));
+		else if(strcmp(soundName, "menu_open")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndMenuOpen, r3dPoint3D(0,0,0));
+		else if(strcmp(soundName, "weapon_attach")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndWeaponAttach, r3dPoint3D(0,0,0));
+		else if(strcmp(soundName, "weapon_quick_change")==0)
+			SoundSys.PlayAndForget(gAPIScaleformGfx->sndWeaponQuickChange, r3dPoint3D(0,0,0));
+
+		return;
+	}
+
 	for(int i = 0; i < NumGfxEvents; i++)
 	{
 		if(EventHandlers[i].EventName == methodName)

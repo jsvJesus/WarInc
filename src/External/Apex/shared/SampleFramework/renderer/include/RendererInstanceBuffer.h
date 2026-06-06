@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,16 +36,18 @@
 #define RENDERER_INSTANCEBUFFER_H
 
 #include <RendererConfig.h>
-#include "PxSimpleTypes.h"
 #include "RendererInteropableBuffer.h"
 
-class RendererInstanceBufferDesc;
-
-class RendererInstanceBuffer: public RendererInteropableBuffer
+namespace SampleRenderer
 {
-	friend class RendererMesh;
+
+	class RendererInstanceBufferDesc;
+
+	class RendererInstanceBuffer: public RendererInteropableBuffer
+	{
+		friend class RendererMesh;
 	public:
-		typedef enum Semantic
+		enum Semantic
 		{
 			SEMANTIC_POSITION = 0,
 			SEMANTIC_NORMALX,
@@ -53,11 +55,13 @@ class RendererInstanceBuffer: public RendererInteropableBuffer
 			SEMANTIC_NORMALZ,
 			SEMANTIC_VELOCITY_LIFE,// life remain (0-1] is packed into w
 			SEMANTIC_DENSITY,
+			SEMANTIC_UV_OFFSET,
+			SEMANTIC_LOCAL_OFFSET,
 
 			NUM_SEMANTICS
-		};
-		
-		typedef enum Format
+		}_Semantic;
+
+		enum Format
 		{
 			FORMAT_FLOAT1 = 0,
 			FORMAT_FLOAT2,
@@ -65,65 +69,69 @@ class RendererInstanceBuffer: public RendererInteropableBuffer
 			FORMAT_FLOAT4,
 
 			NUM_FORMATS,
-		};
-		
-		typedef enum Hint
+		}_Format;
+
+		enum Hint
 		{
 			HINT_STATIC = 0,
 			HINT_DYNAMIC,
-		};
-	
+		}_Hint;
+
 	public:
-		static physx::PxU32 getFormatByteSize(Format format);
-	
+		static PxU32 getFormatByteSize(Format format);
+
 	protected:
 		RendererInstanceBuffer(const RendererInstanceBufferDesc &desc);
 		virtual ~RendererInstanceBuffer(void);
-		
+
 	public:
 		void release(void) { delete this; }
-		
+
 		Hint   getHint(void) const;
 		Format getFormatForSemantic(Semantic semantic) const;
-		
-		void *lockSemantic(Semantic semantic, physx::PxU32 &stride);
+		PxU32  getMaxInstances(void) const;
+		PxU32  getOffsetForSemantic(Semantic semantic) const;
+
+		void *lockSemantic(Semantic semantic, PxU32 &stride);
 		void  unlockSemantic(Semantic semantic);
-	
+
 		virtual void *lock(void) = 0;
 		virtual void  unlock(void) = 0;
-		virtual physx::PxU32 getStride(void) const { return m_stride; };
+		virtual PxU32 getStride(void) const { return m_stride; };
 	private:
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstInstance) const = 0;
-		virtual void  unbind(physx::PxU32 streamID) const = 0;
-		
+
+		virtual void  bind(PxU32 streamID, PxU32 firstInstance) const = 0;
+		virtual void  unbind(PxU32 streamID) const = 0;
+
 		RendererInstanceBuffer &operator=(const RendererInstanceBuffer &) { return *this; }
-		
+
 	protected:
 		class SemanticDesc
 		{
-			public:
-				Format format;
-				physx::PxU32  offset;
-				bool   locked;
-			public:
-				SemanticDesc(void)
-				{
-					format = NUM_FORMATS;
-					offset = 0;
-					locked = false;
-				}
+		public:
+			Format format;
+			PxU32  offset;
+			bool   locked;
+		public:
+			SemanticDesc(void)
+			{
+				format = NUM_FORMATS;
+				offset = 0;
+				locked = false;
+			}
 		};
-	
+
 	protected:
 		const Hint   m_hint;
-		physx::PxU32 m_maxInstances;
-		physx::PxU32 m_stride;
+		PxU32        m_maxInstances;
+		PxU32        m_stride;
 		SemanticDesc m_semanticDescs[NUM_SEMANTICS];
-	
+
 	private:
 		void        *m_lockedBuffer;
-		physx::PxU32 m_numSemanticLocks;
-};
+		PxU32        m_numSemanticLocks;
+	};
+
+} // namespace SampleRenderer
 
 #endif

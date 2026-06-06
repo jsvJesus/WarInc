@@ -35,7 +35,7 @@
 
 #define BIT(index) (1 << (index))
 
-#ifdef _BIG_ENDIAN
+#ifdef RENDERER_BIG_ENDIAN
 # define htole16(x) ( (((x) & 0x00FF) << 8) | (((x) & 0xFF00) >> 8) )
 # define letoh16(x) htole16(x)
 #else /* little endian */
@@ -212,7 +212,7 @@ void tga_free_buffers(tga_image *img);
 } // extern C
 #endif
 
-#endif /* RENDERER_WINDOWS */
+#endif /* RENDERER_ENABLE_TGA_SUPPORT */
 
 #endif /* !_TARGA_H_ */
 /* vim:set tabstop=4 shiftwidth=4 textwidth=78 expandtab: */

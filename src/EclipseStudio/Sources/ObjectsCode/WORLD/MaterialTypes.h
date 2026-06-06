@@ -28,7 +28,9 @@ struct MaterialType
 
 	DecalEntries	entries;
 	int				footStepsSound;
-	MaterialType(): footStepsSound(-1) {}
+	int				crouchFootstepsSound;
+	int				proneFootstepsSound;
+	MaterialType(): footStepsSound(-1), crouchFootstepsSound(-1), proneFootstepsSound(-1) {}
 };
 
 class MaterialTypes

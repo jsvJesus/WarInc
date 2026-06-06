@@ -1,3 +1,5 @@
 <?xml version="1.0"?>
 <!--Damage Lib-->
-<damage_lib />
+<damage_lib>
+	<entry name="wz_townbuildings:townbuilding_11.sco" destruction_mesh="WZ_TownBuildings/TownBuilding_11.sco" destruction_particles="" has_particles="0" has_sound="0" sound="" hit_points="100" />
+</damage_lib>

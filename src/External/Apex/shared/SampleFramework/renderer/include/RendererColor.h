@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,37 +35,40 @@
 #ifndef RENDERER_COLOR_H
 #define RENDERER_COLOR_H
 
-#include "PsShare.h"
 #include <RendererConfig.h>
-#include "Px.h"
-#include "PxSimpleTypes.h"
 
-class RendererColor
+namespace SampleRenderer
 {
-	public:
-		physx::PxU8 b, g, r, a;
-	
-	public:
-		RendererColor(void);
-		RendererColor(physx::PxU8 r, physx::PxU8 g, physx::PxU8 b, physx::PxU8 a);
-		RendererColor(physx::PxU32 rgba);
-		
-		// switches between RGBA and BGRA.
-		PX_INLINE void swizzleRB(void)
-		{
-			physx::PxU8 t = b;
-			b = r;
-			r = t;
-		}
-};
 
-PX_INLINE RendererColor lerp( const RendererColor& start, const RendererColor& end, float s )
-{
-    return RendererColor(
-        start.r + physx::PxU8(( end.r - start.r ) * s),
-        start.g + physx::PxU8(( end.g - start.g ) * s),
-        start.b + physx::PxU8(( end.b - start.b ) * s),
-        start.a + physx::PxU8(( end.a - start.a ) * s));
-}
+	class RendererColor
+	{
+		public:
+
+			// use the API color format for OpenGL platforms
+#if defined(RENDERER_ENABLE_OPENGL) && !defined(RENDERER_WINDOWS)
+			PxU8 r, g, b, a;
+#else
+			PxU8 b, g, r, a;
+#endif
+
+		public:
+			RendererColor(void);
+			RendererColor(PxU8 r, PxU8 g, PxU8 b, PxU8 a = 255);
+
+			// conversion constructor, format must be 0xAARRGGBB (but alpha is ignored)
+			RendererColor(PxU32 rgba);
+			void swizzleRB(void);
+	};
+
+	PX_INLINE RendererColor lerp( const RendererColor& start, const RendererColor& end, float s )
+	{
+		return RendererColor(
+			start.r + PxU8(( end.r - start.r ) * s),
+			start.g + PxU8(( end.g - start.g ) * s),
+			start.b + PxU8(( end.b - start.b ) * s),
+			start.a + PxU8(( end.a - start.a ) * s));
+	}
+
+} // namespace SampleRenderer
 
 #endif

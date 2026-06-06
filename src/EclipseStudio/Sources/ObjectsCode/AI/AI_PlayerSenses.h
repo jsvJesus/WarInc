@@ -5,12 +5,10 @@
 
 #pragma once
 
-#if ENABLE_ZOMBIES
-
 //////////////////////////////////////////////////////////////////////////
 
 class obj_Zombie;
-class obj_AI_Player;
+class obj_Player;
 
 class PlayerLifeProps
 {
@@ -31,7 +29,7 @@ class PlayerLifeProps
 	//	Smell values
 	float smell;
 
-	obj_AI_Player *owner;
+	obj_Player *owner;
 
 	float GetPlayerRawSmell() const;
 	float GetPlayerRawNoise() const;
@@ -42,15 +40,18 @@ class PlayerLifeProps
 
 public:
 	bool weaponFired;
-	explicit PlayerLifeProps(obj_AI_Player *o);
+	explicit PlayerLifeProps(obj_Player *o);
 	bool DetectByZombie(const obj_Zombie &z, bool &hardLock);
-	bool SaveAISettingsXML();
-	bool LoadAISettingsXML();
+
+	float getPlayerVisibility(); // return from 0 to 1
+	float getPlayerHearRadius(); // return from 0 to 1
 
 	/**	Visualize debug information in editor. */
 #ifndef FINAL_BUILD
 	void DebugVisualizeRanges();
 //	void DebugDrawZombieSenses();
+	bool SaveAISettingsXML();
+	bool LoadAISettingsXML();
 #endif;
 };
 
@@ -78,4 +79,3 @@ void PlayerLifeProps::SerializeAISettingsXML(pugi::xml_node &rootNode)
 
 //////////////////////////////////////////////////////////////////////////
 
-#endif // ENABLE_ZOMBIES

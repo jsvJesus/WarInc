@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,20 +38,39 @@
 #ifndef RENDERER_GRID_SHAPE_H
 #define RENDERER_GRID_SHAPE_H
 
-#include "PsShare.h"
 #include <RendererShape.h>
-#include "PxSimpleTypes.h"
 
-class RendererVertexBuffer;
-
-class RendererGridShape : public RendererShape
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+#ifdef RENDERER_PSP2
+	class RendererIndexBuffer;
+#endif
+
+	class RendererGridShape : public RendererShape
+	{
 	public:
-		RendererGridShape(Renderer &renderer, physx::PxU32 size, float cellSize);
+		enum UpAxis
+		{
+			UP_X,
+			UP_Y,
+			UP_Z,
+		};
+
+		RendererGridShape(Renderer &renderer, PxU32 size, float cellSize, bool showAxis = false, UpAxis = UP_Y);
 		virtual ~RendererGridShape(void);
-		
+
+		UpAxis getUpAxis() { return m_UpAxis; }
+
 	private:
 		RendererVertexBuffer *m_vertexBuffer;
-};
+#ifdef RENDERER_PSP2
+		RendererIndexBuffer  *m_indexBuffer;
+#endif
+		UpAxis                m_UpAxis;
+	};
+
+} // namespace SampleRenderer
 
 #endif

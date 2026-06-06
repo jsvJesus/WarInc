@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,24 +34,26 @@
  */
 #include <RendererMeshDesc.h>
 
+using namespace SampleRenderer;
+
 RendererMeshDesc::RendererMeshDesc(void)
 {
 	primitives = RendererMesh::PRIMITIVE_POINTS;
-	
+
 	vertexBuffers    = 0;
 	numVertexBuffers = 0;
 	firstVertex      = 0;
 	numVertices      = 0;
-	
+
 	indexBuffer = 0;
 	firstIndex  = 0;
 	numIndices  = 0;
-	
+
 	instanceBuffer = 0;
 	firstInstance  = 0;
 	numInstances   = 0;
 }
-		
+
 bool RendererMeshDesc::isValid(void) const
 {
 	bool ok = true;

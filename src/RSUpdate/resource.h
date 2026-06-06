@@ -3,8 +3,6 @@
 // Used by RSUpdate.rc
 //
 #define IDI_WARINC                      5
-#define IDI_WARINC_FULL                 133
-#define IDI_WARINC_SMALL                134
 #define IDR_IMAGE_PB_LEFT               135
 #define IDR_IMAGE_PB_RIGHT              136
 #define IDR_IMAGE_PB_CENTER             137
@@ -26,13 +24,22 @@
 #define IDR_IMAGE_BTN_FACEBOOK_HOVER    160
 #define IDR_IMAGE_BTN_TWITTER_HOVER     161
 #define IDR_IMAGE_G1_REGISTER_NOTE      162
+#define IDR_IMAGE_BACK_SERIALCHECK      163
+#define IDR_IMAGE_BTN_VALIDATE_HOVER    164
+#define IDR_IMAGE_BTN_GETSERIAL_HOVER   165
+#define IDR_IMAGE_BTN_REGISTER_NEW_HOVER    166
+#define IDR_IMAGE_BACK_EXPIRED          167
+#define IDR_IMAGE_BTN_GETNEWKEY_HOVER    168
+#define IDR_IMAGE_BTN_APPLYNEWKEY_HOVER    169
 #define IDR_DATA_STEAM_API              200
 #define IDD_DIALOG_EULA                 300
 #define IDR_ACCELERATOR1                301
 #define IDR_DATA1                       302
 #define IDS_STRING_REGIONLOCK_CIS       303
+#define IDD_DIALOG_TOS                  304
 #define IDC_RICHEDIT21                  1004
 #define IDC_RICHEDIT_EULA               1004
+#define IDC_BUTTON1                     1005
 
 // Next default values for new objects
 // 
@@ -40,7 +47,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        304
 #define _APS_NEXT_COMMAND_VALUE         32772
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_CONTROL_VALUE         1006
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

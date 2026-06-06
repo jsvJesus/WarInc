@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,16 +32,24 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "PsShare.h"
-#include "Px.h"
-#include "PxAssert.h"
-
+#include "FrameworkFoundation.h"
 #include <SampleCommandLine.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include "PsString.h"
+#include "PsFile.h"
+
+#ifdef WIN32
+#include <windows.h>
+#elif defined(ANDROID)
+typedef int errno_t;
+#endif
+
+
+#include <PsString.h>
+
+using namespace SampleFramework;
 
 static char **CommandLineToArgvA(const char *cmdLine, unsigned int &_argc)
 {
@@ -83,39 +91,39 @@ static char **CommandLineToArgvA(const char *cmdLine, unsigned int &_argc)
 		{
 			switch(a)
 			{
-				case '\"':
-					in_QM = true;
-					in_TEXT = true;
-					if(in_SPACE)
-					{
-						argv[argc] = _argv+j;
-						argc++;
-					}
-					in_SPACE = false;
-					break;
-				case ' ':
-				case '\t':
-				case '\n':
-				case '\r':
-					if(in_TEXT)
-					{
-						_argv[j] = '\0';
-						j++;
-					}
-					in_TEXT = false;
-					in_SPACE = true;
-					break;
-				default:
-					in_TEXT = true;
-					if(in_SPACE)
-					{
-						argv[argc] = _argv+j;
-						argc++;
-					}
-					_argv[j] = a;
+			case '\"':
+				in_QM = true;
+				in_TEXT = true;
+				if(in_SPACE)
+				{
+					argv[argc] = _argv+j;
+					argc++;
+				}
+				in_SPACE = false;
+				break;
+			case ' ':
+			case '\t':
+			case '\n':
+			case '\r':
+				if(in_TEXT)
+				{
+					_argv[j] = '\0';
 					j++;
-					in_SPACE = false;
-					break;
+				}
+				in_TEXT = false;
+				in_SPACE = true;
+				break;
+			default:
+				in_TEXT = true;
+				if(in_SPACE)
+				{
+					argv[argc] = _argv+j;
+					argc++;
+				}
+				_argv[j] = a;
+				j++;
+				in_SPACE = false;
+				break;
 			}
 		}
 		i++;
@@ -132,38 +140,85 @@ static bool isSwitchChar(char c)
 	return (c == '-' || c == '/');
 }
 
-SampleCommandLine::SampleCommandLine(unsigned int argc, const char *const* argv)
+namespace
 {
-	m_argc   = argc;
-	m_argv   = argv;
-	m_freeme = 0;
-	m_argUsed = new bool[m_argc];
-	for(unsigned int i = 0; i < m_argc; i++)
-	{
-		m_argUsed[i] = false;
-	}
+void operationOK(int e)
+{
+	PX_FORCE_PARAMETER_REFERENCE(e);
+	PX_ASSERT(0 == e);
 }
 
-SampleCommandLine::SampleCommandLine(const char *args)
+const char * const * getCommandLineArgumentsFromFile(unsigned int & argc, const char * programName, const char * commandLineFilePath)
 {
-	m_argUsed  = 0;
-	m_argc   = 0;
-	m_argv   = 0;
-	m_freeme = 0;
+	const char * const * argv = NULL;
+	argc = 0;
+	PX_ASSERT(NULL != programName);
+	PX_ASSERT(NULL != commandLineFilePath);
+	if(NULL != programName && NULL != commandLineFilePath)
+	{
+		FILE * commandLineFile = NULL;
+		operationOK(physx::shdfnd::fopen_s(&commandLineFile, commandLineFilePath, "r"));
+		if(NULL != commandLineFile)
+		{
+			operationOK(::fseek(commandLineFile, 0, SEEK_END));
+			const unsigned int commandLineFileCount = static_cast<unsigned int>(::ftell(commandLineFile));
+			::rewind(commandLineFile);
+			const unsigned int bufferCount = static_cast<unsigned int>(::strlen(programName)) + 1 + commandLineFileCount + 1;
+			if(bufferCount > 0)
+			{
+				char * argsOwn = static_cast<char*>(::malloc(bufferCount));
+				physx::string::strcpy_s(argsOwn, bufferCount, programName);
+				physx::string::strcat_s(argsOwn, bufferCount, " ");
+				const unsigned int offset = static_cast<unsigned int>(::strlen(argsOwn));
+				PX_ASSERT((bufferCount - offset - 1) == commandLineFileCount);
+				if(NULL != ::fgets(argsOwn + offset, bufferCount - offset, commandLineFile))
+				{
+					argv = CommandLineToArgvA(argsOwn, argc);
+				}
+				::free(argsOwn);
+				argsOwn = NULL;
+			}
+			operationOK(::fclose(commandLineFile));
+			commandLineFile = NULL;
+		}
+	}
+	return argv;
+}
+}; //namespace nameless
+
+SampleCommandLine::SampleCommandLine(unsigned int argc, const char * const * argv, const char * commandLineFilePathFallback)
+	:m_argc(0)
+	,m_argv(NULL)
+	,m_freeme(NULL)
+	,m_argUsed(NULL)
+{
+	//initially, set to use inherent command line arguments
+	PX_ASSERT((0 != argc) && (NULL != argv) && "This class assumes argument 0 is always the executable path!");
+	m_argc = argc;
+	m_argv = argv;
+
+	//finalize init
+	initCommon(commandLineFilePathFallback);
+}
+
+SampleCommandLine::SampleCommandLine(const char * args, const char * commandLineFilePathFallback)
+	:m_argc(0)
+	,m_argv(NULL)
+	,m_freeme(NULL)
+	,m_argUsed(NULL)
+{
+	//initially, set to use inherent command line arguments
 	unsigned int argc = 0;
-	char       **argv = CommandLineToArgvA(args, argc);
-	PX_ASSERT(argv);
-	if(argv)
-	{
-		m_argc   = argc;
-		m_argv   = argv;
-		m_freeme = argv;
-	}
-	m_argUsed = new bool[m_argc];
-	for(unsigned int i = 0; i < m_argc; i++)
-	{
-		m_argUsed[i] = false;
-	}
+	const char * const * argvOwning = NULL;
+	argvOwning = CommandLineToArgvA(args, argc);
+	PX_ASSERT((0 != argc) && (NULL != argvOwning) && "This class assumes argument 0 is always the executable path!");
+	m_argc = argc;
+	m_argv = argvOwning;
+	m_freeme = const_cast<void *>(static_cast<const void *>(argvOwning));
+	argvOwning = NULL;
+
+	//finalize init
+	initCommon(commandLineFilePathFallback);
 }
 
 SampleCommandLine::~SampleCommandLine(void)
@@ -180,7 +235,41 @@ SampleCommandLine::~SampleCommandLine(void)
 	}
 }
 
-const unsigned int SampleCommandLine::getNumArgs(void) const
+void SampleCommandLine::initCommon(const char * commandLineFilePathFallback)
+{
+	//if available, set to use command line arguments from file
+	const bool tryUseCommandLineArgumentsFromFile = ((1 == m_argc) && (NULL != commandLineFilePathFallback));
+	if(tryUseCommandLineArgumentsFromFile)
+	{
+		unsigned int argcFile = 0;
+		const char * const * argvFileOwn = NULL;
+		argvFileOwn = getCommandLineArgumentsFromFile(argcFile, m_argv[0], commandLineFilePathFallback);
+		if((0 != argcFile) && (NULL != argvFileOwn))
+		{
+			if(NULL != m_freeme)
+			{
+				::free(m_freeme);
+				m_freeme = NULL;
+			}
+			m_argc = argcFile;
+			m_argv = argvFileOwn;
+			m_freeme = const_cast<void *>(static_cast<const void *>(argvFileOwn));
+			argvFileOwn = NULL;
+		}
+	}
+
+	//for tracking use-status of arguments
+	if((0 != m_argc) && (NULL != m_argv))
+	{
+		m_argUsed = new bool[m_argc];
+		for(unsigned int i = 0; i < m_argc; i++)
+		{
+			m_argUsed[i] = false;
+		}
+	}
+}
+
+unsigned int SampleCommandLine::getNumArgs(void) const
 {
 	return(m_argc);
 }
@@ -190,7 +279,7 @@ const char * SampleCommandLine::getProgramName(void) const
 	return(m_argv[0]);
 }
 
-const unsigned int SampleCommandLine::unusedArgsBufSize(void) const
+unsigned int SampleCommandLine::unusedArgsBufSize(void) const
 {
 	unsigned int bufLen = 0;
 	for(unsigned int i = 1; i < m_argc; i++)
@@ -243,14 +332,14 @@ bool SampleCommandLine::hasSwitch(const char *s, unsigned int argNum) const
 		else
 		{
 			firstArg = 1;
-			lastArg  = m_argc - 1;
+			lastArg  = (m_argc > 1) ? (m_argc - 1) : 0;
 		}
 		for(unsigned int i=firstArg; i<=lastArg; i++)
 		{
 			const char *arg = m_argv[i];
 			// allow switches of '/', '-', and double character versions of both.
 			if( (isSwitchChar(*arg) && !physx::string::strnicmp(arg+1, s, n) && ((arg[n+1]=='\0')||(arg[n+1]=='='))) ||
-			    (isSwitchChar(*(arg+1)) && !physx::string::strnicmp(arg+2, s, n) && ((arg[n+2]=='\0')||(arg[n+2]=='='))) )
+				(isSwitchChar(*(arg+1)) && !physx::string::strnicmp(arg+2, s, n) && ((arg[n+2]=='\0')||(arg[n+2]=='='))) )
 			{
 				m_argUsed[i] = true;
 				has = true;
@@ -335,4 +424,10 @@ const char *SampleCommandLine::getCommand(void) const
 		command = m_argv[1];
 	}
 	return command;
+}
+
+//! whether or not an argument has been read already
+bool SampleCommandLine::isUsed(unsigned int argNum) const
+{
+	return argNum < m_argc ? m_argUsed[argNum] : false;
 }

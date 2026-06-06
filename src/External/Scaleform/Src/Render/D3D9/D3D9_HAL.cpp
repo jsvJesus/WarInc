@@ -12,20 +12,16 @@ agreement provided at the time of installation or download, or which
 otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
-
-// This removes the need to link with dxguid.lib.
-#define DIRECT3D_VERSION 0x0900
-#include <InitGuid.h>
+//#ifdef FINAL_BUILD
+//#define SF_BUILD_SHIPPING 1
+//#endif
 
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_Random.h"
-#include "Render/D3D9/D3D9_HAL.h"
-#include "Render/Render_BufferGeneric.h"
+#include "D3D9_HAL.h"
 #include "Kernel/SF_HeapNew.h"
 #include "Render/D3D9/D3D9_Events.h"
-#if SF_CC_MSVC < 1700
 #include <d3dx9.h>
-#endif
 
 #include <stdio.h>
 
@@ -43,15 +39,19 @@ namespace Scaleform { namespace Render { namespace D3D9 {
 // ***** HAL_D3D9
 
 HAL::HAL(ThreadCommandQueue* commandQueue)
-:   Render::ShaderHAL<ShaderManager, ShaderInterface>(commandQueue),
+:   Render::HAL(commandQueue),
     pDevice(0),
     Cache(Memory::GetGlobalHeap(), MeshCacheParams::PC_Defaults),
+    SManager(&Profiler),
+    ShaderData(getThis()),
     PrevBatchType(PrimitiveBatch::DP_None),
     // Mask/Stencil vars
     StencilChecked(false), StencilAvailable(false), MultiBitStencil(false),
     DepthBufferAvailable(false),
     StencilOpInc(D3DSTENCILOP_REPLACE)
 {
+    memset(MappedXY16iAlphaTexture, 0, sizeof(MappedXY16iAlphaTexture));
+    memset(MappedXY16iAlphaSolid, 0, sizeof(MappedXY16iAlphaSolid));
 }
 
 HAL::~HAL()
@@ -59,299 +59,56 @@ HAL::~HAL()
     ShutdownHAL();
 }
 
-// *** RenderHAL_D3D9 Implementation
-bool HAL::InitHAL(const D3D9::HALInitParams& params)
+PrimitiveFill*  HAL::CreatePrimitiveFill(const PrimitiveFillData &data)
 {
-    ScopedRenderEvent GPUEvent(GetEvent(Event_InitHAL), __FUNCTION__);
-
-    if ( !initHAL(params))
-        return false;
-
-    if (!params.pD3DDevice)
-        return 0; 
-
-    pDevice = params.pD3DDevice;
-    pDevice->AddRef();
-
-    // Detect shader level features.
-    D3DCAPSx caps;
-    D3DDEVICE_CREATION_PARAMETERS cparams;
-    pDevice->GetDeviceCaps(&caps);
-    pDevice->GetCreationParameters(&cparams);
-
-    if (!Cache.Initialize(pDevice, !(params.ConfigFlags&HALConfig_StaticBuffers)) ||
-        !SManager.Initialize(this))
-    {
-        ShutdownHAL();
-        return false;
-    }
-
-    // Create Texture manager if needed.
-    if (params.pTextureManager)
-        pTextureManager = params.GetTextureManager();
-    else
-    {
-        D3DCapFlags ourCaps;
-        ourCaps.InitFromHWCaps(caps, cparams);
-
-        // Determine D3D9Ex usage.
-        IDirect3DDevice9Ex* d3d9exPtr;
-        if ( SUCCEEDED(pDevice->QueryInterface(IID_IDirect3DDevice9Ex, (void**)&d3d9exPtr)) && d3d9exPtr)
-        {
-            d3d9exPtr->Release();
-            ourCaps.Flags |= D3DCapFlags::Cap_D3D9Ex;
-        }
-
-        pTextureManager = 
-            *SF_HEAP_AUTO_NEW(this) TextureManager(pDevice, ourCaps,
-                                                   params.RenderThreadId, pRTCommandQueue);
-        if (!pTextureManager)
-        {
-            ShutdownHAL();
-            return false;
-        }
-    }
-
-    Matrices = *SF_HEAP_AUTO_NEW(this) MatrixState(this);
-
-    // Create RenderBufferManager if needed.
-    if (params.pRenderBufferManager)
-        pRenderBufferManager = params.pRenderBufferManager;
-    else
-    {
-        // Create the default render target, and manager.
-        pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric(RBGenericImpl::DSSM_EqualOrBigger);
-        if ( !pRenderBufferManager || !createDefaultRenderBuffer())
-        {
-            ShutdownHAL();
-            return false;
-        }
-    }
-
-    // Detect stencil op.
-    if (caps.StencilCaps & D3DSTENCILCAPS_INCR)
-    {
-        StencilOpInc = D3DSTENCILOP_INCR;
-    }
-    else if (caps.StencilCaps & D3DSTENCILCAPS_INCRSAT)
-    {
-        StencilOpInc = D3DSTENCILOP_INCRSAT;
-    }
-    else
-    {   // Stencil ops not available.
-        StencilOpInc = D3DSTENCILOP_REPLACE;
-    }
-
-    memcpy(&PresentParams, &params.PresentParams, sizeof(D3DPRESENT_PARAMETERS));
-    HALState|= HS_ModeSet;
-    notifyHandlers(HAL_Initialize);
-    return true;
+    return SF_HEAP_NEW(pHeap) PrimitiveFill(data);
 }
 
-// Returns back to original mode (cleanup)
-bool HAL::ShutdownHAL()
+template< class _MatrixType >
+class MatrixUpdateAdapter_Meshes
 {
-    if (!(HALState & HS_ModeSet))
-        return true;
+public:
+    MatrixUpdateAdapter_Meshes( const Primitive::MeshEntry* meshes, unsigned count, unsigned matricesPerMesh ) : 
+      Count(count), MatricesPerMesh(matricesPerMesh), Meshes(meshes) { }
 
-    if (!shutdownHAL())
-        return false;
+    typedef _MatrixType MatrixType;
 
-    destroyRenderBuffers();
-    pRenderBufferManager.Clear();
+    unsigned        GetCount() const { return Count; }
+    unsigned        GetElementsPerTransform() const { return 4; } // always 4, even for 2D case.
+    unsigned        GetMatricesPerMesh() const { return MatricesPerMesh; }
+    const Matrix2F& GetVertexMatrix(unsigned i ) const { return Meshes[i].pMesh->VertexMatrix; }
+    const HMatrix&  GetHMatrix(unsigned i) const { return Meshes[i].M; }
 
-    // Do TextureManager::Reset to ensure shutdown on the current thread.
-    if ( pTextureManager )
-        pTextureManager->Reset();
-    pTextureManager.Clear();
-    SManager.Reset();
-    Cache.Reset();
-     
-    if (pDevice)
-        pDevice->Release();
-    pDevice = 0;
+private:
+    unsigned Count;
+    unsigned MatricesPerMesh;
+    const Primitive::MeshEntry* Meshes;
+};
 
-    return true;
-}
-
-void HAL::PrepareForReset()
+template< class _MatrixType >
+class MatrixUpdateAdapter_Matrices
 {
-    SF_ASSERT(HALState & HS_ModeSet);
-    if (HALState & HS_ReadyForReset)
-        return;
+public:
+    MatrixUpdateAdapter_Matrices( const StrideArray<const HMatrix>& matrixArray, unsigned matricesPerMesh, const Matrix2F & vertexMatrix ) : 
+      MatrixArray(matrixArray), MatricesPerMesh(matricesPerMesh), VertexMatrix(vertexMatrix) { }
 
-    notifyHandlers(HAL_PrepareForReset);
+    typedef _MatrixType MatrixType;
 
-    destroyRenderBuffers();
+    unsigned        GetCount() const { return (unsigned)MatrixArray.GetSize(); }
+    unsigned        GetElementsPerTransform() const { return 4; } // always 4, even for 2D case.
+    unsigned        GetMatricesPerMesh() const { return MatricesPerMesh; }
+    const Matrix2F& GetVertexMatrix(unsigned i ) const { SF_UNUSED(i); return VertexMatrix; }
+    const HMatrix&  GetHMatrix(unsigned i) const { return MatrixArray[i]; }
 
-    pRenderBufferManager->Reset();
-    pTextureManager->PrepareForReset();
-    Cache.Reset();    
+private:
+    // Hide warnings (this class is never assigned to).
+    MatrixUpdateAdapter_Matrices & operator=( const MatrixUpdateAdapter_Matrices & k )
+    { SF_ASSERT(0); return *this; }
 
-    HALState |= HS_ReadyForReset;
-}
-
-// - RestoreAfterReset called after reset to restore needed variables.
-bool HAL::RestoreAfterReset()
-{
-    if (!IsInitialized())
-        return false;
-    if (!(HALState & HS_ReadyForReset))
-        return true;
-
-    if (!Cache.Initialize(pDevice, Cache.UsesDynamicMeshes()))
-        return false;
-
-    pTextureManager->RestoreAfterReset();
-
-    if (!createDefaultRenderBuffer())
-        return false;
-
-     notifyHandlers(HAL_RestoreAfterReset);
-
-     HALState &= ~HS_ReadyForReset;
-     return true;
-}
-
-    
-// ***** Rendering
-
-bool HAL::BeginScene()
-{
-    if ( !Render::HAL::BeginScene())
-        return false;
-
-    ScopedRenderEvent GPUEvent(GetEvent(Event_BeginScene), __FUNCTION__ "-SetState");
-
-    // Blending render states.
-    pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);    
-
-    // Not necessary of not alpha testing:
-    pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);  // Important!
-
-    union 
-    {
-        float fbias;
-        DWORD d;
-    } bias;
-    bias.fbias = -0.75f;
-
-    pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);
-
-    pDevice->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, bias.d );
-    pDevice->SetSamplerState(0, D3DSAMP_ELEMENTINDEX, 0);
-    pDevice->SetSamplerState(1, D3DSAMP_ELEMENTINDEX, 0);
-
-    // Set texture coordinate indices to match their stages, as we will be using the programmable pipeline.
-    for ( unsigned i = 0; i < 8; i++ )
-        pDevice->SetTextureStageState(i, D3DTSS_TEXCOORDINDEX, i);
-
-    // Textures off by default.
-    pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_DISABLE);
-
-    // No ZWRITE by default
-    pDevice->SetRenderState(D3DRS_ZWRITEENABLE, 0);
-    pDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
-    pDevice->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
-        D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
-
-    // Turn off back-face culling.
-    pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    pDevice->SetRenderState(D3DRS_ZFUNC, D3DCMP_ALWAYS);
-
-    // Disable fog.
-    pDevice->SetRenderState(D3DRS_FOGENABLE, FALSE); 
-
-    // Start the scene
-    if (!(VMCFlags&HALConfig_NoSceneCalls))
-        pDevice->BeginScene();
-
-    SManager.BeginScene();
-    ShaderData.BeginScene();
-
-    return true;
-}
-
-bool HAL::EndScene()
-{
-    if ( !Render::HAL::EndScene())
-        return false;
-
-    SManager.EndScene();
-
-    // 'undo' instancing setup, if it was set.
-    pDevice->SetStreamSourceFreq(0, 1);
-    pDevice->SetStreamSourceFreq(1, 1);
-    PrevBatchType = PrimitiveBatch::DP_None;
-
-    if (!(VMCFlags&HALConfig_NoSceneCalls))
-        pDevice->EndScene();
-
-    return true;
-}
-
-// Updates D3D HW Viewport and ViewportMatrix based on provided viewport
-// and view rectangle.
-void HAL::updateViewport()
-{
-    D3DVIEWPORTx vp;
-    Rect<int>    vpRect;
-
-    if (HALState & HS_ViewValid)
-    {
-        int dx = ViewRect.x1 - VP.Left,
-            dy = ViewRect.y1 - VP.Top;
-        
-        // Modify HW matrix and viewport to clip.
-        CalcHWViewMatrix(Viewport::View_HalfPixelOffset, &Matrices->View2D, ViewRect, dx, dy);
-        Matrices->SetUserMatrix(Matrices->User);
-        Matrices->ViewRect    = ViewRect;
-        Matrices->UVPOChanged = 1;
-
-        /*
-        // TBD: Prepend UserMatrix here is incorrect for nested viewport-based
-        // mask clipping; what's needed is a complex combination of viewport and
-        // coordinate adjustment. Until this is done, mask viewport clipping will be
-        // in the wrong place for UserMatrix.
-        if (UserMatrix != Matrix2F::Identity)
-        {
-            Rect<int> viewportRect;
-            Rect<int> userViewRect(
-                ViewRect.x1 + (int)UserMatrix.Tx(),
-                ViewRect.y1 + (int)UserMatrix.Ty(),
-                Size<int>((int)(UserMatrix.Sx() * (float)ViewRect.Width()),
-                          (int)(UserMatrix.Sy() * (float)ViewRect.Height())));
-
-            VP.GetClippedRect(&viewportRect);
-            viewportRect.IntersectRect(&vpRect, userViewRect);
-        }
-        */
-
-        if ( !(HALState & HS_InRenderTarget) )
-		{
-			Viewport vp = VP;
-			vp.Left     = ViewRect.x1;
-			vp.Top      = ViewRect.y1;
-			vp.Width    = ViewRect.Width();
-			vp.Height   = ViewRect.Height();
-            vp.SetStereoViewport(Matrices->S3DDisplay);
-			vpRect.SetRect(vp.Left, vp.Top, vp.Left + vp.Width, vp.Top + vp.Height);
-		}
-        else
-            vpRect.SetRect(VP.Left, VP.Top, VP.Left + VP.Width, VP.Top + VP.Height);
-    }
-
-    vp.X        = vpRect.x1;
-    vp.Y        = vpRect.y1;
-
-    // DX9 can't handle a vp with zero area.
-    vp.Width    = (DWORD)Alg::Max<int>(vpRect.Width(), 1);
-    vp.Height   = (DWORD)Alg::Max<int>(vpRect.Height(), 1);
-
-    vp.MinZ     = 0.0f;
-    vp.MaxZ     = 0.0f;
-    pDevice->SetViewport(&vp);
-}
+    const StrideArray<const HMatrix>& MatrixArray;
+    unsigned MatricesPerMesh;
+    const Matrix2F& VertexMatrix;
+};
 
 // Draws a range of pre-cached and preprocessed primitives
 void HAL::DrawProcessedPrimitive(Primitive* pprimitive,
@@ -893,9 +650,6 @@ bool HAL::checkMaskBufferCaps()
             case D3DFMT_D15S1:
                 StencilAvailable = 1;
                 break;
-            default:
-                SF_DEBUG_ASSERT1(1, "Unexpected DepthStencil format: 0x%08x\n", sd.Format);
-                break;
             }
 
             pdepthStencilSurface->Release();
@@ -921,6 +675,39 @@ bool HAL::checkMaskBufferCaps()
         return false;
     }
     return true;
+}
+
+
+void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_MaskClear), __FUNCTION__);
+
+    // This operation is used to clear bounds for masks.
+    // Potential issue: Since our bounds are exact, right/bottom pixels may not
+    // be drawn due to HW fill rules.
+    //  - This shouldn't matter if a mask is tessellated within bounds of those
+    //    coordinates, since same rules are applied to those render shapes.
+    //  - EdgeAA must be turned off for masks, as that would extrude the bounds.
+
+    unsigned fillflags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags, PrimitiveBatch::DP_Batch, 
+        MappedXY16iAlphaSolid[PrimitiveBatch::DP_Batch], &ShaderData);
+    setLinearStreamSource(PrimitiveBatch::DP_Batch);
+    pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(),
+        0, sizeof(VertexXY16iAlpha));
+
+    unsigned drawRangeCount = 0;
+    for (UPInt i = 0; i < count; i+= (UPInt)drawRangeCount)
+    {
+        drawRangeCount = Alg::Min<unsigned>((unsigned)count, SF_RENDER_MAX_BATCHES);
+
+        for (unsigned j = 0; j < drawRangeCount; j++)
+        {
+            ShaderData.SetMatrix(pso, Uniform::SU_mvp, Matrix2F::Identity, matrices[i+j], Matrices, 0, j);
+        }
+        ShaderData.Finish(drawRangeCount);
+        drawPrimitive(drawRangeCount * 6, drawRangeCount);
+    }
 }
 
 //--------------------------------------------------------------------
@@ -966,6 +753,20 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 // *** BlendMode Stack support
 //--------------------------------------------------------------------
 
+// Structure describing color combines applied for a given blend mode.
+struct BlendModeDesc
+{
+    D3DBLENDOP  BlendOp;
+    D3DBLEND    SrcArg, DestArg;
+};
+
+struct BlendModeDescAlpha
+{
+    D3DBLENDOP  BlendOp;
+    D3DBLEND    SrcArg, DestArg;
+    D3DBLEND    SrcAlphaArg, DestAlphaArg;
+};
+
 void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc )
 {    
     ScopedRenderEvent GPUEvent(GetEvent(Event_ApplyBlend), __FUNCTION__);
@@ -985,7 +786,6 @@ void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc )
         D3DBLEND_SRCALPHA,      // BlendFactor_SRCALPHA
         D3DBLEND_INVSRCALPHA,   // BlendFactor_INVSRCALPHA
         D3DBLEND_DESTCOLOR,     // BlendFactor_DESTCOLOR
-        D3DBLEND_INVDESTCOLOR,  // BlendFactor_INVDESTCOLOR
     };
 
     if (!pDevice)
@@ -1051,7 +851,7 @@ RenderTarget* HAL::CreateRenderTarget(Render::Texture* texture, bool needsStenci
     Ptr<DepthStencilBuffer> pdsb;
     if ( needsStencil )
     {
-        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(prt->GetTexture()->GetSize());
+        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(texture->GetSize());
         if ( pdsb )
         {
             DepthStencilSurface* surf = (D3D9::DepthStencilSurface*)pdsb->GetSurface();
@@ -1086,7 +886,7 @@ RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStenc
     Ptr<DepthStencilBuffer> pdsb;
     if ( needsStencil )
     {
-        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(prt->GetTexture()->GetSize());
+        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(size);
         if ( pdsb )
         {
             DepthStencilSurface* surf = (D3D9::DepthStencilSurface*)pdsb->GetSurface();
@@ -1101,13 +901,13 @@ RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStenc
 
 bool HAL::SetRenderTarget(RenderTarget* ptarget, bool setState)
 {
-    // When changing the render target while in a scene, we must flush all drawing.
-    if ( HALState & HS_InScene)
-        Flush();
-
     // Cannot set the bottom level render target if already in display.
     if ( HALState & HS_InDisplay )
         return false;
+
+    // When changing the render target while in a scene, we must flush all drawing.
+    if ( HALState & HS_InScene)
+        Flush();
 
     D3DSURFACE_DESC rtDesc;
     RenderTargetEntry entry;
@@ -1142,24 +942,6 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
     entry.OldViewRect = ViewRect;
     entry.OldMatrixState.CopyFrom(Matrices);
     Matrices->SetUserMatrix(Matrix2F::Identity);
-
-	if ( RenderTargetStack.GetSize() > 0 )
-	{
-		IDirect3DSurface9* pDeviceSurface = 0;
-		pDevice->GetRenderTarget( 0, &pDeviceSurface );
-		RenderTargetData* phd = (D3D9::RenderTargetData*)prt->GetRenderTargetData();
-		RenderTargetEntry& currentEntry = RenderTargetStack.Back();
-		RenderTargetData* pCurrentTargetData = (D3D9::RenderTargetData*)currentEntry.pRenderTarget->GetRenderTargetData();
-		char buffer[128] = { 0 };
-		sprintf( buffer, "Push render target: Device: 0x%p, Current: 0x%p, New: 0x%p\n", 
-			pDeviceSurface, pCurrentTargetData->pRenderSurface, phd->pRenderSurface );
-		OutputDebugString( buffer );
-		pDeviceSurface->Release();
-	}
-	else
-	{
-		OutputDebugString( "Render target stack size == 0 before PushRenderTarget\n" );
-	}
 
     // Setup the render target/depth stencil on the device.
     if ( !prt )
@@ -1208,16 +990,10 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
 
 void HAL::PopRenderTarget(unsigned)
 {
-	IDirect3DSurface9 *pDeviceSurface = 0, *pCurrentSurface = 0, *pOldSurface = 0;
-
     ScopedRenderEvent GPUEvent(GetEvent(Event_RenderTarget), __FUNCTION__, false);
 
     RenderTargetEntry& entry = RenderTargetStack.Back();
     RenderTarget* prt = entry.pRenderTarget;
-	
-	D3D9::RenderTargetData* debugData = (D3D9::RenderTargetData*)entry.pRenderTarget->GetRenderTargetData();
-	pCurrentSurface = debugData->pRenderSurface;
-
     prt->SetInUse(false);
     if ( prt->GetType() == RBuffer_Temporary )
     {
@@ -1235,14 +1011,16 @@ void HAL::PopRenderTarget(unsigned)
     ViewRect = entry.OldViewRect;
     VP = entry.OldViewport;
 
+    // Must reverse the offset of the 'original' viewrect.
+    Matrices->ViewRectOriginal.Offset(entry.OldViewport.Left, entry.OldViewport.Top);
+    Matrices->UVPOChanged = true;
+
     RenderTargetStack.PopBack();
     RenderTargetData* phd = 0;
     if ( RenderTargetStack.GetSize() > 0 )
     {
         RenderTargetEntry& back = RenderTargetStack.Back();
         phd = (D3D9::RenderTargetData*)back.pRenderTarget->GetRenderTargetData();
-
-		pOldSurface = phd->pRenderSurface;
     }
 
     if ( RenderTargetStack.GetSize() == 1 )
@@ -1264,14 +1042,6 @@ void HAL::PopRenderTarget(unsigned)
     // Reset the viewport to the last render target on the stack.
     HALState |= HS_ViewValid;
     updateViewport();
-
-	pDevice->GetRenderTarget( 0, &pDeviceSurface );
-	char buffer[128] = { 0 };
-	sprintf( buffer, "pop render target: Device: 0x%p, Old: 0x%p, Current: 0x%p\n", 
-		pDeviceSurface, pOldSurface, pCurrentSurface );
-	OutputDebugString( buffer );
-	pDeviceSurface->Release();
-
 }
 
 bool HAL::createDefaultRenderBuffer()
@@ -1285,8 +1055,8 @@ bool HAL::createDefaultRenderBuffer()
     }
     else
     {
-        IDirect3DSurface9* prenderTarget = 0;
-        IDirect3DSurface9* pdsTarget = 0;
+        IDirect3DSurface9* prenderTarget;
+        IDirect3DSurface9* pdsTarget;
         D3DSURFACE_DESC rtDesc;
         if (FAILED(pDevice->GetRenderTarget(0, &prenderTarget)) ||             
             FAILED(prenderTarget->GetDesc(&rtDesc)) )
@@ -1443,7 +1213,8 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
         // All shadows (except those hiding the object) need the original texture.
         bool requireSource = false;
         if ( filter->GetFilterType() >= Filter_Shadow &&
-             filter->GetFilterType() <= Filter_Blur_End )
+             filter->GetFilterType() <= Filter_Blur_End &&
+             !(((BlurFilterImpl*)filter)->GetParams().Mode & BlurFilterParams::Mode_HideObject) )
         {
             temporaryTextures[Target_Original] = temporaryTextures[Target_Source];
             requireSource = true;
@@ -1495,26 +1266,15 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
         }
     }
 
-    // If there were no passes, assume we were doing a cacheAsBitmap.
-    bool cacheAsBitmap = passes == 0;
-    SF_DEBUG_ASSERT(!cacheAsBitmap || filterCount == 1, "Expected exactly one cacheAsBitmap filter.");
-
     // Cache the 2nd last step so it might be available as a cached filter next time.
-    if (temporaryTextures[Target_Source] && (Profiler.IsFilterCachingEnabled() || cacheAsBitmap))
+	if (Profiler.IsFilterCachingEnabled() && temporaryTextures[Target_Source])
     {
-        // If there were no passes, assume we were doing a cacheAsBitmap.
-        RenderTarget* cacheResults[2] = { temporaryTextures[0], temporaryTextures[2] };        
-        e.pPrimitive->SetCacheResults(cacheAsBitmap ? FilterPrimitive::Cache_Target : FilterPrimitive::Cache_PreTarget, cacheResults, cacheAsBitmap ? 1 : 2);
+        RenderTarget* cacheResults[2] = { temporaryTextures[0], temporaryTextures[2] };
+        e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_PreTarget, cacheResults, 2);
         ((D3D9::RenderTargetData*)cacheResults[0]->GetRenderTargetData())->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
         if ( cacheResults[1] )
             ((D3D9::RenderTargetData*)cacheResults[1]->GetRenderTargetData())->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
     }
-    else
-    {
-        // This is required, or else disabling filter caching may produce incorrect results.
-        e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
-    }
-    
 
     // Pop the temporary target, begin rendering to the previous surface.
     PopRenderTarget();
@@ -1529,22 +1289,13 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     }
 
     // Now actually draw the filtered sub-scene to the target below.
-    if (passes != 0)
-    {
-        // 'Real' filter.
-        const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
-        const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
-        SManager.SetFilterFill(mvp, cx, filter, temporaryTextures, shaders, pass, passes, 
-            MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);
-        applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
-        drawPrimitive(6,1);
-        applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState&HS_InRenderTarget) != 0);
-    }
-    else
-    {
-        // CacheAsBitmap
-        drawCachedFilter(e.pPrimitive);
-    }
+    const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
+    const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
+    SManager.SetFilterFill(mvp, cx, filter, temporaryTextures, shaders, pass, passes, 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);
+    applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
+    drawPrimitive(6,1);
+    applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState&HS_InRenderTarget) != 0);
 
     // Re-[en/dis]able masking from previous target, if available.
     if ( HALState & HS_DrawingMask )
@@ -1577,7 +1328,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
             const Filter* filter = filters->GetFilter(filterIndex);
             unsigned shaders[ShaderManager::MaximumFilterPasses];
             unsigned passes = SManager.GetFilterPasses(filter, FillFlags, shaders);
-
+            
             // Fill out the temporary textures from the cached results.
             Ptr<RenderTarget> temporaryTextures[MaxTemporaryTextures];
             memset(temporaryTextures, 0, sizeof temporaryTextures);
@@ -1591,9 +1342,10 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
 
             // Render to the target.
             Matrix2F mvp = Matrix2F::Scaling(2,-2) * Matrix2F::Translation(-0.5f, -0.5f);
+            const Cxform & cx = primitive->GetFilterAreaMatrix().GetCxform();
             mvp.Tx() -= 1.0f/size.Width;   // D3D9 1/2 pixel center offset
             mvp.Ty() += 1.0f/size.Height;
-            SManager.SetFilterFill(mvp, Cxform::Identity, filter, temporaryTextures, shaders, passes-1, passes, 
+            SManager.SetFilterFill(mvp, cx, filter, temporaryTextures, shaders, passes-1, passes, 
                 MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);
             applyBlendMode(BlendModeStack.GetSize()>=1 ? BlendModeStack.Back() : Blend_Normal, true, true);
             drawPrimitive(6,1);
@@ -1632,7 +1384,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         // We have a final filtered texture. Just apply it to a screen quad.
         case FilterPrimitive::Cache_Target:
         {
-            unsigned fillFlags = (FillFlags|FF_Cxform|FF_AlphaWrite);
+            unsigned fillFlags = FillFlags;
             const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single, 
                 MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);
 
@@ -1645,8 +1397,6 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
             texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
             texgen.AppendScaling((float)srect.Width() / ptexture->GetSize().Width, (float)srect.Height() / ptexture->GetSize().Height);
 
-            const Cxform & cx = primitive->GetFilterAreaMatrix().GetCxform();
-            ShaderData.SetCxform(pso, cx);
             ShaderData.SetUniform(pso, Uniform::SU_mvp, &mvp.M[0][0], 8 );
             ShaderData.SetUniform(pso, Uniform::SU_texgen, &texgen.M[0][0], 8 );
             ShaderData.SetTexture(pso, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
@@ -1668,14 +1418,6 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         // Should have been one of the other two caching types.
         default: SF_ASSERT(0); break;
     }
-}
-
-
-void HAL::setBatchUnitSquareVertexStream()
-{
-    setLinearStreamSource(PrimitiveBatch::DP_Batch);
-    pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(),
-        0, sizeof(VertexXY16iAlpha));
 }
 
 void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
@@ -1714,6 +1456,136 @@ void HAL::drawIndexedInstanced( unsigned indexCount, unsigned vertexCount, unsig
 #endif
 }
 
+
+void HAL::DrawableCxform( Render::Texture** tex, const Matrix2F* texgen, const Cxform* cx)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICxform), __FUNCTION__);
+    SManager.SetDrawableCxform(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), cx, 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_HalfPixelOffset );
+    drawScreenQuad();
+}
+
+void HAL::DrawableCompare( Render::Texture** tex, const Matrix2F* texgen )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICompare), __FUNCTION__);
+    SManager.SetDrawableCompare(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_HalfPixelOffset );
+    drawScreenQuad();
+}
+
+void HAL::DrawableMerge( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIMerge), __FUNCTION__);
+    SManager.SetDrawableMergeFill(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), 
+        cxmul, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_HalfPixelOffset );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableCopyPixels( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, bool mergeAlpha, bool destAlpha )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICopyPixels), __FUNCTION__);
+    SManager.SetDrawableCopyPixelsFill(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        mergeAlpha, destAlpha, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData,
+		ShaderManager::CPF_HalfPixelOffset );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawablePaletteMap( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, unsigned channelMask, const UInt32* values)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIPaletteMap), __FUNCTION__);
+
+    // Create a temporary texture with the palette map. There may be a more efficient way to do this; however, using
+    // uniforms seems unworkable, due to shader constant slot constraints.
+    ImageData data;
+    Ptr<Render::Texture> ptex = *pTextureManager->CreateTexture(Image_B8G8R8A8, 1, ImageSize(256, 4), ImageUse_Map_Mask, 0);
+    if ( !ptex->Map(&data, 0, 1) )
+        return;
+    for ( int channel = 0; channel < 4; ++channel )
+    {
+        UInt32* dataPtr = (UInt32*)data.GetScanline(channel);
+        if ( channelMask & (1<<channel))
+        {
+            memcpy(dataPtr, values + channel*256, 256*sizeof(UInt32));
+        }
+        else
+        {
+            // Channel was not provided, just do a straight mapping.
+            for ( unsigned i = 0; i < 256; ++i )
+                *dataPtr++ = (i << (channel*8));
+        }
+    }
+    if (!ptex->Unmap())
+        return;
+
+    // First pass overwrites everything.
+    applyBlendMode(Blend_OverwriteAll, true, true);
+    SManager.SetDrawablePaletteMap(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        ptex, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData, ShaderManager::CPF_HalfPixelOffset );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, DrawableImage::OperationType op, 
+                            UInt32 threshold, UInt32 color, UInt32 mask, bool copySource)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DIThreshold), __FUNCTION__);
+
+    SManager.SetDrawableThreshold(tex, texgen, RenderTargetStack.Back().pRenderTarget->GetSize(), mvp,
+        op, threshold, color, mask, copySource, MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], 
+        &ShaderData, ShaderManager::CPF_HalfPixelOffset );
+
+    drawScreenQuad();
+}
+
+void HAL::DrawableCopyback( Render::Texture* source, const Matrix2F& mvpOriginal, const Matrix2F& texgen )
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DICopyback), __FUNCTION__);
+
+    // Set shader constants.
+    unsigned fillFlags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single, 
+        MappedXY16iAlphaTexture[PrimitiveBatch::DP_Single], &ShaderData);    
+
+    Matrix2F mvp = mvpOriginal;
+    mvp.Tx() -= 1.0f/RenderTargetStack.Back().pRenderTarget->GetSize().Width;   // D3D9 1/2 pixel center offset
+    mvp.Ty() += 1.0f/RenderTargetStack.Back().pRenderTarget->GetSize().Height;
+
+    ShaderData.SetMatrix(pso,  Uniform::SU_mvp,    mvp);
+    ShaderData.SetMatrix(pso,  Uniform::SU_texgen, texgen);
+    ShaderData.SetTexture(pso, Uniform::SU_tex,    source, ImageFillMode());
+    ShaderData.Finish(1);
+
+    drawScreenQuad();
+}
+
+bool HAL::initializeShaders(bool force)
+{
+    // force is not needed, because all shaders are precompiled.
+    SF_UNUSED(force);
+
+    for (unsigned i = 0; i < VertexShaderDesc::VSI_Count; i++)
+    {
+        if ( VertexShaderDesc::Descs[i] && !StaticVShaders[i].Init(this, VertexShaderDesc::Descs[i]) )
+            return false;
+    }
+
+    for (unsigned i = 0; i < FragShaderDesc::FSI_Count; i++)
+    {
+        if ( !FragShaderDesc::Descs[i] )
+            continue;
+
+        // If the platform does not support dynamic loops, do not initialize shadow or blur shaders,
+        // because they will fail.
+        if ( (FragShaderDesc::Descs[i]->Flags & Shader_DynamicLoop) && !SManager.HasDynamicLoopingSupport())                
+            continue;
+
+        if ( !StaticFShaders[i].Init(this, FragShaderDesc::Descs[i]) )
+            return false;
+    }
+    return true;
+}
 
 bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
 {

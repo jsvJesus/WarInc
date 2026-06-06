@@ -475,14 +475,26 @@ extern  void		r3dScreenPosTo3DPos( float scr_x, float scr_y, r3dVector *out_p );
 extern	int		r3dProjectToScreen(const r3dPoint3D& pos, r3dPoint3D* scrCoord);
 extern	int		r3dProjectToScreenAlways(const r3dPoint3D& pos, r3dPoint3D* scrCoord, int offsetXpixels, int offsetYpixels); // offsets from center of icon, otherwise icon will be half way outside of screen area
 
-
-
 // 2D-3D Rendering functions
+struct r3dDrawLineDesc
+{
+	r3dPoint3D p1, p2;
+	r3dColor24 c;
+	float width;
+};
+
+struct r3dDrawTriDesc
+{
+	r3dPoint3D p1, p2, p3;
+	r3dColor24 c;
+};
+
 extern	void		r3dStartLineStrip2D( int count ) ;
 extern	void		r3dLineStrip2D( int x, int y ) ;
 extern	void		r3dEndLineStrip2D() ;
 extern	void		r3dDrawLine2D(float x1, float y1, float x2, float y2, float w, const r3dColor& clr);
 extern	void 		r3dDrawLine3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dCamera &Cam, float Width, const r3dColor24& clr, r3dTexture *Tex=NULL);
+extern  void		r3dDrawLineList3D(const r3dDrawLineDesc *lines, int numLines, const r3dCamera &Cam, r3dTexture *Tex = 0);
 extern	void 		r3dDrawLine3DColors(const r3dPoint3D& P1, const r3dPoint3D& P2, r3dCamera &Cam, float Width, const r3dColor24& clr, const r3dColor24& clr2, r3dTexture *Tex=NULL);
 extern	void 		r3dDrawLine3D1(const r3dPoint3D& P1, const r3dPoint3D& P2, r3dCamera &Cam, float Width1, float Width2, const r3dColor24& clr, r3dTexture *Tex=NULL);
 extern	void 		r3dDrawUniformLine3D(const r3dPoint3D& P1, const r3dPoint3D& P2, const r3dCamera &Cam, const r3dColor24& clr);
@@ -490,19 +502,20 @@ extern	void 		r3dFillUniformLine3D(const r3dPoint3D& P1, const r3dPoint3D& P2, c
 extern  void		r3dDrawConeSolid ( const r3dCone & tCone, r3dCamera &Cam, r3dColor tColor, float fLen = 1.0f, int iSamples = 12 );
 extern	void		r3dDrawCone2D(const r3dPoint3D& pos, float radius, float angle, const r3dPoint3D& dir, const r3dColor& clr1, const r3dColor& clr2);
 extern  void		r3dDrawCylinder( const r3dCylinder & cylinder, r3dCamera &Cam, r3dColor tColor, DWORD dwNumSegments = 16 );
-extern	void		r3dDrawCircle2D(const r3dPoint3D& pos, float radius, const r3dColor& clr1, const r3dColor& clr2);
+extern	void		r3dDrawCircle2D(const r3dPoint2D& pos, float radius, const r3dColor& clr1, const r3dColor& clr2);
 extern  void		r3dDrawPlane(const r3dPoint3D& normal, const r3dPoint3D& point, const r3dColor& clr1, float sizeX = 1000.0f, float sizeY = 100.0f);
 extern	void 		r3dDrawCircle3D(const r3dPoint3D& P1, const float Radius, const r3dCamera &Cam, float Width, const r3dColor24& clr, r3dTexture *Tex=NULL, int Segments = 16, float* Heights = NULL );
 extern  void		r3dDrawUniformCircle3D(const r3dPoint3D& P1, const float Radius, r3dCamera &Cam, const r3dColor24& clr);
 extern  void		r3dDrawUniformSphere(r3dVector const & vPos, float fRadius, r3dCamera &Cam, r3dColor24 const & clr, uint32_t dwNumSphereRings = 6, uint32_t dwNumSphereSegments = 12, r3dVector vScale = r3dVector(1,1,1) );
 
-extern	void		r3dDrawUniformBoundBox( const r3dBoundBox &Box, r3dCamera &Cam, const r3dColor24& clr );
+extern	void		r3dDrawUniformBoundBox( const r3dBoundBox &Box, const r3dCamera &Cam, const r3dColor24& clr );
 extern	void		r3dDrawSphereSolid(r3dVector const & vPos, float fRadius, const r3dCamera	&Cam, r3dColor24 const & clr, uint32_t dwNumSphereRings	= 8, uint32_t dwNumSphereSegments =	16 );
-extern	void		r3dDrawBoundBox( const r3dBoundBox	&Box, const r3dCamera &Cam, const	r3dColor24&	clr, float fLineWidth =	0.1f );
+extern	void		r3dDrawBoundBox( const r3dBoundBox	&Box, const r3dCamera &Cam, const	r3dColor24&	clr, float fLineWidth =	0.1f, bool flush = true );
 extern  void		r3dDrawOrientedBoundBox( const r3dBoundBox &Box, const r3dPoint3D& rotation, const r3dCamera &Cam, const r3dColor24& clr, float fLineWidth = 0.1f ); 
 extern	void		r3dDrawGridPlane( const	r3dPoint3D&	centrePos, const r3dCamera &Cam, float width, float	depth, int cellsX, int cellsZ, const r3dColor24& colr, float lineWidth );
 extern	void		r3dDrawUniformGridPlane( const r3dPoint3D& centrePos, const	r3dCamera &Cam,	float width, float depth, int cellsX, int cellsZ, const	r3dColor24&	colr );
 extern	void		r3dDrawTriangle3D(const	r3dPoint3D&	P1,	const r3dPoint3D& P2, const	r3dPoint3D&	P3,	const r3dCamera &Cam,	const r3dColor24& clr, r3dTexture *Tex=NULL, float *TC=NULL, bool bDontDot = false );
+extern	void		r3dDrawTriangleList3D(const r3dDrawTriDesc *tris, int numTris, const r3dCamera &Cam, r3dTexture *Tex=NULL, bool bDontDot = false );
 
 extern	void		r3dDrawGeoSpheresStart();
 extern	void		r3dDrawGeoSphere(); // all transforms should go as world matrix

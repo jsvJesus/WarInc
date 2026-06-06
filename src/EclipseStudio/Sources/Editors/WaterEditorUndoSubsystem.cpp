@@ -60,46 +60,38 @@ ValueTracker<float> PlaneOffsetZT;
 
 extern float g_fWaterPlaneBrushRadius;
 
+struct WaterPlaneSettingsTracker : IValueTracker
+{
+	obj_WaterPlane* waterPlane;
+
+	obj_WaterPlane::Settings originalSettings;
+
+	virtual void Update() OVERRIDE
+	{
+		if( waterPlane )
+		{
+			const obj_WaterPlane::Settings* trackedSettings = &waterPlane->GetSettings();
+
+			if ( memcmp ( trackedSettings, &originalSettings, sizeof originalSettings ) && !Mouse->IsPressed(r3dMouse::mLeftButton))
+			{
+				WatterPlaneSettingsUndo* pUndo = static_cast<WatterPlaneSettingsUndo*>( g_pUndoHistory->CreateUndoItem( UA_WATERPLANE_SETTINGS_CHANGE ) );
+
+				if( pUndo )
+				{
+					pUndo->SetTag(tag);
+					pUndo->SetValues(*trackedSettings, originalSettings);
+					pUndo->SetWaterPlane(waterPlane);
+				}
+
+				originalSettings = *trackedSettings;
+			}
+		}
+	}
+};
+
+WaterPlaneSettingsTracker g_WaterPlaneSettingsTracker;
+
 ValueTracker<float> WaterPlaneBrushRadiusT;
-ValueTracker<float> CellGridSizeT;
-ValueTracker<bool> WaterPlaneFollowTerrainT;
-ValueTracker<float> WaterPlaneHeightOnTerrainT;
-ValueTracker<int> CoastSmoothLevelsT;
-ValueTracker<float> WaterPlaneHeightT;
-
-//////////////////////////////////////////////////////////////////////////
-
-void UpdateWaterPlaneCallbackI(int &v, ValueTracker<int> &vt)
-{
-	obj_WaterPlane *o = reinterpret_cast<obj_WaterPlane*>(vt.tag);
-	if (o)
-	{
-		o->UpdateWaterPlane ();
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void CellSizeChangeCallback(float &v, ValueTracker<float> &vt)
-{
-	obj_WaterPlane *o = reinterpret_cast<obj_WaterPlane*>(vt.tag);
-	if (o)
-	{
-		vt.GetTrackedValue() -= 1.0f;
-		o->SetCellGridSize(v);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-void UpdateWaterPlaneCallbackF(float &v, ValueTracker<float> &vt)
-{
-	obj_WaterPlane *o = reinterpret_cast<obj_WaterPlane*>(vt.tag);
-	if (o)
-	{
-		o->UpdateWaterPlane ();
-	}
-}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -185,19 +177,9 @@ void InitWaterValueTrackers(obj_WaterPlane *o)
 
 	WaterPlaneBrushRadiusT.Init(g_fWaterPlaneBrushRadius);
 
-	CellGridSizeT.Init(o->m_fCellGridSize);
-	CellGridSizeT.tag = tag;
-	CellGridSizeT.SetOnUndoCallback(&CellSizeChangeCallback);
-	WaterPlaneFollowTerrainT.Init(o->m_bWaterPlaneFollowTerrain);
-	WaterPlaneFollowTerrainT.tag = tag;
-	WaterPlaneHeightOnTerrainT.Init(o->m_fWaterPlaneHeightOnTerrain);
-	WaterPlaneHeightOnTerrainT.tag = tag;
-	WaterPlaneHeightOnTerrainT.SetOnUndoCallback(&UpdateWaterPlaneCallbackF);
-	CoastSmoothLevelsT.Init(o->m_iCoastSmoothLevels);
-	CoastSmoothLevelsT.tag = tag;
-	CoastSmoothLevelsT.SetOnUndoCallback(&UpdateWaterPlaneCallbackI);
-	WaterPlaneHeightT.Init(o->m_fWaterPlaneHeight);
-	WaterPlaneHeightT.tag = tag;
+	g_WaterPlaneSettingsTracker.originalSettings = o->GetSettings();
+	g_WaterPlaneSettingsTracker.waterPlane = o;
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -221,6 +203,77 @@ void WaterCellsTrackUndoStart(obj_WaterPlane *o)
 	if (!o) return;
 	gSavedGridCellsState = o->GetGrid();
 }
+
+//------------------------------------------------------------------------
+
+WatterPlaneSettingsUndo::WatterPlaneSettingsUndo()
+: prevValue( obj_WaterPlane::Settings() )
+, curValue( obj_WaterPlane::Settings() )
+, waterPlane( 0 )
+{
+	m_sTitle = "Water Plane Settings Change";
+}
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::Release()
+{ 
+	delete this; 
+}
+
+//------------------------------------------------------------------------
+
+UndoAction_e WatterPlaneSettingsUndo::GetActionID()
+{
+	return ms_eActionID;
+}
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::Undo()
+{
+	waterPlane->SetSettings( prevValue );
+}
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::Redo()
+{
+	waterPlane->SetSettings( curValue );
+}
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::SetValues( const obj_WaterPlane::Settings& oldV, const obj_WaterPlane::Settings& newV )
+{
+	prevValue = oldV;
+	curValue = newV;
+}
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::SetWaterPlane( obj_WaterPlane *plane )
+{
+	waterPlane = plane;
+}
+
+//------------------------------------------------------------------------
+
+IUndoItem * WatterPlaneSettingsUndo::CreateUndoItem	()
+{
+	return new WatterPlaneSettingsUndo;
+};
+
+//------------------------------------------------------------------------
+
+void WatterPlaneSettingsUndo::Register()
+{
+	UndoAction_t action;
+	action.nActionID = ms_eActionID;
+	action.pCreateUndoItem = CreateUndoItem;
+	g_pUndoHistory->RegisterUndoAction( action );
+}
+
 //-------------------------------------------------------------------------
 //	class WaterGridChangeUndo
 //-------------------------------------------------------------------------
@@ -243,4 +296,5 @@ void WaterGridChangeUndo::Redo()
 }
 
 //////////////////////////////////////////////////////////////////////////
+
 #endif // FINAL_BUILD

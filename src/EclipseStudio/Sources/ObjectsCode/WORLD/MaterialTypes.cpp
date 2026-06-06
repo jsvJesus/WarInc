@@ -289,6 +289,8 @@ bool MaterialTypes::Load()
 		xmlEntry = xmlType.child("footsteps");
 #ifndef WO_SERVER
 		en.type.footStepsSound = SoundSys.GetEventIDByPath(xmlEntry.attribute("sound").value());
+		en.type.crouchFootstepsSound = SoundSys.GetEventIDByPath(xmlEntry.attribute("crouch").value());
+		en.type.proneFootstepsSound = SoundSys.GetEventIDByPath(xmlEntry.attribute("prone").value());
 #endif
 
 		mEntries.PushBack( en );
@@ -401,7 +403,7 @@ void SpawnImpactParticle( uint32_t impactIdx, const r3dPoint3D& pos, const r3dPo
 		em->Torch->Direction = norm;
 	em->GlobalScale = 1.0f;
 #ifndef WO_SERVER
-	snd_PlaySound(entry->sndID, pos);
+	SoundSys.PlayAndForget(entry->sndID, pos);
 #endif
 	em->ObjFlags |= OBJFLAG_SkipCastRay;
 

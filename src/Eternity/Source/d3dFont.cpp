@@ -538,111 +538,57 @@ const char* CD3DFont::ParseSpecialCodes(const char* in)
 //-----------------------------------------------------------------------------
 HRESULT CD3DFont::GetTextExtent(const char* strText, SIZE* pSize)
 {
-  if(NULL == strText || NULL == pSize)
-    return E_FAIL;
+    if(NULL==strText || NULL==pSize)
+        return E_FAIL;
 
-  pSize->cx = 0;
-  pSize->cy = 0;
+	if(glyphTexture == NULL) 
+	{
+		RECT  r = { 0 };
 
-  if(glyphTexture == NULL)
-  {
-    if(!fnt_pD3DXFont)
+		DWORD flags = DT_CALCRECT;
+
+		fnt_pD3DXFont->DrawTextA( NULL, strText, strlen(strText), &r, flags, 0 );
+
+		pSize->cx = r.right - r.left ;
+		pSize->cy = r.bottom - r.top ;
+
+		return S_OK ;
+	}
+
+    float texWidth   = (float)glyphTexture->GetWidth();
+    float texHeight  = (float)glyphTexture->GetHeight();
+
+    float fRowWidth  = 0.0f;
+    float fRowHeight = (glyphTexCoords[0][3]-glyphTexCoords[0][1])*texHeight;
+    float fWidth     = 0.0f;
+    float fHeight    = fRowHeight;
+
+    while(*strText)
     {
-      if(r3dRenderer && r3dRenderer->pd3ddev)
-        CreateD3DXFont();
+	strText = ParseSpecialCodes(strText);
+        char c = *strText++;
+
+        if(c == '\n')
+        {
+            fRowWidth = 0.0f;
+            fHeight  += fRowHeight;
+        }
+        if(c < ' ')
+            continue;
+
+        float tx1 = glyphTexCoords[c-32][0];
+        float tx2 = glyphTexCoords[c-32][2];
+
+        fRowWidth += (tx2-tx1)*texWidth/glyphTexScale;
+
+        if(fRowWidth > fWidth)
+            fWidth = fRowWidth;
     }
 
-    if(!fnt_pD3DXFont)
-      return E_FAIL;
-
-    char cleanText[4096];
-    char* out = cleanText;
-    char* outEnd = cleanText + sizeof(cleanText) - 1;
-    const char* in = strText;
-
-    while(*in && out < outEnd)
-    {
-      if(in[0] == '#' && in[1] == 'c' &&
-        in[2] && in[3] && in[4] && in[5] && in[6] && in[7])
-      {
-        in += 8;
-        continue;
-      }
-
-      *out++ = *in++;
-    }
-
-    *out = 0;
-
-    RECT r;
-    r.left = 0;
-    r.top = 0;
-    r.right = 0;
-    r.bottom = 0;
-
-    fnt_pD3DXFont->DrawTextA(
-      NULL,
-      cleanText,
-      -1,
-      &r,
-      DT_CALCRECT | DT_NOCLIP,
-      0xFFFFFFFF
-    );
-
-    pSize->cx = r.right - r.left;
-    pSize->cy = r.bottom - r.top;
-
-    if(pSize->cx < 0)
-      pSize->cx = 0;
-
-    if(pSize->cy < 0)
-      pSize->cy = 0;
+    pSize->cx = (int)fWidth;
+    pSize->cy = (int)fHeight;
 
     return S_OK;
-  }
-
-  float texWidth = (float)glyphTexture->GetWidth();
-  float texHeight = (float)glyphTexture->GetHeight();
-
-  float fRowWidth = 0.0f;
-  float fRowHeight = (glyphTexCoords[0][3] - glyphTexCoords[0][1]) * texHeight;
-  float fWidth = 0.0f;
-  float fHeight = fRowHeight;
-
-  while(*strText)
-  {
-    strText = ParseSpecialCodes(strText);
-
-    char c = *strText++;
-
-    if(c == '\n')
-    {
-      fRowWidth = 0.0f;
-      fHeight += fRowHeight;
-      continue;
-    }
-
-    if((unsigned char)c < ' ')
-      continue;
-
-    int gc = (int)((unsigned char)c) - GlyphCodeCacheMin;
-
-    if(gc < 0 || gc >= GlyphCacheSize)
-      continue;
-
-    float tx1 = glyphTexCoords[gc][0];
-    float tx2 = glyphTexCoords[gc][2];
-
-    fRowWidth += (tx2 - tx1) * texWidth / glyphTexScale;
-
-    if(fRowWidth > fWidth)
-      fWidth = fRowWidth;
-  }
-
-  pSize->cx = (int)fWidth;
-  pSize->cy = (int)fHeight;
-
-  return S_OK;
 }
 
 
@@ -654,7 +600,7 @@ void _DrawChar(float sx, float sy, float w, float h, float tx1, float ty1, float
  for(i=0; i<4; i++)
  {
   V[i].color = clr.GetPacked();
-  V[i].z     = 0;
+  V[i].z     = r3dRenderer->GetNearPlaneZValue();
   V[i].rwh   = 1;
  }
 
@@ -683,7 +629,7 @@ void _DrawChar(int idx, float sx, float sy, float w, float h, float tx1, float t
 	for(int i=0; i<4; i++)
 	{
 		V[i].color = clr.GetPacked();
-		V[i].z     = 0;
+		V[i].z     = r3dRenderer->GetNearPlaneZValue();
 		V[i].rwh   = 1;
 	}
 
@@ -727,7 +673,7 @@ void CD3DFont::DrawText(float sx, float sy, float sw, float sh, const r3dColor24
     fnt_pD3DXFont->DrawTextA(
       NULL, //fnt_sprite,
       strText,
-      -1,
+      strlen(strText), 
       &r,
       flags,
       Color.GetPacked());
@@ -994,7 +940,7 @@ void CD3DFont::PrintF(float X, float Y, float W, float H,  float StartTime, floa
   StringCbVPrintfA(buf, sizeof(buf), fmt, ap);
   va_end(ap);
 
-  int Len = static_cast<int>(strlen(buf));
+  int Len = strlen(buf);
 
   int Val = int((CurrentTime - StartTime) * PrintSpeed);
   if (Val > Len) Val = Len;
@@ -1024,27 +970,29 @@ void CD3DFont::ScaledPrintF(float X, float Y, float XScale, float YScale, float 
 
 void CD3DFont::DrawTextW(float x, float y, float w, float h, const r3dColor24& Color, const wchar_t* strText, DWORD dwFlags)
 {
+  // this is needed, because we might have some data sitting in our renderer
   r3dRenderer->Flush();
-
-  RECT r;
+  
+  RECT  r;
   r.left   = (long)x;
   r.top    = (long)y;
   r.right  = r.left + (long)w;
   r.bottom = r.top  + (long)h;
-
+    
   DWORD flags = DT_NOCLIP;
   if(dwFlags & D3DFONT_CENTERED) {
+    // clip in specified rectangle
     flags = DT_CENTER | DT_VCENTER | DT_WORDBREAK;
   }
-
+  
   fnt_pD3DXFont->DrawTextW(
-    NULL,
+    NULL, //fnt_sprite,
     strText,
-    -1,
+    wcslen(strText), 
     &r,
     flags,
     Color.GetPacked());
-
+    
   return;
 }
 
@@ -1072,11 +1020,11 @@ void CD3DFont::GetTextExtentW(const wchar_t* strText, SIZE* pSize) const
   fnt_pD3DXFont->DrawTextW(
     NULL,
     strText,
-    -1,
+    wcslen(strText), 
     &r,
     DT_CALCRECT,
     0xFFFFFFFF);
-
+    
   pSize->cx = r.right  - r.left;
   pSize->cy = r.bottom - r.top;
 

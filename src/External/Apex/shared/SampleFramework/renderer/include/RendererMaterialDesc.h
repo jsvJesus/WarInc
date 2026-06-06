@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,26 +37,34 @@
 
 #include <RendererMaterial.h>
 
-class RendererMaterialDesc
+namespace SampleRenderer
 {
+
+	class RendererMaterialDesc
+	{
 	public:
 		RendererMaterial::Type          type;
-		
+
 		RendererMaterial::AlphaTestFunc alphaTestFunc;
 		float                           alphaTestRef;
-		
+
 		bool                            blending;
+		bool							instanced;
 		RendererMaterial::BlendFunc     srcBlendFunc;
 		RendererMaterial::BlendFunc     dstBlendFunc;
-		
+
 		const char                     *geometryShaderPath;
+		const char                     *hullShaderPath;
+		const char                     *domainShaderPath;
 		const char                     *vertexShaderPath;
 		const char                     *fragmentShaderPath;
-		
+
 	public:
 		RendererMaterialDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

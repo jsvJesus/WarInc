@@ -17,15 +17,13 @@ otherwise accompanies this software in either electronic or hard copy form.
 #ifndef INC_SF_D3D1x_Events_H
 #define INC_SF_D3D1x_Events_H
 
-#include "Render/D3D1x/D3D1x_Config.h"
 #include "Render/Render_Events.h"
 #include <windows.h>
-#include <tchar.h>
 
 namespace Scaleform { namespace Render { namespace D3D1x { 
 
 // Used to create heirarchies in PIX captures.
-#if !defined(SF_BUILD_SHIPPING) && !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
+#if !defined(SF_BUILD_SHIPPING) && !defined(SF_OS_WINMETRO)
     typedef INT (WINAPI * LPD3DPERF_BEGINEVENT)(D3DCOLOR, LPCWSTR);
     typedef INT (WINAPI * LPD3DPERF_ENDEVENT)(void);
 #endif
@@ -33,14 +31,10 @@ namespace Scaleform { namespace Render { namespace D3D1x {
 class RenderEvent : public Render::RenderEvent
 {
 public:
-    static void InitializeEvents(ID3D1x(DeviceContext)* pctx)
+    static void InitializeEvents()
     {
-        SF_DEBUG_ASSERT(pctx, "Cannot pass a NULL ID3D1x(DeviceContext) to InitializeEvents\n");
-        pContext = pctx;
-        pContext->AddRef();
-
-#if !defined(SF_BUILD_SHIPPING) && !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
-        HMODULE hdll = LoadLibrary( _T("D3D9.dll") );
+#if !defined(SF_BUILD_SHIPPING) && !defined(SF_OS_WINMETRO)
+        HMODULE hdll = LoadLibrary( "D3D9.dll" );
         if (hdll)
         {
             RenderEvent::BeginEventFn = (LPD3DPERF_BEGINEVENT)GetProcAddress( hdll, "D3DPERF_BeginEvent" );
@@ -50,61 +44,31 @@ public:
 #endif
     }
 
-    static void ShutdownEvents()
-    {
-        pContext->Release();
-        pContext = 0;
-    }
-
     virtual void Begin( String eventName )
     {
-#if !defined(SF_BUILD_SHIPPING) 
-        // PIX events only take wide-character strings.
-        wchar_t dest[256];
-        size_t  chars;
-        mbstowcs_s(&chars, dest, eventName.ToCStr(), 256);
-
-#if !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
+#if !defined(SF_BUILD_SHIPPING) && !defined(SF_OS_WINMETRO)
         if ( BeginEventFn )
         {
+            // PIX events only take wide-character strings.
+            wchar_t dest[256];
+            size_t  chars;
+            mbstowcs_s(&chars, dest, eventName.ToCStr(), 256);
             BeginEventFn(D3DCOLOR_XRGB(0,0,0), dest);
         }
-#else // __ID3DUserDefinedAnnotation_FWD_DEFINED__
-        if (!pContext)
-            return;
-        Ptr<ID3DUserDefinedAnnotation> eventPtr;
-        HRESULT hr = pContext->QueryInterface( IID_ID3DUserDefinedAnnotation, reinterpret_cast<void**>(&eventPtr.GetRawRef()) );
-        SF_DEBUG_WARNONCE(SUCCEEDED(hr), "Failed to get ID3DUserDefinedAnnotation object from context.\n");
-        if (FAILED(hr))
-            return;
-        eventPtr->BeginEvent( dest );
-#endif // __ID3DUserDefinedAnnotation_FWD_DEFINED__
-#endif // SF_BUILD_SHIPPING
+#endif
     }
     void End()
     {
-#if !defined(SF_BUILD_SHIPPING) 
-#if !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
+#if !defined(SF_BUILD_SHIPPING) && !defined(SF_OS_WINMETRO)
         if ( EndEventFn )
             EndEventFn();
-#else // __ID3DUserDefinedAnnotation_FWD_DEFINED__
-        if (!pContext)
-            return;
-        Ptr<ID3DUserDefinedAnnotation> eventPtr;
-        HRESULT hr = pContext->QueryInterface( IID_ID3DUserDefinedAnnotation, reinterpret_cast<void**>(&eventPtr.GetRawRef()) );
-        SF_DEBUG_WARNONCE(SUCCEEDED(hr), "Failed to get ID3DUserDefinedAnnotation object from context.\n");
-        if (FAILED(hr))
-            return;
-        eventPtr->EndEvent();
-#endif // __ID3DUserDefinedAnnotation_FWD_DEFINED__
-#endif // SF_BUILD_SHIPPING
+#endif
     }
 
-#if !defined(SF_BUILD_SHIPPING) && !defined(__ID3DUserDefinedAnnotation_FWD_DEFINED__)
+#if !defined(SF_BUILD_SHIPPING) && !defined(SF_OS_WINMETRO)
     static LPD3DPERF_BEGINEVENT  BeginEventFn;
     static LPD3DPERF_ENDEVENT    EndEventFn;
 #endif
-    static ID3D1x(DeviceContext)*     pContext;
 };
 
 }}} // Scaleform::Render::D3D1x

@@ -19,7 +19,6 @@
 
 using namespace physx;
 using namespace physx::apex;
-using namespace physx::pubfnd2;
 
 extern UserRenderer apexUserRenderer;
 extern bool g_bEditMode;

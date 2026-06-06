@@ -5,20 +5,11 @@ class r3dVBuffer;
 class r3dIBuffer16;
 class r3dIBuffer32;
 
-#ifndef WO_SERVER
-struct ID3D11Buffer;
-struct ID3D11Query;
-#endif
-
 class r3dD3DQuery : public r3dIResource
 {
   protected:
 	D3DQUERYTYPE	type_;
 	IDirect3DQuery9* query_;
-#ifndef WO_SERVER
-	ID3D11Query*	dx11Query_;
-	int				dx11Open_;
-#endif
 	
   protected:
 	// you can't directly create it - use CreateClass()
@@ -43,8 +34,17 @@ static	r3dD3DQuery*	CreateClass(D3DQUERYTYPE type) {
 	  return 0;
 	}
 	
-	HRESULT		Issue(DWORD dwIssueFlags);
-	HRESULT		GetData(void* pData,DWORD dwSize,DWORD dwGetDataFlags);
+	HRESULT		Issue(DWORD dwIssueFlags)
+	{
+		R3D_ENSURE_MAIN_THREAD();
+		return query_->Issue(dwIssueFlags);
+	}
+	
+	HRESULT		GetData(void* pData,DWORD dwSize,DWORD dwGetDataFlags) 
+	{
+		R3D_ENSURE_MAIN_THREAD();
+		return query_->GetData(pData, dwSize, dwGetDataFlags);
+	}
 };
 
 
@@ -73,12 +73,6 @@ class r3dD3DBuffer : public r3dIResource
 	// for vertex buffer
 	LPDIRECT3DVERTEXDECLARATION9		m_Decl;
 
-#ifndef WO_SERVER
-	ID3D11Buffer*	m_DX11Buffer;
-	void*			m_DX11MappedPtr;
-	void*			m_DX9LockedPtr;
-#endif
-
 	// locked start/size
 	DWORD		m_LockStart;
 	DWORD		m_LockSize;
@@ -100,26 +94,15 @@ class r3dD3DBuffer : public r3dIResource
 	}
 	void*		LockData(int size, int* lstart);
 	void		Unlock();
-
-#ifndef WO_SERVER
-	void			DX11CreateResource();
-	void			DX11ReleaseResource();
-
-	ID3D11Buffer*	GetDX11Buffer() const { return m_DX11Buffer; }
-#endif
-
-	DWORD			GetStride() const { return m_Stride; }
-	DWORD			GetCount() const { return m_Size; }
-	type_e			GetType() const { return m_Type; }
 	
 	IDirect3DVertexBuffer9* GetVB() { 
 	  r3d_assert(m_Type == BUFFER_Vertex);
 	  return pVB;
 	}
 
-	IDirect3DIndexBuffer9* GetIB() { 
-		r3d_assert(m_Type == BUFFER_Index);
-		return pIB;
+	IDirect3DVertexBuffer9* GetIB() { 
+	  r3d_assert(m_Type == BUFFER_Index);
+	  return pVB;
 	}
 	
 	void		Activate();
@@ -218,11 +201,6 @@ public:
 	LPDIRECT3DVERTEXDECLARATION9		decl_;
 	r3dD3DVertexBufferTunnel			vrtBuff_;
 	unsigned char* lockedPtr_;
-#ifndef WO_SERVER
-	unsigned char* dx11Mirror_;
-	int dx11MirrorBytes_;
-	int dx11MirrorLocked_;
-#endif
 	
 	int		pos_, actual_, unflushed_, needed_;
 	int 	type ;
@@ -252,6 +230,7 @@ public:
 	void		Add(const void* vtx, int num);	//lock-set-unlock
 	void		AddList( const void* vtx, int num);	//lock-set-unlock
 	void		Flush();	//draw unflushed primitives
+	int			GetCapacity() const { return size_; }
 
 	void StartVertices(int numVertsInPoly, int numPoly);	//locks buffer
 	void SetVtx(const void* vtx, int num);

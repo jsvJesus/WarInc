@@ -7,15 +7,16 @@
 class Terrain2Editor
 {
 public:
-	friend class CHeightChanged2 ;
-	friend class CLayerMaskPaint2 ;
-	friend class CLayerColorPaint2 ;
+	friend class CHeightChanged2;
+	friend class CLayerMaskPaint2;
+	friend class CLayerColorPaint2;
+	friend class CLayerMaskEraseAll2;
 
-	typedef r3dTL::TArray< float > Floats ;
-	typedef r3dTL::TArray< PxI16 > Shorts ;
-	typedef r3dTL::TArray< r3dTexture* > PaintMasks ;
-	typedef r3dTL::TArray< uint32_t > UInts ;
-	typedef r3dTL::TArray< r3dPoint3D > Vectors ;
+	typedef r3dTL::TArray< float > Floats;
+	typedef r3dTL::TArray< PxI16 > Shorts;
+	typedef r3dTL::TArray< r3dTexture* > PaintMasks;
+	typedef r3dTL::TArray< uint32_t > UInts;
+	typedef r3dTL::TArray< r3dPoint3D > Vectors;
 
 	struct NoiseParams
 	{
@@ -42,26 +43,26 @@ public:
 		NoiseParams();
 		~NoiseParams();
 
-		void	DrawNoiseParams( float& SliderX, float& SliderY ) ;
-		void	ResetCache() ;
-		float	GetNoise( int x, int y ) ;
-		void	Apply( const r3dPoint3D& pos, float radius, float hardiness ) ;
+		void	DrawNoiseParams( float& SliderX, float& SliderY );
+		void	ResetCache();
+		float	GetNoise( int x, int y );
+		void	Apply( const r3dPoint3D& pos, float radius, float hardiness );
 
-	} noiseParams ;
-
-public:
-	Terrain2Editor() ;
-	~Terrain2Editor() ;
+	} noiseParams;
 
 public:
-	void LoadHeightsFromTerrain() ;
-	void SaveHeightsToTerrain() ;
+	Terrain2Editor();
+	~Terrain2Editor();
 
-	void FinalizeHeightEditing() ;
+public:
+	void LoadHeightsFromTerrain();
+	void SaveHeightsToTerrain();
 
-	void LoadColorsFromTerrain() ;
+	void FinalizeHeightEditing();
 
-	int AreHeightsLoaded() const ;
+	void LoadColorsFromTerrain();
+
+	int AreHeightsLoaded() const;
 
 	void ApplyHeightBrush(const r3dPoint3D &pnt, const float strength, const float radius, const float hardness);
 	void ApplyHeightLevel(const r3dPoint3D &pnt, const float H, const float strength, const float radius, const float hardness);
@@ -70,48 +71,53 @@ public:
 	void ApplyHeightNoise(const r3dPoint3D &pnt, const float radius, const float hardness);
 	void ApplyHeightRamp(const r3dPoint3D& rampStart, const r3dPoint3D& rampEnd, const float rampWidthOuter, const float rampWidthInner);
 
-	void StartLayerBrush( int layerIdx ) ;
+	void StartLayerBrush( int layerIdx );
 	void ApplyLayerBrush(const r3dTerrainPaintBoundControl& boundCtrl, const r3dPoint3D &pnt, int opType, int layerIdx, float val, const float radius, const float hardness );
-	void EndLayerBrush() ;
+	void EndLayerBrush();
 
-	void StartColorBrush() ;
-	void ApplyColorBrush( const r3dTerrainPaintBoundControl& boundCtrl, const r3dPoint3D &pnt, const r3dColor &dwColor, const float strength, const float radius, const float hardness ) ;
-	void EndColorBrush() ;
+	void StartEraseAllBrush();
+	void ApplyEraseAllBrush(const r3dTerrainPaintBoundControl& boundCtrl, const r3dPoint3D &pnt, const float val, const float radius, const float hardness );
+	void EndEraseAllBrush();
 
-	int ImportHeight( const char* path, float scale, float offset ) ;
-	int ExportHeight( const char* path ) ;
+	void StartColorBrush();
+	void ApplyColorBrush( const r3dTerrainPaintBoundControl& boundCtrl, const r3dPoint3D &pnt, const r3dColor &dwColor, const float strength, const float radius, const float hardness );
+	void EndColorBrush();
 
-	void UpdateHeightRect( const RECT& rc ) ;
-	void UpdateTerrainHeightRect( const RECT& rc ) ;
+	int ImportHeight( const char* path, float scale, float offset );
+	int ExportHeight( const char* path );
 
-	r3dTexture*		GetPaintMask( int idx ) ;
+	void UpdateHeightRect( const RECT& rc );
+	void UpdateTerrainHeightRect( const RECT& rc );
+
+	r3dTexture*		GetPaintMask( int idx );
 
 	void			BeginUndoRecord				( const char * title, UndoAction_e eAction );
 	void			EndUndoRecord				();
 	bool			IsUndoRecord				() const { return m_UndoItem != NULL; }
-	IUndoItem*		GetUndoRecord				() const { return m_UndoItem ; }
+	IUndoItem*		GetUndoRecord				() const { return m_UndoItem; }
 
-	int IsHeightDirty() const ;
+	int IsHeightDirty() const;
+	int GetMaskCount() const;
 
 private:
-	int			m_PaintLayerIdx ;
-	PaintMasks	m_PaintLayerMasks ;
+	int			m_PaintLayerIdx;
+	PaintMasks	m_PaintLayerMasks;
 
-	r3dTexture*	m_ColorTex ;
+	r3dTexture*	m_ColorTex;
 
-	Floats		m_FloatHeights ;
-	Floats		m_TempFloatHeights ;
+	Floats		m_FloatHeights;
+	Floats		m_TempFloatHeights;
 
-	Vectors		m_TempVectors0 ;
-	Vectors		m_TempVectors1 ;
+	Vectors		m_TempVectors0;
+	Vectors		m_TempVectors1;
 
-	Shorts		m_ShortHeights ;
+	Shorts		m_ShortHeights;
 
-	IUndoItem*	m_UndoItem ;
+	IUndoItem*	m_UndoItem;
 
-	int			m_HeightDirty ;
+	int			m_HeightDirty;
 
-} extern * g_pTerrain2Editor ;
+} extern * g_pTerrain2Editor;
 
 //------------------------------------------------------------------------
 
@@ -140,8 +146,6 @@ public:
 	void				Release ();
 	UndoAction_e		GetActionID ();
 
-	void				UndoRedo( bool redo ) ;
-
 	void				Undo ();
 	void				Redo ();
 
@@ -150,8 +154,8 @@ public:
 
 	CHeightChanged2 ();
 
-	static IUndoItem*	CreateUndoItem () ;
-	static void			Register() ;
+	static IUndoItem*	CreateUndoItem ();
+	static void			Register();
 };
 
 //------------------------------------------------------------------------
@@ -181,18 +185,61 @@ public:
 	void				Release			();
 	UndoAction_e		GetActionID		();
 
-	void				UndoRedo		( bool redo ) ;
+	void				UndoRedo		( bool redo );
 
 	void				Undo			();
 	void				Redo			();
 
-	void				AddData			( const PaintData_t & data ) ;
-	void				AddRectUpdate	( const RECT &rc ) ;
+	void				AddData			( const PaintData_t & data );
+	void				AddRectUpdate	( const RECT &rc );
 
-	CLayerMaskPaint2() ;
+	CLayerMaskPaint2();
 
-	static IUndoItem * CreateUndoItem	() ;
-	static void Register() ;
+	static IUndoItem * CreateUndoItem	();
+	static void Register();
+
+};
+
+//------------------------------------------------------------------------
+
+class CLayerMaskEraseAll2 : public IUndoItem
+{
+public:
+
+	struct PaintData_t
+	{
+		PaintData_t();
+
+		r3dTL::TArray< r3dTL::TArray< uint16_t > >	masks; // old data + new data
+		RECT										rc;
+	};
+
+private:
+
+	static const UndoAction_e		ms_eActionID = UA_TERRAIN2_MASK_ERASEALL;
+	r3dTL::TArray< PaintData_t >	m_pData;
+
+	int					m_MaskCount;
+
+	RECT				m_rc;
+
+public:
+
+	void				Release			();
+	UndoAction_e		GetActionID		();
+
+	void				UndoRedo		( bool redo );
+
+	void				Undo			();
+	void				Redo			();
+
+	void				AddData			( const PaintData_t & data );
+	void				AddRectUpdate	( const RECT &rc );
+
+	CLayerMaskEraseAll2();
+
+	static IUndoItem * CreateUndoItem	();
+	static void Register();
 
 };
 
@@ -224,19 +271,19 @@ public:
 	void				Release			();
 	UndoAction_e		GetActionID		();
 
-	void				UndoRedo		( bool redo ) ;
+	void				UndoRedo		( bool redo );
 
 	void				Undo			();
 	void				Redo			();
 
-	void				AddData			( const UndoColor_t & data ) ;
-	void				AddRectUpdate	( const RECT &rc ) ;
+	void				AddData			( const UndoColor_t & data );
+	void				AddRectUpdate	( const RECT &rc );
 
 	CLayerColorPaint2	();
 
-	static IUndoItem * CreateUndoItem	() ;
+	static IUndoItem * CreateUndoItem	();
 
-	static void Register() ;
+	static void Register();
 };
 
 //------------------------------------------------------------------------
@@ -244,7 +291,7 @@ public:
 class CTerrain2DestroyLayer : public IUndoItem
 {
 public:
-	typedef r3dTL::TArray< float > Floats ;
+	typedef r3dTL::TArray< float > Floats;
 
 public:
 	CTerrain2DestroyLayer();
@@ -256,17 +303,17 @@ public:
 	void				Undo			();
 	void				Redo			();
 
-	void				SetData			( int layerIdx ) ;
+	void				SetData			( int layerIdx );
 
-	static IUndoItem *	CreateUndoItem	() ;
+	static IUndoItem *	CreateUndoItem	();
 
-	static void			Register() ;
+	static void			Register();
 
 private:
-	static const UndoAction_e	ms_eActionID = UA_TERRAIN2_DESTROY_LAYER ;
-	r3dTerrainLayer				m_TerrainLayer ;
-	Floats						m_TerrainLayerData ;
-	int							m_TerrainLayerIdx ;
+	static const UndoAction_e	ms_eActionID = UA_TERRAIN2_DESTROY_LAYER;
+	r3dTerrainLayer				m_TerrainLayer;
+	Floats						m_TerrainLayerData;
+	int							m_TerrainLayerIdx;
 
 };
 
@@ -275,7 +322,7 @@ private:
 class CTerrain2InsertLayer : public IUndoItem
 {
 public:
-	typedef r3dTL::TArray< float > Floats ;
+	typedef r3dTL::TArray< float > Floats;
 
 public:
 	CTerrain2InsertLayer();
@@ -287,15 +334,15 @@ public:
 	void				Undo			();
 	void				Redo			();
 
-	void				SetData			( int layerIdx ) ;
+	void				SetData			( int layerIdx );
 
-	static IUndoItem *	CreateUndoItem	() ;
+	static IUndoItem *	CreateUndoItem	();
 
-	static void			Register() ;
+	static void			Register();
 
 private:
-	static const UndoAction_e	ms_eActionID = UA_TERRAIN2_INSERT_LAYER ;
-	int							m_TerrainLayerIdx ;
+	static const UndoAction_e	ms_eActionID = UA_TERRAIN2_INSERT_LAYER;
+	int							m_TerrainLayerIdx;
 
 };
 

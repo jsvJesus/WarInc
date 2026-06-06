@@ -12,7 +12,7 @@ CRITICAL_SECTION g_FileSysCritSection;
 
 r3dFS_FileList::r3dFS_FileList()
 {
-  buildVersion_ = 0;
+  buildVersion_ = 1;
 }
 
 r3dFS_FileList::~r3dFS_FileList()
@@ -253,31 +253,20 @@ bool r3dFS_FileList::WriteFileList(FILE* f)
   hdr1.version = 0x00000001;
   
   //
-  const size_t rawSize = files_.size() * sizeof(r3dFS_FileEntry);
-
-  if(rawSize > MAXDWORD)
-    r3dError("file list is too big\n");
-
-  if(files_.size() > MAXDWORD)
-    r3dError("too many files in file list\n");
-
-  const DWORD size = static_cast<DWORD>(rawSize);
-
-  BYTE* data = new BYTE[rawSize + 1];
-
-  for(size_t i = 0; i < files_.size(); i++) {
+  long  size = files_.size() * sizeof(r3dFS_FileEntry);
+  BYTE* data = new BYTE[size + 1];
+  for(size_t i=0; i<files_.size(); i++) {
     memcpy(data + i * sizeof(r3dFS_FileEntry), files_[i], sizeof(r3dFS_FileEntry));
   }
-
+  
   r3dFSCompress compress;
   BYTE* cdata;
   DWORD csize;
-
   if(!compress.CompressInflate(data, size, &cdata, &csize))
     r3dError("failed to compres file list\n");
-
+  
   r3dFS_ListHeader_v1 hdr2;
-  hdr2.numFiles     = static_cast<DWORD>(files_.size());
+  hdr2.numFiles     = files_.size();
   hdr2.buildVersion = buildVersion_;
   hdr2.csize        = csize;
   hdr2.crc32        = r3dCRC32(data, size);
@@ -325,7 +314,8 @@ void r3dFileSystem::RemoveVolumeFiles()
   r3dCSHolder csHolder(g_FileSysCritSection);
   CloseVolumes();
 
-  for(int i = 0; i < MAX_VOLUMES; i++) {
+  // clean up
+  for(size_t i=0; i<MAX_VOLUMES; i++) {
     char fname[MAX_PATH];
     GetVolumeName(fname, i);
     _unlink(fname);
@@ -335,7 +325,7 @@ void r3dFileSystem::RemoveVolumeFiles()
 bool r3dFileSystem::OpenVolumesEx(bool forRead, bool fail_if_error)
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
-  for(int i = 0; i < MAX_VOLUMES; i++) 
+  for(size_t i=0; i<MAX_VOLUMES; i++) 
   {
     r3d_assert(volumeHandles[i] == INVALID_HANDLE_VALUE);
     if(volumeSizes[i] == 0)
@@ -690,80 +680,71 @@ float r3dFileSystem::GetArchiveWastedPerc()
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
 
-  if(fl_.files_.size() <= 1)
-    return 0.0f;
+  std::sort(fl_.files_.begin(), fl_.files_.end(), FileEntrySortByVolume);
 
+  // get total size of archive
   __int64 totalSize = 0;
-
-  for(size_t i = 0; i < fl_.files_.size(); i++)
-  {
+  for(size_t i=0; i<fl_.files_.size(); i++)
     totalSize += fl_.files_[i]->csize;
-  }
 
-  if(totalSize <= 0)
-    return 0.0f;
-
+  // calc gap size
   __int64 totalGap = 0;
-
-  for(size_t i = 0; i + 1 < fl_.files_.size(); i++) 
+  for(size_t i=0; i<fl_.files_.size()-1; i++) 
   {
     r3dFS_FileEntry& f1 = *fl_.files_[i];
-    r3dFS_FileEntry& f2 = *fl_.files_[i + 1];
+    r3dFS_FileEntry& f2 = *fl_.files_[i+1];
+    //r3dOutToLog("%d: %d:%08d %s\n", i, f1.volume, f1.offset, f1.name);
 
     if(f1.volume != f2.volume)
       continue;
-
-    const DWORD f1End = f1.offset + f1.csize + static_cast<DWORD>(sizeof(r3dFS_FileHeader));
-    const int gap = static_cast<int>(f2.offset - f1End);
-
+      
+    int gap = f2.offset - (f1.offset + f1.csize + sizeof(r3dFS_FileHeader));
     if(gap != 0) {
+      //r3dOutToLog("%d bytes gap\n", gap);
       totalGap += gap;
     }
   }
-
-  return static_cast<float>(totalGap) / static_cast<float>(totalSize);
+  
+  float wasted = (float)totalGap / (float)totalSize;
+  return wasted;
 }
 
 bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
 {
   r3dCSHolder csHolder(g_FileSysCritSection);
-
   r3dOutToLog("r3dFS: rebuilding archive\n"); CLOG_INDENT;
 
   std::sort(fl_.files_.begin(), fl_.files_.end(), FileEntrySortByVolume);
 
+  // get total size of files
   outCur   = 0;
   outTotal = 0;
-
-  for(size_t i = 0; i < fl_.files_.size(); i++)
-  {
+  for(size_t i=0; i<fl_.files_.size(); i++)
     outTotal += fl_.files_[i]->csize;
-  }
-
+    
+  // open for WRITE
   if(!OpenVolumesForWrite(false)) {
     return false;
   }
-
+  
   int   curVolume = 0;
   DWORD curOffset = 0;
-
-  for(size_t i = 0; i < fl_.files_.size(); i++) 
+  for(size_t i=0; i<fl_.files_.size(); i++) 
   {
     r3dFS_FileEntry& fe = *fl_.files_[i];
-
-    const DWORD headerSize = static_cast<DWORD>(sizeof(r3dFS_FileHeader));
-    const DWORD chunkSize = fe.csize + headerSize;
-
-    if(static_cast<__int64>(curOffset) + static_cast<__int64>(chunkSize) >= VOLUME_SIZE)
+    
+    // check if we need to switch to new volume
+    if(curOffset + fe.csize + sizeof(r3dFS_FileHeader) >= VOLUME_SIZE)
     {
       curOffset = 0;
       curVolume++;
     }
-
+    
     if(fe.volume != curVolume || fe.offset != curOffset)
     {
       if(!RelocateFile(fe, curVolume, curOffset))
       {
+        // ok, shit happens
         CloseVolumes();
         RemoveVolumeFiles();
         r3dOutToLog("archive is corrupted\n");
@@ -771,25 +752,30 @@ bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
       }
     }
 
-    curOffset += chunkSize;
-
+    // advance offset
+    curOffset += fe.csize + sizeof(r3dFS_FileHeader);
+    
+    // check if we're requested to exit
     extern bool g_bExit;
     if(g_bExit)
       break;
-
-    outCur += fe.csize;
+    
+    outCur    += fe.csize;
   }
-
+  
   CloseVolumes();
   WriteFileList();
-
+  
   ResetVolumes();
   DetectVolumeSizes();
 
-  for(int i = 0; i < MAX_VOLUMES; i++) {
-    char fname[MAX_PATH];
-    GetVolumeName(fname, i);
-    _unlink(fname);
+  // clean up unused volumes
+  for(size_t i=0; i<MAX_VOLUMES; i++) {
+    if(volumeSizes[i] == 0) {
+      char fname[MAX_PATH];
+      GetVolumeName(fname, i + 1);
+      _unlink(fname);
+    }
   }
 
   return true;
@@ -797,8 +783,9 @@ bool r3dFileSystem::RebuildArchive(__int64& outTotal, __int64& outCur)
 
 bool r3dFileSystem::RelocateFile(r3dFS_FileEntry& fe, int newVolume, DWORD newOffset)
 {
-  const DWORD chunksize = fe.csize + static_cast<DWORD>(sizeof(r3dFS_FileHeader));
-  BYTE* chunkdata = new BYTE[static_cast<size_t>(chunksize) + 1];
+  // note: that'll work with zero sized files, because we're relocating whole chunk with header
+  int chunksize = fe.csize + sizeof(r3dFS_FileHeader);
+  BYTE* chunkdata = new BYTE[chunksize + 1];
 
   HANDLE h = volumeHandles[fe.volume];
   r3d_assert(h != INVALID_HANDLE_VALUE);

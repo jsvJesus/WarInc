@@ -127,15 +127,14 @@ WaterBase::~WaterBase()
 #include "lake.h"
 bool TraceWater(const r3dPoint3D& start, const r3dPoint3D& finish, r3dPoint3D& waterSplashPos)
 {
-
 	//get waterplane that is under/over the camera
-	obj_WaterPlane * pPlane = 0;
 	for(uint32_t i = 0; i < obj_WaterPlane::m_dWaterPlanes.Count (); i++ )
 	{
 		obj_WaterPlane * pP = obj_WaterPlane::m_dWaterPlanes[i];
-		if(pP->GetWaterPlaneFollowTerrainFlag())	continue;	//TODO
 
-		float h = pP->GetWaterPlaneHeight();
+		const obj_WaterPlane::Settings& sts = pP->GetSettings();
+
+		float h = sts.WaterPlaneHeight;
 		if( (start.y - h) * (h - finish.y) < 0)	continue;
 
 		waterSplashPos = start + (start.y-h) * (finish-start) / (start.y-finish.y);
@@ -144,14 +143,17 @@ bool TraceWater(const r3dPoint3D& start, const r3dPoint3D& finish, r3dPoint3D& w
 			 waterSplashPos.Z >= bBox.Org.Z && waterSplashPos.Z <= bBox.Org.Z + bBox.Size.Z)
 		{
 			//check for grid's cell where the camera is presents
-			uint32_t iW, iH;
-			pP->GetGridDimensions( iW, iH);
+			const obj_WaterPlane::Info& info = pP->GetInfo();
 
-			uint32_t i = uint32_t(waterSplashPos.x/pP->GetCellGridSize());
-			if(i >= iW)	continue;
+			int i, j;
 
-			uint32_t j = uint32_t(waterSplashPos.z/pP->GetCellGridSize());
-			if(j >= iH)	continue;
+			pP->GetCellIndexes( waterSplashPos, &i, &j );
+
+			if( i < 0 || i >= info.CellCountX )
+				continue;
+
+			if( j < 0 || j >= info.CellCountZ )
+				continue;
 
 			if(pP->GetWaterGridValue(i,j)!=0)	return true;
 		}
@@ -172,9 +174,53 @@ void WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, flo
 	for(uint32_t i = 0; i < obj_WaterPlane::m_dWaterPlanes.Count (); i++ )
 	{
 		obj_WaterPlane * pP = obj_WaterPlane::m_dWaterPlanes[i];
-		if(pP->GetWaterPlaneFollowTerrainFlag())	continue;	//TODO
 		pP->WaterSplash(waterSplashPos, height, size, amount, texIdx);
 	}
+}
+
+float getWaterDepthAtPos(const r3dPoint3D& pos)
+{
+	float depth = 100; 
+
+	for(uint32_t i = 0; i < obj_WaterPlane::m_dWaterPlanes.Count (); i++ )
+	{
+		obj_WaterPlane * pP = obj_WaterPlane::m_dWaterPlanes[i];
+
+		const obj_WaterPlane::Settings& sts = pP->GetSettings();
+
+		float h = sts.WaterPlaneHeight;
+		if( pos.y - h > 0)	continue; // above water
+
+		r3dBoundBox const & bBox = pP->GetBBoxWorld();
+		if(pos.X >= bBox.Org.X && pos.X <= bBox.Org.X + bBox.Size.X &&
+			pos.Z >= bBox.Org.Z && pos.Z <= bBox.Org.Z + bBox.Size.Z)
+		{
+			//check for grid's cell where the camera is presents
+			const obj_WaterPlane::Info& info = pP->GetInfo();
+
+			int i, j;
+
+			pP->GetCellIndexes( pos, &i, &j );
+
+			if( i < 0 || i >= info.CellCountX )
+				continue;
+
+			if( j < 0 || j >= info.CellCountZ )
+				continue;
+
+			if(pP->GetWaterGridValue(i,j)!=0)	
+				depth = pos.y - h;
+		}
+	}
+
+	extern float LakePlaneY;
+	if(objOceanPlane && (pos.y - LakePlaneY) < 0)
+	{
+		if((pos.y - LakePlaneY)<depth)
+			depth = pos.y - LakePlaneY;
+	}
+
+	return -depth;
 }
 
 bool WaterBase::Ripples(D3DXVECTOR4& camd)
@@ -249,8 +295,8 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 	}
 
 	r3dRenderer->SetCullMode(D3DCULL_NONE);
-	r3dRenderer->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-	r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
 	d3dc._SetDecl(pScreenDecl);
 	r3dRenderer->SetVertexShader("RIPPLES_VS");
 	D3DXVECTOR3 sq[] = {
@@ -260,20 +306,20 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		D3DXVECTOR3(-0.5f,  0.5f, 0.0f)
 	};
 
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 
-	/*r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 1, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	/*r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 	r3dRenderer->SetTex(HeightTexture, 1);*/
 
 
 	D3DXVECTOR4 params(	1.0f/RIPPLES_TEXTURE_SIZE,	1.0f/RIPPLES_AREA_SIZE,	RIPPLES_VISCOSITY,	0.0f);
-	r3dRenderer->SetPixelShaderConstantF(  6, &params.x,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  6, &params.x,  1 );
 
 	for(int i=0; i<nIterations; i++)
 	{
@@ -284,7 +330,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		if( needClear )
 		{
 			ripplesRT[prevRT]->Activate();
-			r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0x80808080, 1.0f, 0 );
+			r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0x80808080, r3dRenderer->GetClearZValue(), 0 );
 			ripplesRT[prevRT]->Deactivate();
 		}
 
@@ -293,11 +339,11 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 			ripplesRT[curRipplesRT]->Activate();
 
 			r3dRenderer->SetTex(ripplesRT[prevRT]->Tex, 0);
-			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 			r3dRenderer->SetTex(RipplesTex, 1);
-			r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-			r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+			r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+			r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
 
 			if(r_water_quality->GetInt()==3)
 				if(nSplashes>0)	r3dRenderer->SetPixelShader("RIPPLESR_PS");
@@ -306,18 +352,18 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 				if(nSplashes>0)	r3dRenderer->SetPixelShader("RIPPLESR_N_PS");
 				else	r3dRenderer->SetPixelShader("RIPPLES_N_PS");
 
-			r3dRenderer->SetPixelShaderConstantF(  5, &camd.x,  1 );
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(  5, &camd.x,  1 );
 			camd.x = camd.z = 0.0f;
 
 			D3DXVECTOR4 splash(0.0f, 0.0f, 0.0f, 0.0f);
 			for(int s=nSplashes; s<MaxSplashes; s++)
-				r3dRenderer->SetPixelShaderConstantF(  s, &splash.x,  1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  s, &splash.x,  1 );
 			for(; nSplashes>0; nSplashes--)
 			{
 				splash = splashes[nSplashes-1].params;
 				splash.z = floorf(100000.0f*splash.z/RIPPLES_TEXTURE_SIZE/512.0f * RIPPLES_AREA_SIZE) + float(splashes[nSplashes-1].texIdx+1)*0.2f;
 				splash.w *= RIPPLES_TEXTURE_SIZE/512.0f;
-				r3dRenderer->SetPixelShaderConstantF(  nSplashes-1, &splash.x,  1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  nSplashes-1, &splash.x,  1 );
 			}
 
 
@@ -330,7 +376,7 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 		if(0)	//rain
 		{
 			rainRipplesRT[curRipplesRT]->Activate();
-			if(needs2clear)	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0 );
+			if(needs2clear)	r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0, r3dRenderer->GetClearZValue(), 0 );
 
 			bool drops = GetAsyncKeyState('1')<0;
 			for(int n=0; n<4; n++)
@@ -342,11 +388,11 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 					drop.y = float(rand())/RAND_MAX;
 					drop.z = 0.05f*float(rand())/RAND_MAX;
 				}
-				r3dRenderer->SetPixelShaderConstantF(  n, &drop.x,  1 );
+				r3dRenderer->pd3ddev->SetPixelShaderConstantF(  n, &drop.x,  1 );
 			}
 
-			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-			r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+			r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 			r3dRenderer->SetTex(rainRipplesRT[prevRT]->Tex, 0);
 			r3dRenderer->SetPixelShader("RAINRIPPLES_PS");
 
@@ -357,10 +403,10 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 
 	}
 
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( 0, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAXANISOTROPY, 16 );
 
 	if(dss)
 	{
@@ -389,13 +435,21 @@ bool WaterBase::Ripples(D3DXVECTOR4& camd)
 }
 
 
-void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followTerrain)
+void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel)
 {
 	R3DPROFILE_FUNCTION("WaterBase::RenderBegin");
 
 	lastWaterLevel = waterLevel ;
 
-	float ic = 1.0f / 255.0f;
+	float4 envLightColor = GetEnvLightColor();
+	float4 envAmbientColor = GetEnvLightAmbient();
+
+	float ic_r = 1.0f / 255.0f * R3D_MIN( envLightColor.x + envAmbientColor.x, 1.0f );
+	float ic_g = 1.0f / 255.0f * R3D_MIN( envLightColor.y + envAmbientColor.y, 1.0f );
+	float ic_b = 1.0f / 255.0f * R3D_MIN( envLightColor.z + envAmbientColor.z, 1.0f );
+
+	float ic = 1.0f / 255.f;
+
 	r3dRenderer->SetMaterial(NULL);
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
@@ -428,9 +482,6 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 		_shallowColor = shallowColor;
 		_deepColor = deepColor;
 		_attenColor = attenColor;
-
-		//WATER_PLANE
-		if(followTerrain)	strcat(sVS,"F");
 	}
 	if(isRippled)	strcat(sVS, "R");
 
@@ -459,7 +510,8 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 
 	float fBumpness_RefrIndex_TileSize[] = { 50 - bumpness, (_refractionIndex-2.0f)/20.0f, tileSize, 10.0f*tileSize };
 
-	D3DXVECTOR4 vSun (-Sun->SunLight.Direction.x, -Sun->SunLight.Direction.y, -Sun->SunLight.Direction.z, r3dGetTime());
+	r3dPoint3D envLightDir = GetEnvLightDir();
+	D3DXVECTOR4 vSun (-envLightDir.x, -envLightDir.y, -envLightDir.z, r3dGetTime());
 
 	//---------------------------------------
 	//VERTEX shader CONSTS
@@ -469,22 +521,22 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	D3DXMATRIX ShaderMat;
 	ShaderMat =  mWorld * 	r3dRenderer->ViewProjMatrix ;
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 	D3DXVECTOR4 vWaveParam( specularTiling, 0, waterLevel, 0);
-	r3dRenderer->SetVertexShaderConstantF(  5, (float *)&vWaveParam,	1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  5, (float *)&vWaveParam,	1 );
 
 
 	D3DXVECTOR4 vsCamReg (r3dRenderer->CameraPosition.x, r3dRenderer->CameraPosition.y, r3dRenderer->CameraPosition.z, 0.f );
-	r3dRenderer->SetVertexShaderConstantF(  8, (float *)&vsCamReg,	1 );
-	r3dRenderer->SetVertexShaderConstantF(  22, fBumpness_RefrIndex_TileSize,  1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  8, (float *)&vsCamReg,	1 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF(  22, fBumpness_RefrIndex_TileSize,  1 );
 
 	if( r_water_quality->GetInt() == 1 )
 	{
-		r3dRenderer->SetVertexShaderConstantF(  23, (float *)&RefractViewProjTexXf,	4 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  23, (float *)&RefractViewProjTexXf,	4 );
 	}
 	else
 	{
-		r3dRenderer->SetVertexShaderConstantF(  23, (float *)&vSun,	1 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  23, (float *)&vSun,	1 );
 	}
 
 	//---------------------------------------
@@ -519,7 +571,16 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 
 	//------------------------------------------------------------------------
 	// float4      projVal                                 : register(  c9 );
-	psConsts [ 9 ] = D3DXVECTOR4 (r3dRenderer->ProjMatrix.m[2][2], r3dRenderer->ProjMatrix.m[2][3], 2.0f / r3dRenderer->ProjMatrix.m[0][0], -2.0f / r3dRenderer->ProjMatrix.m[1][1]) ;
+
+	// need to calculate projection coefficients manually, because they may be for inversed z range
+
+	float zn = r3dRenderer->NearClip;
+	float zf = r3dRenderer->FarClip;
+
+	float p33 = zf/(zf-zn);
+	float p34 = -zn*zf/(zf-zn);
+
+	psConsts [ 9 ] = D3DXVECTOR4 (p33, p34, 2.0f / r3dRenderer->ProjMatrix.m[0][0], -2.0f / r3dRenderer->ProjMatrix.m[1][1]) ;
 
 	//------------------------------------------------------------------------
 	// float4      SunVector_Time                          : register( c10 );
@@ -528,7 +589,7 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	//------------------------------------------------------------------------
 	// float4      deepColor_SpecularCosinePower           : register( c11 );
 
-	D3DXVECTOR4 fDeepColor_SpecularCosinePower = D3DXVECTOR4 (_deepColor.R * ic, _deepColor.G * ic, _deepColor.B * ic, specularCosinePower);
+	D3DXVECTOR4 fDeepColor_SpecularCosinePower = D3DXVECTOR4 (_deepColor.R * ic_r, _deepColor.G * ic_g, _deepColor.B * ic_b, specularCosinePower);
 	fDeepColor_SpecularCosinePower.x = powf(fDeepColor_SpecularCosinePower.x, 2.2f);
 	fDeepColor_SpecularCosinePower.y = powf(fDeepColor_SpecularCosinePower.y, 2.2f);
 	fDeepColor_SpecularCosinePower.z = powf(fDeepColor_SpecularCosinePower.z, 2.2f);
@@ -602,7 +663,7 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	//------------------------------------------------------------------------
 	// float4      SunColor_refrIdx2                       : register( c19 );
 
-	D3DXVECTOR4 vv = D3DXVECTOR4(Sun->SunLight.R, Sun->SunLight.G, Sun->SunLight.B, 0.0f)*Sun->SunLight.Intensity*0.5f/255.0f;
+	D3DXVECTOR4 vv = D3DXVECTOR4(envLightColor.x, envLightColor.y, envLightColor.z, 0.0f)*0.5f;
 	vv.w = 1.0f - fBumpness_RefrIndex_TileSize[1];
 	psConsts[ 19 ] = vv ;
 
@@ -636,9 +697,9 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	//------------------------------------------------------------------------
 	// float4      specIntensity_Bumpiness                 : register( c23 );
 
-	float SunR = Sun->SunLight.R * Sun->SunLight.Intensity * specIntensity * 0.5f/255.0f;
-	float SunG = Sun->SunLight.G * Sun->SunLight.Intensity * specIntensity * 0.5f/255.0f;
-	float SunB = Sun->SunLight.B * Sun->SunLight.Intensity * specIntensity * 0.5f/255.0f;
+	float SunR = envLightColor.x * specIntensity * 0.5f;
+	float SunG = envLightColor.y * specIntensity * 0.5f;
+	float SunB = envLightColor.z * specIntensity * 0.5f;
 
 	psConsts[ 23 ] = D3DXVECTOR4 ( SunR, SunG, SunB, 1.0f / specBumpiness ) ;
 
@@ -659,53 +720,53 @@ void WaterBase::RenderBegin(const r3dCamera& Cam, float waterLevel, bool followT
 	psConsts[ 26 ] = D3DXVECTOR4 ( 1.0f / farTileBumpiness, SetNormalTextures(10,11,10.f / farTileScale ), 1.0f / fresnelBumpiness, 0.f ) ;
 
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[0].x, psConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[0].x, psConsts.COUNT ) ) ;
 	
 	//-----------------------------------------------------
 	// TEXTURES
 	r3dRenderer->SetTex(SkyDome->cubemap->Tex, 7);
 
 	r3dRenderer->SetTex(DepthBuffer->Tex, 2);
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 2, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 2, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 	
 	r3dRenderer->SetTex(gWaterRefractionBuffer->Tex, 3);
-	r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( 3, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-	r3dRenderer->SetSamplerState( 3, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
+	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+	r3dRenderer->pd3ddev->SetSamplerState( 3, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
 
 	r3dRenderer->SetTex(TempShadowBuffer->Tex,5);
 
 	r3dRenderer->SetTex(ColorTexture, 6);
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( 6, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( 6, D3DSAMP_MAXANISOTROPY, 16 );
 
 	if(RIPPLES_TEXTURE_SIZE > 0.0f && curRipplesRT!=-1)
 	{
 		//r3dRenderer->SetTex(rainRipplesRT[curRipplesRT]->Tex, 8);
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->SetSamplerState( 8, D3DSAMP_MAXANISOTROPY, 16 );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->pd3ddev->SetSamplerState( 8, D3DSAMP_MAXANISOTROPY, 16 );
 
 		r3dRenderer->SetTex(ripplesRT[curRipplesRT]->Tex, 9);
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-		r3dRenderer->SetSamplerState( 9, D3DSAMP_MAXANISOTROPY, 16 );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+		r3dRenderer->pd3ddev->SetSamplerState( 9, D3DSAMP_MAXANISOTROPY, 16 );
 	}
 }
 
@@ -856,21 +917,21 @@ float WaterBase::SetNormalTextures(unsigned int t0, unsigned int t1, float fps) 
 	int texIdx = int(frame) % 25;
 
 	r3dRenderer->SetTex(WaterColor[texIdx], t0);
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( t0, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( t0, D3DSAMP_MAXANISOTROPY, 16 );
 	texIdx++;
 	if(texIdx==25)	texIdx = 0;
 	r3dRenderer->SetTex(WaterColor[texIdx], t1);
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
-	r3dRenderer->SetSamplerState( t1, D3DSAMP_MAXANISOTROPY, 16 );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	r3dRenderer->pd3ddev->SetSamplerState( t1, D3DSAMP_MAXANISOTROPY, 16 );
 
 	return frame - int(frame);
 }
@@ -903,7 +964,7 @@ void WaterBase::OnCreateBase()
 	( r3dDeviceTunnel::CreateVertexDeclaration(screenDecl, &pScreenDecl) );
 }
 
-void WaterBase::CreateRefractionBuffer()
+void WaterBase::CreateWaterBuffers()
 {
 	R3DPROFILE_FUNCTION("WaterBase::CreateRefractionBuffer");
 
@@ -916,12 +977,9 @@ void WaterBase::CreateRefractionBuffer()
 	RIPPLES_TEXTURE_SIZE = 1024.0f;
 	RIPPLES_AREA_SIZE = 40.0f;
 
-	gWaterRefractionBuffer = BlurredScreenBuffer;
-
 	switch(r_water_quality->GetInt())
 	{
 	case 1:
-		gWaterRefractionBuffer = TempBuffer;
 		RIPPLES_TEXTURE_SIZE = 0.0f;
 		break;
 	case 2:
@@ -940,9 +998,24 @@ void WaterBase::CreateRefractionBuffer()
 		//rainRipplesRT[1] = r3dScreenBuffer::CreateClass(512, 512, D3DFMT_G16R16);
 	}
 
+	UpdateRefractionBuffer( false );
 }
 
+void WaterBase::UpdateRefractionBuffer( bool allowZero )
+{
+	if( gWaterRefractionBuffer || !allowZero )
+	{
+		if( r_water_quality->GetInt() == 1 )
+			gWaterRefractionBuffer = TempBuffer;
+		else
+			gWaterRefractionBuffer = BlurredScreenBuffer;
+	}
+}
 
+void WaterBase::FlushRefractionBuffer()
+{
+	gWaterRefractionBuffer = NULL;
+}
 
 #ifndef FINAL_BUILD
 float WaterBase::DrawPropertyEditorWater(float scrx, float scry, float scrw, float scrh, float DEFAULT_CONTROLS_WIDTH, float DEFAULT_CONTROLS_HEIGHT)
@@ -950,7 +1023,7 @@ float WaterBase::DrawPropertyEditorWater(float scrx, float scry, float scrw, flo
 	static int showBounds = 0 ;
 	if( showBounds )
 	{
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
 
 		D3DXVECTOR4 pointNear( gCam.x + gCam.vPointTo.x * farTileFadeStart, lastWaterLevel, gCam.z + gCam.vPointTo.z * farTileFadeStart, 1 ) ;
 
@@ -972,7 +1045,7 @@ float WaterBase::DrawPropertyEditorWater(float scrx, float scry, float scrw, flo
 
 		r3dRenderer->Flush() ;
 
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
 	}
 
 	float starty = scry;

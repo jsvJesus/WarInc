@@ -16,8 +16,6 @@ struct GBWeaponInfo
 	float m_AmmoDelay;
 	float m_AmmoTimeout;
 
-	uint32_t m_numClips;
-	uint32_t m_clipSize;
 	float m_reloadTime;
 	float m_reloadActiveTick;
 	float m_fireDelay;

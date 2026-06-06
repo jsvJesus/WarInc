@@ -7,12 +7,12 @@ void SetVolumeFogParams()
 	{
 
 		D3DXVECTOR4 AerialDensity_Distance(0.0f, 100.0f, r3dGameLevel::Environment.Aerial_MipBias, 0);
-		r3dRenderer->SetPixelShaderConstantF(  FOGC_CONST0, (float *)&AerialDensity_Distance,  1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF(  FOGC_CONST0, (float *)&AerialDensity_Distance,  1 );
 		r3dRenderer->SetTex(0, 7);
 
 		D3DXVECTOR4 TintVector(0.0f, 0.0f, 0.0f, 0.0f);
-		r3dRenderer->SetPixelShaderConstantF( FOGC_CONST1, (float *)&TintVector,  1 );
-		r3dRenderer->SetVertexShaderConstantF( 254, (float *)&TintVector,  1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF( FOGC_CONST1, (float *)&TintVector,  1 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF( 254, (float *)&TintVector,  1 );
 
 		float top = 1.0f;
 		float middle = top * 0.1f;
@@ -22,8 +22,8 @@ void SetVolumeFogParams()
 		float t_m = 1.0f;
 
 		D3DXVECTOR4 PVector(fadeDist, top, _middle, t_m);
-		r3dRenderer->SetPixelShaderConstantF(  FOGC_CONST2, (float *)&PVector,  1 );
-		r3dRenderer->SetVertexShaderConstantF(  255, (float *)&PVector,  1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF(  FOGC_CONST2, (float *)&PVector,  1 );
+		r3dRenderer->pd3ddev->SetVertexShaderConstantF(  255, (float *)&PVector,  1 );
 	}
 	else
 	{
@@ -32,10 +32,11 @@ void SetVolumeFogParams()
 		float aerialDensity = r3dGameLevel::Environment.Aerial_Density.GetFloatValue(time) / 1000.0f;
 		float aerialDistance = r3dGameLevel::Environment.Aerial_Distance.GetFloatValue(time);
 		D3DXVECTOR4 AerialDensity_Distance(aerialDensity, aerialDistance,  r3dGameLevel::Environment.Aerial_MipBias, 0);
-		r3dRenderer->SetPixelShaderConstantF(  FOGC_CONST0, (float *)&AerialDensity_Distance,  1 );
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF(  FOGC_CONST0, (float *)&AerialDensity_Distance,  1 );
 
-		D3D_V( r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
-		D3D_V( r3dRenderer->SetSamplerState( 7, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 7, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP ) );
 
 		r3dSetFiltering( R3D_BILINEAR, 7 ) ;
 
@@ -54,8 +55,8 @@ void SetVolumeFogParams()
 			TintVector.y = powf( TintVector.y, 2.2f ) ;
 			TintVector.z = powf( TintVector.z, 2.2f ) ;
 
-			r3dRenderer->SetPixelShaderConstantF( FOGC_CONST1, (float *)&TintVector,  1 );
-			r3dRenderer->SetVertexShaderConstantF( 254, (float *)&TintVector,  1 );
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF( FOGC_CONST1, (float *)&TintVector,  1 );
+			r3dRenderer->pd3ddev->SetVertexShaderConstantF( 254, (float *)&TintVector,  1 );
 
 			float top = r3dGameLevel::Environment.Fog_Height.GetFloatValue(time)+0.001f;
 			float middle = top * r3dGameLevel::Environment.Fog_Range.GetFloatValue(time) / 100.0f;	//%
@@ -65,8 +66,8 @@ void SetVolumeFogParams()
 
 			D3DXVECTOR4 PVector(fadeDist, top, _middle, t_m);
 
-			r3dRenderer->SetPixelShaderConstantF(  FOGC_CONST2, (float *)&PVector,  1 );
-			r3dRenderer->SetVertexShaderConstantF(  255, (float *)&PVector,  1 );
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(  FOGC_CONST2, (float *)&PVector,  1 );
+			r3dRenderer->pd3ddev->SetVertexShaderConstantF(  255, (float *)&PVector,  1 );
 		}
 	}
 }
@@ -83,9 +84,9 @@ void DrawVolumeFogEffect()
 
 	/*
 	r3dRenderer->pd3ddev->SetTexture(5, gNoiseTexture2->AsTexVolume());
-	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSW,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSW,   D3DTADDRESS_WRAP );
 	*/
 
 	float DepthZ = r3dRenderer->FarClip * 0.9375f;
@@ -93,10 +94,10 @@ void DrawVolumeFogEffect()
 			D3DXVECTOR4( gCam.x, gCam.y, gCam.z, 1.f / DepthZ ),
 			D3DXVECTOR4( .5f / r3dRenderer->ScreenW, 0.5f / r3dRenderer->ScreenH, g_waterLevel, 0.f )
 		};
-	r3dRenderer->SetPixelShaderConstantF( 10, (float *)vsConsts, sizeof vsConsts / sizeof vsConsts[ 0 ] );	
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 10, (float *)vsConsts, sizeof vsConsts / sizeof vsConsts[ 0 ] );	
 
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	SetVolumeFogParams();
 
@@ -112,7 +113,7 @@ void DrawVolumeFogEffect()
 
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 	r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));
@@ -124,8 +125,8 @@ void DrawVolumeFogEffect()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(NULL);
 	r3dRenderer->SetMaterial(NULL);

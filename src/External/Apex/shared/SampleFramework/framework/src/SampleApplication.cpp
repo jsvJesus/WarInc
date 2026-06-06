@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,76 +32,75 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
+#include <PsUtilities.h>
 #include <SampleApplication.h>
 #include <SampleCommandLine.h>
 #include <SampleAssetManager.h>
-#include <RendererDesc.h>
-#include "PsString.h"
-#include "AgPerfMonEventSrcAPI.h"
-#include "psfile.h"
+#include <Renderer.h>
 #include <RendererMemoryMacros.h>
 #include <SamplePlatform.h>
-
-#include "PsShare.h"
-#include "PsTime.h"
+#include "SampleFrameworkInputEventIds.h"
+// for PsString.h
+namespace physx
+{
+	namespace string {}
+}
+#include <PsString.h>
+#include "PsFoundation.h"
+#include "PsUtilities.h"
 
 //#define RENDERER_USE_OPENGL_ON_WINDONWS	1
 
-#ifdef AGPERFMON
-#define DEFINE_EVENT(name) #name,
-const char *AgAppPerfUtils::mEventNames[] = {
-#include "AgPerfMonEventDefs.h"
-	""
-};
+#ifdef PHYSX_PROFILE_SDK
+#include "SamplePxProfileZone.h"
+#include "PxProfileZone.h"
+#include "PxProfileZoneManager.h"
+extern SampleProfileEventNameProvider gProfileNameProvider;
+#endif //PHYSX_PROFILE_SDK
 
-AgAppPerfUtils* gAppPerfUtils = NULL;
-#undef DEFINE_EVENT
+#ifdef PX_ANDROID
+#define LOGI(...) LOG_INFO("SampleApplication", __VA_ARGS__)
+#define printf LOGI
 #endif
-
-char gShadersDir[1024];
-char gAssetDir[1024];
 
 #if defined(SMOOTH_CAM)
 const float g_smoothCamBaseVel  = 6.0f;
-const float g_smoothCamShiftMul = 4.0f;
+const float g_smoothCamFastMul = 4.0f;
 const float g_smoothCamPosLerp  = 0.4f;
 
 const float g_smoothCamRotSpeed = 0.005f;
 const float g_smoothCamRotLerp  = 0.4f;
 #endif
 
-using physx::pubfnd2::PxMat33Legacy;
-using physx::pubfnd2::PxMat34Legacy;
-using physx::pubfnd2::PxAtan2;
-using physx::pubfnd2::PxAsin;
-using physx::pubfnd2::PxPi;
-using physx::pubfnd2::PxVec3;
-using physx::pubfnd2::PxF32;
-using physx::pubfnd2::PxU32;
-using physx::pubfnd2::PxI32;
+#include "FrameworkFoundation.h"
 
-static PxMat33Legacy EulerToMat33(const PxVec3 &e)
+using namespace SampleFramework;
+
+static PxMat44 EulerToMat33(const PxVec3& e)
 {
-	float c1 = cosf(e.z);
-	float s1 = sinf(e.z);
-	float c2 = cosf(e.y);
-	float s2 = sinf(e.y);
-	float c3 = cosf(e.x);
-	float s3 = sinf(e.x);
-	PxMat33Legacy m(PxVec3(c1*c2,              -s1*c2,             s2),
-			  PxVec3((s1*c3)+(c1*s2*s3), (c1*c3)-(s1*s2*s3),-c2*s3),
-			  PxVec3((s1*s3)-(c1*s2*c3), (c1*s3)+(s1*s2*c3), c2*c3));
-	m.setTransposed(m);
+	const float c1 = cosf(e.z);
+	const float s1 = sinf(e.z);
+	const float c2 = cosf(e.y);
+	const float s2 = sinf(e.y);
+	const float c3 = cosf(e.x);
+	const float s3 = sinf(e.x);
+	PxMat44 m;
+	m.column0 = PxVec4(c1*c2,              -s1*c2,             s2,	0.0f);
+	m.column1 = PxVec4((s1*c3)+(c1*s2*s3), (c1*c3)-(s1*s2*s3),-c2*s3, 0.0f);
+	m.column2 = PxVec4((s1*s3)-(c1*s2*c3), (c1*s3)+(s1*s2*c3), c2*c3, 0.0f);
+	m.column3 = PxVec4(0,0,0,1);
 	return m;
 }
 
-static PxVec3 Mat33ToEuler(const PxMat33Legacy &m)
+static PxVec3 Mat33ToEuler(const PxMat44& m)
 {
 	const PxF32 epsilon = 0.99999f;
 	PxVec3 e, x, y, z;
-	m.getColumn(0, x);
-	m.getColumn(1, y);
-	m.getColumn(2, z);
+
+	x = PxVec3(m.column0.x, m.column1.x, m.column2.x);
+	y = PxVec3(m.column0.y, m.column1.y, m.column2.y);
+	z = PxVec3(m.column0.z, m.column1.z, m.column2.z);
+
 	if(x.z > epsilon)
 	{
 		e.x = PxAtan2(z.y, y.y);
@@ -123,14 +122,19 @@ static PxVec3 Mat33ToEuler(const PxMat33Legacy &m)
 	return e;
 }
 
-SampleApplication::SampleApplication(const SampleCommandLine &cmdline, const char *assetPathPrefix, MouseButton camMoveButton) :
+SampleApplication::SampleApplication(const SampleCommandLine &cmdline, const char *assetPathPrefix, PxI32 camMoveButton) :
 	m_cmdline(cmdline)
+,   m_disableRendering(false)
+,	m_rotationSpeedScale(200.0f)
+,	m_moveSpeedScale(40.0f)
+,	m_rightStickRotate(false)
+,	m_rewriteBuffers(false)
 {
 	m_platform->setCWDToEXE();
 
 	if (assetPathPrefix)
 	{
-		if (!SampleAssetManager::searchForPath(assetPathPrefix, m_assetPathPrefix, sizeof(m_assetPathPrefix)/sizeof(m_assetPathPrefix[0]), 20))
+		if (!searchForPath(assetPathPrefix, m_assetPathPrefix, PX_ARRAY_SIZE(m_assetPathPrefix), true, 20))
 		{
 			RENDERER_ASSERT(false, "assetPathPrefix could not be found in any of the parent directories!");
 			m_assetPathPrefix[0] = 0;
@@ -139,50 +143,20 @@ SampleApplication::SampleApplication(const SampleCommandLine &cmdline, const cha
 	else
 	{
 		RENDERER_ASSERT(assetPathPrefix, "assetPathPrefix must not be NULL (try \"media\" instead)");
+#if defined(RENDERER_ANDROID)
+		strcpy(m_assetPathPrefix, "/sdcard/media/");
+#else
 		m_assetPathPrefix[0] = 0;
+#endif			
 	}
 
 	m_renderer     = 0;
 	m_sceneSize    = 1.0f;
 	m_assetManager = 0;
-	m_mouseX       = 0;
-	m_mouseY       = 0;
-	m_timeCounter  = 0;
-	memset(m_mouseButtonState, 0, sizeof(m_mouseButtonState));
-	memset(m_keyState,         0, sizeof(m_keyState));
-	memset(m_gamepadAxisState, 0, sizeof(m_gamepadAxisState));
+	m_timeCounter	= 0;
 	m_camMoveButton = camMoveButton;
-	
-#ifdef AGPERFMON
-#ifndef WIN32
-#define MAX_IP_LENGTH 32
-	FILE *agInFile = NULL;
-	char ipBuffer[MAX_IP_LENGTH];
-	//shdfnd::fopen_s(&agInFile, "/app_home/APEX/1.0/common/perfmonConfig.txt", "r");
 
-	if (agInFile!=NULL)
-	{
-		// obtain file size:
-		fseek (agInFile , 0 , SEEK_END);
-		int lSize = ftell (agInFile);
-		if (lSize > MAX_IP_LENGTH)
-			lSize = MAX_IP_LENGTH;
-
-		rewind (agInFile);
-
-		// copy the file into the buffer
-		fread (ipBuffer,1,lSize,agInFile);
-		ipBuffer[lSize] = '\0';
-
-		// terminate
-		fclose (agInFile);
-		AgAppPerfUtils::SetIPAddress(ipBuffer);
-	}
-	else
-		AgAppPerfUtils::SetIPAddress("10.20.200.134");
-#endif //!WIN32
-	gAppPerfUtils = new AgAppPerfUtils;
-#endif //AGPERFMON
+	mProfileZone = NULL;
 }
 
 SampleApplication::~SampleApplication(void)
@@ -190,52 +164,46 @@ SampleApplication::~SampleApplication(void)
 	RENDERER_ASSERT(!m_renderer, "Renderer was not released prior to window closure.");
 	RENDERER_ASSERT(!m_assetManager, "Asset Manager was not released prior to window closure.");
 
-#ifdef AGPERFMON
-	if(gAppPerfUtils)
-	{
-		delete gAppPerfUtils;
-		gAppPerfUtils = 0;
-	}
-#endif
+	DELETESINGLE(m_platform);
+
+	clearSearchPaths();
 }
 
-void SampleApplication::setEyeTransform(const PxMat34Legacy &eyeTransform)
+void SampleApplication::setEyeTransform(const PxMat44& eyeTransform)
 {
 	m_worldToView.setInverseTransform(eyeTransform);
-	m_eyeRot = Mat33ToEuler(eyeTransform.M);
+	m_eyeRot = Mat33ToEuler(eyeTransform);
 #if defined(SMOOTH_CAM)
-	m_targetEyePos = m_worldToView.getInverseTransform().t;
+	m_targetEyePos = m_worldToView.getInverseTransform().getPosition();
 	m_targetEyeRot = m_eyeRot;
 #endif
 }
 
-void SampleApplication::setEyeTransform(const PxVec3 &pos, const PxVec3 &rot)
+void SampleApplication::setEyeTransform(const PxVec3& pos, const PxVec3& rot)
 {
-	PxMat34Legacy eye;
-
-	eye.id();
-	eye.t  = pos;
+	PxMat44 eye;
 	m_eyeRot = rot;
-	eye.M = EulerToMat33(m_eyeRot);
+	eye = EulerToMat33(m_eyeRot);
+	eye.setPosition(pos);
 #if defined(SMOOTH_CAM)
-	m_targetEyePos = eye.t;
+	m_targetEyePos = pos;
 	m_targetEyeRot = m_eyeRot;
 #endif
 
 	m_worldToView.setInverseTransform(eye);
 }
 
-void SampleApplication::setViewTransform(const PxMat34Legacy &viewTransform)
+void SampleApplication::setViewTransform(const PxMat44 &viewTransform)
 {
 	m_worldToView.setForwardTransform(viewTransform);
-	m_eyeRot = Mat33ToEuler( m_worldToView.getInverseTransform().M );
+	m_eyeRot = Mat33ToEuler( m_worldToView.getInverseTransform() );
 #if defined(SMOOTH_CAM)
-	m_targetEyePos = m_worldToView.getInverseTransform().t;
+	m_targetEyePos = m_worldToView.getInverseTransform().getPosition();
 	m_targetEyeRot = m_eyeRot;
 #endif
 }
 
-const PxMat34Legacy& SampleApplication::getViewTransform() const
+const PxMat44& SampleApplication::getViewTransform() const
 {
 	return m_worldToView.getForwardTransform();
 }
@@ -244,53 +212,65 @@ void SampleApplication::onOpen(void)
 {
 	m_platform->preRendererSetup();
 
-    memset(m_mouseButtonState, 0, sizeof(m_mouseButtonState));
-	memset(m_keyState,         0, sizeof(m_keyState));
-
-	char rendererdir[1024];
-	physx::string::strcpy_s(rendererdir, sizeof(rendererdir), m_assetPathPrefix);
-	physx::string::strcat_s(rendererdir, sizeof(rendererdir), "/SampleRenderer/3/");
-	physx::string::strcpy_s(gAssetDir, sizeof(gAssetDir), rendererdir);
-
-	physx::string::strcpy_s(gShadersDir, sizeof(gShadersDir), rendererdir);
-	physx::string::strcat_s(gShadersDir, sizeof(gShadersDir), "shaders/");
+	char assetDir[1024];
+	physx::string::strcpy_s(assetDir, sizeof(assetDir), m_assetPathPrefix);
+	physx::string::strcat_s(assetDir, sizeof(assetDir), ASSET_DIR);
 
 	m_eyeRot = PxVec3(0,0,0);
-	PxMat34Legacy eye;
-	eye.id();
-	eye.t.x = 2;
-	eye.t.y = 2;
-	eye.t.z = 16;
+	PxMat44 eye = PxMat44::createIdentity();
+	const PxVec3 pos = PxVec3(0.0f, 2.0f, 16.0f);
+	eye.setPosition(pos);
 	m_worldToView.setInverseTransform(eye);
 #if defined(SMOOTH_CAM)
-	m_targetEyePos = eye.t;
+	m_targetEyePos = pos;
 	m_targetEyeRot = m_eyeRot;
 #endif
 
-	RendererDesc renDesc;
-	
 	// default renderer drivers for various platforms...
-	m_platform->setupRendererDescription(renDesc);
+	setupRendererDescription(m_renDesc);
 #if defined RENDERER_USE_OPENGL_ON_WINDONWS
-	renDesc.driver = SampleRenderer::Renderer::DRIVER_OPENGL;
+	m_renDesc.driver = SampleRenderer::Renderer::DRIVER_OPENGL;
 #endif
 
 	// check to see if the user wants to override the renderer driver...
-	if(m_cmdline.hasSwitch("ogl"))        renDesc.driver = Renderer::DRIVER_OPENGL;
-	else if(m_cmdline.hasSwitch("d3d9"))  renDesc.driver = Renderer::DRIVER_DIRECT3D9;
-	else if(m_cmdline.hasSwitch("d3d10")) renDesc.driver = Renderer::DRIVER_DIRECT3D10;
-	else if(m_cmdline.hasSwitch("gcm"))   renDesc.driver = Renderer::DRIVER_LIBGCM;
+#if defined(RENDERER_ENABLE_OPENGL)
+	if(m_cmdline.hasSwitch("ogl"))   m_renDesc.driver = SampleRenderer::Renderer::DRIVER_OPENGL;
+#endif
+#if defined(RENDERER_ENABLE_GLES2)
+	if(m_cmdline.hasSwitch("gles2")) m_renDesc.driver = SampleRenderer::Renderer::DRIVER_GLES2;
+#endif
+#if defined(RENDERER_ENABLE_DIRECT3D9)
+	if(m_cmdline.hasSwitch("d3d9"))  m_renDesc.driver = SampleRenderer::Renderer::DRIVER_DIRECT3D9;
+#endif
+#if defined(RENDERER_ENABLE_DIRECT3D11)
+	if(m_cmdline.hasSwitch("d3d11")) m_renDesc.driver = SampleRenderer::Renderer::DRIVER_DIRECT3D11;
+#endif
 
-	m_renderer = Renderer::createRenderer(renDesc);
-	m_platform->postRendererSetup();
+#if defined(RENDERER_ANDROID)
+	m_renDesc.windowHandle = (physx::PxU64)android_window_ptr;
+#endif
+
+	// UGLY!  We set the path here temporarily to the base media path.  The onInit() call 
+	// should call m_renderer->setAssetDir() with the full SampleRenderer media path
+	m_renderer = SampleRenderer::Renderer::createRenderer(m_renDesc, m_assetPathPrefix);
+	m_platform->postRendererSetup(m_renderer);
 
 	m_timeCounter = m_time.getCurrentCounterValue();
 
 	m_assetManager = new SampleAssetManager(*m_renderer);
-	m_assetManager->addSearchPath(m_assetPathPrefix);
-	m_assetManager->addSearchPath(rendererdir);
-
+	addSearchPath(m_assetPathPrefix);
+	//addSearchPath(assetDir);
 	onInit();
+
+	// make sure the resize method is called once
+	if (m_renderer)
+	{
+		PxU32 width,height;
+		m_renderer->getWindowSize(width, height);
+		onResize(width, height);
+		if ( mProfileZone != NULL )
+			m_renderer->setProfileZone( mProfileZone );
+	}
 }
 
 bool SampleApplication::onClose(void)
@@ -319,65 +299,93 @@ T SmoothStep( const T& start, const T& end, float s )
 }
 
 void SampleApplication::onDraw(void)
-{	
-	SAMPLE_PERF_SCOPE(ApexOnDraw);
-#if USE_MEMORY_TRACKER
-	TRACK_FRAME();
-#endif
+{
+	if (!getRenderer())
+	{
+		return;
+	}
 
 	physx::PxU64 qpc = m_time.getCurrentCounterValue();
-	float dtime = static_cast<float>((double)(qpc - m_timeCounter) / (double)m_time.sCounterFreq.mDenominator);
+	static float sToSeconds = float(m_time.getBootCounterFrequency().mNumerator) / float(m_time.getBootCounterFrequency().mDenominator * m_time.sNumTensOfNanoSecondsInASecond);
+	float dtime = float(qpc - m_timeCounter) * sToSeconds;
+	m_lastDTime = dtime;
 	m_timeCounter = qpc;
-	PX_ASSERT(dtime >= 0);
+	PX_ASSERT(dtime > 0);
 	if(dtime > 0)
 	{
+		dtime = tweakElapsedTime(dtime);
+
 		{
-			SAMPLE_PERF_SCOPE( ApexOnTickPreRender );
 			onTickPreRender(dtime);
 		}
 		if(m_renderer)
 		{
-			SAMPLE_PERF_SCOPE( ApexOnRender );
-			onRender();
+			if(!m_disableRendering)
+			{
+				onRender();
+			}
 		}
 		{
-			SAMPLE_PERF_SCOPE( ApexOnTickPostRender );
 			onTickPostRender(dtime);
 		}
-		
+
+		//return;
+
+		if(m_renderer && !m_disableRendering)
+		{
+			m_rewriteBuffers = m_renderer->swapBuffers();
+		}
+
 		// update scene...
 
-		PxMat34Legacy eye = m_worldToView.getInverseTransform();
-		eye.M = EulerToMat33(m_eyeRot);
-		PxVec3* targetParam;
+		PxMat44 tmp = m_worldToView.getInverseTransform();
+		PxMat44 eye = EulerToMat33(m_eyeRot);
+		eye.column3 = tmp.column3;
 
+		doInput();
+
+		PxVec3* targetParam;
 #if defined(SMOOTH_CAM)
-		const float eyeSpeed = m_sceneSize * g_smoothCamBaseVel * dtime * (isKeyDown(KEY_SHIFT) ? g_smoothCamShiftMul : 1.0f);
+		const float eyeSpeed = m_sceneSize * g_smoothCamBaseVel * dtime * (getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_SHIFT_SPEED) ? g_smoothCamFastMul : 1.0f);
 		targetParam = &m_targetEyePos;
 #else
-		const float eyeSpeed = m_sceneSize * 4.0f * dtime * (isKeyDown(KEY_SHIFT) ? 4.0f : 1.0f);
+		const float eyeSpeed = m_sceneSize * 4.0f * dtime * (getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_SHIFT_SPEED) ? 4.0f : 1.0f);
 		targetParam = &eye.t;
 #endif
 
-		if(m_keyState[KEY_W]) *targetParam -= eye.M.getColumn(2) * eyeSpeed;
-		if(m_keyState[KEY_A]) *targetParam -= eye.M.getColumn(0) * eyeSpeed;
-		if(m_keyState[KEY_S]) *targetParam += eye.M.getColumn(2) * eyeSpeed;
-		if(m_keyState[KEY_D]) *targetParam += eye.M.getColumn(0) * eyeSpeed;
+		const PxVec3 column2 = eye.getBasis(2);
+		const PxVec3 column0 = eye.getBasis(0);
+		const PxVec3 column1 = eye.getBasis(1);
+
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_FORWARD))
+			*targetParam -= column2 * eyeSpeed;
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_LEFT))
+			*targetParam -= column0 * eyeSpeed;
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_BACKWARD))
+			*targetParam += column2 * eyeSpeed;
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_RIGHT))
+			*targetParam += column0 * eyeSpeed;
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_UP))
+			*targetParam += column1 * eyeSpeed;
+		if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_DOWN))
+			*targetParam -= column1 * eyeSpeed;
 
 		// move forward from gamepad
-		*targetParam -= eye.M.getColumn(2) * eyeSpeed * m_gamepadAxisState[AXIS_RIGHT_VERTICAL] * 40.0f * dtime;
+		*targetParam -= column2 * eyeSpeed *  getPlatform()->getSampleUserInput()->getAnalogInputEventState(CAMERA_GAMEPAD_MOVE_FORWARD_BACK) * m_moveSpeedScale * dtime;
 		// strafe from gamepad
-		*targetParam += eye.M.getColumn(0) * eyeSpeed * m_gamepadAxisState[AXIS_RIGHT_HORIZONTAL] * 40.0f * dtime;
+		*targetParam += column0 * eyeSpeed * getPlatform()->getSampleUserInput()->getAnalogInputEventState(CAMERA_GAMEPAD_MOVE_LEFT_RIGHT) * m_moveSpeedScale* dtime;
 
 #if defined(SMOOTH_CAM)
-		eye.t = eye.t + (m_targetEyePos - eye.t) * g_smoothCamPosLerp;
+		PxVec3 eye_t = eye.getPosition();
+		eye_t = eye_t + (m_targetEyePos - eye_t) * g_smoothCamPosLerp;
+		eye.setPosition(eye_t);
 #endif
 
 		// rotate from gamepad
 		{
-			const PxF32 rotationSpeed = 200.0f * dtime;
-			PxF32 dx = m_gamepadAxisState[AXIS_LEFT_HORIZONTAL] * rotationSpeed;
-			PxF32 dy = m_gamepadAxisState[AXIS_LEFT_VERTICAL] * rotationSpeed;
+			const PxF32 rotationSpeed = m_rotationSpeedScale * dtime;
+			PxF32 dx = getPlatform()->getSampleUserInput()->getAnalogInputEventState(CAMERA_GAMEPAD_ROTATE_LEFT_RIGHT) * rotationSpeed;
+			PxF32 dy = getPlatform()->getSampleUserInput()->getAnalogInputEventState(CAMERA_GAMEPAD_ROTATE_UP_DOWN) * rotationSpeed;
 			rotateCamera(dx, dy);
 		}
 
@@ -385,48 +393,97 @@ void SampleApplication::onDraw(void)
 	}
 }
 
-void SampleApplication::onMouseMove(PxU32 x, PxU32 y)
+// When holding down the mouse button and dragging across the edge of the window,
+//   the input provider will spit out nonsensical delta values... so threshold appropriately
+void thresholdCameraRotate(physx::PxReal& dx, physx::PxReal& dy) 
 {
-	if(m_mouseButtonState[m_camMoveButton])
+	static const physx::PxReal invalidDelta = 1000.f;
+	if ( physx::PxAbs(dx) > invalidDelta )
+		dx = physx::PxSign(dx);
+	if ( physx::PxAbs(dy) > invalidDelta )
+		dy = physx::PxSign(dy);
+}
+
+void SampleApplication::onPointerInputEvent(const InputEvent& ie, physx::PxU32 x, physx::PxU32 y, physx::PxReal dx, physx::PxReal dy)
+{
+	switch (ie.m_Id)
 	{
-		PxI32 dx = ((PxI32)x)-(PxI32)m_mouseX;
-		PxI32 dy = ((PxI32)y)-(PxI32)m_mouseY;
-		rotateCamera((PxF32)dx, (PxF32)dy);
+	case CAMERA_MOUSE_LOOK:
+		{	
+			if(getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_MOVE_BUTTON))
+			{
+				thresholdCameraRotate(dx, dy);
+				rotateCamera(dx, dy);
+
+			}
+		}
+		break;
 	}
-	m_mouseX = x;
-	m_mouseY = y;
 }
 
-void SampleApplication::onMouseDown(PxU32 /*x*/, PxU32 /*y*/, MouseButton button)
+bool SampleApplication::onDigitalInputEvent(const InputEvent& , bool val)
 {
-	m_mouseButtonState[button] = true;
+	return true;
 }
 
-void SampleApplication::onMouseUp(PxU32 /*x*/, PxU32 /*y*/, MouseButton button)
+void SampleApplication::moveCamera(PxF32 dx, PxF32 dy)
 {
-	m_mouseButtonState[button] = false;
+	PxMat44 tmp = m_worldToView.getInverseTransform();
+	PxMat44 eye = EulerToMat33(m_eyeRot);
+	eye.column3 = tmp.column3;
+
+	PxVec3* targetParam;
+#if defined(SMOOTH_CAM)
+	const float eyeSpeed = m_sceneSize * g_smoothCamBaseVel * m_lastDTime * (getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_SHIFT_SPEED) ? g_smoothCamFastMul : 1.0f);
+	targetParam = &m_targetEyePos;
+#else
+	const float eyeSpeed = m_sceneSize * 4.0f * m_lastDTime * (getPlatform()->getSampleUserInput()->getDigitalInputEventState(CAMERA_SHIFT_SPEED) ? 4.0f : 1.0f);
+	targetParam = &eye.t;
+#endif
+
+	const PxVec3 column2 = eye.getBasis(2);
+	const PxVec3 column0 = eye.getBasis(0);
+	const PxVec3 column1 = eye.getBasis(1);
+
+	// strafe from gamepad
+	*targetParam += column0 * eyeSpeed * dx * m_moveSpeedScale* m_lastDTime;
+	// move forward from gamepad
+	*targetParam -= column2 * eyeSpeed *  dy * m_moveSpeedScale * m_lastDTime;
+
+#if defined(SMOOTH_CAM)
+	PxVec3 eye_t = eye.getPosition();
+	eye_t = eye_t + (m_targetEyePos - eye_t) * g_smoothCamPosLerp;
+	eye.setPosition(eye_t);
+#endif
+
+	m_worldToView.setInverseTransform(eye);	
 }
 
-void SampleApplication::onKeyDown(KeyCode keyCode)
+void SampleApplication::onAnalogInputEvent(const InputEvent& ie, float val)
 {
-	m_keyState[keyCode] = true;
-}
-
-void SampleApplication::onKeyUp(KeyCode keyCode)
-{
-	m_keyState[keyCode] = false;
-}
-
-void SampleApplication::onGamepadButton(physx::PxU32 /*button*/, bool /*buttonDown*/)
-{
-
-}
-
-void SampleApplication::onGamepadAxis(physx::PxU32 axis, physx::PxReal absolutePosition)
-{
-	// This will rotate the camera with the left stick and move it with the right stick.
-	// PH: If this behaviour is unwanted, make sure not to forward the onGamepadAxis callback to SampleApplication but intercept yourself.
-	m_gamepadAxisState[axis+1] = absolutePosition;
+	switch (ie.m_Id)
+	{
+	case CAMERA_GAMEPAD_ROTATE_LEFT_RIGHT:
+		{	
+			rotateCamera((PxF32)val, (PxF32)0.0);
+		}
+		break;
+	case CAMERA_GAMEPAD_ROTATE_UP_DOWN:
+		{	
+			rotateCamera((PxF32)0.0, (PxF32)val);
+		}
+		break;
+	case CAMERA_GAMEPAD_MOVE_LEFT_RIGHT:
+		{	
+			moveCamera((PxF32)val, (PxF32)0.0);
+		}
+		break;
+	case CAMERA_GAMEPAD_MOVE_FORWARD_BACK:
+		{	
+			moveCamera((PxF32)0.0, (PxF32)val);
+		}
+		break;
+	}
 }
 
 void SampleApplication::rotateCamera(PxF32 dx, PxF32 dy)
@@ -448,7 +505,19 @@ void SampleApplication::rotateCamera(PxF32 dx, PxF32 dy)
 #endif
 }
 
+void SampleApplication::fatalError(const char * msg)
+{
+printf("Fatal Error in SampleApplication: %s\n", msg);
+close();
+exit(1);
+}
+
 void SampleApplication::doInput()
 {
 	m_platform->doInput();
+}
+
+void SampleApplication::setupRendererDescription(SampleRenderer::RendererDesc& renDesc)
+{
+	m_platform->setupRendererDescription(renDesc);
 }

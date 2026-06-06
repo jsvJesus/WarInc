@@ -1,3 +1,0 @@
-    <Class Name="AssignedStatusViewModel" Base="NoesisStudioInternals.TechnicianStatusViewModel">
-      <Property Name="System" Type="Object" SubType="NoesisStudioInternals.SystemViewModel"/>
-    </Class>

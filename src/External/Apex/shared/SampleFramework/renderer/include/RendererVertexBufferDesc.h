@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,29 +37,26 @@
 
 #include <RendererVertexBuffer.h>
 
-namespace physx
+namespace SampleRenderer
 {
-namespace pxtask
-{
-	class CudaContextManager;
-}
-};
 
-class RendererVertexBufferDesc
-{
+	class RendererVertexBufferDesc
+	{
 	public:
-		RendererVertexBuffer::Hint   hint;
-		RendererVertexBuffer::Format semanticFormats[RendererVertexBuffer::NUM_SEMANTICS];
-		
-		physx::PxU32                 maxVertices;
-		
-		bool						 registerInCUDA;
-		physx::pxtask::CudaContextManager * interopContext;
-		
+		RendererVertexBuffer::Hint         hint;
+		RendererVertexBuffer::Format       semanticFormats[RendererVertexBuffer::NUM_SEMANTICS];
+
+		PxU32                              maxVertices;
+
+		bool                               registerInCUDA;
+		physx::pxtask::CudaContextManager *interopContext;
+
 	public:
 		RendererVertexBufferDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,23 +32,27 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9RendererIndexBuffer.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
 
+#include "D3D9RendererIndexBuffer.h"
 #include <RendererIndexBufferDesc.h>
 
 #if defined(PX_WINDOWS)
-#include <PxCudaContextManager.h>
+#include <PxTaskIncludes.h>
 #endif
+
+using namespace SampleRenderer;
 
 static D3DFORMAT getD3D9Format(RendererIndexBuffer::Format format)
 {
 	D3DFORMAT d3dFormat = D3DFMT_UNKNOWN;
 	switch(format)
 	{
-		case RendererIndexBuffer::FORMAT_UINT16: d3dFormat = D3DFMT_INDEX16; break;
-		case RendererIndexBuffer::FORMAT_UINT32: d3dFormat = D3DFMT_INDEX32; break;
+	case RendererIndexBuffer::FORMAT_UINT16: d3dFormat = D3DFMT_INDEX16; break;
+	case RendererIndexBuffer::FORMAT_UINT32: d3dFormat = D3DFMT_INDEX32; break;
 	}
 	RENDERER_ASSERT(d3dFormat != D3DFMT_UNKNOWN, "Unable to convert to D3DFORMAT.");
 	return d3dFormat;
@@ -62,9 +66,9 @@ D3D9RendererIndexBuffer::D3D9RendererIndexBuffer(IDirect3DDevice9 &d3dDevice, co
 
 	m_usage      = 0;
 	m_pool       = D3DPOOL_MANAGED;
-	physx::PxU32	indexSize  = getFormatByteSize(desc.format);
+	PxU32	indexSize  = getFormatByteSize(desc.format);
 	m_format     = getD3D9Format(desc.format);
-    m_bufferSize = indexSize * desc.maxIndices;
+	m_bufferSize = indexSize * desc.maxIndices;
 
 #if RENDERER_ENABLE_DYNAMIC_VB_POOLS
 	if(desc.hint == RendererIndexBuffer::HINT_DYNAMIC)
@@ -102,12 +106,12 @@ void D3D9RendererIndexBuffer::onDeviceLost(void)
 
 	if(m_pool != D3DPOOL_MANAGED && m_d3dIndexBuffer)
 	{
-	#if defined(PX_WINDOWS)
+#if defined(PX_WINDOWS)
 		if(m_interopContext && m_registeredInCUDA)
 		{
 			m_registeredInCUDA = !m_interopContext->unregisterResourceInCuda(m_InteropHandle);
 		}
-	#endif
+#endif
 		m_d3dIndexBuffer->Release();
 		m_d3dIndexBuffer = 0;
 	}
@@ -134,8 +138,8 @@ void *D3D9RendererIndexBuffer::lock(void)
 	if(m_d3dIndexBuffer)
 	{
 		const Format format     = getFormat();
-		const physx::PxU32  maxIndices = getMaxIndices();
-		const physx::PxU32  bufferSize = maxIndices * getFormatByteSize(format);
+		const PxU32  maxIndices = getMaxIndices();
+		const PxU32  bufferSize = maxIndices * getFormatByteSize(format);
 		if(bufferSize > 0)
 		{
 			m_d3dIndexBuffer->Lock(0, (UINT)bufferSize, &buffer, 0);
@@ -161,6 +165,5 @@ void D3D9RendererIndexBuffer::unbind(void) const
 {
 	m_d3dDevice.SetIndices(0);
 }
-
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)

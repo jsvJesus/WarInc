@@ -3,18 +3,20 @@
 
 #include "WOBackendAPI.h"
 
-#if 1
-	const char*	gDomainIP     = "192.95.7.127";
-	const char*	gDomainBaseUrl= "/api/";
-	int		gDomainPort   = 80;
-	bool		gDomainUseSSL = false;
-#else
-	// local site version 
-	const char*	gDomainIP     = "localhost";
-	const char*	gDomainBaseUrl= "/Site/";
-	int		gDomainPort   = 55016;
-	bool		gDomainUseSSL = false;
-#endif	
+#include "LauncherConfig.h"
+
+//#if 1
+//const char*	gDomainIP     = "localhost";
+//const char*	gDomainBaseUrl= "/WarZ/api/";
+//int		gDomainPort   = 443;
+//bool		gDomainUseSSL = true;
+//#else
+//	// local site version 
+//	const char*	gDomainIP     = "localhost";
+//	const char*	gDomainBaseUrl= "/Site/";
+//	int		gDomainPort   = 56016;
+//	bool		gDomainUseSSL = false;
+//#endif	
 	
 CWOBackendReq::CWOBackendReq(const char* url)
 {
@@ -42,9 +44,9 @@ void CWOBackendReq::Init(const char* url)
 	// create request
 	char fullUrl[512];
 	if(url[0] != '/')
-	  sprintf(fullUrl, "%s%s", gDomainBaseUrl, url);
+		sprintf(fullUrl, "%s%s", gLauncherConfig.webAPIDomainBaseURL.c_str(), url);
 	else 
-	  sprintf(fullUrl, "%s", url);
+		sprintf(fullUrl, "%s", url);
 
 	req.put_HttpVerb("POST");
 	req.put_ContentType("application/x-www-form-urlencoded");
@@ -146,7 +148,8 @@ bool CWOBackendReq::Issue()
 	SAFE_DELETE(resp_);
 
 	float t1 = r3dGetTime();
-	resp_ = http.SynchronousRequest(gDomainIP, gDomainPort, gDomainUseSSL, req);
+	resp_ = http.SynchronousRequest(gLauncherConfig.webAPIDomainIP.c_str(),
+		gLauncherConfig.webAPIDomainPort, gLauncherConfig.webAPIDomainUseSSL, req);
 	#ifndef FINAL_BUILD
 	//r3dOutToLog("WOApi: %s NETWORK time: %.4f\n", savedUrl_, r3dGetTime()-t1);
 	#endif

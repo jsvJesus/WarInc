@@ -97,7 +97,7 @@ void GrassPlane::Draw() const
 {
 	DWORD oldStencil = 0;
 	r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldStencil);
-	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	int oldRenderMode = r3dRenderer->GetRenderingMode();
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ZC);
 	//	Prepare 4 corner points
@@ -126,7 +126,7 @@ void GrassPlane::Draw() const
  	r3dDrawTriangle3D(p[1], p[3], p[2], gCam, cl);
 	r3dRenderer->Flush();
 
-	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, oldStencil);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, oldStencil);
 	r3dRenderer->SetRenderingMode(oldRenderMode);
 }
 
@@ -140,13 +140,15 @@ void GrassPlane::UpdateGrassMap()
 		g_pGrassMap->GetGridWorldSize(gridW, gridH);
 		float maxX = std::max(gridW, std::max(bounds.Org.x, bounds.Size.x + bounds.Org.x));
 		float maxZ = std::max(gridH, std::max(bounds.Org.z, bounds.Size.z + bounds.Org.z));
-		
+
+#if 0
 		if (maxX > gridW || maxZ > gridH)
 		{
 			g_pGrassMap->Close();
-			g_pGrassMap->Init(maxX, maxZ);
+			g_pGrassMap->Init(maxX, maxZ, GrassMap::MAX_TEX_CELL_COUNT);
 			g_pGrassMap->ConformWithNewCellSize();
 		}
+#endif
 	}
 
 	g_pGrassMap->UpdateHeight();
@@ -223,6 +225,54 @@ void GrassPlanesManager::DrawPlanes() const
 		const GrassPlane &pln = planes[i];
 		pln.Draw();
 	}
+}
+
+//------------------------------------------------------------------------
+
+void GrassPlanesManager::GetCombinedPlaneBounds( r3dBoundBox* oBox )
+{
+	if( !planes.Count() )
+		return;
+
+	r3dPoint3D start;
+	r3dPoint3D end;
+
+	start.x = FLT_MAX;
+	start.y = FLT_MAX;
+	start.z = FLT_MAX;
+
+	end.x = -FLT_MAX;
+	end.y = -FLT_MAX;
+	end.z = -FLT_MAX;
+
+	for( int i = 0, e = planes.Count(); i < e; i ++ )
+	{
+		r3dPoint3D istart, iend;
+
+		istart = planes[ i ].GetBounds().Org;
+		iend = planes[ i ].GetBounds().Org + planes[ i ].GetBounds().Size;
+
+		start.x = R3D_MIN( start.x, istart.x );
+		start.x = R3D_MIN( start.x, iend.x );
+
+		start.y = R3D_MIN( start.y, istart.y );
+		start.y = R3D_MIN( start.y, iend.y );
+
+		start.z = R3D_MIN( start.z, istart.z );
+		start.z = R3D_MIN( start.z, iend.z );
+
+		end.x = R3D_MAX( end.x, istart.x );
+		end.x = R3D_MAX( end.x, iend.x );
+
+		end.y = R3D_MAX( end.y, istart.y );
+		end.y = R3D_MAX( end.y, iend.y );
+
+		end.z = R3D_MAX( end.z, istart.z );
+		end.z = R3D_MAX( end.z, iend.z );
+	}
+
+	oBox->Org = start;
+	oBox->Size = end - start;
 }
 
 //////////////////////////////////////////////////////////////////////////

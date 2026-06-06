@@ -47,15 +47,11 @@ while (<EXTS>)
         next;
     }
     
-    # Read the definitions.
-    if (/(\?)?\s*(!)?\s*(gl\w+)(?:\s+(\w+\s*)*)/) 
+    if (/(\?)?\s*(!)?\s*(gl\w+)(?:\s+([A-Z]+\s*)*)?/) 
     {
-        my ($optional, $required, $function, $defines) = ($1, $2, $3, $4);
-        $extfns{$3}->{'defined'} = 1;
+        $extfns{$3}->{'otherNames'} = [split(/\s+/, $4)];
         if ($1 eq "?")
         {
-            my @defines = split(/\s+/, $4);
-            $extfns{$3}->{'extensionDefine'} = \@defines;
             $extfns{$3}->{'optional'} = 1;
         }
         if ($2 eq "!")
@@ -82,12 +78,11 @@ unless (-f $glexth)
 open(GLEXT, "<$glexth");
 while (<GLEXT>) 
 {   
-    if (/(?:GLAPI\s+)?(.*?)\s+(?:(?:GL_)?APIENTRY\s+)?(gl\w+) *\((.*)\)/) 
+    if (/(?:GLAPI\s+)?([\w*]+)\s+(?:(?:GL_)?APIENTRY\s+)?(gl\w+) *\((.*)\)/) 
     {
         if ($extfns{$2}) 
         {
             my ($ret,$name,$proto) = ($1,$2,$3);
-			print "Found extension: $name\n";
             
             # Split the prototype into individual parameters, and strip off the identifier, if it exists.
             my @protoparams = split(/\s*,\s*/, $proto);
@@ -217,7 +212,6 @@ foreach my $fn (keys %extfns)
 $maxlen += 7;
 
 my @calls = ();
-my $OptionalMacros = "";
 
 foreach my $fn (keys %extfns) 
 {
@@ -235,76 +229,28 @@ foreach my $fn (keys %extfns)
   }
 
     my $pfn = uc("PFN${fn}PROC");
-
-    # Setup the preprocessor define that determines whether the function prototype/function pointer typedef will exist.
-    my $extIfDef = undef;
-    if ($extfns{$fn}->{'extensionDefine'} ne undef) 
-    { 
-        $extIfDef = "#if " . (join " && ", map { "defined(" . $_ . ")" } @{$extfns{$fn}->{'extensionDefine'}});
-    }
-
-    if ($extIfDef ne undef)
-    {
-        print OUTH "    $extIfDef\n";
-    }
     printf OUTH "    %-${maxlen}s p_$fn;\n", $pfn;
-    if ($extIfDef ne undef)
-    {
-        print OUTH "    #endif\n";
-    }
-    
-    print OUTM "    #define $fn GetHAL()->$fn\n";
-    if ($extfns{$fn}->{'optional'} != undef)
-    {
-        print OUTM "    #define Has_$fn GetHAL()->Has_$fn\n";
-    }
+    print OUTM "#define $fn GetHAL()->$fn\n";
 
     my $c = sprintf "    %s %s(%s)\n    {\n", $ret, $fn, join(', ', @pargs);
     if ( $extfns{$fn}->{'canfail'} == undef )
     {
         $c .= "        ScopedGLErrorCheck check(__FUNCTION__);\n";
     }
-
-    if ($extIfDef ne undef)
-    {
-        $c .= "        $extIfDef\n";
-    }    
     if ($ret ne 'void')
     {
-        $c .= "        return p_$fn(" . join(', ', @params). ");\n";
+        $c .= '        return ' ;
     }
     else
     {
-        $c .= "        p_$fn(".join(', ', @params).");\n";
+        $c .= '        ' ;
     }
-    if ($extIfDef ne undef)
-    {
-        $c .= "        #else\n";
-        $c .= "        SF_DEBUG_ASSERT(1, \"glext.h did not contain required preprocessor defines to \"\n" .
-              "                           \"use the $fn extension function (" . $extIfDef .")\");\n";
-        if ($ret ne 'void')
-        {
-        $c .= "        return $ret(0);\n";
-        }
-        $c .= "        #endif\n";
-    } 
-    $c .="    }\n\n";
+    $c .= "p_$fn(".join(', ', @params).");\n    }\n\n";
 
     # If it's optional, make another method which tells you whether it exists or not.
     if ( $extfns{$fn}->{'optional'} != undef )
     {
-        if ($extIfDef ne undef)
-        {
-            $c .= "    " .$extIfDef. "\n";
-        }
-        
         $c .= "    bool Has_$fn() const { return p_$fn != 0; }\n\n";
-        if ($extIfDef ne undef)
-        {
-            $c .= "    #else\n";
-            $c .= "    bool Has_$fn() const { return false; }\n";
-            $c .= "    #endif\n\n";
-        }        
     }
     
     push @calls, $c;
@@ -313,13 +259,8 @@ foreach my $fn (keys %extfns)
     if ( $extfns{$fn}->{'optional'} != undef )
     {
         $reqValue = "false";
-        $OptionalMacros .= "    inline bool Has_$fn() { return true; }\n";
     }
     
-    if ($extIfDef ne undef)
-    {
-        print OUTC "    $extIfDef\n";
-    }
     print OUTC "    p_$fn = ($pfn) SF_GL_RUNTIME_LINK(\"$fn\");\n";
     if (!($fn =~ /(?:EXT|ARB|OES)$/)) 
     {
@@ -336,10 +277,6 @@ foreach my $fn (keys %extfns)
         }
 EOF
     }
-    if ($extIfDef ne undef)
-    {
-        print OUTC "    #endif\n";
-    }    
     print OUTC "\n";
 }
 
@@ -375,7 +312,7 @@ foreach (@calls) {
 
 print OUTH "};\n\n}}}\n#endif\n";
 print OUTC "    return result;\n}\n\n}}}\n\n#endif\n";
-print OUTM "\n#else\n$OptionalMacros\n#endif\n#endif\n";
+print OUTM "\n#endif\n#endif\n";
 close(OUTH);
 close(OUTC);
 close(OUTM);

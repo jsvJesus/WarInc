@@ -120,4 +120,16 @@ class obj_Road : public GameObject
 	void ReadVer4SerializedData(r3dFile *f);
 };
 
+//-------------------------------------------------------------------------
+//	Standalone helper functions
+//-------------------------------------------------------------------------
+
+/**
+* Road definition binary files are needed even road object deletion due to undo/redo functionality. This
+* This function will cleanup any orphaned road files at game exit.
+*/
+#ifndef FINAL_BUILD
+void CleanOrphanedRoadFiles();
+#endif
+
 #endif	// __PWAR_OBJECT_ROAD_H

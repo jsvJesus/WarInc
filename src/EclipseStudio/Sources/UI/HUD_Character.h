@@ -22,7 +22,7 @@ public:
 	float currentDist;
 
 	// for character rendering
-	class obj_AI_Player* m_Player;
+	class obj_Player* m_Player;
 
 public:
 	CharacterHUD();

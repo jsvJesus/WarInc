@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,6 +34,8 @@
  */
 #include <RendererIndexBufferDesc.h>
 
+using namespace SampleRenderer;
+
 RendererIndexBufferDesc::RendererIndexBufferDesc(void)
 {
 	hint       = RendererIndexBuffer::HINT_STATIC;
@@ -43,7 +45,7 @@ RendererIndexBufferDesc::RendererIndexBufferDesc(void)
 	registerInCUDA = false;
 	interopContext = 0;
 }
-		
+
 bool RendererIndexBufferDesc::isValid(void) const
 {
 	bool ok = true;

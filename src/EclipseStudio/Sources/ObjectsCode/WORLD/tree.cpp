@@ -10,6 +10,7 @@
 #include "tree.h"
 #include "..\..\bin\Data\Shaders\DX9_P1\system\LibSM\shadow_config.h" // shader config file
 #include "..\..\..\..\GameEngine\TrueNature\Terrain.h"
+#include "../../Editors/CollectionsManager.h"
 
 //
 //
@@ -102,7 +103,7 @@ BOOL obj_Tree::Update()
 
 	R3DPROFILE_FUNCTION( "obj_Tree::Update" );
 
-	Update_Instance_Map ();
+	gCollectionsManager.Update();
 
 	r3dBoundBox bboxLocal ;
 
@@ -120,11 +121,9 @@ BOOL obj_Tree::Update()
 	return TRUE;
 }
 
-void Collections_AppendMaterials(std::vector<r3dMaterial*>& materials);
-
 void obj_Tree::AppendMaterials(std::vector<r3dMaterial*>& materials)
 {
-	Collections_AppendMaterials(materials);
+	gCollectionsManager.GetUsedMaterials(materials);
 }
 
 //------------------------------------------------------------------------
@@ -239,7 +238,7 @@ void
 obj_Tree::DoDraw()
 {
 	r3dRenderer->SetDefaultCullMode( D3DCULL_NONE );
-	Draw_Instance_Map( R3D_IDME_NORMAL );
+	gCollectionsManager.Render(R3D_IDME_NORMAL);
 	r3dRenderer->SetDefaultCullMode( D3DCULL_CCW );
 }
 
@@ -249,7 +248,7 @@ void
 obj_Tree::DoDepthDraw()
 {
 	r3dRenderer->SetDefaultCullMode( D3DCULL_NONE );
-	Draw_Instance_Map( R3D_IDME_DEPTH );
+	gCollectionsManager.Render(R3D_IDME_DEPTH);
 	r3dRenderer->SetDefaultCullMode( D3DCULL_CCW );
 }
 
@@ -258,7 +257,7 @@ void
 obj_Tree::DoDrawShadows()
 {
 	r3dRenderer->SetDefaultCullMode( D3DCULL_NONE );
-	Draw_Instance_Map( R3D_IDME_SHADOW );
+	gCollectionsManager.Render(R3D_IDME_SHADOW);
 	r3dRenderer->SetDefaultCullMode( D3DCULL_CCW );
 }
 

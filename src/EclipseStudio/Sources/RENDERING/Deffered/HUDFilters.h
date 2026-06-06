@@ -8,6 +8,8 @@
 #include "PFX_ExtractBloom.h"
 #include "PFX_FilmGrain.h"
 
+#include "r3dAtmosphere.h"
+
 #include "CommonPostFX.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,25 +35,41 @@ struct HUDFilterSettings
 	BlurTaps bloomBlurTaps;
 	float directionalStreaksOnOffCoef;
 	int filmGrain;
-	r3dTexture *colorCorrectionTex;
-	char colorCorrectionTextureName[256];
+
+	r3dAtmosphere::SkyPhaseTextureNames		colorCorrectionTextureNames;
+	r3dAtmosphere::SkyPhaseTextures			colorCorrectionTextures;
+
 	int enableColorCorrection;
 
 	int overrideHDRControls ;
 	float hdrExposureBias ;
+
+	int			overrideAmbientAndIntensity;
+	r3dColor	overrideAmbient;
+	float		overrideIntensity;
 
 	HUDFilterSettings()
 	: bloomBlurPasses(0)
 	, bloomBlurTaps(BT_17)
 	, directionalStreaksOnOffCoef(0)
 	, filmGrain(0)
-	, colorCorrectionTex(0)
 	, enableColorCorrection(0)
 	, overrideHDRControls(0)
 	, hdrExposureBias(0.f)
+	, overrideAmbientAndIntensity( 0 )
+	, overrideAmbient( r3dColor::black )
+	, overrideIntensity( 1.0f )
 	{
-		strcpy_s(colorCorrectionTextureName, _countof(colorCorrectionTextureName), "default.dds");
+		SetAllColorCorrectionTexturesTo( "default.dds" );
 	}
+
+	void SetAllColorCorrectionTexturesTo( const r3dString& name );
+	int IsTextureUsedAsColorCorrection( const r3dString& name );
+	void DeleteColorCorrectionTextures();
+	void LoadColorCorrectionTextures();
+	void FixColorCorrectionTextureNames();
+	void GetCurrentColorCorrection( r3dTexture** oLerpFrom, r3dTexture** oLerpTo, float* oLerpFactor );
+	int HasActiveColorCorrection();
 };
 
 //////////////////////////////////////////////////////////////////////////

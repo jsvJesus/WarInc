@@ -2,7 +2,7 @@
 #ifndef SAMPLE_FILESYSTEM_H
 #define SAMPLE_FILESYSTEM_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,22 +35,32 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-class SampleStream : public physx::PxFileBuf
+
+#include "FrameworkFoundation.h"
+
+#error "Is this file ever used?"
+
+namespace SampleFramework
 {
 
-};
+	/*class SampleStream : public PxFileBuf
+	{
 
-class SampleFilesystem
-{
+	};
+
+	class SampleFilesystem
+	{
 	public:
 		SampleFilesystem(const char *pathPrefix = "../../../../../externals/");
 		~SampleFilesystem(void);
-		
+
 		SampleStream *openStream(const char *path);
 		void          closeStream(SampleStream &stream);
-		
+
 	private:
 		char *m_pathPrefix;
-};
+	};
+	*/
+}
 
 #endif

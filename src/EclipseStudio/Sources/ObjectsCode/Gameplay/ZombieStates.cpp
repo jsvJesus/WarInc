@@ -6,17 +6,16 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
-#if ENABLE_ZOMBIES
-
 #include "ZombieStates.h"
 #include "../../multiplayer/ClientGameLogic.h"
 #include "gameobjects/ObjManag.h"
 #include "../../UI/HUD_EditorGame.h"
 #include "../ai/AI_Player.H"
-#include "ai/NavMeshActor.h"
 #include "../ai/r3dPhysSkeleton.h"
 #include "obj_ZombieSpawn.h"
 #include "fmod/SoundSys.h"
+
+#if 0
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -32,7 +31,7 @@ ZombieGlobalState			gZombieGlobalState;
 
 void ZombieLookForTargetState::Enter(obj_Zombie *o)
 {
-	o->uberAnim->SwitchToState(PLAYER_IDLE, CUberData::ANIMDIR_Stand);
+	//o->uberAnim->SwitchToState(PLAYER_IDLE, CUberData::ANIMDIR_Stand);
 	o->chasedTarget = invalidGameObjectID;
 	o->playingSndHandle = SoundSys.Play(gSndZombieBreatheID, o->GetPosition());
 }
@@ -45,8 +44,8 @@ void ZombieLookForTargetState::Execute(obj_Zombie *o)
 	const ClientGameLogic& CGL = gClientLogic();
 	//		for (int i = 0; i < CGL.CurMaxPlayerIdx; ++i)
 	{
-		//			obj_AI_Player *plr = CGL.GetPlayer(i);
-		obj_AI_Player* plr = static_cast<obj_AI_Player *>(GameWorld().GetObject(EditorGameHUD::editorPlayerId));
+		//			obj_Player *plr = CGL.GetPlayer(i);
+		obj_Player* plr = static_cast<obj_Player *>(GameWorld().GetObject(EditorGameHUD::editorPlayerId));
 
 		if (plr)
 		{
@@ -93,7 +92,7 @@ void ZombieMoveToTargetState::Enter(obj_Zombie *o)
 	gNavMeshActorsManager.NavigateTo(o->navAgentIdx, targetPos);
 
 	//	Switch to run animation
-	o->uberAnim->SwitchToState(chaseAnim, CUberData::ANIMDIR_Str);
+	//o->uberAnim->SwitchToState(chaseAnim, CUberData::ANIMDIR_Str);
 
 	o->playingSndHandle = SoundSys.Play(gSndZombieGrowlID, o->GetPosition());
 }
@@ -167,7 +166,7 @@ void ZombieMoveToTargetState::Exit(obj_Zombie *o)
 
 void ZombieAttackTargetState::Enter(obj_Zombie *o)
 {
-	o->uberAnim->SwitchToState(PLAYER_IDLEAIM, CUberData::ANIMDIR_Stand);
+	//o->uberAnim->SwitchToState(PLAYER_IDLEAIM, CUberData::ANIMDIR_Stand);
 	o->playingSndHandle = SoundSys.Play(gSndZombieAttack2ID, o->GetPosition());
 }
 
@@ -214,9 +213,9 @@ void ZombieDieState::Enter(obj_Zombie *o)
 void ZombieDieState::Execute(obj_Zombie *o)
 {
 	//	Destroy object if corpse stays long enough
-	if (r3dGetTime() - o->deadTime > 5.0f && o->spawn)
+	if (o->isActive() && r3dGetTime() - o->deadTime > 5.0f)
 	{
-		o->spawn->DeleteZombie(o);
+		o->setActiveFlag(0);
 	}
 }
 
@@ -253,4 +252,4 @@ void ZombieGlobalState::Exit(obj_Zombie *o)
 
 }
 
-#endif // ENABLE_ZOMBIES
+#endif

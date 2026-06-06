@@ -1,3 +1,0 @@
-    <Class Name="SystemModifierViewModel">
-      <Property Name="Description" Type="String" StringMinWordCount="2" StringMaxWordCount="2"/>
-    </Class>

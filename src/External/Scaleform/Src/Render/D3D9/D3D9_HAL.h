@@ -16,10 +16,10 @@ otherwise accompanies this software in either electronic or hard copy form.
 #ifndef INC_SF_Render_D3D9_HAL_H
 #define INC_SF_Render_D3D9_HAL_H
 
+#include "Render/Render_HAL.h"
 #include "Render/D3D9/D3D9_MeshCache.h"
 #include "Render/D3D9/D3D9_Texture.h"
-#include "Render/D3D9/D3D9_Shader.h"    // ShaderManager
-#include "Render/Render_ShaderHAL.h"    // Must be included after platform specific shader includes.
+#include "Render/D3D9/D3D9_Shader.h" // ShaderManager
 
 #include <d3d9.h>
 
@@ -44,9 +44,6 @@ enum HALConfigFlags
     // throughput, but can cause significant latency issues with dynamic content. This also 
     // may be used silently, if the underlying hardware does not support D3D9 queries.
     HALConfig_StaticBuffers         = 0x00000010,
-
-    // Forces the shader system to use ShaderModel 2.0 shaders (even if it is capable of 3.0)
-    HALConfig_ShaderModel20         = 0x00000020,
 };
 
 
@@ -74,7 +71,7 @@ struct HALInitParams : public Render::HALInitParams
 
 
 
-class HAL : public Render::ShaderHAL<ShaderManager, ShaderInterface>
+class HAL : public Render::HAL
 {
 public:
 
@@ -86,7 +83,11 @@ public:
 
     MeshCache                Cache;
 
+    ShaderManager            SManager;
     Ptr<TextureManager>      pTextureManager;
+    FragShader               StaticFShaders[FragShaderDesc::FSI_Count];
+    VertexShader             StaticVShaders[VertexShaderDesc::VSI_Count];
+    ShaderInterface          ShaderData;
     
     // Previous batching mode
     PrimitiveBatch::BatchType PrevBatchType;
@@ -118,10 +119,17 @@ public:
     virtual bool        BeginScene();
     virtual bool        EndScene();
 
+    void                CalcHWViewMatrix(Matrix* pmatrix, const Rect<int>& viewRect,
+                                         int dx, int dy);
+
     // Updates D3D HW Viewport and ViewportMatrix based on the current
     // values of VP, ViewRect and ViewportValid.
     virtual void        updateViewport();
 
+
+    // Creates / Destroys mesh and DP data 
+
+    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data);    
 
     virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
                                                PrimitiveBatch* pstart, PrimitiveBatch *pend);
@@ -181,6 +189,7 @@ public:
     }
 
     bool    checkMaskBufferCaps();
+    void    drawMaskClearRectangles(const HMatrix* matrices, UPInt count);
 
     // Background clear helper, expects viewport coordinates.
     virtual void        clearSolidRectangle(const Rect<int>& r, Color color);
@@ -213,22 +222,40 @@ public:
     virtual void            drawUncachedFilter(const FilterStackEntry& e);
     virtual void            drawCachedFilter(FilterPrimitive* primitive);
 
+    // *** DrawableImage
+    virtual void            DrawableCxform( Render::Texture** tex, const Matrix2F* texgen, const Cxform* cx);
+    virtual void            DrawableCompare( Render::Texture** tex, const Matrix2F* texgen );
+    virtual void            DrawableCopyChannel( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul ) 
+                            { DrawableMerge(tex, texgen, cxmul); }
+    virtual void            DrawableMerge( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul );
+    virtual void            DrawableCopyPixels( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                                bool mergeAlpha, bool destAlpha );
+    virtual void            DrawablePaletteMap( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                                unsigned channelMask, const UInt32* values);
+    virtual void            DrawableThreshold(  Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                                DrawableImage::OperationType op, UInt32 threshold, UInt32 color, 
+                                                UInt32 mask, bool copySource);
+    virtual void            DrawableCopyback( Render::Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen );
+
     virtual class MeshCache&       GetMeshCache()        { return Cache; }
         
     virtual void    MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                                     const VertexFormat** single,
-                                    const VertexFormat** batch, const VertexFormat** instanced, unsigned)
+                                    const VertexFormat** batch, const VertexFormat** instanced, unsigned flags =0)
     {
+        SF_UNUSED(flags);
         SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced, 
             MVF_Align | MVF_ReverseColor | (SManager.HasInstancingSupport() ? MVF_HasInstancing : 0));
     }
 
 protected:
 
-    virtual void        setBatchUnitSquareVertexStream();
-    virtual void        drawPrimitive(unsigned indexCount, unsigned meshCount);
-    void                drawIndexedPrimitive( unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
-    void                drawIndexedInstanced( unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+    void        drawPrimitive(unsigned indexCount, unsigned meshCount);
+    void        drawIndexedPrimitive( unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+    void        drawIndexedInstanced( unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+
+    // Initializes all shaders. If compilation of any shader fails, returns false, in which case the Prog member is set to zero.
+    bool                initializeShaders(bool force = false);
 
     // Returns whether the profile can render any of the filters contained in the FilterPrimitive.
     // If a profile does not support dynamic looping (Cap_NoDynamicLoops), no blur/shadow type filters
@@ -240,6 +267,10 @@ protected:
 
     // *** Events
     virtual Render::RenderEvent& GetEvent(EventType eventType);
+
+    // Cached mappings of VertexXY16iAlpha vertex format.
+    VertexFormat* MappedXY16iAlphaTexture[PrimitiveBatch::DP_DrawableCount];
+    VertexFormat* MappedXY16iAlphaSolid[PrimitiveBatch::DP_DrawableCount];
 };
 
 //--------------------------------------------------------------------

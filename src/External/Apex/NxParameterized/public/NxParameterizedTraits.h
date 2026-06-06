@@ -1,40 +1,32 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
 #ifndef NX_PARAMETERIZED_TRAITS_H
 #define NX_PARAMETERIZED_TRAITS_H
-
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
 
 /*!
 \file
@@ -42,8 +34,9 @@
 */
 
 #include <string.h>
-#include "PsShare.h"
-#include "PxAssert.h"
+#include "foundation/PxAssert.h"
+
+#include "NxApexUsingNamespace.h"
 
 namespace NxParameterized
 {
@@ -79,6 +72,11 @@ public:
 	\brief Returns version of class whose objects are created by factory
 	*/
 	virtual physx::PxU32 getVersion() = 0;
+
+	/**
+	\brief Returns memory alignment required for objects of class
+	*/
+	virtual physx::PxU32 getAlignment() = 0;
 
 	/**
 	\brief Returns checksum of class whose objects are created by factory
@@ -138,6 +136,16 @@ public:
 	virtual ::NxParameterized::Factory *removeFactory( const char * className, physx::PxU32 version ) = 0;
 
 	/**
+	\brief Checks whether any class factory is registered
+	*/
+	virtual bool doesFactoryExist(const char* className) = 0;
+
+	/**
+	\brief Checks whether class factory for given version is registered
+	*/
+	virtual bool doesFactoryExist(const char* className, physx::PxU32 version) = 0;
+
+	/**
 	\brief Create object of NxParameterized class
 	
 	Most probably this just calls Factory::create on appropriate factory.
@@ -171,6 +179,11 @@ public:
 	virtual physx::PxU32 getCurrentVersion(const char *className) const = 0;
 
 	/**
+	\brief Get memory alignment required for objects of class
+	*/
+	virtual physx::PxU32 getAlignment(const char *className, physx::PxU32 classVersion) const = 0;
+
+	/**
 	\brief Register converter for legacy version of class
 	*/
 	virtual void registerConversion(const char * /*className*/, physx::PxU32 /*from*/, physx::PxU32 /*to*/, Conversion & /*conv*/) {}
@@ -185,12 +198,12 @@ public:
 	\param [in] legacyObj legacy object to be converted
 	\param [in] obj destination object
 	\return True if conversion was successful, false otherwise
+	\warning Note that update is intrusive - legacyObj may be modified as a result of update
 	*/
 	virtual bool updateLegacyNxParameterized(::NxParameterized::Interface &legacyObj, ::NxParameterized::Interface &obj)
 	{
-		//Force references
-		::NxParameterized::Interface *tmp = &legacyObj;
-		tmp = &obj;
+		PX_FORCE_PARAMETER_REFERENCE(&legacyObj);
+		PX_FORCE_PARAMETER_REFERENCE(&obj);
 
 		return false;
 	}
@@ -207,6 +220,20 @@ public:
 	         and should only be read, not written or freed.
 	*/
 	virtual bool getNxParameterizedNames( const char ** names, physx::PxU32 &outCount, physx::PxU32 inCount) const = 0;
+
+		/**
+	\brief Get a list of versions of particular NxParameterized class
+
+	\param [in] className Name of the class
+	\param [in] versions buffer for versions
+	\param [out] outCount minimal required length of buffer
+	\param [in] inCount length of buffer
+	\return False if 'inCount' is not large enough to contain all of version names, true otherwise
+	
+	\warning The memory for the strings returned is owned by the traits class
+	         and should only be read, not written or freed.
+	*/
+	virtual bool getNxParameterizedVersions(const char* className, physx::PxU32* versions, physx::PxU32 &outCount, physx::PxU32 inCount) const = 0;
 
 	/**
 	\brief Increment reference counter
@@ -229,9 +256,14 @@ public:
 	virtual void onAllInplaceObjectsDestroyed(void *buf) { free(buf); }
 
 	/**
-	\brief Allocate memory
+	\brief Allocate memory with default alignment of 8
 	*/
 	virtual void *alloc(physx::PxU32 nbytes) = 0;
+
+	/**
+	\brief Allocate aligned memory
+	*/
+	virtual void *alloc(physx::PxU32 nbytes, physx::PxU32 align) = 0;
 
 	/**
 	\brief Deallocate memory
@@ -247,7 +279,7 @@ public:
 			return NULL;
 
 		physx::PxU32 strLen = (physx::PxU32)strlen(str) + 1;
-		char *retStr = (char *)this->alloc( strLen );
+		char *retStr = (char *)this->alloc(strLen, 1);
 		
 		PX_ASSERT( retStr );
 		
@@ -366,6 +398,9 @@ public:
 	physx::PxU32 getCurrentVersion(const char *className) const;
 
 	/// Calls wrapped Traits object
+	physx::PxU32 getAlignment(const char *className, physx::PxU32 classVersion) const;
+
+	/// Calls wrapped Traits object
 	void registerConversion(const char *className, physx::PxU32 from, physx::PxU32 to, Conversion &conv);
 
 	/// Calls wrapped Traits object
@@ -393,6 +428,9 @@ public:
 	void *alloc(physx::PxU32 nbytes);
 
 	/// Calls wrapped Traits object
+	void *alloc(physx::PxU32 nbytes, physx::PxU32 align);
+
+	/// Calls wrapped Traits object
 	void free(void *buf);
 
 	/// Calls wrapped Traits object
@@ -407,7 +445,6 @@ public:
 
 PX_POP_PACK
 
-}; // end of namespace
+}; // namespace NxParameterized
 
-#endif
-
+#endif // NX_PARAMETERIZED_TRAITS_H

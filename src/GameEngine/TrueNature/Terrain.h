@@ -509,7 +509,6 @@ public:
 	void		CalculateTileFaceOrients	( uint8_t* target, int tileX, int tileY, int cellGridSize, int step, TerraFaceOrientStats& oStats );
 
 	void		SaveData					( const char * fileName, bool writeCache );
-	void		SaveDataPS3					( const char * fileName );
 	void		SaveLayerToScript			( FILE * hFile, const Layer_t &layer, char * tab );
 
 	void		RecalcParams				();

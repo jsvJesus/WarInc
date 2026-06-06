@@ -46,4 +46,7 @@ public:
 	virtual void SetObjFlags(int objFlags);
 
 	virtual BOOL OnNetReceive(DWORD EventID, const void* packetData, int packetSize) OVERRIDE;
+
+	// NOTE : disable staticness derived from obj_Building as this object can be damaged and thus should go to non-static list
+	virtual int	IsStatic() OVERRIDE;
 };

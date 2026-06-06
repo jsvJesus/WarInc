@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,31 +32,39 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererVertexBuffer.h"
+
+#include "RendererConfig.h"
+#include <SamplePlatform.h>
 
 #if defined(RENDERER_ENABLE_OPENGL)
+
+#include "OGLRendererVertexBuffer.h"
 
 #include <RendererVertexBufferDesc.h>
 
 #if defined(PX_WINDOWS)
-#include <PxCudaContextManager.h>
+#include <PxTaskIncludes.h>
 #endif
 
-OGLRendererVertexBuffer::OGLRendererVertexBuffer(const RendererVertexBufferDesc &desc, bool deferredUnlock) :
+using namespace SampleRenderer;
+
+OGLRendererVertexBuffer::OGLRendererVertexBuffer(const RendererVertexBufferDesc &desc) :
 	RendererVertexBuffer(desc)
+,	m_vbo(0)
+,	m_bufferSize(0)
+,	m_access(0)
 {
-	m_deferredUnlock = deferredUnlock;
-	m_vbo = 0;
-	
 	RENDERER_ASSERT(GLEW_ARB_vertex_buffer_object, "Vertex Buffer Objects not supported on this machine!");
 	if(GLEW_ARB_vertex_buffer_object)
 	{
 		GLenum usage = GL_STATIC_DRAW_ARB;
+		m_access = GL_READ_WRITE;
 		if(getHint() == HINT_DYNAMIC)
 		{
 			usage = GL_DYNAMIC_DRAW_ARB;
+			m_access = GL_WRITE_ONLY;
 		}
-		
+
 		RENDERER_ASSERT(m_stride && desc.maxVertices, "Unable to create Vertex Buffer of zero size.");
 		if(m_stride && desc.maxVertices)
 		{
@@ -66,7 +74,7 @@ OGLRendererVertexBuffer::OGLRendererVertexBuffer(const RendererVertexBufferDesc 
 		if(m_vbo)
 		{
 			m_maxVertices = desc.maxVertices;
-			physx::PxU32 bufferSize = m_stride * m_maxVertices;
+			PxU32 bufferSize = m_stride * m_maxVertices;
 			glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
 			glBufferDataARB(GL_ARRAY_BUFFER_ARB, bufferSize, 0, usage);
 			glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
@@ -75,7 +83,7 @@ OGLRendererVertexBuffer::OGLRendererVertexBuffer(const RendererVertexBufferDesc 
 			if(m_interopContext && m_mustBeRegisteredInCUDA)
 			{
 				RENDERER_ASSERT(m_deferredUnlock == false, "Deferred VB Unlock must be disabled when CUDA Interop is in use.")
-				m_registeredInCUDA = m_interopContext->registerResourceInCudaGL(m_InteropHandle, (physx::PxU32) m_vbo);
+					m_registeredInCUDA = m_interopContext->registerResourceInCudaGL(m_InteropHandle, (PxU32) m_vbo);
 			}
 #endif
 		}
@@ -96,23 +104,42 @@ OGLRendererVertexBuffer::~OGLRendererVertexBuffer(void)
 	}
 }
 
-void OGLRendererVertexBuffer::swizzleColor(void *colors, physx::PxU32 stride, physx::PxU32 numColors)
+PxU32 OGLRendererVertexBuffer::convertColor(const RendererColor& color)
 {
-	void *end = ((physx::PxU8*)colors)+(stride*numColors);
-	for(; colors < end; colors=((physx::PxU8*)colors)+stride)
+#if defined(RENDERER_WINDOWS)
+	return color.a << 24 | color.b << 16 | color.g << 8 | color.r;
+#elif defined (RENDERER_PS3)
+	return (PxU32&)color;
+#elif defined (RENDERER_MACOSX)
+	return color.a << 24 | color.b << 16 | color.g << 8 | color.r; // TODO: JPB: Check if this is the right order
+#elif defined(RENDERER_LINUX)
+	return color.a << 24 | color.b << 16 | color.g << 8 | color.r;
+#else
+	PX_ASSERT(!"Platform not implemented");
+	return (PxU32&)color;
+#endif
+}
+
+void OGLRendererVertexBuffer::swizzleColor(void *colors, PxU32 stride, PxU32 numColors, RendererVertexBuffer::Format inFormat)
+{
+	if (inFormat == RendererVertexBuffer::FORMAT_COLOR_BGRA)
 	{
-		((RendererColor*)colors)->swizzleRB();
+		const void *end = ((PxU8*)colors)+(stride*numColors);
+		for(PxU8* iterator = (PxU8*)colors; iterator < end; iterator+=stride)
+		{
+			// swizzle red and blue
+			std::swap(((PxU8*)iterator)[0], ((PxU8*)iterator)[2]);
+		}
 	}
 }
 
 void *OGLRendererVertexBuffer::lock(void)
 {
 	void *buffer = 0;
-	RENDERER_PERFZONE( OGLRendererVertexBufferLock );
 	if(m_vbo)
 	{
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
-		buffer = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+		buffer = glMapBuffer(GL_ARRAY_BUFFER, m_access);
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 	}
 	return buffer;
@@ -130,16 +157,19 @@ void OGLRendererVertexBuffer::unlock(void)
 
 static GLuint getGLFormatSize(RendererVertexBuffer::Format format)
 {
-	physx::PxU32 size = 0;
+	PxU32 size = 0;
 	switch(format)
 	{
-		case RendererVertexBuffer::FORMAT_FLOAT1:   size = 1; break;
-		case RendererVertexBuffer::FORMAT_FLOAT2:   size = 2; break;
-		case RendererVertexBuffer::FORMAT_FLOAT3:   size = 3; break;
-		case RendererVertexBuffer::FORMAT_FLOAT4:   size = 4; break;
-		case RendererVertexBuffer::FORMAT_UBYTE4:   size = 4; break;
-		case RendererVertexBuffer::FORMAT_USHORT4:  size = 4; break;
-		case RendererVertexBuffer::FORMAT_COLOR:    size = 4; break;
+	case RendererVertexBuffer::FORMAT_FLOAT1:		size = 1; break;
+	case RendererVertexBuffer::FORMAT_FLOAT2:		size = 2; break;
+	case RendererVertexBuffer::FORMAT_FLOAT3:		size = 3; break;
+	case RendererVertexBuffer::FORMAT_FLOAT4:		size = 4; break;
+	case RendererVertexBuffer::FORMAT_UBYTE4:		size = 4; break;
+	case RendererVertexBuffer::FORMAT_USHORT4:		size = 4; break;
+	case RendererVertexBuffer::FORMAT_COLOR_BGRA:	size = 4; break;
+	case RendererVertexBuffer::FORMAT_COLOR_RGBA:	size = 4; break;
+	case RendererVertexBuffer::FORMAT_COLOR_NATIVE:	size = 4; break;
+	default: break;
 	}
 	RENDERER_ASSERT(size, "Unable to compute number of Vertex Buffer elements.");
 	return size;
@@ -150,21 +180,24 @@ static GLenum getGLFormatType(RendererVertexBuffer::Format format)
 	GLenum type = 0;
 	switch(format)
 	{
-		case RendererVertexBuffer::FORMAT_FLOAT1:
-		case RendererVertexBuffer::FORMAT_FLOAT2:
-		case RendererVertexBuffer::FORMAT_FLOAT3:
-		case RendererVertexBuffer::FORMAT_FLOAT4:
-			type = GL_FLOAT;
-			break;
-		case RendererVertexBuffer::FORMAT_UBYTE4:
-			type = GL_BYTE;
-			break;
-		case RendererVertexBuffer::FORMAT_USHORT4:
-			type = GL_SHORT;
-			break;
-		case RendererVertexBuffer::FORMAT_COLOR:
-			type = GL_UNSIGNED_BYTE;
-			break;
+	case RendererVertexBuffer::FORMAT_FLOAT1:
+	case RendererVertexBuffer::FORMAT_FLOAT2:
+	case RendererVertexBuffer::FORMAT_FLOAT3:
+	case RendererVertexBuffer::FORMAT_FLOAT4:
+		type = GL_FLOAT;
+		break;
+	case RendererVertexBuffer::FORMAT_UBYTE4:
+		type = GL_BYTE;
+		break;
+	case RendererVertexBuffer::FORMAT_USHORT4:
+		type = GL_SHORT;
+		break;
+	case RendererVertexBuffer::FORMAT_COLOR_BGRA:
+	case RendererVertexBuffer::FORMAT_COLOR_RGBA:
+	case RendererVertexBuffer::FORMAT_COLOR_NATIVE:
+		type = GL_UNSIGNED_BYTE;
+		break;
+	default: break;
 	}
 	RENDERER_ASSERT(type, "Unable to compute GLType for Vertex Buffer Format.");
 	return type;
@@ -175,33 +208,33 @@ static GLenum getGLSemantic(RendererVertexBuffer::Semantic semantic)
 	GLenum glsemantic = 0;
 	switch(semantic)
 	{
-		case RendererVertexBuffer::SEMANTIC_POSITION: glsemantic = GL_VERTEX_ARRAY;        break;
-		case RendererVertexBuffer::SEMANTIC_COLOR:    glsemantic = GL_COLOR_ARRAY;         break;
-		case RendererVertexBuffer::SEMANTIC_NORMAL:   glsemantic = GL_NORMAL_ARRAY;        break;
-		case RendererVertexBuffer::SEMANTIC_TANGENT:  glsemantic = GL_TEXTURE_COORD_ARRAY; break;
+	case RendererVertexBuffer::SEMANTIC_POSITION: glsemantic = GL_VERTEX_ARRAY;        break;
+	case RendererVertexBuffer::SEMANTIC_COLOR:    glsemantic = GL_COLOR_ARRAY;         break;
+	case RendererVertexBuffer::SEMANTIC_NORMAL:   glsemantic = GL_NORMAL_ARRAY;        break;
+	case RendererVertexBuffer::SEMANTIC_TANGENT:  glsemantic = GL_TEXTURE_COORD_ARRAY; break;
 
-		case RendererVertexBuffer::SEMANTIC_TEXCOORD0:
-		case RendererVertexBuffer::SEMANTIC_TEXCOORD1:
-		case RendererVertexBuffer::SEMANTIC_TEXCOORD2:
-		case RendererVertexBuffer::SEMANTIC_TEXCOORD3:
-		case RendererVertexBuffer::SEMANTIC_BONEINDEX:
-		case RendererVertexBuffer::SEMANTIC_BONEWEIGHT:
-			glsemantic = GL_TEXTURE_COORD_ARRAY;
-			break;
+	case RendererVertexBuffer::SEMANTIC_TEXCOORD0:
+	case RendererVertexBuffer::SEMANTIC_TEXCOORD1:
+	case RendererVertexBuffer::SEMANTIC_TEXCOORD2:
+	case RendererVertexBuffer::SEMANTIC_TEXCOORD3:
+	case RendererVertexBuffer::SEMANTIC_BONEINDEX:
+	case RendererVertexBuffer::SEMANTIC_BONEWEIGHT:
+		glsemantic = GL_TEXTURE_COORD_ARRAY;
+		break;
 	}
-	RENDERER_ASSERT(glsemantic, "Unable to compute the GL Semantic for Vertex Buffer Semantic.");
+	// There is no reason why certain semantics can go unsupported by OpenGL
+	//RENDERER_ASSERT(glsemantic, "Unable to compute the GL Semantic for Vertex Buffer Semantic.");
 	return glsemantic;
 }
 
-void OGLRendererVertexBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstVertex)
+void OGLRendererVertexBuffer::bind(PxU32 streamID, PxU32 firstVertex)
 {
-	RENDERER_PERFZONE(OGLRendererVertexBufferBind);
 	prepareForRender();
-	const physx::PxU8 *buffer = ((physx::PxU8*)0) + firstVertex*m_stride;
+	const PxU8 *buffer = ((PxU8*)0) + firstVertex*m_stride;
 	if(m_vbo)
 	{
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
-		for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+		for(PxU32 i=0; i<NUM_SEMANTICS; i++)
 		{
 			Semantic semantic = (Semantic)i;
 			const SemanticDesc &sm = m_semanticDescs[semantic];
@@ -209,77 +242,86 @@ void OGLRendererVertexBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstVert
 			{
 				switch(semantic)
 				{
-					case SEMANTIC_POSITION:
-						RENDERER_ASSERT(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for POSITION semantic.");
-						if(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4)
-						{
-							glVertexPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
-						}
-						break;
-					case SEMANTIC_COLOR:
-						RENDERER_ASSERT(sm.format == FORMAT_COLOR, "Unsupported Vertex Buffer Format for COLOR semantic.");
-						if(sm.format == FORMAT_COLOR)
-						{
-							glColorPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
-						}
-						break;
-					case SEMANTIC_NORMAL:
-						RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for NORMAL semantic.");
-						if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
-						{
-							glNormalPointer(getGLFormatType(sm.format), m_stride, buffer+sm.offset);
-						}
-						break;
-					case SEMANTIC_TANGENT:
-						RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for TANGENT semantic.");
-						if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
-						{
-							const physx::PxU32 channel = RENDERER_TANGENT_CHANNEL;
-							glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
-							glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
-							glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
-						}
-						break;
-					case SEMANTIC_TEXCOORD0:
-					case SEMANTIC_TEXCOORD1:
-					case SEMANTIC_TEXCOORD2:
-					case SEMANTIC_TEXCOORD3:
+				case SEMANTIC_POSITION:
+					RENDERER_ASSERT(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for POSITION semantic.");
+					if(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4)
 					{
-						const physx::PxU32 channel = semantic - SEMANTIC_TEXCOORD0;
+						glVertexPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+					}
+					break;
+				case SEMANTIC_COLOR:
+					// swizzling was already handled in unlock()
+					RENDERER_ASSERT(sm.format == FORMAT_COLOR_BGRA || sm.format == FORMAT_COLOR_RGBA || sm.format == FORMAT_COLOR_NATIVE, "Unsupported Vertex Buffer Format for COLOR semantic.");
+					if(sm.format == FORMAT_COLOR_BGRA || sm.format == FORMAT_COLOR_RGBA || sm.format == FORMAT_COLOR_NATIVE)
+					{
+						glColorPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+					}
+					break;
+				case SEMANTIC_NORMAL:
+					RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for NORMAL semantic.");
+					if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
+					{
+						glNormalPointer(getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+					}
+					break;
+				case SEMANTIC_TANGENT:
+					RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for TANGENT semantic.");
+					if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
+					{
+						const PxU32 channel = RENDERER_TANGENT_CHANNEL;
+						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+					}
+					break;
+				case SEMANTIC_TEXCOORD0:
+				case SEMANTIC_TEXCOORD1:
+				case SEMANTIC_TEXCOORD2:
+				case SEMANTIC_TEXCOORD3:
+					{
+						const PxU32 channel = semantic - SEMANTIC_TEXCOORD0;
 						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
 						break;
 					}
-					case SEMANTIC_BONEINDEX:
+				case SEMANTIC_BONEINDEX:
 					{
-						const physx::PxU32 channel = RENDERER_BONEINDEX_CHANNEL;
+						const PxU32 channel = RENDERER_BONEINDEX_CHANNEL;
 						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
 						break;
 					}
-					case SEMANTIC_BONEWEIGHT:
+				case SEMANTIC_BONEWEIGHT:
 					{
-						const physx::PxU32 channel = RENDERER_BONEWEIGHT_CHANNEL;
+						const PxU32 channel = RENDERER_BONEWEIGHT_CHANNEL;
 						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
 						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
 						break;
 					}
-					default:
-						RENDERER_ASSERT(0, "Unable to bind Vertex Buffer Semantic.");
+				case SEMANTIC_DISPLACEMENT_TEXCOORD:
+				case SEMANTIC_DISPLACEMENT_FLAGS:
+					break;
+				default:
+					RENDERER_ASSERT(0, "Unable to bind Vertex Buffer Semantic.");
 				}
-				glEnableClientState(getGLSemantic(semantic));
+
+				GLenum glsemantic = getGLSemantic(semantic);
+				if(glsemantic)
+				{
+					glEnableClientState(getGLSemantic(semantic));
+				}
 			}
 		}
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 	}
 }
 
-void OGLRendererVertexBuffer::unbind(physx::PxU32 streamID)
+void OGLRendererVertexBuffer::unbind(PxU32 streamID)
 {
-	for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+	for(PxU32 i=0; i<NUM_SEMANTICS; i++)
 	{
 		Semantic semantic = (Semantic)i;
 		const SemanticDesc &sm = m_semanticDescs[semantic];
@@ -292,7 +334,7 @@ void OGLRendererVertexBuffer::unbind(physx::PxU32 streamID)
 			}
 		}
 	}
-	for(physx::PxU32 i=0; i<8; i++)
+	for(PxU32 i=0; i<8; i++)
 	{
 		glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + i));
 		glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + i));

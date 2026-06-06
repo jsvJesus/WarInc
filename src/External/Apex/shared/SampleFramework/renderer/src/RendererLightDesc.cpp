@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,14 +34,16 @@
  */
 #include <RendererLightDesc.h>
 
+using namespace SampleRenderer;
+
 RendererLightDesc::RendererLightDesc(RendererLight::Type _type) :
-	type(_type),
-	shadowProjection(45, 1, 0.1f, 100.0f)
+type(_type),
+shadowProjection(45, 1, 0.1f, 100.0f)
 {
 	color       = RendererColor(0,0,0,0);
 	intensity   = 0;
 	shadowMap   = 0;
-	shadowTransform.id();
+	shadowTransform = physx::PxTransform::createIdentity();
 }
 
 bool RendererLightDesc::isValid(void) const

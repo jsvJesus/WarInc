@@ -1,7 +1,5 @@
-#ifndef SAMPLE_ACTOR_H
-#define SAMPLE_ACTOR_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,22 +32,30 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "PsShare.h"
-#include "PxMat34Legacy.h"
 
-class SampleActor
+#ifndef SAMPLE_ACTOR_H
+#define SAMPLE_ACTOR_H
+
+#include "FrameworkFoundation.h"
+
+namespace SampleFramework
 {
+
+	class SampleActor
+	{
 	public:
 		SampleActor(void) {}
 		virtual ~SampleActor(void) {}
-		
+
 		void release(void) { delete this; }
-		
+
 	public:
-		virtual void tick(float dtime, bool rewriteBuffers = false) {}
-		virtual void render(bool rewriteBuffers = false) {}
-		virtual void render(const physx::PxMat34Legacy &eyeT) { render(); } // TODO: provide a version of render() with some info about the current scene like camera pose...
+		virtual void tick(float /*dtime*/, bool /*rewriteBuffers*/ = false) {}
+		virtual void render(bool /*rewriteBuffers*/ = false) {}
+		//virtual void render(const PxMat44 &eyeT) { render(); } // TODO: provide a version of render() with some info about the current scene like camera pose...
 		virtual int getType() { return -1; }
-};
+	};
+
+} // namespace SampleFramework
 
 #endif

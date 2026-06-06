@@ -14,10 +14,6 @@ class Ammo
 {
 	friend class WeaponArmory;
 	friend class Weapon;
-	friend class obj_Grenade;
-	friend class obj_Mine;
-	friend class obj_Rocket;
-
 public:
 	Ammo(const char* ammoName);
 	~Ammo();
@@ -61,6 +57,7 @@ protected: // shared data
 	r3dPoint3D	m_CreationPos;
 	r3dPoint3D	m_AppliedVelocity;
 	float		m_AddedDelay; // for grenades
+	r3dPoint3D	m_MuzzlerStartPos; // muzzler position at fire event
 	class obj_ParticleSystem* m_ParticleTracer;
 
 	virtual r3dMesh* getModel()

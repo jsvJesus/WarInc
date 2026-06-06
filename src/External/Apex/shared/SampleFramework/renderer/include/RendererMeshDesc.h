@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,32 +37,37 @@
 
 #include <RendererMesh.h>
 
-class RendererVertexBuffer;
-class RendererIndexBuffer;
-class RendererInstanceBuffer;
-
-class RendererMeshDesc
+namespace SampleRenderer
 {
+
+	class RendererVertexBuffer;
+	class RendererIndexBuffer;
+	class RendererInstanceBuffer;
+
+	class RendererMeshDesc
+	{
 	public:
 		RendererMesh::Primitive primitives;
-		
+
 		RendererVertexBuffer  **vertexBuffers;
-		physx::PxU32                   numVertexBuffers;
-		physx::PxU32                   firstVertex;
-		physx::PxU32                   numVertices;
-		
+		PxU32                   numVertexBuffers;
+		PxU32                   firstVertex;
+		PxU32                   numVertices;
+
 		RendererIndexBuffer    *indexBuffer;
-		physx::PxU32                   firstIndex;
-		physx::PxU32                   numIndices;
-		
+		PxU32                   firstIndex;
+		PxU32                   numIndices;
+
 		RendererInstanceBuffer *instanceBuffer;
-		physx::PxU32                   firstInstance;
-		physx::PxU32                   numInstances;
-		
+		PxU32                   firstInstance;
+		PxU32                   numInstances;
+
 	public:
 		RendererMeshDesc(void);
-		
+
 		bool isValid(void) const;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

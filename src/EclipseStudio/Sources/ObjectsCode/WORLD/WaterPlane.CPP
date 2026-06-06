@@ -61,12 +61,12 @@ static r3dVector WaterPlaneComputeNormal ( r3dTL::T2DArray<r3dVector> const &dPo
 	r3dVector vNormal(0,0,0);
 	int iCnt = 0;
 
-	if(iI<iW&&iJ<iH&&dGrid[iI][iJ])
+	if(iI<iW&&iJ<iH&&dGrid[iJ][iI])
 	{
-		r3dVector const & v0 = dPoints[iI][iJ];
-		r3dVector const & v1 = dPoints[iI][iJ+1];
-		r3dVector const & v2 = dPoints[iI+1][iJ+1];
-		r3dVector const & v3 = dPoints[iI+1][iJ];
+		r3dVector const & v0 = dPoints[iJ][iI];
+		r3dVector const & v1 = dPoints[iJ+1][iI];
+		r3dVector const & v2 = dPoints[iJ+1][iI+1];
+		r3dVector const & v3 = dPoints[iJ][iI+1];
 
 		r3dVector vNormal0 = -(v0-v1).Cross(v2-v1).NormalizeTo();
 		r3dVector vNormal1 = -(v2-v3).Cross(v0-v3).NormalizeTo();
@@ -75,12 +75,12 @@ static r3dVector WaterPlaneComputeNormal ( r3dTL::T2DArray<r3dVector> const &dPo
 		iCnt+=2;		
 	}
 
-	if(iI>0&&iJ>0&&iI-1<iW&&iJ-1<iH&&dGrid[iI-1][iJ-1])
+	if(iI>0&&iJ>0&&iI-1<iW&&iJ-1<iH&&dGrid[iJ-1][iI-1])
 	{
-		r3dVector const & v0 = dPoints[iI-1][iJ-1];
-		r3dVector const & v1 = dPoints[iI-1][iJ];
-		r3dVector const & v2 = dPoints[iI][iJ];
-		r3dVector const & v3 = dPoints[iI][iJ-1];
+		r3dVector const & v0 = dPoints[iJ-1][iI-1];
+		r3dVector const & v1 = dPoints[iJ][iI-1];
+		r3dVector const & v2 = dPoints[iJ][iI];
+		r3dVector const & v3 = dPoints[iJ-1][iI];
 
 		r3dVector vNormal0 = -(v0-v1).Cross(v2-v1).NormalizeTo();
 		r3dVector vNormal1 = -(v2-v3).Cross(v0-v3).NormalizeTo();
@@ -89,22 +89,22 @@ static r3dVector WaterPlaneComputeNormal ( r3dTL::T2DArray<r3dVector> const &dPo
 		iCnt+=2;		
 	}
 
-	if(iI>0&&iI-1<iW&&iJ<iH&&dGrid[iI-1][iJ])
+	if(iI>0&&iI-1<iW&&iJ<iH&&dGrid[iJ][iI-1])
 	{
-		r3dVector const & v0 = dPoints[iI-1][iJ];
-		r3dVector const & v2 = dPoints[iI][iJ+1];
-		r3dVector const & v3 = dPoints[iI][iJ];
+		r3dVector const & v0 = dPoints[iJ][iI-1];
+		r3dVector const & v2 = dPoints[iJ+1][iI];
+		r3dVector const & v3 = dPoints[iJ][iI];
 
 		r3dVector vNormal1 = -(v2-v3).Cross(v0-v3).NormalizeTo();
 		vNormal+=vNormal1;
 		iCnt+=1;		
 	}
 
-	if(iJ>0&&iI<iW&&iJ-1<iH&&dGrid[iI][iJ-1])
+	if(iJ>0&&iI<iW&&iJ-1<iH&&dGrid[iJ-1][iI])
 	{
-		r3dVector const & v0 = dPoints[iI][iJ-1];
-		r3dVector const & v1 = dPoints[iI][iJ];
-		r3dVector const & v2 = dPoints[iI+1][iJ];
+		r3dVector const & v0 = dPoints[iJ-1][iI];
+		r3dVector const & v1 = dPoints[iJ][iI];
+		r3dVector const & v2 = dPoints[iJ][iI+1];
 		
 		r3dVector vNormal0 = -(v0-v1).Cross(v2-v1).NormalizeTo();
 		vNormal+=vNormal0;
@@ -121,7 +121,7 @@ static r3dVector WaterPlaneComputeNormal ( r3dTL::T2DArray<r3dVector> const &dPo
 //////////////////////////////////////////////////////////////////////////
 
 const char WATER_PLANES_DIR [] = "water_planes";
-const WORD WATER_VERSION_ID = 3;
+const WORD WATER_VERSION_ID = 4;
 const WORD WATER_VERSION_BIN_ID = 5;
 
 extern r3dScreenBuffer*	DepthBuffer;
@@ -134,18 +134,40 @@ r3dTL::TArray<obj_WaterPlane*> obj_WaterPlane::m_dWaterPlanes;
 
 //////////////////////////////////////////////////////////////////////////
 
+obj_WaterPlane::Settings::Settings()
+: WaterPlaneHeight( 10.0f )
+, CellGridSize( 50.0f )
+, PlaneXSize( 0.0f )
+, PlaneZSize( 0.0f )
+, PlaneCentreX( 0.0f )
+, PlaneCentreZ( 0.0f )
+, CoastSmoothLevels( 2 )
+{
+
+}
+
+//------------------------------------------------------------------------
+
+obj_WaterPlane::Info::Info()
+: OffsetX( 0.0f )
+, OffsetZ( 0.0f )
+, CellCountX( 0 )
+, CellCountZ( 0 )
+{
+
+}
+
+//------------------------------------------------------------------------
+
 IMPLEMENT_CLASS(obj_WaterPlane, "obj_WaterPlane", "Object");
 AUTOREGISTER_CLASS(obj_WaterPlane);
 
 obj_WaterPlane::obj_WaterPlane()
-	: m_fCellGridSize ( 50.0f )
-	, m_fWaterPlaneHeight ( 10.0f )
-	, m_fWaterPlaneHeightOnTerrain ( 1.0f )
-	, m_bWaterPlaneFollowTerrain ( false )
-	, m_iCoastSmoothLevels ( 2 )
-	, m_fOldCellGridSize ( 0.0f )
-	, m_bResizeInfoExists ( false )
-	, m_Plane ( NULL )
+: m_fOldCellGridSize ( 0.0f )
+, m_bResizeInfoExists ( false )
+, m_Plane ( NULL )
+, m_fOldOffsetX( 0.f )
+, m_fOldOffsetZ( 0.f )
 {
 	m_dOldGrid.Clear ();
 	m_dWaterPlanes.PushBack ( this );
@@ -154,6 +176,8 @@ obj_WaterPlane::obj_WaterPlane()
 	SpecularTexture = 0;
 	ColorTexture = 0;
 	MaskTexture = 0;
+
+	DrawDistanceSq = FLT_MAX;
 }
 
 obj_WaterPlane::~obj_WaterPlane()
@@ -182,15 +206,8 @@ BOOL obj_WaterPlane::OnCreate()
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
 
-	
-
-	ObjFlags |= OBJFLAG_SkipCastRay 
-					| 
-				OBJFLAG_SkipOcclusionCheck
-					|
-				OBJFLAG_DisableShadows
-					|	
-				OBJFLAG_ForceSleep; // todo: remove skipObstacle and add proper aabb!!!
+	setSkipOcclusionCheck(true);
+	ObjFlags |= OBJFLAG_SkipCastRay | OBJFLAG_DisableShadows | OBJFLAG_ForceSleep; // todo: remove skipObstacle and add proper aabb!!!
 
 	m_Plane = new r3dXPSObject<R3D_WATER_PLANE_VERTEX>;
 	
@@ -202,7 +219,7 @@ BOOL obj_WaterPlane::OnCreate()
 #endif
 
 	WaterBase::OnCreateBase();
-	CreateRefractionBuffer();
+	CreateWaterBuffers();
 
 	if ( ! WaterColor[0] )
 	{
@@ -243,8 +260,7 @@ BOOL obj_WaterPlane::Update()
 
 	r3dBoundBox bboxLocal = GetBBoxLocal() ;
 
-	if(	m_bWaterPlaneFollowTerrain ) bboxLocal.Org.y = m_meshHeight;// + m_fWaterPlaneHeightOnTerrain;
-	else	bboxLocal.Org.y = m_fWaterPlaneHeight;
+	bboxLocal.Org.y = m_Settings.WaterPlaneHeight;
 
 	SetBBoxLocal( bboxLocal ) ;
 
@@ -331,14 +347,14 @@ extern float RIPPLES_AREA_SIZE;
 bool obj_WaterPlane::WaterSplash(const r3dPoint3D& waterSplashPos, float height, float size, float amount, int texIdx)
 {
 	if(nSplashes==MaxSplashes)	return false;
-	if(GetWaterPlaneFollowTerrainFlag())	return false;	//TODO
+
 	const float heightBlend = 0.5f;
 
 	const r3dBoundBox& bboxLocal = GetBBoxLocal() ;
 
 	if(waterSplashPos.X >= bboxLocal.Org.X && waterSplashPos.X <= bboxLocal.Org.X + bboxLocal.Size.X &&
 		 waterSplashPos.Z >= bboxLocal.Org.Z && waterSplashPos.Z <= bboxLocal.Org.Z + bboxLocal.Size.Z
-		 && m_fWaterPlaneHeight > waterSplashPos.y && m_fWaterPlaneHeight < waterSplashPos.y+height+heightBlend
+		 && m_Settings.WaterPlaneHeight > waterSplashPos.y && m_Settings.WaterPlaneHeight < waterSplashPos.y+height+heightBlend
 		 )
 	{
 		splashes[nSplashes].params.x = (waterSplashPos.x - gCam.x) / RIPPLES_AREA_SIZE + 0.5f;
@@ -346,8 +362,8 @@ bool obj_WaterPlane::WaterSplash(const r3dPoint3D& waterSplashPos, float height,
 		splashes[nSplashes].params.z = size;
 		splashes[nSplashes].texIdx = texIdx;
 
-		if(m_fWaterPlaneHeight > waterSplashPos.y+height)
-			amount *= 1 - (m_fWaterPlaneHeight - waterSplashPos.y-height) / heightBlend;
+		if(m_Settings.WaterPlaneHeight > waterSplashPos.y+height)
+			amount *= 1 - (m_Settings.WaterPlaneHeight - waterSplashPos.y-height) / heightBlend;
 
 		splashes[nSplashes].params.w = amount;
 		nSplashes++;
@@ -364,7 +380,7 @@ obj_WaterPlane::DoDraw( const r3dCamera& Cam )
 #ifndef WO_SERVER
 	R3DPROFILE_FUNCTION("WaterPlane::DoDraw");
 
-	RenderBegin(Cam, m_bWaterPlaneFollowTerrain ? 0.0f : m_fWaterPlaneHeight, m_bWaterPlaneFollowTerrain);
+	RenderBegin(Cam, m_Settings.WaterPlaneHeight);
 
 	m_Plane->Draw();
 
@@ -409,15 +425,22 @@ void obj_WaterPlane::ReadSerializedData(pugi::xml_node& node)
 
 
 		if(!ch_node.attribute("waterplaneheight").empty())
-			m_fWaterPlaneHeight =  ch_node.attribute("waterplaneheight").as_float();
-		if(!ch_node.attribute("waterplaneheightonterrain").empty())
-			m_fWaterPlaneHeightOnTerrain =  ch_node.attribute("waterplaneheightonterrain").as_float();
-		if(!ch_node.attribute("waterplanefollowterrain").empty())
-			m_bWaterPlaneFollowTerrain =  ch_node.attribute("waterplanefollowterrain").as_bool();
+			m_Settings.WaterPlaneHeight =  ch_node.attribute("waterplaneheight").as_float();
 		if(!ch_node.attribute("cellgridsize").empty())
-			m_fCellGridSize =  ch_node.attribute("cellgridsize").as_float();
+			m_Settings.CellGridSize =  ch_node.attribute("cellgridsize").as_float();
 		if(!ch_node.attribute("coastsmoothlevels").empty())
-			m_iCoastSmoothLevels =  ch_node.attribute("coastsmoothlevels").as_int();
+			m_Settings.CoastSmoothLevels =  ch_node.attribute("coastsmoothlevels").as_int();
+		if(!ch_node.attribute("total_x_size").empty())
+			m_Settings.PlaneXSize =  ch_node.attribute("total_x_size").as_float();
+		if(!ch_node.attribute("total_z_size").empty())
+			m_Settings.PlaneZSize =  ch_node.attribute("total_z_size").as_float();
+		if(!ch_node.attribute("center_x").empty())
+			m_Settings.PlaneCentreX =  ch_node.attribute("center_x").as_float();
+		if(!ch_node.attribute("center_z").empty())
+			m_Settings.PlaneCentreZ =  ch_node.attribute("center_z").as_float();
+
+		// calculate m_Info members like this
+		SetSettings( m_Settings );
 
 		WaterBase::ReadSerializedData(ch_node);
 
@@ -446,114 +469,17 @@ void obj_WaterPlane::WriteSerializedData(pugi::xml_node& node)
 	}
 
 
-	ch_node.append_attribute("waterplaneheight") = m_fWaterPlaneHeight;
-	ch_node.append_attribute("waterplaneheightonterrain") = m_fWaterPlaneHeightOnTerrain;
-	ch_node.append_attribute("waterplanefollowterrain") = m_bWaterPlaneFollowTerrain;
-	ch_node.append_attribute("cellgridsize") = m_fCellGridSize;
-	ch_node.append_attribute("coastsmoothlevels") = m_iCoastSmoothLevels;
+	ch_node.append_attribute("waterplaneheight") = m_Settings.WaterPlaneHeight;
+	ch_node.append_attribute("cellgridsize") = m_Settings.CellGridSize;
+	ch_node.append_attribute("coastsmoothlevels") = m_Settings.CoastSmoothLevels;
+	ch_node.append_attribute("total_x_size") = m_Settings.PlaneXSize;
+	ch_node.append_attribute("total_z_size") = m_Settings.PlaneZSize;
+	ch_node.append_attribute("center_x") = m_Settings.PlaneCentreX;
+	ch_node.append_attribute("center_z") = m_Settings.PlaneCentreZ;
 
 	WaterBase::WriteSerializedData(ch_node);
 
 	SaveWaterPlaneGrid (Name.c_str());
-	SaveWaterPlaneGridBin (Name.c_str());
-}
-
-float obj_WaterPlane::GetCellGridSize () const
-{
-	return m_fCellGridSize;
-}
-
-void obj_WaterPlane::SetCellGridSize ( float fSize )
-{
-	if ( fabsf(m_fCellGridSize - fSize) > FLT_EPSILON )
-	{
-		if(!m_bResizeInfoExists)
-		{
-			m_fOldCellGridSize = m_fCellGridSize;
-			m_dOldGrid = m_dGrid;
-			m_bResizeInfoExists = true;
-		}
-		m_fCellGridSize = fSize;
-
-		UpdateGridOnChangeCellSize ();
-
-		UpdateWaterPlane ();
-	}
-}
-
-void obj_WaterPlane::SetWaterPlaneHeightOnTerrain ( float fH )
-{
-	if ( fabsf(m_fWaterPlaneHeightOnTerrain - fH) > FLT_EPSILON )
-	{
-		m_fWaterPlaneHeightOnTerrain = fH;
-		UpdateWaterPlane ();
-	}
-}
-
-float obj_WaterPlane::GetWaterPlaneHeightOnTerrain () const
-{
-	return m_fWaterPlaneHeightOnTerrain;
-}
-
-
-void obj_WaterPlane::SetWaterPlaneHeight ( float fH )
-{
-	if ( fabsf(m_fWaterPlaneHeight - fH) > FLT_EPSILON )
-	{
-		m_fWaterPlaneHeight = fH;
-		UpdateWaterPlane ();
-	}
-}
-
-float obj_WaterPlane::GetWaterPlaneHeight () const
-{
-	return m_fWaterPlaneHeight;
-}
-
-void obj_WaterPlane::SetWaterPlaneCoastSmoothLevels ( int iLvls )
-{
-	if(m_iCoastSmoothLevels!= iLvls)
-	{
-		m_iCoastSmoothLevels = iLvls;
-		UpdateWaterPlane ();
-	}
-}
-
-int obj_WaterPlane::GetWaterPlaneCoastSmoothLevels () const
-{
-	return m_iCoastSmoothLevels;
-}
-
-void obj_WaterPlane::SetWaterPlaneFollowTerrainFlag(bool bFollow)
-{
-	if ( m_bWaterPlaneFollowTerrain != bFollow )
-	{
-		m_bWaterPlaneFollowTerrain = bFollow;
-		UpdateWaterPlane ();
-	}
-}
-
-bool obj_WaterPlane::GetWaterPlaneFollowTerrainFlag() const
-{
-	return m_bWaterPlaneFollowTerrain;
-}
-
-
-
-void obj_WaterPlane::SetGridDimensions ( uint32_t iW, uint32_t iH )
-{
-	if(m_dGrid.Width() == iW && m_dGrid.Height() == iH)
-		return;
-
-	m_dGrid.Resize(iW, iH, 0);
-
-	if(m_bResizeInfoExists)
-		UpdateGridOnChangeCellSize ();
-}
-void obj_WaterPlane::GetGridDimensions( uint32_t& iW, uint32_t& iH )
-{
-	iW = m_dGrid.Width();
-	iH = m_dGrid.Height();
 }
 
 
@@ -561,8 +487,8 @@ bool obj_WaterPlane::FillWaterGrid ( uint32_t iW, uint32_t iH, bool bUpdateImmed
 {
 	ResetResizeInfo ();
 
-	bool bChanged = m_dGrid[iW][iH] == 0;
-	m_dGrid[iW][iH] = 1;
+	bool bChanged = m_dGrid[iH][iW] == 0;
+	m_dGrid[iH][iW] = 1;
 	if(bUpdateImmediately)
 		UpdateWaterPlane ();
 
@@ -573,8 +499,8 @@ bool obj_WaterPlane::EraseWaterGrid ( uint32_t iW, uint32_t iH, bool bUpdateImme
 {
 	ResetResizeInfo ();
 
-	bool bChanged = m_dGrid[iW][iH] == 1;
-	m_dGrid[iW][iH] = 0;
+	bool bChanged = m_dGrid[iH][iW] == 1;
+	m_dGrid[iH][iW] = 0;
 	if(bUpdateImmediately)
 		UpdateWaterPlane ();
 
@@ -586,7 +512,7 @@ uint8_t obj_WaterPlane::GetWaterGridValue(uint32_t iW, uint32_t iH)
 	if(iW>=m_dGrid.Width() || iH>= m_dGrid.Height())
 		return 0;
 
-	return m_dGrid[iW][iH];
+	return m_dGrid[iH][iW];
 }
 
 
@@ -598,12 +524,18 @@ void obj_WaterPlane::UpdateWaterPlane ()
 	if ( m_dGrid.Width() == 0 || m_dGrid.Height() == 0 )
 		return;
 
+	float totalW = m_Settings.PlaneXSize;
+	float totalH = m_Settings.PlaneZSize;
+
+	float offX = m_Info.OffsetX;
+	float offZ = m_Info.OffsetZ;
+	
 	m_Plane->Destroy();
 
 	int iCount = 0;
 	for ( uint32_t i = 0; i < m_dGrid.Width(); i++ )
 		for ( uint32_t j = 0; j < m_dGrid.Height(); j++ )
-			if(m_dGrid[i][j])
+			if(m_dGrid[j][i])
 				iCount++;
 
 	if(iCount == 0)
@@ -613,7 +545,7 @@ void obj_WaterPlane::UpdateWaterPlane ()
 	uint32_t iH = m_dGrid.Height();
 
 	r3dTL::T2DArray<r3dVector> dGridVertexesPos;
-	ComputeWaterVertexesPos(dGridVertexesPos);
+	ComputeWaterVertexesPos(dGridVertexesPos, offX, offZ);
 
 	m_Plane->Init(iCount*4,iCount*6, 0);
 
@@ -632,12 +564,12 @@ void obj_WaterPlane::UpdateWaterPlane ()
 	{
 		for ( uint32_t j = 0; j < iH; j++ )
 		{
-			if(m_dGrid[i][j])
+			if(m_dGrid[j][i])
 			{
-				r3dVector const & v0 = dGridVertexesPos[i][j];
-				r3dVector const & v1 = dGridVertexesPos[i][j+1];
-				r3dVector const & v2 = dGridVertexesPos[i+1][j+1];
-				r3dVector const & v3 = dGridVertexesPos[i+1][j];
+				r3dVector const & v0 = dGridVertexesPos[j][i];
+				r3dVector const & v1 = dGridVertexesPos[j+1][i];
+				r3dVector const & v2 = dGridVertexesPos[j+1][i+1];
+				r3dVector const & v3 = dGridVertexesPos[j][i+1];
 
 				r3dVector vNormal0 = -(v0-v1).Cross(v2-v1).NormalizeTo();
 				r3dVector vNormal1 = -(v2-v3).Cross(v0-v3).NormalizeTo();
@@ -686,8 +618,7 @@ void obj_WaterPlane::UpdateWaterPlane ()
 	bboxLocal.Size = vMaxBound - vMinBound;
 	m_meshHeight = vMinBound.y;
 	bboxLocal.Org = vMinBound;
-	if(	m_bWaterPlaneFollowTerrain ) bboxLocal.Org.y = m_meshHeight;// + m_fWaterPlaneHeightOnTerrain;
-	else	bboxLocal.Org.y = m_fWaterPlaneHeight;
+	bboxLocal.Org.y = m_Settings.WaterPlaneHeight;
 
 	SetBBoxLocal( bboxLocal ) ;
 
@@ -737,7 +668,9 @@ void obj_WaterPlane::LoadWaterPlaneGrid(const char*szName)
 
 	WORD version;
 	fread(&version, sizeof(version), 1, f);
-	if ( version != WATER_VERSION_ID )
+	if ( version != WATER_VERSION_ID
+			&&
+		version != 3 )
 	{
 		r3dError("invalid obj_WaterPlane version %d file %s", version, file);
 		fclose(f);
@@ -759,9 +692,13 @@ void obj_WaterPlane::LoadWaterPlaneGrid(const char*szName)
 		{
 			uint8_t iVal = 0;
 			fread(&iVal, sizeof(iVal), 1, f);
-			m_dGrid[i][j] = iVal;
+
+			m_dGrid[j][i] = iVal;		
 		}
 	}
+
+	// update m_Info with proper cell counts.
+	SetSettings( m_Settings );
 
 	fclose(f);
 }
@@ -789,72 +726,16 @@ void obj_WaterPlane::SaveWaterPlaneGrid(const char*szName)
 	{
 		for(uint32_t i=0;i<iW;i++)
 		{
-			uint8_t iVal = m_dGrid[i][j];
+			uint8_t iVal = m_dGrid[j][i];
 			fwrite(&iVal, sizeof(iVal), 1, f);
 		}
 	}
 	fclose(f);
 }
 
-
-void obj_WaterPlane::SaveWaterPlaneGridBin(const char*szName)
-{
-	char dir[MAX_PATH], file[MAX_PATH];
-	sprintf(dir, "%s\\%s", r3dGameLevel::GetSaveDir(), WATER_PLANES_DIR);
-	sprintf(file, "%s\\%s_ps3.dat", dir, szName);
-	CreateDirectory(dir, NULL);
-
-	FILE* f = fopen_for_write(file, "wb");
-	r3d_assert(f);
-
-	WORD version = WATER_VERSION_BIN_ID;
-	fwrite(&version, sizeof(version), 1, f);
-
-	int32_t iIndexCount = 0 ;
-	int32_t iVertexCount = 0 ;
-
-	R3D_WATER_PLANE_VERTEX * pV = NULL;
-	DWORD * pI = NULL;
-	int iFirstIndex = 0;
-
-	if( m_Plane->IsValid() )
-	{
-		iIndexCount = m_Plane->IndexSize;
-		iVertexCount = m_Plane->VertexSize;
-
-		m_Plane->Lock(iVertexCount,iIndexCount, &pV, &pI,&iFirstIndex, true);
-		r3d_assert(pV);
-		r3d_assert(pI);
-		r3d_assert(iFirstIndex==0);
-	}
-
-	fwrite(&iIndexCount, sizeof(iIndexCount), 1, f);
-	fwrite(&iVertexCount, sizeof(iVertexCount), 1, f);
-	for(int32_t i=0;i<iIndexCount;i++)
-	{
-		WORD idx = WORD(*pI);
-		fwrite(&idx, sizeof(idx), 1, f);
-		pI++;
-	}
-	for(int32_t i=0;i<iVertexCount;i++)
-	{
-		R3D_WATER_PLANE_VERTEX vrt = *pV;
-		fwrite(&vrt.Position, sizeof(vrt.Position), 1, f);
-		fwrite(&vrt.Normal, sizeof(vrt.Normal), 1, f);
-		pV++;
-	}
-
-	if( m_Plane->IsValid() )
-	{
-		m_Plane->Unlock ();
-	}
-
-	fclose(f);
-}
-
 void obj_WaterPlane::ComputeCoastSmoothInfo (r3dTL::T2DArray<uint8_t> & tInfo)
 {
-	r3d_assert(m_iCoastSmoothLevels<7);
+	r3d_assert( m_Settings.CoastSmoothLevels<7 );
 
 	tInfo.Resize(m_dGrid.Width(),m_dGrid.Height());
 
@@ -862,26 +743,26 @@ void obj_WaterPlane::ComputeCoastSmoothInfo (r3dTL::T2DArray<uint8_t> & tInfo)
 	uint32_t iH = tInfo.Height();
 	for(uint32_t j=0;j<iH;j++)
 		for(uint32_t i=0;i<iW;i++)
-			tInfo[i][j] = m_dGrid[i][j]?m_iCoastSmoothLevels+1:0;
+			tInfo[j][i] = m_dGrid[j][i]?m_Settings.CoastSmoothLevels+1:0;
 
-	for ( uint32_t k = 1; k < (uint32_t)m_iCoastSmoothLevels+1; k++ )
+	for ( uint32_t k = 1; k < (uint32_t)m_Settings.CoastSmoothLevels+1; k++ )
 	{
 		for(uint32_t j=0;j<iH;j++)
 			for(uint32_t i=0;i<iW;i++)
 			{
-				if(tInfo[i][j]<k)
+				if(tInfo[j][i]<k)
 					continue;
 				
-				if((i>0 && tInfo[i-1][j] == k-1)||
-					(i<iW-1 && tInfo[i+1][j] == k-1)||
-					(j>0 && tInfo[i][j-1] == k-1)||
-					(j<iH-1 && tInfo[i][j+1] == k-1))
-					tInfo[i][j] = k;
+				if((i>0 && tInfo[j][i-1] == k-1)||
+					(i<iW-1 && tInfo[j][i+1] == k-1)||
+					(j>0 && tInfo[j-1][i] == k-1)||
+					(j<iH-1 && tInfo[j+1][i] == k-1))
+					tInfo[j][i] = k;
 			}
 	}
 }
 
-void obj_WaterPlane::ComputeWaterVertexesPos (r3dTL::T2DArray<r3dVector> & tInfo)
+void obj_WaterPlane::ComputeWaterVertexesPos( r3dTL::T2DArray<r3dVector> & tInfo, float offX, float offZ )
 {
 	// FILL ONLY EXISTS VERTEXES INFO
 	uint32_t iW = m_dGrid.Width();
@@ -893,80 +774,69 @@ void obj_WaterPlane::ComputeWaterVertexesPos (r3dTL::T2DArray<r3dVector> & tInfo
 	tInfo.Clear ();
 	tInfo.Resize(iW+1,iH+1);
 
+	float cellSize = m_Settings.CellGridSize;
+
 	for ( uint32_t i = 0; i < iW; i++ )
 	{
 		for ( uint32_t j = 0; j < iH; j++ )
 		{
-			if(m_dGrid[i][j])
+			if(m_dGrid[j][i])
 			{
-				r3dVector v0 = r3dVector((i+0)*m_fCellGridSize, 0, (j+0)*m_fCellGridSize);
-				r3dVector v1 = r3dVector((i+0)*m_fCellGridSize, 0, (j+1)*m_fCellGridSize);
-				r3dVector v2 = r3dVector((i+1)*m_fCellGridSize, 0, (j+1)*m_fCellGridSize);
-				r3dVector v3 = r3dVector((i+1)*m_fCellGridSize, 0, (j+0)*m_fCellGridSize);
+				r3dVector v0 = r3dVector((i+0)*cellSize + offX, 0, (j+0)*cellSize + offZ);
+				r3dVector v1 = r3dVector((i+0)*cellSize + offX, 0, (j+1)*cellSize + offZ);
+				r3dVector v2 = r3dVector((i+1)*cellSize + offX, 0, (j+1)*cellSize + offZ);
+				r3dVector v3 = r3dVector((i+1)*cellSize + offX, 0, (j+0)*cellSize + offZ);
 
-				if ( m_bWaterPlaneFollowTerrain )
-				{
-					float f0 = (float)dGridCoastInfo[i][j];
-					float f1 = (float)dGridCoastInfo[i][j];
-					float f2 = (float)dGridCoastInfo[i][j];
-					float f3 = (float)dGridCoastInfo[i][j];
-					if(m_iCoastSmoothLevels<=0)
-					{
-						f0 = f1 = f2 = f3 = 1.0f;
-					}
-					else
-					{
-						if(i>0) f0 = r3dTL::Max( (float)dGridCoastInfo[i-1][j], f0);
-						if(j>0) f0 = r3dTL::Max( (float)dGridCoastInfo[i][j-1], f0);
-						if(i>0&&j>0) f0 = r3dTL::Max( (float)dGridCoastInfo[i-1][j-1], f0);
-
-						if(i>0) f1 = r3dTL::Max( (float)dGridCoastInfo[i-1][j], f1);
-						if(j<iH-1) f1 = r3dTL::Max( (float)dGridCoastInfo[i][j+1], f1);
-						if(i>0&&j<iH-1) f1 = r3dTL::Max( (float)dGridCoastInfo[i-1][j+1], f1);
-
-						if(i<iW-1) f2 = r3dTL::Max( (float)dGridCoastInfo[i+1][j], f2);
-						if(j<iH-1) f2 = r3dTL::Max( (float)dGridCoastInfo[i][j+1], f2);
-						if(i<iW-1&&j<iH-1) f2 = r3dTL::Max( (float)dGridCoastInfo[i+1][j+1], f2);
-
-						if(i<iW-1) f3 = r3dTL::Max( (float)dGridCoastInfo[i+1][j], f3);
-						if(j>0) f3 = r3dTL::Max( (float)dGridCoastInfo[i][j-1], f3);
-						if(j>0&&i<iW-1) f3 = r3dTL::Max( (float)dGridCoastInfo[i+1][j-1], f3);
-
-						f0 = ( (f0 - 1.0f)/(float)m_iCoastSmoothLevels - 0.5f ) * 2.0f;
-						f1 = ( (f1 - 1.0f)/(float)m_iCoastSmoothLevels - 0.5f ) * 2.0f;
-						f2 = ( (f2 - 1.0f)/(float)m_iCoastSmoothLevels - 0.5f ) * 2.0f;
-						f3 = ( (f3 - 1.0f)/(float)m_iCoastSmoothLevels - 0.5f ) * 2.0f;
-					}
-
-					v0.y = terra_GetH(v0)+f0*m_fWaterPlaneHeightOnTerrain;
-					v1.y = terra_GetH(v1)+f1*m_fWaterPlaneHeightOnTerrain;
-					v2.y = terra_GetH(v2)+f2*m_fWaterPlaneHeightOnTerrain;
-					v3.y = terra_GetH(v3)+f3*m_fWaterPlaneHeightOnTerrain;
-				}
-
-				tInfo[i][j] = v0;
-				tInfo[i][j+1] = v1;
-				tInfo[i+1][j+1] = v2;
-				tInfo[i+1][j] = v3;
+				tInfo[j][i] = v0;
+				tInfo[j+1][i] = v1;
+				tInfo[j+1][i+1] = v2;
+				tInfo[j][i+1] = v3;
 			}
 		}
 	}
 }
 
-void obj_WaterPlane::UpdateGridOnChangeCellSize ()
+void obj_WaterPlane::UpdateGridOnCellCountChange ()
 {
 	r3d_assert(m_bResizeInfoExists);
+
+	float cellSize = m_Settings.CellGridSize;
+
+	int iCellCountX = int( m_Settings.PlaneXSize / cellSize ) + 1;
+	int iCellCountZ = int( m_Settings.PlaneZSize / cellSize ) + 1;
+
+	m_dGrid.Resize( iCellCountX, iCellCountZ );
 
 	for(uint32_t j = 0; j < m_dGrid.Height (); j++ )
 	{
 		for(uint32_t i = 0; i < m_dGrid.Width (); i++)
 		{
-			uint32_t i_old = uint32_t( ( ((float)i+0.5f)*m_fCellGridSize ) / m_fOldCellGridSize );
-			uint32_t j_old = uint32_t( ( ((float)j+0.5f)*m_fCellGridSize ) / m_fOldCellGridSize );
-			if(/*i_old>=0&&*/i_old<m_dOldGrid.Width () && /*j_old>=0&&*/j_old<m_dOldGrid.Height ())
-				m_dGrid[i][j] = m_dOldGrid[i_old][j_old];
-			else
-				m_dGrid[i][j] = 0;
+			float coord_x0 = ( i + 0.125f ) * cellSize + m_Info.OffsetX;
+			float coord_z0 = ( j + 0.125f ) * cellSize + m_Info.OffsetZ;
+
+			float coord_x1 = ( i + 1.0f - 0.125f ) * cellSize + m_Info.OffsetX;
+			float coord_z1 = ( j + 1.0f - 0.125f ) * cellSize + m_Info.OffsetZ;
+
+			int i_old0 = int( ( coord_x0 - m_fOldOffsetX ) / m_fOldCellGridSize );
+			int j_old0 = int( ( coord_z0 - m_fOldOffsetZ ) / m_fOldCellGridSize );
+
+			int i_old1 = int( ( coord_x1 - m_fOldOffsetX ) / m_fOldCellGridSize );
+			int j_old1 = int( ( coord_z1 - m_fOldOffsetZ ) / m_fOldCellGridSize );
+
+			int found = 0;
+
+			for( int i_old = i_old0; i_old <= i_old1; i_old ++ )
+			{
+				for( int j_old = j_old0; j_old <= j_old1; j_old ++ )
+				{
+					if( i_old >= 0 && i_old < (int)m_dOldGrid.Width () && j_old >= 0 && j_old < (int)m_dOldGrid.Height() )
+					{
+						found = R3D_MAX( (int)found, (int)m_dOldGrid[j_old][i_old] );
+					}	
+				}
+			}
+
+			m_dGrid[j][i] = found;
 		}
 	}
 }
@@ -989,7 +859,89 @@ void obj_WaterPlane::SetGrid(const GridVecType &v)
 }
 
 
+//------------------------------------------------------------------------
 
+const obj_WaterPlane::Settings&	obj_WaterPlane::GetSettings() const
+{
+	return m_Settings;
+}
 
+//------------------------------------------------------------------------
 
+void obj_WaterPlane::SetSettings( const Settings& settings )
+{
+	int cellCountChange = 0;
+	int needUpdatePlane = 0;
 
+	if( fabsf( m_Settings.CellGridSize - settings.CellGridSize ) > FLT_EPSILON )
+	{
+		cellCountChange = 1;
+		needUpdatePlane = 1;
+	}
+
+	if( fabsf( m_Settings.WaterPlaneHeight - settings.WaterPlaneHeight ) > FLT_EPSILON )
+	{
+		needUpdatePlane = 1;
+	}
+
+	if( m_Settings.CoastSmoothLevels != settings.CoastSmoothLevels )
+	{
+		needUpdatePlane = 1;
+	}
+
+	if( m_Settings.PlaneXSize != settings.PlaneXSize 
+			||
+		m_Settings.PlaneZSize != settings.PlaneZSize 
+			)
+	{
+		cellCountChange = 1;
+		needUpdatePlane = 1;
+	}
+
+	//------------------------------------------------------------------------
+
+	if( cellCountChange )
+	{
+		if( !m_bResizeInfoExists )
+		{
+			m_fOldCellGridSize = m_Settings.CellGridSize;
+			m_fOldOffsetX = m_Info.OffsetX;
+			m_fOldOffsetZ = m_Info.OffsetZ;
+			m_dOldGrid = m_dGrid;
+			m_bResizeInfoExists = true;
+		}
+	}
+
+	m_Settings = settings;
+
+	m_Info.OffsetX = m_Settings.PlaneCentreX - m_Settings.PlaneXSize * 0.5f;
+	m_Info.OffsetZ = m_Settings.PlaneCentreZ - m_Settings.PlaneZSize * 0.5f;
+
+	if( cellCountChange )
+	{
+		UpdateGridOnCellCountChange();
+	}
+
+	m_Info.CellCountX = (int)m_dGrid.Width();
+	m_Info.CellCountZ = (int)m_dGrid.Height();
+
+	if( needUpdatePlane )
+	{
+		UpdateWaterPlane();
+	}
+}
+
+//------------------------------------------------------------------------
+
+const obj_WaterPlane::Info&	obj_WaterPlane::GetInfo() const
+{
+	return m_Info;
+}
+
+//------------------------------------------------------------------------
+
+void obj_WaterPlane::GetCellIndexes( const r3dPoint3D& pos, int* oCellX, int* oCellZ ) const
+{
+	*oCellX = int( ( pos.x - m_Info.OffsetX ) / m_Settings.CellGridSize );
+	*oCellZ = int( ( pos.z - m_Info.OffsetZ ) / m_Settings.CellGridSize );
+}

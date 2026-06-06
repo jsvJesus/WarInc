@@ -131,8 +131,6 @@ public:
     virtual void            Restart();
     // Set state changed flags
     virtual void            SetStateChangeFlags(UInt8 flags);
-    virtual void            PropagateScale9GridExists();
-    virtual void            SetScale9Grid(const RectF& rect);
 
     // *** overloaded methods of InteractiveObject
     // focus rect for buttons is calculated as follows:

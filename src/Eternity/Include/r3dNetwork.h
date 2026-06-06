@@ -30,6 +30,7 @@ class r3dNetwork
   public:
 	int		dumpStats_;
 	int		lastPing_;
+	DWORD		firstBindIP_;
 	const static int FIRST_FREE_PACKET_ID = 134; // must be more that RakNet::ID_USER_PACKET_ENUM
 
   public:

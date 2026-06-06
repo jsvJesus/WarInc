@@ -38,8 +38,7 @@ void CharacterHUD::CreateCharacter()
 {
 	if(!m_Player)
 	{
-		m_Player = (obj_AI_Player *)srv_CreateGameObject("obj_AI_Player", "RespawnPlayer", r3dPoint3D(0,0,0));
-		m_Player->TeamID = TEAM_BLUE;
+		m_Player = (obj_Player *)srv_CreateGameObject("obj_Player", "RespawnPlayer", r3dPoint3D(0,0,0));
 		m_Player->NetworkLocal = true;
 		m_Player->PlayerState = PLAYER_IDLE;
 		m_Player->bDead = 0;
@@ -121,8 +120,8 @@ void CharacterHUD::Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -184,12 +183,12 @@ void CharacterHUD::Draw()
 	
 	if(equipShow)
 	{
-		extern void ProcessCharacterEditor(obj_AI_Player* pl, float left, float top, float height);
+		extern void ProcessCharacterEditor(obj_Player* pl, float left, float top, float height);
 		ProcessCharacterEditor(m_Player, 0.0f, r3dRenderer->ScreenH - 275.0f, 250.0f);
 	}	
 	
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 }
@@ -297,12 +296,12 @@ void CharacterHUD::DrawPlayerStates(float& Y)
 	}
 	Y += 30;
 	
-	if(Keyboard->WasPressed(kbs1))
-		m_Player->uberAnim_->StartGrenadePinPullAnimation();
-	if(Keyboard->WasPressed(kbs2))
-		m_Player->uberAnim_->StartGrenadeThrowAnimation();
-	if(Keyboard->WasPressed(kbs3))
-		m_Player->uberAnim_->StopGrenadeAnimations();
+//	if(Keyboard->WasPressed(kbs1))
+//		m_Player->uberAnim_->StartGrenadePinPullAnimation();
+//	if(Keyboard->WasPressed(kbs2))
+//		m_Player->uberAnim_->StartGrenadeThrowAnimation();
+//	if(Keyboard->WasPressed(kbs3))
+//		m_Player->uberAnim_->StopGrenadeAnimations();
 		
 	// for JUMPS
 	m_Player->UpdateLocalPlayerMovement();

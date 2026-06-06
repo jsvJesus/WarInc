@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,25 +42,33 @@
 #include <RendererVertexBuffer.h>
 #include "OGLRenderer.h"
 
-class OGLRendererVertexBuffer : public RendererVertexBuffer
+namespace SampleRenderer
 {
+
+	class OGLRendererVertexBuffer : public RendererVertexBuffer
+	{
 	public:
-		OGLRendererVertexBuffer(const RendererVertexBufferDesc &desc, bool deferredUnlock);
+		OGLRendererVertexBuffer(const RendererVertexBufferDesc &desc);
 		virtual ~OGLRendererVertexBuffer(void);
 
+		static PxU32 convertColor(const RendererColor& color);
+
 	protected:
-		virtual void  swizzleColor(void *colors, physx::PxU32 stride, physx::PxU32 numColors);
-		
+		virtual void  swizzleColor(void *colors, PxU32 stride, PxU32 numColors, RendererVertexBuffer::Format inFormat);
+
 		virtual void *lock(void);
 		virtual void  unlock(void);
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstVertex);
-		virtual void  unbind(physx::PxU32 streamID);
-	
+
+		virtual void  bind(PxU32 streamID, PxU32 firstVertex);
+		virtual void  unbind(PxU32 streamID);
+
 	private:
 		GLuint m_vbo;
-		physx::PxU32  m_bufferSize;
-};
+		PxU32  m_bufferSize;
+		GLenum m_access;
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

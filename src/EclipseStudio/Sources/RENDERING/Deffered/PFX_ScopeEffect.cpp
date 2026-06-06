@@ -184,7 +184,7 @@ void PFX_ScopeEffect::PrepareImpl(r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*
 
 	D3DXMatrixTranspose( (D3DXMATRIX*)( vsConsts + 2 ), &shadowCompoundMtx ) ;
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF(0, (float*)vsConsts, R3D_ARRAYSIZE( vsConsts ) ) );
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF(0, (float*)vsConsts, R3D_ARRAYSIZE( vsConsts ) ) );
 	r3dRenderer->SetTex(m_scopeMaskTexture, PostFXChief::FREE_TEX_STAGE_START);
 	r3dRenderer->SetTex(m_scopeReticuleTexture, PostFXChief::FREE_TEX_STAGE_START + 1);
 	r3dRenderer->SetTex(m_scopeBlurTexture, PostFXChief::FREE_TEX_STAGE_START+2);
@@ -254,7 +254,7 @@ void PFX_ScopeEffect::PrepareImpl(r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*
 
 	D3DXMatrixTranspose( (D3DXMATRIX*)( vConsts + R3D_ARRAYSIZE(vConsts) - 4 ), &r3dRenderer->InvViewMatrix ) ;
 
-	D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &vConsts->x, R3D_ARRAYSIZE(vConsts ) ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &vConsts->x, R3D_ARRAYSIZE(vConsts ) ) ) ;
 
 	if( m_scopeNormalTexture )
 	{
@@ -265,15 +265,15 @@ void PFX_ScopeEffect::PrepareImpl(r3dScreenBuffer* /*dest*/, r3dScreenBuffer* /*
 		r3dRenderer->SetTex( __r3dShadeTexture[1], PostFXChief::FREE_TEX_STAGE_START + 4 );		
 	}
 	
-	D3D_V( r3dRenderer->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 4, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 4, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 4, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 4, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
 	r3dSetFiltering( R3D_BILINEAR, PostFXChief::FREE_TEX_STAGE_START + 4 ) ;
 
 	r3dRenderer->SetTex( LFUpdateShadowMap->Tex, PostFXChief::FREE_TEX_STAGE_START + 5 );
 
-	D3D_V( r3dRenderer->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 5, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
-	D3D_V( r3dRenderer->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 5, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 5, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState(PostFXChief::FREE_TEX_STAGE_START + 5, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
 	r3dFilter shadowFilter = r_hardware_shadow_method->GetInt() == HW_SHADOW_METHOD_HW_PCF ? R3D_BILINEAR : R3D_POINT ;
 

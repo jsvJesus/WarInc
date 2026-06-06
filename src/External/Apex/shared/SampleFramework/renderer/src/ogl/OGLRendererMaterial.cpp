@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,120 +32,133 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererMaterial.h"
-#include "PsString.h"
-#include "PsFile.h"
-#if defined(RENDERER_PS3)
-#include "Cg\cgc.h"
-#endif
 
-#include <SamplePlatform.h>
+#include "RendererConfig.h"
 
 #if defined(RENDERER_ENABLE_OPENGL)
 
+#include "OGLRendererMaterial.h"
+#include "OGLRendererTexture2D.h"
+
 #include <RendererMaterialDesc.h>
 
-#include "OGLRendererTexture2D.h"
+#include <SamplePlatform.h>
 
 #include <stdio.h>
 
+// for PsString.h
+namespace physx
+{
+	namespace string
+	{}
+}
+#include <PsString.h>
+#include <PsFile.h>
+
+using namespace SampleRenderer;
+
 #if defined(RENDERER_ENABLE_CG)
 	
-	static RendererMaterial::VariableType getVariableType(CGtype cgt)
+static RendererMaterial::VariableType getVariableType(CGtype cgt)
+{
+	RendererMaterial::VariableType vt = RendererMaterial::NUM_VARIABLE_TYPES;
+	switch(cgt)
 	{
-		RendererMaterial::VariableType vt = RendererMaterial::NUM_VARIABLE_TYPES;
-		switch(cgt)
-		{
-			case CG_FLOAT:     vt = RendererMaterial::VARIABLE_FLOAT;     break;
-			case CG_FLOAT2:    vt = RendererMaterial::VARIABLE_FLOAT2;    break;
-			case CG_FLOAT3:    vt = RendererMaterial::VARIABLE_FLOAT3;    break;
-			case CG_FLOAT4:    vt = RendererMaterial::VARIABLE_FLOAT4;    break;
-			case CG_FLOAT4x4:  vt = RendererMaterial::VARIABLE_FLOAT4x4;  break;
-			case CG_SAMPLER2D: vt = RendererMaterial::VARIABLE_SAMPLER2D; break;
-		}
-		RENDERER_ASSERT(vt < RendererMaterial::NUM_VARIABLE_TYPES, "Unable to convert shader parameter type.");
-		return vt;
+		case CG_FLOAT:     vt = RendererMaterial::VARIABLE_FLOAT;     break;
+		case CG_FLOAT2:    vt = RendererMaterial::VARIABLE_FLOAT2;    break;
+		case CG_FLOAT3:    vt = RendererMaterial::VARIABLE_FLOAT3;    break;
+		case CG_FLOAT4:    vt = RendererMaterial::VARIABLE_FLOAT4;    break;
+		case CG_FLOAT4x4:  vt = RendererMaterial::VARIABLE_FLOAT4x4;  break;
+		case CG_SAMPLER2D: vt = RendererMaterial::VARIABLE_SAMPLER2D; break;
+		case CG_SAMPLER3D: vt = RendererMaterial::VARIABLE_SAMPLER3D; break;
+		default: break;
 	}
-	
-	static GLuint getGLBlendFunc(RendererMaterial::BlendFunc func)
+	RENDERER_ASSERT(vt < RendererMaterial::NUM_VARIABLE_TYPES, "Unable to convert shader parameter type.");
+	return vt;
+}
+
+static GLuint getGLBlendFunc(RendererMaterial::BlendFunc func)
+{
+	GLuint glfunc = 0;
+	switch(func)
 	{
-		GLuint glfunc = 0;
-		switch(func)
-		{
-			case RendererMaterial::BLEND_ZERO:                glfunc = GL_ZERO;                break;
-			case RendererMaterial::BLEND_ONE:                 glfunc = GL_ONE;                 break;
-			case RendererMaterial::BLEND_SRC_COLOR:           glfunc = GL_SRC_COLOR;           break;
-			case RendererMaterial::BLEND_ONE_MINUS_SRC_COLOR: glfunc = GL_ONE_MINUS_SRC_COLOR; break;
-			case RendererMaterial::BLEND_SRC_ALPHA:           glfunc = GL_SRC_ALPHA;           break;
-			case RendererMaterial::BLEND_ONE_MINUS_SRC_ALPHA: glfunc = GL_ONE_MINUS_SRC_ALPHA; break;
-			case RendererMaterial::BLEND_DST_ALPHA:           glfunc = GL_DST_COLOR;           break;
-			case RendererMaterial::BLEND_ONE_MINUS_DST_ALPHA: glfunc = GL_ONE_MINUS_DST_ALPHA; break;
-			case RendererMaterial::BLEND_DST_COLOR:           glfunc = GL_DST_COLOR;           break;
-			case RendererMaterial::BLEND_ONE_MINUS_DST_COLOR: glfunc = GL_ONE_MINUS_DST_COLOR; break;
-			case RendererMaterial::BLEND_SRC_ALPHA_SATURATE:  glfunc = GL_SRC_ALPHA_SATURATE;  break;
-		}
-		RENDERER_ASSERT(glfunc, "Unable to convert Material Blend Func.");
-		return glfunc;
+		case RendererMaterial::BLEND_ZERO:                glfunc = GL_ZERO;                break;
+		case RendererMaterial::BLEND_ONE:                 glfunc = GL_ONE;                 break;
+		case RendererMaterial::BLEND_SRC_COLOR:           glfunc = GL_SRC_COLOR;           break;
+		case RendererMaterial::BLEND_ONE_MINUS_SRC_COLOR: glfunc = GL_ONE_MINUS_SRC_COLOR; break;
+		case RendererMaterial::BLEND_SRC_ALPHA:           glfunc = GL_SRC_ALPHA;           break;
+		case RendererMaterial::BLEND_ONE_MINUS_SRC_ALPHA: glfunc = GL_ONE_MINUS_SRC_ALPHA; break;
+		case RendererMaterial::BLEND_DST_ALPHA:           glfunc = GL_DST_COLOR;           break;
+		case RendererMaterial::BLEND_ONE_MINUS_DST_ALPHA: glfunc = GL_ONE_MINUS_DST_ALPHA; break;
+		case RendererMaterial::BLEND_DST_COLOR:           glfunc = GL_DST_COLOR;           break;
+		case RendererMaterial::BLEND_ONE_MINUS_DST_COLOR: glfunc = GL_ONE_MINUS_DST_COLOR; break;
+		case RendererMaterial::BLEND_SRC_ALPHA_SATURATE:  glfunc = GL_SRC_ALPHA_SATURATE;  break;
+		default: break;
 	}
-	
-	static void connectParameters(CGparameter from, CGparameter to)
-	{
-		if(from && to) cgConnectParameter(from, to);
-	}
-	
-	static void connectEnvParameters(const OGLRenderer::CGEnvironment &cgEnv, CGprogram program)
-	{
-		connectParameters(cgEnv.modelMatrix,         cgGetNamedParameter(program, "g_" "modelMatrix"));
-		connectParameters(cgEnv.viewMatrix,          cgGetNamedParameter(program, "g_" "viewMatrix"));
-		connectParameters(cgEnv.projMatrix,          cgGetNamedParameter(program, "g_" "projMatrix"));
-		connectParameters(cgEnv.modelViewMatrix,     cgGetNamedParameter(program, "g_" "modelViewMatrix"));
-		connectParameters(cgEnv.modelViewProjMatrix, cgGetNamedParameter(program, "g_" "modelViewProjMatrix"));
+	RENDERER_ASSERT(glfunc, "Unable to convert Material Blend Func.");
+	return glfunc;
+}
+
+static void connectParameters(CGparameter from, CGparameter to)
+{
+	if(from && to) cgConnectParameter(from, to);
+}
+
+static void connectEnvParameters(const OGLRenderer::CGEnvironment &cgEnv, CGprogram program)
+{
+	connectParameters(cgEnv.modelMatrix,         cgGetNamedParameter(program, "g_" "modelMatrix"));
+	connectParameters(cgEnv.viewMatrix,          cgGetNamedParameter(program, "g_" "viewMatrix"));
+	connectParameters(cgEnv.projMatrix,          cgGetNamedParameter(program, "g_" "projMatrix"));
+	connectParameters(cgEnv.modelViewMatrix,     cgGetNamedParameter(program, "g_" "modelViewMatrix"));
+	connectParameters(cgEnv.modelViewProjMatrix, cgGetNamedParameter(program, "g_" "modelViewProjMatrix"));
 
 
 #if !defined(RENDERER_PS3)
-		connectParameters(cgEnv.boneMatrices,         cgGetNamedParameter(program, "g_" "boneMatrices"));
+	connectParameters(cgEnv.boneMatrices,         cgGetNamedParameter(program, "g_" "boneMatrices"));
 #endif		
-		connectParameters(cgEnv.eyePosition,         cgGetNamedParameter(program, "g_" "eyePosition"));
-		connectParameters(cgEnv.eyeDirection,        cgGetNamedParameter(program, "g_" "eyeDirection"));
-		
-		connectParameters(cgEnv.ambientColor,        cgGetNamedParameter(program, "g_" "ambientColor"));
-		
-		connectParameters(cgEnv.lightColor,          cgGetNamedParameter(program, "g_" "lightColor"));
-		connectParameters(cgEnv.lightIntensity,      cgGetNamedParameter(program, "g_" "lightIntensity"));
-		connectParameters(cgEnv.lightDirection,      cgGetNamedParameter(program, "g_" "lightDirection"));
-		connectParameters(cgEnv.lightPosition,       cgGetNamedParameter(program, "g_" "lightPosition"));
-		connectParameters(cgEnv.lightInnerRadius,    cgGetNamedParameter(program, "g_" "lightInnerRadius"));
-		connectParameters(cgEnv.lightOuterRadius,    cgGetNamedParameter(program, "g_" "lightOuterRadius"));
-		connectParameters(cgEnv.lightInnerCone,      cgGetNamedParameter(program, "g_" "lightInnerCone"));
-		connectParameters(cgEnv.lightOuterCone,      cgGetNamedParameter(program, "g_" "lightOuterCone"));
-	}
+	connectParameters(cgEnv.eyePosition,         cgGetNamedParameter(program, "g_" "eyePosition"));
+	connectParameters(cgEnv.eyeDirection,        cgGetNamedParameter(program, "g_" "eyeDirection"));
+
+	connectParameters(cgEnv.fogColorAndDistance, cgGetNamedParameter(program, "g_" "fogColorAndDistance"));
+
+	connectParameters(cgEnv.ambientColor,        cgGetNamedParameter(program, "g_" "ambientColor"));
 	
-	OGLRendererMaterial::CGVariable::CGVariable(const char *name, VariableType type, physx::PxU32 offset) :
-		Variable(name, type, offset)
-	{
-		m_vertexHandle = 0;
-		memset(m_fragmentHandles, 0, sizeof(m_fragmentHandles));
-	}
+	connectParameters(cgEnv.lightColor,          cgGetNamedParameter(program, "g_" "lightColor"));
+	connectParameters(cgEnv.lightIntensity,      cgGetNamedParameter(program, "g_" "lightIntensity"));
+	connectParameters(cgEnv.lightDirection,      cgGetNamedParameter(program, "g_" "lightDirection"));
+	connectParameters(cgEnv.lightPosition,       cgGetNamedParameter(program, "g_" "lightPosition"));
+	connectParameters(cgEnv.lightInnerRadius,    cgGetNamedParameter(program, "g_" "lightInnerRadius"));
+	connectParameters(cgEnv.lightOuterRadius,    cgGetNamedParameter(program, "g_" "lightOuterRadius"));
+	connectParameters(cgEnv.lightInnerCone,      cgGetNamedParameter(program, "g_" "lightInnerCone"));
+	connectParameters(cgEnv.lightOuterCone,      cgGetNamedParameter(program, "g_" "lightOuterCone"));
+}
+
+OGLRendererMaterial::CGVariable::CGVariable(const char *name, VariableType type, PxU32 offset) :
+	Variable(name, type, offset)
+{
+	m_vertexHandle = 0;
+	memset(m_fragmentHandles, 0, sizeof(m_fragmentHandles));
+}
+
+OGLRendererMaterial::CGVariable::~CGVariable(void)
+{
 	
-	OGLRendererMaterial::CGVariable::~CGVariable(void)
-	{
-		
-	}
-	
-	void OGLRendererMaterial::CGVariable::addVertexHandle(CGparameter handle)
-	{
-		m_vertexHandle = handle;
-	}
-	
-	void OGLRendererMaterial::CGVariable::addFragmentHandle(CGparameter handle, Pass pass)
-	{
-		m_fragmentHandles[pass] = handle;
-	}
-	
+}
+
+void OGLRendererMaterial::CGVariable::addVertexHandle(CGparameter handle)
+{
+	m_vertexHandle = handle;
+}
+
+void OGLRendererMaterial::CGVariable::addFragmentHandle(CGparameter handle, Pass pass)
+{
+	m_fragmentHandles[pass] = handle;
+}
+
 #endif
 
 OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMaterialDesc &desc) :
-	RendererMaterial(desc),
+	RendererMaterial(desc, renderer.getEnableMaterialCaching()),
 	m_renderer(renderer)
 {
 	m_glAlphaTestFunc = GL_ALWAYS;
@@ -170,8 +183,16 @@ OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMa
 	m_vertexProfile   = CG_PROFILE_SCE_VP_RSX; //cgGLGetLatestProfile(CG_GL_VERTEX); // CG_PROFILE_GPU_VP FAILS SO BAD!
 	m_fragmentProfile = CG_PROFILE_SCE_FP_RSX; //cgGLGetLatestProfile(CG_GL_FRAGMENT); // CG_PROFILE_GPU_VP FAILS SO BAD!
 #else
-	m_vertexProfile   = CG_PROFILE_ARBVP1; //cgGLGetLatestProfile(CG_GL_VERTEX); // CG_PROFILE_GPU_VP FAILS SO BAD!
-	m_fragmentProfile = CG_PROFILE_ARBFP1; //cgGLGetLatestProfile(CG_GL_FRAGMENT); // CG_PROFILE_GPU_VP FAILS SO BAD!
+#define NO_SUPPORT_DDX_DDY
+#if 0
+	// JD: CG_PROFILE_GPU_VP FAILS SO BAD!
+	m_vertexProfile   = CG_PROFILE_ARBVP1;
+	m_fragmentProfile = CG_PROFILE_ARBVP1;
+#else
+	// PH: Seems to work fine nowadays
+	m_vertexProfile   = cgGLGetLatestProfile(CG_GL_VERTEX);
+	m_fragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);
+#endif
 #endif
 	memset(m_fragmentPrograms, 0, sizeof(m_fragmentPrograms));
 	
@@ -180,8 +201,8 @@ OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMa
 	if(cgContext && m_vertexProfile && m_fragmentProfile)
 	{
 		char fullPath[1024] = "-I";
-		physx::string::strcat_s(fullPath, 1024, gShadersDir);
-		physx::string::strcat_s(fullPath, 1024, "include");
+		physx::string::strcat_s(fullPath, 1024, m_renderer.getAssetDir());
+		physx::string::strcat_s(fullPath, 1024, "shaders/include");
 		const char *vertexEntry = "vmain";
 		const char *vertexArgs[] =
 		{
@@ -189,19 +210,19 @@ OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMa
 			"-DRENDERER_VERTEX",
 #ifdef RENDERER_PS3
 			"-DRENDERER_PS3",
+			"-melf",
 #endif
 			0, 0,
 		};		
+
 		cgGLSetOptimalOptions(m_vertexProfile);
 		if(1)
 		{
-			RENDERER_PERFZONE(OGLRendererMaterial_compile_vertexProgram);
-			m_vertexProgram = static_cast<CGprogram>(SamplePlatform::platform()->compileProgram(cgContext, desc.vertexShaderPath, m_vertexProfile, vertexEntry, vertexArgs));
+			m_vertexProgram = static_cast<CGprogram>(SampleFramework::SamplePlatform::platform()->compileProgram(cgContext, m_renderer.getAssetDir(), desc.vertexShaderPath, m_vertexProfile, 0, vertexEntry, vertexArgs));
 		}
 		RENDERER_ASSERT(m_vertexProgram, "Failed to compile Vertex Shader.");
 		if(m_vertexProgram)
 		{
-			RENDERER_PERFZONE(OGLRendererMaterial_load_vertexProgram);
 			connectEnvParameters(cgEnv, m_vertexProgram);
 			cgGLLoadProgram(m_vertexProgram);
 			loadCustomConstants(m_vertexProgram, NUM_PASSES);
@@ -209,21 +230,37 @@ OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMa
 		else
 		{
 			char msg[1024];
-			physx::string::sprintf_s(msg, sizeof(msg), "Could not find shader file: <%s> in path: <%s>", desc.vertexShaderPath, gShadersDir);
+			physx::string::sprintf_s(msg, sizeof(msg), "Could not find shader file: <%s> in path: <%sshaders/>", desc.vertexShaderPath, m_renderer.getAssetDir());
 			RENDERER_OUTPUT_MESSAGE(&m_renderer, msg);
 		}
 		
 		const char *fragmentEntry = "fmain";
-		for(physx::PxU32 i=0; i<NUM_PASSES; i++)
+		for(PxU32 i=0; i<NUM_PASSES; i++)
 		{
-			char passDefine[1024] = {0};
-			physx::string::sprintf_s(passDefine, 1023, "-D%s", getPassName((Pass)i));
+			char passDefine[64] = {0};
+			physx::string::sprintf_s(passDefine, 63, "-D%s", getPassName((Pass)i));
+
+			char fvaceDefine[20] = "-DENABLE_VFACE=0";
+#ifdef PX_WINDOWS
+			// Aparently the FACE semantic is only supported with fp40
+			if (cgGLIsProfileSupported(CG_PROFILE_FP40))
+			{
+				fvaceDefine[15] = '1';
+			}
+#endif
 			const char *fragmentArgs[]  =
 			{
 				fullPath,
 				"-DRENDERER_FRAGMENT",
+				fvaceDefine,			// used for double sided rendering (as done in D3D anyways)
+				"-DVFACE=FACE",			// rename VFACE to FACE semantic, the first is only known to HLSL shaders...
 #ifdef RENDERER_PS3
 				"-DRENDERER_PS3",
+				"-melf",
+				"-DENABLE_VFACE",
+#endif
+#ifdef NO_SUPPORT_DDX_DDY
+				"-DNO_SUPPORT_DDX_DDY",
 #endif
 				passDefine,
 				0, 0,
@@ -232,13 +269,11 @@ OGLRendererMaterial::OGLRendererMaterial(OGLRenderer &renderer, const RendererMa
 			CGprogram fp = 0;
 			if(1)
 			{
-				RENDERER_PERFZONE(OGLRendererMaterial_compile_fragmentProgram);
-				fp = static_cast<CGprogram>(SamplePlatform::platform()->compileProgram(cgContext, desc.fragmentShaderPath, m_fragmentProfile, fragmentEntry, fragmentArgs));
+				fp = static_cast<CGprogram>(SampleFramework::SamplePlatform::platform()->compileProgram(cgContext, m_renderer.getAssetDir(), desc.fragmentShaderPath, m_fragmentProfile, getPassName((Pass)i), fragmentEntry, fragmentArgs));
 			}
 			RENDERER_ASSERT(fp, "Failed to compile Fragment Shader.");
 			if(fp)
 			{
-				RENDERER_PERFZONE(OGLRendererMaterial_load_fragmentProgram);
 				connectEnvParameters(cgEnv, fp);
 				cgGLLoadProgram(fp);
 				m_fragmentPrograms[i] = fp;
@@ -256,7 +291,7 @@ OGLRendererMaterial::~OGLRendererMaterial(void)
 	{
 		cgDestroyProgram(m_vertexProgram);
 	}
-	for(physx::PxU32 i=0; i<NUM_PASSES; i++)
+	for(PxU32 i=0; i<NUM_PASSES; i++)
 	{
 		CGprogram fp = m_fragmentPrograms[i];
 		if(fp)
@@ -278,7 +313,7 @@ void OGLRendererMaterial::bind(RendererMaterial::Pass pass, RendererMaterialInst
 	else
 	{
 		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(m_glAlphaTestFunc, physx::PxClamp(getAlphaTestRef(), 0.0f, 1.0f));
+		glAlphaFunc(m_glAlphaTestFunc, PxClamp(getAlphaTestRef(), 0.0f, 1.0f));
 	}
 	
 	if(getBlending())
@@ -358,9 +393,10 @@ void OGLRendererMaterial::unbind(void) const
 }
 
 #if defined(RENDERER_ENABLE_CG)
-static void bindSampler2DVariable(CGparameter param, RendererTexture2D &texture)
+template<class TextureType>
+static void bindSamplerVariable(CGparameter param, RendererTexture2D &texture)
 {
-	OGLRendererTexture2D &tex = *static_cast<OGLRendererTexture2D*>(&texture);
+	TextureType &tex = *static_cast<TextureType*>(&texture);
 	if(param)
 	{
 		CGresource resource = cgGetParameterResource(param);
@@ -412,9 +448,24 @@ void OGLRendererMaterial::bindVariable(Pass pass, const Variable &variable, cons
 			RENDERER_ASSERT(data, "NULL Sampler.");
 			if(data)
 			{
-				bindSampler2DVariable(var.m_vertexHandle,          *(RendererTexture2D*)data);
-				bindSampler2DVariable(var.m_fragmentHandles[pass], *(RendererTexture2D*)data);
+				bindSamplerVariable<OGLRendererTexture2D>(var.m_vertexHandle,          *(RendererTexture2D*)data);
+				bindSamplerVariable<OGLRendererTexture2D>(var.m_fragmentHandles[pass], *(RendererTexture2D*)data);
 			}
+			break;
+		case VARIABLE_SAMPLER3D:
+			RENDERER_ASSERT(0, "3D GL Textures Not Implemented.");
+			/*
+			data = *(void**)data;
+			RENDERER_ASSERT(data, "NULL Sampler.");
+			if(data)
+			{
+				bindSamplerVariable<OGLRendererTexture3D>(var.m_vertexHandle,          *(RendererTexture2D*)data);
+				bindSamplerVariable<OGLRendererTexture3D>(var.m_fragmentHandles[pass], *(RendererTexture2D*)data);
+			}
+			*/
+			break;
+		default: 
+			RENDERER_ASSERT(0, "Cannot bind variable of this type.");
 			break;
 	}
 #endif
@@ -432,8 +483,8 @@ void OGLRendererMaterial::loadCustomConstants(CGprogram program, Pass pass)
 		{
 			CGVariable *var = 0;
 			// find existing variable...
-			physx::PxU32 numVariables = (physx::PxU32)m_variables.size();
-			for(physx::PxU32 i=0; i<numVariables; i++)
+			PxU32 numVariables = (PxU32)m_variables.size();
+			for(PxU32 i=0; i<numVariables; i++)
 			{
 				if(!strcmp(m_variables[i]->getName(), name))
 				{

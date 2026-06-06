@@ -20,7 +20,7 @@ namespace physx
 	{
 		class NxApexSDK;
 		class NxApexScene;
-		class NxModuleDestructible;
+		class NxModule;
 	}
 }
 
@@ -35,17 +35,22 @@ class ApexWorld: public r3dIResource
 	typedef r3dTL::TArray<ApexActorBase*> ActorsArray;
 	ActorsArray actors;
 
+	/**	Init specific modules. */
+	physx::apex::NxModule * InitModule(const char *moduleName);
+
 public:
 	physx::apex::NxApexSDK *apexSDK;
 	physx::apex::NxApexScene *apexScene;
-	physx::apex::NxModuleDestructible *apexDestructibleModule;
+
+	typedef r3dTL::TArray<physx::apex::NxModule *> ModuleList;
+	ModuleList modules;
 
 	ApexWorld();
 	~ApexWorld();
 	void Init();
 	void Destroy();
-	void StartSimulation();
-	void EndSimulation();
+	void Simulate(float timeStep, bool final);
+	void FetchResults(bool block);
 	void ApplyAreaDamage(float damage, float momentum, const r3dPoint3D& position, float radius, bool falloff);
 	void ApplyDamage(float damage, float momentum, const r3dPoint3D &pos, const r3dPoint3D &direction);
 	/**	r3dIResource overrides. */

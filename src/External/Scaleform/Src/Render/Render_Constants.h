@@ -56,7 +56,6 @@ enum TreeNodeFlags
     NF_HasFilter            = 0x0400,       // indicates that the node has filter applied
     NF_HasViewMatrix3D      = 0x0800,       // indicates that the node has a ViewMatrix set
     NF_HasProjectionMatrix3D= 0x1000,       // indicates that the node has a ProjMatrix set
-    NF_HasOrigScale9Parent  = 0x2000,       // indicates that the node has a original mask's parent set
 
 
     // EdgeAA flags are stored TreeNode, with cache values propagated through
@@ -82,19 +81,16 @@ enum TreeNodeFlags
     // Propagated the same way as NF_PartOfMask, but also on Change_State_Scale9 change.
     NF_PartOfScale9     = 0x0080,
 
-    NF_PartOf3D         = 0x0100,
-    NF_PartOfFilter     = 0x0200,
 
     // This flag is set if SortParentBounds have been expanded,
     // typically to accommodate a mask.
-    NF_ExpandedBounds   = 0x0400,
+    NF_ExpandedBounds   = 0x0100,
 
     // Masks
-    NF_TreeNode_Mask    = NF_Visible | NF_HasMask | NF_MaskNode | NF_3D | NF_EdgeAA_Mask | NF_HasFilter |
-                          NF_HasViewMatrix3D | NF_HasProjectionMatrix3D | NF_HasOrigScale9Parent,
+    NF_TreeNode_Mask    = NF_Visible | NF_HasMask | NF_MaskNode | NF_3D | NF_EdgeAA_Mask | NF_HasFilter 
+                        | NF_HasViewMatrix3D | NF_HasProjectionMatrix3D,
     NF_CacheNode_Mask   = NF_TreeNode_Mask | 
-                          NF_Culled | NF_PartOfMask | NF_PartOfScale9 | NF_ExpandedBounds | NF_3D |
-                          NF_HasOrigScale9Parent | NF_PartOf3D | NF_PartOfFilter
+                          NF_Culled | NF_PartOfMask | NF_PartOfScale9 | NF_ExpandedBounds | NF_3D
 };
 
 // Helper function: maps NF_MaskNode flag to NF_PartOfMask.

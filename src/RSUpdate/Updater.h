@@ -6,6 +6,7 @@
 #include "updProgress.h"
 #include "WOLoginHelper.h"
 #include "WOCreateAccHelper.h"
+#include "WOCheckSerialHelper.h"
 
 class updUpdaterData
 {
@@ -73,8 +74,10 @@ class CUpdater
 	enum EUpdaterStatus
 	{
 	  STATUS_Checking,
+	  STATUS_SerialCheck,
 	  STATUS_NeedRegister,
 	  STATUS_NeedLogin,
+	  STATUS_TimeExpired,
 	  STATUS_Updating,
 	};
 	EUpdaterStatus	status_;
@@ -115,9 +118,6 @@ class CUpdater
 	bool		NeedUpdaterUpdate();
 	bool		InstallNewUpdater();
 	
-	EUpdaterStatus	GetSteamLinkedStatus();
-	EUpdaterStatus	GetG1LinkedStatus();
-	
 	bool		GetPackageData();	// retreive package update info
 
 	bool		OpenLocalFS();
@@ -147,11 +147,14 @@ class CUpdater
 	CLoginHelper	gUserProfile;
 	friend static unsigned int __stdcall CUpdater_LoginThreadEntry(LPVOID in);
 	void		LoginThreadEntry();
-	bool		CheckLoginRegionLock();
 
 	CCreateAccHelper createAccHelper;
 	friend static unsigned int __stdcall CUpdater_CreateAccThreadEntry(LPVOID in);
 	void		CreateAccThreadEntry();
+
+	CCheckSerialHelper checkSerialHelper;
+	friend static unsigned int __stdcall CUpdater_CheckSerialThreadEntry(LPVOID in);
+	void		CheckSerialThreadEntry();
 
   //
   // news section
@@ -171,19 +174,6 @@ class CUpdater
 	std::string	surveyLinkIn_;
 	std::string	surveyLinkOut_;
 
-	struct rotator_s {
-	  std::string	url_;
-	  std::string	desc_;
-	  std::string	image_;
-	  
-	  volatile DWORD imgStatus_;
-	  CkByteData	imgData_;
-	  r3dTexture*	tex_;
-	};
-	std::vector<rotator_s> rotatorData_;
-	volatile DWORD 	rotatorStatus_;
-	CRITICAL_SECTION csRotator_;
-
 	bool		IsServerOnline() {
 	  EnterCriticalSection(&csNews_);
 	  bool online = stricmp(serverStatus_.c_str(), "ONLINE") == 0;
@@ -196,14 +186,9 @@ class CUpdater
 	void		NewsThreadEntry();
 	int		 GetNews();
 	void		 ParseNewsNode(pugi::xml_node xmlNode, std::vector<news_s>& news);
-	void		 ParseRotatorNode(pugi::xml_node xmlNode, std::vector<rotator_s>& rotator);
 	void		 FilterSurveyLinks();
 	HANDLE		newsThread_;
 
-	friend static unsigned int __stdcall CUpdater_RotatorThreadEntry(LPVOID in);
-	void		RotatorThreadEntry();
-	HANDLE		rotatorThread_;
-	
   private:	
 	// make copy constructor and assignment operator inaccessible
 	CUpdater(const CUpdater& rhs);
@@ -218,8 +203,12 @@ class CUpdater
 	void		 StopThread(HANDLE& h);
 	void		RequestStop();
 
+	int		CheckForNewData(); // not in thread for now
+
 	void		DoLogin();
+	void		DoCheckSerial();
 	void		DoCreateAccount();
+	void		DoApplyNewKey(const char* key);
 	void		SwitchToUpdater() {
 	  status_ = STATUS_Updating;
 	}

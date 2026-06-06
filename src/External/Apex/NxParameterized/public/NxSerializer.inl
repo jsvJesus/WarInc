@@ -1,44 +1,43 @@
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#include "NxParameterized.h"
+#include "NxParameterizedTraits.h"
+
+namespace NxParameterized
+{
 
 /*!
-\file
 \brief Serializer::SerializePlatform and Serializer::DeserializedData inline implementation
 */
 
-//Check binary compatibility of compiler versions
+/**
+\brief Check binary compatibility of compiler versions
+*/
 PX_INLINE bool DoCompilerVersMatch(SerializePlatform::CompilerType t, physx::PxU32 v1, physx::PxU32 v2)
 {
 	PX_FORCE_PARAMETER_REFERENCE(t);
@@ -51,7 +50,9 @@ PX_INLINE bool DoCompilerVersMatch(SerializePlatform::CompilerType t, physx::PxU
 	return true;
 }
 
-//Check binary compatibility of OS versions
+/**
+\brief Check binary compatibility of OS versions
+*/
 PX_INLINE bool DoOsVersMatch(SerializePlatform::OsType t, physx::PxU32 v1, physx::PxU32 v2)
 {
 	PX_FORCE_PARAMETER_REFERENCE(t);
@@ -91,21 +92,23 @@ PX_INLINE bool SerializePlatform::operator !=(const SerializePlatform &p) const
 	return !(*this == p);
 }
 
-PX_INLINE Serializer::DeserializedData::DeserializedData()
-	: objs(0), nobjs(0), traits(0) {}
+template<typename T, int bufSize> PX_INLINE Serializer::DeserializedResults<T, bufSize>::DeserializedResults(): objs(0), nobjs(0), traits(0) {}
 
-PX_INLINE Serializer::DeserializedData::DeserializedData(const Serializer::DeserializedData &data)
+template<typename T, int bufSize> PX_INLINE Serializer::DeserializedResults<T, bufSize>::DeserializedResults(const Serializer::DeserializedResults<T, bufSize> &data)
 {
 	*this = data;
 }
 
-PX_INLINE Serializer::DeserializedData &Serializer::DeserializedData::operator =(const Serializer::DeserializedData &rhs)
+template<typename T, int bufSize> PX_INLINE Serializer::DeserializedResults<T, bufSize> &Serializer::DeserializedResults<T, bufSize>::operator =(const Serializer::DeserializedResults<T, bufSize> &rhs)
 {
+	if( this == &rhs )
+		return *this;
+
 	init(rhs.traits, rhs.objs, rhs.nobjs);
 	return *this;
 }
 
-PX_INLINE void Serializer::DeserializedData::clear()
+template<typename T, int bufSize> PX_INLINE void Serializer::DeserializedResults<T, bufSize>::clear()
 {
 	if ( objs && objs != buf ) //Memory was allocated?
 	{
@@ -114,18 +117,18 @@ PX_INLINE void Serializer::DeserializedData::clear()
 	}
 }
 
-PX_INLINE Serializer::DeserializedData::~DeserializedData()
+template<typename T, int bufSize> PX_INLINE Serializer::DeserializedResults<T, bufSize>::~DeserializedResults()
 {
 	clear();
 }
 
-PX_INLINE void Serializer::DeserializedData::init(Traits *traits_, ::NxParameterized::Interface **objs_, physx::PxU32 nobjs_)
+template<typename T, int bufSize> PX_INLINE void Serializer::DeserializedResults<T, bufSize>::init(Traits *traits_, T *objs_, physx::PxU32 nobjs_)
 {
 	init(traits_, nobjs_);
-	::memcpy(objs, objs_, nobjs * sizeof(::NxParameterized::Interface *));
+	::memcpy(objs, objs_, nobjs * sizeof(T));
 }
 
-PX_INLINE void Serializer::DeserializedData::init(Traits *traits_, physx::PxU32 nobjs_)
+template<typename T, int bufSize> PX_INLINE void Serializer::DeserializedResults<T, bufSize>::init(Traits *traits_, physx::PxU32 nobjs_)
 {
 	clear();
 
@@ -135,125 +138,40 @@ PX_INLINE void Serializer::DeserializedData::init(Traits *traits_, physx::PxU32 
 	//Allocate memory if buf is too small
 	objs = nobjs <= bufSize
 		? buf
-		: (::NxParameterized::Interface **)traits->alloc(nobjs * sizeof(::NxParameterized::Interface *));
+		: (T *)traits->alloc(nobjs * sizeof(T));
 }
 
-PX_INLINE physx::PxU32 Serializer::DeserializedData::size() const
+template<typename T, int bufSize> PX_INLINE physx::PxU32 Serializer::DeserializedResults<T, bufSize>::size() const
 {
 	return nobjs;
 }
 
-PX_INLINE ::NxParameterized::Interface *&Serializer::DeserializedData::operator[](physx::PxU32 i)
+template<typename T, int bufSize> PX_INLINE T &Serializer::DeserializedResults<T, bufSize>::operator[](physx::PxU32 i)
 {
 	PX_ASSERT( i < nobjs );
 	return objs[i];
 }
 
-PX_INLINE ::NxParameterized::Interface *Serializer::DeserializedData::operator[](physx::PxU32 i) const
+template<typename T, int bufSize> PX_INLINE const T &Serializer::DeserializedResults<T, bufSize>::operator[](physx::PxU32 i) const
 {
 	PX_ASSERT( i < nobjs );
 	return objs[i];
 }
 
-PX_INLINE void Serializer::DeserializedData::getObjects(::NxParameterized::Interface **outObjs)
+template<typename T, int bufSize> PX_INLINE void Serializer::DeserializedResults<T, bufSize>::getObjects(T *outObjs)
 {
-	::memcpy(outObjs, objs, nobjs * sizeof(::NxParameterized::Interface *));
+	::memcpy(outObjs, objs, nobjs * sizeof(T));
 }
 
-
-PX_INLINE const SerializePlatform &SerializePlatform::GetCurrentPlatform()
+template<typename T, int bufSize> PX_INLINE void Serializer::DeserializedResults<T, bufSize>::releaseAll()
 {
-	static bool isInitialized = false;
-	static SerializePlatform platform;
-
-	if( isInitialized )
-		return platform;
-
-	platform.osVer = ANY_VERSION; //Do we need this at all???
-
-	//Determine compiler
-#	if defined PX_VC
-		platform.compilerType = COMP_VC;
-		platform.compilerVer = _MSC_VER;
-#	elif defined PX_GNUC
-		platform.compilerType = COMP_GCC;
-		platform.compilerVer = __GNUC__ << 16 + __GNUC_MINOR__;
-#	elif defined PX_CW
-		platform.compilerType = COMP_MW;
-#		error "TODO: define version of Metrowerks compiler"
-#	else
-#		error "Unknown compiler"
-#	endif
-
-	//Determine OS
-#	if defined PX_WINDOWS
-		platform.osType = OS_WINDOWS;
-#	elif defined PX_APPLE
-		platform.osType = OS_MACOSX;
-#	elif defined PX_PS3
-		platform.osType = OS_PS3;
-#	elif defined PX_X360
-		platform.osType = OS_XBOX;
-		platform.osVer = _XBOX_VER;
-#	else
-#		error "Undefined OS"
-#	endif
-
-	//Determine arch
-#	if defined PX_X86
-		platform.archType = ARCH_X86;
-#	elif defined PX_APPLE
-		platform.archType = ARCH_X86;
-#	elif defined PX_X64
-		platform.archType = ARCH_X86_64;
-#	elif defined PX_PPC
-	platform.archType = ARCH_PPC;
-#	elif defined PX_PS3
-	platform.archType = ARCH_CELL;
-#	else
-#		error "Unknown architecture"
-#	endif
-
-	isInitialized = true;
-	return platform;
+	for(physx::PxU32 i = 0; i < nobjs; ++i)
+	{
+		if (objs[i]) 
+		{
+			objs[i]->destroy(); // FIXME What should we do with buf. And should we delete T* obj? 
+		}
+	}
 }
 
-PX_INLINE bool SerializePlatform::GetPlatform(const char *name, SerializePlatform &platform)
-{
-	platform.osVer = platform.compilerVer = ANY_VERSION;
-
-	if( 0 == strcmp("VcXbox", name) )
-	{
-		platform.archType = ARCH_PPC;
-		platform.compilerType = COMP_VC;
-		platform.osType = OS_XBOX;
-	}
-	else if( 0 == strcmp("VcWin32", name) )
-	{
-		platform.archType = ARCH_X86;
-		platform.compilerType = COMP_VC;
-		platform.osType = OS_WINDOWS;
-	}
-	else if( 0 == strcmp("VcWin64", name) )
-	{
-		platform.archType = ARCH_X86_64;
-		platform.compilerType = COMP_VC;
-		platform.osType = OS_WINDOWS;
-	}
-	else if( 0 == strcmp("GccPs3", name) )
-	{
-		platform.archType = ARCH_CELL;
-		platform.compilerType = COMP_GCC;
-		platform.osType = OS_PS3;
-	}
-	else if( 0 == strcmp("Pib", name) ) //Abstract platform for platform-independent serialization
-	{
-		platform.archType = ARCH_GEN;
-		platform.compilerType = COMP_GEN;
-		platform.osType = OS_GEN;
-	}
-	else
-		return false;
-
-	return true;
-}
+} // namespace NxParameterized

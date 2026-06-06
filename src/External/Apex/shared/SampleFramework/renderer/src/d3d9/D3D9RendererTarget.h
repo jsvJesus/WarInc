@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -49,23 +49,26 @@
 #include <RendererTarget.h>
 #include "D3D9Renderer.h"
 
-class D3D9RendererTexture2D;
-
-class D3D9RendererTarget : public RendererTarget, public D3D9RendererResource
+namespace SampleRenderer
 {
+
+	class D3D9RendererTexture2D;
+
+	class D3D9RendererTarget : public RendererTarget, public D3D9RendererResource
+	{
 	public:
 		D3D9RendererTarget(IDirect3DDevice9 &d3dDevice, const RendererTargetDesc &desc);
 		virtual ~D3D9RendererTarget(void);
-		
+
 	private:
 		D3D9RendererTarget& operator=( const D3D9RendererTarget& ) {}
 		virtual void bind(void);
 		virtual void unbind(void);
-	
+
 	private:
 		virtual void onDeviceLost(void);
 		virtual void onDeviceReset(void);
-	
+
 	private:
 		IDirect3DDevice9               &m_d3dDevice;
 		IDirect3DSurface9              *m_d3dLastSurface;
@@ -73,7 +76,9 @@ class D3D9RendererTarget : public RendererTarget, public D3D9RendererResource
 		IDirect3DSurface9              *m_d3dDepthStencilSurface;
 		std::vector<D3D9RendererTexture2D*> m_textures;
 		D3D9RendererTexture2D          *m_depthStencilSurface;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9) && defined(RENDERER_ENABLE_DIRECT3D9_TARGET)
 #endif

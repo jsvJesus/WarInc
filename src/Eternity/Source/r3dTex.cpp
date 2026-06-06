@@ -1,10 +1,6 @@
 #include "r3dPCH.h"
 #include "r3d.h"
 
-#ifndef WO_SERVER
-#include "r3dDX11Texture.h"
-#endif
-
 #include "../SF/script.h"
 #include "r3dBackgroundTaskDispatcher.h"
 
@@ -21,450 +17,6 @@ int	r3dTexture_MinSize   = 1;		// Minimum possible texture dimension after scali
 int	r3dTexture_ScaleBoxInterpolate = 0;	// Use D3D_FILTER_BOX interpolation
 int	r3dTexture_UseEmpty  = 0; // for server
 
-#ifndef WO_SERVER
-
-static bool r3dTexture_DX11LinkEnabled()
-{
-	if(!g_r3dDX11.IsInitialized())
-		return false;
-
-	if(strstr(__r3dCmdLine, "-nodx11linktex"))
-		return false;
-
-	if(strstr(__r3dCmdLine, "/nodx11linktex"))
-		return false;
-
-	if(strstr(__r3dCmdLine, "-dx11linktex"))
-		return true;
-
-	if(strstr(__r3dCmdLine, "/dx11linktex"))
-		return true;
-
-	return true;
-}
-
-static bool r3dTexture_IsDDSMemory(const void* data, uint32_t dataSize)
-{
-	if(!data || dataSize < 4)
-		return false;
-
-	const unsigned int magic = *(const unsigned int*)data;
-	return magic == 0x20534444;
-}
-
-static bool r3dTexture_IsDDSFileName(const char* fileName)
-{
-	if(!fileName || !fileName[0])
-		return false;
-
-	const char* ext = strrchr(fileName, '.');
-	return ext && !stricmp(ext, ".dds");
-}
-
-static void r3dTexture_CreateDX11Fallback(r3dDX11Texture** slot, const char* debugName)
-{
-	if(!slot || *slot)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	r3dDX11Texture* fallback = new r3dDX11Texture();
-
-	if(fallback->LoadDDSFromFile("Data\\Shaders\\Texture\\Missing.dds"))
-	{
-		*slot = fallback;
-		r3dOutToLog("r3dTexture DX11: using fallback SRV for '%s'\n", debugName ? debugName : "");
-		return;
-	}
-
-	delete fallback;
-}
-
-static void r3dTexture_CreateDX11FromDDSMemory(r3dDX11Texture** slot, const void* data, uint32_t dataSize, const char* debugName)
-{
-	if(!slot)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(!r3dTexture_IsDDSMemory(data, dataSize))
-		return;
-
-	if(*slot)
-	{
-		delete *slot;
-		*slot = NULL;
-	}
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-
-	if(!tex->LoadDDSFromMemory(data, (int)dataSize, debugName))
-	{
-		delete tex;
-		tex = NULL;
-
-		r3dOutToLog("r3dTexture DX11: failed to create SRV for '%s'\n", debugName ? debugName : "");
-
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	*slot = tex;
-
-	r3dOutToLog("r3dTexture DX11: linked SRV '%s'\n", debugName ? debugName : "");
-}
-
-static void r3dTexture_CreateDX11FromImageMemory(
-	r3dDX11Texture** slot,
-	const void* data,
-	uint32_t dataSize,
-	const char* debugName,
-	int width,
-	int height
-)
-{
-	if(!slot || !data || !dataSize)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(width <= 0 || height <= 0)
-		return;
-
-	if(r3dTexture_IsDDSMemory(data, dataSize))
-	{
-		r3dTexture_CreateDX11FromDDSMemory(slot, data, dataSize, debugName);
-		return;
-	}
-
-	if(*slot)
-	{
-		delete *slot;
-		*slot = NULL;
-	}
-
-	IDirect3DDevice9* device = NULL;
-	if(r3dRenderer)
-		device = r3dRenderer->pd3ddev;
-
-	if(!device)
-		return;
-
-	IDirect3DTexture9* stagingTex = NULL;
-	HRESULT hr = D3DXCreateTextureFromFileInMemoryEx(
-		device,
-		data,
-		dataSize,
-		width,
-		height,
-		1,
-		0,
-		D3DFMT_A8R8G8B8,
-		D3DPOOL_SYSTEMMEM,
-		D3DX_FILTER_LINEAR,
-		D3DX_FILTER_LINEAR,
-		0x00000000,
-		NULL,
-		NULL,
-		&stagingTex
-	);
-
-	if(FAILED(hr) || !stagingTex)
-	{
-		r3dOutToLog("r3dTexture DX11: failed to decode image SRV for '%s', HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	D3DLOCKED_RECT locked;
-	hr = stagingTex->LockRect(0, &locked, NULL, D3DLOCK_READONLY);
-	if(FAILED(hr))
-	{
-		r3dOutToLog("r3dTexture DX11: failed to lock image SRV for '%s', HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
-		stagingTex->Release();
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(D3DFMT_A8R8G8B8);
-
-	const bool created = tex->Create2D(width, height, dx11Format, locked.pBits, locked.Pitch);
-
-	stagingTex->UnlockRect(0);
-	stagingTex->Release();
-
-	if(!created)
-	{
-		delete tex;
-		r3dOutToLog("r3dTexture DX11: failed to create image SRV for '%s'\n", debugName ? debugName : "");
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	*slot = tex;
-
-	r3dOutToLog("r3dTexture DX11: linked image SRV '%s'\n", debugName ? debugName : "");
-}
-
-static void r3dTexture_CreateDX11FromImageFile(r3dDX11Texture** slot, const char* fileName)
-{
-	if(!slot || *slot)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(!fileName || !fileName[0])
-	{
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	r3dFile* ff = r3d_open(fileName, "rb");
-	if(!ff)
-	{
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	const int fileSize = ff->size;
-	if(fileSize <= 0)
-	{
-		fclose(ff);
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	void* fileData = malloc(fileSize);
-	if(!fileData)
-	{
-		fclose(ff);
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	fread(fileData, 1, fileSize, ff);
-	fclose(ff);
-
-	D3DXIMAGE_INFO info;
-	ZeroMemory(&info, sizeof(info));
-	HRESULT hr = D3DXGetImageInfoFromFileInMemory(fileData, fileSize, &info);
-	if(FAILED(hr) || info.Width <= 0 || info.Height <= 0 || info.ResourceType != D3DRTYPE_TEXTURE)
-	{
-		r3dOutToLog("r3dTexture DX11: failed to read image info for '%s', HRESULT=0x%08X\n", fileName, (unsigned int)hr);
-		free(fileData);
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	r3dTexture_CreateDX11FromImageMemory(slot, fileData, fileSize, fileName, info.Width, info.Height);
-
-	free(fileData);
-
-	if(!*slot)
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-}
-
-static bool r3dTexture_CanCreateDX11SRVFormat(D3DFORMAT d3dFormat)
-{
-	switch(d3dFormat)
-	{
-	case D3DFMT_D16:
-	case D3DFMT_D24X8:
-	case D3DFMT_D24S8:
-		return false;
-
-	default:
-		return r3dDX11_ConvertLegacyD3DFormat(d3dFormat) != 0;
-	}
-}
-
-static void r3dTexture_CreateDX11Blank(
-	r3dDX11Texture** slot,
-	int width,
-	int height,
-	D3DFORMAT d3dFormat,
-	const char* debugName
-)
-{
-	if(!slot || *slot)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(width <= 0 || height <= 0 || !r3dTexture_CanCreateDX11SRVFormat(d3dFormat))
-	{
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
-
-	if(!tex->Create2D(width, height, dx11Format, NULL, 0))
-	{
-		delete tex;
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	*slot = tex;
-
-	r3dOutToLog("r3dTexture DX11: linked blank SRV '%s'\n", debugName ? debugName : "");
-}
-
-static void r3dTexture_CreateDX11FromD3D9Texture(
-	r3dDX11Texture** slot,
-	r3dD3DTextureTunnel* source,
-	int width,
-	int height,
-	D3DFORMAT d3dFormat,
-	const char* debugName
-)
-{
-	if(!slot || !source)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(width <= 0 || height <= 0 || !r3dTexture_CanCreateDX11SRVFormat(d3dFormat))
-	{
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	if(*slot)
-	{
-		delete *slot;
-		*slot = NULL;
-	}
-
-	IDirect3DTexture9* sourceTex = source->AsTex2D();
-	if(!sourceTex)
-	{
-		r3dTexture_CreateDX11Blank(slot, width, height, d3dFormat, debugName);
-		return;
-	}
-
-	D3DLOCKED_RECT locked;
-	HRESULT hr = sourceTex->LockRect(0, &locked, NULL, D3DLOCK_READONLY);
-	if(FAILED(hr))
-	{
-		r3dOutToLog("r3dTexture DX11: creating blank SRV for '%s', D3D9 lock failed HRESULT=0x%08X\n", debugName ? debugName : "", (unsigned int)hr);
-		r3dTexture_CreateDX11Blank(slot, width, height, d3dFormat, debugName);
-		return;
-	}
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-	const R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
-	const bool created = tex->Create2D(width, height, dx11Format, locked.pBits, locked.Pitch);
-
-	sourceTex->UnlockRect(0);
-
-	if(!created)
-	{
-		delete tex;
-		r3dTexture_CreateDX11Fallback(slot, debugName);
-		return;
-	}
-
-	*slot = tex;
-
-	r3dOutToLog("r3dTexture DX11: linked D3D9 copy SRV '%s'\n", debugName ? debugName : "");
-}
-
-static void r3dTexture_CreateDX11FromDDSFile(r3dDX11Texture** slot, const char* fileName)
-{
-	if(!slot || *slot)
-		return;
-
-	if(!r3dTexture_DX11LinkEnabled())
-		return;
-
-	if(!R3D_IS_MAIN_THREAD())
-		return;
-
-	if(!r3dTexture_IsDDSFileName(fileName))
-		return;
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-
-	if(!tex->LoadDDSFromFile(fileName))
-	{
-		delete tex;
-		r3dOutToLog("r3dTexture DX11: failed to lazy-create SRV for '%s'\n", fileName ? fileName : "");
-		r3dTexture_CreateDX11Fallback(slot, fileName);
-		return;
-	}
-
-	*slot = tex;
-
-	r3dOutToLog("r3dTexture DX11: lazy linked SRV '%s'\n", fileName ? fileName : "");
-}
-
-static void r3dTexture_CreateDX11RenderTargetMirror(
-	r3dDX11Texture** slot,
-	int width,
-	int height,
-	D3DFORMAT d3dFormat,
-	int mipCount,
-	bool cube
-)
-{
-	if(!slot || !g_r3dDX11.IsInitialized())
-		return;
-
-	R3D_DX11_FORMAT dx11Format = r3dDX11_ConvertLegacyD3DFormat(d3dFormat);
-	if(dx11Format == 0)
-		return;
-
-	if(*slot)
-	{
-		delete *slot;
-		*slot = NULL;
-	}
-
-	r3dDX11Texture* tex = new r3dDX11Texture();
-
-	bool created = cube
-		? tex->CreateRenderTargetCube(width, dx11Format, mipCount)
-		: tex->CreateRenderTarget2D(width, height, dx11Format, mipCount);
-
-	if(!created)
-	{
-		delete tex;
-		return;
-	}
-
-	*slot = tex;
-}
-
-#endif
-
 //C
 //
 // r3dTexture
@@ -475,12 +27,11 @@ r3dTexture::r3dTexture()
 {
 	Missing = 0;
 
-	m_Loaded = 0 ;
+	m_Loaded = 0;
+	m_IsLoading = 0;
 
 	m_TexArray = NULL;
-#ifndef WO_SERVER
-	m_DX11TexArray = NULL;
-#endif
+
 	m_pDelayTextureArray = 0;
 	m_iNumTextures = 0;
 	m_LastAccess = 0;
@@ -499,32 +50,15 @@ r3dTexture::r3dTexture()
 
 	NumMipMaps	= 0;
 
+	m_DownScale = 1;
+	m_DownScaleMinDim = 1;
+
 	bPersistent	= 0;
 	bCubemap		= false;
 
+	Pitch = 0;
+
 	ID	        = r3dLastTextureID++;
-}
-
-bool r3dTexture::IsValid()
-{
-	if(IsMissing())
-		return false;
-
-	if(!m_TexArray || m_iNumTextures <= 0)
-		return false;
-
-	if(m_TexArray[0].Valid())
-		return true;
-
-#ifndef WO_SERVER
-	if(m_DX11TexArray && m_DX11TexArray[0] && m_DX11TexArray[0]->IsValid())
-		return true;
-
-	if(m_TexArray[0].HasDX11Texture())
-		return true;
-#endif
-
-	return false;
 }
 
 void r3dTexture::Unload()
@@ -580,8 +114,6 @@ void r3dTexture::Unlock()
 
 }
 
-D3DPOOL r3dDefaultTexturePool = D3DPOOL_MANAGED;
-
 void CalcDownScaleToMatchMaxDim( int& ioRatio, int Dim, int MaxDim )
 {
 	if( Dim / ioRatio > MaxDim )
@@ -603,9 +135,10 @@ namespace
 	{
 		r3dD3DTextureTunnel* texTunnel ;
 		int mipsDown ;
+		D3DPOOL pool;
 	};
 
-	void DownCube( r3dD3DTextureTunnel* texTunnel, int mipsDown )
+	void DownCube( r3dD3DTextureTunnel* texTunnel, int mipsDown, D3DPOOL pool )
 	{
 		R3D_ENSURE_MAIN_THREAD();
 
@@ -619,26 +152,41 @@ namespace
 
 		IDirect3DCubeTexture9* res;
 
-		D3D_V( r3dRenderer->pd3ddev->CreateCubeTexture( desc.Width, origLevelCount - mipsDown, 0, desc.Format, desc.Pool, &res, NULL ) );
+		D3D_V( r3dRenderer->pd3ddev->CreateCubeTexture( desc.Width, origLevelCount - mipsDown, 0, desc.Format, pool, &res, NULL ) );
 
 		for( int i = 0, e = res->GetLevelCount(); i < e; i ++ )
 		{
-			D3DLOCKED_RECT from, to;
-
 			for( int j = 0; j < 6; j ++ )
 			{
-				D3D_V( cubeTex->LockRect( D3DCUBEMAP_FACES( j ), i + mipsDown, &from, NULL, D3DLOCK_READONLY ) );
-				D3D_V( res->LockRect( D3DCUBEMAP_FACES( j ), i, &to, NULL, 0 ) );
+				if( pool == D3DPOOL_DEFAULT )
+				{
+					IDirect3DSurface9* src, * dest;
 
-				D3DSURFACE_DESC desc;
+					D3D_V( cubeTex->GetCubeMapSurface( D3DCUBEMAP_FACES( j ), i + mipsDown, &src ) );
+					D3D_V( res->GetCubeMapSurface( D3DCUBEMAP_FACES( j ), i, &dest ) );
 
-				D3D_V( res->GetLevelDesc( i, &desc ) );
+					D3D_V( r3dRenderer->pd3ddev->UpdateSurface( src, NULL, dest, NULL ) );
 
-				r3d_assert( from.Pitch == to.Pitch );
-				memcpy( to.pBits, from.pBits, r3dGetPixelSize( to.Pitch * desc.Height, desc.Format ) );
+					SAFE_RELEASE( src );
+					SAFE_RELEASE( dest );
+				}
+				else
+				{
+					D3DLOCKED_RECT from, to;
 
-				D3D_V( cubeTex->UnlockRect( D3DCUBEMAP_FACES( j ), i + mipsDown ) );
-				D3D_V( res->UnlockRect( D3DCUBEMAP_FACES( j ), i ) );
+					D3D_V( cubeTex->LockRect( D3DCUBEMAP_FACES( j ), i + mipsDown, &from, NULL, D3DLOCK_READONLY ) );
+					D3D_V( res->LockRect( D3DCUBEMAP_FACES( j ), i, &to, NULL, 0 ) );
+
+					D3DSURFACE_DESC desc;
+
+					D3D_V( res->GetLevelDesc( i, &desc ) );
+
+					r3d_assert( from.Pitch == to.Pitch );
+					memcpy( to.pBits, from.pBits, r3dGetPixelSize( to.Pitch * desc.Height, desc.Format ) );
+
+					D3D_V( cubeTex->UnlockRect( D3DCUBEMAP_FACES( j ), i + mipsDown ) );
+					D3D_V( res->UnlockRect( D3DCUBEMAP_FACES( j ), i ) );
+				}
 			}
 		}
 
@@ -651,11 +199,11 @@ namespace
 	{
 		DownTexParams* pms = ( DownTexParams* ) params ;
 
-		DownCube( pms->texTunnel, pms->mipsDown );
+		DownCube( pms->texTunnel, pms->mipsDown, pms->pool );
 	}
 
 
-	void DownTex2D( r3dD3DTextureTunnel* tex2DTunnel, int mipsDown )
+	void DownTex2D( r3dD3DTextureTunnel* tex2DTunnel, int mipsDown, D3DPOOL pool )
 	{
 		R3D_ENSURE_MAIN_THREAD();
 
@@ -671,7 +219,7 @@ namespace
 
 		int mips = origLevelCount - mipsDown ;
 
-		HRESULT hres = r3dRenderer->pd3ddev->CreateTexture( desc.Width, desc.Height, mips, 0, desc.Format, desc.Pool, &res, NULL );
+		HRESULT hres = r3dRenderer->pd3ddev->CreateTexture( desc.Width, desc.Height, mips, 0, desc.Format, pool, &res, NULL );
 
 		r3dRenderer->CheckOutOfMemory( hres ) ;
 
@@ -693,20 +241,35 @@ namespace
 
 		for( int i = 0, e = res->GetLevelCount(); i < e; i ++ )
 		{
-			D3DLOCKED_RECT from, to;
+			if( pool == D3DPOOL_DEFAULT )
+			{
+				IDirect3DSurface9* sourceSurf, * targSurf ;
+				
+				D3D_V( tex2D->GetSurfaceLevel( i + mipsDown, & sourceSurf ) );
+				D3D_V( res->GetSurfaceLevel( i, & targSurf ) );
 
-			D3D_V( tex2D->LockRect( i + mipsDown, &from, NULL, D3DLOCK_READONLY ) );
-			D3D_V( res->LockRect( i, &to, NULL, 0 ) );
+				D3D_V( r3dRenderer->pd3ddev->UpdateSurface( sourceSurf, NULL, targSurf, NULL ) );
 
-			D3DSURFACE_DESC desc;
+				sourceSurf->Release();
+				targSurf->Release();
+			}
+			else
+			{
+				D3DLOCKED_RECT from, to;
 
-			D3D_V( res->GetLevelDesc( i, &desc ) );
+				D3D_V( tex2D->LockRect( i + mipsDown, &from, NULL, D3DLOCK_READONLY ) );
+				D3D_V( res->LockRect( i, &to, NULL, 0 ) );
 
-			r3d_assert( from.Pitch == to.Pitch );
-			memcpy( to.pBits, from.pBits, to.Pitch * r3dGetPitchHeight( desc.Height, desc.Format ) );
+				D3DSURFACE_DESC desc;
 
-			D3D_V( tex2D->UnlockRect( i + mipsDown ) );
-			D3D_V( res->UnlockRect( i ) );
+				D3D_V( res->GetLevelDesc( i, &desc ) );
+
+				r3d_assert( from.Pitch == to.Pitch );
+				memcpy( to.pBits, from.pBits, to.Pitch * r3dGetPitchHeight( desc.Height, desc.Format ) );
+
+				D3D_V( tex2D->UnlockRect( i + mipsDown ) );
+				D3D_V( res->UnlockRect( i ) );
+			}
 		}
 		
 		tex2DTunnel->ReleaseAndReset();
@@ -718,10 +281,10 @@ namespace
 	{
 		DownTexParams* pms = ( DownTexParams* ) params ;
 
-		DownTex2D( pms->texTunnel, pms->mipsDown );
+		DownTex2D( pms->texTunnel, pms->mipsDown, pms->pool );
 	}
 
-	void DownTex3D( r3dD3DTextureTunnel* TexTunnel, int mipsDown )
+	void DownTex3D( r3dD3DTextureTunnel* TexTunnel, int mipsDown, D3DPOOL pool )
 	{
 		R3D_ENSURE_MAIN_THREAD();
 
@@ -735,7 +298,14 @@ namespace
 
 		IDirect3DVolumeTexture9* res;
 
-		D3D_V( r3dRenderer->pd3ddev->CreateVolumeTexture( desc.Width, desc.Height, desc.Depth, origLevelCount - mipsDown, 0, desc.Format, desc.Pool, &res, NULL ) );
+		int finalMipCount = origLevelCount - mipsDown;
+
+		D3D_V( r3dRenderer->pd3ddev->CreateVolumeTexture(	desc.Width, desc.Height, desc.Depth, finalMipCount, 0, desc.Format, 
+															// in case of volumetric pool default texture
+															// we have to downscale in temporary system mem texture and then
+															// call UpdateTexture
+															pool == D3DPOOL_DEFAULT ? D3DPOOL_SYSTEMMEM : pool, &res, NULL 
+															) );
 
 		for( int i = 0, e = res->GetLevelCount(); i < e; i ++ )
 		{
@@ -757,15 +327,32 @@ namespace
 			D3D_V( res->UnlockBox(  i ) );
 		}
 
+		IDirect3DVolumeTexture9* final ;
+
+		if( pool == D3DPOOL_DEFAULT )
+		{
+			D3D_V( r3dRenderer->pd3ddev->CreateVolumeTexture( desc.Width, desc.Height, desc.Depth, finalMipCount, 0, desc.Format, pool, &final, NULL ) );
+
+			final->AddDirtyBox( NULL );
+
+			D3D_V( r3dRenderer->pd3ddev->UpdateTexture( res, final ) );
+
+			SAFE_RELEASE( res );
+		}
+		else
+		{
+			final = res;
+		}
+
 		TexTunnel->ReleaseAndReset() ;
-		TexTunnel->Set( volTex ) ;
+		TexTunnel->Set( final ) ;
 	}
 
 	void DoDownTex3D( void* params )
 	{
 		DownTexParams* pms = ( DownTexParams* ) params ;
 
-		DownTex3D( pms->texTunnel, pms->mipsDown );
+		DownTex3D( pms->texTunnel, pms->mipsDown, pms->pool );
 	}
 
 
@@ -792,10 +379,7 @@ void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName)
 {
 #if R3D_SET_DEBUG_D3D_NAMES
 
-	if( !res || !FName )
-		return;
-
-	DWORD sz = static_cast<DWORD>( strlen( FName ) );
+	DWORD sz = strlen(FName);
 	res->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
 
 	void* p = 0;
@@ -804,39 +388,41 @@ void SetD3DResourcePrivateData(LPDIRECT3DRESOURCE9 res, const char* FName)
 	if(p)
 	{
 		LPDIRECT3DTEXTURE9 t = (LPDIRECT3DTEXTURE9)p;
-		UINT mipsCount = t->GetLevelCount();
+		int mipsCount = t->GetLevelCount();
 
-		for (UINT i = 0; i < mipsCount; ++i)
+		for (int i = 0; i < mipsCount; ++i)
 		{
-			LPDIRECT3DSURFACE9 surf = NULL;
+			LPDIRECT3DSURFACE9 surf; 
 			t->GetSurfaceLevel(i, &surf);
+			surf->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
+			surf->Release();
+		}
 
-			if( surf )
+		t->Release();
+		return;
+	}
+
+	p = 0;
+	res->QueryInterface(IID_IDirect3DCubeTexture9, &p);
+	if(p)
+	{
+		LPDIRECT3DCUBETEXTURE9 t = (LPDIRECT3DCUBETEXTURE9)p;
+		int mipsCount = t->GetLevelCount();
+
+		for (int i = 0; i < mipsCount; ++i)
+		{
+			for (int j = D3DCUBEMAP_FACE_POSITIVE_X; j <= D3DCUBEMAP_FACE_NEGATIVE_Z; ++j)
 			{
+				LPDIRECT3DSURFACE9 surf; 
+				t->GetCubeMapSurface((D3DCUBEMAP_FACES)j, i, &surf);
 				surf->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
 				surf->Release();
 			}
 		}
 
 		t->Release();
-	}
 
-	p = 0;
-	res->QueryInterface(IID_IDirect3DVertexBuffer9, &p);
-	if(p)
-	{
-		LPDIRECT3DVERTEXBUFFER9 vb = (LPDIRECT3DVERTEXBUFFER9)p;
-		vb->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
-		vb->Release();
-	}
-
-	p = 0;
-	res->QueryInterface(IID_IDirect3DIndexBuffer9, &p);
-	if(p)
-	{
-		LPDIRECT3DINDEXBUFFER9 ib = (LPDIRECT3DINDEXBUFFER9)p;
-		ib->SetPrivateData(WKPDID_D3DDebugObjectName, FName, sz, 0);
-		ib->Release();
+		return;
 	}
 
 #endif
@@ -860,9 +446,13 @@ void DoPostLoadStuff( void* params )
 	free( pms->StuffTofree );
 }
 
-void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t FileInMemorySize, D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, int SystemMem, const char* DEBUG_NAME )
+void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t FileInMemorySize, D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, D3DPOOL Pool, const char* DEBUG_NAME )
 {
-	D3DPOOL targetPool = SystemMem ? D3DPOOL_SYSTEMMEM : r3dDefaultTexturePool ;
+	m_DownScale = DownScale;
+	m_DownScaleMinDim = DownScaleMinDim;
+
+	if( Pool == D3DPOOL_DEFAULT )
+		Flags |= fPoolDefault;
 
 	int TgW = 0;
 	int TgH = 0;
@@ -935,19 +525,20 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 		if( totalMipDown && totalMipDown < pInfo.MipLevels )
 		{
 
-			r3dDeviceTunnel::D3DXCreateCubeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, pInfo.Width, pInfo.MipLevels - totalMipDown, 0, TargetTexFormat, targetPool,
+			r3dDeviceTunnel::D3DXCreateCubeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, pInfo.Width, pInfo.MipLevels - totalMipDown, 0, TargetTexFormat, D3DPOOL_SYSTEMMEM,
 																		D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0x00000000, &pInfo, NULL, &m_TexArray[ index ], ALLOW_ASYNC );
 
-			R3D_DEIVCE_QUEUE_OBJ( DownTexParams, parms ) ;
+			R3D_DEIVCE_QUEUE_OBJ( DownTexParams, parms );
 
-			parms.texTunnel = &m_TexArray[ index ] ;
-			parms.mipsDown = totalMipDown ;
+			parms.texTunnel = &m_TexArray[ index ];
+			parms.mipsDown = totalMipDown;
+			parms.pool = Pool;
 
 			AddCustomDeviceQueueItem( DoDownCube, &parms );
 		}
 		else
 		{
-			r3dDeviceTunnel::D3DXCreateCubeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, pInfo.MipLevels, 0, TargetTexFormat, targetPool,
+			r3dDeviceTunnel::D3DXCreateCubeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, pInfo.MipLevels, 0, TargetTexFormat, Pool,
 																		ScaleFilter, ScaleFilter, 0x00000000, &pInfo, NULL, &m_TexArray[ index ], ALLOW_ASYNC ) ;
 		}
 	}
@@ -959,20 +550,21 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 			{
 				// load original texture
 
-				r3dDeviceTunnel::D3DXCreateTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, pInfo.Width, pInfo.Height, pInfo.MipLevels, 0, TargetTexFormat, targetPool,
+				r3dDeviceTunnel::D3DXCreateTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, pInfo.Width, pInfo.Height, pInfo.MipLevels, 0, TargetTexFormat, D3DPOOL_SYSTEMMEM,
 																		D3DX_FILTER_NONE, D3DX_FILTER_NONE ,0x00000000, &pInfo, NULL, &m_TexArray[ index ], DEBUG_NAME, ALLOW_ASYNC );
 				
 				// create downscaled version by copying mip levels into a new texture
-				R3D_DEIVCE_QUEUE_OBJ( DownTexParams, params ) ;
+				R3D_DEIVCE_QUEUE_OBJ( DownTexParams, params );
 
-				params.texTunnel = &m_TexArray[ index ] ;
-				params.mipsDown = totalMipDown ;
+				params.texTunnel = &m_TexArray[ index ];
+				params.mipsDown = totalMipDown;
+				params.pool = Pool;
 
 				AddCustomDeviceQueueItem( DoDownTex2D, &params );
 			}
 			else
 			{
-				r3dDeviceTunnel::D3DXCreateTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, pInfo.MipLevels, 0, TargetTexFormat, targetPool,
+				r3dDeviceTunnel::D3DXCreateTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, pInfo.MipLevels, 0, TargetTexFormat, Pool,
 																		ScaleFilter, ScaleFilter, 0x00000000, &pInfo, NULL, &m_TexArray[ index ], DEBUG_NAME, ALLOW_ASYNC );
 			}
 		}
@@ -980,50 +572,26 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 		{
 			if( totalMipDown && totalMipDown < pInfo.MipLevels )
 			{
-				r3dDeviceTunnel::D3DXCreateVolumeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, ScaledDepth, pInfo.MipLevels - totalMipDown, 0, TargetTexFormat, targetPool,
+				r3dDeviceTunnel::D3DXCreateVolumeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, ScaledDepth, pInfo.MipLevels - totalMipDown, 0, TargetTexFormat, D3DPOOL_SYSTEMMEM,
 																			D3DX_FILTER_POINT, D3DX_FILTER_POINT, 0x00000000, &pInfo, NULL, &m_TexArray[ index ], ALLOW_ASYNC );
 
 				R3D_DEIVCE_QUEUE_OBJ( DownTexParams, params ) ;
 
-				params.texTunnel = &m_TexArray[ index ] ;
-				params.mipsDown = totalMipDown ;
+				params.texTunnel = &m_TexArray[ index ];
+				params.mipsDown = totalMipDown;
+				params.pool = Pool;
 
 				AddCustomDeviceQueueItem( DoDownTex3D, &params );
 
 			}
 			else
 			{
-				r3dDeviceTunnel::D3DXCreateVolumeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, ScaledDepth, pInfo.MipLevels, 0, TargetTexFormat, targetPool,
+				r3dDeviceTunnel::D3DXCreateVolumeTextureFromFileInMemoryEx(	FileInMemoryData, FileInMemorySize, ScaledWidth, ScaledHeight, ScaledDepth, pInfo.MipLevels, 0, TargetTexFormat, Pool,
 																			ScaleFilter, ScaleFilter, 0x00000000, &pInfo, NULL, &m_TexArray[ index ], ALLOW_ASYNC );
 			}
 		}
 	}
 
-#ifndef WO_SERVER
-	if(m_DX11TexArray && index >= 0 && index < m_iNumTextures)
-	{
-		if(bCubemap || TgD > 1)
-		{
-			r3dTexture_CreateDX11FromDDSMemory(
-				&m_DX11TexArray[index],
-				FileInMemoryData,
-				FileInMemorySize,
-				DEBUG_NAME
-			);
-		}
-		else
-		{
-			r3dTexture_CreateDX11FromImageMemory(
-				&m_DX11TexArray[index],
-				FileInMemoryData,
-				FileInMemorySize,
-				DEBUG_NAME,
-				TgW,
-				TgH
-			);
-		}
-	}
-#endif
 
 	if( !ALLOW_ASYNC )
 	{
@@ -1059,7 +627,7 @@ void r3dTexture::LoadTextureInternal(int index, void* FileInMemoryData, uint32_t
 
 }
 
-void r3dTexture::LoadTextureInternal( int index, const char* FName, D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, int SystemMem )
+void r3dTexture::LoadTextureInternal( int index, const char* FName, D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, D3DPOOL Pool )
 {
 	r3d_assert(index >=0 && index < m_iNumTextures);
 	if(r3dTexture_UseEmpty) 
@@ -1092,11 +660,11 @@ void r3dTexture::LoadTextureInternal( int index, const char* FName, D3DFORMAT Ta
 		fread(SrcData, 1, ff_size, ff);
 		fclose(ff) ;
 
-		LoadTextureInternal( index, SrcData, ff_size, TargetTexFormat, DownScale, DownScaleMinDim, SystemMem, Location.FileName ) ;
+		LoadTextureInternal( index, SrcData, ff_size, TargetTexFormat, DownScale, DownScaleMinDim, Pool, Location.FileName ) ;
 	}
 	else
 	{
-		LoadTextureInternal(index, "Data\\Shaders\\Texture\\MissingTexture.dds", TargetTexFormat, DownScale, DownScaleMinDim, SystemMem );
+		LoadTextureInternal(index, "Data\\Shaders\\Texture\\MissingTexture.dds", TargetTexFormat, DownScale, DownScaleMinDim, Pool );
 		Missing = 1;
 		return;
 	}
@@ -1131,7 +699,8 @@ struct TextureLoadTaskParams : r3dTaskParams
 	D3DFORMAT	TargetTexFormat ;
 	int			DownScale ;
 	int			DownScaleMinDim ;
-	int			SystemMem ;
+	D3DPOOL		Pool ;
+	int			Dynamic ;
 	r3dTexture* Loadee ;
 };
 
@@ -1142,13 +711,15 @@ void
 r3dTexture::LoadTexture( struct r3dTaskParams* taskParams )
 {
 	TextureLoadTaskParams* params = static_cast<TextureLoadTaskParams*>( taskParams ) ;
-	params->Loadee->DoLoad( params->TargetTexFormat, params->DownScale, params->DownScaleMinDim, params->SystemMem ) ;
+	params->Loadee->DoLoad( params->TargetTexFormat, params->DownScale, params->DownScaleMinDim, params->Pool ) ;
 }
 
-int r3dTexture::Load( const char* fname, D3DFORMAT targetTexFormat, int downScale /*= 1*/, int downScaleMinDim /*= 1*/, int systemMem /*= 0*/ )
+int r3dTexture::Load( const char* fname, D3DFORMAT targetTexFormat, int downScale /*= 1*/, int downScaleMinDim /*= 1*/, D3DPOOL pool /*= D3DPOOL_MANAGED*/ )
 {
 	sprintf(Location.FileName, "%s", fname);
 	strlwr(&Location.FileName[0]);
+
+	InterlockedExchange( &m_IsLoading, 1 ) ;
 
 	if( g_async_loading->GetInt() && R3D_IS_MAIN_THREAD() && g_pBackgroundTaskDispatcher)
 	{
@@ -1159,7 +730,7 @@ int r3dTexture::Load( const char* fname, D3DFORMAT targetTexFormat, int downScal
 		params->TargetTexFormat = targetTexFormat;
 		params->DownScale		= downScale;
 		params->DownScaleMinDim = downScaleMinDim;
-		params->SystemMem		= systemMem ;
+		params->Pool			= pool;
 
 		params->Loadee			= this ;
 
@@ -1171,7 +742,7 @@ int r3dTexture::Load( const char* fname, D3DFORMAT targetTexFormat, int downScal
 	}
 	else
 	{
-		DoLoad( targetTexFormat, downScale, downScaleMinDim, systemMem ) ;
+		DoLoad( targetTexFormat, downScale, downScaleMinDim, pool );
 	}
 
 	return 1 ;	
@@ -1192,26 +763,10 @@ void r3dTexture::DestroyInternal()
 		delete [] m_TexArray;
 		m_TexArray = NULL ;
 	}
-#ifndef WO_SERVER
-	if(m_DX11TexArray)
-	{
-		for(int i = 0; i < m_iNumTextures; ++i)
-		{
-			if(m_DX11TexArray[i])
-			{
-				delete m_DX11TexArray[i];
-				m_DX11TexArray[i] = NULL;
-			}
-		}
-
-		delete [] m_DX11TexArray;
-		m_DX11TexArray = NULL;
-	}
-#endif
 	SAFE_DELETE_ARRAY(m_pDelayTextureArray);
 }
 
-int r3dTexture::DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, int SystemMem )
+int r3dTexture::DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleMinDim, D3DPOOL Pool )
 {
 	D3DXIMAGE_INFO pInfo;
 
@@ -1259,39 +814,31 @@ int r3dTexture::DoLoad( D3DFORMAT TargetTexFormat, int DownScale, int DownScaleM
 
 		m_iNumTextures = numElements;
 		m_TexArray = new r3dD3DTextureTunnel [ numElements ] ;
-
-#ifndef WO_SERVER
-		m_DX11TexArray = new r3dDX11Texture* [ numElements ];
-		memset(m_DX11TexArray, 0, sizeof(r3dDX11Texture*) * numElements);
-#endif
 		m_pDelayTextureArray = new float[numElements];
-		
 		for(int i=0; i<numElements; ++i)
 		{
 			char fullpath[512];
 			sprintf(fullpath, "%s%s", tempStr, tempFilenames[i]);
-			LoadTextureInternal( i, fullpath, TargetTexFormat, DownScale, DownScaleMinDim, SystemMem );
+			LoadTextureInternal( i, fullpath, TargetTexFormat, DownScale, DownScaleMinDim, Pool );
 			m_pDelayTextureArray[i] = (float)tempDelays[i]/1000.0f; // ms->seconds
 		}		
 	}
 	else
 	{
+		r3d_assert( !m_TexArray );
+
 		m_iNumTextures = 1;
 		m_TexArray = new r3dD3DTextureTunnel[ 1 ] ;
 
-#ifndef WO_SERVER
-		m_DX11TexArray = new r3dDX11Texture* [ 1 ];
-		m_DX11TexArray[0] = NULL;
-#endif
-
-		LoadTextureInternal( 0, FName, TargetTexFormat, DownScale, DownScaleMinDim, SystemMem );
+		LoadTextureInternal( 0, FName, TargetTexFormat, DownScale, DownScaleMinDim, Pool );
 	}
 
 	int size = GetTextureSizeInVideoMemory() ;
 
 	UpdateTextureStats( size ) ;
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 
 	return 1;
 }
@@ -1320,140 +867,12 @@ IDirect3DBaseTexture9* r3dTexture::GetD3DTexture()
 	return NULL;
 }
 
-#ifndef WO_SERVER
-
-r3dDX11Texture* r3dTexture::GetDX11Texture()
-{
-	if(!m_Loaded)
-		return NULL;
-
-	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].HasDX11Texture())
-		return m_TexArray[0].GetDX11Texture();
-
-	if(!m_DX11TexArray)
-		return NULL;
-
-	if(m_iNumTextures == 1)
-	{
-		if(!m_DX11TexArray[0] && (Flags & fCreated))
-		{
-			if(Flags & fRenderTarget)
-			{
-				if(m_TexArray && m_TexArray[0].HasDX11Texture())
-					return m_TexArray[0].GetDX11Texture();
-
-				r3dTexture_CreateDX11RenderTargetMirror(
-					&m_DX11TexArray[0],
-					Width,
-					Height,
-					TexFormat,
-					NumMipMaps,
-					bCubemap
-				);
-			}
-			else if(!bCubemap && Depth <= 1)
-			{
-				r3dTexture_CreateDX11FromD3D9Texture(
-					&m_DX11TexArray[0],
-					&m_TexArray[0],
-					Width,
-					Height,
-					TexFormat,
-					Location.FileName
-				);
-			}
-		}
-
-		if(!m_DX11TexArray[0] && !(Flags & fCreated))
-		{
-			if(r3dTexture_IsDDSFileName(Location.FileName))
-				r3dTexture_CreateDX11FromDDSFile(&m_DX11TexArray[0], Location.FileName);
-			else
-				r3dTexture_CreateDX11FromImageFile(&m_DX11TexArray[0], Location.FileName);
-		}
-
-		return m_DX11TexArray[0];
-	}
-	else if(m_iNumTextures > 1)
-	{
-		r3d_assert(m_pDelayTextureArray);
-		r3d_assert(m_AccessCounter >= 0 && m_AccessCounter < m_iNumTextures);
-
-		if((r3dGetTime() - m_LastAccess) > m_pDelayTextureArray[m_AccessCounter])
-		{
-			m_LastAccess = r3dGetTime();
-			m_AccessCounter = (m_AccessCounter + 1) % m_iNumTextures;
-		}
-
-		r3d_assert(m_AccessCounter >= 0 && m_AccessCounter < m_iNumTextures);
-		return m_DX11TexArray[m_AccessCounter];
-	}
-
-	return NULL;
-}
-
-ID3D11ShaderResourceView* r3dTexture::GetDX11SRV()
-{
-	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].HasDX11Texture())
-		return m_TexArray[0].GetDX11SRV();
-
-	r3dDX11Texture* tex = GetDX11Texture();
-
-	if(!tex)
-		return NULL;
-
-	if(!tex->IsValid())
-		return NULL;
-
-	return tex->GetSRV();
-}
-
-bool r3dTexture::HasDX11Texture()
-{
-	return GetDX11SRV() != NULL;
-}
-
-void r3dTexture::RegisterDX11RenderTargetSurface(r3dD3DSurfaceTunnel* surface, int face, int mip)
-{
-	if(!surface || !(Flags & fRenderTarget))
-		return;
-
-	if(m_iNumTextures == 1 && m_TexArray && m_TexArray[0].RegisterDX11RenderTargetSurface(surface, face, mip))
-		return;
-
-	r3dDX11Texture* tex = GetDX11Texture();
-	if(!tex)
-		return;
-
-	ID3D11Texture2D* texture = NULL;
-	ID3D11RenderTargetView* rtv = NULL;
-
-	if(!tex->AddRefRenderTargetMirror(face, mip, &texture, &rtv))
-		return;
-
-	const unsigned int mipWidth = (unsigned int)R3D_MAX(1, Width >> mip);
-	const unsigned int mipHeight = (unsigned int)R3D_MAX(1, Height >> mip);
-
-	surface->SetFormat(TexFormat);
-	surface->SetDX11RenderTargetMirror(texture, rtv, mipWidth, mipHeight);
-}
-
-#endif
-
 void r3dTexture::SetNewD3DTexture(IDirect3DBaseTexture9* newTex) 
 {
 	if(m_TexArray[0].Valid()) 
 		m_TexArray[0].ReleaseAndReset(); 
 
 	m_TexArray[0].Set( newTex );
-
-#ifndef WO_SERVER
-	if(m_DX11TexArray && m_DX11TexArray[0])
-	{
-		delete m_DX11TexArray[0];
-		m_DX11TexArray[0] = NULL;
-	}
-#endif
 }
 
 void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int aNumMipMaps, r3dD3DTextureTunnel* texture, bool isRenderTarget )
@@ -1475,51 +894,19 @@ void r3dTexture::Setup( int XSize, int YSize, int ZSize, D3DFORMAT TexFmt, int a
 	m_iNumTextures = 1;
 	m_TexArray[ 0 ] = *texture ;
 
-#ifndef WO_SERVER
-	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
-	m_DX11TexArray[0] = NULL;
-#endif
-
 	if( isRenderTarget )
 	{
 		Flags |= fRenderTarget ;
-
-#ifndef WO_SERVER
-		if(!m_TexArray[0].HasDX11Texture())
-		{
-			r3dTexture_CreateDX11RenderTargetMirror(
-				&m_DX11TexArray[0],
-				XSize,
-				YSize,
-				TexFmt,
-				aNumMipMaps,
-				false
-			);
-		}
-#endif
 	}
 	else
 	{
-#ifndef WO_SERVER
-		if(ZSize <= 1)
-		{
-			r3dTexture_CreateDX11FromD3D9Texture(
-				&m_DX11TexArray[0],
-				&m_TexArray[0],
-				XSize,
-				YSize,
-				TexFmt,
-				Location.FileName
-			);
-		}
-#endif
-
 		int size = GetTextureSizeInVideoMemory() ;
 
 		UpdateTextureStats( size ) ;
 	}
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 }
 
 void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps, r3dD3DTextureTunnel* texture, bool isRenderTarget )
@@ -1540,28 +927,9 @@ void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps
 	m_iNumTextures = 1;
 	m_TexArray[ 0 ] = *texture ;
 
-#ifndef WO_SERVER
-	m_DX11TexArray = new r3dDX11Texture* [ 1 ];
-	m_DX11TexArray[0] = NULL;
-#endif
-
 	if( isRenderTarget )
 	{
 		Flags |= fRenderTarget ;
-
-#ifndef WO_SERVER
-		if(!m_TexArray[0].HasDX11Texture())
-		{
-			r3dTexture_CreateDX11RenderTargetMirror(
-				&m_DX11TexArray[0],
-				EdgeLength,
-				EdgeLength,
-				TexFmt,
-				aNumMipMaps,
-				true
-			);
-		}
-#endif
 	}
 	else
 	{
@@ -1570,7 +938,8 @@ void r3dTexture::SetupCubemap( int EdgeLength, D3DFORMAT TexFmt, int aNumMipMaps
 		UpdateTextureStats( size ) ;
 	}
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 }
 
 float GetD3DTexFormatSize(D3DFORMAT Fmt)
@@ -1661,13 +1030,16 @@ r3dTexture::RegisterCreatedCubemap()
 #endif
 }
 
-int r3dTexture::Create(int XSize, int YSize, D3DFORMAT TexFmt, int _NumMipMaps, int SystemMem /*= 0*/ )
+int r3dTexture::Create(int XSize, int YSize, D3DFORMAT TexFmt, int _NumMipMaps, D3DPOOL Pool /*= D3DPOOL_MANAGED*/ )
 {
 	r3dD3DTextureTunnel texTun ;
 
+	if( Pool == D3DPOOL_DEFAULT )
+		Flags |= fPoolDefault;
+
 	r3dDeviceTunnel::CreateTexture(	XSize, YSize, _NumMipMaps,
-									(r3dDefaultTexturePool == D3DPOOL_MANAGED) ? 0 : D3DUSAGE_DYNAMIC,
-									TexFmt, SystemMem ? D3DPOOL_SYSTEMMEM : r3dDefaultTexturePool,
+									(Pool == D3DPOOL_DEFAULT) ? D3DUSAGE_DYNAMIC : 0,
+									TexFmt, Pool,
 									&texTun );
 
 	Setup( XSize, YSize, 1, TexFmt, _NumMipMaps, &texTun, false );
@@ -1678,7 +1050,8 @@ int r3dTexture::Create(int XSize, int YSize, D3DFORMAT TexFmt, int _NumMipMaps, 
 	r3dOutToLog("r3dTexture: Texture [%dx%d] created\n", Width, Height);
 #endif
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 
 	return 1;
 }
@@ -1710,9 +1083,12 @@ void r3dTexture::Destroy()
 
 //-------------------------------------------------------------------------
 
-int r3dTexture::CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetTexFormat, int NumMipMaps, int SystemMem)
+int r3dTexture::CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetTexFormat, int NumMipMaps, D3DPOOL Pool /*= D3DPOOL_MANAGED*/ )
 {
 	r3dD3DTextureTunnel tex3D;
+
+	if( Pool == D3DPOOL_DEFAULT )
+		Flags |= fPoolDefault;
 
 	r3dDeviceTunnel::CreateVolumeTexture
 	(
@@ -1720,9 +1096,9 @@ int r3dTexture::CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetT
 		Height,
 		Depth,
 		NumMipMaps,
-		(r3dDefaultTexturePool == D3DPOOL_MANAGED) ? 0 : D3DUSAGE_DYNAMIC,
+		(Pool == D3DPOOL_DEFAULT) ? D3DUSAGE_DYNAMIC : 0,
 		TargetTexFormat,
-		SystemMem ? D3DPOOL_SYSTEMMEM : r3dDefaultTexturePool,
+		Pool,
 		&tex3D
 	);
 
@@ -1734,7 +1110,8 @@ int r3dTexture::CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetT
 	r3dOutToLog("r3dTexture: Texture [%dx%d] created\n", Width, Height);
 #endif
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 
 	return 1;
 }
@@ -1742,16 +1119,19 @@ int r3dTexture::CreateVolume(int Width, int Height, int Depth, D3DFORMAT TargetT
 //------------------------------------------------------------------------
 
 int
-r3dTexture::CreateCubemap( int EdgeLength, D3DFORMAT TargetTexFormat, int aNumMipMaps )
+r3dTexture::CreateCubemap( int EdgeLength, D3DFORMAT TargetTexFormat, int aNumMipMaps, D3DPOOL Pool /*= D3DPOOL_MANAGED*/ )
 {
 	r3dD3DTextureTunnel texTunnel ;
+
+	if( Pool == D3DPOOL_DEFAULT )
+		Flags |= fPoolDefault;
 
 	r3dDeviceTunnel::CreateCubeTexture(
 		EdgeLength,
 		aNumMipMaps,
-		(r3dDefaultTexturePool == D3DPOOL_MANAGED) ? 0 : D3DUSAGE_DYNAMIC,
+		(Pool == D3DPOOL_DEFAULT) ? D3DUSAGE_DYNAMIC : 0,
 		TargetTexFormat,
-		r3dDefaultTexturePool,
+		Pool,
 		&texTunnel );
 
 	SetupCubemap( EdgeLength, TargetTexFormat, aNumMipMaps, &texTunnel, false );
@@ -1760,7 +1140,8 @@ r3dTexture::CreateCubemap( int EdgeLength, D3DFORMAT TargetTexFormat, int aNumMi
 
 	RegisterCreatedCubemap();
 
-	InterlockedExchange( &m_Loaded, 1 ) ;
+	InterlockedExchange( &m_Loaded, 1 );
+	InterlockedExchange( &m_IsLoading, 0 );
 
 	return 1;
 }
@@ -1841,7 +1222,7 @@ r3dTexture *r3dRenderLayer::AllocateTexture()
 
 
 
-r3dTexture* r3dRenderLayer::LoadTexture( const char* TexFile, D3DFORMAT TexFormat, bool bCheckFormat, int DownScale /*= 1*/, int DownScaleMinDim /*= 1*/, int SystemMem /*= 0*/, int gameResourcePool /*= 0*/ )
+r3dTexture* r3dRenderLayer::LoadTexture( const char* TexFile, D3DFORMAT TexFormat, bool bCheckFormat, int DownScale /*= 1*/, int DownScaleMinDim /*= 1*/, D3DPOOL Pool /*= D3DPOOL_MANAGED*/, int gameResourcePool /*= 0*/ )
 {
 	if(!bInited)
 		return NULL;
@@ -1871,7 +1252,7 @@ r3dTexture* r3dRenderLayer::LoadTexture( const char* TexFile, D3DFORMAT TexForma
 		Tex->MarkPlayerTexture() ;
 	}
 
-	if(!Tex->Load(szFileName, TexFormat, DownScale, DownScaleMinDim, SystemMem )) {
+	if(!Tex->Load(szFileName, TexFormat, DownScale, DownScaleMinDim, Pool )) {
 		_DeleteTexture(Tex);
 		return NULL;
 	}
@@ -1918,6 +1299,21 @@ void r3dRenderLayer::DeleteTexture(r3dTexture *Tex, int bForceDelete)
 {
 	if(!Tex)
 		return;
+
+	if( R3D_IS_MAIN_THREAD() )
+	{
+		int message = 0;
+		for( ; Tex->IsLoading(); )
+		{
+			if( !message )
+			{
+				r3dOutToLog( "r3dRenderLayer::DeleteTexture: Load/Unload collision for '%s'\n", Tex->getFileLoc().FileName );
+				message = 1;
+			}
+
+			ProcessDeviceQueue( r3dGetTime(), 0.033f );
+		}
+	}
 
 	r3dCSHolderWithDeviceQueue csholder( g_ResourceCritSection ) ; (void)csholder ;
 

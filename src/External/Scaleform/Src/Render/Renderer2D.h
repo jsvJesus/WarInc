@@ -70,7 +70,6 @@ public:
     // Delegated interface.
     bool    BeginFrame();
     void    EndFrame();
-    void    FinishFrame();
     bool    BeginScene();
     void    EndScene();
     void    BeginDisplay(Color backgroundColor, const Viewport& viewport);

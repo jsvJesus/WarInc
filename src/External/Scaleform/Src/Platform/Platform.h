@@ -29,7 +29,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 #include "Platform/Platform_CommandLine.h"
 #include "Platform/Platform_SystemCursorManager.h"
-#include "GFx/GFx_Player.h"
 //#include "GFx/IME/GFx_IMEManager.h"
 
 #ifdef SF_OS_PS3
@@ -159,13 +158,6 @@ enum ViewFlagConstants
     // Causes the mesh caches to use static index/vertex buffers, instead of dynamic ones 
     // (if applicable for the HAL's mesh cache - currently only D3D9).
     View_StaticBuffers     = 0x10000,
-
-    // Causes the created OpenGL context to use legacy mode rather than GL 3. Only applicable
-    // to OpenGL renderers.
-    View_GL20              = 0x20000,
-    
-    // Forces the shader system in D3D9 to use SM2.0 shaders, even if it is capable of SM3.0.
-    View_ShaderModel20     = 0x40000
 };
 
 enum StereoFormats
@@ -195,10 +187,8 @@ enum DeviceCaps
 
 struct ViewConfig
 {
-    unsigned        ViewFlags;      // Bit-flags for configuration. See ViewFlagConstants.
-    int             ColorBits;      // The requested number of bits in the color buffer (-1 will use platform default).
-    int             DepthBits;      // The requested number of bits in the depth buffer (-1 will use platform default).
-    int             StencilBits;    // The requested number of bits in the stencil buffer (-1 will use platform default).
+    unsigned        ViewFlags;
+    unsigned        BitDepth; // 0 = default.
     Size<unsigned>  ViewSize;
     unsigned        Orientation;
     unsigned        StereoFormat;
@@ -206,13 +196,13 @@ struct ViewConfig
     Size<unsigned>  MinSize;
 
     ViewConfig()
-        : ViewFlags(0), ColorBits(-1), DepthBits(-1), StencilBits(-1), ViewSize(0), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
+        : ViewFlags(0), BitDepth(0), ViewSize(0), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
     ViewConfig(const Size<unsigned>& sz)
-        : ViewFlags(View_Size), ColorBits(-1), DepthBits(-1), StencilBits(-1), ViewSize(sz), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
+        : ViewFlags(View_Size), BitDepth(0), ViewSize(sz), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
     ViewConfig(const Point<int> &pos, const Size<unsigned>& sz)
-        : ViewFlags(View_Pos|View_Size), ColorBits(-1), DepthBits(-1), StencilBits(-1), ViewSize(sz), Orientation(0), StereoFormat(Stereo_None), WindowPos(pos), MinSize(0) { }
+        : ViewFlags(View_Pos|View_Size), BitDepth(0), ViewSize(sz), Orientation(0), StereoFormat(Stereo_None), WindowPos(pos), MinSize(0) { }
     ViewConfig(unsigned width, unsigned height)
-        : ViewFlags(View_Size), ColorBits(-1), DepthBits(-1), StencilBits(-1), ViewSize(width, height), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
+        : ViewFlags(View_Size), BitDepth(0), ViewSize(width, height), Orientation(0), StereoFormat(Stereo_None), WindowPos(0), MinSize(0) { }
     
     Size<unsigned> GetSize() const { return ViewSize; }
     void           SetSize(const Size<unsigned>& sz)
@@ -293,7 +283,6 @@ public:
     bool        AdjustViewConfig(ViewConfig* config);
     bool        InitGraphics(const ViewConfig& config, Device::Window* window,
                              ThreadId renderThreadId = 0);
-    void        ResizeFrame(void* layer);
     bool        ReconfigureGraphics(const ViewConfig& config);
     void        ShutdownGraphics();
 
@@ -331,22 +320,17 @@ enum ThreadingType
     // AutoDetect means that causes the use of multi-threading
     // if Thread::GetCPUCount() > 1.
     TT_AutoDetect,
-    TT_Unspecified,
-
-    TT_TypeMask         = 0x0000FFF,    // Bitmask, specifying the bits used for the threading type.
-    TT_WatchDogFlag     = 0x0001000,    // Enables the watchdog thread.
+    TT_Unspecified
 };
 
 //------------------------------------------------------------------------
 // A platform independent interface for a gesture manager.
 class GestureManager : public RefCountBaseNTS<GestureManager, Stat_Default_Mem>
 {
+    class AppBase& TheApp;
 public:
-	class AppBase& TheApp;
     GestureManager(class AppBase& app) : TheApp(app) {}
-	virtual ~GestureManager() {}
-
-	virtual void SetMovie(Ptr<Scaleform::GFx::Movie> moviePtr) = 0;
+    virtual ~GestureManager() {}
 
     // 'screenPt' - the point in screen (window) coordinates;
     // 'moviePt'  - the point in Movie coordinate space.
@@ -390,7 +374,6 @@ public:
     virtual bool            setupWindow(const String& title, const ViewConfig& config) = 0;
     
     virtual bool            IsMultitouchSupported() const { return false; }
-    virtual bool            IsDisplayActive() const { return true; }
 
     // Invoked when a virtual keyboard must be opened.
     // 'textBox' contains bounds of a textfield in world coordinates (stage), in pixels.
@@ -398,8 +381,6 @@ public:
         { SF_UNUSED2(multiline,textBox); }
     // Invoked when a virtual keyboard must be closed 
     virtual void            HandleVirtualKeyboardClose() { }
-
-    virtual void            ProcessUrl(const String& url) { SF_UNUSED(url); }
 
 public:
     AppBase*        pApp;
@@ -631,7 +612,6 @@ public:
 
     // A notification that comes from a system to the player about virtual keyboard disappearance.
     virtual void    NotifyHideVirtualKeyboard() {}
-
 
     // *** Window Setup / Message APIs
 

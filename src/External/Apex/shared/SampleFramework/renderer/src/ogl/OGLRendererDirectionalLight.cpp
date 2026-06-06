@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,15 +32,21 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererDirectionalLight.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_OPENGL)
 
-OGLRendererDirectionalLight::OGLRendererDirectionalLight(const RendererDirectionalLightDesc &desc, OGLRenderer &renderer) :
+#include "OGLRendererDirectionalLight.h"
+
+using namespace SampleRenderer;
+
+OGLRendererDirectionalLight::OGLRendererDirectionalLight(const RendererDirectionalLightDesc &desc, OGLRenderer &renderer) 
+:	RendererDirectionalLight(desc)
 #if defined(RENDERER_ENABLE_CG)
-	m_cgenv(renderer.getCGEnvironment()),
+,	m_cgenv(renderer.getCGEnvironment())
 #endif
-	RendererDirectionalLight(desc)
+
 {
 }
 

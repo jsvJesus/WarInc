@@ -9,9 +9,9 @@ class	r3dMatrix;
 extern	float		_r3d_b2f[256];
 
 
-float r3dFastSin(float Degree);
-float r3dFastCos(float Degree);
-float r3dFastTan(float Degree);
+R3D_FORCEINLINE float r3dFastSin(float Degree) { return sinf(R3D_DEG2RAD(Degree)); }
+R3D_FORCEINLINE float r3dFastCos(float Degree) { return cosf(R3D_DEG2RAD(Degree)); }
+R3D_FORCEINLINE float r3dFastTan(float Degree) { return tanf(R3D_DEG2RAD(Degree)); }
 
 
 void		r3dBuildRotationMatrix(r3dMatrix& Matrix, float xAngle, float yAngle, float zAngle);
@@ -23,7 +23,7 @@ r3dPoint3D 	r3dCalcOrientation(const r3dVector& vRight, const r3dVector& vUp, co
 
 unsigned short	r3dFloatToHalf(float val);
 float		r3dHalfToFloat(unsigned short val);
-unsigned int r3dUpperPow2(unsigned int x);
+uint32_t r3dNextPow2(uint32_t v);
 
 void		r3dOrthoInverse( D3DXMATRIX& Res, const D3DXMATRIX& Mtx );
 void		r3dPerspProjInverse( D3DXMATRIX& Res, const D3DXMATRIX& Mtx );
@@ -34,6 +34,7 @@ float		r3dViewCulledTriangleArea_x2( r3dPoint2D a, r3dPoint2D b, r3dPoint2D c );
 int			r3dIsPow2( unsigned val ) ;
 int			r3dGetBitCount( unsigned val ) ;
 void		r3dRotateVector(r3dVector& v, float xAngle, float yAngle, float zAngle) /*-------------------------------------------------------------------------- */;
+uint32_t	r3dLog2(uint32_t v);
 
 //------------------------------------------------------------------------
 

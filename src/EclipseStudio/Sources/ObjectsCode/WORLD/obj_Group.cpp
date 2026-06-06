@@ -58,7 +58,7 @@ void obj_Group::SetPreviewMode ( bool bPreview )
 					if ( pNewObj )
 					{
 						pNewObj->bPersistent = 0;
-						pNewObj->ObjFlags &= OBJFLAG_SkipCastRay;
+						pNewObj->ObjFlags |= OBJFLAG_SkipCastRay;
 						m_dPreviewObjects.PushBack ( pNewObj );
 					}
 				}
@@ -77,7 +77,7 @@ void obj_Group::SetPreviewMode ( bool bPreview )
 	}
 }
 
-void obj_Group::SetPreviewObjectsPos ( r3dVector vPos )
+void obj_Group::SetPreviewObjectsPos ( r3dVector vPos, bool dropOnGround )
 {
 	if ( !m_bGroupJustCreated )
 	{
@@ -95,6 +95,15 @@ void obj_Group::SetPreviewObjectsPos ( r3dVector vPos )
 			{
 				r3dVector vOffset = pObj->GetPosition () - ( tBoxUnion.Org + tBoxUnion.Size * 0.5f );
 				pObj->SetPosition ( vPos + vOffset );
+
+				if( dropOnGround && Terrain )
+				{
+					r3dPoint3D pos = pObj->GetPosition();
+
+					pos.y = Terrain->GetHeight( pos );
+
+					pObj->SetPosition( pos );
+				}
 			}
 		}
 	}
@@ -226,6 +235,11 @@ void obj_Group::SaveToFile ( const char * sFile )
 	xmlGroupFile.save_file(sFile);
 }
 
+void obj_Group::Save()
+{
+	SaveToFile( "Data\\ObjectsDepot\\LevelGroups.xml" );
+}
+
 // static
 obj_Group * obj_Group::CreateNewGroup ()
 {
@@ -258,6 +272,8 @@ void obj_Group::LoadGroupObjects ()
 	if ( m_iIndexInFile < 0 )
 		return;
 
+	UnloadGroupObjects ();
+
 	r3d_assert ( g_sGroupsFileBuffer != NULL );
 
 	char * fileBuffer = new char [strlen ( g_sGroupsFileBuffer ) + 1];
@@ -289,8 +305,9 @@ void obj_Group::UnloadGroupObjects ()
 	if ( m_iIndexInFile < 0 )
 		return;
 
-	for ( uint32_t i = 0; i < m_dObjects.Count (); i++ )
-		GameWorld().DeleteObject(m_dObjects[i]);
+	for ( ; m_dObjects.Count(); )
+		GameWorld().DeleteObject( m_dObjects[ m_dObjects.Count() - 1 ] );
+
 	m_dObjects.Clear ();
 }
 

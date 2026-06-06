@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -41,40 +41,43 @@
 
 #include <RendererTexture2D.h>
 #include "OGLRenderer.h"
-#include "PxSimpleTypes.h"
 
-class RendererTexture2DDesc;
-
-class OGLRendererTexture2D : public RendererTexture2D
+namespace SampleRenderer
 {
+
+	class OGLRendererTexture2D : public RendererTexture2D
+	{
 	public:
 		OGLRendererTexture2D(const RendererTexture2DDesc &desc);
 		virtual ~OGLRendererTexture2D(void);
-	
+
 	public:
-		virtual void *lockLevel(physx::PxU32 level, physx::PxU32 &pitch);
-		virtual void  unlockLevel(physx::PxU32 level);
+		virtual void *lockLevel(PxU32 level, PxU32 &pitch);
+		virtual void  unlockLevel(PxU32 level);
 
-		void bind(physx::PxU32 textureUnit);
+		void bind(PxU32 textureUnit);
 
-		virtual	void	select(physx::PxU32 stageIndex)
+		virtual	void	select(PxU32 stageIndex)
 		{
 			bind(stageIndex);
 		}
 
 	private:
+
 		GLuint m_textureid;
 		GLuint m_glformat;
 		GLuint m_glinternalformat;
 		GLuint m_gltype;
-		
-		physx::PxU32  m_width;
-		physx::PxU32  m_height;
-		
-		physx::PxU32  m_numLevels;
-		
-		physx::PxU8 **m_data;
-};
+
+		PxU32  m_width;
+		PxU32  m_height;
+
+		PxU32  m_numLevels;
+
+		PxU8 **m_data;
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

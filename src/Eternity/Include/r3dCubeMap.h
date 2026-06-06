@@ -33,6 +33,7 @@ public:
 	int		Save(const char* fname);
 };
 
-void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* temp0, r3dScreenBuffer* temp1 ) ;
+void RenderCubeFaceMipChain( r3dScreenBuffer* cube, int face, r3dScreenBuffer* temp0, r3dScreenBuffer* temp1 );
+void RenderCubeMapMipChainWithEdgeSmoothing( r3dScreenBuffer* cube, r3dScreenBuffer* temp0, r3dScreenBuffer* (&faces)[ 6 ] ) ;
 
 #endif	// __R3D_CMAP_H

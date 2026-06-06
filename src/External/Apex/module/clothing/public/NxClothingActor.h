@@ -1,46 +1,41 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
 #ifndef NX_CLOTHING_ACTOR_H
 #define NX_CLOTHING_ACTOR_H
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
-#include "NxApex.h"
-#include "NxApexDesc.h"
-#include "NxClothingUserRecompute.h"
-#include "NxClothingVelocityCallback.h"
 
-class NxClothDesc;
-class NxRay;
+#include "NxApexActor.h"
+#include "NxApexRenderable.h"
+#include "NxClothingAsset.h"
+
+namespace NxParameterized
+{
+class Interface;
+}
 
 namespace physx
 {
@@ -49,59 +44,36 @@ namespace apex
 
 PX_PUSH_PACK_DEFAULT
 
-/**
-\brief \b DEPRECATED Various flags that can be queried and set at runtime for each NxClothingActor
+class NxClothingUserRecompute;
+class NxClothingVelocityCallback;
 
-\deprecated Use the NxParameterized Clothing Actor Descriptor to modify these values
+
+/**
+\brief selects the mode the clothing actor will be in the simulation frame
 */
-struct NxApexClothingFlag
+struct ClothingTeleportMode
 {
-	///Container for the flag
+	/** \brief the enum type */
 	enum Enum
 	{
 		/**
-		\brief Mesh skinning for physics is done during simulation instead of before.
-		This will cause the simulation to lag one frame behind
-		<br><b>Default:</b> off
-
-		\see NxClothingActor::getFrameDelay()
-
+		\brief Simulation continues smoothly. This is the most commonly used mode
 		*/
-		PARALLEL_PHYSX_MESH_SKINNING						= 1 << 0,
+		Continuous,
 
 		/**
-		\brief Mesh-Mesh skinning from physical to graphical mesh is done during next simulation step and not after the current one.
-		This will cause the simulation to lag one frame behind
-		<br><b>Default:</b> off
+		\brief Transforms the current simulation state from the old global pose to the new global pose.
 
-		\see NxClothingActor::getFrameDelay()
+		This will transform positions and velocities and thus keep the simulation state, just translate it to a new pose.
 		*/
-		PARALLEL_MESH_MESH_SKINNING							= 1 << 1,
+		Teleport,
 
 		/**
-		\brief Enable debug visualization for this particular actor
-		<br><b>Default:</b> on
+		\brief Forces the cloth to the animated position in the next frame.
+
+		This can be used to reset it from a bad state or by a teleport where the old state is not important anymore.
 		*/
-		VISUALIZE											= 1 << 2,
-
-		/**
-		\brief All graphical vertices without correspondence to physical vertices or triangles are skinned normally.
-		This flag specifies whether this happens during Physics scene simulation, or after.
-
-		\note If this flag is set, an inconsistency can arise when calling NxClothingActor::updateRenderResource in between NxApexScene::simulate
-		and NxApexScene::fetchResults. As a workaround, you should only call NxClothingActor::updateRenderResources <i>after</i>
-		NxApexScene::fetchResults has terminated
-		<br><b>Default:</b> on
-		*/
-		PARALLEL_CPU_SKINNING								= 1 << 3,
-
-		/**
-		\brief Recompute all normals after mesh-mesh skinning is complete
-
-		\note This usually leads to better looking results, but is more expensive to compute
-		<br><b>Default:</b> off
-		*/
-		RECOMPUTE_NORMALS									= 1 << 4,
+		TeleportAndReset,
 	};
 };
 
@@ -124,35 +96,18 @@ public:
 	virtual ::NxParameterized::Interface* getActorDesc() = 0;
 
 	/**
-	\brief \b DEPRECATED Set the template for clothing.
-
-	\deprecated Use NxClothingActor::getActorDesc() and modify the clothingTemplate part of it
-	\note This can be called while the simulation is running, but will only affect simulation after the next NxApexScene::simulate() call
-	*/
-	virtual void setClothingTemplate(const NxClothDesc* desc) = 0;
-
-	/**
-	\brief \b DEPRECATED Gets the template for clothing
-
-	\deprecated Use NxClothingActor::getActorDesc() and modify the clothingTemplate part of it
-	\return false if no template has been set
-	*/
-	virtual bool getClothingTemplate(NxClothDesc& desc) const = 0;
-
-	/**
 	\brief Updates all internal bone matrices. This should be called with updated information before apex scenes start simulating.
 
 	\param[in] globalPose				The new location of the actor
 	\param[in] newBoneMatrices			Pointer to the array of transformations that contain the composite bone transformations for the
 										current frame
-	\param[in] boneMatricesByteStride	stride of the bone matrices, must be bigger than ::sizeof(physx::PxMat44)
+	\param[in] boneMatricesByteStride	stride of the bone matrices, must be bigger than sizeof(physx::PxMat44)
 	\param[in] numBoneMatrices			number of bone matrices available. This should correspond with the number of bones present in the asset
-	\param[in] isContinuous				Setting this to false will force the cloth to the animated position for the next frame.
-										used for teleportations and non-smooth animations mainly.
+	\param[in] teleportMode				Setting this to anything but TM_Continuous will force apply a teleport and optionally a reset.
 
 	\note This must be called before NxApexScene::simulate is called
 	*/
-	virtual void updateState(const physx::PxMat44& globalPose, const physx::PxMat44* newBoneMatrices, physx::PxU32 boneMatricesByteStride, physx::PxU32 numBoneMatrices, bool isContinuous) = 0;
+	virtual void updateState(const physx::PxMat44& globalPose, const physx::PxMat44* newBoneMatrices, physx::PxU32 boneMatricesByteStride, physx::PxU32 numBoneMatrices, ClothingTeleportMode::Enum teleportMode) = 0;
 
 	/**
 	\brief Change the max distance of all active vertices with a scalar parameter
@@ -169,6 +124,8 @@ public:
 
 	/**
 	\brief Sets the wind strength and direction, can be called any time
+
+	\deprecated Use NxClothingActor::getActorDesc() and modify the wind part of it
 
 	\param[in] windAdaption The rate of adaption. The higher this value, the faster the cloth reaches the wind velocity. Set to 0 to turn off wind
 	\param[in] windVelocity The target velocity each vertex tries to achieve.
@@ -195,27 +152,6 @@ public:
 	virtual physx::PxF32 getMaxDistanceBlendTime() const = 0;
 
 	/**
-	\brief \b DEPRECATED sets or clears flag.
-
-	\deprecated Use NxClothingActor::getActorDesc() and modify the flag part of it
-	\note It is safe to call this even during simulation.
-	*/
-	virtual void setFlag(NxApexClothingFlag::Enum flag, bool on) = 0;
-
-	/**
-	\brief \b DEPRECATED gets the current value of a flag.
-
-	\deprecated Use NxClothingActor::getActorDesc() and read the flag part of it
-	*/
-	virtual bool getFlag(NxApexClothingFlag::Enum flag) = 0;
-
-	/**
-	\brief returns the current numbers of frames that the output is delayed from the animation input.
-	This frame delay depends on the flags for parallel skinning and is in the range of [0, 2].
-	*/
-	virtual physx::PxU32 getFrameDelay() = 0;
-
-	/**
 	\brief Tells the actor if it will be rendered or not.
 	If an actor is simulated, but not rendered, some computations (skinning, normal and tangent calculation)
 	doesn't need to be done.
@@ -239,6 +175,11 @@ public:
 	\brief Returns if the simulation is currently stopped for this actor.
 	*/
 	virtual bool isFrozen() const = 0;
+
+	/**
+	\brief Returns whether the actor is simulated using the 2.8.x or the 3.x cloth solver.
+	*/
+	virtual ClothSolverMode::Enum getClothSolverMode() const = 0;
 
 	/**
 	\brief \b DEPRECATED Sets LOD parameters that control how the distance from the eye position should influence the benefit of an object.
@@ -278,13 +219,25 @@ public:
 	/**
 	\brief Raycasts against the NxClothingActor
 
-	\param [in] worldRay	The world ray, direction needs not to be normalized
-	\param [out] time		Impact time
-	\param [out] normal		Impact normal in world space
+	\param [in] worldOrigin		The world ray's origin
+	\param [in] worldDirection	The world ray's direction, needs not to be normalized
+	\param [out] time			Impact time
+	\param [out] normal			Impact normal in world space
+	\param [out] vertexIndex	Vertex index that was hit
 
 	\return true if this actor is hit
 	*/
-	virtual bool rayCast(const NxRay& worldRay, physx::PxF32& time, physx::PxVec3& normal) = 0;
+	virtual bool rayCast(const PxVec3& worldOrigin, const PxVec3& worldDirection, physx::PxF32& time, physx::PxVec3& normal, physx::PxU32& vertexIndex) = 0;
+
+	/**
+	\brief Attach a vertex to a global position
+	*/
+	virtual void attachVertexToGlobalPosition(PxU32 vertexIndex, const PxVec3& globalPosition) = 0;
+
+	/**
+	\brief Free a previously attached vertex
+	*/
+	virtual void freeVertex(PxU32 vertexIndex) = 0;
 
 	/**
 	\brief Returns the actively selected material.
@@ -295,6 +248,11 @@ public:
 	\brief Sets which clothing material is used from the assets library
 	*/
 	virtual void setClothingMaterial(physx::PxU32 index) = 0;
+
+	/**
+	\brief Sets the override material for the submesh with the given index.
+	*/
+	virtual void setOverrideMaterial(PxU32 submeshIndex, const char* overrideMaterialName) = 0;
 
 	/**
 	\brief sets the recompute callback for an individual actor, can be NULL to use default.
@@ -325,7 +283,17 @@ public:
 	/**
 	\brief Returns how much an Actor will cost at maximum
 	*/
-	virtual physx::PxU32 getMaximumSimulationBudget() const = 0;
+	virtual physx::PxF32 getMaximumSimulationBudget() const = 0;
+
+	/**
+	\brief Returns the number of currently simulation vertices.
+
+	\note	This is not the to be used for getSimulationVertices.
+			getNumSimulatedVertices returns the number
+			of actually simulated verts, while getSimulationVertices returns the complete
+			physical mesh, regardless of the current physical lod
+	*/
+	virtual physx::PxU32 getNumSimulatedVertices() const = 0;
 };
 
 PX_POP_PACK
@@ -333,4 +301,4 @@ PX_POP_PACK
 }
 } // namespace physx::apex
 
-#endif
+#endif // NX_CLOTHING_ACTOR_H

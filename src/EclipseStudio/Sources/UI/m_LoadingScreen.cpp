@@ -12,6 +12,9 @@
 
 LoadingScreen::LoadingScreen( const char * movieName ) 
 : UIMenu(movieName) 
+,m_MapName(NULL)
+,m_MapDesc(NULL)
+,m_TipOfTheDay(NULL)
 {
 	m_pBackgroundTex = 0;
 	m_RenderingDisabled = false;
@@ -24,15 +27,30 @@ LoadingScreen::~LoadingScreen()
 	if(m_pBackgroundTex)
 		r3dRenderer->DeleteTexture(m_pBackgroundTex);
 	m_pBackgroundTex = 0;
+
+	m_GFX_Main.SetUndefined();
+
+	SAFE_DELETE_ARRAY(m_MapName);
+	SAFE_DELETE_ARRAY(m_MapDesc);
+	SAFE_DELETE_ARRAY(m_TipOfTheDay);
 }
 
 //------------------------------------------------------------------------
 
 bool LoadingScreen::Initialize()
 {
-//	char EulaText[70000] = "";
+#define MAKE_CALLBACK(FUNC) new r3dScaleformMovie::TGFxEICallback<LoadingScreen>(this, &LoadingScreen::FUNC)
+	gfxMovie.RegisterEventHandler("eventRegisterUI", MAKE_CALLBACK(eventRegisterUI));
 
 	return true;
+}
+
+void LoadingScreen::eventRegisterUI(r3dScaleformMovie* pMovie, const Scaleform::GFx::Value* args, unsigned argCount)
+{
+	m_GFX_Main = args[0];
+
+	if(m_MapName)
+		updateUIDataText(m_MapName, m_MapDesc, m_TipOfTheDay);
 }
 
 void ClearFullScreen_Menu();
@@ -44,7 +62,7 @@ int LoadingScreen::Update()
 	r3dMouse::Show();
 	r3dStartFrame();
 
-	if(r3dRenderer->DeviceAvailable)
+	if( r3dRenderer->DeviceAvailable )
 	{
 		r3dRenderer->StartRender(1);
 		r3dRenderer->StartFrame();
@@ -53,33 +71,37 @@ int LoadingScreen::Update()
 
 		ClearFullScreen_Menu();
 
-		if(m_pBackgroundTex)
-		{
-			float x = 0.0f;
-			float y = 0.0f;
-			float w = 0.0f;
-			float h = 0.0f;
+		// for now just draw a static picture in background, later on will be a video
+		r3d_assert(m_pBackgroundTex);
 
-			r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
-			r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
-		}
+		float x, y, w, h;
+		r3dRenderer->GetBackBufferViewport(&x, &y, &w, &h);
+		D3DVIEWPORT9 oldVp, newVp;
 
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-		
+		r3dRenderer->DoGetViewport(&oldVp);
+		newVp = oldVp;
+		newVp.X = 0;
+		newVp.Y = 0;
+		newVp.Width = r3dRenderer->d3dpp.BackBufferWidth;
+		newVp.Height = r3dRenderer->d3dpp.BackBufferHeight;
+		r3dRenderer->SetViewport( (float)newVp.X, (float)newVp.Y, (float)newVp.Width, (float)newVp.Height );
+		DWORD oldScissor = 0;
+		r3dRenderer->pd3ddev->GetRenderState(D3DRS_SCISSORTESTENABLE, &oldScissor);
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+		r3dDrawBox2D(x, y, w, h, r3dColor24::white, m_pBackgroundTex);
+		r3dRenderer->SetViewport( (float)oldVp.X, (float)oldVp.Y, (float)oldVp.Width, (float)oldVp.Height );
+		r3dRenderer->pd3ddev->SetRenderState(D3DRS_SCISSORTESTENABLE, oldScissor);
+
 		if(!m_RenderingDisabled)
 		{
 			gfxMovie.UpdateAndDraw();
 		}
 
-		r3dRenderer->Flush();
-
-		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-		r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_NZ);
-
+		r3dRenderer->Flush();  
 		r3dRenderer->EndFrame();
 	}
 
-	r3dRenderer->EndRender(true);
+	r3dRenderer->EndRender( true );
 	r3dEndFrame();
 
 	return 0;
@@ -96,52 +118,92 @@ void LoadingScreen::SetLoadingTexture(const char* ImagePath)
 	r3d_assert(m_pBackgroundTex);
 }
 
-void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const wchar_t* Message, int mapType, const wchar_t* tip_of_the_day )
+void LoadingScreen::SetData( const char* ImagePath, const wchar_t* Name, const wchar_t* Message, const wchar_t* tip_of_the_day )
 {
 	R3D_ENSURE_MAIN_THREAD();
+
+	SAFE_DELETE_ARRAY(m_MapName);
+	SAFE_DELETE_ARRAY(m_MapDesc);
+	SAFE_DELETE_ARRAY(m_TipOfTheDay);
 
 	if(!m_RenderingDisabled)
 		SetLoadingTexture(ImagePath);
 
-	if(g_num_matches_played->GetInt() == 1 && g_num_game_executed2->GetInt()==1) // first time launch of the game, show keyboard schematic
+	r3d_assert(_CrtCheckMemory());
+	if(m_GFX_Main.IsUndefined())
 	{
-		gfxMovie.SetVariable("_root.Main._visible", false);
-		gfxMovie.SetVariable("_root.Main2._visible", true);
+		if(Name)
+		{
+			m_MapName = new wchar_t[wcslen(Name)+1];
+			r3dscpy(m_MapName, Name);
+		}
+		if(Message)
+		{
+			m_MapDesc = new wchar_t[wcslen(Message)+1];
+			r3dscpy(m_MapDesc, Message);
+		}
+		if(tip_of_the_day)
+		{
+			m_TipOfTheDay = new wchar_t[wcslen(tip_of_the_day)+1];
+			r3dscpy(m_TipOfTheDay, tip_of_the_day);
+		}
 	}
 	else
+		updateUIDataText(Name, Message, tip_of_the_day);
+	r3d_assert(_CrtCheckMemory());
+}
+
+void LoadingScreen::updateUIDataText(const wchar_t* name, const wchar_t* desc, const wchar_t* tip)
+{
+	r3d_assert(_CrtCheckMemory());
+	/*if(g_num_matches_played->GetInt() == 1 && g_num_game_executed2->GetInt()==1) // first time launch of the game, show keyboard schematic
 	{
-		gfxMovie.SetVariable("_root.Main._visible", true);
-		gfxMovie.SetVariable("_root.Main2._visible", false);
+		Scaleform::GFx::Value::DisplayInfo dinfo;
+		dinfo.SetVisible(true);
+		m_GFX_Main2.SetDisplayInfo(dinfo);
+		dinfo.SetVisible(false);
+		m_GFX_Main.SetDisplayInfo(dinfo);
+	}
+	else*/
+	{
+		Scaleform::GFx::Value::DisplayInfo dinfo;
+		dinfo.SetVisible(true);
+		m_GFX_Main.SetDisplayInfo(dinfo);
 	}
 
+	Scaleform::GFx::Value tmp, tmp2, tmp3;
+	/*m_GFX_Main2.GetMember("Name", &tmp);
+	tmp.GetMember("Name", &tmp2);
+	tmp2.GetMember("Text", &tmp3);
+	tmp3.SetText(name);*/
+	m_GFX_Main.GetMember("Name", &tmp);
+	tmp.GetMember("Name", &tmp2);
+	tmp2.GetMember("Text", &tmp3);
+	tmp3.SetText(name);
 
-	gfxMovie.SetVariable("_global.MapName", Name);
-	gfxMovie.SetVariable("_global.MapDesc", Message);
+	/*m_GFX_Main2.GetMember("Desc", &tmp);
+	tmp.GetMember("Text", &tmp2);
+	tmp2.GetMember("Text", &tmp3);
+	tmp3.SetText(desc);*/
+	m_GFX_Main.GetMember("Desc", &tmp);
+	tmp.GetMember("Text", &tmp2);
+	tmp2.GetMember("Text", &tmp3);
+	tmp3.SetText(desc);
+
+	m_GFX_Main.GetMember("Tip", &tmp);
+	Scaleform::GFx::Value::DisplayInfo dinfo;
+	dinfo.SetVisible(tip!=NULL);
+	tmp.SetDisplayInfo(dinfo);
+	if(tip)
 	{
-		const wchar_t* gameMode=L""; const char* modeType="";
-		switch(mapType)
-		{
-		case GBGameInfo::MAPT_Bomb:
-			gameMode = gLangMngr.getString("$GameMode_Sabotage");
-			modeType = "Siege";
-			break;
-		case GBGameInfo::MAPT_Conquest:
-			gameMode = gLangMngr.getString("$GameMode_Conquest");
-			modeType = "Conquest";
-			break;
-		case GBGameInfo::MAPT_Deathmatch:
-			gameMode = gLangMngr.getString("$GameMode_Deathmatch");
-			modeType = "DM";
-			break;
-		default:
-			break;
-		}
-		gfxMovie.SetVariable("_global.MapModeName", gameMode);
-		gfxMovie.SetVariable("_global.MapModeType", modeType); //Conquest, DM, Siege
-	}
+		tmp.GetMember("Tip", &tmp2);
+		tmp2.GetMember("Text", &tmp3);
+		tmp3.SetText(tip);
 
-	gfxMovie.SetVariable("_global.TipCaption", gLangMngr.getString("TipOfTheDay"));
-	gfxMovie.SetVariable("_global.TipText", tip_of_the_day?tip_of_the_day:L"");
+		tmp2.GetMember("Caption", &tmp3);
+		tmp3.SetText(gLangMngr.getString("TipOfTheDay"));
+	}
+	r3d_assert(_CrtCheckMemory());
 }
 
 //------------------------------------------------------------------------
@@ -150,7 +212,31 @@ void
 LoadingScreen::SetProgress( float progress )
 {
 	R3D_ENSURE_MAIN_THREAD();
-	gfxMovie.SetVariable("_global.LoadedPercent", progress*100);
+	if(!m_GFX_Main.IsUndefined())
+	{
+		Scaleform::GFx::Value tmp, tmp1, tmp2, tmp3, tmp4;
+		m_GFX_Main.GetMember("Bar", &tmp);
+		tmp.GetMember("RankBar", &tmp1);
+		tmp1.GetMember("Bar", &tmp2);
+		float baseWidth = 1510;
+		tmp2.GetMember("width", &tmp4);
+		tmp4.SetNumber(baseWidth*R3D_CLAMP(progress, 0.01f, 1.0f));
+		tmp2.SetMember("width", tmp4);
+
+		/*m_GFX_Main2.GetMember("Bar", &tmp);
+		tmp.GetMember("RankBar", &tmp1);
+		tmp1.GetMember("Bar", &tmp2);
+		tmp1.GetMember("Scale", &tmp3);
+		tmp3.GetMember("width", &tmp4);
+		baseWidth = (float)tmp4.GetNumber();
+		tmp2.GetMember("width", &tmp4);
+		tmp4.SetNumber(baseWidth*R3D_CLAMP(progress, 0.01f, 1.0f));
+		tmp2.SetMember("width", tmp4);*/
+
+//		Bar._width = Math.round(Scale._width*_global.LocalPercent/100)-5;
+
+	}
+	//gfxMovie.SetVariable("_global.LoadedPercent", progress*100);
 }
 
 //------------------------------------------------------------------------
@@ -235,17 +321,7 @@ int DoLoadingScreen( volatile LONG* Loading, const wchar_t* LevelName, const wch
 
 	char tempStr[32];
 	sprintf(tempStr, "TipOfTheDay%d", int(floorf(u_GetRandom(0.0f, 12.99f))));
-	if(gameMode == GBGameInfo::MAPT_Conquest || gameMode == GBGameInfo::MAPT_Bomb)
-	{
-		if(u_GetRandom(0.0f, 1.0f) > 0.7f)
-		{
-			if(gameMode == GBGameInfo::MAPT_Conquest)
-				sprintf(tempStr, "ConquestTipOfTheDay%d", int(floorf(u_GetRandom(0.0f, 3.99f))));
-			else if(gameMode == GBGameInfo::MAPT_Bomb)
-				sprintf(tempStr, "SabotageTipOfTheDay%d", int(floorf(u_GetRandom(0.0f, 4.99f))));
-		}
-	}
-	gLoadingScreen->SetData( sFullPath, LevelName, LevelDescription, gameMode, gLangMngr.getString(tempStr));
+	gLoadingScreen->SetData( sFullPath, LevelName, LevelDescription, gLangMngr.getString(tempStr));
 
 	bool checkTimeOut = TimeOut != 0.f;
 
@@ -285,7 +361,7 @@ int DoConnectScreen( volatile LONG* Loading, const wchar_t* Message, float TimeO
 {
 	r3d_assert( gLoadingScreen );
 
-	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, -1, NULL );
+	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, NULL );
 
 	bool checkTimeOut = TimeOut != 0.f;
 
@@ -317,7 +393,7 @@ int DoConnectScreen( T* Logic, bool (T::*CheckFunc)(), const wchar_t* Message, f
 {
 	r3d_assert( gLoadingScreen );
 
-	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, -1, NULL );
+	gLoadingScreen->SetData( "Data\\Menu\\ConnectScreen.dds", gLangMngr.getString("Connecting"), Message, NULL );
 
 	bool checkTimeOut = TimeOut != 0.f;
 

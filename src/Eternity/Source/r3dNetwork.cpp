@@ -8,10 +8,6 @@
 #include "RakNetStatistics.h"
 #include "GetTime.h"
 
-#pragma warning(disable: 4996)
-#pragma warning(disable: 4267)
-#pragma warning(disable: 4244)
-
 	int	_r3d_Network_DoLog = 0;
 
 class r3dNetworkImpl
@@ -236,63 +232,34 @@ void r3dNetwork::Update()
   return;
 }
 
-static int RakNet_FillBindAddresses(RakNet::SocketDescriptor* binds, int port)
+static int RakNet_FillBindAddresses(RakNet::SocketDescriptor* binds, int port, DWORD* firstIP)
 {
   // get all computer available ip addresses
   char ac[256];
   if(gethostname(ac, sizeof(ac)) == -1)
     r3dError("gethostname failed\n");
-  addrinfo hints;
-  ZeroMemory(&hints, sizeof(hints));
-
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_protocol = IPPROTO_UDP;
-
-  addrinfo* result = NULL;
-
-  int addrResult = getaddrinfo(ac, NULL, &hints, &result);
-  if(addrResult != 0 || result == NULL)
-    r3dError("getaddrinfo %s failed: %d\n", ac, addrResult);
+  struct hostent* phe = gethostbyname(ac);
+  if(phe == NULL) 
+    r3dError("gethostbyname %s failed\n", ac);
 
   int numBinds = 0;
+  for(numBinds = 0; numBinds < 128; ++numBinds) {
+    if(phe->h_addr_list[numBinds] == NULL)
+      break;
+      
+    in_addr ipaddr;
+    memcpy(&ipaddr, phe->h_addr_list[numBinds], sizeof(in_addr));
 
-  for(addrinfo* ptr = result; ptr != NULL && numBinds < 127; ptr = ptr->ai_next)
-  {
-    if(ptr->ai_family != AF_INET || ptr->ai_addr == NULL)
-      continue;
-
-    sockaddr_in* ipv4 = reinterpret_cast<sockaddr_in*>(ptr->ai_addr);
-
+    if(numBinds == 0)
+      *firstIP = ipaddr.s_addr;
+    
     char ip[128];
-    ZeroMemory(ip, sizeof(ip));
-
-    DWORD ipLen = sizeof(ip);
-
-    sockaddr_in addr;
-    ZeroMemory(&addr, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr = ipv4->sin_addr;
-
-    if(WSAAddressToStringA(
-      reinterpret_cast<SOCKADDR*>(&addr),
-      sizeof(addr),
-      NULL,
-      ip,
-      &ipLen
-    ) != 0)
-    {
-      continue;
-    }
-
+    r3dscpy(ip, inet_ntoa(ipaddr));
     r3dOutToLog("IP: %s\n", ip);
 
+    // add raknet bind
     binds[numBinds] = RakNet::SocketDescriptor(port, ip);
-    ++numBinds;
   }
-
-  if(result)
-    freeaddrinfo(result);
 
   // add localhost binding as well
   binds[numBinds++] = RakNet::SocketDescriptor(port, "127.0.0.1");
@@ -318,7 +285,7 @@ int r3dNetwork::CreateHost(int port, int numPeers)
   // otherwise on machines with multiple IPs default gateway can be different from external IP
   // and send functions will fail.
   RakNet::SocketDescriptor sdescs[128 + 1];
-  int numBinds = RakNet_FillBindAddresses(&sdescs[0], port);
+  int numBinds = RakNet_FillBindAddresses(&sdescs[0], port, &firstBindIP_);
   RakNet::StartupResult sr = impl->peer->Startup(numPeers, &sdescs[0], numBinds);
   if(sr != RakNet::RAKNET_STARTED) {
     r3dError("r3dNetwork::CreateHost failed %d\n", sr);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,15 +37,21 @@
 #include <SamplePlatform.h>
 #include <stdio.h>
 
-#if defined(RENDERER_XBOX360)
-extern int gWindowWidth;
-extern int gWindowHeight;
-#endif
+using namespace SampleRenderer;
 
-RendererWindow::RendererWindow(void)
+RendererWindow::RendererWindow(void) : m_platform(NULL), m_isOpen(false)
 {
-	m_platform = createPlatform(this);
-	m_isOpen = false;
+	m_platform = SampleFramework::createPlatform(this);
+}
+
+bool RendererWindow::hasFocus() const
+{
+	return m_platform->hasFocus();
+}
+
+void RendererWindow::setFocus(bool b) 
+{
+	m_platform->setFocus(b);
 }
 
 RendererWindow::~RendererWindow(void)
@@ -53,7 +59,7 @@ RendererWindow::~RendererWindow(void)
 	DELETESINGLE(m_platform);
 }
 
-bool RendererWindow::open(physx::PxU32 width, physx::PxU32 height, const char *title, bool fullscreen)
+bool RendererWindow::open(PxU32 width, PxU32 height, const char *title, bool fullscreen)
 {
 	bool ok         = false;
 	RENDERER_ASSERT(width && height, "Attempting to open a window with invalid width and/or height.");
@@ -96,32 +102,32 @@ void RendererWindow::update(void)
 #if defined(RENDERER_MACOSX)
 	if (isOpen())
 	{
-		if (!updateWindow())
+		if (!m_platform->updateWindow())
 		{
 			close();
 		}
 	}
     return;
 #endif
+
+#if defined(RENDERER_ANDROID)
+	if (!m_platform->isOpen())
+		return;
+#endif
+
 	if(isOpen())
 	{
 		onDraw();
 	}
 }
 
-// get/set the size of the window...
-void RendererWindow::getSize(physx::PxU32 &width, physx::PxU32 &height) const
-{
-	m_platform->getWindowSize(width, height);
-}
-
-void RendererWindow::setSize(physx::PxU32 width, physx::PxU32 height)
+void RendererWindow::setSize(PxU32 width, PxU32 height)
 {
 	m_platform->setWindowSize(width, height);
 }
 
 // get the window's title...
-void RendererWindow::getTitle(char *title, physx::PxU32 maxLength) const
+void RendererWindow::getTitle(char *title, PxU32 maxLength) const
 {
 	m_platform->getTitle(title, maxLength);
 }

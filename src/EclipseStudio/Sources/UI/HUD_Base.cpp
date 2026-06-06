@@ -68,6 +68,37 @@ BaseHUD::SetCamPos( const r3dPoint3D& pos )
 //------------------------------------------------------------------------
 #ifndef FINAL_BUILD
 
+DECLARE_CMD( vmemcrash )
+{
+	void MemCrash( bool );
+	MemCrash( true );
+}
+
+
+DECLARE_CMD( memcrash )
+{
+	void MemCrash( bool );
+	MemCrash( false );
+}
+
+DECLARE_CMD( zspawn )
+{
+	void SpawnZombie();
+	SpawnZombie();
+}
+
+DECLARE_CMD( dumpobjs )
+{
+	void DumpObjects();
+	DumpObjects();
+}
+
+DECLARE_CMD( dumpheaps )
+{
+	void DumpHeaps();
+	DumpHeaps();
+}
+
 DECLARE_CMD( dumptex )
 {
 	void DumpTextures();
@@ -193,21 +224,6 @@ DECLARE_CMD( aura )
 	DebugCyclePlayerAura();
 }
 
-DECLARE_CMD( tcamo )
-{
-	void DebugTransparrentCamo( float alpha, int ToggleOrOn );
-
-	if( ev.NumArgs() > 1 )
-	{
-		float alpha = ev.GetFloat( 1 );
-		DebugTransparrentCamo( alpha, 1 );
-	}
-	else
-	{
-		DebugTransparrentCamo( 0.0f, 0 );
-	}
-}
-
 DECLARE_CMD( die )
 {
 	void DebugPlayerDie();
@@ -230,22 +246,26 @@ DECLARE_CMD( export_physx_scene )
 
 void RegisterHUDCommands()
 {
-	REG_CCOMMAND( dumptex, 0, "Dump loaded textures" ) ;
-	REG_CCOMMAND( flushmesh, 0, "Flush released meshes") ;
-	REG_CCOMMAND( testfb, 0, "Test flash bang") ;
-	REG_CCOMMAND( terrafetch, 0, "Switch terrain vfetch flag" ) ;
-	REG_CCOMMAND( rts, 0, "Dump render target stats" ) ;
-	REG_CCOMMAND( armory, 0, "Dump armory stats usage" ) ;
-	REG_CCOMMAND( playertex, 0, "Dump player texture stats" ) ;
-	REG_CCOMMAND( vmem, 0, "Dump video memory stats" ) ;
-	REG_CCOMMAND( phystats, 0, "Dump physics stats" ) ;
-	REG_CCOMMAND( setpos, 0, "Teleport observer to given coordinates" ) ;
-	REG_CCOMMAND( cursor, 0, "Turn mouse cursor on/off" ) ;
-	REG_CCOMMAND( showripples, 0, "Show ripples tex on/off" ) ;
-	REG_CCOMMAND( aura, 0, "Cycle player aura state"  ) ;
-	REG_CCOMMAND( tcamo, 0, "Turn on/off player transparent camouflage" ) ;
-	REG_CCOMMAND( die, 0, "Make character die!" ) ;
-	REG_CCOMMAND( ragdoll, 0, "Switch character to ragdoll" ) ;
-	REG_CCOMMAND( export_physx_scene, 0, "Export whole physx scene into collection file" ) ;
+	REG_CCOMMAND( vmemcrash, 0, "Allocate video memory using d3d until the app crashes" );
+	REG_CCOMMAND( memcrash, 0, "Allocate system memory using d3d until the app crashes" );
+	REG_CCOMMAND( zspawn, 0, "Spawn zombie" );
+	REG_CCOMMAND( dumpobjs, 0, "Dump objects stats" );
+	REG_CCOMMAND( dumpheaps, 0, "Dump process heaps" );
+	REG_CCOMMAND( dumptex, 0, "Dump loaded textures" );
+	REG_CCOMMAND( flushmesh, 0, "Flush released meshes");
+	REG_CCOMMAND( testfb, 0, "Test flash bang");
+	REG_CCOMMAND( terrafetch, 0, "Switch terrain vfetch flag" );
+	REG_CCOMMAND( rts, 0, "Dump render target stats" );
+	REG_CCOMMAND( armory, 0, "Dump armory stats usage" );
+	REG_CCOMMAND( playertex, 0, "Dump player texture stats" );
+	REG_CCOMMAND( vmem, 0, "Dump video memory stats" );
+	REG_CCOMMAND( phystats, 0, "Dump physics stats" );
+	REG_CCOMMAND( setpos, 0, "Teleport observer to given coordinates" );
+	REG_CCOMMAND( cursor, 0, "Turn mouse cursor on/off" );
+	REG_CCOMMAND( showripples, 0, "Show ripples tex on/off" );
+	REG_CCOMMAND( aura, 0, "Cycle player aura state"  );
+	REG_CCOMMAND( die, 0, "Make character die!" );
+	REG_CCOMMAND( ragdoll, 0, "Switch character to ragdoll" );
+	REG_CCOMMAND( export_physx_scene, 0, "Export whole physx scene into collection file" );
 }
 #endif

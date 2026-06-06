@@ -1,3 +1,0 @@
-<Class Name="Screen_ViewModel">
-  <Property Name="Characters" Type="Collection" SubType="NoesisStudioInternals.Character_ViewModel" CollectionMinItemCount="8" CollectionMaxItemCount="8"/>
-</Class>

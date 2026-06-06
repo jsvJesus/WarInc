@@ -79,6 +79,16 @@ struct MeshDeferredRenderable : Renderable
 	r3dMesh*				Mesh;
 };
 
+struct MeshDeferredHighlightRenderable : Renderable
+{
+	static void DoDraw( Renderable* RThis, float distance, const r3dCamera& Cam );
+	
+	void Init( r3dMesh* mesh );
+
+	r3dMesh*	Mesh;
+};
+
+
 struct MeshShadowRenderable : Renderable
 {
 	static void DrawSingleBatch( Renderable* RThis, const r3dCamera& Cam );
@@ -120,7 +130,7 @@ public:
 		obfDynaLightApplied   = 0x0100,	// dynamic lights applied.
 		obfSaveColors         = 0x0200,
 		obfMissingSource      = 0x0400,	// no .SCO file when loading mesh ( only .SCB was there )
-		obfPlayerMesh         = 0x0800, // add to player buffer when calculating statistics
+		obfPlayerMesh         = 0x0800, // add to player buffer when calculating statistics + draw double depth shadows differently ( gaps in body parts are intollerable )
 	};
 
 	enum EVertexFlags
@@ -267,6 +277,7 @@ public:
 	void		GetWorldMatrix( const r3dVector& vPos, const r3dVector& vScl, const r3dVector& vRot, D3DXMATRIX &mRes );
 	void		SetVSConsts(const r3dVector& pos, const r3dVector& scale, const D3DXMATRIX& rotation);
 	void		SetVSConsts(const D3DXMATRIX& world);
+	void		SetVSConsts_Localized(const D3DXMATRIX& world);
 
 	void		AppendShadowRenderables( RenderArray& oArr );
 	void		AppendRenderablesDeferred( RenderArray& oArr, const r3dColor& color );
@@ -322,7 +333,8 @@ public:
 };
 
 void r3dMeshSetVSConsts( const D3DXMATRIX& world, const r3dPoint3D* UnpackScale, const r3dPoint2D* TexcUnpackScale );
-void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &world, const r3dPoint3D* ScaleBox, const r3dPoint2D* TexcUnpackScale );
+void r3dMeshSetVSConsts_Localized( const D3DXMATRIX& world, const r3dPoint3D* UnpackScale, const r3dPoint2D* TexcUnpackScale );
+void r3dPrepareMeshVSConsts(PrecalculatedMeshVSConsts &out, const D3DXMATRIX &world, const r3dPoint3D* ScaleBox, const r3dPoint2D* TexcUnpackScale, const D3DXMATRIX& viewMtx, const D3DXMATRIX& viewProjMtx );
 /**	Set matrices into shader constants. */
 void r3dMeshSetVSTexcUnpackScale( r3dPoint2D unpackScale ) ;
 void r3dApplyPreparedMeshVSConsts(const PrecalculatedMeshVSConsts &vsc);

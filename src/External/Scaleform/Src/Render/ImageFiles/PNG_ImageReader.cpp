@@ -22,7 +22,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #ifdef SF_ENABLE_LIBPNG
 
 #ifdef SF_OS_WIN32
-#include "../3rdParty/libpng-1.5.13/png.h"
+#include "../3rdParty/libpng/png.h"
 
 #else
 #include <png.h>
@@ -61,12 +61,12 @@ static void SF_CDECL png_error_handler(png_structp png_ptr, png_const_charp msg)
         SFstrncpy(pcontext->errorMessage, sizeof(pcontext->errorMessage), msg, sizeof(pcontext->errorMessage) - 1);
         pcontext->errorMessage[sizeof(pcontext->errorMessage) - 1] = 0;
     }
-    png_longjmp(png_ptr, 1);
+    longjmp(png_ptr->jmpbuf, 1);
 }
 
 static void SF_CDECL png_read_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-    File* pfile = reinterpret_cast<File*>(png_get_io_ptr(png_ptr));
+    File* pfile = reinterpret_cast<File*>(png_ptr->io_ptr);
     int check = pfile->Read(data, (int)length);
 
     if (check < 0 || ((png_size_t)check) != length)
@@ -149,7 +149,7 @@ static int GFxPngReadInfo(PngContext* context)
 
     // row_bytes is the width x number of channels
 
-    context->ulRowBytes = (png_uint_32)png_get_rowbytes(context->png_ptr, context->info_ptr);
+    context->ulRowBytes = png_get_rowbytes(context->png_ptr, context->info_ptr);
 
     return 1;
 }
@@ -482,7 +482,7 @@ FileReader FileReader::Instance;
 
 static void SF_CDECL png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
-    File* pfile = reinterpret_cast<File*>(png_get_io_ptr(png_ptr));
+    File* pfile = reinterpret_cast<File*>(png_ptr->io_ptr);
     int check = pfile->Write(data, (int)length);
 
     if (check < 0 || ((png_size_t)check) != length)

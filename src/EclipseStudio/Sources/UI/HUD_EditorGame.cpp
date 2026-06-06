@@ -34,7 +34,7 @@ void EditorGameHUD :: SetCameraDir (r3dPoint3D vPos )
 
 r3dPoint3D EditorGameHUD :: GetCameraDir () const
 {
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId);
 	if ( pl )
 		return pl->m_vVision;
 	else
@@ -98,7 +98,7 @@ void RigEffect_SprintBlur (float Lerp)
 	gPFX_RadialBlur.SetDefaultSettings( sts );
 }
 
-void PlayerStateVars_s::Lerp(obj_AI_Player* pl, PlayerStateVars_s& s1, PlayerStateVars_s& s2, float lerpV)
+void PlayerStateVars_s::Lerp(obj_Player* pl, PlayerStateVars_s& s1, PlayerStateVars_s& s2, float lerpV)
 {
 	if(s2.allowScope && pl->hasScopeMode() && pl->m_isAiming)
 	{
@@ -147,6 +147,10 @@ const r3dPoint3D gCameraPosCrouch(0.0f, -0.4f,-2.7f);
 const r3dPoint3D gCameraPosCrouchAim(0.8f, -0.3f, -1.47f);
 const r3dPoint3D gCameraPosCrouchScope(0.0f, -0.6f, 0.0f);
 
+const r3dPoint3D gCameraPosProne(0.0f, -0.6f,-2.7f);
+const r3dPoint3D gCameraPosProneAim(0.8f, -0.5f, -1.47f);
+const r3dPoint3D gCameraPosProneScope(0.0f, -0.6f, 0.0f);
+
 // THIRD PERSON CAMERA, CROSS HAIR IN THE CENTER OF THE SCREEN!
 const r3dPoint3D gCameraPosIdle2(0.5f, -0.2f, -2.0f);
 const r3dPoint3D gCameraPosIdleAim2(0.73f, -0.32f, -1.05f);
@@ -156,6 +160,10 @@ const r3dPoint3D gCameraPosSprint2(0.5f, -0.2f, -2.52f);
 const r3dPoint3D gCameraPosCrouch2(0.5f,-0.7f,-1.5f);
 const r3dPoint3D gCameraPosCrouchAim2(0.57f, -0.7f, -1.05f);
 const r3dPoint3D gCameraPosCrouchScope2(0.15f, -0.7f, 0.0f);
+
+const r3dPoint3D gCameraPosProne2(0.5f,-1.1f,-1.5f);
+const r3dPoint3D gCameraPosProneAim2(0.57f, -1.3f, -1.05f);
+const r3dPoint3D gCameraPosProneScope2(0.15f, -1.3f, 0.0f);
 
 // FIRST PERSON CAMERA, CROSS HAIR IN THE CENTER OF THE SCREEN!
 const r3dPoint3D gCameraPosIdle3(0.0f, -.19f, 0.0f);
@@ -167,15 +175,16 @@ const r3dPoint3D gCameraPosCrouch3(0.0f, -.6f, 0.0f);
 const r3dPoint3D gCameraPosCrouchAim3(0.0f, -.6f, 0.0f);
 const r3dPoint3D gCameraPosCrouchScope3(0.0f, -.6f, 0.0f);
 
+const r3dPoint3D gCameraPosProne3(0.0f, -1.3f, 0.0f);
+const r3dPoint3D gCameraPosProneAim3(0.0f, -1.3f, 0.0f);
+const r3dPoint3D gCameraPosProneScope3(0.0f, -1.3f, 0.0f);
+
 //////////////////////////////////////////////////////////////////////////
 
 const float gMaximumScopeFov = 3;
 const float gMaximumScopeSens = 0.005f;
 
 r3dPoint3D TPSHudCameraTarget(0.0f, 0.0f, 2.0f); // pt: target should be the same for all states, otherwise your aim will move and make it very difficult to shoot someone
-
-float	TPSCameraPointToAdj[3] = {0.0f, 0.0f, 0.0f };
-float   TPSCameraPointToAdjCrouch[3] = {0.0f, 0.0f, 0.0f};
 
 PlayerStateVars_s TPSHudCameras[3][PLAYER_NUM_STATES] = 
 {
@@ -242,6 +251,49 @@ PlayerStateVars_s TPSHudCameras[3][PLAYER_NUM_STATES] =
 			65.0f, 65.0f, 50,
 			0.15f,0.15f,
 			20.0f, -20.0f, false, RigEffect_SprintBlur
+		},
+		// PLAYER_MOVE_PRONE
+		{
+			gCameraPosProne2,
+			gCameraPosProneScope2,
+			60, 60, 60,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_AIM
+		{
+			gCameraPosProneAim2,
+			gCameraPosProneScope2,
+			30, gMaximumScopeFov, 30,
+			0.1f, gMaximumScopeSens,
+			20.0f, -20.0f, true, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_UP
+		{
+			gCameraPosIdle2,
+			gCameraPosScope2,
+			60, 60, 60,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+		// PLAYER_PRONE_DOWN
+		{
+			gCameraPosProne2,
+			gCameraPosProneScope2,
+			60, 60, 60,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_MOVE_IDLE
+		{
+			gCameraPosProne2,
+			gCameraPosProneScope2,
+			60, 60, 60,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
 		},
 
 		// PLAYER_DIE
@@ -316,6 +368,51 @@ PlayerStateVars_s TPSHudCameras[3][PLAYER_NUM_STATES] =
 			55.0f, 55.0f, 50,
 			0.15f,0.15f,
 			20.0f, -20.0f, false, RigEffect_SprintBlur
+		},
+		
+		// PLAYER_MOVE_PRONE
+		{
+			gCameraPosProne,
+			gCameraPosProneScope,
+			50, 50, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_AIM
+		{
+			gCameraPosProneAim,
+			gCameraPosProneScope,
+			30, gMaximumScopeFov, 30,
+			0.1f, gMaximumScopeSens,
+			20.0f, -20.0f, true, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_UP
+		{
+			gCameraPosIdle,
+			gCameraPosScope,
+			50, 50, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_DOWN
+		{
+			gCameraPosProne,
+			gCameraPosProneScope,
+			50, 50, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+	
+		// PLAYER_MOVE_IDLE
+		{
+			gCameraPosProne,
+			gCameraPosProneScope,
+			50, 50, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
 		},
 
 		// PLAYER_DIE
@@ -392,6 +489,51 @@ PlayerStateVars_s TPSHudCameras[3][PLAYER_NUM_STATES] =
 			20.0f, -20.0f, false, RigEffect_SprintBlur
 		},
 
+		// PLAYER_MOVE_PRONE
+		{
+			gCameraPosProne3,
+			gCameraPosProneScope3,
+			60, 60, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_AIM
+		{
+			gCameraPosProneAim3,
+			gCameraPosProneScope3,
+			30, gMaximumScopeFov, 30,
+			0.1f, gMaximumScopeSens,
+			20.0f, -20.0f, true, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_UP
+		{
+			gCameraPosIdle3,
+			gCameraPosScope3,
+			60, 60, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_DOWN
+		{
+			gCameraPosProne3,
+			gCameraPosProneScope3,
+			60, 60, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
+		// PLAYER_PRONE_IDLE
+		{
+			gCameraPosProne3,
+			gCameraPosProneScope3,
+			60, 60, 50,
+			0.26f,0.26f, 
+			20.0f, -20.0f, false, RigEffect_Clear
+		},
+
 		// PLAYER_DIE
 		{
 			gCameraPosSprint3,
@@ -408,7 +550,7 @@ struct CheckTPSCameras
 {
 	CheckTPSCameras()
 	{
-		TL_STATIC_ASSERT( R3D_ARRAYSIZE(TPSHudCameras[0]) == PLAYER_NUM_STATES ) ;
+		COMPILE_ASSERT( R3D_ARRAYSIZE(TPSHudCameras[0]) == PLAYER_NUM_STATES );
 	}
 };
 
@@ -427,7 +569,7 @@ void ProcessCameraRigEditor ()
 	if (imgui_Button(SliderX, SliderY,80,35, "RIG ID", 0, false)) RigID ++;
 	if (RigID > PLAYER_DIE) RigID = PLAYER_IDLE;
 
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(EditorGameHUD::editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(EditorGameHUD::editorPlayerId);
 	if(pl)
 		pl->PlayerState = RigID;
 
@@ -439,6 +581,11 @@ void ProcessCameraRigEditor ()
 		"PLAYER_MOVE_WALK_AIM",
 		"PLAYER_MOVE_RUN",
 		"PLAYER_MOVE_SPRINT",
+		"PLAYER_MOVE_PRONE",
+		"PLAYER_PRONE_AIM",
+		"PLAYER_PRONE_UP",
+		"PLAYER_PRONE_DOWN",
+		"PLAYER_PRONE_IDLE",
 		"PLAYER_DIE",
 	};
 
@@ -455,21 +602,12 @@ void ProcessCameraRigEditor ()
 
 	SliderY += 10;
 	SliderY += imgui_Static(SliderX+40, SliderY, "CAMERA");
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Height", &TPSHudCameras[g_camera_mode->GetInt()][RigID].Position.Y, -1.0f, 2.0f, "%.2f", 1 );
+	SliderY += imgui_Value_Slider( SliderX, SliderY, "Height", &TPSHudCameras[g_camera_mode->GetInt()][RigID].Position.Y, -2.0f, 2.0f, "%.2f", 1 );
 	SliderY += imgui_Value_Slider( SliderX, SliderY, "Distance", &TPSHudCameras[g_camera_mode->GetInt()][RigID].Position.Z, -20.0f, 20.0f, "%.2f", 1 );
 	SliderY += imgui_Value_Slider( SliderX, SliderY, "Offset", &TPSHudCameras[g_camera_mode->GetInt()][RigID].Position.X, -3.0f, 3.0f, "%.2f", 1 );
 	SliderY += imgui_Value_Slider( SliderX, SliderY, "FOV", &TPSHudCameras[g_camera_mode->GetInt()][RigID].FOV, 20.0f, 100.0f, "%.2f", 1 );
 	SliderY += imgui_Value_Slider( SliderX, SliderY, "Sensetivity", &TPSHudCameras[g_camera_mode->GetInt()][RigID].MouseSensetivity, 0.01f, 2.0f, "%.2f", 1 );
 	SliderY +=5;
-
-	/*SliderY += imgui_Static(SliderX+40, SliderY, "CAMERA TARGET");
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Height", &TPSHudCameraTarget.Y, -1.0f, 2.0f, "%.2f", 1 );
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Offset", &TPSHudCameraTarget.X, -3.0f, 3.0f, "%.2f", 1 );
-	SliderY +=5;*/
-	SliderY += imgui_Static(SliderX+40, SliderY, "CAMERA POINT TO");
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Height", &TPSCameraPointToAdj[g_camera_mode->GetInt()], -2.0f, 2.0f, "%.2f", 1 );
-	SliderY += imgui_Value_Slider( SliderX, SliderY, "Height Crouch", &TPSCameraPointToAdjCrouch[g_camera_mode->GetInt()], -2.0f, 2.0f, "%.2f", 1 );
-
 }
 
 
@@ -480,22 +618,20 @@ PlayerStateVars_s SourceRig = TPSHudCameras[0][0];
 PlayerStateVars_s TargetRig = TPSHudCameras[0][0];
 float LerpValue = 0;
 
-void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug );
+void ProcessPlayerMovement(obj_Player* pl, bool editor_debug );
 
 // runs only in editor!
 bool CheckCameraCollision(r3dPoint3D& camPos, const r3dPoint3D& target, bool checkCamera);
-void Get_Camera_Bob(r3dPoint3D& camBob, r3dPoint3D& camUp, const obj_AI_Player* player);
+void Get_Camera_Bob(r3dPoint3D& camBob, r3dPoint3D& camUp, const obj_Player* player);
 void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 {
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId);
 	if (!pl) return;
 
 	if(g_usePlayerEditorCamera)
 	{
 		TargetRig  = TPSHudCameras[g_camera_mode->GetInt()][ActiveCameraRigID];
-		pl->m_siegeArmingTimer = 1.0f; // hack to prevent player from moving
 		ProcessPlayerMovement(pl, true);
-		pl->m_siegeArmingTimer = 0.0f;
 	}
 
 #ifndef FINAL_BUILD
@@ -505,16 +641,8 @@ void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 #endif
 		GameFOV = CurrentRig.FOV;
 
-	// uav camera
-	extern bool SetCameraPlayerUAV(const obj_AI_Player* pl, r3dCamera &Cam);
-	if(SetCameraPlayerUAV(pl, Cam))
-	{
-		FPS_Position = Cam;
-		return;
-	}
-
 	// vehicle camera
-	extern bool SetCameraPlayerVehicle(const obj_AI_Player* pl, r3dCamera &Cam);
+	extern bool SetCameraPlayerVehicle(const obj_Player* pl, r3dCamera &Cam);
 	if(SetCameraPlayerVehicle(pl, Cam))
 	{
 		FPS_Position = Cam;
@@ -524,7 +652,7 @@ void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 	r3dPoint3D CamPos = pl->GetPosition();
 	
 	r3dPoint3D offset = GetCamOffset();
-	CamPos += offset ;
+	CamPos += offset;
 
 	float CharacterHeight = pl->getPlayerHeightForCamera();
 	
@@ -537,7 +665,7 @@ void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 	r3dPoint3D playerPosHead = playerPos; playerPosHead.y += CharacterHeight;
 	{
 		r3dPoint3D savedCamPos = CamPos;
-		if(CheckCameraCollision(CamPos, playerPosHead, true) && (pl->PlayerState == PLAYER_MOVE_CROUCH || pl->PlayerState == PLAYER_MOVE_CROUCH_AIM)) 
+		if(CheckCameraCollision(CamPos, playerPosHead, true) && (pl->PlayerState == PLAYER_MOVE_CROUCH || pl->PlayerState == PLAYER_MOVE_CROUCH_AIM || pl->PlayerState == PLAYER_MOVE_PRONE || pl->PlayerState == PLAYER_PRONE_AIM || pl->PlayerState == PLAYER_PRONE_IDLE)) 
 		{
 			CamPos = savedCamPos;
 			playerPosHead = playerPos;
@@ -545,9 +673,9 @@ void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 			CheckCameraCollision(CamPos, playerPosHead, true);
 		}
 	}
-	PointTo += (pl->m_vVision+r3dPoint3D(0, (pl->bCrouch?TPSCameraPointToAdjCrouch[g_camera_mode->GetInt()]:TPSCameraPointToAdj[g_camera_mode->GetInt()]), 0.0f)) * 50;//cameraRayLen;//CurrentRig.Target.Z;
+	PointTo += (pl->m_vVision) * 50;//cameraRayLen;//CurrentRig.Target.Z;
 
-	r3dPoint3D getAdjustedPointTo(obj_AI_Player* pl, const r3dPoint3D& PointTo, const r3dPoint3D& CamPos);
+	r3dPoint3D getAdjustedPointTo(obj_Player* pl, const r3dPoint3D& PointTo, const r3dPoint3D& CamPos);
 	r3dPoint3D adjPointTo(0,0,0);
 	adjPointTo = getAdjustedPointTo(pl, PointTo, CamPos);
 
@@ -564,7 +692,7 @@ void EditorGameHUD :: SetCameraPure ( r3dCamera &Cam)
 #ifndef FINAL_BUILD
 	if( g_pHUDCameraEffects )
 	{
-		g_pHUDCameraEffects->Update( &Cam, pl->GetPosition() ) ;
+		g_pHUDCameraEffects->Update( &Cam, pl->GetPosition() );
 	}
 #endif
 	
@@ -580,8 +708,8 @@ void EditorGameHUD :: Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -593,8 +721,8 @@ void EditorGameHUD :: Draw()
 		Font_Label->PrintF(10, r3dRenderer->ScreenH-25,r3dColor(255,255,255), "FPS %3.1f[%02.2fms]", 1.0f/r3dGetFrameTime(), r3dGetFrameTime()*1000.0f );
 	}
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 
@@ -608,12 +736,12 @@ void		updateCameraLeftSide();
 
 /*virtual*/ r3dPoint3D EditorGameHUD :: GetCamOffset() const
 {
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId);
 	if (!pl) return r3dPoint3D( 0, 0, 0 );
 
 	r3dPoint3D offset;
 
-	const PlayerStateVars_s& state = CurrentRig ;
+	const PlayerStateVars_s& state = CurrentRig;
 
 	offset =  r3dPoint3D( 0, (pl->Height +  state.Position.Y), 0 );
 	updateCameraLeftSide();
@@ -625,7 +753,7 @@ void		updateCameraLeftSide();
 
 /*virtual*/ void EditorGameHUD :: SetCamPos( const r3dPoint3D& pos )
 {
-	if( obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId) )
+	if( obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId) )
 	{
 		pl->SetPosition( pos - GetCamOffset() );
 	}
@@ -636,36 +764,36 @@ void		updateCameraLeftSide();
 void EditorGameHUD :: Process()
 //----------------------------------------------------------------
 {
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId);
 
 	if(!pl) 
 		pl = AddPlayer( 1 );
 
 	if( int s = d_spawn_players->GetInt() )
 	{
-		static float SinceLastSpawn = r3dGetTime() ;
+		static float SinceLastSpawn = r3dGetTime();
 
 		if( r3dGetTime() - SinceLastSpawn > d_spawn_player_delay->GetFloat() )
 		{
-			r3dPoint3D rpos ;
+			r3dPoint3D rpos;
 
-			r3dVector to = gCam.vPointTo ;
+			r3dVector to = gCam.vPointTo;
 
-			to.Normalize() ;
+			to.Normalize();
 
-			r3dVector binorm = to.Cross( r3dVector( 0,1,0) ) ;
+			r3dVector binorm = to.Cross( r3dVector( 0,1,0) );
 
-			binorm.Normalize() ;
+			binorm.Normalize();
 			
-			r3dVector toAdd = to * ( float( rand() ) / RAND_MAX + 0.5f ) * 10 + binorm * ( float( rand() ) / RAND_MAX - 0.5f ) * 10 ;
+			r3dVector toAdd = to * ( float( rand() ) / RAND_MAX + 0.5f ) * 10 + binorm * ( float( rand() ) / RAND_MAX - 0.5f ) * 10;
 
-			rpos.x = gCam.x + toAdd.x ;
-			rpos.y = gCam.y ;
-			rpos.z = gCam.z + toAdd.z ;
+			rpos.x = gCam.x + toAdd.x;
+			rpos.y = gCam.y;
+			rpos.z = gCam.z + toAdd.z;
 
-			AddPlayer( 0 )->SetPosition( rpos ) ;
-			d_spawn_players->SetInt( s - 1 ) ;
-			SinceLastSpawn = r3dGetTime() ;
+			AddPlayer( 0 )->SetPosition( rpos );
+			d_spawn_players->SetInt( s - 1 );
+			SinceLastSpawn = r3dGetTime();
 		}
 	}
 
@@ -681,7 +809,7 @@ void EditorGameHUD::OnHudSelected()
 	g_usePlayerEditorCamera = false;
 
 	Mouse->Hide();
-	obj_AI_Player* pl = (obj_AI_Player *)GameWorld().GetObject(editorPlayerId);
+	obj_Player* pl = (obj_Player *)GameWorld().GetObject(editorPlayerId);
 	if ( !pl )
 	{
 		pl = AddPlayer( 1 );
@@ -708,184 +836,167 @@ void EditorGameHUD::OnHudUnselected()
 
 static int SelectRandomGear( STORE_CATEGORIES cat )
 {
-	int catCount = 0 ;
+	int catCount = 0;
 
-	for( int i = 0, e = gWeaponArmory.getNumGears(); i < e; i ++ )
+	uint32_t* gearID = new uint32_t[g_pWeaponArmory->getNumGears()];
+	
+	g_pWeaponArmory->startItemSearch();
+	while(g_pWeaponArmory->searchNextItem())
 	{
-		const GearConfig* cfg = gWeaponArmory.getGearConfigByIndex( i ) ;
-
+		uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+		const BaseItemConfig* cfg = g_pWeaponArmory->getConfig(itemID);
 		if( cfg->category == cat )
 		{
-			catCount ++ ;
+			gearID[catCount++] = itemID;
 		}
 	}
+	if(catCount == 0)
+		return 0;
 
-	int idx = rand() % catCount ;
+	int idx = rand() % catCount;
+	uint32_t itemID = gearID[idx];
+	delete [] gearID; gearID = NULL;
 
-	catCount = 0 ;
-
-	for( int i = 0, e = gWeaponArmory.getNumGears(); i < e; i ++ )
+	const GearConfig* cfg = g_pWeaponArmory->getGearConfig(itemID);
+	if( r3dMesh::CanLoad( cfg->m_ModelPath ) )
 	{
-		const GearConfig* cfg = gWeaponArmory.getGearConfigByIndex( i ) ;
+		return cfg->m_itemID;
+	}
+	else
+	{
+		r3dOutToLog( "Couldn't load random gear %s!\n", cfg->m_ModelPath );
+		return 0;
+	}
+	r3dOutToLog( "Couldn't select random gear!\n" );
+	return 0;
+}
 
+static int SelectRandomHero( STORE_CATEGORIES cat )
+{
+	int catCount = 0;
+
+	uint32_t* heroID = new uint32_t[g_pWeaponArmory->getNumHeroes()];
+
+	g_pWeaponArmory->startItemSearch();
+	while(g_pWeaponArmory->searchNextItem())
+	{
+		uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+		const BaseItemConfig* cfg = g_pWeaponArmory->getConfig(itemID);
 		if( cfg->category == cat )
 		{
-			if( catCount == idx )
-			{
-				if( r3dMesh::CanLoad( cfg->m_ModelPath ) )
-				{
-					return cfg->m_itemID ;
-				}
-				else
-				{
-					r3dOutToLog( "Couldn't load random gear %s!\n", cfg->m_ModelPath ) ;
-					return 0 ;
-				}
-			}
-			catCount ++ ;
+			heroID[catCount++] = itemID;
 		}
 	}
+	if(catCount == 0)
+		return 0;
 
-	r3dOutToLog( "Couldn't select random gear!\n" ) ;
+	int idx = rand() % catCount;
+	uint32_t itemID = heroID[idx];
+	delete [] heroID; heroID = NULL;
 
-	return 0 ;
+	return itemID;
 }
 
 static int SelectRandomWeapon( STORE_CATEGORIES cat )
 {
-	int catCount = 0 ;
+	int catCount = 0;
 
-	for( int i = 0, e = gWeaponArmory.getNumWeapons(); i < e; i ++ )
+	uint32_t* wpnID = new uint32_t[g_pWeaponArmory->getNumWeapons()];
+
+	g_pWeaponArmory->startItemSearch();
+	while(g_pWeaponArmory->searchNextItem())
 	{
-		const WeaponConfig* cfg = gWeaponArmory.getWeaponConfigByIndex( i ) ;
-
-		if( cfg->category == cat && cfg->IsFPS)
+		uint32_t itemID = g_pWeaponArmory->getCurrentSearchItemID();
+		const BaseItemConfig* cfg = g_pWeaponArmory->getConfig(itemID);
+		if( cfg->category == cat )
 		{
-			catCount ++ ;
-		}
-
-	}
-
-	int idx = rand() % catCount ;
-
-	catCount = 0 ;
-
-	for( int i = 0, e = gWeaponArmory.getNumWeapons(); i < e; i ++ )
-	{
-		const WeaponConfig* cfg = gWeaponArmory.getWeaponConfigByIndex( i ) ;
-
-		if( cfg->category == cat && cfg->IsFPS)
-		{
-			if( catCount == idx )
-			{
-				if( r3dMesh::CanLoad( cfg->m_ModelPath) )
-				{
-					return cfg->m_itemID ;
-				}
-				else
-				{
-					r3dOutToLog( "Couldn't load random weapon %s!\n", cfg->m_ModelPath ) ;
-					return 0 ;
-				}
-			}
-			catCount ++ ;
+			wpnID[catCount++] = itemID;
 		}
 	}
+	int idx = rand() % catCount;
+	uint32_t itemID = wpnID[idx];
+	delete [] wpnID; wpnID = NULL;
 
-	r3dOutToLog( "Couldn't select random weapon!\n" ) ;
-
-	return 0 ;
+	const WeaponConfig* cfg = g_pWeaponArmory->getWeaponConfig(itemID);
+	if( r3dMesh::CanLoad( cfg->m_ModelPath ) )
+	{
+		return cfg->m_itemID;
+	}
+	else
+	{
+		r3dOutToLog( "Couldn't load random weapon %s!\n", cfg->m_ModelPath );
+		return 0;
+	}
+	r3dOutToLog( "Couldn't select random weapon!\n" );
+	return 0;
 }
 
 void CreateDummyEditorPlayer()
 {
-	obj_AI_Player* pl = (obj_AI_Player *)srv_CreateGameObject("obj_AI_Player", "Player", UI_TargetPos + r3dPoint3D(0, 0.01f, 0));
-	pl->TeamID       = TEAM_RED;
+	obj_Player* pl = (obj_Player *)srv_CreateGameObject("obj_Player", "Player", UI_TargetPos + r3dPoint3D(0, 0.01f, 0));
 	pl->NetworkLocal = false; // so it will be always in 3rd person mode. with disabled physics
 
 	extern int SelectRandomGear( STORE_CATEGORIES cat );
 	extern int SelectRandomWeapon( STORE_CATEGORIES cat );
 
-	wiWeaponAttachments Attm;
-	pl->CurLoadout.BodyMeshID		= SelectRandomGear( storecat_Characters ) ;
-	pl->CurLoadout.BodyHeadID		= SelectRandomGear( storecat_Heads ) ;
-	pl->CurLoadout.BodyHeadGearID		= SelectRandomGear( storecat_HeadGear ) ;
-	pl->CurLoadout.BodyArmorID		= SelectRandomGear( storecat_Gear ) ;
-	pl->CurLoadout.BodyVoiceID		= 0 ;
+	pl->CurLoadout.HeroItemID       = SelectRandomHero(storecat_HeroPackage);
+	const HeroConfig* heroConf = g_pWeaponArmory->getHeroConfig(pl->CurLoadout.HeroItemID);
+	pl->CurLoadout.HeadIdx			= rand()%heroConf->getNumHeads();
+	pl->CurLoadout.BodyIdx			= rand()%heroConf->getNumBodys();
+	pl->CurLoadout.LegsIdx			= rand()%heroConf->getNumLegs();
 
-	pl->CurLoadout.PrimaryWeaponID		= SelectRandomWeapon( storecat_ASR ) ;
-	pl->CurLoadout.SecondaryWeaponID	= SelectRandomWeapon( storecat_SNP ) ;
-	pl->CurLoadout.SidearmWeaponID		= SelectRandomWeapon( storecat_HG ) ;
+	pl->CurLoadout.Items[wiCharDataFull::CHAR_LOADOUT_ARMOR].itemID		= SelectRandomGear( storecat_Armor );
+	pl->CurLoadout.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID	= SelectRandomGear( storecat_Helmet );
+	pl->CurLoadout.Items[0].itemID		= SelectRandomWeapon( storecat_ASR );
+	pl->CurLoadout.Items[1].itemID		= SelectRandomWeapon( storecat_SNP );
 
-	pl->CurLoadout.Item1			= SelectRandomWeapon( storecat_GRENADES ) ;
-	pl->CurLoadout.Item2			= SelectRandomWeapon( storecat_GRENADES ) ;
-	pl->CurLoadout.Item3			= 0 ;	
-	pl->CurLoadout.Item4			= 0 ;
+	pl->CurLoadout.Health = 100;
+	pl->CurLoadout.Toxic = 0;
+	pl->CurLoadout.Hunger = 0;
+	pl->CurLoadout.Thirst = 0;
 
 	pl->m_fPlayerRotationTarget = pl->m_fPlayerRotation = u_GetRandom(0.0f, 360.0f);
-	pl->OnCreate() ;
-	pl->UpdateLoadoutSlot(pl->CurLoadout, Attm);
+	pl->OnCreate();
+	pl->UpdateLoadoutSlot(pl->CurLoadout);
 }
 
-obj_AI_Player* EditorGameHUD::AddPlayer( int bControllable )
+obj_Player* EditorGameHUD::AddPlayer( int bControllable )
 {
-	obj_AI_Player* pl;
+	obj_Player* pl;
 
 	extern r3dPoint3D UI_TargetPos;
 
-	pl = (obj_AI_Player *)srv_CreateGameObject("obj_AI_Player", "Player", UI_TargetPos + r3dPoint3D(0,5,0));
+	pl = (obj_Player *)srv_CreateGameObject("obj_Player", "Player", UI_TargetPos + r3dPoint3D(0,5,0));
 	
 	if( bControllable )
 	{
-		pl->TeamID = TEAM_BLUE;
-
 		pl->NetworkLocal = true;
-		pl->NetworkID    = 1;
 		editorPlayerId = pl->ID;
 	}
-	else
-	{
-		pl->TeamID = TEAM_RED;
-	}
 
-	wiWeaponAttachments Attm;
-	if(g_camera_mode->GetInt() == 2)
-	{
-		pl->CurLoadout.BodyMeshID			= 20011; // slickman
-		pl->CurLoadout.BodyHeadID			= SelectRandomGear( storecat_Heads ) ;
-		pl->CurLoadout.BodyHeadGearID		= SelectRandomGear( storecat_HeadGear ) ;
-		pl->CurLoadout.BodyArmorID			= SelectRandomGear( storecat_Gear ) ;
+	wiInventoryItem wpn1;
+	wiInventoryItem wpn2;
+	wpn1.itemID = SelectRandomWeapon( storecat_ASR );
+	wpn2.itemID = SelectRandomWeapon( storecat_SNP );
+	
+	wiCharDataFull slot;
+	slot.HeroItemID       = 20174; //SelectRandomHero(storecat_HeroPackage);
+	const HeroConfig* heroConf = g_pWeaponArmory->getHeroConfig(slot.HeroItemID);
+	slot.HeadIdx			= rand()%heroConf->getNumHeads();
+	slot.BodyIdx			= rand()%heroConf->getNumBodys();
+	slot.LegsIdx			= rand()%heroConf->getNumLegs();
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_ARMOR].itemID		= SelectRandomGear( storecat_Armor );
+	slot.Items[wiCharDataFull::CHAR_LOADOUT_HEADGEAR].itemID	= SelectRandomGear( storecat_Helmet );
+	slot.Items[0] = wpn1;
+	slot.Items[1] = wpn2;
 
-		pl->CurLoadout.PrimaryWeaponID		= 101193; //ASR_Fn_scar
-		pl->CurLoadout.SecondaryWeaponID	= 101068;
-		pl->CurLoadout.SidearmWeaponID		= 101115;
-	}
+	pl->OnCreate();
+	pl->UpdateLoadoutSlot(slot);
 
-	pl->CurLoadout.Item1 = 101140; //EXP_VS50
-	pl->CurLoadout.Item2 = 101147; //Exp_SmokeG_Red
-	pl->CurLoadout.Item3 = WeaponConfig::ITEMID_Cypher2;
-	pl->CurLoadout.Item4 = WeaponConfig::ITEMID_LLDR;
-
-	if( d_random_editor_players->GetInt() )
-	{
-		pl->CurLoadout.BodyMeshID			= SelectRandomGear( storecat_Characters ) ;
-		pl->CurLoadout.BodyHeadID			= SelectRandomGear( storecat_Heads ) ;
-		pl->CurLoadout.BodyHeadGearID		= SelectRandomGear( storecat_HeadGear ) ;
-		pl->CurLoadout.BodyArmorID			= SelectRandomGear( storecat_Gear ) ;
-		pl->CurLoadout.BodyVoiceID			= 0 ;
-
-		pl->CurLoadout.PrimaryWeaponID		= SelectRandomWeapon( storecat_ASR ) ;
-		pl->CurLoadout.SecondaryWeaponID	= SelectRandomWeapon( storecat_SNP ) ;
-		pl->CurLoadout.SidearmWeaponID		= SelectRandomWeapon( storecat_HG ) ;
-
-		pl->CurLoadout.Item1				= SelectRandomWeapon( storecat_GRENADES ) ;
-		pl->CurLoadout.Item2				= SelectRandomWeapon( storecat_GRENADES ) ;
-		pl->CurLoadout.Item3				= 0 ;	
-		pl->CurLoadout.Item4				= 0 ;
-	}
-
-	pl->OnCreate() ;
-	pl->UpdateLoadoutSlot(pl->CurLoadout, Attm);
+	pl->CurLoadout.Health = 100;
+	pl->CurLoadout.Toxic = 0;
+	pl->CurLoadout.Hunger = 0;
+	pl->CurLoadout.Thirst = 0;
 
 	return pl;
 }

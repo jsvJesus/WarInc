@@ -72,6 +72,32 @@ R3D_FORCEINLINE void SetLQ( FillbufferShaderKey* key )
 	}
 }
 
+//------------------------------------------------------------------------
+
+struct FillGBufferConstantId
+{
+	union
+	{
+		struct
+		{
+			UINT32 aux	: 1;
+		};
+
+		UINT32 Id;
+	};
+
+	FillGBufferConstantId();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 2 > FillGBufferConstantPSIds;
+
+extern FillGBufferConstantPSIds gFillGBufferConstantPSIds;
+
+//------------------------------------------------------------------------
+
 /**	Pixel shader id storage. Modify size of this array when new pins are introduced. */
 typedef r3dTL::TFixedArray<int, 128> FillbufferPixelShadersArr;
 extern FillbufferPixelShadersArr gFillbufferPixelShaders;
@@ -233,48 +259,26 @@ void r3dCloseMaterials();
 //------------------------------------------------------------------------
 // Material shaders
 
-extern int VS_FOREST_ID											;
-extern int VS_FOREST_NONINSTANCED_ID							;
-extern int VS_FOREST_NOANIM_NONINSTANCED_ID						;
-extern int VS_FOREST_NOANIM_ID									;
 extern int VS_SKIN_ID											;
 extern int VS_SKIN_DEPTH_ID										;
 extern int VS_DEPTH_ID											;
-extern int VS_SMSKIN_ORTHO_ID									;
-extern int VS_SMSKIN_PROJ_ID									;
 extern int VS_DEPTH_PREPASS_ID									;
 extern int VS_FILLGBUFFER_ID									;
+extern int VS_FILLGBUFFER_EXTRUDE_ID							;
 extern int VS_FILLGBUFFER_DISP_ID								;
 extern int VS_FILLGBUFFER_APEX_ID								;
 extern int VS_FILLGBUFFER_INSTANCED_ID							;
-extern int VS_SMDEPTHPASS_ORTHO_ID								;
-extern int VS_SMDEPTHPASS_PROJ_ID								;
-extern int VS_SMDEPTHPASS_PARABOLOID_PROJ_ID					;
-extern int VS_SMDEPTHPASS_ORTHO_INSTANCED_ID					;
-extern int VS_SMDEPTHPASS_PROJ_INSTANCED_ID						;
-extern int VS_SMDEPTHPATH_FOREST_ORTHO_ID						;
-extern int VS_SMDEPTHPATH_FOREST_ORTHO_NONINSTANCED_ID			;
-extern int VS_SMDEPTHPATH_FOREST_PROJ_ID						;
-extern int VS_SMDEPTHPATH_FOREST_PROJ_NONINSTANCED_ID			;
-extern int VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_ID				;
-extern int VS_SMDEPTHPATH_FOREST_ORTHO_NOANIM_NONINSTANCED_ID	;
-extern int VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_ID					;
-extern int VS_SMDEPTHPATH_FOREST_PROJ_NOANIM_NONINSTANCED_ID	;
-extern int VS_SMDEPTHPATH_APEX_ORTHO_ID							;
-extern int VS_SMDEPTHPATH_APEX_PROJ_ID							;
 
 const int MAX_LIGHTS_FOR_TRANSPARENT = 3;
 extern int VS_TRANSPARENT_ID[2][MAX_LIGHTS_FOR_TRANSPARENT];
 extern int PS_DEPTH_ID;
-extern int PS_SMDEPTHPATH_ID;
-extern int PS_SMDEPTHPATH_HW_ID;
-extern int PS_SMDEPTHPATH_NORMAL_OFFSET_ID;
 extern int PS_TRANSPARENT_ID;
 extern int PS_TRANSPARENT_AURA_ID;
 extern int PS_TRANSPARENT_CAMOUFLAGE_ID;
 extern int PS_TRANSPARENT_CAMOUFLAGE_FP_ID;
 
 void SetFillGBufferPixelShader( FillbufferShaderKey k );
+void SetFillGBufferConstantPixelShader( const r3dColor& color, float colorAmplify, const r3dPoint3D& normal, float metalness, float chromness, float glow, float specPower );
 
 enum
 {
@@ -296,7 +300,7 @@ enum
 	// float4	CamoInterpolator	: register(c6);
 	MC_CAMOINTERPOLATOR,
 	// float4	UNUSED				: register(c7);
-	MC_UNUSED,
+	MC_DEF_SSAO,
 	// float4	MaskColor			: register(c8);
 	MC_MASKCOLOR,
 	// float	fDisplace			: register(c9);
@@ -323,20 +327,6 @@ enum
 	// float4 TCamoColor1			: register(c17);
 	MC_TCAMO_COLOR1,
 
-	// float4 WetWeapon				: register(c18);
-	// x - wet amount
-	// y - diffuse dark multiplier
-	// z - gloss boost
-	// w - specular power multiplier
-	MC_WET_WEAPON,
-
-	// float4 WetWeaponRain			: register(c19);
-	// x - streak normal strength
-	// y - streak scale
-	// z - time
-	// w - unused
-	MC_WET_WEAPON_RAIN,
-
 	// float4 AerialDensity_Distance_Bias	: register (FOG_CONST0); // x - density, y - distance, z - bias
 	FOGC_CONST0 = 29,
 	// float4 g_fogColor		: register (FOG_CONST1);	//a = density
@@ -357,6 +347,126 @@ r3dMaterial::SetRenderedObjectColor( const r3dColor& color )
 }
 
 extern void ( *g_SetupFilmToneConstants )( int reg ) ;
+
+//------------------------------------------------------------------------
+
+enum SMVSType
+{
+	SMVSTYPE_PERSP,
+	SMVSTYPE_PERSP_PARABOLOID,
+	SMVSTYPE_ORTHO,
+	SMVSTYPE_ORTHO_WARPED,
+	SMVSTYPE_COUNT
+};
+
+struct SMDepthVShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 apex			: 1;
+			UINT32 intanced		: 1;
+			UINT32 type			: 2;
+		};
+
+		UINT32 Id;
+	};
+
+	SMDepthVShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 16 > SMDepthVShaderIDs;
+
+extern SMDepthVShaderIDs gSMDepthVSIds;
+
+//------------------------------------------------------------------------
+
+struct SkinSMDepthVShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 type			: 2;
+		};
+
+		UINT32 Id;
+	};
+
+	SkinSMDepthVShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 4 > SkinSMDepthVShaderIDs;
+
+extern SkinSMDepthVShaderIDs gSkinSMDepthVSIds;
+
+//------------------------------------------------------------------------
+
+struct ForestVShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 noninstanced		: 1;
+			UINT32 animated			: 1;
+			UINT32 shadows			: 1;
+			UINT32 shadow_type		: 2;
+		};
+
+		UINT32 Id;
+	};
+
+	ForestVShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 32 > ForestVShaderIDs;
+
+extern ForestVShaderIDs gForestVSIds;
+
+//------------------------------------------------------------------------
+
+enum SMPSType
+{
+	SMPSTYPE_DEFAULT,
+	SMPSTYPE_HW,
+	SMPSTYPE_NORMAL_OFFSET,
+	SMPSTYPE_SIMPLE,
+	SMPSTYPE_COUNT
+};
+
+struct SMDepthPShaderID
+{
+	union
+	{
+		struct
+		{
+			UINT32 type			: 2;
+		};
+
+		UINT32 Id;
+	};
+
+	SMDepthPShaderID();
+
+	void ToString( char* str );
+	void FillMacros( ShaderMacros& defines );
+};
+
+typedef r3dTL::TFixedArray< int, 4 > SMDepthPShaderIDs;
+
+extern SMDepthPShaderIDs gSMDepthPSIds;
+
 
 #endif //__R3D_MAT_H
 

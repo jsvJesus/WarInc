@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,23 +42,28 @@
 #include <RendererVertexBuffer.h>
 #include "D3D9Renderer.h"
 
-class D3D9RendererVertexBuffer : public RendererVertexBuffer, public D3D9RendererResource
+namespace SampleRenderer
 {
+
+	class D3D9RendererVertexBuffer : public RendererVertexBuffer, public D3D9RendererResource
+	{
 	public:
-		D3D9RendererVertexBuffer(IDirect3DDevice9 &d3dDevice, const RendererVertexBufferDesc &desc, bool deferredUnlock);
+		D3D9RendererVertexBuffer(IDirect3DDevice9 &d3dDevice, const RendererVertexBufferDesc &desc);
 		virtual ~D3D9RendererVertexBuffer(void);
-		
-		void addVertexElements(physx::PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const;
+
+		void addVertexElements(PxU32 streamIndex, std::vector<D3DVERTEXELEMENT9> &vertexElements) const;
 
 		virtual bool checkBufferWritten(void);
-		
+
 	protected:
+		virtual void  swizzleColor(void *colors, PxU32 stride, PxU32 numColors, RendererVertexBuffer::Format inFormat);
+
 		virtual void *lock(void);
 		virtual void  unlock(void);
-		
-		virtual void  bind(physx::PxU32 streamID, physx::PxU32 firstVertex);
-		virtual void  unbind(physx::PxU32 streamID);
-	
+
+		virtual void  bind(PxU32 streamID, PxU32 firstVertex);
+		virtual void  unbind(PxU32 streamID);
+
 	private:
 		virtual void onDeviceLost(void);
 		virtual void onDeviceReset(void);
@@ -66,13 +71,17 @@ class D3D9RendererVertexBuffer : public RendererVertexBuffer, public D3D9Rendere
 	private:
 		IDirect3DDevice9             &m_d3dDevice;
 		IDirect3DVertexBuffer9       *m_d3dVertexBuffer;
-		
+
 		DWORD                         m_usage;
+		DWORD                         m_lockFlags;
 		D3DPOOL                       m_pool;
 		UINT                          m_bufferSize;
 
 		bool                          m_bufferWritten;
-};
+		void*						  m_savedData;
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  * Copyright 2007-2008 Ageia Technologies.  All rights reserved.
  * NOTICE TO USER:
  *
@@ -51,10 +51,10 @@
 // Statistics from the fluid mesh packet cooker
 DEFINE_EVENT(renderFunction)
 DEFINE_EVENT(SampleRendererVBwriteBuffer)
-DEFINE_EVENT(ApexOnTickPreRender)
-DEFINE_EVENT(ApexOnTickPostRender)
-DEFINE_EVENT(ApexOnRender)
-DEFINE_EVENT(ApexOnDraw)
+DEFINE_EVENT(SampleOnTickPreRender)
+DEFINE_EVENT(SampleOnTickPostRender)
+DEFINE_EVENT(SampleOnRender)
+DEFINE_EVENT(SampleOnDraw)
 DEFINE_EVENT(D3D9Renderer_createVertexBuffer)
 DEFINE_EVENT(Renderer_render)
 DEFINE_EVENT(Renderer_render_depthOnly)

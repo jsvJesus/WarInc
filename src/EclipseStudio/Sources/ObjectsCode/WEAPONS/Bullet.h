@@ -14,7 +14,6 @@ public:
 
 	virtual	BOOL		OnCreate();
 	virtual BOOL		OnDestroy();
-	virtual	void		OnCollide(PhysicsCallbackObject *tobj, CollisionInfo &trace);
 	virtual	BOOL		Update();
 
 	bool OnHit( PxSweepHit &hit );

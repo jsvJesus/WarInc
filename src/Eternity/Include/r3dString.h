@@ -42,6 +42,18 @@ r3dString::Length() const
 
 //------------------------------------------------------------------------
 
-char *stristr (const char *s1, const char *s2) ;
+char *stristr (const char *s1, const char *s2);
+
+R3D_FORCEINLINE r3dString& r3dscpy_s(r3dString& targ, const r3dString& src )
+{
+	targ = src;
+	return targ;
+}
+
+R3D_FORCEINLINE r3dString& r3dscpy(r3dString& targ, const char* src )
+{
+	targ = src;
+	return targ;
+}
 
 #endif //__TSG_STL_USTRING

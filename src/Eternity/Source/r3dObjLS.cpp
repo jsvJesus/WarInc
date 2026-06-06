@@ -204,9 +204,10 @@ bool r3dMesh::DoLoad( bool use_default_material )
 
 	if(!(txt_exist || bin_exist)) // if sco and scb both missing - then bail out
 	{
-#ifndef FINAL_BUILD
-		r3dError("Erorr: Missing mesh file: %s\n", fname);
-#endif
+		// ptumik: show art bug, but do not crash editor
+//#ifndef FINAL_BUILD
+//		r3dError("Erorr: Missing mesh file: %s\n", fname);
+//#endif
 		r3dArtBug("r3dMesh::Load(): Can't load '%s' or '%s', file doesn't exist\n", fname, bin_file);
 		return false;
 	}
@@ -607,7 +608,7 @@ bool r3dMesh::SaveBin(const char* fname)
 		flags |= 2;
 	fwrite(&flags, sizeof(DWORD), 1, f);
 
-	int len = static_cast<int>(strlen(Name));
+	int len = strlen(Name);
 	fwrite(&len, sizeof(len), 1, f);
 	fwrite(Name, len, 1, f);
 
@@ -635,7 +636,7 @@ bool r3dMesh::SaveBin(const char* fname)
 	{
 		fwrite(&MatChunks[i].StartIndex, sizeof(int), 1, f);
 		fwrite(&MatChunks[i].EndIndex, sizeof(int), 1, f);
-		int len = static_cast<int>(strlen(MatChunksNames[i]));//strlen(MatChunks[i].Mat->Name);
+		int len = strlen(MatChunksNames[i]);//strlen(MatChunks[i].Mat->Name);
 		fwrite(&len, sizeof(int), 1, f);
 		//fwrite(MatChunks[i].Mat->Name, len, 1, f);
 		fwrite(MatChunksNames[i], len, 1, f);
@@ -664,7 +665,7 @@ bool r3dMesh::SaveBinPS3(const char* fname)
 
 	fwrite_be(R3DMESH_BINARY_VERSION, f);
 
-	int len = static_cast<int>(strlen(Name));
+	int len = strlen(Name);
 	fwrite_be(len, f);
 	fwrite_be(Name, len, f);
 
@@ -682,21 +683,19 @@ bool r3dMesh::SaveBinPS3(const char* fname)
 	fwrite_be(VertexUVs, NumVertices, f);
 	fwrite_be(VertexNormals, NumVertices, f);
 	fwrite_be(VertexTangents, NumVertices, f);
-	fwrite_be(VertexTangentWs, sizeof(VertexTangentWs[0]) * NumVertices, f);
+	fwrite_be(VertexTangentWs, sizeof(VertexTangentWs[ 0 ]) * NumVertices, f);
 
 	fwrite_be(NumIndices, f);
 	fwrite_be(Indices, NumIndices, f);
 
 	fwrite_be(NumMatChunks, f);
-
-	for(int i = 0; i < NumMatChunks; ++i)
+	for(int i=0; i<NumMatChunks; ++i)
 	{
 		fwrite_be(MatChunks[i].StartIndex, f);
 		fwrite_be(MatChunks[i].EndIndex, f);
-
-		int chunkNameLen = static_cast<int>(strlen(MatChunksNames[i]));
-		fwrite_be(chunkNameLen, f);
-		fwrite_be(MatChunksNames[i], chunkNameLen, f);
+		int len = strlen(MatChunksNames[i]);
+		fwrite_be(len, f);
+		fwrite_be(MatChunksNames[i], len, f);
 	}
 
 	fclose(f);

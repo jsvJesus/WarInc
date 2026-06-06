@@ -1,70 +1,76 @@
-#include "NxApex.h"
-#ifndef __NX_APEX_SDK_H__
-#define __NX_APEX_SDK_H__
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_APEX_SDK_H
+#define NX_APEX_SDK_H
 
 /*!
 \file
 \brief APEX SDK classes
 */
 
+#include "NxApexDefs.h"
+#include "NxApexDesc.h"
+#include "NxApexInterface.h"
+
 #include "NxSerializer.h"
 #include "NxParameterized.h"
-#include "Nxp.h"
+#include "NxParameterizedTraits.h"
+#include "NxApexShape.h"
 
 namespace physx
 {
-namespace pxtask
-{
-class TaskManager;
-class CudaContextManagerDesc;
-class CudaContextManager;
+	class PxFoundation;
+	namespace pxtask
+	{
+		class CpuDispatcher;
+		class CudaContextManagerDesc;
+		class CudaContextManager;
+	}
 }
 
-namespace general_PxIOStream2
-{
-class PxFileBuf;
-}
+#if NX_SDK_VERSION_MAJOR == 3
 
-namespace shdfnd2
+/**
+PhysX 3.0 SDK classes
+*/
+namespace physx
 {
-class Foundation;
-}
+class PxPhysics;
+class PxCloth;
+class PxJoint;
+class PxCooking;
+class PxActor;
+class PxShape;
 };
 
+#else
+
+#include "Nxp.h"
 /**
 PhysX 2.8 SDK classes
 */
@@ -76,13 +82,20 @@ class NxSoftBody;
 class NxPhysicsSDK;
 class NxCookingInterface;
 class NxDebugRenderable;
+#endif
 
+namespace PVD
+{
+class PvdBinding;
+}
+
+//! \brief physx namespace
 namespace physx
 {
+//! \brief apex namespace
 namespace apex
 {
 
-class NxApexStream;
 class NxUserRenderResourceManager;
 class NxApexScene;
 class NxApexSceneDesc;
@@ -101,6 +114,38 @@ class NxRenderMeshActor;
 PX_PUSH_PACK_DEFAULT
 
 /**
+\brief 64-bit mask used for collision filtering.
+*/
+class NxGroupsMask64
+{
+public:
+	/**	\brief Mask bits. */
+	physx::PxU32		bits0;
+	/**	\brief Mask bits. */
+	physx::PxU32		bits1;
+};
+
+/**
+\brief Collision groups filtering operations.
+*/
+struct NxGroupsFilterOp
+{
+	/**
+	\brief Enum of names for group filtering operations.
+	*/
+	enum Enum
+	{
+		AND,
+		OR,
+		XOR,
+		NAND,
+		NOR,
+		NXOR,
+		SWAP_AND
+	};
+};
+
+/**
 \brief Integer values, each representing a unique authorable object class/type
 */
 typedef unsigned int NxAuthObjTypeID;
@@ -111,15 +156,19 @@ typedef unsigned int NxAuthObjTypeID;
 class NxApexSDKDesc : public NxApexDesc
 {
 public:
+#if NX_SDK_VERSION_MAJOR == 2
 	/**
-	\brief The allocator APEX should use
+	\brief The allocator APEX should use when running with PhysX 2.8.x
+
+	If left blank, APEX will use the PhysX allocator
 	*/
-	physx::PxUserAllocator* allocator;
+	physx::PxAllocatorCallback* allocator;
+#endif
 
 	/**
-	\brief The output stream that APEX should use
+	\brief The error callback (formerly called output stream) that APEX should use
 	*/
-	physx::PxUserOutputStream* outputStream;
+	physx::PxErrorCallback* outputStream;
 
 	/**
 	\brief The PhysX SDK version you are building with
@@ -132,12 +181,20 @@ public:
 	/**
 	\brief Pointer to the physX sdk (PhysX SDK version specific structure)
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	NxPhysicsSDK* physXSDK;
+#else
+	PxPhysics* physXSDK;
+#endif
 
 	/**
 	\brief Pointer to the cooking interface (PhysX SDK version specific structure)
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	NxCookingInterface* cooking;
+#else
+	PxCooking* cooking;
+#endif
 
 	/**
 	\brief User defined interface for creating renderable resources.
@@ -176,6 +233,36 @@ public:
 	If not specified, the default value is "ApexSolidShaded"
 	*/
 	const char* solidShadedMaterial;
+
+	/**
+	\brief Delays material loading
+
+	Any NxRenderMeshActor will issue callbacks to the NxResourceCallback to create one or more materials. This happens either
+	at actor creation or lazily during updateRenderResource upon necessity.
+	Additionally it will call NxUserRenderResourceManager::getMaxBonesPerMaterial for the freshly created material right
+	after a successful material creation.
+	*/
+	bool renderMeshActorLoadMaterialsLazily;
+
+	/**
+	\brief APEX module DLL name postfix (Windows Only)
+
+	If specified, this string will be appended to the APEX module DLL names prior to calling LoadLibrary() to load them.  You can
+	use this mechanism to load the APEX module DLLS for two different PhysX SDKs in the same process (DCC tools).
+
+	For example, the APEX_Destructible_x86.dll is renamed to APEX_Destructible_x86_PhysX-2.8.4.dll.
+	dllNamePostfix would be "_PhysX-2.8.4"
+	*/
+	const char* dllNamePostfix;
+
+	/**
+	\brief Application-specific GUID (Windows Only)
+
+	Provide an optional appGuid if you have made local modifications to your APEX DLLs. 
+	Application GUIDs are available from NVIDIA. For non-Windows platforms the appGuid
+	is ignored.
+	*/
+	const char* appGuid;
 
 	/**
 	\brief constructor sets to default.
@@ -218,6 +305,10 @@ public:
 		{
 			return false;
 		}
+		if (outputStream == NULL)
+		{
+			return false;
+		}
 		return retVal;
 	}
 
@@ -225,7 +316,9 @@ private:
 	PX_INLINE void init()
 	{
 		renderResourceManager = NULL;
+#if NX_SDK_VERSION_MAJOR == 2
 		allocator = NULL;
+#endif
 		outputStream = NULL;
 		physXSDKVersion = NX_PHYSICS_SDK_VERSION;
 		physXSDK = NULL;
@@ -234,9 +327,39 @@ private:
 		dllLoadPath = NULL;
 		solidShadedMaterial = "ApexSolidShaded";
 		wireframeMaterial = "ApexWireframe";
+		renderMeshActorLoadMaterialsLazily = true;
+		dllNamePostfix = NULL;
+		appGuid = NULL;
 	}
 };
 
+
+/**
+\brief These errors are returned by the NxCreateApexSDK() and NxApexSDK::createModule() functions
+*/
+enum NxApexCreateError
+{
+	/**
+	\brief No errors occurred when creating the Physics SDK.
+	*/
+	APEX_CE_NO_ERROR = 0,
+
+	/**
+	\brief Unable to find the libraries.
+	*/
+	APEX_CE_NOT_FOUND = 1,
+
+	/**
+	\brief The application supplied a version number that does not match with the libraries.
+	*/
+	APEX_CE_WRONG_VERSION = 2,
+
+	/**
+	\brief The supplied descriptor is invalid.
+	*/
+	APEX_CE_DESCRIPTOR_INVALID = 3,
+
+};
 
 /**
 \brief The ApexSDK abstraction. Manages scenes and modules.
@@ -254,23 +377,15 @@ public:
 	*/
 	virtual void releaseScene(NxApexScene*) = 0;
 
+#if NX_SDK_VERSION_MAJOR == 2
 	/**
-	 * \brief Allocates a TaskManager with optional thread pool
-	 *
-	 * If numThreads is non-zero, the new TaskManager will immediately
-	 * allocate a CpuDispatcher thread pool with the specified thread
-	 * count.  The user may query the CpuDispatcher pointer from this
-	 * new TaskManager and assign it to TaskManagers for other scenes.
-	 * The TaskManager maintains ownership of this CpuDispatcher and
-	 * will automatically release it when the TaskManager is released.
-	 *
-	 * If numThreads is zero, the new TaskManager's CpuDispatcher
-	 * reference will be NULL.  If the user does not set a CpuDispatcher
-	 * reference before providing the TaskManager to a scene, a
-	 * CpuDispatcher will be allocated the first time the simulation is
-	 * stepped.
-	 */
-	virtual physx::pxtask::TaskManager* createTaskManager(physx::PxU32 numThreads = 0) const = 0;
+	 \brief Allocates a CpuDispatcher with a thread pool of the specified number of threads
+
+	 If numThreads is zero, the thread pool will use the default number of threads for the
+	 current platform.
+	*/
+	virtual physx::pxtask::CpuDispatcher* createCpuDispatcher(physx::PxU32 numThreads = 0) = 0;
+	virtual void						   releaseCpuDispatcher(physx::pxtask::CpuDispatcher& cd) = 0;
 
 	/**
 	\brief Create a physx::pxtask::CudaContextManager
@@ -278,50 +393,84 @@ public:
 	virtual physx::pxtask::CudaContextManager* createCudaContextManager(const physx::pxtask::CudaContextManagerDesc& desc) = 0;
 
 	/**
+	\brief Get the PxFoundation instance
+	*/
+	virtual physx::PxFoundation* getPxFoundation() const = 0;
+#endif
+
+	/**
 	\brief Create/Load a module
 	*/
-	virtual NxModule* createModule(const char* name, NxSDKCreateError* err = NULL) = 0;
+	virtual NxModule* createModule(const char* name, NxApexCreateError* err = NULL) = 0;
 
 	/**
 	\brief Return an object describing how APEX is using the PhysX Actor.
 	\return NULL if PhysX Actor is not owned by APEX.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const NxActor* actor) const = 0;
+#else
+	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const PxActor* actor) const = 0;
+#endif
 
 	/**
 	\brief Return an object describing how APEX is using the PhysX Shape.
 	\return NULL if PhysX Shape is not owned by APEX.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const NxShape* shape) const = 0;
+#else
+	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const PxShape* shape) const = 0;
+#endif
 
 	/**
 	\brief Return an object describing how APEX is using the PhysX Joint.
 	\return NULL if PhysX Joint is not owned by APEX.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const NxJoint* joint) const = 0;
+#else
+	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const PxJoint* joint) const = 0;
+#endif
 
 
 	/**
 	\brief Return an object describing how APEX is using the PhysX Cloth.
 	\return NULL if PhysX Cloth is not owned by APEX.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const NxCloth* cloth) const = 0;
+#else
+	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const PxCloth* cloth) const = 0;
+#endif
 
+#if NX_SDK_VERSION_MAJOR == 2
 	/**
 	\brief Return an object describing how APEX is using the PhysX SoftBody.
 	\return NULL if PhysX SoftBody is not owned by APEX.
 	*/
 	virtual const NxApexPhysXObjectDesc* getPhysXObjectInfo(const NxSoftBody* softbody) const = 0;
+#endif
 
 	/**
-	\brief Return the user output stream.
+	\brief Return the user error callback.
+	\deprecated Use getErrorCallback() instead.
 	*/
-	virtual physx::PxUserOutputStream* getOutputStream() = 0;
+	PX_DEPRECATED virtual physx::PxErrorCallback* getOutputStream() = 0;
+
+	/**
+	\brief Return the user error callback.
+	*/
+	virtual physx::PxErrorCallback* getErrorCallback() = 0;
 
 	/**
 	\brief Returns the cooking interface.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual NxCookingInterface* getCookingInterface() = 0;
+#else
+	virtual PxCooking* getCookingInterface() = 0;
+#endif
 
 	/**
 	\brief Return the named resource provider.
@@ -329,22 +478,21 @@ public:
 	virtual NxResourceProvider* getNamedResourceProvider() = 0;
 
 	/**
-	\brief Return a user-implemented NxApexStream instance, if apexuser.dll is found.
-
-	Else returns an APEX PxFileBuf instance.  For use by APEX tools and samples, not by APEX internally.
-	Internally,	APEX will use a PxFileBuf directly provided by the user.
+	\brief Return an APEX physx::general_PxIOStream2::PxFileBuf instance.  For use by APEX
+	tools and samples, not by APEX internally. Internally,	APEX will use an
+	physx::general_PxIOStream2::PxFileBuf directly provided by the user.
 	*/
-	virtual physx::general_PxIOStream2::PxFileBuf* createStream(const char* filename, physx::PxU32 apexStreamFlags) = 0;
+	virtual physx::general_PxIOStream2::PxFileBuf* createStream(const char* filename, physx::general_PxIOStream2::PxFileBuf::OpenMode mode) = 0;
 
 	/**
-	\brief Return a PxFileBuf which reads from a buffer in memory.
+	\brief Return a physx::general_PxIOStream2::PxFileBuf which reads from a buffer in memory.
 	*/
 	virtual physx::general_PxIOStream2::PxFileBuf* createMemoryReadStream(const void* mem, physx::PxU32 len) = 0;
 
 	/**
-	\brief Return a PxFileBuf which writes to memory.
+	\brief Return a physx::general_PxIOStream2::PxFileBuf which writes to memory.
 	*/
-	virtual physx::general_PxIOStream2::PxFileBuf* createMemoryWriteStream(void) = 0;
+	virtual physx::general_PxIOStream2::PxFileBuf* createMemoryWriteStream(physx::PxU32 alignment = 0) = 0;
 
 	/**
 	\brief Return the address and length of the contents of a memory write buffer stream.
@@ -352,19 +500,23 @@ public:
 	virtual const void* getMemoryWriteBuffer(physx::general_PxIOStream2::PxFileBuf& stream, physx::PxU32& len) = 0;
 
 	/**
-	\brief Release a previously created PxFileBuf used as a read stream
+	\brief Release a previously created physx::general_PxIOStream2::PxFileBuf used as a read stream
 	*/
 	virtual void releaseMemoryReadStream(physx::general_PxIOStream2::PxFileBuf& stream) = 0;
 
 	/**
-	\brief Release a previously created PxFileBuf used as a write stream
+	\brief Release a previously created physx::general_PxIOStream2::PxFileBuf used as a write stream
 	*/
 	virtual void releaseMemoryWriteStream(physx::general_PxIOStream2::PxFileBuf& stream) = 0;
 
 	/**
 	\brief Return the PhysX SDK.
 	*/
+#if NX_SDK_VERSION_MAJOR == 2
 	virtual NxPhysicsSDK* getPhysXSDK() = 0;
+#else
+	virtual PxPhysics* getPhysXSDK() = 0;
+#endif
 
 	/**
 	\brief Return the number of modules.
@@ -381,24 +533,6 @@ public:
 	*/
 	virtual void releaseModule(NxModule* module) = 0;
 
-
-	/**
-	\brief Creates a render mesh asset from a stream
-
-	\deprecated
-	*/
-	virtual NxRenderMeshAsset* createRenderMeshAsset(physx::general_PxIOStream2::PxFileBuf&, const char* name, NxAuthObjTypeID ownerModuleID = 0) = 0;
-
-	/**
-	\brief Creates a render mesh asset from an authoring asset.
-	*/
-	virtual NxRenderMeshAsset* 	createRenderMeshAsset(NxRenderMeshAssetAuthoring&, const char* name, NxAuthObjTypeID ownerModuleID = 0) = 0;
-
-	/**
-	\brief Releases a render mesh asset.
-	*/
-	virtual void				releaseRenderMeshAsset(NxRenderMeshAsset&) = 0;
-
 	/**
 	\brief Creates an ApexDebugRender interface
 	*/
@@ -407,17 +541,32 @@ public:
 	/**
 	\brief Releases an ApexDebugRender interface
 	*/
-	virtual void                releaseApexRenderDebug(NxApexRenderDebug& debug) = 0;
+	virtual void releaseApexRenderDebug(NxApexRenderDebug& debug) = 0;
 
 	/**
-	\brief Create a render mesh asset authoring instance
+	\brief Creates an ApexSphereShape interface
 	*/
-	virtual NxRenderMeshAssetAuthoring* createRenderMeshAssetAuthoring() = 0;
+	virtual NxApexSphereShape* createApexSphereShape() = 0;
 
 	/**
-	\brief Release a render mesh asset authoring instance
+	\brief Creates an ApexCapsuleShape interface
 	*/
-	virtual void releaseRenderMeshAssetAuthoring(NxRenderMeshAssetAuthoring&) = 0;
+	virtual NxApexCapsuleShape* createApexCapsuleShape() = 0;
+
+	/**
+	\brief Creates an ApexBoxShape interface
+	*/
+	virtual NxApexBoxShape* createApexBoxShape() = 0;
+
+	/**
+	\brief Creates an ApexHalfSpaceShape interface
+	*/
+	virtual NxApexHalfSpaceShape* createApexHalfSpaceShape() = 0;
+
+	/**
+	\brief Release an NxApexShape interface
+	*/
+	virtual void releaseApexShape(NxApexShape& shape) = 0;
 
 	/**
 	\brief Return the number of assets force loaded by all of the existing APEX modules
@@ -436,13 +585,6 @@ public:
 	\brief Get the a pointer to APEX's instance of the ::NxParameterized::Traits class
 	*/
 	virtual ::NxParameterized::Traits* getParameterizedTraits() = 0;
-
-	/**
-	\brief Creates an APEX asset from a stream.
-
-	\deprecated
-	*/
-	virtual NxApexAsset* createAsset(physx::general_PxIOStream2::PxFileBuf&, const char* name) = 0;
 
 	/**
 	\brief Creates an APEX asset from an NxApexAssetAuthoring object.
@@ -518,6 +660,27 @@ public:
 	virtual NxParameterized::Serializer::ErrorType getSerializePlatform(const void* data, PxU32 dlen, NxParameterized::SerializePlatform& platform) = 0;
 
 	/**
+	\brief Get current (native) platform
+	*/
+	virtual void getCurrentPlatform(NxParameterized::SerializePlatform& platform) const = 0;
+
+	/**
+	\brief Get platform from human-readable name
+	\param [in]		name		platform name
+	\param [out]	platform	Platform corresponding to name
+	\return Success
+
+	Name format: compiler + compiler version (if needed) + architecture.
+	Supported names: VcWin32, VcWin64, VcXbox, GccPs3 (both Gcc and Snc), AndroidARM, Pib.
+	*/
+	virtual bool getPlatformFromString(const char* name, NxParameterized::SerializePlatform& platform) const = 0;
+
+	/**
+	\brief Get canonical name for platform
+	*/
+	virtual const char* getPlatformName(const NxParameterized::SerializePlatform& platform) const = 0;
+
+	/**
 	\brief Gets NxParameterized debug rendering color parameters.
 	Modiying NxParameterized debug colors automatically updates color table in debug renderer
 	*/
@@ -526,29 +689,41 @@ public:
 	/**
 	\brief Gets a string for the material to use when rendering wireframe data.
 	*/
-	virtual const char* getWireframeMaterial(void) = 0;
+	virtual const char* getWireframeMaterial() = 0;
 
 	/**
 	\brief Gets a string for the material to use when rendering solid shaded (per vertex color) lit triangles.
 	*/
-	virtual const char* getSolidShadedMaterial(void) = 0;
+	virtual const char* getSolidShadedMaterial() = 0;
 
-	/***
-	\brief Return the ApexSDK internal Foundation pointer if needed by other APEX DLLs
+	/**
+	\brief Get the PhysX Visual Debugger binding
 	*/
-	virtual physx::shdfnd2::Foundation* getFoundation(void) = 0;
+	virtual PVD::PvdBinding* getPvdBinding() = 0;
 
 protected:
 	virtual ~NxApexSDK() {}
 
 };
 
+/**
+\def NXAPEX_API
+\brief Export the function declaration from its DLL
+*/
+
+/**
+\def NX_CALL_CONV
+\brief Use C calling convention, required for exported functions
+*/
+
 PX_POP_PACK
 
-/// \def NXAPEX_API		Export the function declaration from its DLL
-/// \def NX_CALL_CONV	Use C calling convention, required for exported functions
+#ifdef NX_CALL_CONV
+#undef NX_CALL_CONV
+#endif
 
 #if defined(PX_WINDOWS)
+
 #define NXAPEX_API extern "C" __declspec(dllexport)
 #define NX_CALL_CONV __cdecl
 #else
@@ -559,7 +734,7 @@ PX_POP_PACK
 /**
 \brief Global function to create the SDK object.  NX_APEX_SDK_VERSION must be passed for the APEXsdkVersion.
 */
-NXAPEX_API NxApexSDK*	NX_CALL_CONV NxCreateApexSDK(const NxApexSDKDesc& desc, NxSDKCreateError* errorCode = NULL, physx::PxU32 APEXsdkVersion = NX_APEX_SDK_VERSION);
+NXAPEX_API NxApexSDK*	NX_CALL_CONV NxCreateApexSDK(const NxApexSDKDesc& desc, NxApexCreateError* errorCode = NULL, physx::PxU32 APEXsdkVersion = NX_APEX_SDK_VERSION);
 
 /**
 \brief Returns global SDK pointer.
@@ -569,4 +744,4 @@ NXAPEX_API NxApexSDK*	NX_CALL_CONV NxGetApexSDK();
 }
 } // end namespace physx::apex
 
-#endif //__NX_APEX_SDK_H__
+#endif // NX_APEX_SDK_H

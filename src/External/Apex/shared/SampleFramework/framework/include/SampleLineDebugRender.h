@@ -2,7 +2,7 @@
 #ifndef SAMPLE_LINE_DEBUG_RENDER_H
 #define SAMPLE_LINE_DEBUG_RENDER_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,51 +37,59 @@
  */
 #include <RendererMeshContext.h>
 
-#include "Px.h"
-#include "PxVec3.h"
+#include <FrameworkFoundation.h>
 
-class Renderer;
-class RendererColor;
-class RendererVertexBuffer;
-class SampleAssetManager;
-class SampleMaterialAsset;
-
-class SampleLineDebugRender
+namespace SampleRenderer
 {
-public:
-	    void addLine(const physx::PxVec3 &p0, const physx::PxVec3 &p1, const RendererColor &color);
-		void checkResizeLine(physx::PxU32 maxVerts);
+	class Renderer;
+	class RendererColor;
+	class RendererVertexBuffer;
+}
+
+namespace SampleFramework
+{
+
+	class SampleAssetManager;
+	class SampleMaterialAsset;
+
+	class SampleLineDebugRender
+	{
+	public:
+		void addLine(const PxVec3 &p0, const PxVec3 &p1, const SampleRenderer::RendererColor &color);
+		void checkResizeLine(PxU32 maxVerts);
 		void queueForRenderLine(void);
 		void clearLine(void);
 	protected:
-		SampleLineDebugRender(Renderer &renderer, SampleAssetManager &assetmanager);
+		SampleLineDebugRender(SampleRenderer::Renderer &renderer, SampleAssetManager &assetmanager);
 		virtual ~SampleLineDebugRender(void);
-			
+
 	private:
 		void checkLock(void);
 		void checkUnlock(void);
-		void addVert(const physx::PxVec3 &p, const RendererColor &color);
-	
+		void addVert(const PxVec3 &p, const SampleRenderer::RendererColor &color);
+
 	private:
 		SampleLineDebugRender &operator=(const SampleLineDebugRender&) { return *this; }
-		
+
 	private:
-		Renderer             &m_renderer;
-		SampleAssetManager   &m_assetmanager;
-		
-		SampleMaterialAsset  *m_material;
-		
-		physx::PxU32                 m_maxVerts;
-		physx::PxU32                 m_numVerts;
-		RendererVertexBuffer *m_vertexbuffer;
-		RendererMesh         *m_mesh;
-		RendererMeshContext   m_meshContext;
-		
-		void                 *m_lockedPositions;
-		physx::PxU32                 m_positionStride;
-		
-		void                 *m_lockedColors;
-		physx::PxU32                 m_colorStride;
-};
+		SampleRenderer::Renderer             &m_renderer;
+		SampleAssetManager                   &m_assetmanager;
+
+		SampleMaterialAsset                  *m_material;
+
+		PxU32                                 m_maxVerts;
+		PxU32                                 m_numVerts;
+		SampleRenderer::RendererVertexBuffer *m_vertexbuffer;
+		SampleRenderer::RendererMesh         *m_mesh;
+		SampleRenderer::RendererMeshContext   m_meshContext;
+
+		void                                 *m_lockedPositions;
+		PxU32                                 m_positionStride;
+
+		void                                 *m_lockedColors;
+		PxU32                                 m_colorStride;
+	};
+
+} // namespace SampleFramework
 
 #endif

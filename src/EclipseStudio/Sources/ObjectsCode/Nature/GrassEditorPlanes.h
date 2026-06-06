@@ -63,6 +63,8 @@ public:
 	float GetHeight(float x, float z) const;
 
 	void DrawPlanes() const;
+
+	void GetCombinedPlaneBounds( r3dBoundBox* oBox );
 };
 
 GrassPlanesManager * GetGrassPlaneManager();

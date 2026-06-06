@@ -624,6 +624,13 @@ namespace pugi
 		unsigned int as_uint() const;
 
 		/**
+		 * Cast attribute value as int64.
+		 *
+		 * \return attribute value as unsigned int, or 0 if conversion did not succeed or attribute is empty
+		 */
+		__int64 as_int64() const;
+
+		/**
 		 * Cast attribute value as double.
 		 *
 		 * \return attribute value as double, or 0.0 if conversion did not succeed or attribute is empty

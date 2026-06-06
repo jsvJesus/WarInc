@@ -73,7 +73,7 @@ inline
 void
 DamageLib::RemoveEntry( const string& category, const string& meshName )
 {
-	RemoveEntry( category, meshName );
+	RemoveEntry( ComposeKey( category, meshName ) );
 }
 
 //------------------------------------------------------------------------

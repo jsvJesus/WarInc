@@ -12,7 +12,6 @@ volatile static  int   * volatile input_StackTail = input_ScanStack;
 void win32_OnWMChar(WPARAM wParam)
 {
   int ch = (unsigned char)wParam;
-  input_StackTail = input_StackHead;
   *(input_StackHead++) = ch;
   if(input_StackHead >= input_ScanStack + INPUT_KBD_STACK)
     input_StackHead = input_ScanStack;

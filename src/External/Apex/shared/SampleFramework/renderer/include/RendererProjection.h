@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,27 +36,28 @@
 #define RENDERER_PROJECTION_H
 
 #include <RendererConfig.h>
-#include "PsShare.h"
-#include "Px.h"
-#include "PxSimpleTypes.h"
-#include "PxVec3.h"
-#include "PxMat34Legacy.h"
 
-class RendererProjection
+namespace SampleRenderer
 {
-	public:
-		RendererProjection(float fov, float aspectRatio, float nearPlane, float farPlane);
-		RendererProjection(float left, float right, float bottom, float top, float near, float far);
-		
-		void getColumnMajor44(float *f) const;
-		
-	private:
-		float m_matrix[16];
-};
 
-void   buildProjectMatrix(float *dst, const RendererProjection &proj, const physx::PxMat34Legacy &view);
-void   buildUnprojectMatrix(float *dst, const RendererProjection &proj, const physx::PxMat34Legacy &view);
-physx::PxVec3 unproject(const RendererProjection &proj, const physx::PxMat34Legacy &view, physx::PxF32 x, physx::PxF32 y);
-physx::PxVec3 project(  const RendererProjection &proj, const physx::PxMat34Legacy &view, const physx::PxVec3& pos);
+	class RendererProjection
+	{
+		public:
+			RendererProjection(float fov, float aspectRatio, float nearPlane, float farPlane);
+			RendererProjection(float left, float right, float bottom, float top, float near, float far);
+			
+			void getColumnMajor44(float *f) const;
+			void getRowMajor44(float *f) const;
+			
+		private:
+			float m_matrix[16];
+	};
+
+	void   buildProjectMatrix(float *dst, const RendererProjection &proj, const physx::PxTransform &view);
+	void   buildUnprojectMatrix(float *dst, const RendererProjection &proj, const physx::PxTransform &view);
+	PxVec3 unproject(const RendererProjection &proj, const physx::PxTransform &view, PxF32 x, PxF32 y, PxF32 z = 0);
+	PxVec3 project(  const RendererProjection &proj, const physx::PxTransform &view, const PxVec3& pos);
+
+} // namespace SampleRenderer
 
 #endif

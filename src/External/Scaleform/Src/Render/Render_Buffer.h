@@ -67,15 +67,8 @@ public:
     virtual ~RenderBuffer()
     { destroyRenderTargetData(); }
 
-    virtual void AddRef() 
-    {
-        AtomicOps<int>::ExchangeAdd_NoSync(&RefCount, 1);
-    }
-    virtual void Release()
-    {
-        if ((AtomicOps<int>::ExchangeAdd_NoSync(&RefCount, -1) - 1) == 0)
-            delete this;
-    }
+    virtual void AddRef() { }
+    virtual void Release() { }
 
     // RenderTargetData represents HW resource associated with render buffer,
     // allocated explicitly by the relevant HAL back end.

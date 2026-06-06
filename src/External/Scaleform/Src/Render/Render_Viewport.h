@@ -73,8 +73,8 @@ public:
 
         View_RenderTextureAlpha = View_IsRenderTexture|View_AlphaComposite,
 
-        // The viewport should offset by a half-pixel to be on the pixel centers.
-        View_HalfPixelOffset    = 0x100
+        // Hal-specific flags should start here
+        View_FirstHalFlag       = 0x100
     };
 
     Viewport()

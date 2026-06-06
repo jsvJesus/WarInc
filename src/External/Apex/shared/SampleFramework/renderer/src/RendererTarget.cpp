@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,12 +34,12 @@
  */
 #include <RendererTarget.h>
 
+using namespace SampleRenderer;
+
 RendererTarget::RendererTarget(void)
 {
-
 }
 
 RendererTarget::~RendererTarget(void)
 {
-
 }

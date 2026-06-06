@@ -22,8 +22,8 @@ namespace Scaleform { namespace Platform {
 // ***** RenderHALThread
 
 RenderHALThread::RenderHALThread(RTCommandQueue::ThreadingType threadingType)
-: Thread(256 * 1024, 1), // 256k stack size, create on processor #1.
-  RTCommandQueue((RTCommandQueue::ThreadingType)(threadingType & TT_TypeMask)),
+: Thread(128 * 1024, 1), // Default stack size, create on processor #1.
+  RTCommandQueue(threadingType),
   pDevice(0),
   pTextureManager(0),
   Status(Device_NeedInit),
@@ -38,8 +38,12 @@ RenderHALThread::RenderHALThread(RTCommandQueue::ThreadingType threadingType)
 {        
     memset(CursorPrims, 0, sizeof CursorPrims);
 
-    if (threadingType & TT_WatchDogFlag)
-        WatchDogThread.Start();
+    //ToleranceParams p;
+    //p.StrokeLowerScale = 0.99f;
+    //p.StrokeUpperScale = 1.01f;
+    //p.StrokeLowerScale = 0.9f;
+    //p.StrokeUpperScale = 1.1f;
+    //pRenderer->SetToleranceParams(p);
 }
 
 int RenderHALThread::Run()
@@ -115,20 +119,6 @@ bool RenderHALThread::InitGraphics(const Platform::ViewConfig& config, Device::W
     return ok;
 }
 
-void RenderHALThread::ResizeFrame(void* layer)
-{
-    SF_ASSERT(pDevice);
-    if (!pDevice->GraphicsConfigOnMainThread() || IsSingleThreaded())
-    {
-        PushCallAndWait(&RenderHALThread::resizeFrame, layer);
-    }
-    else
-    {
-        RTBlockScope rtblock(this);
-        resizeFrame(layer);
-    }
-}
-
 bool RenderHALThread::ReconfigureGraphics(const Platform::ViewConfig& config)
 {
     SF_ASSERT(pDevice);
@@ -195,11 +185,6 @@ void RenderHALThread::DrawFrame()
     DrawFrameEnqueued = true;
 }
 
-void RenderHALThread::FinishFrame()
-{
-    PushCallAndWait(&RenderHALThread::finishFrame);
-}
-
 void RenderHALThread::WaitForOutstandingDrawFrame()
 {
     if (DrawFrameEnqueued && !IsSingleThreaded())
@@ -227,11 +212,6 @@ bool RenderHALThread::initGraphics(const Platform::ViewConfig& config, Device::W
         return true;
     }
     return false;
-}
-
-void RenderHALThread::resizeFrame(void* layer)
-{
-    pDevice->ResizeFrame(layer);
 }
 
 bool RenderHALThread::reconfigureGraphics(const Platform::ViewConfig& config)
@@ -316,25 +296,17 @@ void RenderHALThread::executeThreadCommand(const Ptr<Render::ThreadCommand>& com
 int RenderHALThread::watchDogThreadFn(Thread*, void* triggerAddr)
 {
     unsigned* trigger = reinterpret_cast<unsigned*>(triggerAddr);
-    int failureCount = 0;
+    unsigned failureCount = 0;
     while (true)
     {
         if (!AtomicOps<unsigned>::CompareAndSet_Sync(trigger, 1, 0))
         {
             failureCount++;
-
-            // Print to stderr, so we will know that if this dies in an autotest, it will come out in the log.
             SF_DEBUG_WARNING1(1, "Watchdog thread unsatisfied (for %d seconds)", (failureCount * WatchDogInterval) / 1000);
+            SF_DEBUG_ASSERT1(failureCount < WatchDogMaxFailureCount, "Watchdog thread unsatisfied for too long (%d seconds), "
+                "system is likely deadlocked.", (failureCount * WatchDogInterval) / 1000);
             if (failureCount >= WatchDogMaxFailureCount)
-            {
-                // Print to stderr, so we will know that if this dies in an autotest, it will come out in the log.
-                fprintf(stderr, "Watchdog thread unsatisfied for too long (for %d seconds)\n", (failureCount * WatchDogInterval) / 1000);
-
-                // Cause a crash, so that if this is an autotest, we will get a dump that we can debug.
-                int * crash = 0;
-                *crash = 0xDEADDEAD;
                 return -1;
-            }
         }
         else
             failureCount = 0;

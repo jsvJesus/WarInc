@@ -24,7 +24,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Include System thread functionality.
 #if defined(SF_OS_WIN32)
 #include <windows.h>
-
 #elif defined(SF_OS_XBOX360)
 #include <xtl.h>
 
@@ -946,7 +945,7 @@ public:
     inline void Unlock() { }
 
    // Windows.
-#elif defined(SF_OS_WIN32)
+#elif defined(SF_OS_WIN32) && (defined(SF_CPU_X86) || defined(SF_CPU_X86_64))
 
     // Optimized Win32 CriticalSection similar to code provided by
     // "Fast critical sections with timeout" by Vladislav Gelfer on code project.

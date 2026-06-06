@@ -2,7 +2,7 @@
 
 #include "hud_base.h"
 
-class obj_AI_Player;
+class obj_Player;
 
 class EditorGameHUD : public BaseHUD
 {
@@ -35,7 +35,7 @@ protected:
 	virtual void	DestroyPure();
 	virtual void	SetCameraPure (r3dCamera &Cam );
 private:
-	obj_AI_Player*	AddPlayer	( int bControllable );
+	obj_Player*	AddPlayer	( int bControllable );
 
 	float cameraRayLen;
 

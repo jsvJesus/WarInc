@@ -17,10 +17,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 #define INC_SF_Render_GL_HAL_H
 
 #include "Render/Render_HAL.h"
-#include "Render/GL/GL_MeshCache.h"
-#include "Render/GL/GL_Shader.h"
-#include "Render/GL/GL_Texture.h"
-#include "Render/Render_ShaderHAL.h"    // Must be included after platform specific shader includes.
+#include "GL_MeshCache.h"
+#include "GL_Shader.h"
+#include "GL_Texture.h"
 
 namespace Scaleform { namespace Render { namespace GL {
 
@@ -30,14 +29,7 @@ enum HALConfigFlags
 {
     // Only compile shaders when they are actually used. This can reduce startup-times,
     // however, compiling shaders dynamically can cause performance spikes during playback.
-    // Note that if binary shaders are available in the OpenGL/ES implementation and not explicitly
-    // disabled by using HALConfig_DisableBinaryShaders, this flag is ignored, and all shaders are
-    // loaded at startup. They subsequently will be loaded from disk, which is much faster.
     HALConfig_DynamicShaderCompile  = 0x00000001,
-
-    // Disables the use of binary shaders (loading and saving), even if the OpenGL/ES implementation
-    // has the required support for it. 
-    HALConfig_DisableBinaryShaders  = 0x00000002,
 };
 
 // GL::HALInitParams provides OpenGL-specific rendering initialization
@@ -46,18 +38,17 @@ enum HALConfigFlags
 struct HALInitParams : public Render::HALInitParams
 {
     String BinaryShaderPath;
-    bool NoVAO;
-    bool NoInstancing;
 
-    HALInitParams(UInt32 halConfigFlags = 0,
-                  ThreadId renderThreadId = ThreadId(),
+    HALInitParams(
+#ifdef SF_GL_BINARY_SHADERS
                   const String& binaryShaderPath = String(),
-                  bool noVao = false,
-                  bool noInstancing = false) : 
-        Render::HALInitParams(0, halConfigFlags, renderThreadId),
-        BinaryShaderPath(binaryShaderPath),
-        NoVAO(noVao),
-        NoInstancing(noInstancing)
+#endif
+                  UInt32 halConfigFlags = 0,
+                  ThreadId renderThreadId = ThreadId())
+        : Render::HALInitParams(0, halConfigFlags, renderThreadId)
+#ifdef SF_GL_BINARY_SHADERS
+        , BinaryShaderPath(binaryShaderPath)
+#endif
     { }
 
     // GL::TextureManager accessors for correct type.
@@ -81,14 +72,12 @@ enum CapFlags
     Cap_BinaryShaders   = 0x100, // profile supports loading binary shaders (GLES 2.0)
 
     // Caps for drawing.
-    Cap_Instancing      = 0x200, // profile supports instancing (DrawArraysInstanced, and GLSL1.4+).
-    
-    Cap_NoVAO           = 0x400, // disable vertex array objects
-    
+    Cap_Instancing      = 0x200, // profile supports instancing (DrawArraysInstanced).
+
     // GL_MAX_VERTEX_UNIFORM_VECTORS, or a different value on certain devices
     Cap_MaxUniforms       = 0xffff0000,
     Cap_MaxUniforms_Shift = 16,
-    
+
     Caps_Standard         = Cap_MapBuffer
 };
 
@@ -105,25 +94,31 @@ protected:
     virtual void        recalculateUVPOC() const;
 };
 
-class HAL : public Render::ShaderHAL<ShaderManager, ShaderInterface>
+class HAL : public Render::HAL
 #ifdef SF_GL_RUNTIME_LINK
     , public GL::Extensions
 #endif
 {
 public:
-    bool                 MultiBitStencil;
-    int                  EnabledVertexArrays;
-    bool                 FilterVertexBufferSet;
-    int                  BlendEnable;
+    bool                MultiBitStencil;
+    int                 EnabledVertexArrays;
+    bool                FilterVertexBufferSet;
+    int                 BlendEnable;
 
     MeshCache            Cache;
 
-    Ptr<TextureManager>  pTextureManager;
+    ShaderManager            SManager;
+    ShaderObject             StaticShaders[UniqueShaderCombinations];
+    HashLH<void*, GLuint>    CompiledShaderHash;                        // Hash of source shader text to compiled shader index.
+
+    ShaderInterface          ShaderData;
+    String                   BinaryShaderPath;
+    Ptr<TextureManager>      pTextureManager;
     
     // Previous batching mode
     PrimitiveBatch::BatchType PrevBatchType;
 
-    unsigned&            Caps;
+    unsigned                Caps;
 
     // Self-accessor used to avoid constructor warning.
     HAL*      GetHAL() { return this; }
@@ -150,7 +145,6 @@ public:
     // *** Rendering
 
     virtual bool        BeginFrame();
-    virtual void        FinishFrame();
     virtual bool        BeginScene();
     virtual bool        EndScene();
 
@@ -158,10 +152,17 @@ public:
     // Fill the background color, and set up default transforms, etc.
     virtual void        beginDisplay(BeginDisplayData* data);
 
+    void                CalcHWViewMatrix(unsigned VPFlags, Matrix* pmatrix, const Rect<int>& viewRect,
+                                         int dx, int dy);
+
     // Updates HW Viewport and ViewportMatrix based on the current
     // values of VP, ViewRect and ViewportValid.
     virtual void        updateViewport();
 
+
+    // Creates / Destroys mesh and DP data 
+
+    virtual PrimitiveFill*  CreatePrimitiveFill(const PrimitiveFillData& data);    
 
     virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
                                                PrimitiveBatch* pstart, PrimitiveBatch *pend);
@@ -174,10 +175,10 @@ public:
     virtual void    EndMaskSubmit();
     virtual void    PopMask();
 
+    void    drawMaskClearRectangles(const HMatrix* matrices, UPInt count);
     virtual void    clearSolidRectangle(const Rect<int>& r, Color color);
 
-    bool SetVertexArray(const VertexFormat* pFormat, MeshCacheItem* pmesh, unsigned vboffset = 0);
-    bool SetVertexArray(const VertexFormat* pFormat, GLuint buffer, GLuint vao);
+    bool SetVertexArray(const VertexFormat* pFormat, GLuint buffer, UByte* vertexOffset);
 
 
     // *** BlendMode
@@ -203,39 +204,49 @@ public:
     virtual void          PushFilters(FilterPrimitive* primitive);
     virtual void          drawUncachedFilter(const FilterStackEntry& e);
     virtual void          drawCachedFilter(FilterPrimitive* primitive);
-    
+
+    // *** DrawableImage
+    virtual void          DrawableCxform( Render::Texture** tex, const Matrix2F* texgen, const Cxform* cx);
+    virtual void          DrawableCompare( Render::Texture** tex, const Matrix2F* texgen );
+    virtual void          DrawableCopyChannel( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul );
+    virtual void          DrawableMerge( Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul );
+    virtual void          DrawableCopyPixels( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                              bool mergeAlpha, bool destAlpha );
+    virtual void          DrawablePaletteMap( Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                              unsigned channelMask, const UInt32* values);
+    virtual void          DrawableThreshold(  Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, 
+                                              DrawableImage::OperationType op, UInt32 threshold, UInt32 color, 
+                                              UInt32 mask, bool copySource);
+    virtual void          DrawableCopyback( Render::Texture* tex, const Matrix2F& mvp, const Matrix2F& texgen );
+
     virtual class MeshCache&       GetMeshCache()        { return Cache; }
 
     virtual float         GetViewportScaling() const { return 1.0f; }
 
     virtual void    MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                                     const VertexFormat** single,
-                                    const VertexFormat** batch, const VertexFormat** instanced, 
-                                    unsigned meshType = MeshCacheItem::Mesh_Regular);
+                                    const VertexFormat** batch, const VertexFormat** instanced, unsigned meshType = 0);
 
-    const ShaderObject* GetStaticShader(ShaderDesc::ShaderType shaderType);
+    const ShaderObject* GetStaticShader(FragShaderDesc::ShaderType shaderType);
 
     void     DrawFilter(const Matrix2F& mvp, const Cxform & cx, const Filter* filter, Ptr<RenderTarget> * targets, 
                         unsigned* shaders, unsigned pass, unsigned passCount, const VertexFormat* pvf, 
                         BlurFilterState& leBlur, bool isLastPass);
 
-    // Check whether the given extension exists in the current profile.
-    bool                CheckExtension(const char *name);
-
-    // Check whether the input major/minor version pair is greater or equal to the current profile version.
-    bool                CheckGLVersion(unsigned reqMajor, unsigned reqMinor);
-
 
 protected:
     ImageSize           getFboInfo(GLint fbo, GLint& currentFBO, bool useCurrent);
+
+    // Initializes all shaders, unless HALConfig_DynamicShaderCompile is set, or force is true.
+    // If compilation of any shader fails, returns false, in which case the Prog member is set to zero.
+    bool                initializeShaders(bool force = false);
 
     // Returns whether the profile can render any of the filters contained in the FilterPrimitive.
     // If a profile does not support dynamic looping (Cap_NoDynamicLoops), no blur/shadow type filters
     // can be rendered, in which case this may return false, however, ColorMatrix filters can still be rendered.
     bool                shouldRenderFilters(const FilterPrimitive* prim) const;
 
-    virtual void        setBatchUnitSquareVertexStream();
-    virtual void        drawPrimitive(unsigned indexCount, unsigned meshCount);
+    void                drawPrimitive(unsigned indexCount, unsigned meshCount);
     void                drawIndexedPrimitive( unsigned indexCount, unsigned meshCount, UByte* indexPtr);
     void                drawIndexedInstanced( unsigned indexCount, unsigned meshCount, UByte* indexPtr);
 
@@ -245,10 +256,10 @@ protected:
     // *** Events
     virtual Render::RenderEvent& GetEvent(EventType eventType);
 
-    // Cached versions read from GL_VERSION string.
-    unsigned            MajorVersion, MinorVersion;
-    // Cached GL_EXTENSIONS string.
-    String              Extensions;
+    // Cached mappings of VertexXY16iAlpha vertex format.
+    VertexFormat*       MappedXY16iUVTexture[PrimitiveBatch::DP_DrawableCount];
+    VertexFormat*       MappedXY16iAlphaTexture[PrimitiveBatch::DP_DrawableCount];
+    VertexFormat*       MappedXY16iAlphaSolid[PrimitiveBatch::DP_DrawableCount];
 };
 
 //--------------------------------------------------------------------

@@ -42,13 +42,12 @@ GameObject * LoadLevelObject ( pugi::xml_node & curNode )
 	}
 #endif
 
-	// after all levels have been resaved and the past has been forgotten - remove this block
-	if( !strcmp( class_name, "obj_GeneralParticleEmmiter" ) )
-	{
-		class_name = "obj_ParticleSystem" ;
-	}
-
 	obj = srv_CreateGameObject(class_name, load_name, pos);
+	if(!obj)
+	{
+		r3dOutToLog("!!!Failed to create object! class: %s, name: %s\n", class_name, load_name);
+		return NULL;
+	}
 	r3d_assert ( obj );
 	obj->ReadSerializedData(curNode);
 

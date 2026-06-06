@@ -36,7 +36,7 @@ static	int		draggingPnt;
   public:
 	UICurveEditor();
 	~UICurveEditor();
-	void		DrawIM(float in_x, float in_y, float in_w, float in_h, const char *Title, r3dTimeGradient2* edit_val, float* pVertScale, float in_minVal, float in_maxVal, int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, bool bUseDesktop = true  );
+	void		DrawIM(float in_x, float in_y, float in_w, float in_h, const char *Title, r3dTimeGradient2* edit_val, float* pVertScale, float in_minVal, float in_maxVal, int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, float currentTime = -1.0f, bool bUseDesktop = true  );
 	void		DrawBezier(float in_x, float in_y, float in_w, float in_h, const char *Title, r3dBezierGradient* edit_val, float* pVertScale, float in_minVal, float in_maxVal, int x_steps = 10, int y_steps = 10, int x_precision = 2, int y_precision = 2, bool bUseDesktop = true  );
 };
 

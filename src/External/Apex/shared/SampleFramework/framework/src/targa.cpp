@@ -18,8 +18,13 @@
 #include "RendererConfig.h"
 #if defined(RENDERER_ENABLE_TGA_SUPPORT)
 
-#ifndef __CELLOS_LV2__
-/*@unused@*/ static const char rcsid[] =
+#ifdef __GNUC__
+#define UNUSED_VAR __attribute__((unused))
+#else
+#define UNUSED_VAR
+#endif
+
+/*@unused@*/ static const char rcsid[] UNUSED_VAR =
     "$Id: targa.c,v 1.7 2003/06/21 09:30:53 emikulic Exp $";
 
 #define TGA_KEEP_MACROS /* BIT, htole16, letoh16 */
@@ -33,6 +38,7 @@ extern "C" {
 
 #include <stdlib.h>
 #include <string.h> /* memcpy, memcmp */
+#include "PsFile.h"
 
 #define SANE_DEPTH(x) ((x) == 8 || (x) == 16 || (x) == 24 || (x) == 32)
 #define UNMAP_DEPTH(x)            ((x) == 16 || (x) == 24 || (x) == 32)
@@ -165,8 +171,8 @@ const char *tga_error(const tga_result errcode)
 tga_result tga_read(tga_image *dest, const char *filename)
 {
     tga_result result;
-    FILE *fp;
-    if (0 != fopen_s(&fp, filename, "rb")) return TGAERR_FOPEN;
+    FILE *fp = NULL;
+    if (0 != physx::shdfnd::fopen_s(&fp, filename, "rb")) return TGAERR_FOPEN;
     result = tga_read_from_FILE(dest, fp);
     fclose(fp);
     return result;
@@ -359,8 +365,8 @@ static tga_result tga_read_rle(tga_image *dest, FILE *fp)
 tga_result tga_write(const char *filename, const tga_image *src)
 {
     tga_result result;
-    FILE *fp;
-    if (0 != fopen_s(&fp, filename, "wb")) return TGAERR_FOPEN;
+    FILE *fp = NULL;
+    if (0 != physx::shdfnd::fopen_s(&fp, filename, "wb")) return TGAERR_FOPEN;
     result = tga_write_to_FILE(fp, src);
     fclose(fp);
     return result;
@@ -955,7 +961,7 @@ tga_result tga_desaturate(tga_image *img, const int cr, const int cg,
          src < img->image_data + img->width*img->height*bpp;
          src += bpp)
     {
-        uint8_t b, g, r;
+        uint8_t b=0, g=0, r=0;
         (void)tga_unpack_pixel(src, img->pixel_depth, &b, &g, &r, NULL);
 
         *dest = (uint8_t)( ( (int)b * cb +
@@ -1034,7 +1040,7 @@ tga_result tga_convert_depth(tga_image *img, const uint8_t bits)
              src < img->image_data + img->width * img->height * src_bpp;
              src += src_bpp)
         {
-            uint8_t r,g,b,a;
+            uint8_t r=0,g=0,b=0,a=0;
             (void)tga_unpack_pixel(src, img->pixel_depth, &r, &g, &b, &a);
             (void)tga_pack_pixel(dest, bits, r, g, b, a);
             dest += dest_bpp;
@@ -1059,7 +1065,7 @@ tga_result tga_convert_depth(tga_image *img, const uint8_t bits)
              src >= img->image_data;
              src -= src_bpp)
         {
-            uint8_t r,g,b,a;
+            uint8_t r=0,g=0,b=0,a=0;
             (void)tga_unpack_pixel(src, img->pixel_depth, &r, &g, &b, &a);
             (void)tga_pack_pixel(dest, bits, r, g, b, a);
             dest -= dest_bpp;
@@ -1086,7 +1092,7 @@ tga_result tga_swap_red_blue(tga_image *img)
          ptr < img->image_data + (img->width * img->height - 1) * bpp;
          ptr += bpp)
     {
-        uint8_t r,g,b,a;
+        uint8_t r=0,g=0,b=0,a=0;
         (void)tga_unpack_pixel(ptr, img->pixel_depth, &b,&g,&r,&a);
         (void)tga_pack_pixel(ptr, img->pixel_depth, r,g,b,a);
     }
@@ -1117,8 +1123,6 @@ void tga_free_buffers(tga_image *img)
         img->image_data = NULL;
     }
 }
-
-#endif /* !__CELLOS_LV2__ */
 
 #endif /* RENDERER_WINDOWS */
 

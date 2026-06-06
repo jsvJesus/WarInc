@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,26 +35,6 @@
 #ifndef RENDERER_TEXTURE_2D_DESC_H
 #define RENDERER_TEXTURE_2D_DESC_H
 
-#include <RendererTexture2D.h>
-
-class RendererTexture2DDesc
-{
-	public:
-		RendererTexture2D::Format     format;
-		RendererTexture2D::Filter     filter;
-		RendererTexture2D::Addressing addressingU;
-		RendererTexture2D::Addressing addressingV;
-		
-		physx::PxU32                     width;
-		physx::PxU32                     height;
-		physx::PxU32                     numLevels;
-		
-		bool                      renderTarget;
-		
-	public:
-		RendererTexture2DDesc(void);
-		
-		bool isValid(void) const;
-};
+#include <RendererTextureDesc.h>
 
 #endif

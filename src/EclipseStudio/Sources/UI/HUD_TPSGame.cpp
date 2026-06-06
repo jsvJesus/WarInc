@@ -11,10 +11,8 @@
 #include "UI\HUD_TPSGame.h"
 #include "ObjectsCode/AI/AI_Player.h"
 #include "ObjectsCode/AI/AI_PlayerAnim.h"
-#include "ObjectsCode/Gameplay/BaseControlPoint.h"
+#include "ObjectsCode/Gameplay/BasePlayerSpawnPoint.h"
 #include "ObjectsCode/weapons/WeaponArmory.h"
-#include "ObjectsCode/weapons/Weapon.h"
-#include "ObjectsCode/Gameplay/obj_UAV.h"
 
 #include "APIScaleformGfx.h"
 
@@ -23,48 +21,33 @@
 #include "HUDCameraEffects.h"
 
 #include "UI\HUDDisplay.h"
-#include "UI\HUDRespawn.h"
-#include "UI\HUDMinimap.h"
-#include "UI\HUDScoreboard.h"
-#include "UI\m_EndRound.h"
 #include "UI\HUDPause.h"
-#include "UI\HUDCameraDrone.h"
-#include "UI\HUDCommCalls.h"
-#include "UI\HUDLaserDesignator.h"
+#include "UI\HUDAttachments.h"
+#include "UI\HUDActionUI.h"
+#include "UI\HUDGeneralStore.h"
+#include "UI\HUDVault.h"
 
 #include "..\GameEngine\gameobjects\obj_Vehicle.h"
 
+#include "rendering/Deffered/D3DMiscFunctions.h"
+
 extern float GameFOV;
 
-HUDCommCalls* hudCommCalls = NULL;
-HUDLaserDesignator* hudLaserDesignator = NULL;
-HUDMinimap* hudMinimap = NULL;
-HUDRespawn*	hudRespawn = NULL;
 HUDDisplay*	hudMain = NULL;
-HUDScoreboard*	hudScore = NULL;
-HUDEndRound*	hudEndRound = NULL;
 HUDPause*	hudPause = NULL;
-HUDCameraDrone* hudDrone = NULL;
+HUDAttachments*	hudAttm = NULL;
+HUDActionUI*	hudActionUI = NULL;
+HUDGeneralStore* hudGeneralStore = NULL;
+HUDVault* hudVault = NULL;
 
 #define VEHICLE_CINEMATIC_MODE 0
 
-void TPSGameHud_UnlockAchievement( int achievementID )
-{
-	if( gClientLogic().gameFinished_ == false )
-	{
-		hudMain->RequeustAchievement(achievementID);
-	} else {
-		hudEndRound->ShowAchievementRibbon(achievementID);
-	}
-}
-
 void TPSGameHUD_AddHitEffect(GameObject* from)
 {
-	obj_AI_Player* pl = gClientLogic().localPlayer_;
+	obj_Player* pl = gClientLogic().localPlayer_;
 	if(!pl) return;
 	if(pl->bDead) return;
 
-	hudMain->AddHitEffect(from);
 	pl->BloodEffect = 3.0f;
 }
 
@@ -91,25 +74,19 @@ void TPSGameHUD_OnStartGame()
 {
 	const GBGameInfo& ginfo = gClientLogic().m_gameInfo;
 
-	hudCommCalls = new HUDCommCalls();
-	hudLaserDesignator = new HUDLaserDesignator();
-	hudMinimap = new HUDMinimap();
-	hudRespawn = new HUDRespawn();
 	hudMain = new HUDDisplay();
-	hudScore = new HUDScoreboard();
-	hudEndRound = new HUDEndRound();
 	hudPause = new HUDPause();
-	hudDrone = new HUDCameraDrone();
+	hudActionUI = new HUDActionUI();
+	hudAttm = new HUDAttachments();
+	hudGeneralStore = new HUDGeneralStore();
+	hudVault = new HUDVault();
 
-	hudMain->Init(ginfo.startTickets);
-	hudRespawn->Init();
-	hudScore->Init();
-	hudCommCalls->Init();
-	hudLaserDesignator->Init();
-	hudMinimap->Init();
-	hudEndRound->Init();
+	hudMain->Init();
 	hudPause->Init();
-	hudDrone->Init();
+	hudActionUI->Init();
+	hudAttm->Init();
+	hudGeneralStore->Init();
+	hudVault->Init();
 
 	Mouse->Hide(true);
 	// lock mouse to a window when playing a game
@@ -131,25 +108,19 @@ void TPSGameHUD :: DestroyPure()
 	{
 		TPSGameHud_Inited = false;
 
-		hudRespawn->Unload();
-		hudEndRound->Unload();
 		hudPause->Unload();
-		hudScore->Unload();
-		hudCommCalls->Unload();
-		hudLaserDesignator->Unload();
-		hudDrone->Unload();
-		hudMinimap->Unload();
 		hudMain->Unload();
+		hudActionUI->Unload();
+		hudAttm->Unload();
+		hudGeneralStore->Unload();
+		hudVault->Unload();
 
-		SAFE_DELETE(hudCommCalls);
-		SAFE_DELETE(hudLaserDesignator);
-		SAFE_DELETE(hudMinimap);
-		SAFE_DELETE(hudRespawn);
 		SAFE_DELETE(hudMain);
-		SAFE_DELETE(hudScore);
-		SAFE_DELETE(hudEndRound);
 		SAFE_DELETE(hudPause);
-		SAFE_DELETE(hudDrone);
+		SAFE_DELETE(hudActionUI);
+		SAFE_DELETE(hudAttm);
+		SAFE_DELETE(hudGeneralStore);
+		SAFE_DELETE(hudVault);
 	}
 }
 
@@ -207,29 +178,15 @@ bool CheckCameraCollision(r3dPoint3D& camPos, const r3dPoint3D& target, bool che
 		PxTransform camPose(PxVec3(target.x, target.y, target.z), PxQuat(0,0,0,1));
 
 		PxSweepHit sweepResults[32];
-		PxSweepBuffer sweepBuffer(sweepResults, 32);
-
-		PxSceneQueryFilterData filter(
-			PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0),
-			PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
-		);
-
-		while(LoopBreaker < MaxLoopBreaker)
+		bool blockingHit;
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_PLAYER_COLLIDABLE_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
+		while(int numRes=g_pPhysicsWorld->PhysXScene->sweepMultiple(camSphere, camPose, PxVec3(motion.x, motion.y, motion.z), motionLen, PxSceneQueryFlag::eINITIAL_OVERLAP|PxSceneQueryFlag::eNORMAL, sweepResults, 32, blockingHit, filter) && LoopBreaker<MaxLoopBreaker)
 		{
-			bool hasSweepHit = g_pPhysicsWorld->PhysXScene->sweep(
-				camSphere,
-				camPose,
-				PxVec3(motion.x, motion.y, motion.z),
-				motionLen,
-				sweepBuffer,
-				PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eNORMAL,
-				filter
-			);
-
-			int numRes = hasSweepHit ? (int)sweepBuffer.getNbAnyHits() : 0;
-			if(numRes <= 0)
+			if(numRes == -1)
+			{
+				r3d_assert(false);
 				break;
-			
+			}
 			/* PxVec3 collNormal = PxVec3(0,0,0);
 			for(int i=0; i<numRes; ++i)
 			{
@@ -254,62 +211,6 @@ bool CheckCameraCollision(r3dPoint3D& camPos, const r3dPoint3D& target, bool che
 			}
 			motion.Normalize();
 		}
-
-		/*
-		// OLD CODE!
-		NxRay ray; 
-		NxRaycastHit hit;
-		ray.orig = target.asNxVec3();
-		ray.dir = (camPos - target).asNxVec3();
-		float rayLen = ray.dir.magnitude();
-		ray.dir.normalize();
-		r3dPoint3D rayDir(-ray.dir);
-		if(rayLen > 0)
-		{
-		NxShape* shape = g_pPhysicsWorld->PhysXScene->raycastClosestShape(ray, NX_STATIC_SHAPES, hit, COLLIDABLE_STATIC_MASK, rayLen,NX_RAYCAST_IMPACT);
-		if(shape)
-		camPos = r3dPoint3D(hit.worldImpact.x-ray.dir.x*0.1f, hit.worldImpact.y-ray.dir.y*0.1f, hit.worldImpact.z-ray.dir.z*0.1f);
-		}
-
-		NxSphere camSphere;
-		NxVec3 origCamPos = camPos.asNxVec3();
-		camSphere.center = camPos.asNxVec3();
-		camSphere.radius = 0.6f;
-		int LoopBreaker = 0;
-		float distance = 0;
-		// simple test to make sure that camera isn't too close to geometry, so that Near Plane will not clip it, otherwise player can see through walls
-		while(g_pPhysicsWorld->PhysXScene->checkOverlapSphere(camSphere, NX_STATIC_SHAPES, COLLIDABLE_STATIC_MASK) && LoopBreaker < 50) // && distance < rayLen
-		{
-		// check for collision shapes
-		NxShape* collShapes[32] = {0};
-		int numColl = g_pPhysicsWorld->PhysXScene->overlapSphereShapes(camSphere, NX_STATIC_SHAPES, 32, &collShapes[0], NULL, COLLIDABLE_STATIC_MASK, NULL, true);
-		NxVec3 collNormal = NxVec3(0,0,0);
-		for(int i=0; i<numColl; ++i)
-		{
-		NxBounds3 camAABB;
-		camAABB.setCenterExtents(camSphere.center, NxVec3(0.5f));
-		NxBox camBox;
-		NxMat34 identMat; identMat.id();
-		NxCreateBox(camBox, camAABB, identMat);
-		NxSweepQueryHit hit;
-		if(g_pPhysicsWorld->PhysXScene->linearOBBSpecificShapeSweep(camBox, collShapes[i], ray.dir*20.0f, hit))
-		{
-		collNormal += hit.normal;
-		}
-		}
-
-		if(collNormal.magnitude() > 0)
-		collNormal.normalize();
-		else
-		collNormal = rayDir.asNxVec3();
-
-		r3dPoint3D tmp(collNormal.x, collNormal.y, collNormal.z);
-		camPos += tmp * 0.02f;
-		distance += 0.02f;
-		camSphere.center = camPos.asNxVec3();
-		LoopBreaker++;
-		}*/
-
 	}
 
 	if(checkCamera)
@@ -328,7 +229,7 @@ bool CheckCameraCollision(r3dPoint3D& camPos, const r3dPoint3D& target, bool che
 }
 
 float g_shootCameraShakeTimer = 0.0f;
-void Get_Camera_Bob(r3dPoint3D& camBob, r3dPoint3D& camUp, const obj_AI_Player* player)
+void Get_Camera_Bob(r3dPoint3D& camBob, r3dPoint3D& camUp, const obj_Player* player)
 {
 	r3d_assert(player);
 	camBob.Assign(0,0,0);
@@ -418,6 +319,9 @@ void Get_Camera_Bob(r3dPoint3D& camBob, r3dPoint3D& camUp, const obj_AI_Player* 
 			// crouch mode no bob
 		case PLAYER_MOVE_CROUCH: // intentional fallthrough
 		case PLAYER_MOVE_CROUCH_AIM:// intentional fallthrough
+		case PLAYER_MOVE_PRONE: // intentional fallthrough
+		case PLAYER_PRONE_AIM:// intentional fallthrough
+		case PLAYER_PRONE_IDLE:// intentional fallthrough
 		case PLAYER_IDLE:// intentional fallthrough
 		case PLAYER_IDLEAIM:// intentional fallthrough
 			// no bob if turn in place or idle
@@ -489,7 +393,7 @@ void		updateCameraLeftSide()
 		g_CameraLeftSideLerp = R3D_CLAMP(g_CameraLeftSideLerp+r3dGetFrameTime()*5.0f, 0.0f, 1.0f);
 }
 
-r3dPoint3D getAdjustedPointTo(obj_AI_Player* pl, const r3dPoint3D& PointTo, const r3dPoint3D& CamPos)
+r3dPoint3D getAdjustedPointTo(obj_Player* pl, const r3dPoint3D& PointTo, const r3dPoint3D& CamPos)
 {
 	if(g_camera_mode->GetInt()==2)
 		return R3D_ZERO_VECTOR;
@@ -510,24 +414,13 @@ r3dPoint3D getAdjustedPointTo(obj_AI_Player* pl, const r3dPoint3D& PointTo, cons
             else
                 r3dScreenTo3D(r3dRenderer->ScreenW2, r3dRenderer->ScreenH*0.32f, &dir);
 
-        	PxRaycastHit hit;
-        	PxSceneQueryFilterData filter(
-				PxFilterData(COLLIDABLE_STATIC_MASK | (1 << PHYSCOLL_NETWORKPLAYER), 0, 0, 0),
-				PxSceneQueryFilterFlag::eSTATIC | PxSceneQueryFilterFlag::eDYNAMIC
-			);
-
-        	if(g_pPhysicsWorld->raycastSingle(
-				PxVec3(gCam.x, gCam.y, gCam.z),
-				PxVec3(dir.x, dir.y, dir.z),
-				2000.0f,
-				PxSceneQueryFlag::ePOSITION | PxSceneQueryFlag::eDISTANCE,
-				hit,
-				filter
-			))
-        	{
-        		currentLookAt.Assign(hit.position.x, hit.position.y, hit.position.z);
-        		currentLookAtDist = hit.distance;
-        	}
+            PxRaycastHit hit;
+            PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK|(1<<PHYSCOLL_NETWORKPLAYER), 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC|PxSceneQueryFilterFlag::eDYNAMIC);
+            if(g_pPhysicsWorld->raycastSingle(PxVec3(gCam.x, gCam.y, gCam.z), PxVec3(dir.x, dir.y, dir.z), 2000.0f, PxSceneQueryFlag::eIMPACT|PxSceneQueryFlag::eDISTANCE, hit, filter))
+            {
+                currentLookAt.Assign(hit.impact.x, hit.impact.y, hit.impact.z);
+                currentLookAtDist = hit.distance;
+            }
             else
             {
                 currentLookAt = CamPos + dir * 1000.0f;
@@ -581,7 +474,7 @@ r3dPoint3D getAdjustedPointTo(obj_AI_Player* pl, const r3dPoint3D& PointTo, cons
 		//r3dOutToLog("Lerp=%.2f, pl_state=%d, aiming=%d\n", LerpValue, pl->PlayerState, pl->m_isAiming);
 
 		static bool wasAiming = false;
-		if(pl->m_isAiming || pl->laserViewActive_)
+		if(pl->m_isAiming)
 		{
 			if(!wasAiming)
 			{
@@ -630,7 +523,7 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 		Cam.SetPosition( CamPos );
 		Cam.PointTo(ViewPos);
 
-		LevelDOF = 1;
+		LevelDOF = r_video_DOF_enable->GetBool();
 		_NEAR_DOF = 1;
 		_FAR_DOF = 1;
 		DepthOfField_NearStart = r_video_nearDOF_start->GetFloat();
@@ -642,143 +535,14 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 	}
 #endif
 
-	if(hudRespawn->isActive() && !hudRespawn->isWaitingForNextRound())
-	{
-		int spawnID = hudRespawn->getSpawnID();
-		r3dPoint3D cpPos(0,0,0);
-		if(spawnID >= gCPMgr.numControlPoints_)
-		{
-			GameObject* beacon = GameWorld().GetNetworkObject(spawnID);
-			if(beacon)
-				cpPos = beacon->GetPosition();
-			else
-				cpPos = gClientLogic().localPlayer_->GetPosition(); // should be ok, beacons visible only after first spawn
-		}
-		else
-			cpPos = gCPMgr.GetCP(spawnID)->GetPosition();
-		
-		r3dPoint3D camPos = cpPos + r3dPoint3D(1, 40, 0);
-		
-		Cam.FOV = 60;
-		Cam.SetPosition( camPos );
-		Cam.PointTo(cpPos);
-		FPS_Position = Cam;
-		return;
-	}
-	if(hudEndRound->isActive() || hudPause->isActive())
-		return;
-
-	int mMX=Mouse->m_MouseMoveX, mMY=Mouse->m_MouseMoveY;
-	if(g_vertical_look->GetBool()) // invert mouse
-		mMY = -mMY;
-
 	const ClientGameLogic& CGL = gClientLogic();
-	obj_AI_Player* pl = CGL.localPlayer_;
+	obj_Player* pl = CGL.localPlayer_;
 	if(pl == 0)
 	{
-		r3dPoint3D camPos;
-		r3dPoint3D camPointTo;
-		bool do_camera = false;
-		if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb && (hudRespawn->isWaitingForNextRound() || gClientLogic().m_isSpectator)) // spectator mode
-		{
-			bool find_new_player = false;
-			obj_AI_Player* player = CGL.GetPlayer(spectator_observingPlrIdx);
-			if(player == NULL) 
-				find_new_player = true;
-			else if(player->bDead && (r3dGetTime()-player->TimeOfDeath)>5.0f) // allow X seconds to look at dead body
-				find_new_player = true;
-			if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE))
-				find_new_player = true;
-
-			if(find_new_player)
-			{
-				bool foundPlr = false;
-				for(int i=spectator_observingPlrIdx+1; i<CGL.CurMaxPlayerIdx; ++i)
-				{
-					obj_AI_Player* plr = CGL.GetPlayer(i);
-					if(plr && !plr->bDead)
-					{
-						spectator_observingPlrIdx = i;
-						player = plr;
-						foundPlr = true;
-						break;
-					}
-				}
-				if(!foundPlr)
-				{
-					for(int i=0; i<CGL.CurMaxPlayerIdx; ++i)
-					{
-						obj_AI_Player* plr = CGL.GetPlayer(i);
-						if(plr && !plr->bDead)
-						{
-							spectator_observingPlrIdx = i;
-							player = plr;
-							break;
-						}
-					}
-				}
-			}
-
-			if(player)
-			{
-				float  glb_MouseSensAdj = CurrentRig.MouseSensetivity * g_mouse_sensitivity->GetFloat();	
-				//  Mouse controls are here
-				static r3dPoint3D camViewAngle(0,0,0);
-				camViewAngle.x += float(-mMX) * glb_MouseSensAdj;
-				camViewAngle.y += float(-mMY) * glb_MouseSensAdj;
-
-				if(camViewAngle.x > 360.0f ) camViewAngle.x = camViewAngle.x - 360.0f;
-				if(camViewAngle.x < 0.0f )   camViewAngle.x = camViewAngle.x + 360.0f;
-
-				// Player can't look too high!
-				if(camViewAngle.y > 50 ) camViewAngle.y = 50;
-				if(camViewAngle.y < -60) camViewAngle.y = -60;
-
-				D3DXMATRIX mr;
-				D3DXMatrixRotationYawPitchRoll(&mr, R3D_DEG2RAD(-camViewAngle.x), R3D_DEG2RAD(-camViewAngle.y), 0);
-				r3dPoint3D vVision  = r3dVector(mr._31, mr._32, mr._33);
-
-				camPos = player->GetPosition();
-				camPos.Y +=  (player->getPlayerHeightForCamera()+  TPSHudCameras[0][0].Position.Y);
-				camPos += player->GetvRight() * TPSHudCameras[0][0].Position.X * getCameraLeftSide();
-				camPos += vVision * TPSHudCameras[0][0].Position.Z;
-
-				r3dPoint3D playerPosHead = player->GetPosition(); playerPosHead.y += player->getPlayerHeightForCamera();
-				camPointTo = player->GetPosition();
-				camPointTo.Y += (player->getPlayerHeightForCamera() + TPSHudCameraTarget.Y);
-				camPointTo += player->GetvRight() * TPSHudCameraTarget.X;
-
-				CheckCameraCollision(camPos, playerPosHead, false);
-
-				camPointTo += vVision * 50;
-
-				do_camera = true;
-
-				// update minimap
-				hudMinimap->SetCameraPosition(camPos, (camPointTo-camPos).Normalize());
-			}
-		}
-
-		if(do_camera)
-		{
-			spectator_cameraPos = camPos;
-			Cam.FOV = 60;
-			Cam.SetPosition( camPos );
-			Cam.PointTo( camPointTo );
-			FPS_Position = Cam;
-		}
 		return;
 	}
 
-	// uav camera
-	extern bool SetCameraPlayerUAV(const obj_AI_Player* pl, r3dCamera &Cam);
-	if(SetCameraPlayerUAV(pl, Cam))
-	{
-		FPS_Position = Cam;
-		return;
-	}
-
-	extern bool SetCameraPlayerVehicle(const obj_AI_Player* pl, r3dCamera &Cam);
+	extern bool SetCameraPlayerVehicle(const obj_Player* pl, r3dCamera &Cam);
 	if(SetCameraPlayerVehicle(pl, Cam))
 	{
 		FPS_Position = Cam;
@@ -789,19 +553,13 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 	// dead camera
 	if(pl->bDead)
 	{
-		obj_AI_Player* killer = (obj_AI_Player*)GameWorld().GetNetworkObject(pl->Dead_KillerID);
 		r3dPoint3D camPos, camPointTo;
 		bool do_camera = false;
 		bool check_cam_collision = true;
-		if((r3dGetTime() - pl->TimeOfDeath)<3.0f) // show dead player for 2 seconds
 		{
 			static r3dPoint3D oldPlayerPos(0,0,0);
 			static r3dPoint3D camPosOffset(0,0,0);
 			camPointTo = pl->GetPosition();
-
-			obj_AI_Player* killer = (obj_AI_Player*)GameWorld().GetNetworkObject(pl->Dead_KillerID);
-			if(killer)
-				hudMain->ShowKillTag(killer, pl->DeathDamageSource);
 
 			// find a cam position
 			if(!oldPlayerPos.AlmostEqual(pl->GetPosition())) // make sure to do that check only once
@@ -818,14 +576,7 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 						raydir.Normalize();
 						PxRaycastHit hit;
 						PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-						if(!g_pPhysicsWorld->raycastSingle(
-							PxVec3(camPointTo.x, camPointTo.y, camPointTo.z),
-							PxVec3(raydir.x, raydir.y, raydir.z),
-							rayLen,
-							PxSceneQueryFlag::ePOSITION,
-							hit,
-							filter
-						))
+						if(!g_pPhysicsWorld->raycastSingle(PxVec3(camPointTo.x, camPointTo.y, camPointTo.z), PxVec3(raydir.x, raydir.y, raydir.z), rayLen, PxSceneQueryFlag::eIMPACT, hit, filter))
 						{
 							found = i;
 							break;
@@ -845,108 +596,6 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 			camPos = pl->GetPosition() + camPosOffset; 
 			do_camera = true;
 			check_cam_collision = false;
-		}
-		else if(killer && (r3dGetTime() - pl->TimeOfDeath)<4.0f && !pl->DisableKillerView && CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb) // for next 2 seconds show enemy
-		{
-			pl->DisableKillerView = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE);
-			camPointTo = killer->GetPosition(); camPointTo.y += pl->Height;
-			r3dPoint3D viewVector(0,0,5);
-			D3DXVECTOR3 res;
-			D3DXVec3TransformNormal(&res, viewVector.d3dx(), &killer->MoveMatrix);
-			viewVector.x = res.x;
-			viewVector.y = -1.0f;
-			viewVector.z = res.z;
-
-			camPos = camPointTo - viewVector; 
-			do_camera = true;
-		}
-		else if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb && (r3dGetTime() - pl->TimeOfDeath)>=2.0f && !hudRespawn->isActive()) // after that in bomb mode show your allies until respawn time
-		{
-			hudMain->switchToDead(true, true); // force spectator mode
-			static int friendlyIndx = 0;
-			bool find_new_ally = false;
-			obj_AI_Player* ally = CGL.GetPlayer(friendlyIndx);
-			if(ally == NULL) 
-				find_new_ally = true;
-			else if(ally->bDead && (r3dGetTime()-ally->TimeOfDeath)>5.0f) // allow X seconds to look at dead body
-				find_new_ally = true;
-			else if(ally->TeamID != CGL.localPlayer_->TeamID)
-				find_new_ally = true;
-			if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE))
-				find_new_ally = true;
-
-			if(find_new_ally)
-			{
-				bool foundPlr = false;
-				for(int i=friendlyIndx+1; i<CGL.CurMaxPlayerIdx; ++i)
-				{
-					obj_AI_Player* plr = CGL.GetPlayer(i);
-					if(plr && !plr->bDead && 
-					   plr->TeamID == CGL.localPlayer_->TeamID && 
-					   plr != CGL.localPlayer_)
-					{
-						friendlyIndx = i;
-						ally = plr;
-						foundPlr = true;
-						break;
-					}
-				}
-				if(!foundPlr)
-				{
-					for(int i=0; i<CGL.CurMaxPlayerIdx; ++i)
-					{
-						obj_AI_Player* plr = CGL.GetPlayer(i);
-						if(plr && !plr->bDead && 
-						   plr->TeamID == CGL.localPlayer_->TeamID && 
-						   plr != CGL.localPlayer_)
-						{
-							friendlyIndx = i;
-							ally = plr;
-							break;
-						}
-					}
-				}
-			}
-
-			if(ally)
-			{
-				float  glb_MouseSensAdj = CurrentRig.MouseSensetivity * g_mouse_sensitivity->GetFloat();	
-				//  Mouse controls are here
-				static r3dPoint3D camViewAngle(0,0,0);
-				camViewAngle.x += float(-mMX) * glb_MouseSensAdj;
-				camViewAngle.y += float(-mMY) * glb_MouseSensAdj;
-
-				if(camViewAngle.x > 360.0f ) camViewAngle.x = camViewAngle.x - 360.0f;
-				if(camViewAngle.x < 0.0f )   camViewAngle.x = camViewAngle.x + 360.0f;
-
-				// Player can't look too high!
-				if(camViewAngle.y > 50 ) camViewAngle.y = 50;
-				if(camViewAngle.y < -60) camViewAngle.y = -60;
-
-				D3DXMATRIX mr;
-				//D3DXMatrixRotationYawPitchRoll(&mr, R3D_DEG2RAD(-camViewAngle.x), R3D_DEG2RAD(-camViewAngle.y), 0);
-				D3DXMatrixRotationYawPitchRoll(&mr, R3D_DEG2RAD(ally->m_fPlayerRotation), R3D_DEG2RAD(-ally->bodyAdjust_y[1]), 0);
-				r3dPoint3D vVision  = r3dVector(mr._31, mr._32, mr._33);
-
-				camPos = ally->GetPosition();
-				camPos.Y +=  (ally->getPlayerHeightForCamera()+  TPSHudCameras[0][0].Position.Y);
-				camPos += ally->GetvRight() * TPSHudCameras[0][0].Position.X * getCameraLeftSide();
-				camPos += vVision * TPSHudCameras[0][0].Position.Z;
-
-				r3dPoint3D playerPosHead = ally->GetPosition(); playerPosHead.y += ally->getPlayerHeightForCamera();
-				camPointTo = ally->GetPosition();
-				camPointTo.Y += (ally->getPlayerHeightForCamera() + TPSHudCameraTarget.Y);
-				camPointTo += ally->GetvRight() * TPSHudCameraTarget.X;
-
-
-
-				check_cam_collision = false;
-				CheckCameraCollision(camPos, playerPosHead, false);
-
-				camPointTo += vVision * 50;
-
-				do_camera = true;
-			}
 		}
 
 		if(do_camera)
@@ -968,6 +617,22 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 		}
 	}
 
+	if(pl->bDead && hudAttm->isActive())
+		hudAttm->Deactivate();
+
+	if(hudPause->isActive())
+		return;
+	if(hudAttm->isActive())
+		return;
+	if(hudGeneralStore->isActive())
+		return;
+	if(hudVault->isActive())
+		return;
+
+	int mMX=Mouse->m_MouseMoveX, mMY=Mouse->m_MouseMoveY;
+	if(g_vertical_look->GetBool()) // invert mouse
+		mMY = -mMY;
+
 	GameFOV = CurrentRig.FOV;
 
 	float CharacterHeight = pl->getPlayerHeightForCamera();
@@ -986,7 +651,7 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 	// check for collision
 	{
 		r3dPoint3D savedCamPos = CamPos;
-		if(CheckCameraCollision(CamPos, playerPosHead, true) && (pl->PlayerState == PLAYER_MOVE_CROUCH || pl->PlayerState == PLAYER_MOVE_CROUCH_AIM)) 
+		if(CheckCameraCollision(CamPos, playerPosHead, true) && (pl->PlayerState == PLAYER_MOVE_CROUCH || pl->PlayerState == PLAYER_MOVE_CROUCH_AIM || pl->PlayerState == PLAYER_MOVE_PRONE || pl->PlayerState == PLAYER_PRONE_AIM || pl->PlayerState == PLAYER_PRONE_IDLE)) 
 		{
 			CamPos = savedCamPos;
 			playerPosHead = playerPos;
@@ -995,7 +660,7 @@ void TPSGameHUD :: SetCameraPure ( r3dCamera &Cam)
 		}
 	}
 
-	PointTo += (pl->m_vVision+r3dPoint3D(0, (pl->bCrouch?TPSCameraPointToAdjCrouch[g_camera_mode->GetInt()]:TPSCameraPointToAdj[g_camera_mode->GetInt()]), 0.0f)) * 50;//cameraRayLen;//CurrentRig.Target.Z;
+	PointTo += (pl->m_vVision) * 50;//cameraRayLen;//CurrentRig.Target.Z;
 
 	r3dPoint3D adjPointTo(0,0,0);
 	adjPointTo = getAdjustedPointTo(pl, PointTo, CamPos);
@@ -1065,8 +730,8 @@ static void DrawMenus()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -1079,32 +744,52 @@ static void DrawMenus()
 	currentMovies.clear();
 	movieDurations.clear();
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
 #endif
 
-	if(!win::bSuspended && Keyboard->WasPressed(kbsEsc) && !hudEndRound->isActive() && !hudCommCalls->isVisible()) 
+	if(!win::bSuspended && !hudMain->isChatInputActive() && !hudMain->isPlayersListVisible()) 
 	{
-		// close chat on Esc
-		if(hudMain->isChatVisible())
-			hudMain->ForceHideChatWindow();
-		else
+		bool showHudPause = Keyboard->WasPressed(kbsEsc) || InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SWITCH_MINIMAP) || InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INVENTORY);
+		if(showHudPause && !hudAttm->isActive() && !hudGeneralStore->isActive() && !hudVault->isActive())
 		{
 			if(!hudPause->isActive())
+			{
 				hudPause->Activate();
+				if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SWITCH_MINIMAP))
+					hudPause->showMap();
+				else if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INVENTORY))
+					hudPause->showInventory();
+			}
 			else
 				hudPause->Deactivate();
 		}
+		
+		bool showAttachment = InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SHOW_ATTACHMENTS);
+		if(showAttachment)
+		{
+			if(!hudAttm->isActive())
+			{
+				hudAttm->Activate();
+			}
+			else
+				hudAttm->Deactivate();
+		}
+
+		if(hudAttm->isActive() && Keyboard->WasPressed(kbsEsc))
+			hudAttm->Deactivate();
+
+		if(hudGeneralStore->isActive() && Keyboard->WasPressed(kbsEsc))
+			hudGeneralStore->Deactivate();
+
+		if(hudVault->isActive() && Keyboard->WasPressed(kbsEsc))
+			hudVault->Deactivate();
 	}
 
 	if(hudPause->isActive())
 	{
-		// make sure that we close chat
-		if(hudMain->isChatVisible())
-			hudMain->ForceHideChatWindow();
-
 		r3dMouse::Show(); // make sure that mouse is visible
 
 		R3DPROFILE_START( "hudPause->" );
@@ -1117,132 +802,122 @@ static void DrawMenus()
 		return;
 	}
 
-	if(hudEndRound->isActive())
+	if(hudAttm->isActive())
 	{
-		// make sure that we close chat
-		if(hudMain->isChatVisible())
-			hudMain->ForceHideChatWindow();
-
 		r3dMouse::Show(); // make sure that mouse is visible
 
-		R3DPROFILE_START( "hudEndRound->" );
+		R3DPROFILE_START( "hudAttm->" );
 
-		hudEndRound->Update();
-		hudEndRound->Draw();
+		hudAttm->Update();
+		hudAttm->Draw();
 
-		R3DPROFILE_END( "hudEndRound->" );
+		R3DPROFILE_END( "hudAttm->" );
 
 		return;
 	}
 
-	bool scoreSwitch = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_SHOW_SCORE);
+	if(hudGeneralStore->isActive())
+	{
+		r3dMouse::Show(); // make sure that mouse is visible
+
+		R3DPROFILE_START( "hudGeneralStore->" );
+
+		hudGeneralStore->Update();
+		hudGeneralStore->Draw();
+
+		R3DPROFILE_END( "hudGeneralStore->" );
+
+		return;
+	}
+
+	if(hudVault->isActive())
+	{
+		r3dMouse::Show(); // make sure that mouse is visible
+
+		R3DPROFILE_START( "hudVault->" );
+
+		hudVault->Update();
+		hudVault->Draw();
+
+		R3DPROFILE_END( "hudVault->" );
+
+		return;
+	}
+
+	if(hudActionUI->isActive())
+	{
+		R3DPROFILE_START( "hudActionUI->" );
+		hudActionUI->Update();
+		hudActionUI->Draw();
+		R3DPROFILE_END( "hudActionUI->" );
+	}
+
+
 	bool ChatWindowSwitch = InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_CHAT);
 
 	const ClientGameLogic& CGL = gClientLogic();
-	const obj_AI_Player* pl = CGL.localPlayer_; // can be null
+	const obj_Player* pl = CGL.localPlayer_; // can be null
 	if(pl == NULL) // no player, we need to show respawn menu and let player enter game
 	{
-		if(!CGL.m_isSpectator)
-		{
-			if(hudRespawn->isActive() == false)
-				hudRespawn->Activate(CGL.m_onJoinServerAssignedTeamId, 0);
-
-			if(hudRespawn->isSpawning())
-				scoreSwitch = 0;
-			if(scoreSwitch && !hudScore->isActive())
-				hudScore->Activate();
-
-			hudRespawn->Update();
-			if(hudScore->isActive())
-			{
-				if(!scoreSwitch)
-					hudScore->Deactivate();
-
-				R3DPROFILE_START( "hudScore->" );
-
-				hudScore->Update();
-				hudScore->Draw();
-
-				R3DPROFILE_END( "hudScore->" );
-			}
-			else
-			{
-				R3DPROFILE_START( "hudRespawn->" );
-
-				if( CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb || CGL.m_gameHasStarted == false ){ // don't use a mouse if the showing "Waiting for next round"
-					r3dMouse::Show(); // make sure that mouse is visible
-				}
-				hudRespawn->Draw();
-
-				R3DPROFILE_END( "hudRespawn->" );
-			}
-		}
-		else // spectator mode
-		{
-			if(CGL.m_gameInfo.mapType == GBGameInfo::MAPT_Bomb) // in sabotage teams are switched due to legacy shenanigans
-				hudMain->SetTickets(CGL.tickets_[1], CGL.tickets_[0]);
-			else
-				hudMain->SetTickets(CGL.tickets_[0], CGL.tickets_[1]);
-			hudMain->Update();
-			hudMain->Draw();
-
-			// show minimap
-			if (InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SWITCH_MINIMAP))
-				hudMinimap->SwitchMinimap();
-
-			hudMinimap->Update();
-			hudMinimap->Draw();
-
-			// show score in spectator mode
-			if(scoreSwitch && !hudScore->isActive())
-				hudScore->Activate();
-
-			if(hudScore->isActive())
-			{
-				if(!scoreSwitch)
-					hudScore->Deactivate();
-
-				R3DPROFILE_START( "hudScore->" );
-
-				hudScore->Update();
-				hudScore->Draw();
-
-				R3DPROFILE_END( "hudScore->" );
-			}
-
-
-		}
 	}
 	else
 	{
 		// check for respawn screen
 		if(pl->bDead) 
 		{
-			hudMain->switchToDead(hudRespawn->isActive());
-
-			obj_AI_Player* killer = (obj_AI_Player*)GameWorld().GetNetworkObject(pl->Dead_KillerID);
-			
-			// show respawn: if no killer - after 2 seconds. If killer - after 4 seconds (2sec to see our body, 2 sec to see killer)
-			if(!(((r3dGetTime() - pl->TimeOfDeath)<3.0f) || (killer && (r3dGetTime() - pl->TimeOfDeath)<8.0f && !pl->DisableKillerView)))
-			{
-				if(hudRespawn->isActive() == false && CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-				{
-					hudRespawn->Activate(pl->TeamID, pl->LoadoutSlot);
-				}
-			}
-			else
-			{
-				// otherwise when you spawn you will see for a second blood on your screen
-				hudMain->SetBloodLevel(0);
-			}
 		}
 		else
 		{
-			hudMain->switchToDead(pl->uavViewActive_);
 		}
 
-		if(!pl->bDead && hudRespawn->isActive())
-			hudRespawn->Deactivate();
+		if(ChatWindowSwitch && hudMain && !hudMain->isChatInputActive())
+		{
+			hudMain->showChatInput();
+		}
+
+		if(hudMain)
+		{
+			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_CHAT_CHANNEL1))
+				hudMain->setChatChannel(0);
+			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_CHAT_CHANNEL2))
+				hudMain->setChatChannel(1);
+			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_CHAT_CHANNEL3))
+				hudMain->setChatChannel(2);
+		}
+
+		if(hudMain && !hudMain->isChatInputActive())
+		{
+			bool showPlayerList = InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SHOW_PLAYERS);
+			if(showPlayerList)
+			{
+				if (!hudMain->isPlayersListVisible())
+				{
+					hudMain->clearPlayersList();
+					int index = 0;
+					for(int i=0; i<R3D_ARRAYSIZE(CGL.playerNames); i++)
+					{
+						if(CGL.playerNames[i].Gamertag[0])
+						{
+							r3d_assert(CGL.GetPlayer(i));
+							hudMain->addPlayerToList(index++, CGL.playerNames[i].Gamertag, CGL.GetPlayer(i)->CurLoadout.Stats.Reputation, CGL.playerNames[i].isLegend, CGL.playerNames[i].isDev, false, false);
+						}
+					}
+					hudMain->showPlayersList(1);
+					r3dMouse::Show();
+				}
+				else
+				{
+					hudMain->showPlayersList(0);
+					r3dMouse::Hide();
+				}
+			}
+
+			if(hudMain->isPlayersListVisible() && Keyboard->WasPressed(kbsEsc))
+			{
+					hudMain->showPlayersList(0);
+					r3dMouse::Hide();
+			}
+		}
 
 		// render flash UI for objects
 
@@ -1250,22 +925,8 @@ static void DrawMenus()
 		GameWorld().Draw(rsDrawFlashUI);
 		R3DPROFILE_END( "GameWorld().Draw(rsDrawFlashUI)" );
 
-		bool chatVisible = hudMain->isChatVisible();
-		if (!pl->uavViewActive_ && !pl->laserViewActive_)
 		{
-			if(ChatWindowSwitch && !hudMinimap->isShowingBigMap())
 			{
-				hudMain->ShowChatWindow(!chatVisible);
-			}
-			{
-				if(CGL.localPlayer_)
-				{
-					if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-						hudMain->SetTickets(CGL.tickets_[CGL.localPlayer_->TeamID], CGL.tickets_[1-CGL.localPlayer_->TeamID]);
-					else
-						hudMain->SetTickets(CGL.tickets_[1], CGL.tickets_[0]);
-				}
-
 				R3DPROFILE_START( "hudMain->" );
 
 				hudMain->Update();
@@ -1274,142 +935,29 @@ static void DrawMenus()
 				R3DPROFILE_END( "hudMain->" );
 			}
 
-			// draw minimap on top of hud
-			if(!hudMain->isInDeadMode() && !g_hide_minimap->GetInt() )
+			// issue d3d cheat check on some frames (will stop issuing anti cheat if caught cheat)
+			// wait 5 minute before doing check. after that, do check every other 2-5 minutes
+			if(!pl->bDead && (r3dGetTime() - pl->TimeOfLastRespawn)>300.0f && !hudAttm->isActive() &&
+				!hudPause->isActive() && !hudActionUI->isActive() && !hudGeneralStore->isActive() &&
+				!hudVault->isActive())
 			{
-				R3DPROFILE_START( "hudMinimap" );
-
-				D3DPERF_BeginEvent( 0, L"Minimap" );
-
-				if(!chatVisible)
-				{
-					D3DPERF_BeginEvent( 0, L"Minimap:Update" );
-
-					if (InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SWITCH_MINIMAP))
-						hudMinimap->SwitchMinimap();
-					hudMinimap->Update();
-
-					D3DPERF_EndEvent();
-				}
-
-				D3DPERF_BeginEvent( 0, L"Minimap:Draw" );
-
-				hudMinimap->Draw();
-
-				D3DPERF_EndEvent();
-
-				D3DPERF_EndEvent();
-
-				R3DPROFILE_END( "hudMinimap" );
-			}
-			
-			// issue d3d cheat check on some frames
-			// must be done after minimap 
-			if(!pl->bDead && (r3dGetTime() - pl->TimeOfLastRespawn)>2.0f && !hudMain->isInDeadMode() && !hudScore->isActive() && !hudMinimap->isShowingBigMap() && (pl->m_SelectedWeapon>=0 && pl->m_SelectedWeapon<=2))
-			{
-				static float nextCheck = r3dGetTime() + u_GetRandom(10.0f, 30.0f);
+				static float nextCheck = r3dGetTime() + u_GetRandom(120.0f, 300.0f);
 				if(r3dGetTime() > nextCheck)
 				{
-					extern void issueD3DAntiCheatCodepath();
-					issueD3DAntiCheatCodepath();
-					nextCheck = r3dGetTime() + u_GetRandom(10.0f, 30.0f);
+					issueD3DAntiCheatCodepath( ANTICHEAT_WALLHACK );
+					nextCheck = r3dGetTime() + u_GetRandom(120.0f, 300.0f);
 				}
-			}
-		}
-		else if(pl->uavViewActive_) 
-		{
-				obj_UAV* uav = (obj_UAV *)GameWorld().GetObject(pl->uavId_);
-				if(uav)
-				{
-					hudMinimap->SetCameraPosition(uav->GetPosition(), uav->vVision );
-				}
-				
-				if(CGL.localPlayer_)
-				{
-					if(CGL.m_gameInfo.mapType != GBGameInfo::MAPT_Bomb)
-						hudMain->SetTickets(CGL.tickets_[CGL.localPlayer_->TeamID], CGL.tickets_[1-CGL.localPlayer_->TeamID]);
-					else
-						hudMain->SetTickets(CGL.tickets_[1], CGL.tickets_[0]);
-				}
-
-				R3DPROFILE_START( "hudMain->" );
-				hudMain->Update();
-				hudMain->Draw();
-				R3DPROFILE_END( "hudMain->" );
-
-				hudMinimap->Update();
-				hudMinimap->Draw();
-				hudDrone->Update(uav);
-				hudDrone->Draw();
-
-		}
-
-		if(!pl->bDead) {
-			R3DPROFILE_START( "hudBattleZone->" );
-			void BattleZoneWork();
-			BattleZoneWork();
-			R3DPROFILE_END( "hudBattleZone->" );
-
-			R3DPROFILE_START( "hudCommCalls->" );
-			hudCommCalls->Update();
-			hudCommCalls->Draw();
-			R3DPROFILE_END( "hudCommCalls->" );
-
-			if(hudLaserDesignator->isActive() && !pl->laserViewActive_)
-				hudLaserDesignator->Deactivate();
-			else if(!hudLaserDesignator->isActive() && pl->laserViewActive_)
-				hudLaserDesignator->Activate();
-			
-			if(pl->laserViewActive_)
-			{
-				R3DPROFILE_START( "hudLaserDesignator->" );
-				hudLaserDesignator->Update();
-				hudLaserDesignator->Draw();
-				R3DPROFILE_END( "hudLaserDesignator->" );
+// 				static float nextCheck2 = r3dGetTime() + u_GetRandom(300.0f, 600.0f);
+// 				if(r3dGetTime() > nextCheck2)
+// 				{
+// 					issueD3DAntiCheatCodepath( ANTICHEAT_SCREEN_HELPERS2 );
+// 					nextCheck2 = r3dGetTime() + u_GetRandom(300.0f, 600.0f);
+// 				}
 			}
 		}
 
-		if(hudRespawn->isActive())
-		{
-			if(!hudScore->isActive())
-				r3dMouse::Show(); // make sure that mouse is visible
-
-			R3DPROFILE_START( "hudRespawn->" );
-
-			hudRespawn->Update();
-			hudRespawn->Draw();
-
-			R3DPROFILE_END( "hudRespawn->" );
-		}
-
-		if (!pl->uavViewActive_ && !pl->laserViewActive_)
-		{
-			// main screen active
-			if(scoreSwitch && !hudScore->isActive() && !hudMain->isChatVisible())
-			{
-				hudScore->Activate();
-				return; // it'll activate on next frame
-			}
-
-
-			if(hudScore->isActive())
-			{
-				if(!scoreSwitch)
-				{
-					// tab was depressed, deactivate it
-					hudScore->Deactivate();
-				}
-
-				R3DPROFILE_START( "hudScore->" );
-
-				hudScore->Update();
-				hudScore->Draw();
-
-				R3DPROFILE_END( "hudScore->" );
-
-				return;
-			}
-		}
+		if(hudMain && (hudMain->isChatInputActive() || hudMain->isPlayersListVisible())) // also checks for write note, so do not hide mouse
+			return;
 
 		// draw main hud with hidden mouse
 		// this call is FREE if mouse was hidden already
@@ -1417,7 +965,7 @@ static void DrawMenus()
 		// [pavel]: that fucks up controls, when big map is on screen, or scoreboard is, you shouldn't be able to move character, as in that mode you are actually using mouse
 		//			if app was started inactive, just press M twice and that's it. 
 		// [pavel]: ok, that should fix a problem. If non of modal windows are active, then hide mouse.
-		if(!win::bSuspended && !hudRespawn->isActive() && !g_cursor_mode->GetInt() && !hudCommCalls->isCommRoseVisible() )
+		if(!win::bSuspended && !g_cursor_mode->GetInt())
 			r3dMouse::Hide();
 	}
 }
@@ -1433,8 +981,8 @@ void TPSGameHUD :: Draw()
 
 	r3dSetFiltering( R3D_POINT );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
-	r3dRenderer->SetRenderState( D3DRS_ALPHAREF,        	1 );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, 	FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF,        	1 );
 
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
@@ -1446,88 +994,7 @@ void TPSGameHUD :: Draw()
 	return;  
 }
 
-static void ProcessUAVMovement(obj_UAV* uav, int mMX, int mMY)
-{
-	float sens = 0.3f * g_mouse_sensitivity->GetFloat();
-
-	uav->ViewAngle.x += float(-mMX) * sens;
-	uav->ViewAngle.y += float(-mMY) * sens;
-
-	if(Gamepad->IsConnected()) // overwrite mouse
-	{
-		float X, Y;
-		Gamepad->GetRightThumb(X, Y);
-		uav->ViewAngle.x += float(-X) * sens * r_gamepad_view_sens->GetFloat();
-		uav->ViewAngle.y += float(Y) * sens * r_gamepad_view_sens->GetFloat() * (g_vertical_look->GetBool()?-1.0f:1.0f);
-	}
-
-
-	if(uav->ViewAngle.x > 360.0f ) uav->ViewAngle.x = uav->ViewAngle.x - 360.0f;
-	if(uav->ViewAngle.x < 0.0f )   uav->ViewAngle.x = uav->ViewAngle.x + 360.0f;
-	if(uav->ViewAngle.y > -50 ) uav->ViewAngle.y = -50;
-	if(uav->ViewAngle.y < -80) uav->ViewAngle.y = -80;
-
-	D3DXMATRIX mr;
-	D3DXMatrixRotationYawPitchRoll(&mr, R3D_DEG2RAD(-uav->ViewAngle.x), R3D_DEG2RAD(-uav->ViewAngle.y), 0);
-	const r3dPoint3D vVision  = r3dVector(mr._31, mr._32, mr._33);
-	const r3dPoint3D vForw    = r3dVector(mr._31, 0, mr._33).NormalizeTo(); // need to be normalized, otherwise UAV speed depends on your camera view angle
-	const r3dPoint3D vRight   = r3dVector(mr._11, 0, mr._13);
-	const r3dPoint3D vUp      = r3dVector(0, 1, 0);
-
-	uav->vVision = vVision;
-	
-	r3dPoint3D acc = r3dPoint3D(0, 0, 0);
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_FORWARD)) acc.z = GPP->UAV_FLY_SPEED_V;
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_BACKWARD)) acc.z = -GPP->UAV_FLY_SPEED_V;
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_LEFT)) acc.x = -GPP->UAV_FLY_SPEED_V;
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_RIGHT)) acc.x = GPP->UAV_FLY_SPEED_V;
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_UAV_UP)) acc.y = GPP->UAV_FLY_SPEED_H;
-	if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_UAV_DOWN)) acc.y = -GPP->UAV_FLY_SPEED_H;
-
-	if(Gamepad->IsConnected())
-	{
-		float RX, RY, TL, TR;
-		Gamepad->GetLeftThumb(RX, RY);
-		Gamepad->GetTrigger(TL, TR);
-
-		acc.Z = -RY*r_gamepad_move_speed->GetFloat();
-		acc.Z = RY*r_gamepad_move_speed->GetFloat();
-		acc.X = -RX*r_gamepad_move_speed->GetFloat();
-		acc.X = RX*r_gamepad_move_speed->GetFloat();
-		acc.Y = -TR * r_gamepad_move_speed->GetFloat();
-		acc.Y = TL * r_gamepad_move_speed->GetFloat();
-	}
-
-	
-	r3dPoint3D vel = r3dPoint3D(0, 0, 0);
-	vel += vForw  * acc.z;
-	vel += vRight * acc.x;
-	vel += vUp    * acc.y;
-	if(vel.Length() > 0.001f)
-		uav->SetVelocity(vel);
-	
-	return;
-}
-
-bool SetCameraPlayerUAV(const obj_AI_Player* pl, r3dCamera &Cam)
-{
-	if(!pl->uavViewActive_)
-		return false;
-
-	obj_UAV* uav = (obj_UAV*)GameWorld().GetObject(pl->uavId_);
-	if(!uav)
-		return false;
-
-	r3dPoint3D Pos = uav->GetPosition(); /*+r3dPoint3D(0,-1,0)*/;
-	Cam.FOV = 35;
-	Cam.SetPosition(Pos);
-	Cam.PointTo(Pos + uav->vVision);
-	Cam.vUP = r3dPoint3D(0, 1, 0);
-	return true;
-}
-
-
-bool SetCameraPlayerVehicle(const obj_AI_Player* pl, r3dCamera &Cam)
+bool SetCameraPlayerVehicle(const obj_Player* pl, r3dCamera &Cam)
 {
 	static bool wasDrivenByPlayer = false;
 #if VEHICLES_ENABLED
@@ -1577,83 +1044,9 @@ bool SetCameraPlayerVehicle(const obj_AI_Player* pl, r3dCamera &Cam)
 
 }
 
-static int g_LastTPSCameraMode = 1;
+static float g_lastAimAnimTime = -1.f;
 
-static bool ToggleTPSFPSCamera(obj_AI_Player* pl)
-{
-	if(!pl)
-		return false;
-
-	if(!pl->NetworkLocal)
-		return false;
-
-	if(pl->bDead)
-		return false;
-
-	if(pl->uavViewActive_ || pl->laserViewActive_)
-		return false;
-
-	if(Mouse->GetMouseVisibility())
-		return false;
-
-	if(hudMain && hudMain->isChatVisible())
-		return false;
-
-	if(hudPause && hudPause->isActive())
-		return false;
-
-	if(hudCommCalls && hudCommCalls->isCommRoseVisible())
-		return false;
-
-	if(!Keyboard->WasPressed(kbsC))
-		return false;
-
-	const int oldCameraMode = g_camera_mode->GetInt();
-	int newCameraMode = 2;
-
-	if(oldCameraMode == 2)
-	{
-		newCameraMode = g_LastTPSCameraMode;
-	}
-	else
-	{
-		if(oldCameraMode == 0 || oldCameraMode == 1)
-			g_LastTPSCameraMode = oldCameraMode;
-
-		newCameraMode = 2;
-	}
-
-	g_camera_mode->SetInt(newCameraMode);
-
-	const bool isFirstPerson = newCameraMode == 2;
-
-	if(pl->uberEquip_)
-		pl->uberEquip_->isFirstPerson = isFirstPerson;
-
-	if(pl->m_SelectedWeapon >= 0 && pl->m_SelectedWeapon < NUM_WEAPONS_ON_PLAYER)
-	{
-		Weapon* wpn = pl->m_Weapons[pl->m_SelectedWeapon];
-		if(wpn)
-		{
-			wpn->getModel(true, isFirstPerson);
-
-			if(isFirstPerson)
-				wpn->checkForSkeleton();
-		}
-	}
-
-	pl->UpdateCharWeaponMeshes();
-	pl->SyncAnimation(true);
-
-	if(hudMain)
-		hudMain->updateReticlePosition();
-
-	r3dOutToLog("Camera mode switched: %s\n", isFirstPerson ? "FPS" : "TPS");
-
-	return true;
-}
-
-void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
+void ProcessPlayerMovement(obj_Player* pl, bool editor_debug )
 {
 	r3d_assert(pl->NetworkLocal);
 
@@ -1661,6 +1054,11 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 	{
 		R3DPROFILE_FUNCTION("update fire");
 		pl->CheckFireWeapon();
+	}
+
+	if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_SWITCH_FPS_TPS) && !(hudAttm && hudAttm->isActive()) && !(hudMain && hudMain->isChatInputActive()) && !Mouse->GetMouseVisibility())
+	{
+		pl->switchFPS_TPS();
 	}
 
 	r3dPoint3D prevAccel = pl->InputAcceleration;
@@ -1674,59 +1072,21 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 	if(g_vertical_look->GetBool()) // invert mouse
 		mMY = -mMY;
 
+	bool disablePlayerRotation = false;
 	bool disablePlayerMovement = false;
-	if(Mouse->GetMouseVisibility()) // do not update player if we are in menu control mode!
+	if(Mouse->GetMouseVisibility() || (hudMain && hudMain->isChatInputActive())) // do not update player if we are in menu control mode!
+	{	
 		disablePlayerMovement = true;
-	if(hudMain && hudMain->isChatVisible())
-		disablePlayerMovement = true;
+		disablePlayerRotation = true;
+	}
 	if(pl->bDead)
 		return;
 
-	if(pl->m_siegeArmingTimer > 0)
-		disablePlayerMovement = true;
-
-	if(hudLaserDesignator && hudLaserDesignator->disablePlayerMovement())
-		disablePlayerMovement = true;
-
-	bool cameraModeWasToggled = false;
-
-	if(!disablePlayerMovement)
-		cameraModeWasToggled = ToggleTPSFPSCamera(pl);
-
 	const Weapon* wpn = pl->m_Weapons[pl->m_SelectedWeapon];
 
-	if(!(hudMinimap && hudMinimap->isShowingBigMap()) 
-		&& !(hudMain && hudMain->isChatVisible())
-		&& !Mouse->GetMouseVisibility()
+	if(!Mouse->GetMouseVisibility()
 		&& wpn)
 	{
-		if(wpn->getItemID() == WeaponConfig::ITEMID_LLDR && !pl->laserViewActive_) // LLDR
-		{
-			// flag used to prevent entering to LLDR again while fire key is still pressed from inside lldr menu
-			static bool lldrWasActivated = false;
-			if(lldrWasActivated && !InputMappingMngr->isPressed(r3dInputMappingMngr::KS_PRIMARY_FIRE))
-			{
-				lldrWasActivated = false;
-				Mouse->ClearPressed();
-			}
-
-			if(!lldrWasActivated && InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_PRIMARY_FIRE))
-			{
-				lldrWasActivated = true;
-				pl->ToggleLaserView();
-			}
-		}
-
-		if(wpn->getItemID() == WeaponConfig::ITEMID_Cypher2 && !pl->uavViewActive_) // UAV
-		{
-			if(InputMappingMngr->wasReleased(r3dInputMappingMngr::KS_PRIMARY_FIRE))
-			{
-				if(pl->uavRequested_ == 0) // spawn UAV firstly
-					pl->ProcessSpawnUAV();
-				else
-					pl->ToggleUAVView();
-			}
-		}
 
 		// vehicles
 		if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INTERACT) )
@@ -1745,43 +1105,6 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		}
 	}
 
-	// exit from laser view.
-	if(pl->laserViewActive_)
-	{
-		if(Keyboard->WasPressed(kbsEsc) || InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INTERACT))
-		{
-			Keyboard->ClearPressed(); // eat up ESC key so exit game screen will not be activated
-			pl->ToggleLaserView();
-		}
-	}
-	// exit for uav view
-	if(pl->uavViewActive_)
-	{
-		if(Keyboard->WasPressed(kbsEsc) || InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_INTERACT))
-		{
-			Keyboard->ClearPressed(); // eat up ESC key so exit game screen will not be activated
-			pl->ToggleUAVView();
-		}
-	}
-	// uav first time spawn check, automatically switch
-	if(pl->uavRequested_ == 1 && pl->uavId_ != invalidGameObjectID && GameWorld().GetObject(pl->uavId_))
-	{
-		pl->ToggleUAVView();
-		pl->uavRequested_ = 2;
-	}
-	// uav control
-	if(pl->uavViewActive_)
-	{
-		// UAV might be destroyed at the moment
-		obj_UAV* uav = (obj_UAV*)GameWorld().GetObject(pl->uavId_);
-		if(uav)
-		{
-			ProcessUAVMovement(uav, mMX, mMY);
-		}
-
-		disablePlayerMovement = true; // do not exit from function, let it go, as otherwise character will be stuck in prev.state
-	}
-
 	if(pl->m_isFinishedAiming && !pl->m_isInScope)
 	{
 		if(Keyboard->WasPressed(kbsLeftShift))
@@ -1791,8 +1114,26 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		}
 	}
 
-	bool  aiming      = pl->m_isAiming || pl->laserViewActive_;
+	bool  aiming      = pl->m_isAiming;
 	int   playerState = aiming ? PLAYER_IDLEAIM : PLAYER_IDLE;
+
+	if( g_lastAimAnimTime < 0 )
+		g_lastAimAnimTime = r3dGetTime();
+
+	float newAimTime = r3dGetTime();
+	float deltaAimTime = newAimTime - g_lastAimAnimTime;
+	g_lastAimAnimTime = newAimTime;
+
+	const float AIM_LERP_SPEED = 8.0f;
+
+	if( aiming )
+	{
+		r_grass_zoom_coef->SetFloat( R3D_LERP( r_grass_zoom_coef->GetFloat(), 2.0f, AIM_LERP_SPEED * deltaAimTime ) );
+	}
+	else
+	{
+		r_grass_zoom_coef->SetFloat( R3D_LERP( r_grass_zoom_coef->GetFloat(), 1.0f, AIM_LERP_SPEED * deltaAimTime ) );
+	}
 
 	if(!(g_camera_mode->GetInt()==2 && pl->NetworkLocal))
 	{
@@ -1800,7 +1141,6 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		{
 			// in jump, keep current state  (so strafe will stay, for example) and disable movement
 			playerState = pl->PlayerState;
-			//disablePlayerMovement = true;
 		}
 	}
 	
@@ -1810,6 +1150,9 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 	if(!(pl->uberAnim_->grenadePinPullTrackID==CUberAnim::INVALID_TRACK_ID && !(animInfo && (animInfo->GetStatus()&ANIMSTATUS_Playing))))
 		disableSprint = true;
 
+	if(pl->CurLoadout.Health < 10.0f)
+		disableSprint = true;
+
 	// check if player can straighten up, in case if there is something above his head he will not be able to stop crouching
 	bool force_crouch = false;
 	if(pl->bCrouch)
@@ -1817,16 +1160,11 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		PxBoxGeometry bbox(0.2f, 0.9f, 0.2f);
 		PxTransform pose(PxVec3(pl->GetPosition().x, pl->GetPosition().y+1.1f, pl->GetPosition().z), PxQuat(0,0,0,1));
 		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
-		PxOverlapBuffer overlapHit;
-		force_crouch = g_pPhysicsWorld->PhysXScene->overlap(bbox, pose, overlapHit, filter);
+		PxShape* shape;
+		force_crouch = g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter);
 	}
 	bool crouching = pl->bCrouch;
-
-	if(cameraModeWasToggled)
-	{
-		crouching = pl->bCrouch;
-	}
-	else if(pl->bOnGround)
+	if(pl->fHeightAboveGround < 0.5f)
 	{
 		if(g_toggle_crouch->GetBool())
 		{
@@ -1834,14 +1172,10 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 				crouching = !crouching;
 		}
 		else
-		{
 			crouching = InputMappingMngr->isPressed(r3dInputMappingMngr::KS_CROUCH) || Gamepad->IsPressed(gpB);
-		}
 	}
 	else
-	{
 		crouching = false;
-	}
 
 	if(disablePlayerMovement)
 		crouching = false;
@@ -1851,174 +1185,236 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 
 	if(crouching) 
 		playerState = aiming ? PLAYER_MOVE_CROUCH_AIM : PLAYER_MOVE_CROUCH;
+	
+	// check if player can straighten up, in case if there is something above his head he will not be able to stop proning
+	bool force_prone = false;
+	if(pl->bProne)
+	{
+		PxBoxGeometry bbox(0.2f, 0.9f, 0.2f);
+		PxTransform pose(PxVec3(pl->GetPosition().x, pl->GetPosition().y+1.1f, pl->GetPosition().z), PxQuat(0,0,0,1));
+		PxSceneQueryFilterData filter(PxFilterData(COLLIDABLE_STATIC_MASK, 0, 0, 0), PxSceneQueryFilterFlag::eSTATIC);
+		PxShape* shape;
+		force_prone = g_pPhysicsWorld->PhysXScene->overlapAny(bbox, pose, shape, filter);
+	}
+	bool wasProning = pl->bProne;
+	bool proning = pl->bProne;
+	if(pl->fHeightAboveGround < 0.5f)
+	{
+		if(InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_PRONE) && !disablePlayerMovement)
+			proning = !proning;
+	}
+	else
+		proning = false;
+
+	if(force_prone)
+		proning = true;
+
+	{
+		extern float getWaterDepthAtPos(const r3dPoint3D& pos);
+		float waterDepth = getWaterDepthAtPos(pl->GetPosition());
+		if(waterDepth > 0.5f)
+			proning = false;
+	}
+
+	if(proning) 
+	{
+		if(!wasProning)
+			playerState = PLAYER_PRONE_DOWN;
+		else if(wasProning && pl->PlayerState == PLAYER_PRONE_DOWN) // check if we are still playing anim
+		{
+			bool stillPlayingAnim = false;
+			std::vector<r3dAnimation::r3dAnimInfo>::iterator it;
+			for(it=pl->uberAnim_->anim.AnimTracks.begin(); it!=pl->uberAnim_->anim.AnimTracks.end(); ++it) 
+			{
+				const r3dAnimation::r3dAnimInfo& ai = *it;
+				if(ai.pAnim->iAnimId == pl->uberAnim_->data_->aid_.prone_down_weapon || ai.pAnim->iAnimId == pl->uberAnim_->data_->aid_.prone_down_noweapon)
+				{
+					if(!(ai.dwStatus & ANIMSTATUS_Finished))
+						stillPlayingAnim = true;
+					break;
+				}
+			}
+			if(stillPlayingAnim)
+				playerState = PLAYER_PRONE_DOWN;
+			else
+				playerState = aiming ? PLAYER_PRONE_AIM : PLAYER_PRONE_IDLE;
+		}
+		else
+			playerState = aiming ? PLAYER_PRONE_AIM : PLAYER_PRONE_IDLE;
+	}
+	else
+	{
+		if(wasProning)
+			playerState = PLAYER_PRONE_UP;
+		else if(pl->PlayerState == PLAYER_PRONE_UP) // check if we are still playing anim
+		{
+			bool stillPlayingAnim = false;
+			std::vector<r3dAnimation::r3dAnimInfo>::iterator it;
+			for(it=pl->uberAnim_->anim.AnimTracks.begin(); it!=pl->uberAnim_->anim.AnimTracks.end(); ++it) 
+			{
+				const r3dAnimation::r3dAnimInfo& ai = *it;
+				if(ai.pAnim->iAnimId == pl->uberAnim_->data_->aid_.prone_up_weapon || ai.pAnim->iAnimId == pl->uberAnim_->data_->aid_.prone_up_noweapon)
+				{
+					if(!(ai.dwStatus & ANIMSTATUS_Finished))
+						stillPlayingAnim = true;
+					break;
+				}
+			}
+			if(stillPlayingAnim)
+				playerState = PLAYER_PRONE_UP;
+		}
+	}
+
+	if(playerState == PLAYER_PRONE_UP || playerState == PLAYER_PRONE_DOWN)
+	{
+		disablePlayerMovement = true;
+		disablePlayerRotation = true;
+	}
+
+	if(proning && aiming)
+		disablePlayerMovement = true;
 
 	VMPROTECT_BeginMutation("ProcessPlayerMovement_Accel");	
 	{
 
-	r3dPoint3D accelaration(0,0,0);
-	if(!disablePlayerMovement && !pl->IsPlantingMine())
-	{
-		if(pl->bOnGround && (InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_JUMP)||Gamepad->WasPressed(gpA)) 
-		   && !crouching /*&& (pl->m_Energy>1.0f)*/ 
-		   && !pl->IsJumpActive()
-		   && prevAccel.z >= 0 /* prevent jump backward*/
-		   )
+		r3dPoint3D accelaration(0,0,0);
+		if(!disablePlayerMovement)
 		{
-			pl->StartJump();
-		}
+			// if facing a wall and cannot sprint - stop sprint
+			bool canSprint = (shiftWasPressed<3) || (shiftWasPressed>=3 && movingSpeed > 1.0f);
+			if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_SPRINT) || Gamepad->IsPressed(gpLeftShoulder))
+				shiftWasPressed++;
+			else
+				shiftWasPressed = 0;
 
-		// if facing a wall and cannot sprint - stop sprint
-		bool canSprint = (shiftWasPressed<3) || (shiftWasPressed>=3 && movingSpeed > 1.0f);
-		if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_SPRINT) || Gamepad->IsPressed(gpLeftShoulder))
-			shiftWasPressed++;
-		else
-			shiftWasPressed = 0;
-		
-		if(aiming || pl->m_isHoldingBreath) // cannot spring and aim. also, in default key binding spring and hold breath are on the same key
-			shiftWasPressed = 0;
+			if(aiming || pl->m_isHoldingBreath) // cannot spring and aim. also, in default key binding spring and hold breath are on the same key
+				shiftWasPressed = 0;
 
-		// due to animation, firstly check left and right movement, so that if you move diagonally we will play moving forward animation
-		float thumbX, thumbY;
-		Gamepad->GetLeftThumb(thumbX, thumbY);
-		if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_LEFT)) 
-		{
-			accelaration += (aiming)?r3dPoint3D(-GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE,0,0):r3dPoint3D(-GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE,0,0);
-		}
-		else if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_RIGHT)) 
-		{
-			accelaration += (aiming)?r3dPoint3D(GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE,0,0):r3dPoint3D(GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE,0,0);
-		}
-		else if(thumbX!=0.0f)
-		{
-			accelaration += (aiming)?r3dPoint3D(GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE*thumbX,0,0):r3dPoint3D(GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE*thumbX,0,0);
-		}
-
-		//r3dOutToLog("sprint: %d, canSprint: %d, speed: %.3f\n", (int)shiftWasPressed, (int)canSprint, movingSpeed);
-		if(shiftWasPressed && canSprint /*&& pl->bOnGround*/ && !crouching && !disableSprint && (pl->m_Energy>0.0f) && pl->m_EnergyPenaltyTime<=0 ) 
-		{
-			playerState = PLAYER_MOVE_SPRINT;
-			accelaration *= 0.5f; // half side movement when sprinting
-			accelaration += r3dPoint3D(0,0,GPP->AI_SPRINT_SPEED);
-			accelaration  = accelaration.NormalizeTo() * GPP->AI_SPRINT_SPEED;
-		}
-		else
-		{
-			if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_FORWARD) || shiftWasPressed) 
+			// due to animation, firstly check left and right movement, so that if you move diagonally we will play moving forward animation
+			float thumbX, thumbY;
+			Gamepad->GetLeftThumb(thumbX, thumbY);
+			if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_LEFT)) 
 			{
-				accelaration += (aiming)?r3dPoint3D(0,0,GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_FORWARD):r3dPoint3D(0,0,GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_FORWARD);
+				accelaration += (aiming)?r3dPoint3D(-GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE,0,0):r3dPoint3D(-GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE,0,0);
 			}
-			else if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_BACKWARD))
+			else if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_RIGHT)) 
 			{
-				accelaration += (aiming)?r3dPoint3D(0,0,-GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_BACKWARD):r3dPoint3D(0,0,-GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_BACKWARD);
+				accelaration += (aiming)?r3dPoint3D(GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE,0,0):r3dPoint3D(GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE,0,0);
 			}
-			else if(thumbY!=0.0f)
+			else if(thumbX!=0.0f)
 			{
-				if(thumbY>0)
-					accelaration += (aiming)?r3dPoint3D(0,0,GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_FORWARD*thumbY):r3dPoint3D(0,0,GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_FORWARD*thumbY);
-				else
-					accelaration += (aiming)?r3dPoint3D(0,0,GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_BACKWARD*thumbY):r3dPoint3D(0,0,GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_BACKWARD*thumbY);
+				accelaration += (aiming)?r3dPoint3D(GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_SIDE*thumbX,0,0):r3dPoint3D(GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_SIDE*thumbX,0,0);
 			}
+
+			//r3dOutToLog("sprint: %d, canSprint: %d, speed: %.3f\n", (int)shiftWasPressed, (int)canSprint, movingSpeed);
+			if(shiftWasPressed && canSprint /*&& pl->bOnGround*/ && !crouching && !proning && !disableSprint && (pl->m_Stamina>0.0f) && pl->m_StaminaPenaltyTime<=0 ) 
+			{
+				playerState = PLAYER_MOVE_SPRINT;
+				accelaration *= 0.5f; // half side movement when sprinting
+				accelaration += r3dPoint3D(0,0,GPP->AI_SPRINT_SPEED);
+				accelaration  = accelaration.NormalizeTo() * GPP->AI_SPRINT_SPEED;
+			}
+			else
+			{
+				if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_FORWARD) || shiftWasPressed) 
+				{
+					float spd = GPP->AI_BASE_MOD_FORWARD * (aiming ? GPP->AI_WALK_SPEED : GPP->AI_RUN_SPEED);
+					accelaration += r3dPoint3D(0,0,spd);
+					accelaration  = accelaration.NormalizeTo() * spd;
+				}
+				else if(InputMappingMngr->isPressed(r3dInputMappingMngr::KS_MOVE_BACKWARD))
+				{
+					float spd = GPP->AI_BASE_MOD_BACKWARD * (aiming ? GPP->AI_WALK_SPEED : GPP->AI_RUN_SPEED);
+					accelaration += r3dPoint3D(0,0,-spd);
+					accelaration  = accelaration.NormalizeTo() * spd;
+				}
+				else if(thumbY!=0.0f)
+				{
+					if(thumbY>0)
+						accelaration += (aiming)?r3dPoint3D(0,0,GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_FORWARD*thumbY):r3dPoint3D(0,0,GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_FORWARD*thumbY);
+					else
+						accelaration += (aiming)?r3dPoint3D(0,0,GPP->AI_WALK_SPEED*GPP->AI_BASE_MOD_BACKWARD*thumbY):r3dPoint3D(0,0,GPP->AI_RUN_SPEED*GPP->AI_BASE_MOD_BACKWARD*thumbY);
+				}
+			}
+
+			// set walk/run state
+			if(playerState != PLAYER_MOVE_SPRINT && !crouching && !proning && (accelaration.x || accelaration.z))
+				playerState = aiming ? PLAYER_MOVE_WALK_AIM : PLAYER_MOVE_RUN;
+			// set prone walk state
+			if(playerState != PLAYER_MOVE_SPRINT && !crouching && proning && (accelaration.x || accelaration.z))
+				playerState = aiming ? PLAYER_PRONE_AIM : PLAYER_MOVE_PRONE;
+
+			if((playerState == PLAYER_MOVE_RUN || playerState == PLAYER_MOVE_SPRINT) && (r3dGetTime() < pl->m_SpeedBoostTime))
+			{
+				accelaration *= pl->m_SpeedBoost;
+			}
+			
+#ifndef FINAL_BUILD
+			if(gUserProfile.ProfileData.isDevAccount && Keyboard->IsPressed(kbsLeftAlt))
+				accelaration *= 5.0f;
+#endif
+
+			// 		STORE_CATEGORIES equippedItemCat = wpn ? wpn->getCategory() : storecat_INVALID;;
+			// 		if(equippedItemCat == storecat_SUPPORT || equippedItemCat == storecat_MG)
+			// 			accelaration *= 0.8f; // 20% slow down
 		}
 
-		// set walk/run state
-		if(playerState != PLAYER_MOVE_SPRINT && !crouching && (accelaration.x || accelaration.z))
-			playerState = aiming ? PLAYER_MOVE_WALK_AIM : PLAYER_MOVE_RUN;
 
-		if(playerState == PLAYER_MOVE_WALK_AIM)
-		{
-			int Walker = pl->CurLoadout.getSkillLevel(CUserSkills::ASSAULT_Walker);
-			switch(Walker)
-			{
-			case 1: accelaration *= 1.10f; break;
-			case 2: accelaration *= 1.15f; break;
-			case 3: accelaration *= 1.20f; break;
-			case 4: accelaration *= 1.25f; break;
-			case 5: accelaration *= 1.30f; break;
-			default:break;
-			}
-		}
-		if(playerState == PLAYER_MOVE_SPRINT)
-		{
-			int AssaultBlazingSpeed = pl->CurLoadout.getSkillLevel(CUserSkills::ASSAULT_BlazingSpeed);
-			switch(AssaultBlazingSpeed)
-			{
-			case 1: accelaration *= 1.02f; break;
-			case 2: accelaration *= 1.03f; break;
-			case 3: accelaration *= 1.05f; break;
-			case 4: accelaration *= 1.07f; break;
-			case 5: accelaration *= 1.10f; break;
-			default:break;
-			}
-			int MedicBlazingSpeed = pl->CurLoadout.getSkillLevel(CUserSkills::MEDIC_BlazingSpeed);
-			switch(MedicBlazingSpeed)
-			{
-			case 1: accelaration *= 1.02f; break;
-			case 2: accelaration *= 1.03f; break;
-			case 3: accelaration *= 1.05f; break;
-			case 4: accelaration *= 1.07f; break;
-			case 5: accelaration *= 1.10f; break;
-			default:break;
-			}
-			int SniperBlazingSpeed = pl->CurLoadout.getSkillLevel(CUserSkills::RECON_BlazingSpeed);
-			switch(SniperBlazingSpeed)
-			{
-			case 1: accelaration *= 1.05f; break;
-			case 2: accelaration *= 1.10f; break;
-			case 3: accelaration *= 1.15f; break;
-			case 4: accelaration *= 1.20f; break;
-			case 5: accelaration *= 1.25f; break;
-			default:break;
-			}
-		}
+		if(pl->CurLoadout.Health < GPP->c_fSpeedMultiplier_LowHealthLevel)
+			accelaration *= GPP->c_fSpeedMultiplier_LowHealthValue;
+		if(pl->CurLoadout.Thirst > GPP->c_fSpeedMultiplier_HighThirstLevel)
+			accelaration *= GPP->c_fSpeedMultiplier_HighThirstValue;
+		if(pl->CurLoadout.Hunger > GPP->c_fSpeedMultiplier_HighHungerLevel)
+			accelaration *= GPP->c_fSpeedMultiplier_HighHungerValue;
 
-		if((playerState == PLAYER_MOVE_RUN || playerState == PLAYER_MOVE_SPRINT) && (r3dGetTime() < pl->m_SpeedBoostTime))
-		{
-			accelaration *= pl->m_SpeedBoost;
-		}
+		if(crouching)
+			accelaration *= 0.4f;
+		if(proning)
+			accelaration *= 0.2f;
 
-		STORE_CATEGORIES equippedItemCat = wpn ? wpn->getCategory() : storecat_INVALID;;
-		if(equippedItemCat == storecat_SUPPORT || equippedItemCat == storecat_MG)
-			accelaration *= 0.8f; // 20% slow down
-	}
-
-
-	if( pl->CurLoadout.hasItem( AbilityConfig::AB_SecondWind ) && pl->m_RemainingSecondWindTime != 0 ) { 
-		pl->m_RemainingSecondWindTime -= r3dGetFrameTime();
-		pl->m_RemainingSecondWindTime = R3D_MAX( pl->m_RemainingSecondWindTime, 0.0f );
-		accelaration *= 1.10f;
-	}
-
-	if(crouching)
-		accelaration *= 0.4f;
-
-	/*if(pl->IsJumpActive()) // don't allow to change direction when jumping
+		/*if(pl->IsJumpActive()) // don't allow to change direction when jumping
 		pl->InputAcceleration = prevAccel;
-	else*/
+		else*/
 		pl->InputAcceleration = accelaration;
 
-	if(!editor_debug)
-		pl->PlayerState   = playerState;
+		// process jump after assigning InputAcceleration, so that we can predict where player will jump
+		if(!disablePlayerMovement)
+		{
+			if(pl->bOnGround && (InputMappingMngr->wasPressed(r3dInputMappingMngr::KS_JUMP)||Gamepad->WasPressed(gpA)) 
+				&& !crouching 
+				&& !proning
+				&& !pl->IsJumpActive()
+				&& prevAccel.z >= 0 /* prevent jump backward*/
+				)
+			{
+				pl->StartJump();
+			}
 
-	pl->PlayerMoveDir = CUberData::GetMoveDirFromAcceleration(pl->InputAcceleration);
-	
+		}
+
+		if(!editor_debug)
+			pl->PlayerState   = playerState;
+
+		pl->PlayerMoveDir = CUberData::GetMoveDirFromAcceleration(pl->InputAcceleration);
+
 	} VMPROTECT_End();	
 
 	// adjust player physx controller size
 	// TODO: we need to adjust size only when animation blending was finished! ask Denis how.
-	if(crouching != pl->bCrouch)
+	if(crouching != pl->bCrouch || proning!=pl->bProne)
 	{
 		// GetPosition()/SetPosition() to keep player on the ground.
 		// because capsule controller height offset will be changed in AdjustControllerSize()
 		r3dPoint3D pos = pl->PhysicsObject->GetPosition();
-		if(crouching)
+		if(crouching || proning)
 			pl->PhysicsObject->AdjustControllerSize(0.3f, 0.2f, 0.4f);
 		else
 			pl->PhysicsObject->AdjustControllerSize(0.3f, 1.1f, 0.85f);
 		pl->PhysicsObject->SetPosition(pos + r3dPoint3D(0, 0.01f, 0));
-		g_pPhysicsWorld->CharacterManager->computeInteractions(0.0f);// update internal character controller interactions
 	}
 	
 	pl->bCrouch = crouching;
+	pl->bProne = proning;
 
 	ActiveCameraRigID = (Playerstate_e)pl->PlayerState;
 	ActiveCameraRig   = TPSHudCameras[g_camera_mode->GetInt()][ActiveCameraRigID];
@@ -2027,7 +1423,7 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 	static int currentCameraMode = g_camera_mode->GetInt();
 
 	// if we arn't in the correct view mode currently.   And we are not doing a aim zoom, or the previous lerp is done. 
-	if ( ( CurrentState != pl->PlayerState || currentCameraMode != g_camera_mode->GetInt()) && (LerpValue >= 1.0f || ( !pl->m_isAiming && !pl->laserViewActive_ ) ) )
+	if ( ( CurrentState != pl->PlayerState || currentCameraMode != g_camera_mode->GetInt()) && (LerpValue >= 1.0f || ( !pl->m_isAiming) ) )
 	{
 		currentCameraMode = g_camera_mode->GetInt();
 		//set new target
@@ -2060,7 +1456,7 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 			float lerpMOD = 1.0f;
 			STORE_CATEGORIES equippedItemCat = wpn ? wpn->getCategory() : storecat_INVALID;;
 			if(TargetRig.allowScope) // slow down aiming for those categories
-				if(equippedItemCat == storecat_MG || equippedItemCat == storecat_SUPPORT)
+				if(equippedItemCat == storecat_MG)
 					lerpMOD = 0.5f;
 
 			LerpValue += r3dGetFrameTime()*6.5f*lerpMOD;
@@ -2072,7 +1468,7 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 			CurrentRig.Lerp(pl, SourceRig, TargetRig, 1.0f);
 	}
 
-	if(!disablePlayerMovement)
+	if(!disablePlayerRotation)
 	{
 		float  glb_MouseSensAdj = CurrentRig.MouseSensetivity * g_mouse_sensitivity->GetFloat();	
 		//  Mouse controls are here
@@ -2110,8 +1506,7 @@ void ProcessPlayerMovement(obj_AI_Player* pl, bool editor_debug )
 		if(pl->ViewAngle.y < CurrentRig.LookDownLimit) pl->ViewAngle.y = CurrentRig.LookDownLimit;
 
 		// set player rotation (except when planting mines)
-		if(!pl->IsPlantingMine())
-			pl->m_fPlayerRotationTarget = -pl->ViewAngle.x;
+		pl->m_fPlayerRotationTarget = -pl->ViewAngle.x;
 
 		// calculate player vision
 		r3dVector FinalViewAngle = pl->ViewAngle + pl->RecoilViewMod + pl->SniperViewMod;
@@ -2141,16 +1536,11 @@ void TPSGameHUD :: Process()
 		imgui2_Update();
 	}
 
-	if( hudRespawn->isActive() )
-	{
-		r3dSetAsyncLoading( 0 ) ;
-	}
-	else
 	{
 		r3dSetAsyncLoading( 1 ) ;
 	}
 
-	obj_AI_Player* pl = gClientLogic().localPlayer_;
+	obj_Player* pl = gClientLogic().localPlayer_;
 	if(!pl) return;
 
 #ifndef FINAL_BUILD

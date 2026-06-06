@@ -169,7 +169,7 @@ bool CreateNewLevel()
 			Terrain1->UpdateDesc() ;			
 		}
 
-		GameWorld().Init(1);
+		GameWorld().Init(1,1);
 		obj_Terrain* pObjTerrain = new obj_Terrain();
 		obj_Terrain& objTerrain = *pObjTerrain;
 		objTerrain.DrawOrder      = OBJ_DRAWORDER_FIRST;
@@ -199,222 +199,130 @@ void ClearFullScreen_Menu();
 extern bool g_bExit;
 int Menu_Main::DoModal()
 {
-	LevelEditName[0] = 0;
-	char tempName[256] = { 0 };
+ LevelEditName[0] = 0;
+ char tempName[256] = {0};
 
-	while(1)
+  while(1)
+  {
+	  if(g_bExit)
+		  return 0;
+    r3dStartFrame();
+
+	ClearFullScreen_Menu();
+
+	mUpdate();
+
+	imgui_Update();
+	imgui2_Update();
+
+	int ret = 1;
+
+	mDrawStart();
+  
+	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
+	r3dSetFiltering( R3D_POINT );
+
+	const static char* list[3] = { "LIVE MAPS", "EDITOR MAPS", "CREATE MAP"};
+
+
+	static int LevelIndex = 0;
+
+	int lastLevelIndex = LevelIndex;
+
+    imgui_Toolbar(r3dRenderer->ScreenW/2-250, r3dRenderer->ScreenH/2-150-40, 500, 40, &LevelIndex, 0, list, 3);
+    r3dDrawBox2D(r3dRenderer->ScreenW/2-250, r3dRenderer->ScreenH/2-150+2, 500, 350, imgui_bkgDlg);
+
+	switch (LevelIndex)
 	{
-		if(g_bExit)
-			return 0;
-
-		r3dStartFrame();
-
-		mUpdate();
-
-		imgui_Update();
-		imgui2_Update();
-
-		mDrawStart();
-
-		ClearFullScreen_Menu();
-
-		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-		r3dRenderer->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-
-		r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA | R3D_BLEND_NZ);
-		r3dSetFiltering(R3D_POINT);
-
-		const static char* list[3] =
-		{
-			"LIVE MAPS",
-			"EDITOR MAPS",
-			"CREATE MAP"
-		};
-
-		static int LevelIndex = 0;
-
-		int lastLevelIndex = LevelIndex;
-
-		imgui_Toolbar(
-			r3dRenderer->ScreenW / 2 - 250,
-			r3dRenderer->ScreenH / 2 - 150 - 40,
-			500,
-			40,
-			&LevelIndex,
-			0,
-			list,
-			3
-		);
-
-		r3dDrawBox2D(
-			r3dRenderer->ScreenW / 2 - 250,
-			r3dRenderer->ScreenH / 2 - 150 + 2,
-			500,
-			350,
-			imgui_bkgDlg
-		);
-
-		switch(LevelIndex)
-		{
-		case 0:
-			{
-				static float offset = 0.0f;
-
-				imgui_FileList(
-					r3dRenderer->ScreenW / 2 - 240,
-					r3dRenderer->ScreenH / 2 - 140 + 2,
-					360,
-					330,
-					"Levels\\*.",
-					LevelEditName,
-					&offset
-				);
-
-				if(LevelEditName[0] && stricmp(LevelEditName, "workinprogress") != 0)
+			case	0: // LIVE MAPS
 				{
-					if(imgui_Button(
-						r3dRenderer->ScreenW / 2 + 250 - 150,
-						r3dRenderer->ScreenH / 2 + 200 + 5,
-						150,
-						30,
-						"Load Level",
-						0))
+					static float offset = 0.f ;
+					imgui_FileList(r3dRenderer->ScreenW/2-240, r3dRenderer->ScreenH/2-140+2, 360, 330, "Levels\\*.", LevelEditName, &offset );
+
+					if (LevelEditName[0] && stricmp(LevelEditName, "workinprogress")!=0)
+						if (imgui_Button(r3dRenderer->ScreenW/2+250-150, r3dRenderer->ScreenH/2+200+5,150,30, "Load Level", 0)) 
+							released_id = bEditor;
+				}
+				break;
+
+			case	1: // EDITOR MAPS
+				{
+					static float offset = 0.f ;
+					imgui_FileList(r3dRenderer->ScreenW/2-240, r3dRenderer->ScreenH/2-140+2, 360, 330, "Levels\\WorkInProgress\\*.", tempName, &offset );
+
+					if (tempName[0])
+					{
+						sprintf(LevelEditName, "WorkInProgress\\%s", tempName);
+						if (imgui_Button(r3dRenderer->ScreenW/2+250-150, r3dRenderer->ScreenH/2+200+5,150,30, "Load Level", 0)) 
+							released_id = bEditor;
+					}
+				}
+				break;
+
+			case	2:
+				{
+					if( lastLevelIndex != LevelIndex )
+					{
+						r3dscpy( LevelEditName, "NewLevel" );
+					}
+
+					float SliderX = r3dRenderer->ScreenW/2-240; 
+					float SliderY = r3dRenderer->ScreenH/2-140+2;
+
+					const float MAP_NAME_HEIGHT = 24;
+
+					imgui2_StartArea ( "MAP_NAME_AREA", SliderX, SliderY, 360.f, MAP_NAME_HEIGHT );
+					imgui2_StringValue ( "MAP NAME", LevelEditName );
+					imgui2_EndArea ();
+
+					SliderY += MAP_NAME_HEIGHT;
+
+					SliderY += imgui_Checkbox(SliderX, SliderY, "HAVE TERRAIN",	    &__CreateTerrain, 1);
+					if (__CreateTerrain)
+					{
+						const static char* list[5] = { "256", "512", "1024", "2048", "4096" };
+						const static char* list1[3] = { "PLANE", "IMAGE", "NOISE" };
+
+						SliderY += imgui_Checkbox( SliderX, SliderY, "Create Terrain V2", &__CreateTerrain2, 1 ) ;
+
+						SliderY += imgui_Static(SliderX, SliderY, "Terrain Size");
+						SliderY += imgui_Value_Slider(SliderX, SliderY, "Cell size in Meters",			&__TerrainSizeCell,	1,100,	"%-02.2f",1);
+						imgui_Toolbar(SliderX, SliderY, 360, 35, &__TerrainSize, 0, list, 5);
+
+						SliderY += 36;
+						SliderY += imgui_Static(SliderX, SliderY, "Splat map Size");
+
+						__TerrainSMapSize = R3D_MIN( __TerrainSMapSize, __TerrainSize  ) ;
+
+						imgui_Toolbar(SliderX, SliderY, 360, 35, &__TerrainSMapSize, 0, list, __TerrainSize + 1 );
+
+						SliderY += 36;
+						SliderY += imgui_Value_Slider(SliderX, SliderY, "Terrain height in Meters",			&__TerrainSizeHeight,	0,1200,	"%-02.2f",1);
+					}
+
+				}
+				if (imgui_Button(r3dRenderer->ScreenW/2+250-150, r3dRenderer->ScreenH/2+200+5,150,30, "Create Level", 0))
+				{
+					if ( CreateNewLevel() )
 					{
 						released_id = bEditor;
 					}
 				}
-			}
-			break;
 
-		case 1:
-			{
-				static float offset = 0.0f;
-
-				imgui_FileList(
-					r3dRenderer->ScreenW / 2 - 240,
-					r3dRenderer->ScreenH / 2 - 140 + 2,
-					360,
-					330,
-					"Levels\\WorkInProgress\\*.",
-					tempName,
-					&offset
-				);
-
-				if(tempName[0])
-				{
-					sprintf(LevelEditName, "WorkInProgress\\%s", tempName);
-
-					if(imgui_Button(
-						r3dRenderer->ScreenW / 2 + 250 - 150,
-						r3dRenderer->ScreenH / 2 + 200 + 5,
-						150,
-						30,
-						"Load Level",
-						0))
-					{
-						released_id = bEditor;
-					}
-				}
-			}
-			break;
-
-		case 2:
-			{
-				if(lastLevelIndex != LevelIndex)
-				{
-					r3dscpy(LevelEditName, "NewLevel");
-				}
-
-				float SliderX = r3dRenderer->ScreenW / 2 - 240;
-				float SliderY = r3dRenderer->ScreenH / 2 - 140 + 2;
-
-				const float MAP_NAME_HEIGHT = 24.0f;
-
-				imgui2_StartArea("MAP_NAME_AREA", SliderX, SliderY, 360.0f, MAP_NAME_HEIGHT);
-				imgui2_StringValue("MAP NAME", LevelEditName);
-				imgui2_EndArea();
-
-				SliderY += MAP_NAME_HEIGHT;
-
-				SliderY += imgui_Checkbox(SliderX, SliderY, "HAVE TERRAIN", &__CreateTerrain, 1);
-
-				if(__CreateTerrain)
-				{
-					const static char* terrainSizeList[5] =
-					{
-						"256",
-						"512",
-						"1024",
-						"2048",
-						"4096"
-					};
-
-					SliderY += imgui_Checkbox(SliderX, SliderY, "Create Terrain V2", &__CreateTerrain2, 1);
-
-					SliderY += imgui_Static(SliderX, SliderY, "Terrain Size");
-
-					SliderY += imgui_Value_Slider(
-						SliderX,
-						SliderY,
-						"Cell size in Meters",
-						&__TerrainSizeCell,
-						1,
-						100,
-						"%-02.2f",
-						1
-					);
-
-					imgui_Toolbar(SliderX, SliderY, 360, 35, &__TerrainSize, 0, terrainSizeList, 5);
-
-					SliderY += 36;
-
-					SliderY += imgui_Static(SliderX, SliderY, "Splat map Size");
-
-					__TerrainSMapSize = R3D_MIN(__TerrainSMapSize, __TerrainSize);
-
-					imgui_Toolbar(SliderX, SliderY, 360, 35, &__TerrainSMapSize, 0, terrainSizeList, __TerrainSize + 1);
-
-					SliderY += 36;
-
-					SliderY += imgui_Value_Slider(
-						SliderX,
-						SliderY,
-						"Terrain height in Meters",
-						&__TerrainSizeHeight,
-						0,
-						1200,
-						"%-02.2f",
-						1
-					);
-				}
-
-				if(imgui_Button(
-					r3dRenderer->ScreenW / 2 + 250 - 150,
-					r3dRenderer->ScreenH / 2 + 200 + 5,
-					150,
-					30,
-					"Create Level",
-					0))
-				{
-					if(CreateNewLevel())
-					{
-						released_id = bEditor;
-					}
-				}
-			}
-			break;
-		}
-
-		mDrawEnd();
-
-		switch(released_id)
-		{
-		case bEditor:
-			return bEditor;
-		}
-
-		r3dEndFrame();
+				break;
 	}
 
-	return 0;
+
+	mDrawEnd();
+  
+	switch(released_id)
+	{
+		case bEditor:
+				   return bEditor;
+	};
+
+    r3dEndFrame();
+  }
+  
+  return 0;
 }

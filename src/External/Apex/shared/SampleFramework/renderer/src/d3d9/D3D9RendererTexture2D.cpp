@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,29 +32,42 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9RendererTexture2D.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
 
+#include "D3D9RendererTexture2D.h"
 #include <RendererTexture2DDesc.h>
 
 #include <SamplePlatform.h>
 
+using namespace SampleRenderer;
+
+static void supportsAnisotropic(IDirect3DDevice9& device, bool& min, bool& mag, bool& mip)
+{
+	D3DCAPS9 caps;
+	device.GetDeviceCaps(&caps);
+	min = (caps.TextureFilterCaps & D3DPTFILTERCAPS_MINFANISOTROPIC) != 0;
+	mag = (caps.TextureFilterCaps & D3DPTFILTERCAPS_MAGFANISOTROPIC) != 0;
+	mip = false;
+}
+
 static D3DFORMAT getD3D9TextureFormat(RendererTexture2D::Format format)
 {
-	D3DFORMAT d3dFormat = static_cast<D3DFORMAT>(SamplePlatform::platform()->getD3D9TextureFormat(format));
+	D3DFORMAT d3dFormat = static_cast<D3DFORMAT>(SampleFramework::SamplePlatform::platform()->getD3D9TextureFormat(format));
 	RENDERER_ASSERT(d3dFormat != D3DFMT_UNKNOWN, "Unable to convert to D3D9 Texture Format.");
 	return d3dFormat;
 }
 
-static D3DTEXTUREFILTERTYPE getD3D9TextureFilter(RendererTexture2D::Filter filter)
+static D3DTEXTUREFILTERTYPE getD3D9TextureFilter(RendererTexture2D::Filter filter, bool anisoSupport)
 {
 	D3DTEXTUREFILTERTYPE d3dFilter = D3DTEXF_FORCE_DWORD;
 	switch(filter)
 	{
-		case RendererTexture2D::FILTER_NEAREST:     d3dFilter = D3DTEXF_POINT;       break;
-		case RendererTexture2D::FILTER_LINEAR:      d3dFilter = D3DTEXF_LINEAR;      break;
-		case RendererTexture2D::FILTER_ANISOTROPIC: d3dFilter = D3DTEXF_ANISOTROPIC; break;
+	case RendererTexture2D::FILTER_NEAREST:     d3dFilter = D3DTEXF_POINT;                              break;
+	case RendererTexture2D::FILTER_LINEAR:      d3dFilter = D3DTEXF_LINEAR;                             break;
+	case RendererTexture2D::FILTER_ANISOTROPIC: d3dFilter = anisoSupport ? D3DTEXF_ANISOTROPIC : D3DTEXF_LINEAR; break;
 	}
 	RENDERER_ASSERT(d3dFilter != D3DTEXF_FORCE_DWORD, "Unable to convert to D3D9 Filter mode.");
 	return d3dFilter;
@@ -65,25 +78,30 @@ static D3DTEXTUREADDRESS getD3D9TextureAddressing(RendererTexture2D::Addressing 
 	D3DTEXTUREADDRESS d3dAddressing = D3DTADDRESS_FORCE_DWORD;
 	switch(addressing)
 	{
-		case RendererTexture2D::ADDRESSING_WRAP:   d3dAddressing = D3DTADDRESS_WRAP;   break;
-		case RendererTexture2D::ADDRESSING_CLAMP:  d3dAddressing = D3DTADDRESS_CLAMP;  break;
-		case RendererTexture2D::ADDRESSING_MIRROR: d3dAddressing = D3DTADDRESS_MIRROR; break;
+	case RendererTexture2D::ADDRESSING_WRAP:   d3dAddressing = D3DTADDRESS_WRAP;   break;
+	case RendererTexture2D::ADDRESSING_CLAMP:  d3dAddressing = D3DTADDRESS_CLAMP;  break;
+	case RendererTexture2D::ADDRESSING_MIRROR: d3dAddressing = D3DTADDRESS_MIRROR; break;
 	}
 	RENDERER_ASSERT(d3dAddressing != D3DTADDRESS_FORCE_DWORD, "Unable to convert to D3D9 Addressing mode.");
 	return d3dAddressing;
 }
 
 D3D9RendererTexture2D::D3D9RendererTexture2D(IDirect3DDevice9 &d3dDevice, const RendererTexture2DDesc &desc) :
-	RendererTexture2D(desc),
+RendererTexture2D(desc),
 	m_d3dDevice(d3dDevice)
 {
+	RENDERER_ASSERT(desc.depth == 1, "Invalid depth for 2D Texture!");
+
 	m_d3dTexture     = 0;
 	m_usage          = 0;
 	m_pool           = D3DPOOL_MANAGED;
 	m_format         = getD3D9TextureFormat(desc.format);
-	m_d3dMinFilter   = getD3D9TextureFilter(desc.filter);
-	m_d3dMagFilter   = getD3D9TextureFilter(desc.filter);
-	m_d3dMipFilter   = getD3D9TextureFilter(desc.filter);
+
+	bool minAniso, magAniso, mipAniso;
+	supportsAnisotropic(d3dDevice, minAniso, magAniso, mipAniso);
+	m_d3dMinFilter   = getD3D9TextureFilter(desc.filter, minAniso);
+	m_d3dMagFilter   = getD3D9TextureFilter(desc.filter, magAniso);
+	m_d3dMipFilter   = getD3D9TextureFilter(desc.filter, mipAniso);
 	m_d3dAddressingU = getD3D9TextureAddressing(desc.addressingU);
 	m_d3dAddressingV = getD3D9TextureAddressing(desc.addressingV);
 	if(desc.renderTarget)
@@ -103,13 +121,16 @@ D3D9RendererTexture2D::~D3D9RendererTexture2D(void)
 {
 	if(m_d3dTexture)
 	{
-		m_d3dDevice.SetTexture(0, NULL);
-		SamplePlatform::platform()->D3D9BlockUntilNotBusy(m_d3dTexture);
+		D3DCAPS9 pCaps;
+		m_d3dDevice.GetDeviceCaps(&pCaps);
+		DWORD i = pCaps.MaxTextureBlendStages;
+		while(i--) m_d3dDevice.SetTexture(i, NULL);
+		SampleFramework::SamplePlatform::platform()->D3D9BlockUntilNotBusy(m_d3dTexture);
 		m_d3dTexture->Release();
 	}
 }
 
-void *D3D9RendererTexture2D::lockLevel(physx::PxU32 level, physx::PxU32 &pitch)
+void *D3D9RendererTexture2D::lockLevel(PxU32 level, PxU32 &pitch)
 {
 	void *buffer = 0;
 	if(m_d3dTexture)
@@ -120,13 +141,13 @@ void *D3D9RendererTexture2D::lockLevel(physx::PxU32 level, physx::PxU32 &pitch)
 		if(result == D3D_OK)
 		{
 			buffer = lockedRect.pBits;
-			pitch  = (physx::PxU32)lockedRect.Pitch;
+			pitch  = (PxU32)lockedRect.Pitch;
 		}
 	}
 	return buffer;
 }
 
-void D3D9RendererTexture2D::unlockLevel(physx::PxU32 level)
+void D3D9RendererTexture2D::unlockLevel(PxU32 level)
 {
 	if(m_d3dTexture)
 	{
@@ -134,7 +155,7 @@ void D3D9RendererTexture2D::unlockLevel(physx::PxU32 level)
 	}
 }
 
-void D3D9RendererTexture2D::bind(physx::PxU32 samplerIndex)
+void D3D9RendererTexture2D::bind(PxU32 samplerIndex)
 {
 	m_d3dDevice.SetTexture(     (DWORD)samplerIndex, m_d3dTexture);
 	m_d3dDevice.SetSamplerState((DWORD)samplerIndex, D3DSAMP_MINFILTER, m_d3dMinFilter);
@@ -164,7 +185,7 @@ void D3D9RendererTexture2D::onDeviceReset(void)
 		RENDERER_ASSERT(result == D3D_OK, "Unable to create D3D9 Texture.");
 		if(result == D3D_OK)
 		{
-			
+
 		}
 	}
 }

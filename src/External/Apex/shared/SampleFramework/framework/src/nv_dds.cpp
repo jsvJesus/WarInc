@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -312,7 +312,7 @@ bool CDDSImage::load(string filename, bool flipImage)
     
     // open file
 	FILE *fp = 0;
-	physx::fopen_s(&fp, filename.c_str(), "rb");
+	physx::shdfnd::fopen_s(&fp, filename.c_str(), "rb");
     if (fp == NULL)
         return false;
 
@@ -524,7 +524,7 @@ bool CDDSImage::save(std::string filename, bool flipImage)
 
     // open file
 	FILE *fp = 0;
-	physx::fopen_s(&fp, filename.c_str(), "wb");
+	physx::shdfnd::fopen_s(&fp, filename.c_str(), "wb");
     if (fp == NULL)
         return false;
 
@@ -848,8 +848,8 @@ void CDDSImage::flip_dxt5_alpha(DXT5AlphaBlock *block)
 {
     unsigned char gBits[4][4];
     
-    const unsigned long mask = 0x00000007;          // bits = 00 00 01 11
-    unsigned long bits = 0;
+    const unsigned int mask = 0x00000007;          // bits = 00 00 01 11
+    unsigned int bits = 0;
     memcpy(&bits, &block->row[0], sizeof(unsigned char) * 3);
 
     gBits[0][0] = (unsigned char)(bits & mask);
@@ -887,7 +887,7 @@ void CDDSImage::flip_dxt5_alpha(DXT5AlphaBlock *block)
     bits >>= 3;
     gBits[3][3] = (unsigned char)(bits & mask);
 
-    unsigned long *pBits = ((unsigned long*) &(block->row[0]));
+    unsigned int *pBits = ((unsigned int*) &(block->row[0]));
 
     *pBits = *pBits | (gBits[3][0] << 0);
     *pBits = *pBits | (gBits[3][1] << 3);
@@ -899,7 +899,7 @@ void CDDSImage::flip_dxt5_alpha(DXT5AlphaBlock *block)
     *pBits = *pBits | (gBits[2][2] << 18);
     *pBits = *pBits | (gBits[2][3] << 21);
 
-    pBits = ((unsigned long*) &(block->row[3]));
+    pBits = ((unsigned int*) &(block->row[3]));
 
 #if defined(NV_DDS_BIG_ENDIAN)
     *pBits &= 0x000000ff;

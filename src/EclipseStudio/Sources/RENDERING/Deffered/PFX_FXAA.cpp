@@ -56,19 +56,19 @@ void PFX_FXAA::PrepareImpl(r3dScreenBuffer* dest, r3dScreenBuffer* src)
 	r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_MINFILTER, &minFilter);
 	r3dRenderer->pd3ddev->GetSamplerState(0, D3DSAMP_MAGFILTER, &magFilter);
 
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-	r3dRenderer->SetPixelShaderConstantF(0, consts, _countof(consts) / 4);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, consts, _countof(consts) / 4);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 void PFX_FXAA::FinishImpl()
 {
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MIPFILTER, mipFilter);
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MINFILTER, minFilter);
-	r3dRenderer->SetSamplerState(0, D3DSAMP_MAGFILTER, magFilter);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MIPFILTER, mipFilter);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MINFILTER, minFilter);
+	r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_MAGFILTER, magFilter);
 }
 
 //-------------------------------------------------------------------------

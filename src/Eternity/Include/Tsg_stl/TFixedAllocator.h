@@ -1,18 +1,12 @@
 #ifndef TL_FIXEDALLOCATOR_H
 #define TL_FIXEDALLOCATOR_H
 
+// need to undef new, as here we are using placement new which isn't compatible with memory tracking :( but it still will track malloc :)
 #ifdef _DEBUG
 #ifdef ENABLE_MEMORY_DEBUG
 #undef new
+#endif //ENABLE_MEMORY_DEBUG
 #endif
-#endif
-
-#include <cstddef>
-#include <cstdlib>
-#include <limits>
-#include <new>
-#include <type_traits>
-#include <utility>
 
 namespace r3dTL
 {
@@ -20,9 +14,10 @@ namespace r3dTL
 	class TFixedAllocator
 	{
 	public:
-		template<typename U>
-		friend class TFixedAllocator;
+		template <class U> friend class TFixedAllocator;
 
+
+		//    typedefs
 		typedef T value_type;
 		typedef value_type* pointer;
 		typedef const value_type* const_pointer;
@@ -31,150 +26,83 @@ namespace r3dTL
 		typedef std::size_t size_type;
 		typedef std::ptrdiff_t difference_type;
 
-		typedef std::false_type propagate_on_container_copy_assignment;
-		typedef std::false_type propagate_on_container_move_assignment;
-		typedef std::false_type propagate_on_container_swap;
-		typedef std::true_type is_always_equal;
-
+		//    convert an allocator<T> to allocator<U>
 		template<typename U>
-		struct rebind
+		struct rebind 
 		{
 			typedef TFixedAllocator<U> other;
 		};
 
-		TFixedAllocator()
-			: mArea(NULL)
-			, mPtr(0)
-			, mMaxItems(0)
+		inline explicit TFixedAllocator( size_t maxItems )
+		: mArea( (T*)malloc( maxItems * sizeof(T) ) )
+		, mMaxItems( maxItems )
+		, mPtr( 0 )
 		{
 		}
 
-		explicit TFixedAllocator(size_type maxItems)
-			: mArea(NULL)
-			, mPtr(0)
-			, mMaxItems(maxItems)
+		inline explicit TFixedAllocator(TFixedAllocator const& cpy )
+		: mArea( (T*)malloc( cpy.mMaxItems * sizeof(T) ) )
+		, mMaxItems( cpy.mMaxItems )
+		, mPtr( 0 )
 		{
-			if (mMaxItems > 0)
-			{
-				mArea = static_cast<T*>(std::malloc(mMaxItems * sizeof(T)));
 
-				if (!mArea)
-				{
-					throw std::bad_alloc();
-				}
-			}
-		}
-
-		TFixedAllocator(const TFixedAllocator& cpy)
-			: mArea(NULL)
-			, mPtr(0)
-			, mMaxItems(cpy.mMaxItems)
-		{
-			if (mMaxItems > 0)
-			{
-				mArea = static_cast<T*>(std::malloc(mMaxItems * sizeof(T)));
-
-				if (!mArea)
-				{
-					throw std::bad_alloc();
-				}
-			}
 		}
 
 		template<typename U>
-		TFixedAllocator(const TFixedAllocator<U>& cpy)
-			: mArea(NULL)
-			, mPtr(0)
-			, mMaxItems(cpy.mMaxItems)
+		inline explicit TFixedAllocator(TFixedAllocator<U> const& cpy )
+		: mArea( (T*)malloc( cpy.mMaxItems * sizeof(T) ) )
+		, mMaxItems( cpy.mMaxItems )
+		, mPtr( 0 )
 		{
-			if (mMaxItems > 0)
-			{
-				mArea = static_cast<T*>(std::malloc(mMaxItems * sizeof(T)));
-
-				if (!mArea)
-				{
-					throw std::bad_alloc();
-				}
-			}
+			
 		}
 
-		~TFixedAllocator()
+		inline ~TFixedAllocator()
 		{
-			std::free(mArea);
-			mArea = NULL;
-			mPtr = 0;
-			mMaxItems = 0;
+			free( mArea );
 		}
 
-		pointer address(reference r) const
+		//    address
+		inline pointer address(reference r) { return &r; }
+		inline const_pointer address(const_reference r) { return &r; }
+
+		//    memory allocation
+		inline pointer allocate(size_type cnt, typename std::allocator<void>::const_pointer = 0) 
 		{
-			return &r;
-		}
+			pointer r = reinterpret_cast<pointer>( mArea + mPtr ) ;
 
-		const_pointer address(const_reference r) const
-		{
-			return &r;
-		}
-
-		pointer allocate(size_type cnt)
-		{
-			if (cnt == 0)
-			{
-				return NULL;
-			}
-
-			if (!mArea || cnt > (mMaxItems - mPtr))
-			{
-				r3d_assert(false && "TFixedAllocator overflow");
-				throw std::bad_alloc();
-			}
-
-			pointer result = mArea + mPtr;
 			mPtr += cnt;
+			r3d_assert( mPtr <= mMaxItems );
 
-			return result;
+			return r;
+		}
+		inline void deallocate(pointer p, size_type)
+		{ 
+
 		}
 
-		pointer allocate(size_type cnt, const void*)
+		//    size
+		inline size_type max_size() const 
 		{
-			return allocate(cnt);
+			return 0xffffffff;
 		}
 
-		void deallocate(pointer, size_type)
+		//    construction/destruction
+
+		inline void construct(pointer p, const T& t) 
 		{
+			new( p ) T( t );
 		}
 
-		size_type max_size() const
-		{
-			return std::numeric_limits<size_type>::max() / sizeof(T);
-		}
+		inline void destroy(pointer p) { p->~T(); }
 
-		template<typename U, typename... Args>
-		void construct(U* p, Args&&... args)
-		{
-			::new(static_cast<void*>(p)) U(std::forward<Args>(args)...);
-		}
-
-		template<typename U>
-		void destroy(U* p)
-		{
-			p->~U();
-		}
-
-		bool operator==(const TFixedAllocator&) const
-		{
-			return true;
-		}
-
-		bool operator!=(const TFixedAllocator& a) const
-		{
-			return !operator==(a);
-		}
+		inline bool operator==( TFixedAllocator const& ) { return true; }
+		inline bool operator!=( TFixedAllocator const& a ) { return !operator==(a); }
 
 	private:
-		T* mArea;
-		size_type mPtr;
-		size_type mMaxItems;
+		T				*mArea ;
+		size_t			mPtr ;
+		size_t			mMaxItems ;
 	};
 }
 

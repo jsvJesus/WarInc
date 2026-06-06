@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -36,10 +36,8 @@
 #define OGL_RENDERER_H
 
 #include <RendererConfig.h>
-#include <PxMat34Legacy.h>
 
 #if defined(RENDERER_ENABLE_OPENGL)
-
 #include <GLIncludes.h>
 
 #if defined(RENDERER_ENABLE_CG)
@@ -49,74 +47,82 @@
 
 #include <Renderer.h>
 
+namespace SampleFramework {
+	class SamplePlatform;
+}
+
+namespace SampleRenderer
+{
+
 #if defined(RENDERER_ENABLE_CG)
 	void setColorParameter(CGparameter param, const RendererColor &color);
+	void setFloat4Parameter(CGparameter param, float* values);
 #endif
 
-class OGLRendererMaterial;
+	class OGLRendererMaterial;
 
 
-void PxToGL(GLfloat *gl44, const physx::PxMat34Legacy &nx34);
-void RenToGL(GLfloat *gl44, const RendererProjection &proj);
+	void PxToGL(GLfloat *gl44, const physx::PxMat44 &mat);
+	void RenToGL(GLfloat *gl44, const RendererProjection &proj);
 
-class SamplePlatform;
-
-class OGLRenderer : public Renderer
-{
+	class OGLRenderer : public Renderer
+	{
 	public:
-		OGLRenderer(const RendererDesc &desc);
+		OGLRenderer(const RendererDesc &desc, const char* assetDir);
 		virtual ~OGLRenderer(void);
-	
-	#if defined(RENDERER_ENABLE_CG)
+
+#if defined(RENDERER_ENABLE_CG)
 		class CGEnvironment
 		{
-			public:
-				CGparameter modelMatrix;
-				CGparameter viewMatrix;
-				CGparameter projMatrix;
-				CGparameter modelViewMatrix;
-				CGparameter modelViewProjMatrix;
-				
-				CGparameter boneMatrices;
-				
-				CGparameter eyePosition;
-				CGparameter eyeDirection;
-				
-				CGparameter ambientColor;
-				
-				CGparameter lightColor;
-				CGparameter lightIntensity;
-				CGparameter lightDirection;
-				CGparameter lightPosition;
-				CGparameter lightInnerRadius;
-				CGparameter lightOuterRadius;
-				CGparameter lightInnerCone;
-				CGparameter lightOuterCone;
-				
-			public:
-				CGEnvironment(void);
-				CGEnvironment(CGcontext cgContext);
+		public:
+			CGparameter modelMatrix;
+			CGparameter viewMatrix;
+			CGparameter projMatrix;
+			CGparameter modelViewMatrix;
+			CGparameter modelViewProjMatrix;
+
+			CGparameter boneMatrices;
+
+			CGparameter fogColorAndDistance;
+
+			CGparameter eyePosition;
+			CGparameter eyeDirection;
+
+			CGparameter ambientColor;
+
+			CGparameter lightColor;
+			CGparameter lightIntensity;
+			CGparameter lightDirection;
+			CGparameter lightPosition;
+			CGparameter lightInnerRadius;
+			CGparameter lightOuterRadius;
+			CGparameter lightInnerCone;
+			CGparameter lightOuterCone;
+
+		public:
+			CGEnvironment(void);
+			CGEnvironment(CGcontext cgContext);
 		};
-		
+
 		CGcontext            getCGContext(void)           { return m_cgContext; }
 		CGEnvironment       &getCGEnvironment(void)       { return m_cgEnv; }
 		const CGEnvironment &getCGEnvironment(void) const { return m_cgEnv; }
-	#endif
-		
-		const physx::PxMat34Legacy getViewMatrix(void) const { return m_viewMatrix; }
-		
+#endif
+
+		const physx::PxMat44      &getViewMatrix(void) const { return m_viewMatrix; }
+
 		void                       setCurrentMaterial(const OGLRendererMaterial *cm) { m_currMaterial = cm;   }
 		const OGLRendererMaterial *getCurrentMaterial(void)                          { return m_currMaterial; }
-		
+
 	private:
 		bool begin(void);
 		void end(void);
 		void checkResize(void);
-	
+
 	public:
 		// clears the offscreen buffers.
 		virtual void clearBuffers(void);
-		
+
 		// presents the current color buffer to the screen.
 		// returns true on device reset and if buffers need to be rewritten.
 		virtual bool swapBuffers(void);
@@ -124,57 +130,66 @@ class OGLRenderer : public Renderer
 		// get the device pointer (void * abstraction)
 		virtual void *getDevice()                         { return static_cast<void*>(getCGContext()); }
 
+		// gets a handle to the current frame's data, in bitmap format
+		//    note: subsequent calls will invalidate any previously returned data
+		//    return true on successful screenshot capture
+		virtual bool captureScreen(PxU32 &width, PxU32& height, PxU32& sizeInBytes, const void*& screenshotData);
+
 		// get the window size
-		void getWindowSize(physx::PxU32 &width, physx::PxU32 &height) const;
+		void getWindowSize(PxU32 &width, PxU32 &height) const;
 
 		virtual RendererVertexBuffer   *createVertexBuffer(  const RendererVertexBufferDesc   &desc);
 		virtual RendererIndexBuffer    *createIndexBuffer(   const RendererIndexBufferDesc    &desc);
 		virtual RendererInstanceBuffer *createInstanceBuffer(const RendererInstanceBufferDesc &desc);
 		virtual RendererTexture2D      *createTexture2D(     const RendererTexture2DDesc      &desc);
+		virtual RendererTexture3D      *createTexture3D(     const RendererTexture3DDesc      &desc);
 		virtual RendererTarget         *createTarget(        const RendererTargetDesc         &desc);
 		virtual RendererMaterial       *createMaterial(      const RendererMaterialDesc       &desc);
 		virtual RendererMesh           *createMesh(          const RendererMeshDesc           &desc);
 		virtual RendererLight          *createLight(         const RendererLightDesc          &desc);
 
+		virtual void                    setVsync(bool on);
+
 	private:
-		virtual void bindViewProj(const physx::PxMat34Legacy &inveye, const RendererProjection &proj);
+		virtual void bindViewProj(const physx::PxMat44 &inveye, const RendererProjection &proj);
 		virtual void bindAmbientState(const RendererColor &ambientColor);
+		virtual void bindFogState(const RendererColor &fogColor, float fogDistance);
 		virtual void bindDeferredState(void);
 		virtual void bindMeshContext(const RendererMeshContext &context);
 		virtual void beginMultiPass(void);
 		virtual void endMultiPass(void);
+		virtual void beginTransparentMultiPass(void);
+		virtual void endTransparentMultiPass(void);
 		virtual void renderDeferredLight(const RendererLight &light);
-		
+		virtual PxU32 convertColor(const RendererColor& color) const;
+
 		virtual bool isOk(void) const;
-		
+
 		virtual	void setupTextRenderStates();
 		virtual	void resetTextRenderStates();
-		virtual	void renderTextBuffer(const void* vertices, physx::PxU32 nbVerts, const physx::PxU16* indices, physx::PxU32 nbIndices);
+		virtual	void renderTextBuffer(const void* vertices, PxU32 nbVerts, const PxU16* indices, PxU32 nbIndices, RendererMaterial* material);
+		virtual	void renderLines2D(const void* vertices, PxU32 nbVerts);
 		virtual	void setupScreenquadRenderStates();
 		virtual	void resetScreenquadRenderStates();
 
 	private:
-	#if defined(RENDERER_WINDOWS)
-		HWND                        m_hwnd;
-		HDC                         m_hdc;
-		HGLRC                       m_hrc;
-	#elif defined(RENDERER_PS3)
-		PSGLdevice*	                m_psglDevice;
-	#endif
-	#if defined(RENDERER_ENABLE_CG)
-		CGcontext                   m_cgContext;
-		CGEnvironment               m_cgEnv;
-	#endif
-		
-		const OGLRendererMaterial  *m_currMaterial;
-		
-		physx::PxU32				m_displayWidth;
-		physx::PxU32				m_displayHeight;
-		
-		physx::PxMat34Legacy		m_viewMatrix;
-	protected:
-		SamplePlatform*				m_platform;
-};
+		SampleFramework::SamplePlatform*			   m_platform;
+#if defined(RENDERER_ENABLE_CG)
+		CGcontext                  m_cgContext;
+		CGEnvironment              m_cgEnv;
+#endif
+
+		const OGLRendererMaterial *m_currMaterial;
+
+		PxU32                      m_displayWidth;
+		PxU32                      m_displayHeight;
+
+		std::vector<GLubyte>       m_displayData;
+
+		physx::PxMat44             m_viewMatrix;
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

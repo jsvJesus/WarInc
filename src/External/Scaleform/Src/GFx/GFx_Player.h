@@ -138,17 +138,6 @@ struct MemoryParams
     // the benefit - faster execution due to less calls to Collect.
     unsigned    InitialDynamicLimit;
 
-    // Controls 'generations' in GC (AS3 only).
-    // RunsToUpgradeGen - is the number of regular calls to GC (excluding ones forced by the user)
-    // before generations are upgraded by one step ('newborn' -> 'young', 'young' -> 'old').
-    unsigned    RunsToUpgradeGen;
-    // RunsToCollectYoung - is the number of regular calls to GC (excluding ones forced by the user)
-    // before GC collects 'young' objects.
-    unsigned    RunsToCollectYoung;
-    // RunsToCollectYoung - is the number of regular calls to GC (excluding ones forced by the user)
-    // before GC collects 'old' objects.
-    unsigned    RunsToCollectOld;
-
     MemoryParams(UPInt memoryArena = 0)
     {
         Desc.Arena                 = memoryArena;
@@ -156,9 +145,6 @@ struct MemoryParams
         MaxCollectionRoots         = ~0u; // Default value will be used.
         FramesBetweenCollections   = ~0u; // Default value will be used.
         InitialDynamicLimit        = ~0u; // Default value will be used.
-        RunsToUpgradeGen           = ~0u; // Default value will be used.
-        RunsToCollectYoung         = ~0u; // Default value will be used.
-        RunsToCollectOld           = ~0u; // Default value will be used.
     }
 };
 
@@ -607,6 +593,7 @@ public:
         Double              XScale;
         Double              YScale;
         Double              Alpha;
+        bool                Visible;
         Double              Z;
         Double              XRotation;
         Double              YRotation;
@@ -616,7 +603,6 @@ public:
         Matrix4F            ProjectionMatrix3D;
         Render::EdgeAAMode  EdgeAAMode;
         UInt16              VarsSet;
-        bool                Visible;
 
         SF_INLINE void    SetFlags(unsigned flags)              { VarsSet |= flags; }
         SF_INLINE void    ClearFlags(unsigned flags)            { VarsSet &= ~flags; }
@@ -2033,29 +2019,16 @@ public:
 
     virtual MemoryHeap* GetHeap() const = 0;    
 
-    enum GCFlags
-    {
-        GCF_Quick  = 0, // quick collect, only relatively new nodes are iterated
-        GCF_Medium = 1, // medium collect, older nodes are collected too
-        GCF_Full   = 2  // full collect, all nodes are iterated
-    };
     // Forces to run garbage collection, if it is enabled. Does nothing otherwise.
-    // 'gcFlags' parameter allows to control the speed of GC. GCF_Quick is fastest
-    // but less memory is recovered, whereas GCF_Full is slowest but all possible 
-    // memory is recovered.
-    virtual void        ForceCollectGarbage(unsigned gcFlags = GCF_Full) = 0;
+    virtual void        ForceCollectGarbage() = 0;
 
     // Additional GC control functions. 
     // SuspendGC suspends/resumes garbage collection. It is counted operation, meaning
     // if it was suspended N-times then it should be re-enabled N-times to restore normal operation.
     virtual void        SuspendGC(bool suspend) =0;
-
     // Schedule garbage collection. Unlike ForceCollectGarbage it doesn't execute collection immediately;
     // instead, it will be executed when next Advance is called.
-    // 'gcFlags' parameter allows to control the speed of GC. GCF_Quick is fastest
-    // but less memory is recovered, whereas GCF_Full is slowest but all possible 
-    // memory is recovered.
-    virtual void        ScheduleGC(unsigned gcFlags = GCF_Full) =0;
+    virtual void        ScheduleGC() =0;
 
     enum ReportFlags
     {

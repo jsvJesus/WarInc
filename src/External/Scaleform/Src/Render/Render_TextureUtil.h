@@ -27,6 +27,8 @@ namespace Scaleform { namespace Render {
 
 // ***** Rescale Support
 
+typedef ResizeImageType ImageRescaleType;
+
 ImageRescaleType SF_STDCALL GetImageFormatRescaleType(ImageFormat format);
 void    SF_STDCALL  RescaleImageData(ImageData& dest, ImageData& src,
                                      ImageRescaleType resizeType);

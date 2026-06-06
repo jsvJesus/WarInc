@@ -36,7 +36,7 @@
 #ifndef PX_FILE_BUF_H
 #define PX_FILE_BUF_H
 
-#include "Px.h"
+#include "foundation/Px.h"
 
 /** \addtogroup foundation
   @{
@@ -47,7 +47,6 @@ namespace physx
 
 namespace general_PxIOStream2
 {
-	using namespace ::physx::pubfnd;
 
 PX_PUSH_PACK_DEFAULT
 

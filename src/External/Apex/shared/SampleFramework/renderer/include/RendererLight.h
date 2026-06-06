@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -40,68 +40,71 @@
 #include <RendererMaterial.h>
 #include <RendererProjection.h>
 
-#include "PxMat34Legacy.h"
-
-class RendererLightDesc;
-class Renderer;
-class RendererLight
+namespace SampleRenderer
 {
-	friend class Renderer;
+
+	class RendererLightDesc;
+	class Renderer;
+	class RendererLight
+	{
+		friend class Renderer;
 	public:
-		typedef enum Type
+		enum Type
 		{
 			TYPE_POINT = 0,
 			TYPE_DIRECTIONAL,
 			TYPE_SPOT,
-			
+
 			NUM_TYPES
-		};
-		
+		}_Type;
+
 	protected:
 		RendererLight(const RendererLightDesc &desc);
 		virtual ~RendererLight(void);
-		
+
 	public:
-		void                      release(void) { delete this; }
-		
+		void                      release(void);
+
 		Type                      getType(void) const;
-		
+
 		RendererMaterial::Pass    getPass(void) const;
-		
+
 		const RendererColor      &getColor(void) const;
 		void                      setColor(const RendererColor &color);
-		
+
 		float                     getIntensity(void) const;
 		void                      setIntensity(float intensity);
-		
+
 		bool                      isLocked(void) const;
-		
+
 		RendererTexture2D        *getShadowMap(void) const;
 		void                      setShadowMap(RendererTexture2D *shadowMap);
-		
-		const physx::PxMat34Legacy	 &getShadowTransform(void) const;
-		void                      setShadowTransform(const physx::PxMat34Legacy &shadowTransform);
-		
+
+		const physx::PxTransform &getShadowTransform(void) const	{ return m_shadowTransform; }
+		void                      setShadowTransform(const physx::PxTransform &shadowTransform) { m_shadowTransform = shadowTransform; }
+
 		const RendererProjection &getShadowProjection(void) const;
 		void                      setShadowProjection(const RendererProjection &shadowProjection);
-	
+
 	private:
 		RendererLight &operator=(const RendererLight &) { return *this; }
-		
+
 		virtual void bind(void) const = 0;
-		
+
 	protected:
 		const Type         m_type;
-		
+
 		RendererColor      m_color;
 		float              m_intensity;
-		
+
 		RendererTexture2D *m_shadowMap;
-		physx::PxMat34Legacy	   m_shadowTransform;
+		physx::PxTransform m_shadowTransform;
 		RendererProjection m_shadowProjection;
-	
+
 	private:
 		Renderer          *m_renderer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif

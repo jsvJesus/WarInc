@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -42,12 +42,15 @@
 #include <RendererIndexBuffer.h>
 #include "OGLRenderer.h"
 
-class OGLRendererIndexBuffer : public RendererIndexBuffer
+namespace SampleRenderer
 {
+
+	class OGLRendererIndexBuffer : public RendererIndexBuffer
+	{
 	public:
 		OGLRendererIndexBuffer(const RendererIndexBufferDesc &desc);
 		virtual ~OGLRendererIndexBuffer(void);
-		
+
 	public:
 		virtual void *lock(void);
 		virtual void  unlock(void);
@@ -55,11 +58,13 @@ class OGLRendererIndexBuffer : public RendererIndexBuffer
 	private:
 		virtual void bind(void) const;
 		virtual void unbind(void) const;
-	
+
 	private:
 		GLuint m_ibo;
-		physx::PxU32  m_indexSize;
-};
+		PxU32  m_indexSize;
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_OPENGL)
 #endif

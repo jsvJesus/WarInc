@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -33,7 +33,16 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 #include <SampleAsset.h>
-#include "PsString.h"
+
+// for PsString.h
+namespace physx
+{
+	namespace string
+	{}
+}
+#include <PsString.h>
+
+using namespace SampleFramework;
 
 SampleAsset::SampleAsset(Type type, const char *path) :
 	m_type(type)

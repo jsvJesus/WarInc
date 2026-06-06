@@ -110,9 +110,11 @@ public:
 	void ReadSerializedData(pugi::xml_node& node);
 	void WriteSerializedData(pugi::xml_node& node);
 	float SetNormalTextures(unsigned int t0, unsigned int t1, float fps) const;
-	void CreateRefractionBuffer();
+	void CreateWaterBuffers();
+	static void UpdateRefractionBuffer( bool allowZero );
+	static void FlushRefractionBuffer();
 
-	void RenderBegin(const r3dCamera& Cam, float waterLevel, bool followTerrain);
+	void RenderBegin(const r3dCamera& Cam, float waterLevel);
 	void RenderEnd();
 
 	enum {MaxSplashes=4};

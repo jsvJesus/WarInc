@@ -13,6 +13,8 @@
 #include "SteamHelper.h"
 #include "WOBackendAPI.h"
 
+#include "LauncherConfig.h"
+
 static const char* g_errCheckUpdater    = "Failed to connect to update server.\nCheck that you have a working internet connection and you are not behind a proxy or firewall.";
 static const char* g_errDownloadUpdater = "There was a problem downloading new updater\nCheck that you have a working internet connection and you are not behind a proxy or firewall.";
 static const char* g_errFailedDownload  = "There was a problem downloading from CDN server\nCheck that you have a working internet connection and you are not behind a proxy or firewall.";
@@ -95,8 +97,6 @@ CUpdater::CUpdater()
   mainThread_   = NULL;
   newsThread_   = NULL;
   newsStatus_   = 0;
-  rotatorThread_= NULL;
-  rotatorStatus_= 0;
   serverStatus_ = "";
   surveyLinkIn_ = "";
   surveyLinkOut_= "";
@@ -107,7 +107,6 @@ CUpdater::CUpdater()
   InitializeCriticalSection(&csDataWrite_);
   InitializeCriticalSection(&csJobs_);
   InitializeCriticalSection(&csNews_);
-  InitializeCriticalSection(&csRotator_);
   
   for(int i=0; i<NUM_DOWNLOAD_THREADS; i++) {
     downloadThreads_[i] = NULL;
@@ -122,7 +121,6 @@ CUpdater::~CUpdater()
 {
   r3d_assert(mainThread_ == NULL);
   r3d_assert(newsThread_ == NULL);
-  r3d_assert(rotatorThread_ == NULL);
 }
 
 bool CUpdater::FailUpdate(const char* fmt, ...)
@@ -156,7 +154,7 @@ bool CUpdater::GetUpdaterData()
 
     data.clear();
     HttpDownload http;
-    if(http.Get(UPDATE_UPDATER_URL, data)) {
+    if(http.Get(gLauncherConfig.updateLauncherDataURL.c_str(), data)) {
       downloadOk = true;
       break;
     }
@@ -233,54 +231,6 @@ bool CUpdater::InstallNewUpdater()
   return true;
 }
 
-CUpdater::EUpdaterStatus CUpdater::GetSteamLinkedStatus()
-{
-  // if steam is disabled in updater, skip it
-  if(!UPDATER_STEAM_ENABLED)
-    return STATUS_NeedLogin;
-
-  if(gSteam.steamID == 0) 
-    return STATUS_NeedLogin;
-    
-  sprintf(updMsg1_, "Checking for linked steam account");
-  if(gUserProfile.CheckSteamLogin() == false) {
-    // failed to check steam acc
-    return STATUS_NeedLogin;
-  }
-  
-  if(gUserProfile.CustomerID > 0) {
-    // we're logged in
-    return STATUS_Updating;
-  }
-  
-  // need registering
-  createAccHelper.AccReferrer = CCreateAccHelper::REF_Steam;
-  return STATUS_NeedRegister;
-}
-
-CUpdater::EUpdaterStatus CUpdater::GetG1LinkedStatus()
-{
-  if(gUserProfile.g1AuthToken[0] == 0) 
-    return STATUS_NeedLogin;
-    
-  sprintf(updMsg1_, "Checking for linked GamersFirst account");
-  if(gUserProfile.CheckG1Login() == false) {
-    // failed to check acc
-    MessageBox(NULL, "Failed to authenticate your GamersFirst account", "Warning", MB_OK | MB_ICONINFORMATION);
-    return STATUS_NeedLogin;
-  }
-  
-  if(gUserProfile.CustomerID > 0) {
-    // we're logged in
-    return STATUS_Updating;
-  }
-  
-  // need registering
-  createAccHelper.AccReferrer = CCreateAccHelper::REF_G1;
-  return STATUS_NeedRegister;
-}
-
-
 bool CUpdater::GetPackageData()
 {
   r3dOutToLog("Checking for game update\n");
@@ -288,7 +238,7 @@ bool CUpdater::GetPackageData()
 
   CkByteData   data;
   HttpDownload http(&prgTotal_);
-  if(!http.Get(UPDATE_DATA_URL, data)) {
+  if(!http.Get(gLauncherConfig.updateGameDataURL.c_str(), data)) {
     return FailUpdate("Failed to get current game build");
   }
   
@@ -535,6 +485,28 @@ void CUpdater::CheckAllJobsFinished()
   return;
 }
 
+int CUpdater::CheckForNewData()
+{
+  try
+  {
+    updErr1_[0] = 0;
+  
+    // get current update data from server
+    GetPackageData();
+    
+    // check if we need to update
+    if(fswork_.GetBuildVersion() != updateData_.version_)
+      return true;
+
+    return false;  
+  }
+  catch(...)
+  {
+    MessageBox(NULL, updErr1_, "Error", MB_OK | MB_ICONERROR);
+    return true;
+  }
+}
+
 bool CUpdater::ProcessUpdates()
 {
 	r3dOutToLog("Processing updates\n");
@@ -764,9 +736,10 @@ void CUpdater::ValidateArchive()
   }
   r3dOutToLog("Validating game data - finished\n");
 }
- // Ativado!! [LCCB]
+
 void CUpdater::SetRSUpdateStatus(int status, bool addLog /* = false */)
 {
+/* //@DISABLED, no support on WarZ backend yet
 	// must be logged in
 	if(gUserProfile.CustomerID == 0)
 		return;
@@ -784,6 +757,7 @@ void CUpdater::SetRSUpdateStatus(int status, bool addLog /* = false */)
 	req.AddParam("r3dLog", r3dLog);
 	
 	req.Issue();
+*/	
 }
 
 void CUpdater::CompressArchive()
@@ -812,7 +786,7 @@ void CUpdater::CompressArchive()
 void CUpdater::WaitReadyToPlay()
 {
   r3dOutToLog("WaitReadyToPlay!\n");
-  MakeSureExtractedFilesExists();
+  //MakeSureExtractedFilesExists();
 
   // show progress bar at 100%
   showProgress_ = true;
@@ -856,25 +830,9 @@ void CUpdater::MainThreadEntry()
     }
     updaterVersionOk_ = true;
 
-    // 2nd step - check if we need to create linked account
-    EUpdaterStatus st = GetSteamLinkedStatus();
-    if(st == STATUS_NeedLogin)
-      st = GetG1LinkedStatus();
-
-    if(CheckLoginRegionLock()) {
-      // region lock
-      st = STATUS_NeedLogin;
-    }
-    else if(gUserProfile.AccountStatus >= 200 && gUserProfile.AccountStatus < 400)
-    {
-      // check for frozen accounts
-      st = STATUS_NeedLogin;
-      MessageBox(NULL, "Your account is frozen", "Login failed", MB_OK | MB_ICONHAND);
-    }
-
-    status_ = st;
+    status_ = STATUS_NeedLogin;
     sprintf(updMsg1_, "");
-
+    
     // wait until login is finished
     while(true) {
       if(status_ == STATUS_Updating)
@@ -956,32 +914,12 @@ void CUpdater::ParseNewsNode(pugi::xml_node xmlNode, std::vector<news_s>& news)
   return;
 }
 
-void CUpdater::ParseRotatorNode(pugi::xml_node xmlNode, std::vector<rotator_s>& rotator)
-{
-  rotator.clear();
-
-  xmlNode = xmlNode.first_child();
-  while(!xmlNode.empty())
-  {
-    rotator_s n;
-    n.imgStatus_ = 0;
-    n.tex_       = NULL;
-    n.url_       = xmlNode.attribute("url").value();
-    n.desc_      = xmlNode.attribute("desc").value();
-    n.image_     = xmlNode.attribute("image").value();
-    rotator.push_back(n);
-
-    xmlNode = xmlNode.next_sibling();
-  }
-  
-  return;
-}
-
 int CUpdater::GetNews()
 {
   CkByteData xmlData;
   HttpDownload http;
-  if(!http.Get(GETSERVERINFO_URL, xmlData)) {
+
+  if(!http.Get(gLauncherConfig.serverInfoURL.c_str(), xmlData)) {
     return 0;
   }
     
@@ -999,24 +937,6 @@ int CUpdater::GetNews()
   ::EnterCriticalSection(&csNews_);
     
   ParseNewsNode(xmlInfo.child("news"), newsData_);
-
-  // download rotator data only once
-  if(rotatorStatus_ == 0) 
-  {
-    ParseRotatorNode(xmlInfo.child("rotator"), rotatorData_);
-
-    rotatorStatus_ = 1;
-    
-    // and start picture download thread for rotator
-    rotatorThread_ = (HANDLE)_beginthreadex(
-      NULL,
-      0,
-      &CUpdater_RotatorThreadEntry,
-      (void *)this,		// argument
-      0,			// creation flags
-      NULL			// thread ID
-    );
-  }
 
   pugi::xml_node xmlNode;
   xmlNode = xmlInfo.child("ServerInfo");
@@ -1087,37 +1007,6 @@ void CUpdater::NewsThreadEntry()
   return;
 }
 
-void CUpdater::RotatorThreadEntry()
-{
-  try
-  {
-    for(size_t i=0; i<rotatorData_.size(); i++)
-    {
-      rotator_s& r = rotatorData_[i];
-      const char* url = r.image_.c_str();
-
-      HttpDownload http;
-      if(!http.Get(url, r.imgData_)) {
-        // failed to download image there
-        r3dOutToLog("Rotator: failed to download %s\n", url);
-        r.imgStatus_ = 1;
-        continue;
-      }
-      
-      //r3dOutToLog("Rotator: got %s\n", url);
-      r.imgStatus_ = 2;
-    }
-  
-    return;
-  }
-  catch(...)
-  {
-    MessageBox(NULL, "something wrong happened in rotator", "", MB_OK);
-  }
-
-  return;
-}
-
 void CUpdater::FilterSurveyLinks()
 {
   static const char* surveyFile = "./survey.info";
@@ -1158,13 +1047,6 @@ static unsigned int __stdcall CUpdater_NewsThreadEntry(LPVOID in)
   return 0;
 }
 
-static unsigned int __stdcall CUpdater_RotatorThreadEntry(LPVOID in)
-{
-  CUpdater* impl = (CUpdater*)in;
-  impl->RotatorThreadEntry();
-  return 0;
-}
-
 static unsigned int __stdcall CUpdater_DownloadThreadEntry(LPVOID in)
 {
   CUpdater* impl = (CUpdater*) in;
@@ -1172,30 +1054,11 @@ static unsigned int __stdcall CUpdater_DownloadThreadEntry(LPVOID in)
   return 0;
 }
 
-
 static unsigned int __stdcall CUpdater_LoginThreadEntry(LPVOID in)
 {
   CUpdater* impl = (CUpdater*)in;
   impl->LoginThreadEntry();
   return 0;
-}
-
-bool CUpdater::CheckLoginRegionLock()
-{
-  extern wchar_t g_RegionLockCIS[512];
-  
-  if(gUserProfile.CustomerID > 0 && gUserProfile.AccountStatus >= 600)
-  {
-    // CIS region lock
-    MessageBoxW(NULL, 
-      g_RegionLockCIS, 
-      L"Region Lock!", 
-      MB_OK | MB_ICONHAND);
-      
-    return true;
-  }
-  
-  return false;
 }
 
 void CUpdater::LoginThreadEntry()
@@ -1206,8 +1069,6 @@ void CUpdater::LoginThreadEntry()
     gUserProfile.DoLogin();
     sprintf(updMsg1_, "");
     
-    CheckLoginRegionLock();
-
     switch(gUserProfile.loginAnswerCode) 
     {
       default:
@@ -1219,9 +1080,41 @@ void CUpdater::LoginThreadEntry()
       case CLoginHelper::ANS_BadPassword:
         loginErrMsg_ = "Invalid username or password";
         break;
+        
+      case CLoginHelper::ANS_GameActive:
+        loginErrMsg_ = "Game session active, try later";
+        break;
 
       case CLoginHelper::ANS_Frozen:
-        loginErrMsg_ = "Your account is frozen";
+      {
+        loginErrMsg_ = "Your account has been temporarily frozen";
+        
+        // SessionID holds ban time
+        int hours = (gUserProfile.SessionID / 60) + 1;
+        char buf[512];
+		sprintf(buf, gLauncherConfig.accountFrozenMessage.c_str(), hours);
+        MessageBox(NULL, buf, "Login", MB_OK | MB_ICONEXCLAMATION);
+        break;
+      }
+
+      case CLoginHelper::ANS_Banned:
+        loginErrMsg_ = "Your account has been permanently banned";
+		MessageBox(NULL, gLauncherConfig.accountBannedMessage.c_str(), "Login", MB_OK | MB_ICONSTOP);
+        break;
+        
+      case CLoginHelper::ANS_TimeExpired:
+        loginErrMsg_ = "Your guest game play time is expired";
+        status_ = STATUS_TimeExpired;
+        break;
+
+      case CLoginHelper::ANS_Deleted:
+        loginErrMsg_ = "ACCOUNT DELETED";
+        MessageBox(NULL, gLauncherConfig.accountDeletedMessage.c_str(), "Account Deleted", MB_OK | MB_ICONEXCLAMATION);
+        break;
+        
+      case CLoginHelper::ANS_Unknown:
+        loginErrMsg_ = "Unknown status";
+        MessageBox(NULL, gLauncherConfig.accountUnknownStatusMessage.c_str(), "Login", MB_OK | MB_ICONEXCLAMATION);
         break;
 
       case CLoginHelper::ANS_Logged:
@@ -1254,6 +1147,70 @@ void CUpdater::DoLogin()
     (void *)this,		// argument
     0,				// creation flags
     0			// thread ID
+  );
+}
+
+static unsigned int __stdcall CUpdater_CheckSerialThreadEntry(LPVOID in)
+{
+  CUpdater* impl = (CUpdater*)in;
+  impl->CheckSerialThreadEntry();
+  return 0;
+}
+
+void CUpdater::CheckSerialThreadEntry()
+{
+  try
+  {
+    sprintf(updMsg1_, "Please wait");
+    
+    if(!checkSerialHelper.DoCheckSerial())
+    {
+      sprintf(updMsg1_, "");
+      MessageBox(NULL, "Serial Key check failed, please try again later", "Serial Key Check", MB_OK);
+      return;
+    }
+
+    sprintf(updMsg1_, "");
+    switch(checkSerialHelper.CheckCode)
+    {
+      case 0:
+        // check of,
+        status_ = STATUS_NeedRegister;
+        break;
+        
+      default:
+        MessageBox(NULL, checkSerialHelper.CheckMsg, "Serial Key Check", MB_OK);
+        break;
+    }
+  }
+  catch(char* err)
+  {
+    sprintf(updErr1_, "%s", err);
+    result_ = RES_ERROR;
+  }
+  catch(...)
+  {
+    MessageBox(NULL, "something wrong happened", "", MB_OK);
+  }
+  
+  return;
+}
+
+void CUpdater::DoCheckSerial()
+{
+  if(strlen(checkSerialHelper.serial) != 19 && strlen(checkSerialHelper.serial) != 29) {
+    MessageBox(NULL, "Please enter Serial Key in following format:\nXXXX-XXXX-XXXX-XXXX or XXXXX-XXXXX-XXXXX-XXXXX-XXXXX", "Create Account", MB_OK);
+    return;
+  }
+
+  // create login thread
+  loginThread_ = (HANDLE)_beginthreadex(
+    NULL,
+    0,
+    &CUpdater_CheckSerialThreadEntry,
+    (void *)this,		// argument
+    0,				// creation flags
+    NULL			// thread ID
   );
 }
 
@@ -1309,47 +1266,14 @@ void CUpdater::CreateAccThreadEntry()
 {
   try
   {
-    if(strlen(createAccHelper.username) < 4) {
-      createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
-      MessageBox(NULL, "Account name is too short", "Create Account", MB_OK);
-      return;
-    }
-    if(strcmp(createAccHelper.passwd1, createAccHelper.passwd2) != 0) {
-      createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
-      MessageBox(NULL, "Passwords do not match", "Create Account", MB_OK);
-      return;
-    }
-    if(spc_email_isvalid(createAccHelper.email) == 0) {
-      createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
-      MessageBox(NULL, "email address is not valid", "Create Account", MB_OK);
-      return;
-    }
-	
     sprintf(updMsg1_, "Creating Account, please wait");
-    
-    int code = 0;
-    switch(createAccHelper.AccReferrer)
-    {
-      default:
-        r3d_assert("bad createAccHelper.AccReferrer");
-        return;
-        
-      case CCreateAccHelper::REF_Steam:
-        code = createAccHelper.DoCreateSteamAcc();
-        break;
-      
-      case CCreateAccHelper::REF_G1:
-        code = createAccHelper.DoCreateG1Acc();
-        break;
-    }
-
-    createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
+    int code = createAccHelper.DoCreateAcc();
     sprintf(updMsg1_, "");
 
     switch(code)
     {
       default:
-        MessageBox(NULL, "Account creation failed, please try again later", "Create Account", MB_OK);
+        MessageBox(NULL, gLauncherConfig.accountCreateFailedMessage.c_str(), "Create Account", MB_OK);
         break;
         
       case 0:
@@ -1371,13 +1295,17 @@ void CUpdater::CreateAccThreadEntry()
         }
         break;
         
-      // codes from ECLIPSE_CREATEACCOUNT
-      case 1:
-        MessageBox(NULL, "Account name already in use", "Create Account", MB_OK);
+      // codes from WZ_ACCOUNT_CREATE
+      case 2:
+        MessageBox(NULL, gLauncherConfig.accountCreateEmailTakenMessage.c_str(), "Create Account", MB_OK);
         break;
 
-      case 2:
-        MessageBox(NULL, "EMail already in use", "Create Account", MB_OK);
+      case 3:
+        MessageBox(NULL, gLauncherConfig.accountCreateInvalidSerialMessage.c_str(), "Create Account", MB_OK);
+        break;
+        
+      case 4:
+        MessageBox(NULL, "Guest Serial Keys is not active yet", "Create Account", MB_OK);
         break;
     }
   }
@@ -1396,22 +1324,22 @@ void CUpdater::CreateAccThreadEntry()
 
 void CUpdater::DoCreateAccount()
 {
-  switch(createAccHelper.AccReferrer)
-  {
-    default:
-      r3d_assert("createAccHelper.AccReferrer");
-      return;
-
-    case CCreateAccHelper::REF_Steam:
-      break;
-
-    case CCreateAccHelper::REF_G1:
-      createAccHelper.g1AccountId = gUserProfile.g1AccountId;
-      createAccHelper.g1PayCode   = gUserProfile.g1PayCode;
+  if(strlen(createAccHelper.username) < 4) {
+    createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
+    MessageBox(NULL, "email address is too short", "Create Account", MB_OK);
+    return;
+  }
+  if(spc_email_isvalid(createAccHelper.username) == 0) {
+    createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
+    MessageBox(NULL, "email address is not valid", "Create Account", MB_OK);
+    return;
+  }
+  if(strcmp(createAccHelper.passwd1, createAccHelper.passwd2) != 0) {
+    createAccHelper.createAccCode = CCreateAccHelper::CA_Unactive;
+    MessageBox(NULL, "Passwords do not match", "Create Account", MB_OK);
+    return;
   }
       
-  createAccHelper.StartCreateAcc();
-
   // create login thread
   loginThread_ = (HANDLE)_beginthreadex(
     NULL,
@@ -1421,6 +1349,47 @@ void CUpdater::DoCreateAccount()
     0,				// creation flags
     NULL			// thread ID
   );
+}
+
+void CUpdater::DoApplyNewKey(const char* key)
+{
+  if(strlen(key) != 19 && strlen(key) != 29) {
+    MessageBox(NULL, "Please enter Serial Key in following format:\nXXXX-XXXX-XXXX-XXXX or XXXXX-XXXXX-XXXXX-XXXXX-XXXXX", "Create Account", MB_OK);
+    return;
+  }
+
+  // not threaded right now.
+  CWOBackendReq req("api_AccApplyKey.aspx");
+  req.AddSessionInfo(gUserProfile.CustomerID, 0);
+  req.AddParam("serial", key);
+  req.Issue();
+	
+  switch(req.resultCode_)
+  {
+    case 0:
+      // back to login
+      status_      = STATUS_NeedLogin;
+      loginErrMsg_ = "";
+      updMsg1_[0]  = 0;
+      break;
+
+    // return codes from WZ_ACCOUNT_APPLYKEY
+    case 2:
+      MessageBox(NULL, "Your account type can not be updated, please contact support@localhost", "Update Account", MB_OK);
+      break;
+			
+    case 3:
+      MessageBox(NULL, "Serial Key is not valid", "Update Account", MB_OK);
+      break;
+
+    case 4:
+      MessageBox(NULL, "Serial Key is already used", "Update Account", MB_OK);
+      break;
+		
+    default:
+      MessageBox(NULL, "Check failed, please try again later", "Update Account", MB_OK | MB_ICONERROR);
+      break;
+  }
 }
 
 void CUpdater::Start()
@@ -1504,7 +1473,6 @@ void CUpdater::Stop()
 
   StopThread(mainThread_);
   StopThread(newsThread_);
-  StopThread(rotatorThread_);
   StopThread(loginThread_);
   
   for(int i=0; i<NUM_DOWNLOAD_THREADS; i++) 

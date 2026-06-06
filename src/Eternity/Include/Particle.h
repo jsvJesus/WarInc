@@ -46,6 +46,12 @@ class r3dParticleData
 	int			bAcceptsDynamicLights ;
 
 	int			HasLight;
+
+	int				LightCastsShadows;
+	int				LightSSShadowBlur;
+
+	r3dSSSBParams	SSSBParams;
+
 	float		LightLifetime;
 	float		LightIntensity;
 	float		LightRadius1Base;
@@ -191,6 +197,9 @@ class r3dParticleSystem
 	void		DrawDefferedMeshes(const r3dCamera &Cam, bool bShadowMap);
 
 	void		ClearParticlesOfType( BYTE type );
+
+	void		TurnLightOff();
+	void		TurnLightOn();
 };
 
 void r3dSetParticlesDepthRef( r3dScreenBuffer* FullSizeBuffer, r3dScreenBuffer* HalfSizeBuffer );

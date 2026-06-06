@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,39 +32,44 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "OGLRendererIndexBuffer.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_OPENGL) 
+
+#include "OGLRendererIndexBuffer.h"
 #include <RendererIndexBufferDesc.h>
 
 #if defined(PX_WINDOWS)
-#include <PxCudaContextManager.h>
+#include <PxTaskIncludes.h>
 #endif
+
+using namespace SampleRenderer;
 
 OGLRendererIndexBuffer::OGLRendererIndexBuffer(const RendererIndexBufferDesc &desc) :
 	RendererIndexBuffer(desc)
 {
 	m_indexSize  = getFormatByteSize(getFormat());
-	
+
 	RENDERER_ASSERT(GLEW_ARB_vertex_buffer_object, "Vertex Buffer Objects not supported on this machine!");
 	if(GLEW_ARB_vertex_buffer_object)
 	{
-		RENDERER_ASSERT(desc.maxIndices > 0 && desc.maxIndices > 0, "Cannot create zero size Index Buffer.");
-		if(desc.maxIndices > 0 && desc.maxIndices > 0)
+		RENDERER_ASSERT(desc.maxIndices > 0, "Cannot create zero size Index Buffer.");
+		if(desc.maxIndices > 0)
 		{
 			GLenum usage = GL_STATIC_DRAW_ARB;
 			if(getHint() == HINT_DYNAMIC)
 			{
 				usage = GL_DYNAMIC_DRAW_ARB;
 			}
-			
+
 			glGenBuffersARB(1, &m_ibo);
 			RENDERER_ASSERT(m_ibo, "Failed to create Index Buffer.");
 			if(m_ibo)
 			{
 				m_maxIndices = desc.maxIndices;
-				const physx::PxU32 bufferSize = m_indexSize * m_maxIndices;
-			
+				const PxU32 bufferSize = m_indexSize * m_maxIndices;
+
 				glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_ibo);
 				glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, bufferSize, 0, usage);
 				glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
@@ -72,12 +77,12 @@ OGLRendererIndexBuffer::OGLRendererIndexBuffer(const RendererIndexBufferDesc &de
 #if defined(PX_WINDOWS)
 				if(m_interopContext && m_mustBeRegisteredInCUDA)
 				{
-					m_registeredInCUDA = m_interopContext->registerResourceInCudaGL(m_InteropHandle, (physx::PxU32) m_ibo);
+					m_registeredInCUDA = m_interopContext->registerResourceInCudaGL(m_InteropHandle, (PxU32) m_ibo);
 				}
 #endif
 			}
 		}
-    }
+	}
 }
 
 OGLRendererIndexBuffer::~OGLRendererIndexBuffer(void)

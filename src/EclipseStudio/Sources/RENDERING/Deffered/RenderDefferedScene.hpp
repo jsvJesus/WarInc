@@ -69,30 +69,62 @@ void SetMRTClearShaders( bool depth_only )
 
 void SyncSkydomeStaticSkyParams()
 {
-	StaticSkySettings sts ;
+	StaticSkySettings sts;
 
-	sts.bEnabled		= r3dGameLevel::Environment.bStaticSkyEnable ;
-	sts.bPlanarMapping	= r3dGameLevel::Environment.bStaticSkyPlanarMapping  ;
+	const r3dAtmosphere& atmo = r3dGameLevel::Environment;
 
-	sts.tex			= r3dGameLevel::Environment.StaticSkyTex ;
-	sts.texScaleX	= r3dGameLevel::Environment.StaticTexGenScaleX ;
-	sts.texScaleY	= r3dGameLevel::Environment.StaticTexGenScaleY ;
-	sts.texOffsetX	= r3dGameLevel::Environment.StaticTexGetOffsetX ;
-	sts.texOffsetY	= r3dGameLevel::Environment.StaticTexGetOffsetY ;
+	sts.bEnabled		= atmo.bStaticSkyEnable;
+	sts.bPlanarMapping	= atmo.bStaticSkyPlanarMapping;
 
-	sts.mesh		= r3dGameLevel::Environment.bCustomStaticMeshEnable ? r3dGameLevel::Environment.StaticSkyMesh : 0 ;
+	float midDawn = ( atmo.DawnStart + atmo.DawnEnd ) * 0.5f;
+	float midDusk = ( atmo.DuskStart + atmo.DuskEnd ) * 0.5f;
 
-	SkyDome->SetStaticSkyParams( sts ) ;
+	r3dAtmosphere::SkyPhase phase0, phase1;
+	float lerpT;
+
+	GetAdjecantSkyPhasesAndLerpT( &phase0, &phase1, &lerpT );
+
+	sts.tex0			= atmo.StaticSkyTextures[ phase0 ];
+	sts.tex1			= atmo.StaticSkyTextures[ phase1 ];
+
+	sts.glowTex0		= atmo.StaticSkyGlowTextures[ phase0 ];
+	sts.glowTex1		= atmo.StaticSkyGlowTextures[ phase1 ];
+
+	sts.texLerpT		= lerpT;
+
+	sts.texScaleX		= atmo.StaticTexGenScaleX;
+	sts.texScaleY		= atmo.StaticTexGenScaleY;
+	sts.texOffsetX		= atmo.StaticTexGetOffsetX;
+	sts.texOffsetY		= atmo.StaticTexGetOffsetY;
+
+	sts.mesh			= r3dGameLevel::Environment.bCustomStaticMeshEnable ? r3dGameLevel::Environment.StaticSkyMesh : 0;
+
+	float dayT			= EnvGetDayT();
+
+	sts.SunCtrlX		= r3dGameLevel::Environment.SunSpotAmplify.GetFloatValue( dayT );
+	sts.SunCtrlY		= r3dGameLevel::Environment.SunSpotPow.GetFloatValue( dayT );
+	sts.SunSpotColor	= r3dGameLevel::Environment.SunSpotColor.GetColorValue( dayT );
+
+	sts.SunSpotIntensity	= r3dGameLevel::Environment.SunSpotIntensity.GetFloatValue( dayT );
+
+	sts.dayT				= EnvGetDayT();
+	sts.bIsNight			= IsNight();
+
+	sts.SunIntensity		= r3dGameLevel::Environment.SunIntensityCoef.GetFloatValue( dayT );
+
+	sts.DomeRotationY		= atmo.SkyDomeRotationY;
+
+	SkyDome->SetStaticSkyParams( sts );
 }
 
 void SyncSkyParams()
 {
-	hoffman.m_HGg						= r3dGameLevel::Environment.HGg.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	hoffman.m_inscatteringMultiplier	= r3dGameLevel::Environment.InscatteringMultiplier.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	hoffman.m_betaRayMultiplier			= r3dGameLevel::Environment.BetaRayMultiplier.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	hoffman.m_betaMieMultiplier			= r3dGameLevel::Environment.BetaMieMultiplier.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	hoffman.m_sunIntensity				= r3dGameLevel::Environment.SunIntensityCoef.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
-	hoffman.m_turbitity					= r3dGameLevel::Environment.Turbitity.GetFloatValue(r3dGameLevel::Environment.__CurTime/24.0f);
+	hoffman.m_HGg						= r3dGameLevel::Environment.GetCurrentHGg();
+	hoffman.m_inscatteringMultiplier	= r3dGameLevel::Environment.GetCurrentInscatteringMultiplier();
+	hoffman.m_betaRayMultiplier			= r3dGameLevel::Environment.GetCurrentBetaRayMultiplier();
+	hoffman.m_betaMieMultiplier			= r3dGameLevel::Environment.GetCurrentBetaMieMultiplier();
+	hoffman.m_sunIntensity				= r3dGameLevel::Environment.GetCurrentSunIntensityCoef();
+	hoffman.m_turbitity					= r3dGameLevel::Environment.GetCurrentTurbitity();
 	hoffman.m_fCloudsScale				= r3dGameLevel::Environment.SkyDomeCloudsScale;
 	hoffman.m_fCloudDensity				= r3dGameLevel::Environment.SkyDomeCloudsDensity;
 
@@ -104,15 +136,17 @@ void SyncSkyParams()
 	hoffman.m_fSkyCloudsFadeStart		= r3dGameLevel::Environment.SkyCloudsFadeStart;
 	hoffman.m_fSkyCloudsFadeEnd			= r3dGameLevel::Environment.SkyCloudsFadeEnd;
 
+	hoffman.m_fSkyIntensity				= GetEnvSkyIntensity();
+
 	extern float fLambda[3];
 
-	r3dColor LCol = r3dGameLevel::Environment.LambdaCol.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
+	r3dColor LCol = r3dGameLevel::Environment.GetCurrentLambdaColor();
 
 	fLambda[0] = float(LCol.R) / 256.0f;
 	fLambda[1] = float(LCol.G) / 256.0f;
 	fLambda[2] = float(LCol.B) / 256.0f;
 
-	SyncSkydomeStaticSkyParams() ;
+	SyncSkydomeStaticSkyParams();
 
 }
 
@@ -122,7 +156,7 @@ void UpdateSkyDome( const r3dCamera& cam )
 	SkyDome->Update( cam ) ;
 }
 
-void DrawSkyDome( bool drawNormals, float amplify, bool hemisphere )
+void DrawSkyDome( bool drawNormals, bool hemisphere )
 {
 	if( SkyDome )
 	{
@@ -131,7 +165,7 @@ void DrawSkyDome( bool drawNormals, float amplify, bool hemisphere )
 
 		SyncSkyParams() ;
 	
-		SkyDome->Draw( gCam, drawNormals, amplify, hemisphere );
+		SkyDome->Draw( gCam, drawNormals, hemisphere );
 
 		D3DPERF_EndEvent();
 	}
@@ -163,22 +197,22 @@ void RenderDeferredSkydome()
 
 	// don't care about sky being blocky here - this is for bloom/glow anyway
 	r3dSetFiltering( R3D_POINT, 0 );
-	DrawSkyDome( true, r_sky_intensity->GetFloat(), false ) ;
+	DrawSkyDome( true, false ) ;
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );		
 }
 
 void ClearMRTUsingShaders()
 {
-	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, FALSE);
 
 	SetMRTClearShaders( false );
 
 	D3DXVECTOR4 pconst0 = D3DXVECTOR4 ( gCam.NearClip, gCam.FarClip, 0.0f, 0.0f );
-	r3dRenderer->SetPixelShaderConstantF( 0, (float*) pconst0, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( 0, (float*) pconst0, 1 );
 
 	pconst0 = D3DXVECTOR4 ( Sun->SunLight.Direction.x, Sun->SunLight.Direction.y, Sun->SunLight.Direction.z, 0.0f );
-	r3dRenderer->SetPixelShaderConstantF( MC_SUNDIR, (float*) pconst0, 1  );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF ( MC_SUNDIR, (float*) pconst0, 1  );
 
 	r3dColor Cl = r3dGameLevel::Environment.Fog_Color.GetColorValue(r3dGameLevel::Environment.__CurTime/24.0f);
 
@@ -197,6 +231,9 @@ void RenderDeferredScene1()
 	int __NumPasses = 0;
 
 	SetVolumeFogParams();
+
+	void UpdateSSAOClearValue();
+	UpdateSSAOClearValue();
 
 	r3dRenderer->SetMipMapBias(__WorldRenderBias);
 
@@ -245,23 +282,22 @@ void RenderDeferredScene1()
 
 		gBuffer_Normal->Activate(0);
 		// NOTE : sync clear value with DS_ClearBuffer_ps.hls
-		r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0x7fff7f, 0.f, 0 );
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0x7fff7f, r3dRenderer->GetClearZValue(), 0 ) );
 		gBuffer_Normal->Deactivate();
 
-		// we need to clear this only because half scale ssao can occupy 1/2 upper left of gAux RT
-		// in which case it won't be properly 'default filled' by geometry		
+		// in case of half scale ssao R part of the AUX needs to be black
+		// because grass will render into it with white ( brightness + contrast applied )
+		// then MAX operation will be done with half ssao buffer from the rest of the scene
 		if( r_lighting_quality->GetInt() > 1 && r_half_scale_ssao->GetInt() )
 		{
-			D3DRECT rect ;
+			gBuffer_Aux->Activate( 0 );
+	
+			DWORD ssaoClearVal = R3D_MIN( R3D_MAX( int( 0xff * r_ssao_clear_val->GetFloat() ), 0 ), 0xff );
 
-			rect.x1 = 0 ;
-			rect.y1 = 0 ;
-			rect.x2 = int( gBuffer_Aux->Width / 2 ) + 1 ;
-			rect.y2 = int( gBuffer_Aux->Height / 2 ) + 1 ;
-
-			gBuffer_Aux->Activate( 0 ) ;
-			r3dRenderer->Clear( 1, &rect, D3DCLEAR_TARGET, 0x00ff7f00, 0.f, 0 ) ;
-			gBuffer_Aux->Deactivate() ;
+			D3D_V(	r3dRenderer->pd3ddev->Clear(	0, NULL, D3DCLEAR_TARGET, 
+													D3DCOLOR_ARGB( 0, ssaoClearVal, 0, 0xff ),
+													r3dRenderer->GetClearZValue(), 0 ) );
+			gBuffer_Aux->Deactivate();
 		}
 	}
 
@@ -270,12 +306,12 @@ void RenderDeferredScene1()
 #ifndef FINAL_BUILD
 	if( r_full_zreject->GetInt() )
 	{
-		r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 0.f, 0 );
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.0f - r3dRenderer->GetClearZValue(), 0 ) );
 	}
 	else
 #endif
 	{
-		r3dRenderer->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, 1.f, 0 );
+		D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0, r3dRenderer->GetClearZValue(), 0 ) );
 	}
 
 	gDEBUG_DrawPositions.Clear();
@@ -302,7 +338,7 @@ void RenderDeferredScene1()
 		firstPersonCam.FarClip = r_first_person_render_z_end->GetFloat();
 		firstPersonCam.FOV = r_first_person_fov->GetFloat();
 
-		r3dRenderer->SetCamera( firstPersonCam ) ;
+		r3dRenderer->SetCamera( firstPersonCam, true ) ;
 
 		gBuffer_Normal->Activate(1);
 
@@ -326,7 +362,7 @@ void RenderDeferredScene1()
 
 		gBuffer_Normal->Deactivate() ;
 
-		r3dRenderer->SetCamera( gCam ) ;
+		r3dRenderer->SetCamera( gCam, true ) ;
 
 		r3dRenderer->SetVertexShader() ;
 		r3dRenderer->SetPixelShader() ;
@@ -348,12 +384,12 @@ void RenderDeferredScene1()
 
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW | R3D_BLEND_PUSH ) ;
 
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) ) ;
-		D3D_V( r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, FALSE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE, 0 ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, FALSE ) ) ;
 
 		GameWorld().Draw( rsDepthPrepass ) ;
 
-		r3dRenderer->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED |
+		r3dRenderer->pd3ddev->SetRenderState( D3DRS_COLORWRITEENABLE,	D3DCOLORWRITEENABLE_RED | 
 																		D3DCOLORWRITEENABLE_GREEN |
 																		D3DCOLORWRITEENABLE_BLUE |
 																		D3DCOLORWRITEENABLE_ALPHA	) ;
@@ -391,10 +427,10 @@ void RenderDeferredScene1()
 
 	R3DPROFILE_D3DSTART( D3DPROFILE_FILLGBUFFER ) ;
 
-	r3dRenderer->SetCamera ( gCam );
+	r3dRenderer->SetCamera ( gCam, true );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
-	// r3dRenderer->SetRenderState( D3DRS_ALPHAREF, 1);
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	// r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHAREF, 1);
 
 	DeactivatePrimaryDepth();
 
@@ -406,7 +442,7 @@ void RenderDeferredScene1()
 	r3dRenderer->SetMaterial(NULL);
 	r3dRenderer->SetRenderingMode(R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
-	r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE );
 
 	if ( Terrain1 && r_terrain->GetBool() 
 		&& !( Terrain2 && r_terrain2->GetInt() )
@@ -446,7 +482,7 @@ void RenderDeferredScene1()
 		ActivatePrimaryDepth( 2 );
 	}
 
-	r3dRenderer->SetCamera ( gCam);
+	r3dRenderer->SetCamera ( gCam, true );
 
 	R3DPROFILE_END("DR: Terrain");	
 
@@ -460,22 +496,22 @@ void RenderDeferredScene1()
 
 	//	r3dRenderer->SetTex( g_EnvmapProbes.GetClosestTexture( gCam ), 5 );
 
-	//	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	//	r3dRenderer->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	//	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	//	r3dRenderer->pd3ddev->SetSamplerState( 5, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 
 	D3DXVECTOR4 CamVec = D3DXVECTOR4(gCam.x, gCam.y, gCam.z, 1);
-	r3dRenderer->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_CAMVEC, (float*)&CamVec, 1);
 
+	float defSSAO[ 4 ] = { r_ssao_clear_val->GetFloat(), 0.f, 0.f, 0.f };
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(MC_DEF_SSAO, defSSAO, 1);
 
 	r3dRenderer->SetMipMapBias(__WorldRenderBias);
 
-	// r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, 10000.0f, r3dRenderer->AmbientColor);
-
 	for( int i = 0; i < 6; i ++ )
 	{
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-		r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+		r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 		r3dSetFiltering( R3D_ANISOTROPIC, i );
 	}
@@ -501,13 +537,31 @@ void RenderDeferredScene1()
 		}
 
 		GameWorld().Draw( rsFillGBuffer );
+
+		r3dRenderer->SetRenderingMode( R3D_BLEND_ZC | R3D_BLEND_NOALPHA | R3D_BLEND_PUSH );
+		GameWorld().Draw( rsFillGBufferEffects );
+		r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
+
+		GameWorld().Draw( rsFillGBufferAfterEffects );
 	}
 
 	if( r_grass_ssao->GetInt() )
 	{
-		DrawGrass( GrassMap::COMBINED_PATH, false ) ;
+		bool useAux = r_lighting_quality->GetInt() > 1;
 
-		r_split_grass_render->SetInt( 0 ) ;
+		if( !useAux )
+		{
+			gBuffer_Aux->Deactivate();
+		}
+
+		DrawGrass( GrassMap::COMBINED_PATH, false, useAux );
+
+		if( !useAux )
+		{
+			gBuffer_Aux->Activate( 3 );
+		}
+
+		r_split_grass_render->SetInt( 0 );
 	}
 
 	R3DPROFILE_D3DEND( D3DPROFILE_FILLGBUFFER ) ;
@@ -526,7 +580,7 @@ void RenderDeferredScene1()
 	gBuffer_Color->Deactivate();
 	gBuffer_Aux->Deactivate();
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	r3dRenderer->EndRender();
 
@@ -562,7 +616,7 @@ void RenderDeferredScene()
 
 	D3DXVECTOR4 BlurMul;
 	BlurMul = D3DXVECTOR4(0.25f, 0.25f, 0.25f, 1.0f);
-	r3dRenderer->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)&BlurMul,  1 );
 
 	// r3dBlur2Buffer(ScreenBuffer, BlurBuffer, TempBuffer,4);
 

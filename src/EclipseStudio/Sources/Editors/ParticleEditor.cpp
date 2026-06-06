@@ -565,6 +565,21 @@ static void DrawOverLifeParamsForLight()
 		imgui2_Value_Old(0.0f, 20, "%.2f", "Radius 1", &EditTorch->LightRadius1Base);
 		imgui2_Value_Old(EditTorch->LightRadius1Base+0.5f, EditTorch->LightRadius1Base+20.0f, "%.2f", "Radius 2", &EditTorch->LightRadius2Base);
 
+		imgui2_Checkbox( "Casts Shadow", &EditTorch->LightCastsShadows );
+
+		if( EditTorch->LightCastsShadows )
+		{
+			imgui2_Checkbox( "Blur Shadows", &EditTorch->LightSSShadowBlur );
+
+			if( EditTorch->LightSSShadowBlur )
+			{
+				imgui2_Value_Old( 0.0f, 0.5f, "%-02.2f", "Blur Bias", &EditTorch->SSSBParams.Bias );
+				imgui2_Value_Old( 0.0f, 1024.0f, "%-02.2f", "Physicality", &EditTorch->SSSBParams.PhysRange );
+				imgui2_Value_Old( 0.0f, 1024.0f, "%-02.2f", "Depth Sens.", &EditTorch->SSSBParams.Sense );
+				imgui2_Value_Old( 0.0f, 12.0f, "%-02.2f", "Blur Radius", &EditTorch->SSSBParams.Radius );
+			}
+		}
+
 		imgui2_Static("Light Position Offset");
 			imgui2_Value_Old(-10.0f, 10, "%.2f", "   X", &EditTorch->ParticleLightOffset.X);
 			imgui2_Value_Old(-10.0f, 10, "%.2f", "   Y", &EditTorch->ParticleLightOffset.Y);

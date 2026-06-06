@@ -2,7 +2,7 @@
 #ifndef SAMPLE_ASSET_H
 #define SAMPLE_ASSET_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,42 +35,43 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "PsShare.h"
-#include <Px.h>
-#include <PxSimpleTypes.h>
+#include "FrameworkFoundation.h"
 
-class SampleAsset
+namespace SampleFramework
 {
-	friend class SampleAssetManager;
+
+	class SampleAsset
+	{
+		friend class SampleAssetManager;
 	public:
-		typedef enum Type
+		enum Type
 		{
 			ASSET_MATERIAL = 0,
 			ASSET_TEXTURE,
-			
+			ASSET_INPUT,
+
 			NUM_TYPES
-		};
-	
+		}_Type;
+
+		virtual bool isOk(void) const = 0;
+
+		Type        getType(void) const { return m_type; }
+		const char *getPath(void) const { return m_path; }
+
 	protected:
 		SampleAsset(Type type, const char *path);
 		virtual ~SampleAsset(void);
-		
+
 		virtual void release(void) { delete this; }
-	
-	public:
-		virtual bool isOk(void) const = 0;
-	
-	public:
-		Type        getType(void) const { return m_type; }
-		const char *getPath(void) const { return m_path; }
-		
+
 	private:
 		SampleAsset &operator=(const SampleAsset&) { return *this; }
-		
-	private:
+
 		const Type m_type;
 		char      *m_path;
-		physx::PxU32      m_numUsers;
-};
+		PxU32      m_numUsers;
+	};
+
+} // namespace SampleFramework
 
 #endif

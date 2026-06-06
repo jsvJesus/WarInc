@@ -10,6 +10,7 @@
 #if VEHICLES_ENABLED
 #include "VehicleDescriptor.h"
 #include "XMLHelpers.h"
+#include "PhysXWorld.h"
 
 struct BoneSearcher
 {
@@ -30,6 +31,7 @@ VehicleDescriptor::VehicleDescriptor()
 , vehicle(0)
 , skl(0)
 , owner(0)
+, wheelsData(0)
 {
 	for (uint32_t i = 0; i < _countof(wheelBonesRemapIndices); ++i)
 	{
@@ -41,15 +43,14 @@ VehicleDescriptor::VehicleDescriptor()
 	}
 	::ZeroMemory(wheelCenterOffsets, sizeof(wheelCenterOffsets));
 	::ZeroMemory(hullCenterOffsets, sizeof(hullCenterOffsets));
-
-	InitToDefault();
 }
 
 //////////////////////////////////////////////////////////////////////////
 
 VehicleDescriptor::~VehicleDescriptor()
 {
-	delete vehicle;
+	if (vehicle)
+		vehicle->free();
 	delete skl;
 }
 
@@ -69,7 +70,6 @@ bool VehicleDescriptor::Init(const r3dMesh *m)
 
 bool VehicleDescriptor::InitSkeleton(const r3dSkeleton *s)
 {
-	
 	for (uint32_t i = 0; i < MAX_WHEELS_COUNT; ++i)
 	{
 		wheelBonesRemapIndices[i] = INCORRECT_INDEX;
@@ -130,6 +130,8 @@ bool VehicleDescriptor::InitSkeleton(const r3dSkeleton *s)
 		std::swap(wheelCenterOffsets[i].x, wheelCenterOffsets[i].z);
 		wheelCenterOffsets[i].z *= -1;
 	}
+ 	std::swap(wheelCenterOffsets[0], wheelCenterOffsets[2]);
+ 	std::swap(wheelCenterOffsets[1], wheelCenterOffsets[3]);
 
 	for (uint32_t i = 0; i < MAX_HULL_PARTS_COUNT; ++i)
 	{
@@ -210,8 +212,13 @@ bool VehicleDescriptor::Load(const r3dMesh *m)
 	if (!InitSkeleton(skl))
 		return false;
 
+	wheelsData.Resize(numWheels);
+	InitToDefault();
+
 	//	Ackerman data
 	GetXMLVal("ackermann_accuracy", xml, &ackermannData.mAccuracy);
+
+	//	Gears data
 	GetXMLVal("gears_switch_time", xml, &gearsData.mSwitchTime);
 
 	// chassis data
@@ -242,7 +249,6 @@ bool VehicleDescriptor::Load(const r3dMesh *m)
 // 	GetXMLVal("rear_left_right_torque_split", diffNode, &diffData.mRearLeftRightSplit);
 
 	//	Wheels data
-	wheelsData.Resize(numWheels);
 	pugi::xml_node wheelNode = xml.child("wheel");
 
 	struct WheelIndexSearcher
@@ -265,20 +271,23 @@ bool VehicleDescriptor::Load(const r3dMesh *m)
 		{
 			size_t idx = std::distance(start, n);
 			WheelData &wd = wheelsData[idx];
-			GetXMLVal("radius_multiplier", wheelNode, &wd.wheelData.mRadius);
-			GetXMLVal("mass", wheelNode, &wd.wheelData.mMass);
-			GetXMLVal("damping_rate", wheelNode, &wd.wheelData.mDampingRate);
-			GetXMLVal("max_break_torque", wheelNode, &wd.wheelData.mMaxBrakeTorque);
-			GetXMLVal("max_hand_break_torque", wheelNode, &wd.wheelData.mMaxHandBrakeTorque);
-			GetXMLVal("max_steer_angle", wheelNode, &wd.wheelData.mMaxSteer);
-			wd.wheelData.mMaxSteer = R3D_DEG2RAD(wd.wheelData.mMaxSteer);
-			GetXMLVal("toe_angle", wheelNode, &wd.wheelData.mToeAngle);
-			wd.wheelData.mToeAngle = R3D_DEG2RAD(wd.wheelData.mToeAngle);
 
-			GetXMLVal("suspension_spring_strength", wheelNode, &wd.suspensionData.mSpringStrength);
-			GetXMLVal("suspension_spring_damper_rate", wheelNode, &wd.suspensionData.mSpringDamperRate);
-			GetXMLVal("suspension_max_compression", wheelNode, &wd.suspensionData.mMaxCompression);
-			GetXMLVal("suspension_max_droop", wheelNode, &wd.suspensionData.mMaxDroop);
+			PxVehicleWheelData &wheelData = wd.wheelData;
+			GetXMLVal("radius_multiplier", wheelNode, &wheelData.mRadius);
+			GetXMLVal("mass", wheelNode, &wheelData.mMass);
+			GetXMLVal("damping_rate", wheelNode, &wheelData.mDampingRate);
+			GetXMLVal("max_break_torque", wheelNode, &wheelData.mMaxBrakeTorque);
+			GetXMLVal("max_hand_break_torque", wheelNode, &wheelData.mMaxHandBrakeTorque);
+			GetXMLVal("max_steer_angle", wheelNode, &wheelData.mMaxSteer);
+			wheelData.mMaxSteer = R3D_DEG2RAD(wheelData.mMaxSteer);
+			GetXMLVal("toe_angle", wheelNode, &wheelData.mToeAngle);
+			wheelData.mToeAngle = R3D_DEG2RAD(wheelData.mToeAngle);
+
+			PxVehicleSuspensionData &suspensionData = wd.suspensionData;
+			GetXMLVal("suspension_spring_strength", wheelNode, &suspensionData.mSpringStrength);
+			GetXMLVal("suspension_spring_damper_rate", wheelNode, &suspensionData.mSpringDamperRate);
+			GetXMLVal("suspension_max_compression", wheelNode, &suspensionData.mMaxCompression);
+			GetXMLVal("suspension_max_droop", wheelNode, &suspensionData.mMaxDroop);
 
 			r3dVector v1(wd.suspensionTravelDir.x, wd.suspensionTravelDir.y, wd.suspensionTravelDir.z);
 			GetXMLVal("suspension_travel_dir", wheelNode, &v1);
@@ -321,7 +330,7 @@ bool VehicleDescriptor::Save(const char *fileName)
 	differential.set_name("differential");
 	SetXMLVal("front_rear_torque_split", differential, &diffData.mFrontRearSplit);
 
-	for (uint32_t i = 0; i < wheelsData.Count(); ++i)
+	for (PxU32 i = 0; i < numWheels; ++i)
 	{
 		WheelData &wd = wheelsData[i];
 		pugi::xml_node wheel = v.append_child();
@@ -351,28 +360,29 @@ bool VehicleDescriptor::Save(const char *fileName)
 
 //////////////////////////////////////////////////////////////////////////
 
-void VehicleDescriptor::ApplyDynamicChanges()
+void VehicleDescriptor::ConfigureVehicleSimulationData(PxVehicleDriveSimData4W *dd, PxVehicleWheelsSimData *wd)
 {
-	if (!vehicle)
+	if (!vehicle && (!dd || !wd))
 		return;
 
-	vehicle->mVehicleSimData.setAckermannAccuracy(ackermannData.mAccuracy);
-	vehicle->mVehicleSimData.setChassisData(chassisData);
-	vehicle->mVehicleSimData.setDiffData(diffData);
-	vehicle->mVehicleSimData.setGearsData(gearsData);
-	vehicle->mVehicleSimData.setEngineData(engineData);
+	if (!dd)
+		dd = &vehicle->mDriveSimData;
 
-	const uint32_t remap[4] = { 2, 3, 0, 1 };
+	dd->setDiffData(diffData);
+	dd->setAckermannGeometryData(ackermannData);
+	dd->setClutchData(clutchData);
+	dd->setEngineData(engineData);
+	dd->setGearsData(gearsData);
 
-	r3d_assert(wheelsData.Count() == _countof(remap));
-	for (uint32_t i = 0; i < wheelsData.Count(); ++i)
+	if (!wd)
+		wd = &vehicle->mWheelsSimData;
+
+	for (uint32_t i = 0; i < numWheels; ++i)
 	{
-		WheelData &wd = wheelsData[i];
-
-		vehicle->mVehicleSimData.setSuspensionData(wd.suspensionData, remap[i]);
-		vehicle->mVehicleSimData.setTyreData(wd.tireData, remap[i]);
-		vehicle->mVehicleSimData.setWheelData(wd.wheelData, remap[i]);
-		vehicle->mVehicleSimData.setSuspTravelDirection(wd.suspensionTravelDir, remap[i]);
+		wd->setSuspensionData(i, wheelsData[i].suspensionData);
+		wd->setSuspTravelDirection(i, wheelsData[i].suspensionTravelDir);
+		wd->setTireData(i, wheelsData[i].tireData);
+		wd->setWheelData(i, wheelsData[i].wheelData);
 	}
 }
 
@@ -380,72 +390,17 @@ void VehicleDescriptor::ApplyDynamicChanges()
 
 void VehicleDescriptor::InitToDefault()
 {
-	ackermannData.mAccuracy = 1.0f;
-
-	chassisData.mCMOffset = PxVec3(0, 0, 0);
-	chassisData.mMass = 1500.0f;
-	chassisData.mMOI = PxVec3(0, 0, 0);
-	
-	engineData.mDisengagedClutchDampingRate = 0.35f;
-	engineData.mEngagedClutchDampingRate = 0.15f;
-	engineData.mMaxOmega = 600.0f;
-	engineData.mPeakTorque = 350.0f;
-	engineData.mTorqueCurve.addPair(0.0f, 1.0f);
-	engineData.mTorqueCurve.addPair(0.33f, 1.0f);
-	engineData.mTorqueCurve.addPair(1.0f, 0.8f);
-		
 	gearsData.mNumRatios = 3;
-	gearsData.mRatios[PxVehicleGearsData::eREVERSE] = -4.0f;
-	gearsData.mRatios[PxVehicleGearsData::eNEUTRAL] = 0.0f;
-	gearsData.mRatios[PxVehicleGearsData::eFIRST] = 4.0f;
-	gearsData.mRatios[PxVehicleGearsData::eSECOND] = 2.0f;
-	gearsData.mRatios[PxVehicleGearsData::eTHIRD] = 1.5f;
-	gearsData.mRatios[PxVehicleGearsData::eFOURTH] = 1.1f;
-	gearsData.mRatios[PxVehicleGearsData::eFIFTH] = 1.0f;
-	gearsData.mFinalRatio = 4.0f;
-	gearsData.mSwitchTime = 0.5f;
+	diffData.mType = PxVehicleDifferential4WData::eDIFF_TYPE_OPEN_4WD;
 
-	clutchData.mStrength = 10.0f;
-
-	diffData.mCentreBias = 1.3f;
-	diffData.mFrontBias = 1.3f;
-	diffData.mRearBias = 1.3f;
-	diffData.mFrontRearSplit = 0.45f;
-	diffData.mType = PxVehicleDifferential4WData::eDIFF_TYPE_LS_4WD;
-
-	wheelsData.Resize(4);
-
-	for (uint32_t i = 0; i < wheelsData.Count(); ++i)
+	for (PxU32 i = 0; i < numWheels; ++i)
 	{
-		WheelData &wd = wheelsData[i];
-		wd.wheelData.mRadius = 1.0f;
-		wd.wheelData.mWidth = 1.0f;
-		wd.wheelData.mMass = 20.0f;
-		wd.wheelData.mMaxBrakeTorque = 1500.0f;
-		wd.wheelData.mMaxSteer = (i < 2 ? 0 : PxPi / 3.0f);
-		wd.wheelData.mMaxHandBrakeTorque = (i < 2 ? 4000.0f : 0);
-		wd.wheelData.mToeAngle = 0.0f;
-		wd.wheelData.mDampingRate = 0.25f;
+		PxVehicleWheelData &wd = wheelsData[i].wheelData;
+		wd.mMaxBrakeTorque = 25000.0f;
 
-		wd.suspensionTravelDir = PxVec3(0, -1.0f, 0);
-
-		wd.suspensionData.mSprungMass = 0;
-		wd.suspensionData.mMaxCompression = 0.3f;
-		wd.suspensionData.mMaxDroop = 0.1f;
-		wd.suspensionData.mSpringDamperRate = 4500.0f;
-		wd.suspensionData.mSpringStrength = 35000.0f;
-
-		wd.tireData.mCamberStiffness = 1.0f * (180.0f / PxPi);
-		wd.tireData.mFrictionVsSlipGraph[0][0] = 0.0f;
-		wd.tireData.mFrictionVsSlipGraph[0][1] = 0.5f;
-		wd.tireData.mFrictionVsSlipGraph[1][0] = 0.1f;
-		wd.tireData.mFrictionVsSlipGraph[1][1] = 1.0f;
-		wd.tireData.mFrictionVsSlipGraph[2][0] = 1.0f;
-		wd.tireData.mFrictionVsSlipGraph[2][1] = 0.6f;
-		wd.tireData.mLatStiffX = 2.0f;
-		wd.tireData.mLatStiffY = 0.3125f * (180.0f / PxPi);
-		wd.tireData.mLongitudinalStiffness = 10000.0f;
-		wd.tireData.mType = 0;
+		PxVehicleSuspensionData &sd = wheelsData[i].suspensionData;
+		sd.mSpringStrength = 40000.0f;
+		sd.mSpringDamperRate = 3000.0f;
 	}
 }
 

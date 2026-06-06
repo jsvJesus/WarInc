@@ -38,7 +38,11 @@ BOOL DecalGameObjectProxy::OnPositionChanged()
 		return true;
 
 	const r3dVector& pos = GetPosition();
-	DecalParams p = *g_pDecalChief->GetStaticDecal(decalType, selectedDecalIdx);
+	const DecalParams *dp = g_pDecalChief->GetStaticDecal(decalType, selectedDecalIdx);
+	if (!dp)
+		return false;
+
+	DecalParams p = *dp;
 	p.Pos = pos;
 	g_pDecalChief->UpdateStaticDecal(p, selectedDecalIdx);
 
@@ -55,7 +59,11 @@ BOOL DecalGameObjectProxy::OnOrientationChanged()
 		return true;
 
 	const r3dVector& angles = GetRotationVector();
-	DecalParams p = *g_pDecalChief->GetStaticDecal(decalType, selectedDecalIdx);
+	const DecalParams *dp = g_pDecalChief->GetStaticDecal(decalType, selectedDecalIdx);
+	if (!dp)
+		return false;
+
+	DecalParams p = *dp;
 	p.ZRot = R3D_DEG2RAD(angles.x);
 	g_pDecalChief->UpdateStaticDecal(p, selectedDecalIdx);
 	return true;
@@ -69,19 +77,24 @@ void DecalGameObjectProxy::SelectDecal(UINT typeIdx, UINT idx)
 	decalType = typeIdx;
 
 	const DecalParams *p = g_pDecalChief->GetStaticDecal(decalType, selectedDecalIdx);
+	if (!p)
+		return;
 
 	SetPosition(r3dPoint3D(p->Pos.x, p->Pos.y, p->Pos.z));
-	
-	if (g_Manipulator3d.PickedObjectCount() == 0 || g_Manipulator3d.PickedObjectGet(0) != this)
-	{
-		r3dVector angles( R3D_RAD2DEG( p->ZRot ), 0.f, 0.f ) ;
-		SetRotationVector( angles ) ;
+	r3dVector angles( R3D_RAD2DEG( p->ZRot ), 0.f, 0.f ) ;
+	SetRotationVector( angles ) ;
 
-		g_Manipulator3d.ScaleEnable();
-		g_Manipulator3d.Enable();
-		g_Manipulator3d.PickerResetPicked();
-		g_Manipulator3d.PickerAddToPicked(this);
-	}
+	const DecalType& dt = g_pDecalChief->GetTypeByIdx( p->TypeID ) ;
+
+	float s = sqrtf( dt.ScaleX * dt.ScaleX + dt.ScaleY * dt.ScaleY ) * 0.5f * p->ScaleCoef ;
+
+	r3dBoundBox bbox;
+	bbox.Org	= r3dPoint3D( -s, -s, -s );
+	bbox.Size.x	= s * 2;
+	bbox.Size.y	= s * 2;
+	bbox.Size.z	= s * 2;
+
+	SetBBoxLocal(bbox);
 }
 
 //////////////////////////////////////////////////////////////////////////

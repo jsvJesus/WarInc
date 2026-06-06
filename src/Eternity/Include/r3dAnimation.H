@@ -143,7 +143,9 @@ public:
 	{
 		inline int operator () (DWORD key) { return key; }
 	};
-	HashTableDynamic<trackInfo_s, DWORD, Crc32HashFunc_T, 1024> dupTracks;
+	typedef HashTableDynamic<trackInfo_s, DWORD, Crc32HashFunc_T, 1024> HashTable;
+	//	For lazy initialization and memory saving purposes
+	HashTable & GetDupTracks();
 	int		animDataTotalSize;
 	int		animDataSharedSize;
 
@@ -151,6 +153,8 @@ private:
 	// make copy constructor and assignment operator inaccessible
 	r3dAnimPool(const r3dAnimPool& rhs);
 	r3dAnimPool& operator=(const r3dAnimPool& rhs);
+
+	HashTable *dupTracks;
 
 public:
 	r3dAnimPool();

@@ -5,8 +5,6 @@
 #include "r3dConst.h"
 #include "r3dUtils.h"
 
-#include <intrin.h>
-
 //C
 //
 // r3dImageLoader
@@ -127,48 +125,46 @@ int r3dImageLoader::Load(r3dFile *f)
 // High Performance Counter
 //
 //
-static __forceinline unsigned __int64 r3dReadTSC()
-{
-	return __rdtsc();
-}
+#define THIS_IN_ECX	1
 
 void r3dPerfCounter::Start()
 {
-	const unsigned __int64 ticks = r3dReadTSC();
-
-	perf_StartHi = (long)(ticks >> 32);
-	perf_StartLo = (long)(ticks & 0xffffffff);
-	perf_Start = (long)((ticks & 0xffffffff) >> 4);
+#if !THIS_IN_ECX
+  __asm mov ecx, [this]
+#endif
+  __asm rdtsc
+  __asm mov [ecx.perf_StartHi], edx
+  __asm mov [ecx.perf_StartLo], eax
+  __asm shr eax, 4
+  __asm mov [ecx.perf_Start], eax
 }
 
+#pragma warning(disable: 4035)
+// return value in EAX
 long r3dPerfCounter::GetDiffTicks()
 {
-	const unsigned __int64 ticks = r3dReadTSC();
-
-	const unsigned long lo = (unsigned long)(ticks & 0xffffffff);
-	const unsigned long hi = (unsigned long)(ticks >> 32);
-
-	unsigned long eax = lo >> 4;
-	unsigned long edx = hi - (unsigned long)perf_StartHi;
-
-	edx <<= 28;
-	eax |= edx;
-	eax -= (unsigned long)perf_Start;
-
-	return (long)eax;
+#if !THIS_IN_ECX
+  __asm mov ecx, [this]
+#endif
+  __asm rdtsc
+  __asm sub edx, [ecx.perf_StartHi]
+  __asm shr eax, 4
+  __asm shl edx, 28
+  __asm or  eax, edx
+  __asm sub eax, [ecx.perf_Start]
 }
+#pragma warning(default: 4035)
 
 float r3dPerfCounter::GetDiff()
 {
-	return GetDiffTicks() / 50000000.0f;
+  return GetDiffTicks() / 50000000.0f;
 }
 
-void r3dPerfCounter::GetCurrent(long& Hi, long& Lo)
+void r3dPerfCounter::GetCurrent(long &Hi, long &Lo)
 {
-	const unsigned __int64 ticks = r3dReadTSC();
-
-	Hi = (long)(ticks >> 32);
-	Lo = (long)(ticks & 0xffffffff);
+  __asm rdtsc
+  __asm mov Hi, edx
+  __asm mov Lo, eax
 }
 
 //C
@@ -212,7 +208,7 @@ const char * Va( const char * str, ... )
 		_index_string = 0;
 
 	va_start( args, str );
-	_vsnprintf_s(buffer, MAX_VA_STRING, _TRUNCATE, str, args);
+	vsnprintf( buffer, MAX_VA_STRING, str, args );
 	va_end( args );
 
 	return buffer;

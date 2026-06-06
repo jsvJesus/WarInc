@@ -30,6 +30,8 @@
 
 #define GENERATE_MIPS 0
 
+const char* DigitToCString( int digit );
+
 enum
 {
 	NORTH_CONNECTION	= 1,
@@ -48,33 +50,33 @@ enum
 
 struct r3dDynaTerraVertex
 {
-	short height ;
-	short unused ;
+	short height;
+	short unused;
 };
 
 #pragma pack(pop)
 
-static int CountConnectionIndices( int vertexTileDim, int sideLodConnections ) ;
-static int ConstructConnectionIndices( UINT16* target, int vertexTileDim, int sideLodConnections ) ;
-static void PrintSplatLocation( char (& buf ) [ 1024 ], int idx ) ;
-static uint32_t GetHeightFieldDataSize( const PxHeightFieldDesc& desc ) ;
-static void PrintFullSplatPath( const char* levelDir, int i, char (& buf ) [ 1024 ] ) ;
-static void PrintFullColorPath( const char* levelDir, char (& buf ) [ 1024 ] ) ;
-static void PrintFullNormalPath( const char* levelDir, char (& buf ) [ 1024 ] ) ;
-static void FillDecalRect( RECT* oRect, const r3dTerrain2::DecalRecord& drec ) ;
+static int CountConnectionIndices( int vertexTileDim, int sideLodConnections );
+static int ConstructConnectionIndices( UINT16* target, int vertexTileDim, int sideLodConnections );
+static void PrintSplatLocation( char (& buf ) [ 1024 ], int idx );
+static uint32_t GetHeightFieldDataSize( const PxHeightFieldDesc& desc );
+static void PrintFullSplatPath( const char* levelDir, int i, char (& buf ) [ 1024 ] );
+static void PrintFullColorPath( const char* levelDir, char (& buf ) [ 1024 ] );
+static void PrintFullNormalPath( const char* levelDir, char (& buf ) [ 1024 ] );
+static void FillDecalRect( RECT* oRect, const r3dTerrain2::DecalRecord& drec );
 
-static void TerraTextureReloadListener( r3dTexture* tex ) ;
+static void TerraTextureReloadListener( r3dTexture* tex );
 
-static IDirect3DVertexDeclaration9* g_TerraVDecl ;
-static IDirect3DVertexDeclaration9* g_TerraDynaVDecl ;
+static IDirect3DVertexDeclaration9* g_TerraVDecl;
+static IDirect3DVertexDeclaration9* g_TerraDynaVDecl;
 
-static float gSaveCountDown ;
-static float gSaveCountDownLastTime ;
+static float gSaveCountDown;
+static float gSaveCountDownLastTime;
 
-static const D3DFORMAT TERRA2_LAYERMASK_FORMAT = D3DFMT_DXT1 ;
-static const D3DFORMAT TERRA2_COLORMODULATION_FORMAT = D3DFMT_DXT1 ;
+static const D3DFORMAT TERRA2_LAYERMASK_FORMAT = D3DFMT_DXT1;
+static const D3DFORMAT TERRA2_COLORMODULATION_FORMAT = D3DFMT_DXT1;
 
-extern bool g_bEditMode ;
+extern bool g_bEditMode;
 
 static int GetTerraTexDownScale()
 {
@@ -83,11 +85,11 @@ static int GetTerraTexDownScale()
 	switch( r_texture_quality->GetInt() )
 	{
 	case 1:
-		return 2 ;
-		break ;
+		return 2;
+		break;
 	default:
-		return 1 ;
-		break ;
+		return 1;
+		break;
 	}
 
 	return DownScale;
@@ -96,44 +98,21 @@ static int GetTerraTexDownScale()
 
 static int MipCount( int dim )
 {
-	int c = 0 ;
-	for( ; dim ; )
+	int c = 0;
+	for(; dim; )
 	{
-		dim /= 2 ;
-		c ++ ;
+		dim /= 2;
+		c ++;
 	}
 
-	return c ;
-}
-
-const char* DigitToCString( int digit )
-{
-	r3d_assert( digit < 10 && digit >= 0 ) ;
-
-#define DIG_CASE(num) case num: return #num ;
-	switch( digit )
-	{
-		DIG_CASE(0)
-		DIG_CASE(1)
-		DIG_CASE(2)
-		DIG_CASE(3)
-		DIG_CASE(4)
-		DIG_CASE(5)
-		DIG_CASE(6)
-		DIG_CASE(7)
-		DIG_CASE(8)
-		DIG_CASE(9)
-	}
-#undef DIG_CASE
-
-	return "" ;
+	return c;
 }
 
 //------------------------------------------------------------------------
 
 static R3D_FORCEINLINE bool tile_comp_func_ATLAS_ID( const r3dTerrain2::AllocatedTile* tile0, const r3dTerrain2::AllocatedTile* tile1 )
 {
-	return tile0->AtlasVolumeID < tile1->AtlasVolumeID ;
+	return tile0->AtlasVolumeID < tile1->AtlasVolumeID;
 }
 
 //------------------------------------------------------------------------
@@ -149,21 +128,21 @@ struct GenerateAtlasPixelShaderId
 	{
 		struct
 		{
-			unsigned numLayers : 2 ;
-			unsigned firstBatch : 1 ;
-			unsigned modulationBatch : 1 ;
+			unsigned numLayers : 2;
+			unsigned firstBatch : 1;
+			unsigned modulationBatch : 1;
 		};
 
-		int Id ;
+		int Id;
 	};
 
-	GenerateAtlasPixelShaderId() ;
+	GenerateAtlasPixelShaderId();
 
-	void FillMacros( ShaderMacros& defines ) ;
-	void ToString( char* oStr ) ;
+	void FillMacros( ShaderMacros& defines );
+	void ToString( char* oStr );
 };
 
-r3dTL::TFixedArray< int, 16 > g_AtlasPixelShaderIdMap ;
+r3dTL::TFixedArray< int, 16 > g_AtlasPixelShaderIdMap;
 
 //------------------------------------------------------------------------
 
@@ -178,16 +157,16 @@ GenerateAtlasPixelShaderId::GenerateAtlasPixelShaderId()
 void
 GenerateAtlasPixelShaderId::FillMacros( ShaderMacros& defines )
 {
-	defines.Resize( 3 ) ;
+	defines.Resize( 3 );
 
-	defines[ 0 ].Name		= "NUM_LAYERS" ;
-	defines[ 0 ].Definition	= DigitToCString( numLayers ) ;
+	defines[ 0 ].Name		= "NUM_LAYERS";
+	defines[ 0 ].Definition	= DigitToCString( numLayers );
 
-	defines[ 1 ].Name		= "FIRST_BATCH" ;
-	defines[ 1 ].Definition	= DigitToCString( firstBatch ) ;
+	defines[ 1 ].Name		= "FIRST_BATCH";
+	defines[ 1 ].Definition	= DigitToCString( firstBatch );
 
-	defines[ 2 ].Name		= "MODULATION_BATCH" ;
-	defines[ 2 ].Definition	= DigitToCString( modulationBatch ) ;
+	defines[ 2 ].Name		= "MODULATION_BATCH";
+	defines[ 2 ].Definition	= DigitToCString( modulationBatch );
 }
 
 //------------------------------------------------------------------------
@@ -195,18 +174,18 @@ GenerateAtlasPixelShaderId::FillMacros( ShaderMacros& defines )
 void
 GenerateAtlasPixelShaderId::ToString( char* oStr )
 {
-	strcpy( oStr, "PS_TERRAIN_GEN_ATLAS" ) ;
-	strcat( oStr, "_" ) ;
-	strcat( oStr, DigitToCString( numLayers )) ;
+	strcpy( oStr, "PS_TERRAIN_GEN_ATLAS" );
+	strcat( oStr, "_" );
+	strcat( oStr, DigitToCString( numLayers ));
 
 	if( firstBatch )
 	{
-		strcat( oStr, "_FIRST" ) ;
+		strcat( oStr, "_FIRST" );
 	}
 
 	if( modulationBatch )
 	{
-		strcat( oStr, "_MODULATION" ) ;
+		strcat( oStr, "_MODULATION" );
 	}
 }
 
@@ -220,19 +199,19 @@ struct GenerateAtlasVertexShaderId
 	{
 		struct
 		{
-			unsigned unused : 1 ;
+			unsigned unused : 1;
 		};
 
-		int Id ;
+		int Id;
 	};
 
-	GenerateAtlasVertexShaderId() ;
+	GenerateAtlasVertexShaderId();
 
-	void FillMacros( ShaderMacros& defines ) ;
-	void ToString( char* oStr ) ;
+	void FillMacros( ShaderMacros& defines );
+	void ToString( char* oStr );
 };
 
-r3dTL::TFixedArray< int, 1 > g_AtlasVertexShaderIdMap ;
+r3dTL::TFixedArray< int, 1 > g_AtlasVertexShaderIdMap;
 
 //------------------------------------------------------------------------
 
@@ -247,10 +226,10 @@ GenerateAtlasVertexShaderId::GenerateAtlasVertexShaderId()
 void
 GenerateAtlasVertexShaderId::FillMacros( ShaderMacros& defines )
 {
-	defines.Resize( 1 ) ;
+	defines.Resize( 1 );
 
-	defines[ 0 ].Name		= "UNUSED_DEFINE" ;
-	defines[ 0 ].Definition	= DigitToCString( unused ) ;	
+	defines[ 0 ].Name		= "UNUSED_DEFINE";
+	defines[ 0 ].Definition	= DigitToCString( unused );	
 }
 
 //------------------------------------------------------------------------
@@ -258,11 +237,11 @@ GenerateAtlasVertexShaderId::FillMacros( ShaderMacros& defines )
 void
 GenerateAtlasVertexShaderId::ToString( char* oStr )
 {
-	strcpy( oStr, "VS_TERRAIN_GEN_ATLAS" ) ;
+	strcpy( oStr, "VS_TERRAIN_GEN_ATLAS" );
 
 	if( unused )
 	{
-		strcat( oStr, "_UNUSED" ) ;
+		strcat( oStr, "_UNUSED" );
 	}
 }
 
@@ -275,20 +254,20 @@ struct Terrain2PixelShaderId
 	{
 		struct
 		{
-			unsigned aux : 1 ;
-			unsigned forward_lighting : 1 ;
+			unsigned aux : 1;
+			unsigned forward_lighting : 1;
 		};
 
-		int Id ;
+		int Id;
 	};
 
-	Terrain2PixelShaderId() ;
+	Terrain2PixelShaderId();
 
-	void FillMacros( ShaderMacros& defines ) ;
-	void ToString( char* oStr ) ;
+	void FillMacros( ShaderMacros& defines );
+	void ToString( char* oStr );
 };
 
-r3dTL::TFixedArray< int, 4 > g_Terrain2PixelShaderIdMap ;
+r3dTL::TFixedArray< int, 4 > g_Terrain2PixelShaderIdMap;
 
 struct Terrain2VertexShaderId
 {
@@ -296,21 +275,22 @@ struct Terrain2VertexShaderId
 	{
 		struct
 		{
-			unsigned shadowPath : 1 ;
-			unsigned depthPath : 1 ;
-			unsigned vfetchless : 1 ;
+			unsigned shadowPath : 1;
+			unsigned depthPath : 1;
+			unsigned vfetchless : 1;
+			unsigned recticular_warp : 1;
 		};
 
-		int Id ;
+		int Id;
 	};
 
-	Terrain2VertexShaderId() ;
+	Terrain2VertexShaderId();
 
-	void FillMacros( ShaderMacros& defines ) ;
-	void ToString( char* oStr ) ;
+	void FillMacros( ShaderMacros& defines );
+	void ToString( char* oStr );
 };
 
-r3dTL::TFixedArray< int, 8 > g_Terrain2VertexShaderIdMap ;
+r3dTL::TFixedArray< int, 16 > g_Terrain2VertexShaderIdMap;
 
 //------------------------------------------------------------------------
 
@@ -325,16 +305,19 @@ Terrain2VertexShaderId::Terrain2VertexShaderId()
 void
 Terrain2VertexShaderId::FillMacros( ShaderMacros& defines )
 {
-	defines.Resize( 3 ) ;
+	defines.Resize( 4 );
 
-	defines[ 0 ].Name		= "SHADOW_PATH" ;
-	defines[ 0 ].Definition	= DigitToCString( shadowPath ) ;
+	defines[ 0 ].Name		= "SHADOW_PATH";
+	defines[ 0 ].Definition	= DigitToCString( shadowPath );
 
-	defines[ 1 ].Name		= "DEPTH_PATH" ;
-	defines[ 1 ].Definition	= DigitToCString( depthPath ) ;	
+	defines[ 1 ].Name		= "DEPTH_PATH";
+	defines[ 1 ].Definition	= DigitToCString( depthPath );	
 
-	defines[ 2 ].Name		= "VERTEX_FETCHLESS" ;
-	defines[ 2 ].Definition	= DigitToCString( vfetchless ) ;	
+	defines[ 2 ].Name		= "VERTEX_FETCHLESS";
+	defines[ 2 ].Definition	= DigitToCString( vfetchless );
+
+	defines[ 3 ].Name		= "RECTICULAR_WARP";
+	defines[ 3 ].Definition	= DigitToCString( recticular_warp );	
 
 }
 
@@ -343,26 +326,31 @@ Terrain2VertexShaderId::FillMacros( ShaderMacros& defines )
 void
 Terrain2VertexShaderId::ToString( char* oStr )
 {
-	strcpy( oStr, "VS_TERRAIN2" ) ;
+	strcpy( oStr, "VS_TERRAIN2" );
 
 	if( shadowPath )
 	{
-		strcat( oStr, "_SHADOWS" ) ;
+		strcat( oStr, "_SHADOWS" );
 	}
 
 	if( depthPath )
 	{
-		strcat( oStr, "_DEPTH" ) ;
+		strcat( oStr, "_DEPTH" );
 	}
 
 	if( vfetchless )
 	{
-		strcat( oStr, "_VFETCHLESS" ) ;
+		strcat( oStr, "_VFETCHLESS" );
+	}
+
+	if( recticular_warp )
+	{
+		strcat( oStr, "_RECTICULARWARP" );
 	}
 }
 
 
-int g_RoadAtlasPixelShaderId ;
+int g_RoadAtlasPixelShaderId;
 
 //------------------------------------------------------------------------
 
@@ -377,13 +365,13 @@ Terrain2PixelShaderId::Terrain2PixelShaderId()
 void
 Terrain2PixelShaderId::FillMacros( ShaderMacros& defines )
 {
-	defines.Resize( 2 ) ;
+	defines.Resize( 2 );
 
-	defines[ 0 ].Name		= "AUX_ENABLED" ;
-	defines[ 0 ].Definition	= DigitToCString( aux ) ;
+	defines[ 0 ].Name		= "AUX_ENABLED";
+	defines[ 0 ].Definition	= DigitToCString( aux );
 
-	defines[ 1 ].Name		= "FORWARD_LIGHTING" ;
-	defines[ 1 ].Definition	= DigitToCString( forward_lighting ) ;
+	defines[ 1 ].Name		= "FORWARD_LIGHTING";
+	defines[ 1 ].Definition	= DigitToCString( forward_lighting );
 }
 
 //------------------------------------------------------------------------
@@ -391,16 +379,16 @@ Terrain2PixelShaderId::FillMacros( ShaderMacros& defines )
 void
 Terrain2PixelShaderId::ToString( char* oStr )
 {
-	strcpy( oStr, "PS_TERRAIN2" ) ;
+	strcpy( oStr, "PS_TERRAIN2" );
 
 	if( aux )
 	{
-		strcat( oStr, "_AUX" ) ;
+		strcat( oStr, "_AUX" );
 	}
 
 	if( forward_lighting )
 	{
-		strcat( oStr, "_FORW" ) ;
+		strcat( oStr, "_FORW" );
 	}
 }
 
@@ -432,7 +420,7 @@ r3dTerrainLayer::r3dTerrainLayer()
 
 r3dTerrainStats::r3dTerrainStats()
 {
-	memset( this, 0, sizeof( *this ) ) ;
+	memset( this, 0, sizeof( *this ) );
 }
 
 //------------------------------------------------------------------------
@@ -471,25 +459,51 @@ r3dTerrain2::QualitySettings::QualitySettings()
 , BakeRoads( 1 )
 , VertexDensity( 32 )
 {
-	TileCounts[ 0 ] = 4 ;
-	TileCounts[ 1 ] = 4 ;
+	TileCounts[ 0 ] = 4;
+	TileCounts[ 1 ] = 4;
 
-	for( int i = 2, e = TileCounts.COUNT ; i < e ; i ++ )
+	for( int i = 2, e = TileCounts.COUNT; i < e; i ++ )
 	{
-		TileCounts[ i ] = 2 ;
+		TileCounts[ i ] = 2;
 	}
 
-	for( int i = 0, e = TileVertexDensitySteps.COUNT ; i < e ; i ++ )
+	for( int i = 0, e = TileVertexDensitySteps.COUNT; i < e; i ++ )
 	{
-		TileVertexDensitySteps[ i ] = 32 ;
+		TileVertexDensitySteps[ i ] = 32;
 	}
 
-	for( int i = 0, e = TileDistances.COUNT ; i < e ; i ++ )
+	for( int i = 0, e = TileDistances.COUNT; i < e; i ++ )
 	{
 		TileDistances[ i ] = 0.f;
 	}
 
-	Sync() ;
+	Sync();
+}
+
+//------------------------------------------------------------------------
+
+int
+r3dTerrain2::QualitySettings::Compare( const QualitySettings& sts )
+{
+	// NOTE : we skip TileDistances because they are derived from other settings
+	
+	int res = 0;
+
+	res |= memcmp( &TileCounts[ 0 ], &sts.TileCounts[ 0 ], sizeof TileCounts[ 0 ] * TileCounts.COUNT );
+	res |= memcmp( &TileVertexDensities[ 0 ], &sts.TileVertexDensities[ 0 ], sizeof TileVertexDensities[ 0 ] * TileVertexDensities.COUNT );
+	res |= memcmp( &TileVertexDensitySteps[ 0 ], &sts.TileVertexDensitySteps[ 0 ], sizeof TileVertexDensitySteps[ 0 ] * TileVertexDensitySteps.COUNT );
+
+	// skip QualitySettings::TileDistances;
+
+	res |= VertexDensity != sts.VertexDensity;
+
+	res |= AtlasTileDim != sts.AtlasTileDim;
+	res |= VertexTileDim != sts.VertexTileDim;
+	res |= RoadVertexDimStart != sts.RoadVertexDimStart;
+
+	res |= BakeRoads != sts.BakeRoads;
+
+	return res;
 }
 
 //------------------------------------------------------------------------
@@ -497,30 +511,30 @@ r3dTerrain2::QualitySettings::QualitySettings()
 void
 r3dTerrain2::QualitySettings::Sync()
 {
-	r3d_assert( VertexTileDim <= 8 ) ;
-	r3d_assert( VertexDensity <= 128 ) ;
+	r3d_assert( VertexTileDim <= 8 );
+	r3d_assert( VertexDensity <= 128 );
 
-	VertexTileDim = R3D_MIN( VertexTileDim, 8 ) ;
-	VertexDensity = R3D_MIN( VertexDensity, 128 ) ;
+	VertexTileDim = R3D_MIN( VertexTileDim, 8 );
+	VertexDensity = R3D_MIN( VertexDensity, 128 );
 
-	for( int i = 0, e = TileCounts.COUNT ; i < e ; i ++ )
+	for( int i = 0, e = TileCounts.COUNT; i < e; i ++ )
 	{
 		if( VertexTileDim * ( 1 << i ) <= VertexDensity )
 		{
-			TileVertexDensities[ i ] = i ;
+			TileVertexDensities[ i ] = i;
 		}
 		else
 		{
 			if( i )
-				TileVertexDensities[ i ] = TileVertexDensities[ i - 1 ] ;
+				TileVertexDensities[ i ] = TileVertexDensities[ i - 1 ];
 			else
-				TileVertexDensities[ i ] = 0 ;
+				TileVertexDensities[ i ] = 0;
 		}
 	}
 
 	if( RoadVertexDimStart < VertexTileDim )
 	{
-		RoadVertexDimStart = VertexTileDim ;
+		RoadVertexDimStart = VertexTileDim;
 	}
 
 }
@@ -536,48 +550,55 @@ r3dTerrain2::Settings::Settings()
 
 //------------------------------------------------------------------------
 
-void
-r3dTerrain2::AllocatedTile::Init()
+r3dTerrain2::RoadInfo::RoadInfo()
 {
-	X = 0 ;
-	Z = 0 ;
-
-	AtlasTileID = -1 ;
-	AtlasVolumeID = -1 ;
-
-	Tagged = 0 ;
-	L = 0 ;
-
-	ConFlags = 0 ;
+	memset( ptrs, 0, sizeof ptrs );
 }
 
 //------------------------------------------------------------------------
 
-int g_AtlasMipPSId = -1 ;
-int g_AtlasMipVSId = -1 ;
+void
+r3dTerrain2::AllocatedTile::Init()
+{
+	X = 0;
+	Z = 0;
+
+	AtlasTileID = -1;
+	AtlasVolumeID = -1;
+
+	Tagged = 0;
+	L = 0;
+
+	ConFlags = 0;
+}
 
 //------------------------------------------------------------------------
 
-int g_Terrain2ShadowPSId = -1 ;
+int g_AtlasMipPSId = -1;
+int g_AtlasMipVSId = -1;
+
+//------------------------------------------------------------------------
+
+int g_Terrain2ShadowPSId = -1;
 
 //------------------------------------------------------------------------
 /*static*/
 
-const D3DFORMAT r3dTerrain2::ATLAS_FMT = D3DFMT_R5G6B5 ;
+const D3DFORMAT r3dTerrain2::ATLAS_FMT = D3DFMT_R5G6B5;
 
 //------------------------------------------------------------------------
 
 r3dTerrain2::r3dTerrain2()
 {
 	// NOTE : move all initialization code to Cosntruct()
-	Construct() ;
+	Construct();
 }
 
 //------------------------------------------------------------------------
 
 r3dTerrain2::~r3dTerrain2()
 {
-	Destroy() ;
+	Destroy();
 }
 
 //------------------------------------------------------------------------
@@ -591,102 +612,110 @@ r3dTerrain2::LoadShaders()
 	//------------------------------------------------------------------------
 	// Atlas vertex shaders
 	{
-		GenerateAtlasVertexShaderId vsid ;
+		GenerateAtlasVertexShaderId vsid;
 
-		ShaderMacros macros ;
+		ShaderMacros macros;
 
-		vsid.unused = 0 ;
+		vsid.unused = 0;
 
-		char name[ 512 ] ;
+		char name[ 512 ];
 
-		vsid.ToString( name ) ;
-		vsid.FillMacros( macros ) ;
+		vsid.ToString( name );
+		vsid.FillMacros( macros );
 
-		g_AtlasVertexShaderIdMap[ vsid.Id ] = r3dRenderer->AddVertexShaderFromFile( name, "Nature\\TerrainAtlas_vs.hls", 0, macros ) ;
+		g_AtlasVertexShaderIdMap[ vsid.Id ] = r3dRenderer->AddVertexShaderFromFile( name, "Nature\\TerrainAtlas_vs.hls", 0, macros );
 
 	}
 
 	//------------------------------------------------------------------------
 	// atlas pixel shaders
 	{
-		GenerateAtlasPixelShaderId psid ;
+		GenerateAtlasPixelShaderId psid;
 
-		ShaderMacros macros ;
+		ShaderMacros macros;
 
-		for( int i = 0, e = g_AtlasPixelShaderIdMap.COUNT ; i < e; i ++ )
+		for( int i = 0, e = g_AtlasPixelShaderIdMap.COUNT; i < e; i ++ )
 		{
-			g_AtlasPixelShaderIdMap[ i ] = -1 ;
+			g_AtlasPixelShaderIdMap[ i ] = -1;
 		}
 
-		for( int i = 0, e = GenerateAtlasPixelShaderId::MAX_LAYERS ; i <= e; i ++ )
+		for( int i = 0, e = GenerateAtlasPixelShaderId::MAX_LAYERS; i <= e; i ++ )
 		{
-			psid.numLayers = i ;
+			psid.numLayers = i;
 
-			for( int fi = 0, e = 2 ; fi < e ; fi ++ )
+			for( int fi = 0, e = 2; fi < e; fi ++ )
 			{
-				psid.firstBatch = fi ;
+				psid.firstBatch = fi;
 
-				char name[ 512 ] ;
+				char name[ 512 ];
 
-				psid.modulationBatch = 0 ;
+				psid.modulationBatch = 0;
 
-				psid.ToString( name ) ;
-				psid.FillMacros( macros ) ;
+				psid.ToString( name );
+				psid.FillMacros( macros );
 
-				g_AtlasPixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\TerrainAtlas_ps.hls", 0, macros ) ;
+				g_AtlasPixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\TerrainAtlas_ps.hls", 0, macros );
 			}
 		}
 
 		// modulation batch
 		{
-			psid.Id = 0 ;
-			psid.modulationBatch = 1 ;
+			psid.Id = 0;
+			psid.modulationBatch = 1;
 
-			char name[ 512 ] ;
+			char name[ 512 ];
 
-			psid.ToString( name ) ;
-			psid.FillMacros( macros ) ;
+			psid.ToString( name );
+			psid.FillMacros( macros );
 
-			g_AtlasPixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\TerrainAtlas_ps.hls", 0, macros ) ;
+			g_AtlasPixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\TerrainAtlas_ps.hls", 0, macros );
 		}
 	}
 
 	//------------------------------------------------------------------------
 	// Main Terrain Vertex Shader
 	{
-		for( int s = 0 ; s < 2 ; s ++ )
+		for( int s = 0; s < 2; s ++ )
 		{
-			Terrain2VertexShaderId vsid ;
+			Terrain2VertexShaderId vsid;
 
-			vsid.shadowPath = s ;
+			vsid.shadowPath = s;
 
-			for( int d = 0 ; d < 2 ; d ++ )
+			for( int d = 0; d < 2; d ++ )
 			{
-				vsid.depthPath = d ;
+				vsid.depthPath = d;
 
-				for( int vfl = 0, e = 2 ; vfl < e ; vfl ++ )
+				for( int vfl = 0, e = 2; vfl < e; vfl ++ )
 				{
-					vsid.vfetchless = vfl ;
+					vsid.vfetchless = vfl;
 
-					if( !r3dRenderer->SupportsVertexTextureFetch && !vfl )
+					for( int recticular_warp = 0; recticular_warp < 2; recticular_warp ++ )
 					{
-						g_Terrain2VertexShaderIdMap[ vsid.Id ] = -1;
-						continue;
-					}
+						vsid.recticular_warp = recticular_warp;
 
-					ShaderMacros macros ;
-					char name[ 512 ] ;
+						if( !r3dRenderer->SupportsVertexTextureFetch && !vfl )
+						{
+							g_Terrain2VertexShaderIdMap[ vsid.Id ] = -1;
+							continue;
+						}
 
-					vsid.ToString( name ) ;
-					vsid.FillMacros( macros ) ;
+						ShaderMacros macros;
+						char name[ 512 ];
 
-					if( vsid.depthPath && vsid.shadowPath )
-					{
-						g_Terrain2VertexShaderIdMap[ vsid.Id ] = -1 ;
-					}
-					else
-					{
-						g_Terrain2VertexShaderIdMap[ vsid.Id ] = r3dRenderer->AddVertexShaderFromFile( name, "Nature\\Terrain2_vs.hls", 0, macros ) ;
+						vsid.ToString( name );
+						vsid.FillMacros( macros );
+
+						if( ( vsid.depthPath && vsid.shadowPath )
+								|| 
+							( vsid.recticular_warp && !vsid.shadowPath )
+								)
+						{
+							g_Terrain2VertexShaderIdMap[ vsid.Id ] = -1;
+						}
+						else
+						{
+							g_Terrain2VertexShaderIdMap[ vsid.Id ] = r3dRenderer->AddVertexShaderFromFile( name, "Nature\\Terrain2_vs.hls", 0, macros );
+						}
 					}
 				}
 			}
@@ -696,40 +725,40 @@ r3dTerrain2::LoadShaders()
 	//------------------------------------------------------------------------
 	// Main Terrain Pixel Shader
 	{
-		Terrain2PixelShaderId psid ;
+		Terrain2PixelShaderId psid;
 
-		ShaderMacros macros ;
+		ShaderMacros macros;
 
-		for( int l = 0, e = 2 ; l < e ; l ++ )
+		for( int l = 0, e = 2; l < e; l ++ )
 		{
-			for( int a = 0, e = 2 ; a < e ; a ++ )
+			for( int a = 0, e = 2; a < e; a ++ )
 			{
-				psid.aux = a ;
-				psid.forward_lighting = l ;
+				psid.aux = a;
+				psid.forward_lighting = l;
 
-				char name[ 512 ] ;
+				char name[ 512 ];
 
-				psid.ToString( name ) ;
-				psid.FillMacros( macros ) ;
+				psid.ToString( name );
+				psid.FillMacros( macros );
 
-				g_Terrain2PixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\Terrain2_ps.hls", 0, macros ) ;
+				g_Terrain2PixelShaderIdMap[ psid.Id ] = r3dRenderer->AddPixelShaderFromFile( name, "Nature\\Terrain2_ps.hls", 0, macros );
 			}
 		}
 	}
 
 	//------------------------------------------------------------------------
 	// Shadow PS
-	g_Terrain2ShadowPSId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRA_SM", "Nature\\TerrainV2_SM_ps.hls", 1 ) ;
+	g_Terrain2ShadowPSId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRA_SM", "Nature\\TerrainV2_SM_ps.hls", 1 );
 
 	//------------------------------------------------------------------------
 	// Tile mip generation shaders
 
-	g_AtlasMipVSId = r3dRenderer->AddVertexShaderFromFile( "VS_TERRAIN_ATLAS_MIP", "Nature\\TerrainAtlasMip_vs.hls" ) ;
-	g_AtlasMipPSId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRAIN_ATLAS_MIP", "Nature\\TerrainAtlasMip_ps.hls" ) ;
+	g_AtlasMipVSId = r3dRenderer->AddVertexShaderFromFile( "VS_TERRAIN_ATLAS_MIP", "Nature\\TerrainAtlasMip_vs.hls" );
+	g_AtlasMipPSId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRAIN_ATLAS_MIP", "Nature\\TerrainAtlasMip_ps.hls" );
 
 	//------------------------------------------------------------------------
 	// road to atlas
-	g_RoadAtlasPixelShaderId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRA_ATLAS_ROAD_PS", "DS_FillTerraAtlas_PS.hls" ) ;
+	g_RoadAtlasPixelShaderId = r3dRenderer->AddPixelShaderFromFile( "PS_TERRA_ATLAS_ROAD_PS", "DS_FillTerraAtlas_PS.hls" );
 #endif
 
 }
@@ -741,32 +770,32 @@ r3dTerrain2::LoadShaders()
 
 static R3D_FORCEINLINE float Conform( float val )
 {
-	return val ;
+	return val;
 }
 
 static R3D_FORCEINLINE float2 Conform( float2 val )
 {
-	return val ;
+	return val;
 }
 
 #else
 
 static R3D_FORCEINLINE short Conform( float val )
 {
-	int res ;
+	int res;
 	if( val < 0 )
-		res = int( val * 32768.f ) ;
+		res = int( val * 32768.f );
 	else
-		res = int( val * 32767.f ) ;
+		res = int( val * 32767.f );
 
-	res = R3D_MIN( R3D_MAX( res, -32768 ), 32767 ) ;
+	res = R3D_MIN( R3D_MAX( res, -32768 ), 32767 );
 
-	return (short) res ;
+	return (short) res;
 }
 
 static R3D_FORCEINLINE short2 Conform( float2 val )
 {
-	return short2( Conform( val.x ), Conform( val.y ) ) ;
+	return short2( Conform( val.x ), Conform( val.y ) );
 }
 
 #endif
@@ -774,8 +803,8 @@ static R3D_FORCEINLINE short2 Conform( float2 val )
 void
 r3dTerrain2::Init()
 {
-	RecalcVars() ;
-	RecalcLayerVars() ;
+	RecalcVars();
+	RecalcLayerVars();
 
 #if R3D_TERRAIN_V2_GRAPHICS
 	if( !g_TerraVDecl )
@@ -809,10 +838,10 @@ r3dTerrain2::Init()
 
 	if( !m_AllowVFetch )
 	{
-		CreateDynaVertexBuffer() ;
+		CreateDynaVertexBuffer();
 	}
 
-	InitDynamic() ;
+	InitDynamic();
 #endif
 	
 }
@@ -823,195 +852,195 @@ void
 r3dTerrain2::InitDynamic()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	const float TILE_DIM = (float)m_QualitySettings.AtlasTileDim ;
+	const float TILE_DIM = (float)m_QualitySettings.AtlasTileDim;
 
-	AddAtlasVolume() ;
+	AddAtlasVolume();
 
-	m_TempDiffuseRT		= r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_TEMP_DIFFUSE", TILE_DIM, TILE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, 1 ) ;
-	m_TempNormalRT		= r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_TEMP_NORMAL", TILE_DIM, TILE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, 1 ) ;
+	m_TempDiffuseRT		= r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_TEMP_DIFFUSE", TILE_DIM, TILE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, 1 );
+	m_TempNormalRT		= r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_TEMP_NORMAL", TILE_DIM, TILE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, 1 );
 
 	//------------------------------------------------------------------------
 
-	int MAX_VERTEX_DIM = m_QualitySettings.VertexTileDim ;
+	int MAX_VERTEX_DIM = m_QualitySettings.VertexTileDim;
 
-	for( int i = 0, e = m_QualitySettings.TileVertexDensities.COUNT ; i < e ; i ++ )
+	for( int i = 0, e = m_QualitySettings.TileVertexDensities.COUNT; i < e; i ++ )
 	{
-		MAX_VERTEX_DIM = R3D_MAX( MAX_VERTEX_DIM, m_QualitySettings.VertexTileDim * ( 1 << m_QualitySettings.TileVertexDensities[ i ] ) ) ;
+		MAX_VERTEX_DIM = R3D_MAX( MAX_VERTEX_DIM, m_QualitySettings.VertexTileDim * ( 1 << m_QualitySettings.TileVertexDensities[ i ] ) );
 	}
 
-	int totalVertexCount = 0 ;
+	int totalVertexCount = 0;
 
-	for( int vc = m_QualitySettings.VertexTileDim ; vc <= MAX_VERTEX_DIM ; vc *= 2 )
+	for( int vc = m_QualitySettings.VertexTileDim; vc <= MAX_VERTEX_DIM; vc *= 2 )
 	{
-		m_ConnectionVertexOffsets.PushBack( totalVertexCount ) ;
-		totalVertexCount += ( vc + 1 ) * ( vc + 1 ) + vc * 4 ;
+		m_ConnectionVertexOffsets.PushBack( totalVertexCount );
+		totalVertexCount += ( vc + 1 ) * ( vc + 1 ) + vc * 4;
 	}
 
-	m_TileVertexBuffer	= new r3dVertexBuffer( totalVertexCount, sizeof( R3D_TERRAIN_VERTEX_2 ), 0, false, false, TerrainBufferMem ) ;
+	m_TileVertexBuffer	= new r3dVertexBuffer( totalVertexCount, sizeof( R3D_TERRAIN_VERTEX_2 ), 0, false, false, TerrainBufferMem );
 
-	int connectedCount = 0 ;
+	int connectedCount = 0;
 
-	for( int vc = m_QualitySettings.VertexTileDim, d = 0 ; vc <= MAX_VERTEX_DIM ; d ++, vc *= 2 )
+	for( int vc = m_QualitySettings.VertexTileDim, d = 0; vc <= MAX_VERTEX_DIM; d ++, vc *= 2 )
 	{
-		m_ConnectionIndexOffsets.Resize( m_ConnectionIndexOffsets.Count() + 1 ) ;
-		m_ConnectionIndexCounts.Resize( m_ConnectionIndexCounts.Count() + 1 ) ;
+		m_ConnectionIndexOffsets.Resize( m_ConnectionIndexOffsets.Count() + 1 );
+		m_ConnectionIndexCounts.Resize( m_ConnectionIndexCounts.Count() + 1 );
 
 		for( int i = 0; i < TERRA_CONNECTION_TYPE_COUNT; i ++ )
 		{
-			m_ConnectionIndexOffsets[ d ][ i ] = connectedCount ;
-			int count = CountConnectionIndices( vc, i ) ;
-			m_ConnectionIndexCounts[ d ][ i ] = count / 3 ;
+			m_ConnectionIndexOffsets[ d ][ i ] = connectedCount;
+			int count = CountConnectionIndices( vc, i );
+			m_ConnectionIndexCounts[ d ][ i ] = count / 3;
 
-			connectedCount += count ;
+			connectedCount += count;
 		}
 	}
 
-	m_TileIndexBuffer	= new r3dIndexBuffer( connectedCount + 6 + m_QualitySettings.VertexTileDim * 4 + 1, false, 2, TerrainBufferMem ) ;
+	m_TileIndexBuffer	= new r3dIndexBuffer( connectedCount + 6 + m_QualitySettings.VertexTileDim * 4 + 1, false, 2, TerrainBufferMem );
 
 	//------------------------------------------------------------------------
 	// fill vertex buffer
 	{
-		R3D_TERRAIN_VERTEX_2* vertexData = static_cast<R3D_TERRAIN_VERTEX_2*>( m_TileVertexBuffer->Lock() ) ;
-		R3D_TERRAIN_VERTEX_2* vertexStart = vertexData ;
+		R3D_TERRAIN_VERTEX_2* vertexData = static_cast<R3D_TERRAIN_VERTEX_2*>( m_TileVertexBuffer->Lock() );
+		R3D_TERRAIN_VERTEX_2* vertexStart = vertexData;
 
-		for( int vc = m_QualitySettings.VertexTileDim, d = 0 ; vc <= MAX_VERTEX_DIM ; d ++, vc *= 2 )
+		for( int vc = m_QualitySettings.VertexTileDim, d = 0; vc <= MAX_VERTEX_DIM; d ++, vc *= 2 )
 		{
-			const int VERTEX_TILE_DIM = vc ;
+			const int VERTEX_TILE_DIM = vc;
 
-			float x = -1.f, z = -1.f ;
-			float step = 2.f / VERTEX_TILE_DIM ;
+			float x = -1.f, z = -1.f;
+			float step = 2.f / VERTEX_TILE_DIM;
 
-			for( int i = 0, e = VERTEX_TILE_DIM + 1 ; i < e; i ++, z += step )
+			for( int i = 0, e = VERTEX_TILE_DIM + 1; i < e; i ++, z += step )
 			{
-				x = -1.f ;
-				for( int j = 0, e = VERTEX_TILE_DIM + 1 ; j < e ; j ++, x += step )
+				x = -1.f;
+				for( int j = 0, e = VERTEX_TILE_DIM + 1; j < e; j ++, x += step )
 				{
-					vertexData->pos.x = Conform( x ) ;
-					vertexData->pos.y = Conform( z ) ;
+					vertexData->pos.x = Conform( x );
+					vertexData->pos.y = Conform( z );
 
-					vertexData ++ ;
+					vertexData ++;
 				}
 			}
 
 			// connection vertices
-			x = -1.f + 1.0f / VERTEX_TILE_DIM ;
-			for( int i = 0, e = VERTEX_TILE_DIM ; i < e; i ++, x += step )
+			x = -1.f + 1.0f / VERTEX_TILE_DIM;
+			for( int i = 0, e = VERTEX_TILE_DIM; i < e; i ++, x += step )
 			{
-				vertexData->pos.x = Conform( x ) ;
-				vertexData->pos.y = Conform( -1.0f ) ;
+				vertexData->pos.x = Conform( x );
+				vertexData->pos.y = Conform( -1.0f );
 
-				vertexData ++ ;
+				vertexData ++;
 			}
 
-			x = -1.f + 1.0f / VERTEX_TILE_DIM ;
-			for( int i = 0, e = VERTEX_TILE_DIM ; i < e; i ++, x += step )
+			x = -1.f + 1.0f / VERTEX_TILE_DIM;
+			for( int i = 0, e = VERTEX_TILE_DIM; i < e; i ++, x += step )
 			{
-				vertexData->pos.x = Conform( x ) ;
-				vertexData->pos.y = Conform( +1.0f ) ;
+				vertexData->pos.x = Conform( x );
+				vertexData->pos.y = Conform( +1.0f );
 
-				vertexData ++ ;
+				vertexData ++;
 			}
 
-			z = -1.f + 1.0f / VERTEX_TILE_DIM ;
-			for( int i = 0, e = VERTEX_TILE_DIM ; i < e; i ++, z += step )
+			z = -1.f + 1.0f / VERTEX_TILE_DIM;
+			for( int i = 0, e = VERTEX_TILE_DIM; i < e; i ++, z += step )
 			{
-				vertexData->pos.x = Conform( -1.0f ) ;
-				vertexData->pos.y = Conform( z ) ;
+				vertexData->pos.x = Conform( -1.0f );
+				vertexData->pos.y = Conform( z );
 
-				vertexData ++ ;
+				vertexData ++;
 			}
 
-			z = -1.f + 1.0f / VERTEX_TILE_DIM ;
-			for( int i = 0, e = VERTEX_TILE_DIM ; i < e; i ++, z += step )
+			z = -1.f + 1.0f / VERTEX_TILE_DIM;
+			for( int i = 0, e = VERTEX_TILE_DIM; i < e; i ++, z += step )
 			{
-				vertexData->pos.x = Conform( +1.0f ) ;
-				vertexData->pos.y = Conform( z ) ;
+				vertexData->pos.x = Conform( +1.0f );
+				vertexData->pos.y = Conform( z );
 
-				vertexData ++ ;
+				vertexData ++;
 			}
 		}
 
-		r3d_assert( vertexData - vertexStart == m_TileVertexBuffer->GetItemCount() ) ;
+		r3d_assert( vertexData - vertexStart == m_TileVertexBuffer->GetItemCount() );
 
-		m_TileVertexBuffer->Unlock() ;
+		m_TileVertexBuffer->Unlock();
 	}
 
 	//------------------------------------------------------------------------
 	// fill index buffer
 	{
-		UINT16* indexData = (UINT16*) m_TileIndexBuffer->Lock() ;
+		UINT16* indexData = (UINT16*) m_TileIndexBuffer->Lock();
 
-		UINT16* pLodIndStart = indexData ;
+		UINT16* pLodIndStart = indexData;
 
-		for( int vc = m_QualitySettings.VertexTileDim, d = 0 ; vc <= MAX_VERTEX_DIM ; d ++, vc *= 2 )
+		for( int vc = m_QualitySettings.VertexTileDim, d = 0; vc <= MAX_VERTEX_DIM; d ++, vc *= 2 )
 		{
-			for( int i = 0, e = m_ConnectionIndexOffsets[ 0 ].COUNT ; i < e ; i ++ )
+			for( int i = 0, e = m_ConnectionIndexOffsets[ 0 ].COUNT; i < e; i ++ )
 			{
-				indexData += ConstructConnectionIndices( indexData, vc, i ) ;
+				indexData += ConstructConnectionIndices( indexData, vc, i );
 			}
 		}
 
-		int v0 = 0 ;
-		int v1 = m_QualitySettings.VertexTileDim ;
-		int v2 = ( m_QualitySettings.VertexTileDim + 1 ) * m_QualitySettings.VertexTileDim ;
-		int v3 = ( m_QualitySettings.VertexTileDim + 1 ) * ( m_QualitySettings.VertexTileDim + 1 ) - 1 ;
+		int v0 = 0;
+		int v1 = m_QualitySettings.VertexTileDim;
+		int v2 = ( m_QualitySettings.VertexTileDim + 1 ) * m_QualitySettings.VertexTileDim;
+		int v3 = ( m_QualitySettings.VertexTileDim + 1 ) * ( m_QualitySettings.VertexTileDim + 1 ) - 1;
 
-		m_4VertTileIndexOffset = indexData - pLodIndStart ;
+		m_4VertTileIndexOffset = indexData - pLodIndStart;
 
-		*indexData++ = v0 ;
-		*indexData++ = v1 ;
-		*indexData++ = v2 ;
-		*indexData++ = v1 ;
-		*indexData++ = v2 ;
-		*indexData++ = v3 ;
+		*indexData++ = v0;
+		*indexData++ = v1;
+		*indexData++ = v2;
+		*indexData++ = v1;
+		*indexData++ = v2;
+		*indexData++ = v3;
 
-		m_DebugVisIndexOffset = indexData - pLodIndStart ;
+		m_DebugVisIndexOffset = indexData - pLodIndStart;
 
-		*indexData++ = 0 ;
+		*indexData++ = 0;
 
-		for( int i = 0, e = m_QualitySettings.VertexTileDim ; i < e ; i ++ )
+		for( int i = 0, e = m_QualitySettings.VertexTileDim; i < e; i ++ )
 		{
-			*indexData ++ = i + 1 ;
+			*indexData ++ = i + 1;
 		}
 
-		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1 ; i < e ; i ++ )
+		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1; i < e; i ++ )
 		{
-			*indexData ++ = i * ( m_QualitySettings.VertexTileDim + 1 ) + m_QualitySettings.VertexTileDim ;
+			*indexData ++ = i * ( m_QualitySettings.VertexTileDim + 1 ) + m_QualitySettings.VertexTileDim;
 		}
 
-		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1 ; i < e ; i ++ )
+		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1; i < e; i ++ )
 		{
-			*indexData ++ = ( m_QualitySettings.VertexTileDim + 1 ) * m_QualitySettings.VertexTileDim + m_QualitySettings.VertexTileDim - i ;
+			*indexData ++ = ( m_QualitySettings.VertexTileDim + 1 ) * m_QualitySettings.VertexTileDim + m_QualitySettings.VertexTileDim - i;
 		}
 
-		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1 ; i < e ; i ++ )
+		for( int i = 1, e = m_QualitySettings.VertexTileDim + 1; i < e; i ++ )
 		{
-			*indexData ++ = ( m_QualitySettings.VertexTileDim - i ) * ( m_QualitySettings.VertexTileDim + 1 ) ;
+			*indexData ++ = ( m_QualitySettings.VertexTileDim - i ) * ( m_QualitySettings.VertexTileDim + 1 );
 		}
 
-		r3d_assert( indexData - pLodIndStart == m_TileIndexBuffer->GetItemCount() ) ;
+		r3d_assert( indexData - pLodIndStart == m_TileIndexBuffer->GetItemCount() );
 
-		m_TileIndexBuffer->Unlock() ;
+		m_TileIndexBuffer->Unlock();
 	}
 
 	//------------------------------------------------------------------------
 	// unit quad vertex buffer
 
-	m_UnitQuadVertexBuffer = new r3dVertexBuffer( 4, sizeof (R3D_TERRAIN_VERTEX_2), 0, false, false, TerrainBufferMem ) ;
+	m_UnitQuadVertexBuffer = new r3dVertexBuffer( 4, sizeof (R3D_TERRAIN_VERTEX_2), 0, false, false, TerrainBufferMem );
 
 	{
-		R3D_TERRAIN_VERTEX_2* vertexData = static_cast<R3D_TERRAIN_VERTEX_2*>( m_UnitQuadVertexBuffer->Lock() ) ;
+		R3D_TERRAIN_VERTEX_2* vertexData = static_cast<R3D_TERRAIN_VERTEX_2*>( m_UnitQuadVertexBuffer->Lock() );
 
-		vertexData ++ ->pos = Conform( float2( -1.0f, -1.0f ) ) ;
-		vertexData ++ ->pos = Conform( float2( +1.0f, -1.0f ) ) ;
-		vertexData ++ ->pos = Conform( float2( -1.0f, +1.0f ) ) ;
-		vertexData ++ ->pos = Conform( float2( +1.0f, +1.0f ) ) ;
+		vertexData ++ ->pos = Conform( float2( -1.0f, -1.0f ) );
+		vertexData ++ ->pos = Conform( float2( +1.0f, -1.0f ) );
+		vertexData ++ ->pos = Conform( float2( -1.0f, +1.0f ) );
+		vertexData ++ ->pos = Conform( float2( +1.0f, +1.0f ) );
 
-		m_UnitQuadVertexBuffer->Unlock() ;
+		m_UnitQuadVertexBuffer->Unlock();
 	}
 #endif
 
-	m_MaxAllocatedTiles = 0 ;
+	m_MaxAllocatedTiles = 0;
 }
 
 //------------------------------------------------------------------------
@@ -1021,30 +1050,23 @@ r3dTerrain2::CloseDynamic()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 
+	FreeAtlas();
 
-	for( int i = 0, e = m_Atlas.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int) m_AllocTileLodArray.Count(); i < e; i ++ )
 	{
-		SAFE_DELETE( m_Atlas[ i ].Diffuse ) ;
-		SAFE_DELETE( m_Atlas[ i ].Normal ) ;
+		m_AllocTileLodArray[ i ].Clear();
 	}
 
-	m_Atlas.Clear() ;
+	SAFE_DELETE( m_TempDiffuseRT );
+	SAFE_DELETE( m_TempNormalRT	);
 
-	for( int i = 0, e = (int) m_AllocTileLodArray.Count() ; i < e ; i ++ )
-	{
-		m_AllocTileLodArray[ i ].Clear() ;
-	}
+	SAFE_DELETE( m_UnitQuadVertexBuffer );
 
-	SAFE_DELETE( m_TempDiffuseRT ) ;
-	SAFE_DELETE( m_TempNormalRT	) ;
+	SAFE_DELETE( m_TileVertexBuffer );
+	SAFE_DELETE( m_TileIndexBuffer );
 
-	SAFE_DELETE( m_UnitQuadVertexBuffer ) ;
-
-	SAFE_DELETE( m_TileVertexBuffer ) ;
-	SAFE_DELETE( m_TileIndexBuffer ) ;
-
-	m_ConnectionVertexOffsets.Clear() ;
-	m_ConnectionIndexCounts.Clear() ;
+	m_ConnectionVertexOffsets.Clear();
+	m_ConnectionIndexCounts.Clear();
 #endif
 }
 
@@ -1055,73 +1077,73 @@ r3dTerrain2::Close()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 
-	for( int i = 0, e = m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
-		r3dTerrainLayer& layer = m_Layers[ i ] ;
+		r3dTerrainLayer& layer = m_Layers[ i ];
 
 		if( layer.DiffuseTex )
 		{
-			r3dRenderer->DeleteTexture( layer.DiffuseTex ) ;
-			layer.DiffuseTex = NULL ;
+			r3dRenderer->DeleteTexture( layer.DiffuseTex );
+			layer.DiffuseTex = NULL;
 		}
 
 		if( layer.NormalTex )
 		{
-			r3dRenderer->DeleteTexture( layer.NormalTex ) ;
-			layer.NormalTex = NULL ;
+			r3dRenderer->DeleteTexture( layer.NormalTex );
+			layer.NormalTex = NULL;
 		}
 	}
 
 	if( m_BaseLayer.DiffuseTex )
 	{
-		r3dRenderer->DeleteTexture( m_BaseLayer.DiffuseTex ) ;
-		m_BaseLayer.DiffuseTex = NULL ;
+		r3dRenderer->DeleteTexture( m_BaseLayer.DiffuseTex );
+		m_BaseLayer.DiffuseTex = NULL;
 	}
 
 	if( m_BaseLayer.NormalTex )
 	{
-		r3dRenderer->DeleteTexture( m_BaseLayer.NormalTex ) ;
-		m_BaseLayer.NormalTex = NULL ;
+		r3dRenderer->DeleteTexture( m_BaseLayer.NormalTex );
+		m_BaseLayer.NormalTex = NULL;
 	}
 
-	m_Layers.Clear() ;
+	m_Layers.Clear();
 
-	for( int i = 0, e = (int)m_Masks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_Masks.Count(); i < e; i ++ )
 	{
-		r3dRenderer->DeleteTexture( m_Masks[ i ] ) ;
-		m_Masks[ i ] = NULL ;
+		r3dRenderer->DeleteTexture( m_Masks[ i ] );
+		m_Masks[ i ] = NULL;
 	}
 
-	m_Masks.Clear() ;
+	m_Masks.Clear();
 
 	if( m_ColorTex )
 	{
-		r3dRenderer->DeleteTexture( m_ColorTex ) ;
-		m_ColorTex = NULL ;
+		r3dRenderer->DeleteTexture( m_ColorTex );
+		m_ColorTex = NULL;
 	}
 
 	if( m_HeightTex )
 	{
-		r3dRenderer->DeleteTexture( m_HeightTex ) ;
-		m_HeightTex = NULL ;
+		r3dRenderer->DeleteTexture( m_HeightTex );
+		m_HeightTex = NULL;
 	}
 
 	if( m_NormalTex )
 	{
-		r3dRenderer->DeleteTexture( m_NormalTex ) ;
-		m_NormalTex = NULL ;
+		r3dRenderer->DeleteTexture( m_NormalTex );
+		m_NormalTex = NULL;
 	}
 
 	if( m_DetailNormalTex )
 	{
-		r3dRenderer->DeleteTexture( m_DetailNormalTex ) ;
-		m_DetailNormalTex = NULL ;
+		r3dRenderer->DeleteTexture( m_DetailNormalTex );
+		m_DetailNormalTex = NULL;
 	}
 
-	SAFE_DELETE( m_DynamicVertexBuffer ) ;
+	SAFE_DELETE( m_DynamicVertexBuffer );
 #endif
 
-	CloseDynamic() ;
+	CloseDynamic();
 }
 
 //------------------------------------------------------------------------
@@ -1133,19 +1155,19 @@ r3dTerrain2::UpdateAtlas( const r3dCamera& cam )
 
 	if( !m_IsQualityUpdated )
 	{
-		UpdateQualitySettings() ;
-		m_IsQualityUpdated = 1 ;
+		UpdateQualitySettings();
+		m_IsQualityUpdated = 1;
 	}
 
 #ifndef FINAL_BUILD
 	if( d_terrain2_no_updates->GetInt() )
-		return ;
+		return;
 #endif
 
-	UpdateTiles( cam ) ;
-	UpdateTileMips() ;
+	UpdateTiles( cam );
+	UpdateTileMips();
 
-	UpdateEditor() ;
+	UpdateEditor();
 #endif
 }
 
@@ -1158,35 +1180,35 @@ r3dTerrain2::Render( const r3dCamera& cam )
 	extern int _render_Terrain;
 	if(!_render_Terrain) return;
 
-	R3DPROFILE_FUNCTION( "r3dTerrain2::Render" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::Render" );
 
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::Render" ) ;
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::Render" );
 
-	UpdateVisibleTiles() ;
+	UpdateVisibleTiles();
 
 #ifndef FINAL_BUILD
 	if( r_terrain2_show_tiles->GetInt() && m_VisibleTiles.Count() )
 	{
-		m_DebugVisibleTiles.Resize( m_VisibleTiles.Count() ) ;
-		memcpy( &m_DebugVisibleTiles[ 0 ], &m_VisibleTiles[ 0 ], m_VisibleTiles.Count() * sizeof m_VisibleTiles[ 0 ] ) ;
+		m_DebugVisibleTiles.Resize( m_VisibleTiles.Count() );
+		memcpy( &m_DebugVisibleTiles[ 0 ], &m_VisibleTiles[ 0 ], m_VisibleTiles.Count() * sizeof m_VisibleTiles[ 0 ] );
 	}
 	else
 	{
-		m_DebugVisibleTiles.Clear() ;
+		m_DebugVisibleTiles.Clear();
 	}
 #endif
 
-	StartTileRendering() ;
+	StartTileRendering();
 
-	for( int i = 0, e  = m_VisibleTiles.Count() ; i < e ; i ++ )
+	for( int i = 0, e  = m_VisibleTiles.Count(); i < e; i ++ )
 	{
-		const AllocatedTile* tile = m_VisibleTiles[ i ] ;
-		RenderTile( tile ) ;
+		const AllocatedTile* tile = m_VisibleTiles[ i ];
+		RenderTile( tile );
 	}
 
-	EndTileRendering() ;
+	EndTileRendering();
 
-	D3DPERF_EndEvent() ;
+	D3DPERF_EndEvent();
 #endif
 }
 
@@ -1196,23 +1218,23 @@ void
 r3dTerrain2::RenderShadows()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::RenderShadows" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::RenderShadows" );
 
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderShadows" ) ;
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderShadows" );
 
-	UpdateVisibleTiles() ;
+	UpdateVisibleTiles();
 
-	StartShadowRender() ;
+	StartShadowRender();
 
-	for( int i = 0, e  = m_VisibleTiles.Count() ; i < e ; i ++ )
+	for( int i = 0, e  = m_VisibleTiles.Count(); i < e; i ++ )
 	{
-		const AllocatedTile* tile = m_VisibleTiles[ i ] ;
-		RenderShadowTile( tile ) ;
+		const AllocatedTile* tile = m_VisibleTiles[ i ];
+		RenderShadowTile( tile );
 	}
 
-	StopShadowRender() ;
+	StopShadowRender();
 
-	D3DPERF_EndEvent() ;
+	D3DPERF_EndEvent();
 #endif
 }
 
@@ -1222,23 +1244,23 @@ void
 r3dTerrain2::RenderDepth()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::RenderDepth" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::RenderDepth" );
 
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderDepth" ) ;
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderDepth" );
 
-	UpdateVisibleTiles() ;
+	UpdateVisibleTiles();
 
-	StartDepthRender() ;
+	StartDepthRender();
 
-	for( int i = 0, e  = m_VisibleTiles.Count() ; i < e ; i ++ )
+	for( int i = 0, e  = m_VisibleTiles.Count(); i < e; i ++ )
 	{
-		const AllocatedTile* tile = m_VisibleTiles[ i ] ;
-		RenderDepthTile( tile ) ;
+		const AllocatedTile* tile = m_VisibleTiles[ i ];
+		RenderDepthTile( tile );
 	}
 
-	StopDepthRender() ;
+	StopDepthRender();
 
-	D3DPERF_EndEvent() ;
+	D3DPERF_EndEvent();
 #endif
 }
 
@@ -1251,92 +1273,92 @@ r3dTerrain2::DrawDebug()
 #ifndef FINAL_BUILD
 	if( r_terrain2_show_atlas->GetInt() )
 	{
-		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 
-		int vol = r_terrain2_show_atlas_volume->GetInt() ;
+		int vol = r_terrain2_show_atlas_volume->GetInt();
 
-		vol = R3D_MIN( R3D_MAX( vol, 0 ), (int)m_Atlas.Count() - 1 ) ;
+		vol = R3D_MIN( R3D_MAX( vol, 0 ), (int)m_Atlas.Count() - 1 );
 
-		r3dTexture* tex = m_Atlas[ vol ].Diffuse->Tex ;
+		r3dTexture* tex = m_Atlas[ vol ].Diffuse->Tex;
 
-		float scale = 1.0f / r_terrain2_show_atlas_scale->GetFloat() ;
+		float scale = 1.0f / r_terrain2_show_atlas_scale->GetFloat();
 
-		float w = scale * tex->GetWidth() ;
-		float h = scale * tex->GetHeight() ;
+		float w = scale * tex->GetWidth();
+		float h = scale * tex->GetHeight();
 
-		float off_x = scale * r_terrain2_show_atlas_off_x->GetFloat() ;
-		float off_y = scale * r_terrain2_show_atlas_off_y->GetFloat() ;
+		float off_x = scale * r_terrain2_show_atlas_off_x->GetFloat();
+		float off_y = scale * r_terrain2_show_atlas_off_y->GetFloat();
 
-		r3dColor colr = r3dColor::white ;
-		colr.A = R3D_MAX( R3D_MIN( int( r_terrain2_show_atlas_oppa->GetFloat() * 255 ), 255 ), 0 ) ;
+		r3dColor colr = r3dColor::white;
+		colr.A = R3D_MAX( R3D_MIN( int( r_terrain2_show_atlas_oppa->GetFloat() * 255 ), 255 ), 0 );
 
 		r3dDrawBox2D( r3dRenderer->ScreenW2 - w / 2 + off_x, r3dRenderer->ScreenH2 - h / 2 + off_y, w, h, colr, tex );
 
-		r3dRenderer->SetRenderingMode( R3D_BLEND_POP ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 	}
 
 	if( r_terrain2_show_splat->GetInt() )
 	{
-		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 
-		int idx = r_terrain2_show_splat_idx->GetInt() ;
+		int idx = r_terrain2_show_splat_idx->GetInt();
 
-		idx = R3D_MIN( R3D_MAX( idx, 0 ), (int)m_Masks.Count() - 1 ) ;
+		idx = R3D_MIN( R3D_MAX( idx, 0 ), (int)m_Masks.Count() - 1 );
 
-		r3dTexture* tex = m_Masks[ idx ] ;
+		r3dTexture* tex = m_Masks[ idx ];
 
-		float w = 512 ;
-		float h = 512 ;
+		float w = 512;
+		float h = 512;
 
-		r3dColor colr = r3dColor::white ;
+		r3dColor colr = r3dColor::white;
 
 		r3dDrawBox2D( r3dRenderer->ScreenW2 - w / 2, r3dRenderer->ScreenH2 - h / 2, w, h, colr, tex );
 
-		r3dRenderer->SetRenderingMode( R3D_BLEND_POP ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 	}
 
 	if( r_terrain2_show_tiles->GetInt() )
 	{
-		Terrain2VertexShaderId vsid ;
+		Terrain2VertexShaderId vsid;
 
-		vsid.shadowPath = 0 ;
-		vsid.depthPath = 0 ;
-		vsid.vfetchless = !m_AllowVFetch ;
+		vsid.shadowPath = 0;
+		vsid.depthPath = 0;
+		vsid.vfetchless = !m_AllowVFetch;
 
-		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] ) ;
+		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] );
 
-		extern int g_FwdColorPS ;
-		r3dRenderer->SetPixelShader( g_FwdColorPS ) ;
+		extern int g_FwdColorPS;
+		r3dRenderer->SetPixelShader( g_FwdColorPS );
 
-		float psColor[ 4 ] = { 0, 1, 0, 1 } ;
-		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, psColor, 1 ) ) ;
+		float psColor[ 4 ] = { 0, 1, 0, 1 };
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psColor, 1 ) );
 
-		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_PUSH );
 
-		SetupTileRenderingVertexStates() ;
+		SetupTileRenderingVertexStates();
 
-		for( int i = 0, e = (int)m_DebugVisibleTiles.Count() ; i < e ; i ++ )
+		for( int i = 0, e = (int)m_DebugVisibleTiles.Count(); i < e; i ++ )
 		{
-			const AllocatedTile* tile = m_DebugVisibleTiles[ i ] ;
+			const AllocatedTile* tile = m_DebugVisibleTiles[ i ];
 
 			// hack offset...
-			float oldOffset = m_HeightOffset ;
+			float oldOffset = m_HeightOffset;
 
-			m_HeightOffset += 0.05f ;
+			m_HeightOffset += 0.05f;
 
-			SetTileRenderVSConsts( tile ) ;
+			SetTileRenderVSConsts( tile );
 
-			m_HeightOffset = oldOffset ;
+			m_HeightOffset = oldOffset;
 
 			r3dRenderer->DrawIndexed(	D3DPT_LINESTRIP, 0, 0, 
 										( m_QualitySettings.VertexTileDim + 1 ) * ( m_QualitySettings.VertexTileDim + 1 ),
 										m_DebugVisIndexOffset, 
-										m_QualitySettings.VertexTileDim * 4 ) ;
+										m_QualitySettings.VertexTileDim * 4 );
 		}
 
-		StopUsingTileGeom() ;
+		StopUsingTileGeom();
 
-		r3dRenderer->SetRenderingMode( R3D_BLEND_POP ) ;
+		r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
 	}
 #endif
 #endif
@@ -1347,22 +1369,26 @@ r3dTerrain2::DrawDebug()
 void
 r3dTerrain2::RecalcLayerVars()
 {
-	for( int i = 0, e = m_Layers.Count() ; i < e; i ++ )
+#if R3D_TERRAIN_V2_GRAPHICS
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
-		RecalcLayerVar( &m_Layers[ i ] ) ;
+		RecalcLayerVar( &m_Layers[ i ] );
 	}
 
-	RecalcLayerVar( &m_BaseLayer ) ;
+	RecalcLayerVar( &m_BaseLayer );
 
-	m_MatTypeIdxes.Clear() ;
-	m_MatTypeIdxes.Resize( m_Layers.Count() ) ;
+	m_MatTypeIdxes.Clear();
+	m_MatTypeIdxes.Resize( m_Layers.Count() + 1 );
 
-	for( int i = 0, e = m_Layers.Count() ; i < e ; i ++ )
+	m_MatTypeIdxes[ 0 ] = g_pMaterialTypes->GetIdx( m_BaseLayer.MaterialTypeName );
+
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
-		const r3dTerrainLayer& layer = m_Layers[ i ] ;
+		const r3dTerrainLayer& layer = m_Layers[ i ];
 		if(g_pMaterialTypes)
-			m_MatTypeIdxes[ i ] = g_pMaterialTypes->GetIdx( layer.MaterialTypeName );
+			m_MatTypeIdxes[ i + 1 ] = g_pMaterialTypes->GetIdx( layer.MaterialTypeName );
 	}
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -1372,42 +1398,42 @@ int	r3dTerrain2::Load1( const char* DirName )
 #if R3D_TERRAIN_V2_GRAPHICS
 	char 	TempStr[512];
 
-	m_Path = DirName ;
+	m_Path = DirName;
 
 	sprintf( TempStr, "%s/terrain.ini", DirName );
 
-	r3d_assert ( r3dFileExists( TempStr ) ) ;
+	r3d_assert ( r3dFileExists( TempStr ) );
 
-	r3dOutToLog("TERRAIN2: Loading from ancient script '%s'\n", TempStr ) ;
+	r3dOutToLog("TERRAIN2: Loading from ancient script '%s'\n", TempStr );
 	if( !LoadFromScript1( TempStr, DirName ) )
-		return 0 ;
+		return 0;
 
-	r3dFile	*f = r3d_open( Va( "%s/terrain.heightmap", m_Path.c_str() ), "rb") ;
+	r3dFile	*f = r3d_open( Va( "%s/terrain.heightmap", m_Path.c_str() ), "rb");
 
 	if( !f )
-		return 0 ;
+		return 0;
 
-	RecalcVars() ;
+	RecalcVars();
 
 	if( !LoadBin1( f ) )
-		return 0 ;
+		return 0;
 
-	ConvertSplatsFrom1() ;
+	ConvertSplatsFrom1();
 
-	Init() ;
+	Init();
 
-	UpdateRoadInfo() ;
+	UpdateRoadInfo();
 
-	UpdateDesc() ;
+	UpdateDesc();
 
-	m_BaseQualitySettings[ QS_HIGH ] = m_QualitySettings ;
-	PopulateInferiorQualitySettings() ;
+	m_BaseQualitySettings[ QS_HIGH ] = m_QualitySettings;
+	PopulateInferiorQualitySettings();
 
-	m_IsQualityUpdated = 0 ;
-	m_IsLoaded = 1 ;
+	m_IsQualityUpdated = 0;
+	m_IsLoaded = 1;
 #endif
 
-	return 1 ;
+	return 1;
 }
 
 //------------------------------------------------------------------------
@@ -1423,7 +1449,7 @@ r3dTerrain2::LoadFromScript1( const char * fileName, const char* sourceLevelPath
 
 	char buffer[ MAX_PATH ];
 
-	int layerCount = 0 ;
+	int layerCount = 0;
 
 	while ( ! script.EndOfFile() )
 	{
@@ -1433,14 +1459,14 @@ r3dTerrain2::LoadFromScript1( const char * fileName, const char* sourceLevelPath
 
 		if ( ! strcmp( buffer, "size:" ) )
 		{
-			m_VertexCountX = int( script.GetFloat() ) ;
-			m_VertexCountZ = m_VertexCountX ;
+			m_VertexCountX = int( script.GetFloat() );
+			m_VertexCountZ = m_VertexCountX;
 
-			RecalcTileCounts() ;
+			RecalcTileCounts();
 		}
 		else if ( ! strcmp( buffer, "cell_size:" ) )
 		{
-			m_TileUnitWorldDim = script.GetFloat() ;
+			m_TileUnitWorldDim = script.GetFloat();
 		}
 		else if ( ! strcmp( buffer, "height:" ) )
 		{
@@ -1449,17 +1475,17 @@ r3dTerrain2::LoadFromScript1( const char * fileName, const char* sourceLevelPath
 		else if ( ! strcmp( buffer, "normal_scl:" ) )
 		{
 			// unused
-			script.GetFloat() ;
+			script.GetFloat();
 		}
 		else if ( ! strcmp( buffer, "hm_blend:" ) )
 		{
 			// unused
-			script.GetFloat() ;
+			script.GetFloat();
 		}
 		else if ( ! strcmp( buffer, "split_dist:" ) )
 		{
 			// unused
-			script.GetFloat() ;
+			script.GetFloat();
 		}
 		else if ( ! strcmp( buffer, "lod:" ) )
 		{
@@ -1507,13 +1533,13 @@ r3dTerrain2::LoadFromScript1( const char * fileName, const char* sourceLevelPath
 
 	if( !m_SplatResolutionU )
 	{
-		m_SplatResolutionU = m_VertexCountX ;
-		m_SplatResolutionV = m_SplatResolutionU ;
+		m_SplatResolutionU = m_VertexCountX;
+		m_SplatResolutionV = m_SplatResolutionU;
 	}
 
 #endif
 
-	return true ;
+	return true;
 }
 
 //------------------------------------------------------------------------
@@ -1544,17 +1570,17 @@ r3dTerrain2::LoadLayerFromScript1( Script_c *script, r3dTerrainLayer* layer, int
 			hasTextures = true;
 
 			script->GetString( szName, sizeof( szName ) );
-			layer->DiffuseTex = r3dRenderer->LoadTexture( szName, D3DFMT_UNKNOWN, false, DownScale );				
+			layer->DiffuseTex = r3dRenderer->LoadTexture( szName, D3DFMT_UNKNOWN, false, DownScale );
 		}
 		else if( !strcmp(buffer, "split_enable:" ))
 		{
 			// unused
-			script->GetInt() ;
+			script->GetInt();
 		}
 		else if ( ! strcmp( buffer, "scale:" ) )
 		{
 			layer->ScaleU = script->GetFloat();
-			layer->ScaleV = layer->ScaleU ;
+			layer->ScaleV = layer->ScaleU;
 		}
 		else if ( ! strcmp( buffer, "split:" ) )
 		{
@@ -1580,23 +1606,23 @@ r3dTerrain2::LoadLayerFromScript1( Script_c *script, r3dTerrainLayer* layer, int
 
 			script->GetLine( buff, sizeof buff - 1 );
 
-			char name[ 128 ] ;
+			char name[ 128 ];
 
-			name[ 0 ] = 0 ;
+			name[ 0 ] = 0;
 
 			sscanf( buff, "%31s", name );
 
-			layer->MaterialTypeName = name ;
+			layer->MaterialTypeName = name;
 		}
 	}
 
-	char name[ 256 ] ;
+	char name[ 256 ];
 
-	sprintf( name, "Layer %d", *count ) ;
+	sprintf( name, "Layer %d", *count );
 
-	layer->Name = name ;
+	layer->Name = name;
 
-	++*count ;
+	++*count;
 
 	return hasTextures;
 }
@@ -1619,11 +1645,11 @@ r3dTerrain2::LoadMaterialsFromScript1( Script_c *script, const char* sourceLevel
 
 	#define TERRAIN_LAYERS_PER_MAT 4
 
-	int channelIdx = 0 ;
+	int channelIdx = 0;
 
-	int startMatLayer = m_Layers.Count() ;
+	int startMatLayer = m_Layers.Count();
 
-	int layerCount = 0 ;
+	int layerCount = 0;
 
 	while ( ! script->EndOfFile() )
 	{
@@ -1660,46 +1686,46 @@ r3dTerrain2::LoadMaterialsFromScript1( Script_c *script, const char* sourceLevel
 		}
 		else if ( ! strcmp( buffer, "layer" ) )
 		{
-			m_Layers.Resize( m_Layers.Count() + 1 ) ;
-			m_Layers.GetLast().ChannelIdx = channelIdx ++ ;
+			m_Layers.Resize( m_Layers.Count() + 1 );
+			m_Layers.GetLast().ChannelIdx = channelIdx ++;
 			layersHasTextures |= LoadLayerFromScript1( script, &m_Layers.GetLast(), &layerCount );
 		}
 	}
 
-	int keepLayer = 0 ;
+	int keepLayer = 0;
 
 	if( szName[0] && layersHasTextures )
 	{
-		r3d_assert( g_bEditMode ) ;
+		r3d_assert( g_bEditMode );
 
 		{
-			m_Masks.Resize( m_Masks.Count() + 1 ) ;
+			m_Masks.Resize( m_Masks.Count() + 1 );
 
-			int width = m_TileCountX * m_QualitySettings.VertexTileDim ;
-			int height = m_TileCountZ * m_QualitySettings.VertexTileDim ;
+			int width = m_TileCountX * m_QualitySettings.VertexTileDim;
+			int height = m_TileCountZ * m_QualitySettings.VertexTileDim;
 
-			IDirect3DTexture9* tex ;
-			D3D_V( D3DXCreateTextureFromFileEx( r3dRenderer->pd3ddev, szName, width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM,  D3DX_DEFAULT,  D3DX_DEFAULT, 0, NULL, NULL, &tex ) ) ;
+			IDirect3DTexture9* tex;
+			D3D_V( D3DXCreateTextureFromFileEx( r3dRenderer->pd3ddev, szName, width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM,  D3DX_DEFAULT,  D3DX_DEFAULT, 0, NULL, NULL, &tex ) );
 
-			r3dTexture* r3dtex = r3dRenderer->AllocateTexture() ;
-			r3dD3DTextureTunnel texTunnel ;
+			r3dTexture* r3dtex = r3dRenderer->AllocateTexture();
+			r3dD3DTextureTunnel texTunnel;
 
-			texTunnel.Set( tex ) ;
+			texTunnel.Set( tex );
 
-			r3dtex->Setup( width, height, 1,  D3DFMT_A8R8G8B8, 1, &texTunnel, false ) ;
+			r3dtex->Setup( width, height, 1,  D3DFMT_A8R8G8B8, 1, &texTunnel, false );
 			
-			m_Masks.GetLast() = r3dtex ;
+			m_Masks.GetLast() = r3dtex;
 
 			if( !(m_Masks.GetLast()->IsLoaded() ) )
 			{
 				r3dRenderer->DeleteTexture( m_Masks.GetLast() );
-				m_Masks.Resize( m_Masks.Count() - 1 ) ;
+				m_Masks.Resize( m_Masks.Count() - 1 );
 			}
 		}
 	}
 	else
 	{
-		m_Layers.Resize( startMatLayer ) ;
+		m_Layers.Resize( startMatLayer );
 	}
 }
 
@@ -1711,31 +1737,31 @@ static void check_fread( void* p, size_t size, r3dFile* fin )
 	r3d_assert( num_read == 1 );
 }
 
-void ReadTerrainHeader( r3dFile* file, uint32_t& dwSignature, uint32_t& dwVersion ) ;
+void ReadTerrainHeader( r3dFile* file, uint32_t& dwSignature, uint32_t& dwVersion );
 
 bool
 r3dTerrain2::LoadBin1( r3dFile* file )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	uint32_t signature, version ;
-	ReadTerrainHeader( file, signature, version ) ;
+	uint32_t signature, version;
+	ReadTerrainHeader( file, signature, version );
 
-	r3d_assert( version == 5 ) ;
+	r3d_assert( version == 5 );
 
-	int totalCountX = m_TileCountX * m_QualitySettings.VertexTileDim ;
+	int totalCountX = m_TileCountX * m_QualitySettings.VertexTileDim;
 	// bcox we supported only square in 1
-	int totalCountZ = totalCountX ;
-	int dim = totalCountX ;
-	int elemCount = dim * dim ;
+	int totalCountZ = totalCountX;
+	int dim = totalCountX;
+	int elemCount = dim * dim;
 
-	float minHeight ;
-	float maxHeight ;
+	float minHeight;
+	float maxHeight;
 
 	check_fread( &minHeight, sizeof minHeight, file );
 	check_fread( &maxHeight, sizeof minHeight, file );
 
-	m_HeightOffset = minHeight ;
-	m_HeightScale = maxHeight - minHeight ;
+	m_HeightOffset = minHeight;
+	m_HeightScale = maxHeight - minHeight;
 
 	//------------------------------------------------------------------------
 	// height texture
@@ -1744,56 +1770,56 @@ r3dTerrain2::LoadBin1( r3dFile* file )
 
 		check_fread( &hfData[0], hfData.Count() * sizeof( hfData[0] ), file );
 
-		InitFromHeights( hfData, true ) ;
+		InitFromHeights( hfData, true );
 	}
 
 	//------------------------------------------------------------------------
 	// color texture
 	{
-		uint32_t* colorData ;
+		uint32_t* colorData;
 
 		colorData	= new uint32_t[ elemCount ];
 		uint32_t memSize = elemCount * sizeof(uint32_t);
 
-		fseek( file, -(int)memSize, SEEK_END ) ;
+		fseek( file, -(int)memSize, SEEK_END );
 
 		fread( colorData, memSize, 1, file );
 
-		m_ColorTex = r3dRenderer->AllocateTexture() ;
+		m_ColorTex = r3dRenderer->AllocateTexture();
 
-		IDirect3DTexture9* tex_argb ;
-		D3D_V( r3dRenderer->pd3ddev->CreateTexture( dim, dim, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &tex_argb, NULL ) ) ;
+		IDirect3DTexture9* tex_argb;
+		D3D_V( r3dRenderer->pd3ddev->CreateTexture( dim, dim, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &tex_argb, NULL ) );
 
-		D3DLOCKED_RECT lrect ;
+		D3DLOCKED_RECT lrect;
 
-		D3D_V( tex_argb->LockRect( 0, &lrect, NULL, 0 ) ) ;
+		D3D_V( tex_argb->LockRect( 0, &lrect, NULL, 0 ) );
 
-		memcpy( lrect.pBits, colorData, memSize ) ;
+		memcpy( lrect.pBits, colorData, memSize );
 
-		for( int i = 0, e = memSize / sizeof( uint32_t ) ; i < e ; i ++ )
+		for( int i = 0, e = memSize / sizeof( uint32_t ); i < e; i ++ )
 		{
-			((uint32_t*)lrect.pBits)[ i ] |= 0xff000000 ;
+			((uint32_t*)lrect.pBits)[ i ] |= 0xff000000;
 		}
 
-		tex_argb->UnlockRect( 0 ) ;
+		tex_argb->UnlockRect( 0 );
 
-		ID3DXBuffer* fileInMem ;
-		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, tex_argb, NULL ) ) ;
+		ID3DXBuffer* fileInMem;
+		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, tex_argb, NULL ) );
 
-		SAFE_RELEASE( tex_argb ) ;
+		SAFE_RELEASE( tex_argb );
 
-		IDirect3DTexture9* tex_dxt1 ;
+		IDirect3DTexture9* tex_dxt1;
 
 		D3D_V( D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(), dim, dim, 1, 0, 
-													TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 ) ) ;
+													TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 ) );
 
-		r3dD3DTextureTunnel tunnel ;
+		r3dD3DTextureTunnel tunnel;
 
-		tunnel.Set( tex_dxt1 ) ;
+		tunnel.Set( tex_dxt1 );
 
-		m_ColorTex->Setup( dim, dim, 1, TERRA2_COLORMODULATION_FORMAT, 1, &tunnel, false ) ;
+		m_ColorTex->Setup( dim, dim, 1, TERRA2_COLORMODULATION_FORMAT, 1, &tunnel, false );
 
-		SAFE_RELEASE( fileInMem ) ;
+		SAFE_RELEASE( fileInMem );
 
 		SAFE_DELETE_ARRAY( colorData );
 	}
@@ -1801,7 +1827,7 @@ r3dTerrain2::LoadBin1( r3dFile* file )
 	//------------------------------------------------------------------------
 #endif
 
-	return 1 ;
+	return 1;
 }
 
 //------------------------------------------------------------------------
@@ -1811,150 +1837,150 @@ r3dTerrain2::ConvertSplatsFrom1()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 
-	int baseWidth = m_Masks[ 0 ]->GetWidth() ;
-	int baseHeight = m_Masks[ 0 ]->GetHeight() ;
+	int baseWidth = m_Masks[ 0 ]->GetWidth();
+	int baseHeight = m_Masks[ 0 ]->GetHeight();
 
-	int elemCount = baseWidth * baseHeight ;
+	int elemCount = baseWidth * baseHeight;
 
-	for( int i = 0, e = m_Masks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Masks.Count(); i < e; i ++ )
 	{
-		r3dTexture* mask = m_Masks[ i ] ;
+		r3dTexture* mask = m_Masks[ i ];
 		r3d_assert( mask->GetWidth() == baseWidth
 						&&
-					mask->GetHeight() == baseHeight ) ;
+					mask->GetHeight() == baseHeight );
 
-		int lastChannelCount = m_LayerChannels.Count() ;
-		m_LayerChannels.Resize( lastChannelCount + 4 ) ;
+		int lastChannelCount = m_LayerChannels.Count();
+		m_LayerChannels.Resize( lastChannelCount + 4 );
 
 		// sizzle numbers to represent ARGB 
-		LayerChannel& ch3 = m_LayerChannels[ lastChannelCount ++ ] ;
-		LayerChannel& ch2 = m_LayerChannels[ lastChannelCount ++ ] ;
-		LayerChannel& ch1 = m_LayerChannels[ lastChannelCount ++ ] ;
-		LayerChannel& ch0 = m_LayerChannels[ lastChannelCount ++ ] ;
+		LayerChannel& ch3 = m_LayerChannels[ lastChannelCount ++ ];
+		LayerChannel& ch2 = m_LayerChannels[ lastChannelCount ++ ];
+		LayerChannel& ch1 = m_LayerChannels[ lastChannelCount ++ ];
+		LayerChannel& ch0 = m_LayerChannels[ lastChannelCount ++ ];
 
-		ch0.Resize( elemCount ) ;
-		ch1.Resize( elemCount ) ;
-		ch2.Resize( elemCount ) ;
-		ch3.Resize( elemCount ) ;
+		ch0.Resize( elemCount );
+		ch1.Resize( elemCount );
+		ch2.Resize( elemCount );
+		ch3.Resize( elemCount );
 		
 #pragma pack( push, 1 )
 		struct Channeled
 		{
-			unsigned char x ;
-			unsigned char y ;
-			unsigned char z ;
-			unsigned char w ;
-		} * locked = (Channeled*) mask->Lock( 0 ) ;
+			unsigned char x;
+			unsigned char y;
+			unsigned char z;
+			unsigned char w;
+		} * locked = (Channeled*) mask->Lock( 0 );
 #pragma pack( pop )
 
-		for( int i = 0, e = elemCount ; i < e ; i ++, locked ++ )
+		for( int i = 0, e = elemCount; i < e; i ++, locked ++ )
 		{
-			int x = i % baseWidth ;
-			int z = i / baseWidth ;
+			int x = i % baseWidth;
+			int z = i / baseWidth;
 
-			int idx = x + ( baseWidth - z - 1 ) * baseWidth ;
+			int idx = x + ( baseWidth - z - 1 ) * baseWidth;
 
-			ch0[ idx ] = locked->x ;
-			ch1[ idx ] = locked->y ;
-			ch2[ idx ] = locked->z ;
-			ch3[ idx ] = locked->w ;
+			ch0[ idx ] = locked->x;
+			ch1[ idx ] = locked->y;
+			ch2[ idx ] = locked->z;
+			ch3[ idx ] = locked->w;
 		}
 
-		mask->Unlock() ;
+		mask->Unlock();
 	}
 
-	for( int i = 0, e = m_Masks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Masks.Count(); i < e; i ++ )
 	{
-		r3dRenderer->DeleteTexture( m_Masks[ i ] ) ;
+		r3dRenderer->DeleteTexture( m_Masks[ i ] );
 	}
 
-	m_Masks.Clear() ;
+	m_Masks.Clear();
 
 	struct TempTex
 	{
 		TempTex( int baseWidth, int baseHeight )
 		{
-			D3D_V( r3dRenderer->pd3ddev->CreateTexture( baseWidth, baseHeight, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &resource, NULL ) ) ;
+			D3D_V( r3dRenderer->pd3ddev->CreateTexture( baseWidth, baseHeight, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &resource, NULL ) );
 		}
 
 		~TempTex()
 		{
-			SAFE_RELEASE( resource ) ;
+			SAFE_RELEASE( resource );
 		}
 
-		IDirect3DTexture9* resource ;
-	} tempTex( baseWidth, baseHeight ) ;
+		IDirect3DTexture9* resource;
+	} tempTex( baseWidth, baseHeight );
 
-	DoUpdateDominantLayerData( baseWidth, baseHeight ) ;
+	DoUpdateDominantLayerData( baseWidth, baseHeight );
 
-	for( int L = 0, e = m_Layers.Count() ; L < e ; L += 3 )
+	for( int L = 0, e = m_Layers.Count(); L < e; L += 3 )
 	{
-		int channelCount = R3D_MIN( int( m_Layers.Count() - L ) , 3 ) ;
+		int channelCount = R3D_MIN( int( m_Layers.Count() - L ) , 3 );
 
-		D3DLOCKED_RECT lockedRect ;
-		D3D_V( tempTex.resource->LockRect( 0, &lockedRect, NULL, 0 ) ) ;
+		D3DLOCKED_RECT lockedRect;
+		D3D_V( tempTex.resource->LockRect( 0, &lockedRect, NULL, 0 ) );
 
 		struct Channeled16
 		{
-			UINT16 b : 5 ;
-			UINT16 g : 6 ;
-			UINT16 r : 5 ;
-		} * locked = ( Channeled16* )lockedRect.pBits ;
+			UINT16 b : 5;
+			UINT16 g : 6;
+			UINT16 r : 5;
+		} * locked = ( Channeled16* )lockedRect.pBits;
 
-		TL_STATIC_ASSERT( sizeof *locked == 2 ) ;
+		COMPILE_ASSERT( sizeof *locked == 2 );
 
 		struct To16bit
 		{
 			R3D_FORCEINLINE UINT8 operator() ( float val, int base )
 			{
-				int res = int( val * base / 255 ) ;
+				int res = int( val * base / 255 );
 
-				res = R3D_MAX( R3D_MIN( (int)res, base ), 0 ) ;
+				res = R3D_MAX( R3D_MIN( (int)res, base ), 0 );
 
-				return UINT8 ( res ) ;
+				return UINT8 ( res );
 			}
 
 		} to16bit;
 
-		for( int i = 0, e = elemCount ; i < e ; i ++, locked ++ )
+		for( int i = 0, e = elemCount; i < e; i ++, locked ++ )
 		{
-			int ch = 0 ;
+			int ch = 0;
 
-			locked->r = to16bit( m_LayerChannels[ L + 0 ][ i ], 31 ) ;
-
-			if( ++ch < channelCount )
-				locked->g = to16bit( m_LayerChannels[ L + 1 ][ i ], 63 ) ;
-			else
-				locked->g = 0 ;
+			locked->r = to16bit( m_LayerChannels[ L + 0 ][ i ], 31 );
 
 			if( ++ch < channelCount )
-				locked->b = to16bit( m_LayerChannels[ L + 2 ][ i ], 31 ) ;
+				locked->g = to16bit( m_LayerChannels[ L + 1 ][ i ], 63 );
 			else
-				locked->b = 0 ;
+				locked->g = 0;
+
+			if( ++ch < channelCount )
+				locked->b = to16bit( m_LayerChannels[ L + 2 ][ i ], 31 );
+			else
+				locked->b = 0;
 		}
 
-		tempTex.resource->UnlockRect( 0 ) ;
+		tempTex.resource->UnlockRect( 0 );
 
-		ID3DXBuffer * buffer ;
-		D3D_V( D3DXSaveTextureToFileInMemory( &buffer, D3DXIFF_DDS, tempTex.resource, NULL ) ) ;
+		ID3DXBuffer * buffer;
+		D3D_V( D3DXSaveTextureToFileInMemory( &buffer, D3DXIFF_DDS, tempTex.resource, NULL ) );
 
-		IDirect3DTexture9* finalTex ;
-		D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, buffer->GetBufferPointer(), buffer->GetBufferSize(), baseWidth, baseHeight, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &finalTex ) ) ;
+		IDirect3DTexture9* finalTex;
+		D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, buffer->GetBufferPointer(), buffer->GetBufferSize(), baseWidth, baseHeight, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &finalTex ) );
 
-		r3dTexture* mask = r3dRenderer->AllocateTexture() ;
+		r3dTexture* mask = r3dRenderer->AllocateTexture();
 
-		r3dD3DTextureTunnel tunnel ;
-		tunnel.Set( finalTex ) ;
-		mask->Setup( baseWidth, baseHeight, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false ) ;		
+		r3dD3DTextureTunnel tunnel;
+		tunnel.Set( finalTex );
+		mask->Setup( baseWidth, baseHeight, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false );		
 		
-		SAFE_RELEASE( buffer ) ;
+		SAFE_RELEASE( buffer );
 
-		m_Masks.PushBack( mask ) ;
+		m_Masks.PushBack( mask );
 	}
 
-	InitLayerBaseBitMasks() ;
-	InitLayerBitMaskChains() ;
-	InitLayers() ;
+	InitLayerBaseBitMasks();
+	InitLayerBitMaskChains();
+	InitLayers();
 #endif
 }
 
@@ -1964,104 +1990,104 @@ void
 r3dTerrain2::SaveEmpty( const CreationParams& createParams )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	PopulateInferiorQualitySettings() ;
+	PopulateInferiorQualitySettings();
 
-	const QualitySettings& saveQS = m_BaseQualitySettings[ QS_HIGH ] ;
+	const QualitySettings& saveQS = m_BaseQualitySettings[ QS_HIGH ];
 
-	m_VertexCountX = createParams.CellCountX ;
-	m_VertexCountZ = createParams.CellCountZ ;
+	m_VertexCountX = createParams.CellCountX;
+	m_VertexCountZ = createParams.CellCountZ;
 
-	m_SplatResolutionU = createParams.SplatSizeX ;
-	m_SplatResolutionV = createParams.SplatSizeZ ;
+	m_SplatResolutionU = createParams.SplatSizeX;
+	m_SplatResolutionV = createParams.SplatSizeZ;
 
-	m_TileUnitWorldDim = createParams.CellSize ;
-	m_HeightOffset = createParams.Height ;
-	m_HeightScale = 1.0f ;
+	m_TileUnitWorldDim = createParams.CellSize;
+	m_HeightOffset = createParams.Height;
+	m_HeightScale = 1.0f;
 
-	int tcx = m_VertexCountX / saveQS.VertexTileDim ; 
-	int tcz = m_VertexCountZ / saveQS.VertexTileDim ;
+	int tcx = m_VertexCountX / saveQS.VertexTileDim; 
+	int tcz = m_VertexCountZ / saveQS.VertexTileDim;
 
-	m_NumActiveQualityLayers = 0 ;
+	m_NumActiveQualityLayers = 0;
 
-	for( ; tcx > 0 && tcz > 0 ; tcx /= 2, tcz /= 2 )
+	for(; tcx > 0 && tcz > 0; tcx /= 2, tcz /= 2 )
 	{
-		m_NumActiveQualityLayers ++ ;
+		m_NumActiveQualityLayers ++;
 	}
 
-	SetupHFScale() ;
+	SetupHFScale();
 
-	UINT16 val = UINT16( m_HeightOffset * m_HFScale ) ;
+	UINT16 val = UINT16( m_HeightOffset * m_HFScale );
 
-	Shorts heightValues ( m_VertexCountX * m_VertexCountZ, val ) ;
+	Shorts heightValues ( m_VertexCountX * m_VertexCountZ, val );
 
-	IDirect3DTexture9* white_r5g6b5 ;
+	IDirect3DTexture9* white_r5g6b5;
 
-	D3D_V( r3dRenderer->pd3ddev->CreateTexture( m_SplatResolutionU, m_SplatResolutionV, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &white_r5g6b5, NULL ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->CreateTexture( m_SplatResolutionU, m_SplatResolutionV, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &white_r5g6b5, NULL ) );
 
-	D3DLOCKED_RECT lrect ;
-	D3D_V( white_r5g6b5->LockRect( 0, &lrect, NULL, 0 ) ) ;
+	D3DLOCKED_RECT lrect;
+	D3D_V( white_r5g6b5->LockRect( 0, &lrect, NULL, 0 ) );
 
-	memset( lrect.pBits, 0xff, lrect.Pitch * m_SplatResolutionV ) ;
+	memset( lrect.pBits, 0xff, lrect.Pitch * m_SplatResolutionV );
 
-	D3D_V( white_r5g6b5->UnlockRect( 0 ) ) ;
+	D3D_V( white_r5g6b5->UnlockRect( 0 ) );
 
-	ID3DXBuffer* fileInMem ;
-	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, white_r5g6b5, NULL ) ) ;
+	ID3DXBuffer* fileInMem;
+	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, white_r5g6b5, NULL ) );
 
-	SAFE_RELEASE( white_r5g6b5 ) ;
+	SAFE_RELEASE( white_r5g6b5 );
 
-	IDirect3DTexture9* tex_dxt1 ;
+	IDirect3DTexture9* tex_dxt1;
 
 	D3D_V( D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(), m_SplatResolutionU, m_SplatResolutionV, 1, 0, 
-												TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 ) ) ;
+												TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 ) );
 
-	r3dD3DTextureTunnel tunnel ;
+	r3dD3DTextureTunnel tunnel;
 
-	tunnel.Set( tex_dxt1 ) ;
+	tunnel.Set( tex_dxt1 );
 
-	m_ColorTex = r3dRenderer->AllocateTexture() ;
-	m_ColorTex->Setup( m_SplatResolutionU, m_SplatResolutionV, 1, TERRA2_COLORMODULATION_FORMAT, 1, &tunnel, false ) ;
+	m_ColorTex = r3dRenderer->AllocateTexture();
+	m_ColorTex->Setup( m_SplatResolutionU, m_SplatResolutionV, 1, TERRA2_COLORMODULATION_FORMAT, 1, &tunnel, false );
 
-	SAFE_RELEASE( fileInMem ) ;
+	SAFE_RELEASE( fileInMem );
 
-	int baseW = m_SplatResolutionU / QualitySettings::MIN_VERTEX_TILE_DIM ;
-	int baseH = m_SplatResolutionV / QualitySettings::MIN_VERTEX_TILE_DIM ;
+	int baseW = m_SplatResolutionU / QualitySettings::MIN_VERTEX_TILE_DIM;
+	int baseH = m_SplatResolutionV / QualitySettings::MIN_VERTEX_TILE_DIM;
 
-	m_DominantLayerData.Resize( baseW, baseH, 0 ) ;
+	m_DominantLayerData.Resize( baseW, baseH, 0 );
 
-	m_NormalTex = r3dRenderer->AllocateTexture() ;
-	m_NormalTex->Create( m_VertexCountX * m_NormalDensity, m_VertexCountZ * m_NormalDensity, D3DFMT_R5G6B5, 1 ) ;
+	m_NormalTex = r3dRenderer->AllocateTexture();
+	m_NormalTex->Create( m_VertexCountX * m_NormalDensity, m_VertexCountZ * m_NormalDensity, D3DFMT_R5G6B5, 1 );
 
 #pragma pack( push )
 #pragma pack( 1 )
 	{
 		struct RGB16
 		{
-			UINT16 b : 5 ;
-			UINT16 g : 6 ;
-			UINT16 r : 5 ;
+			UINT16 b : 5;
+			UINT16 g : 6;
+			UINT16 r : 5;
 
-		} * ptr = (RGB16*) m_NormalTex->Lock( 1, NULL ) ;
+		} * ptr = (RGB16*) m_NormalTex->Lock( 1, NULL );
 
-		int lock_pitch = m_NormalTex->GetLockPitch() ;
+		int lock_pitch = m_NormalTex->GetLockPitch();
 
-		for( int y = 0, e = m_NormalTex->GetHeight() ; y < e ; y ++ )
+		for( int y = 0, e = m_NormalTex->GetHeight(); y < e; y ++ )
 		{
-			for( int x = 0, e = m_NormalTex->GetHeight() ; x < e ; x ++ )
+			for( int x = 0, e = m_NormalTex->GetHeight(); x < e; x ++ )
 			{
-				int idx = x + y * lock_pitch / sizeof( *ptr ) ;
+				int idx = x + y * lock_pitch / sizeof( *ptr );
 
-				ptr[ idx ].r = 16 ;
-				ptr[ idx ].g = 63 ;
-				ptr[ idx ].b = 16 ;
+				ptr[ idx ].r = 16;
+				ptr[ idx ].g = 63;
+				ptr[ idx ].b = 16;
 			}
 		}
 
-		m_NormalTex->Unlock() ;
+		m_NormalTex->Unlock();
 	}
 #pragma pack( pop )
 		
-	DoSave( createParams.LevelDir.c_str(), heightValues, m_VertexCountX, m_VertexCountZ ) ; 
+	DoSave( createParams.LevelDir.c_str(), heightValues, m_VertexCountX, m_VertexCountZ ); 
 #endif
 }
 
@@ -2083,13 +2109,13 @@ r3dTerrain2::Save( const char* targetDir )
 
 	r3dTL::TArray< PxI16 > hfShrinkedSamples( m_VertexCountX * m_VertexCountZ );
 
-	SaveHeightField( &hfShrinkedSamples ) ;
+	SaveHeightField( &hfShrinkedSamples );
 
-	gSaveCountDown = 5.0f ;
+	gSaveCountDown = 5.0f;
 
-	return DoSave( targetDir, hfShrinkedSamples, m_VertexCountX, m_VertexCountZ ) ;
+	return DoSave( targetDir, hfShrinkedSamples, m_VertexCountX, m_VertexCountZ );
 #else
-	return 1 ;
+	return 1;
 #endif
 }
 
@@ -2098,8 +2124,8 @@ r3dTerrain2::Save( const char* targetDir )
 
 int	 r3dTerrain2::Load()
 {
-	DoLoad( r3dGameLevel::GetHomeDir() ) ;
-	return 1 ;
+	DoLoad( r3dGameLevel::GetHomeDir() );
+	return 1;
 }
 
 //------------------------------------------------------------------------
@@ -2107,7 +2133,7 @@ int	 r3dTerrain2::Load()
 const r3dTerrain2::Settings&
 r3dTerrain2::GetSettings() const
 {
-	return m_Settings ;
+	return m_Settings;
 }
 
 //------------------------------------------------------------------------
@@ -2115,7 +2141,7 @@ r3dTerrain2::GetSettings() const
 void
 r3dTerrain2::SetSettings( const Settings& sts )
 {
-	m_Settings = sts ;
+	m_Settings = sts;
 }
 
 //------------------------------------------------------------------------
@@ -2123,7 +2149,7 @@ r3dTerrain2::SetSettings( const Settings& sts )
 const r3dTerrain2::QualitySettings&
 r3dTerrain2::GetBaseQualitySettings( int ql ) const
 {
-	return m_BaseQualitySettings[ ql ] ;
+	return m_BaseQualitySettings[ ql ];
 }
 
 //------------------------------------------------------------------------
@@ -2131,7 +2157,7 @@ r3dTerrain2::GetBaseQualitySettings( int ql ) const
 const r3dTerrain2::QualitySettings&
 r3dTerrain2::GetCurrentQualitySettings() const
 {
-	return m_QualitySettings ;
+	return m_QualitySettings;
 }
 
 //------------------------------------------------------------------------
@@ -2140,33 +2166,33 @@ void
 r3dTerrain2::SetQualitySettings( const QualitySettings& settings, bool affectBaseQS, int affectBaseQSIdx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	QualitySettings fixedSettings = settings ;
+	QualitySettings fixedSettings = settings;
 
-	fixedSettings.Sync() ;
+	fixedSettings.Sync();
 
 	if( m_QualitySettings.BakeRoads && !settings.BakeRoads )
 	{
-		ReleaseRoads() ;
+		ReleaseRoads();
 	}
 
-	if( memcmp( &m_QualitySettings, &fixedSettings, sizeof fixedSettings ) )
+	if( m_QualitySettings.Compare( fixedSettings ) )
 	{
-		CloseDynamic() ;
-		m_QualitySettings = fixedSettings ;
-		RecalcVars() ;
-		RecalcLayerVars() ;
-		InitDynamic() ;
+		CloseDynamic();
+		m_QualitySettings = fixedSettings;
+		RecalcVars();
+		RecalcLayerVars();
+		InitDynamic();
 
-		Shorts heightField( m_VertexCountX * m_VertexCountZ ) ;
-		SaveHeightField( &heightField ) ;
-		InitTileField( heightField ) ;
+		Shorts heightField( m_VertexCountX * m_VertexCountZ );
+		SaveHeightField( &heightField );
+		InitTileField( heightField );
 
-		InitLayerBitMaskChains() ;
-		UpdateRoadInfo() ;
+		InitLayerBitMaskChains();
+		UpdateRoadInfo();
 
 		if( affectBaseQS )
 		{
-			m_BaseQualitySettings[ affectBaseQSIdx ] = m_QualitySettings ;
+			m_BaseQualitySettings[ affectBaseQSIdx ] = m_QualitySettings;
 		}
 	}
 
@@ -2178,44 +2204,44 @@ r3dTerrain2::SetQualitySettings( const QualitySettings& settings, bool affectBas
 void
 r3dTerrain2::GetStats( r3dTerrainStats* oStats ) const
 {
-	*oStats = r3dTerrainStats() ;
+	*oStats = r3dTerrainStats();
 
 #if R3D_TERRAIN_V2_GRAPHICS
-	oStats->VolumeCount = m_Atlas.Count() ;
+	oStats->VolumeCount = m_Atlas.Count();
 
-	for( int i = 0, e = (int) m_Atlas.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int) m_Atlas.Count(); i < e; i ++ )
 	{
-		const AtlasVolume& vol = m_Atlas[ i ] ;
-		oStats->TileCount += vol.Occupied.Count() - vol.FreeTiles ;
-		oStats->TileTextureMemory += vol.Diffuse->Tex->GetTextureSizeInVideoMemory() ;
-		oStats->TileTextureMemory += vol.Normal->Tex->GetTextureSizeInVideoMemory() ;
+		const AtlasVolume& vol = m_Atlas[ i ];
+		oStats->TileCount += vol.Occupied.Count() - vol.FreeTiles;
+		oStats->TileTextureMemory += vol.Diffuse->Tex->GetTextureSizeInVideoMemory();
+		oStats->TileTextureMemory += vol.Normal->Tex->GetTextureSizeInVideoMemory();
 	}
 
-	for( int i = 0, e = (int)m_Masks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_Masks.Count(); i < e; i ++ )
 	{
-		oStats->MaskTextureMemory += m_Masks[ i ]->GetTextureSizeInVideoMemory() ;
+		oStats->MaskTextureMemory += m_Masks[ i ]->GetTextureSizeInVideoMemory();
 	}
 
 	if( m_ColorTex )
 	{
-		oStats->MaskTextureMemory += m_ColorTex->GetTextureSizeInVideoMemory() ;
+		oStats->MaskTextureMemory += m_ColorTex->GetTextureSizeInVideoMemory();
 	}
 
-	typedef std::set< r3dTexture* > TextureSet ;
-	TextureSet uniqueLayerTexes ;
+	typedef std::set< r3dTexture* > TextureSet;
+	TextureSet uniqueLayerTexes;
 
-	for( int i = 0, e = (int)m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_Layers.Count(); i < e; i ++ )
 	{
-		const r3dTerrainLayer& layer = m_Layers[ i ] ;
-		uniqueLayerTexes.insert( layer.DiffuseTex ) ;
-		uniqueLayerTexes.insert( layer.NormalTex ) ;
+		const r3dTerrainLayer& layer = m_Layers[ i ];
+		uniqueLayerTexes.insert( layer.DiffuseTex );
+		uniqueLayerTexes.insert( layer.NormalTex );
 	}
 
-	for( TextureSet::iterator i = uniqueLayerTexes.begin(), e = uniqueLayerTexes.end() ; i != e ; ++ i )
+	for( TextureSet::iterator i = uniqueLayerTexes.begin(), e = uniqueLayerTexes.end(); i != e; ++ i )
 	{
 		if( r3dTexture* tex = *i )
 		{
-			oStats->LayerTextureMemory += tex->GetTextureSizeInVideoMemory() ;
+			oStats->LayerTextureMemory += tex->GetTextureSizeInVideoMemory();
 		}
 	}
 #endif
@@ -2227,7 +2253,7 @@ void
 r3dTerrain2::ResetAtlasTiles()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	RemoveAllocatedTiles() ;
+	RemoveAllocatedTiles();
 #endif
 }
 
@@ -2237,10 +2263,10 @@ void
 r3dTerrain2::RefreshAtlasTiles()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_TilesToUpdate.Clear() ;
+	m_TilesToUpdate.Clear();
 
 	// free all tiles to force reallocate & update
-	FreeAtlasTiles() ;
+	FreeAtlasTiles();
 #endif
 }
 
@@ -2250,23 +2276,23 @@ void
 r3dTerrain2::RefreshAtlasTiles( const RECT& rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_TilesToUpdate.Clear() ;
+	m_TilesToUpdate.Clear();
 
-	int tx0 = rect.left / m_QualitySettings.VertexTileDim ;
-	int tx1 = rect.right / m_QualitySettings.VertexTileDim + 1 ;
-	int tz0 = rect.top / m_QualitySettings.VertexTileDim ;
-	int tz1 = rect.bottom / m_QualitySettings.VertexTileDim + 1 ;
+	int tx0 = rect.left / m_QualitySettings.VertexTileDim;
+	int tx1 = rect.right / m_QualitySettings.VertexTileDim + 1;
+	int tz0 = rect.top / m_QualitySettings.VertexTileDim;
+	int tz1 = rect.bottom / m_QualitySettings.VertexTileDim + 1;
 
-	tx0 = R3D_MIN( R3D_MAX( tx0, 0 ), m_TileCountX ) ;
-	tx1 = R3D_MIN( R3D_MAX( tx1, 0 ), m_TileCountX ) ;
-	tz0 = R3D_MIN( R3D_MAX( tz0, 0 ), m_TileCountZ ) ;
-	tz1 = R3D_MIN( R3D_MAX( tz1, 0 ), m_TileCountZ ) ;
+	tx0 = R3D_MIN( R3D_MAX( tx0, 0 ), m_TileCountX );
+	tx1 = R3D_MIN( R3D_MAX( tx1, 0 ), m_TileCountX );
+	tz0 = R3D_MIN( R3D_MAX( tz0, 0 ), m_TileCountZ );
+	tz1 = R3D_MIN( R3D_MAX( tz1, 0 ), m_TileCountZ );
 
-	for( int tz = tz0 ; tz < tz1 ; tz ++ )
+	for( int tz = tz0; tz < tz1; tz ++ )
 	{
-		for( int tx = tx0 ; tx < tx1 ; tx ++ )
+		for( int tx = tx0; tx < tx1; tx ++ )
 		{
-			RefreshAtlasTile( tx, tz ) ;
+			RefreshAtlasTile( tx, tz );
 		}
 	}
 #endif
@@ -2277,26 +2303,47 @@ r3dTerrain2::RefreshAtlasTiles( const RECT& rect )
 void
 r3dTerrain2::RefreshAtlasTile( int tileX, int tileZ )
 {
-#if R3D_TERRAIN_V2_GRAPHICS
-	for( int L = 0, e = m_NumActiveQualityLayers ; L < e ; L ++ )
+	for( int L = 0, e = m_NumActiveQualityLayers, tx = tileX, tz = tileZ; L < e; L ++, tx /=2, tz /= 2 )
 	{
-		AllocatedTileArr& arr = m_AllocTileLodArray[ L ] ;
-
-		for( int i = 0, e = arr.Count() ; i < e; i ++ )
+		for( int i = 0, e = (int)m_TilesToUpdate.Count(); i < e;  )
 		{
-			AllocatedTile& tile = arr[ i ] ;
+			if( m_TilesToUpdate[ i ]->X == tx 
+				&&
+				m_TilesToUpdate[ i ]->Z == tz
+				&&
+				m_TilesToUpdate[ i ]->L == L
+				)
+			{
+				m_TilesToUpdate.Erase( i );
+				e --;
+			}
+			else
+			{
+				i ++;
+			}
+		}
+	}
+
+#if R3D_TERRAIN_V2_GRAPHICS
+	for( int L = 0, e = m_NumActiveQualityLayers; L < e; L ++ )
+	{
+		AllocatedTileArr& arr = m_AllocTileLodArray[ L ];
+
+		for( int i = 0, e = arr.Count(); i < e; i ++ )
+		{
+			AllocatedTile& tile = arr[ i ];
 
 			if( tile.X == tileX && tile.Z == tileZ )
 			{
 				if( tile.AtlasTileID >= 0)
 				{
-					FreeAtlasTile( &tile ) ;
+					FreeAtlasTile( &tile );
 				}
 			}
 		}
 
-		tileX /= 2 ;
-		tileZ /= 2 ;
+		tileX /= 2;
+		tileZ /= 2;
 	}
 #endif
 }
@@ -2309,7 +2356,7 @@ r3dTerrain2::SetPhysUserData( void* data )
 {
 	if( m_PhysicsTerrain )
 	{
-		m_PhysicsTerrain->userData = data ;
+		m_PhysicsTerrain->userData = data;
 	}
 }
 
@@ -2319,27 +2366,27 @@ void
 r3dTerrain2::ClearRoadInfo()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int i = 0, e = (int)m_RoadInfoMipChain.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_RoadInfoMipChain.Count(); i < e; i ++ )
 	{
-		RoadInfoArr2D& arr = m_RoadInfoMipChain[ i ] ;
+		RoadInfoArr2D& arr = m_RoadInfoMipChain[ i ];
 
-		for( int z = 0, e = (int)arr.Height() ; z < e ; z ++ )
+		for( int z = 0, e = (int)arr.Height(); z < e; z ++ )
 		{
-			for( int x = 0, e = (int)arr.Width() ; x < e ; x ++ )
+			for( int x = 0, e = (int)arr.Width(); x < e; x ++ )
 			{
-				RoadInfo* info = arr[ z ][ x ] ;
+				RoadInfo* info = static_cast< RoadInfo* >( arr[ z ][ x ].ptrs[ ROAD_INFO_LENGTH - 1 ] );
 
-				for( ; info ; )
+				for(; info; )
 				{
-					void* toDelete = info ;
-					info = (RoadInfo*)info[ ROAD_INFO_LENGTH - 1 ] ;
-					delete toDelete ;
+					void* toDelete = info;
+					info = static_cast< RoadInfo* >( info->ptrs[ ROAD_INFO_LENGTH - 1 ] );
+					delete toDelete;
 				}
 			}
 		}
 	}
 
-	m_RoadInfoMipChain.Clear() ;
+	m_RoadInfoMipChain.Clear();
 #endif
 }
 
@@ -2350,11 +2397,11 @@ r3dTerrain2::UpdateRoadInfo()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 	// get road objects
-	r3dTL::TArray< obj_Road* > roads ;
+	r3dTL::TArray< obj_Road* > roads;
 
-	roads.Reserve( 2048 ) ;
+	roads.Reserve( 2048 );
 
-	m_RoadInfoMipChain.Clear() ;
+	m_RoadInfoMipChain.Clear();
 
 	if( GetCurrentQualitySettings().BakeRoads )
 	{
@@ -2362,11 +2409,11 @@ r3dTerrain2::UpdateRoadInfo()
 		{
 			if( obj->ObjTypeFlags & OBJTYPE_Road )
 			{
-				obj->ObjFlags |= OBJFLAG_SkipDraw ;
+				obj->ObjFlags |= OBJFLAG_SkipDraw;
 
-				obj->Update() ;
+				obj->Update();
 
-				roads.PushBack( static_cast<obj_Road*>( obj ) ) ;
+				roads.PushBack( static_cast<obj_Road*>( obj ) );
 			}
 		}
 	}
@@ -2377,53 +2424,53 @@ r3dTerrain2::UpdateRoadInfo()
 		{
 			bool operator() ( obj_Road* r0, obj_Road* r1 )
 			{
-				return r0->drawPriority < r1->drawPriority ;
+				return r0->drawPriority < r1->drawPriority;
 			}
-		} compare ;
+		} compare;
 
-		std::sort( &roads[ 0 ], &roads[ 0 ] + roads.Count(), compare ) ;
+		std::sort( &roads[ 0 ], &roads[ 0 ] + roads.Count(), compare );
 
 
-		int startMip = 0 ;
+		int startMip = 0;
 
-		int d = m_QualitySettings.RoadVertexDimStart ;
+		int d = m_QualitySettings.RoadVertexDimStart;
 
-		for( ; d > m_QualitySettings.VertexTileDim ; d /= 2 )
+		for(; d > m_QualitySettings.VertexTileDim; d /= 2 )
 		{
-			startMip ++ ;
+			startMip ++;
 		}
 
-		m_RoadInfoMipChain.Resize( m_NumActiveQualityLayers - startMip ) ;
+		m_RoadInfoMipChain.Resize( m_NumActiveQualityLayers - startMip );
 
-		int roadTileCountX = m_VertexCountX / m_QualitySettings.RoadVertexDimStart ;
-		int roadTileCountZ = m_VertexCountZ / m_QualitySettings.RoadVertexDimStart ;
+		int roadTileCountX = m_VertexCountX / m_QualitySettings.RoadVertexDimStart;
+		int roadTileCountZ = m_VertexCountZ / m_QualitySettings.RoadVertexDimStart;
 
-		for( int i = 0, e = (int)m_RoadInfoMipChain.Count() ; i < e ; 
+		for( int i = 0, e = (int)m_RoadInfoMipChain.Count(); i < e; 
 				i ++,
 				roadTileCountX /= 2,
 				roadTileCountZ /= 2
 				)
 		{
-			RoadInfoArr2D& mip = m_RoadInfoMipChain[ i ] ;
+			RoadInfoArr2D& mip = m_RoadInfoMipChain[ i ];
 
-			r3d_assert( roadTileCountX && roadTileCountZ ) ;
+			r3d_assert( roadTileCountX && roadTileCountZ );
 
-			mip.Resize( roadTileCountX, roadTileCountZ ) ;
+			mip.Resize( roadTileCountX, roadTileCountZ );
 
-			float fz = 0.f, fx = 0.f ;
+			float fz = 0.f, fx = 0.f;
 
-			float dim = m_TileWorldDims[ startMip + i ] ;
+			float dim = m_TileWorldDims[ startMip + i ];
 
-			for( int z = 0, e = roadTileCountZ ; z < e ; z ++, fz += dim )
+			for( int z = 0, e = roadTileCountZ; z < e; z ++, fz += dim )
 			{
-				fx = 0.f ;
-				for( int x = 0, e = roadTileCountX ; x < e ; x ++, fx += dim )
+				fx = 0.f;
+				for( int x = 0, e = roadTileCountX; x < e; x ++, fx += dim )
 				{
-					for( int i = 0, e = roads.Count() ; i < e; i ++ )
+					for( int i = 0, e = roads.Count(); i < e; i ++ )
 					{
-						GameObject* road = roads[ i ] ;
+						GameObject* road = roads[ i ];
 
-						const r3dBoundBox& bbox = road->GetBBoxWorld() ;
+						const r3dBoundBox& bbox = road->GetBBoxWorld();
 
 						if( bbox.Org.x > fx + dim 
 								||
@@ -2433,43 +2480,34 @@ r3dTerrain2::UpdateRoadInfo()
 								||
 							bbox.Org.z + bbox.Size.z < fz
 							)
-							continue ;
+							continue;
 
-						RoadInfo* info = mip[ z ][ x ] ;
-						RoadInfo* prevInfo = info ;
+						RoadInfo* info = &mip[ z ][ x ];
+						RoadInfo* prevInfo = info;
 
-						int success = 0 ;
+						int success = 0;
 
-						for( ; info && !success ; )
+						for(; info && !success; )
 						{
-							for( int i = 0, e = ROAD_INFO_LENGTH - 1 ; i < e ; i ++ )
+							for( int i = 0, e = ROAD_INFO_LENGTH - 1; i < e; i ++ )
 							{
-								if( !(*info)[ i ] )
+								if( !info->ptrs[ i ] )
 								{
-									(*info)[ i ] = road ;
-									success = 1 ;
-									break ;
+									info->ptrs[ i ] = road;
+									success = 1;
+									break;
 								}
 							}
 
-							prevInfo = info ;
-							info = (RoadInfo*)(*info)[ ROAD_INFO_LENGTH - 1 ] ;
+							prevInfo = info;
+							info = static_cast<RoadInfo*>( info->ptrs[ ROAD_INFO_LENGTH - 1 ] );
 						}
 
 						if( !success )
 						{
-							void * target ;
-							if( prevInfo )
-							{
-								target = (*prevInfo)[ ROAD_INFO_LENGTH - 1 ] = new RoadInfo ;
-							}
-							else
-							{
-								target = mip[ z ][ x ] = (RoadInfo*)new RoadInfo ;
-							}
+							RoadInfo * target  = static_cast<RoadInfo*>( prevInfo->ptrs[ ROAD_INFO_LENGTH - 1 ] = new RoadInfo ) ;
 
-							memset( target, 0, sizeof RoadInfo ) ;
-							*(void**)target = road ;
+							target->ptrs[ 0 ] = road;
 						}
 					}
 				}
@@ -2477,6 +2515,43 @@ r3dTerrain2::UpdateRoadInfo()
 		}
 	}
 #endif
+}
+
+//------------------------------------------------------------------------
+
+void r3dTerrain2::OnRoadDelete( class obj_Road* road )
+{
+	for( int i = 0, e = m_RoadInfoMipChain.Count(); i <  e; i ++ )
+	{
+		RoadInfoArr2D& arr = m_RoadInfoMipChain[ i ];
+
+		for( int z = 0, e = arr.Height(); z < e; z ++ )
+		{
+			for( int x = 0, e = arr.Width(); x < e; x ++ )
+			{
+				RoadInfo* info = &arr[ z ][ x ];
+
+				int success = 0;
+
+				for(; info; )
+				{
+					for( int i = 0, e = ROAD_INFO_LENGTH - 1; i < e; i ++ )
+					{
+						if( info->ptrs[ i ] == road )
+						{
+							for( ; i < e - 1; i ++ )
+								info->ptrs[ i ] = info->ptrs[ i + 1 ];
+
+							info->ptrs[ e - 1 ] = NULL;
+						}
+					}
+
+					info = static_cast< RoadInfo* > ( info->ptrs[ ROAD_INFO_LENGTH - 1 ] );
+				}
+
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------
@@ -2489,7 +2564,7 @@ r3dTerrain2::ReleaseRoads( )
 	{
 		if( obj->ObjTypeFlags & OBJTYPE_Road )
 		{
-			obj->ObjFlags &= ~OBJFLAG_SkipDraw ;
+			obj->ObjFlags &= ~OBJFLAG_SkipDraw;
 		}
 	}
 #endif
@@ -2500,7 +2575,7 @@ r3dTerrain2::ReleaseRoads( )
 void
 r3dTerrain2::SaveHeightField( Shorts* oHeights )
 {
-	r3d_assert( oHeights->Count() == m_VertexCountX * m_VertexCountZ ) ;
+	r3d_assert( oHeights->Count() == m_VertexCountX * m_VertexCountZ );
 
 	uint32_t hmSize = GetHeightFieldDataSize( m_PhysicsHeightFieldDesc );
 
@@ -2515,7 +2590,7 @@ r3dTerrain2::SaveHeightField( Shorts* oHeights )
 	r3d_assert( numWritten == hmSize );
 
 	int sampleCount = hmSize / m_PhysicsHeightFieldDesc.samples.stride;
-	char* byteSamplePtr = (char*)&sampleData[ 0 ] ;
+	char* byteSamplePtr = (char*)&sampleData[ 0 ];
 
 	for( int i = 0, e = sampleCount; i < e; i ++, byteSamplePtr += m_PhysicsHeightFieldDesc.samples.stride )
 	{
@@ -2530,20 +2605,20 @@ r3dTerrain2::SaveHeightField( Shorts* oHeights )
 void
 r3dTerrain2::SaveHeightField( Floats* oHeights )
 {
-	Shorts shorts ;	
+	Shorts shorts;	
 
-	shorts.Resize( m_VertexCountX * m_VertexCountZ ) ;
+	shorts.Resize( m_VertexCountX * m_VertexCountZ );
 
-	SaveHeightField( &shorts ) ;
+	SaveHeightField( &shorts );
 
-	r3d_assert( shorts.Count() == oHeights->Count() ) ;
+	r3d_assert( shorts.Count() == oHeights->Count() );
 
-	for( int i = 0, e = (int)shorts.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)shorts.Count(); i < e; i ++ )
 	{
-		int x = i % m_VertexCountX ;
-		int z = i / m_VertexCountX ;
+		int x = i % m_VertexCountX;
+		int z = i / m_VertexCountX;
 
-		(*oHeights)[ x * m_VertexCountZ + z ] = shorts[ i ] * m_InvHFScale ;
+		(*oHeights)[ x * m_VertexCountZ + z ] = shorts[ i ] * m_InvHFScale;
 	}
 }
 
@@ -2553,32 +2628,32 @@ bool
 r3dTerrain2::UpdateHeightRanges( const Floats& floatHeights )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateHeightRanges" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateHeightRanges" );
 
-	float minHeight = floatHeights[ 0 ] ;
-	float maxHeight = floatHeights[ 0 ] ;
+	float minHeight = floatHeights[ 0 ];
+	float maxHeight = floatHeights[ 0 ];
 
-	for( int i = 1, e = (int)floatHeights.Count() ; i < e ; i ++ )
+	for( int i = 1, e = (int)floatHeights.Count(); i < e; i ++ )
 	{
-		minHeight = R3D_MIN( minHeight, floatHeights[ i ] ) ;
-		maxHeight = R3D_MAX( maxHeight, floatHeights[ i ] ) ;
+		minHeight = R3D_MIN( minHeight, floatHeights[ i ] );
+		maxHeight = R3D_MAX( maxHeight, floatHeights[ i ] );
 	}
 
-	float heightScale = maxHeight - minHeight ;
+	float heightScale = maxHeight - minHeight;
 
 	bool rangeChange =	m_HeightOffset != minHeight 
 							||
 						m_HeightScale != heightScale
 							;
 
-	m_HeightOffset = minHeight ;
-	m_HeightScale = heightScale ;
+	m_HeightOffset = minHeight;
+	m_HeightScale = heightScale;
 
-	SetupHFScale() ;
+	SetupHFScale();
 
-	return rangeChange ;
+	return rangeChange;
 #else
-	return false ;
+	return false;
 #endif
 }
 
@@ -2588,29 +2663,29 @@ void
 r3dTerrain2::ConvertHeightField( Shorts* oHeights, const Floats& floatHeights, const RECT* rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::ConvertHeightField" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::ConvertHeightField" );
 
-	RECT r ;
+	RECT r;
 
 	if( rect )
 	{
-		r = *rect ;
+		r = *rect;
 	}
 	else
 	{
-		r.left		= 0 ;
-		r.right		= m_VertexCountX ;
-		r.top		= 0 ;
-		r.bottom	= m_VertexCountZ ;
+		r.left		= 0;
+		r.right		= m_VertexCountX;
+		r.top		= 0;
+		r.bottom	= m_VertexCountZ;
 	}
 
-	r3d_assert( oHeights->Count() == floatHeights.Count() ) ;
+	r3d_assert( oHeights->Count() == floatHeights.Count() );
 
-	for( int z = r.top ; z < r.bottom ; z ++ )
+	for( int z = r.top; z < r.bottom; z ++ )
 	{
-		for( int x = r.left ; x < r.right ; x ++ )
+		for( int x = r.left; x < r.right; x ++ )
 		{
-			(*oHeights)[ x * m_VertexCountZ + z ] = (INT16)R3D_MIN( R3D_MAX( (int)( floatHeights[ x + m_VertexCountX * z ] * m_HFScale ) , -32767 ), 32767 ) ;
+			(*oHeights)[ x * m_VertexCountZ + z ] = (INT16)R3D_MIN( R3D_MAX( (int)( floatHeights[ x + m_VertexCountX * z ] * m_HFScale ) , -32767 ), 32767 );
 		}
 	}
 #endif
@@ -2622,83 +2697,83 @@ void
 r3dTerrain2::UpdateGraphicsHeightField( const Shorts& shorts, const RECT* rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateGraphicsHeightField" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateGraphicsHeightField" );
 
-	int signedMin = 0x10000 ;
-	int signedMax = -0x10000 ;
+	int signedMin = 0x10000;
+	int signedMax = -0x10000;
 
-	for( int i = 0, e = (int)shorts.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)shorts.Count(); i < e; i ++ )
 	{
-		int val = shorts[ i ] ;
+		int val = shorts[ i ];
 
-		signedMin = R3D_MIN( val, signedMin ) ;
-		signedMax = R3D_MAX( val, signedMax ) ;
+		signedMin = R3D_MIN( val, signedMin );
+		signedMax = R3D_MAX( val, signedMax );
 	}
 
-	int range = signedMax - signedMin ;
+	int range = signedMax - signedMin;
 
-	int z0 = 0 ;
-	int z1 = m_VertexCountZ ;
-	int x0 = 0 ;
-	int x1 = m_VertexCountX ;
+	int z0 = 0;
+	int z1 = m_VertexCountZ;
+	int x0 = 0;
+	int x1 = m_VertexCountX;
 
 	if( rect )
 	{
-		x0 = rect->left ;
-		x1 = rect->right + 1 ;
-		z0 = rect->top ;
-		z1 = rect->bottom + 1 ;
+		x0 = rect->left;
+		x1 = rect->right + 1;
+		z0 = rect->top;
+		z1 = rect->bottom + 1;
 
-		x0 = R3D_MIN( R3D_MAX( x0, 0 ), m_VertexCountX ) ;
-		x1 = R3D_MIN( R3D_MAX( x1, 0 ), m_VertexCountX ) ;
-		z0 = R3D_MIN( R3D_MAX( z0, 0 ), m_VertexCountZ ) ;
-		z1 = R3D_MIN( R3D_MAX( z1, 0 ), m_VertexCountZ ) ;
+		x0 = R3D_MIN( R3D_MAX( x0, 0 ), m_VertexCountX );
+		x1 = R3D_MIN( R3D_MAX( x1, 0 ), m_VertexCountX );
+		z0 = R3D_MIN( R3D_MAX( z0, 0 ), m_VertexCountZ );
+		z1 = R3D_MIN( R3D_MAX( z1, 0 ), m_VertexCountZ );
 
-		r3d_assert( x1 >= x0 ) ;
-		r3d_assert( z1 >= z0 ) ;
+		r3d_assert( x1 >= x0 );
+		r3d_assert( z1 >= z0 );
 	}
 
-	int i = 0, e = (int)shorts.Count() ;
+	int i = 0, e = (int)shorts.Count();
 
 	if( !range )
-		range = 1 ;
+		range = 1;
 
-	UINT16* ptr = NULL ;
+	UINT16* ptr = NULL;
 
-	UINT64 bitshift = 16 ;
-	int packRange = 65535 ;
+	UINT64 bitshift = 16;
+	int packRange = 65535;
 
 	if( m_HeightTex )
 	{
-		ptr = (UINT16*)m_HeightTex->Lock( 1, rect ) ;
+		ptr = (UINT16*)m_HeightTex->Lock( 1, rect );
 	}
 	else
 	{
-		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ ) ;
-		ptr = (UINT16*)&m_HeightArr[ 0 ] ;
+		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ );
+		ptr = (UINT16*)&m_HeightArr[ 0 ];
 
-		bitshift = 15 ;
-		packRange = 32767 ;
+		bitshift = 15;
+		packRange = 32767;
 	}
 
-	for( int z = z0 ; z < z1 ; z ++ )
+	for( int z = z0; z < z1; z ++ )
 	{
-		for( int x = x0 ; x < x1 ; x ++, i ++ )
+		for( int x = x0; x < x1; x ++, i ++ )
 		{
-			r3d_assert( i < e ) ;
+			r3d_assert( i < e );
 
-			int val = shorts[ z + x * m_VertexCountZ ] ;
+			int val = shorts[ z + x * m_VertexCountZ ];
 
-			val = ( UINT64( val - signedMin ) << bitshift ) / range ;
-			val = R3D_MAX( R3D_MIN( val, packRange ), 0 ) ;
+			val = ( UINT64( val - signedMin ) << bitshift ) / range;
+			val = R3D_MAX( R3D_MIN( val, packRange ), 0 );
 
-			ptr[ ( z - z0 ) * m_VertexCountX + x - x0 ] = (UINT16) val ;
+			ptr[ ( z - z0 ) * m_VertexCountX + x - x0 ] = (UINT16) val;
 		}
 	}
 
 	if( m_HeightTex )
 	{
-		m_HeightTex->Unlock() ;
+		m_HeightTex->Unlock();
 	}
 
 #endif
@@ -2709,9 +2784,9 @@ r3dTerrain2::UpdateGraphicsHeightField( const Shorts& shorts, const RECT* rect )
 void
 r3dTerrain2::UpdateTileField( const Shorts& heightField )
 {
-	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateTileField" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateTileField" );
 
-	InitTileField( heightField ) ;
+	InitTileField( heightField );
 }
 
 
@@ -2720,8 +2795,8 @@ r3dTerrain2::UpdateTileField( const Shorts& heightField )
 void
 r3dTerrain2::RecalcTileField( const Shorts& heightField, const RECT* rect )
 {
-	R3DPROFILE_FUNCTION( "r3dTerrain2::RecalcTileField" ) ;
-	RecalcTileInfo( heightField, rect ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::RecalcTileField" );
+	RecalcTileInfo( heightField, rect );
 }
 
 //------------------------------------------------------------------------
@@ -2738,7 +2813,7 @@ r3dTerrain2::GetHeight( int x, int z )			/*OVERRIDE*/
 void
 r3dTerrain2::UpdatePhysicsHeightField( const Shorts& heightField )
 {
-	UpdatePhysHeightField( heightField ) ;
+	UpdatePhysHeightField( heightField );
 }
 
 //------------------------------------------------------------------------
@@ -2747,8 +2822,8 @@ void
 r3dTerrain2::UpdateNormals( const Floats& heights, Vectors* tempVectors0, Vectors* tempVectors1, const RECT* rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	RecalcNormalMap( heights, tempVectors0, tempVectors1, rect ) ;
-	RefreshAtlasTiles() ;
+	RecalcNormalMap( heights, tempVectors0, tempVectors1, rect );
+	RefreshAtlasTiles();
 #endif
 }
 
@@ -2757,7 +2832,7 @@ r3dTerrain2::UpdateNormals( const Floats& heights, Vectors* tempVectors0, Vector
 const r3dTerrainLayer&
 r3dTerrain2::GetLayer( int idx ) const
 {
-	return idx ? m_Layers[ idx - 1 ] : m_BaseLayer ;
+	return idx ? m_Layers[ idx - 1 ] : m_BaseLayer;
 }
 
 //------------------------------------------------------------------------
@@ -2766,9 +2841,9 @@ void
 r3dTerrain2::SetLayer( int idx, const r3dTerrainLayer& layer )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	( idx ? m_Layers[ idx - 1 ] : m_BaseLayer ) = layer ;
+	( idx ? m_Layers[ idx - 1 ] : m_BaseLayer ) = layer;
 
-	RecalcLayerVars() ;
+	RecalcLayerVars();
 #endif
 }
 
@@ -2778,31 +2853,31 @@ void
 r3dTerrain2::UpdateTilesWithLayer( int idx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_TilesToUpdate.Clear() ;
+	m_TilesToUpdate.Clear();
 
 	if( !idx )
 	{
-		RefreshAtlasTiles() ;
+		RefreshAtlasTiles();
 	}
 	else
 	{
-		for( int i = 0, e = m_AllocTileLodArray.Count() ; i < e ; i ++ )
+		for( int i = 0, e = m_AllocTileLodArray.Count(); i < e; i ++ )
 		{
-			AllocatedTileArr& arr = m_AllocTileLodArray[ i ] ;
+			AllocatedTileArr& arr = m_AllocTileLodArray[ i ];
 
-			for( int i = 0, e = (int)arr.Count() ; i < e ; i ++ )
+			for( int i = 0, e = (int)arr.Count(); i < e; i ++ )
 			{
-				AllocatedTile& tile = arr[ i ] ;
+				AllocatedTile& tile = arr[ i ];
 
 				if( tile.AtlasVolumeID >= 0 )
 				{
-					LayerBitMaskMipChain& chains = m_LayerBitMasksMipChains[ idx - 1 ] ;
+					LayerBitMaskMipChain& chains = m_LayerBitMasksMipChains[ idx - 1 ];
 
 					if( chains.Count() )
 					{
 						if( chains[ tile.L ].Get( tile.X, tile.Z ) )
 						{
-							FreeAtlasTile( &tile ) ;
+							FreeAtlasTile( &tile );
 						}
 					}
 				}
@@ -2820,18 +2895,18 @@ r3dTerrain2::MarkLayer( int baseX, int baseZ, int lidx )
 #if R3D_TERRAIN_V2_GRAPHICS
 	if( lidx > 0 )
 	{
-		m_TilesToUpdate.Clear() ;
+		m_TilesToUpdate.Clear();
 
-		m_LayerBaseBitMasks[ lidx - 1 ].Set( baseX, baseZ, 1 ) ;
+		m_LayerBaseBitMasks[ lidx - 1 ].Set( baseX, baseZ, 1 );
 
-		int scale = m_QualitySettings.VertexTileDim / r3dTerrain2::QualitySettings::MIN_VERTEX_TILE_DIM ;
+		int scale = m_QualitySettings.VertexTileDim / r3dTerrain2::QualitySettings::MIN_VERTEX_TILE_DIM;
 
-		UpdateTileBitMaskChain( &m_LayerBitMasksMipChains[ lidx - 1 ], m_LayerBaseBitMasks[ lidx - 1 ], baseX / scale, baseZ / scale ) ;
+		UpdateTileBitMaskChain( &m_LayerBitMasksMipChains[ lidx - 1 ], m_LayerBaseBitMasks[ lidx - 1 ], baseX / scale, baseZ / scale );
 
-		int tx = baseX / scale ;
-		int tz = baseZ / scale ;
+		int tx = baseX / scale;
+		int tz = baseZ / scale;
 
-		RefreshAtlasTile( tx, tz ) ;
+		RefreshAtlasTile( tx, tz );
 	}
 #endif
 }
@@ -2841,7 +2916,7 @@ r3dTerrain2::MarkLayer( int baseX, int baseZ, int lidx )
 r3dTexture*
 r3dTerrain2::GetLayerMask( int sidx ) const
 {
-	return m_Masks[ sidx ] ;
+	return m_Masks[ sidx ];
 }
 
 //------------------------------------------------------------------------
@@ -2850,39 +2925,39 @@ void
 r3dTerrain2::UpdateLayerMaskFromReplacementMask( int sidx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dOutToLog( "r3dTerrain2::UpdateLayerMaskFromReplacementMask: creating DXT1 texture from editor R5G6B5 texture\n" ) ;
+	r3dOutToLog( "r3dTerrain2::UpdateLayerMaskFromReplacementMask: creating DXT1 texture from editor R5G6B5 texture\n" );
 
-	r3dTexture* newTex = r3dRenderer->AllocateTexture() ;
-	r3dTexture* source = m_Masks[ sidx ] ;
+	r3dTexture* newTex = r3dRenderer->AllocateTexture();
+	r3dTexture* source = m_Masks[ sidx ];
 
-	r3d_assert( source->GetD3DFormat() ==  D3DFMT_R5G6B5 ) ;
+	r3d_assert( source->GetD3DFormat() ==  D3DFMT_R5G6B5 );
 
-	ID3DXBuffer* fileInMem( NULL ) ;
+	ID3DXBuffer* fileInMem( NULL );
 
-	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, source->AsTex2D(), NULL ) ) ;
+	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, source->AsTex2D(), NULL ) );
 
-	IDirect3DTexture9* dxt1 ;
+	IDirect3DTexture9* dxt1;
 
 	D3D_V( D3DXCreateTextureFromFileInMemoryEx( 
 				r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(),
 				source->GetWidth(), source->GetHeight(), 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, 
-				D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &dxt1 ) ) ;
+				D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &dxt1 ) );
 
-	r3dD3DTextureTunnel tunnel ;
+	r3dD3DTextureTunnel tunnel;
 
-	tunnel.Set( dxt1 ) ;
+	tunnel.Set( dxt1 );
 
-	newTex->Setup( source->GetWidth(), source->GetHeight(), 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false) ;
+	newTex->Setup( source->GetWidth(), source->GetHeight(), 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false);
 
-	SAFE_RELEASE( fileInMem ) ;
+	SAFE_RELEASE( fileInMem );
 
 	// there should be replacement here now
-	m_Masks[ sidx ] = newTex ;
+	m_Masks[ sidx ] = newTex;
 
-	RecalcLayerVars() ;
-	DistributeLayerMasks() ;
+	RecalcLayerVars();
+	DistributeLayerMasks();
 
-	RefreshAtlasTiles() ;
+	RefreshAtlasTiles();
 #endif
 }
 
@@ -2892,13 +2967,13 @@ void
 r3dTerrain2::SetReplacementMask( int sidx, r3dTexture* mask )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3d_assert( m_Masks[ sidx ] && m_Masks[ sidx ]->GetD3DFormat() == TERRA2_LAYERMASK_FORMAT ) ;
+	r3d_assert( m_Masks[ sidx ] && m_Masks[ sidx ]->GetD3DFormat() == TERRA2_LAYERMASK_FORMAT );
 
-	r3dRenderer->DeleteTexture( m_Masks[ sidx ] ) ;
+	r3dRenderer->DeleteTexture( m_Masks[ sidx ] );
 
-	m_Masks[ sidx ] = mask ;
+	m_Masks[ sidx ] = mask;
 
-	DistributeLayerMasks() ;
+	DistributeLayerMasks();
 #endif
 }
 
@@ -2908,60 +2983,60 @@ void
 r3dTerrain2::OptimizeLayerMasks()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dOutToLog( "r3dTerrain2::OptimizeLayerMasks: optimizing %d masks..\n", m_Masks.Count() ) ;
+	r3dOutToLog( "r3dTerrain2::OptimizeLayerMasks: optimizing %d masks..\n", m_Masks.Count() );
 
-	m_LayerChannels.Resize( m_Layers.Count() ) ;
+	m_LayerChannels.Resize( m_Layers.Count() );
 
-	for( int i = 0, e = m_Masks.Count(), c = 0 ; i < e ; i ++, c += 3 )
+	for( int i = 0, e = m_Masks.Count(), c = 0; i < e; i ++, c += 3 )
 	{
-		r3dTexture* mask = m_Masks[ i ] ;
+		r3dTexture* mask = m_Masks[ i ];
 
-		ID3DXBuffer* fileInMem( NULL ) ;
+		ID3DXBuffer* fileInMem( NULL );
 
-		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, mask->AsTex2D(), NULL ) ) ;
+		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, mask->AsTex2D(), NULL ) );
 
-		IDirect3DTexture9* r5g6b5( NULL ) ;
+		IDirect3DTexture9* r5g6b5( NULL );
 
 		D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(),
 													mask->GetWidth(), mask->GetHeight(), 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, 
-													D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &r5g6b5 ) ) ;
+													D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &r5g6b5 ) );
 
-		D3DLOCKED_RECT lrect ;
-		D3D_V( r5g6b5->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) ) ;
+		D3DLOCKED_RECT lrect;
+		D3D_V( r5g6b5->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) );
 
 		struct Channeled16
 		{
-			UINT16 b : 5 ;
-			UINT16 g : 6 ;
-			UINT16 r : 5 ;
-		} * locked = ( Channeled16* )lrect.pBits ;
+			UINT16 b : 5;
+			UINT16 g : 6;
+			UINT16 r : 5;
+		} * locked = ( Channeled16* )lrect.pBits;
 
-		int have1 = c + 1 < (int)m_LayerChannels.Count() ;
-		int have2 = c + 2 < (int)m_LayerChannels.Count() ;
+		int have1 = c + 1 < (int)m_LayerChannels.Count();
+		int have2 = c + 2 < (int)m_LayerChannels.Count();
 
-		int totalSampleCount = mask->GetWidth() * mask->GetHeight() ;
+		int totalSampleCount = mask->GetWidth() * mask->GetHeight();
 
-		m_LayerChannels[ c ].Resize( totalSampleCount ) ;
+		m_LayerChannels[ c ].Resize( totalSampleCount );
 
-		if( have1 )	m_LayerChannels[ c + 1 ].Resize( totalSampleCount ) ;
-		if( have2 )	m_LayerChannels[ c + 2 ].Resize( totalSampleCount ) ;
+		if( have1 )	m_LayerChannels[ c + 1 ].Resize( totalSampleCount );
+		if( have2 )	m_LayerChannels[ c + 2 ].Resize( totalSampleCount );
 
-		for( int i = 0, e = totalSampleCount ; i < e ; i ++, locked ++ )
+		for( int i = 0, e = totalSampleCount; i < e; i ++, locked ++ )
 		{
-			m_LayerChannels[ c + 0 ][ i ] = 255.f * locked->r / 31.f ;
+			m_LayerChannels[ c + 0 ][ i ] = 255.f * locked->r / 31.f;
 
-			if( have1 )		m_LayerChannels[ c + 1 ][ i ] = 255.f * locked->g / 63.f ;
-			if( have2 )		m_LayerChannels[ c + 2 ][ i ] = 255.f * locked->b / 31.f ;
+			if( have1 )		m_LayerChannels[ c + 1 ][ i ] = 255.f * locked->g / 63.f;
+			if( have2 )		m_LayerChannels[ c + 2 ][ i ] = 255.f * locked->b / 31.f;
 		}
 
-		D3D_V( r5g6b5->UnlockRect( 0 ) ) ;
+		D3D_V( r5g6b5->UnlockRect( 0 ) );
 
-		SAFE_RELEASE( r5g6b5 ) ;
-		SAFE_RELEASE( fileInMem ) ;
+		SAFE_RELEASE( r5g6b5 );
+		SAFE_RELEASE( fileInMem );
 	}
 
-	InitLayerBaseBitMasks() ;
-	InitLayerBitMaskChains() ;
+	InitLayerBaseBitMasks();
+	InitLayerBitMaskChains();
 #endif
 }
 
@@ -2970,7 +3045,7 @@ r3dTerrain2::OptimizeLayerMasks()
 r3dTexture*
 r3dTerrain2::GetColorTexture() const
 {
-	return m_ColorTex ;
+	return m_ColorTex;
 }
 
 //------------------------------------------------------------------------
@@ -2979,11 +3054,11 @@ void
 r3dTerrain2::SetReplacementColorTexture( r3dTexture* tex )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3d_assert( m_ColorTex->GetD3DFormat() == TERRA2_COLORMODULATION_FORMAT ) ;
+	r3d_assert( m_ColorTex->GetD3DFormat() == TERRA2_COLORMODULATION_FORMAT );
 
-	r3dRenderer->DeleteTexture( m_ColorTex ) ;
+	r3dRenderer->DeleteTexture( m_ColorTex );
 
-	m_ColorTex = tex ;
+	m_ColorTex = tex;
 #endif
 }
 
@@ -2996,13 +3071,35 @@ r3dTerrain2::UpdateColorTexture()
 	r3d_assert( m_ColorTex->GetD3DFormat() == D3DFMT_A8R8G8B8 );
 	r3d_assert( g_bEditMode );
 
-	ID3DXBuffer* fileInMem;
-	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, m_ColorTex->GetD3DTexture(), NULL ) );
+	ID3DXBuffer* fileInMem( NULL );
+
+	bool onDisk = false;
+
+	HRESULT hres = D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, m_ColorTex->GetD3DTexture(), NULL );
+
+	if( hres == E_OUTOFMEMORY )
+	{
+		D3D_V( D3DXSaveTextureToFile( "temp_tex.dds", D3DXIFF_DDS, m_ColorTex->GetD3DTexture(), NULL ) );
+		r3dOutToLog( "r3dTerrain2::UpdateColorTexture: Failed to save temp texture to file in memory - saving to disk.\n" );
+		onDisk = true;
+	}
+	else
+		D3D_V( hres );
+
 
 	IDirect3DTexture9* tex_dxt1;
-
-	HRESULT hres = D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(), m_ColorTex->GetWidth(), m_ColorTex->GetHeight(), 1, 0, 
-														TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 );
+	
+	if( onDisk )
+	{
+		hres = D3DXCreateTextureFromFileEx(	r3dRenderer->pd3ddev, "temp_tex.dds", m_ColorTex->GetWidth(), m_ColorTex->GetHeight(), 1, 0, 
+											TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 );
+		remove( "temp_tex.dds" );
+	}
+	else
+	{
+		hres = D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(), m_ColorTex->GetWidth(), m_ColorTex->GetHeight(), 1, 0, 
+													TERRA2_COLORMODULATION_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &tex_dxt1 );
+	}
 
 	if ( hres == D3D_OK )
 	{
@@ -3038,7 +3135,15 @@ r3dTerrain2::UpdateColorTexture()
 r3dTexture*
 r3dTerrain2::GetHeightTexture() const
 {
-	return m_HeightTex ;
+	return m_HeightTex;
+}
+
+//------------------------------------------------------------------------
+
+r3dTexture*
+r3dTerrain2::GetNormalTexture() const
+{
+	return m_NormalTex;
 }
 
 //------------------------------------------------------------------------
@@ -3047,47 +3152,47 @@ void
 r3dTerrain2::InsertLayer( int idx, Floats* channel, const r3dTerrainLayer* layerDesc )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3d_assert( idx >= 0 && idx <= (int)m_Layers.Count() ) ;
+	r3d_assert( idx >= 0 && idx <= (int)m_Layers.Count() );
 
-	ExtractMasksToChannels() ;
+	ExtractMasksToChannels();
 
-	int splatElemCount = m_SplatResolutionU * m_SplatResolutionV ;
+	int splatElemCount = m_SplatResolutionU * m_SplatResolutionV;
 
 	if( channel )
 	{
-		m_LayerChannels.Insert( idx, *channel ) ;
+		m_LayerChannels.Insert( idx, *channel );
 	}
 	else
 	{
-		m_LayerChannels.Insert( idx, LayerChannel() ) ;
-		m_LayerChannels[ idx ].Resize( splatElemCount, 0 ) ;
+		m_LayerChannels.Insert( idx, LayerChannel() );
+		m_LayerChannels[ idx ].Resize( splatElemCount, 0 );
 	}
 
-	r3dTerrainLayer tlayer ;
+	r3dTerrainLayer tlayer;
 
-	m_Layers.Insert( idx, tlayer ) ;
+	m_Layers.Insert( idx, tlayer );
 
-	m_LayerBaseBitMasks.Insert( idx, r3dBitMaskArray2D() ) ;
-	InitLayerBaseBitMask( idx ) ;
+	m_LayerBaseBitMasks.Insert( idx, r3dBitMaskArray2D() );
+	InitLayerBaseBitMask( idx );
 
-	m_LayerBitMasksMipChains.Insert( idx, LayerBitMaskMipChain() ) ;
+	m_LayerBitMasksMipChains.Insert( idx, LayerBitMaskMipChain() );
 
-	InitLayerBitMaskChain( idx ) ;
+	InitLayerBitMaskChain( idx );
 
-	StoreChannelsInMasks() ;
+	StoreChannelsInMasks();
 
 	if( layerDesc )
 	{
-		m_Layers[ idx ] = *layerDesc ;
+		m_Layers[ idx ] = *layerDesc;
 	}
 
-	InitLayers() ;
+	InitLayers();
 
-	RecalcLayerVars() ;
+	RecalcLayerVars();
 
-	UpdateDesc() ;
+	UpdateDesc();
 
-	RefreshAtlasTiles() ;
+	RefreshAtlasTiles();
 #endif
 }
 
@@ -3097,24 +3202,24 @@ void
 r3dTerrain2::DestroyLayer( int idx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3d_assert( idx >= 0 && idx < (int)m_Layers.Count() ) ;
+	r3d_assert( idx >= 0 && idx < (int)m_Layers.Count() );
 
-	ExtractMasksToChannels() ;
+	ExtractMasksToChannels();
 
-	m_LayerChannels.Erase( idx ) ;
-	m_Layers.Erase( idx ) ;
-	m_LayerBaseBitMasks.Erase( idx ) ;
-	m_LayerBitMasksMipChains.Erase( idx ) ;
+	m_LayerChannels.Erase( idx );
+	m_Layers.Erase( idx );
+	m_LayerBaseBitMasks.Erase( idx );
+	m_LayerBitMasksMipChains.Erase( idx );
 
-	StoreChannelsInMasks() ;
+	StoreChannelsInMasks();
 
-	InitLayers() ;
+	InitLayers();
 
-	RecalcLayerVars() ;
+	RecalcLayerVars();
 
-	UpdateDesc() ;
+	UpdateDesc();
 
-	RefreshAtlasTiles() ;
+	RefreshAtlasTiles();
 #endif
 }
 
@@ -3124,9 +3229,9 @@ void
 r3dTerrain2::GetLayerChannel( Floats * oChannel, int idx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	ExtractMasksToChannels() ;
+	ExtractMasksToChannels();
 
-	*oChannel = m_LayerChannels[ idx ] ;
+	*oChannel = m_LayerChannels[ idx ];
 #endif
 }
 
@@ -3136,8 +3241,8 @@ void
 r3dTerrain2::UpdateDominantLayerData()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	ExtractMasksToChannels() ;
-	DoUpdateDominantLayerData( m_SplatResolutionU, m_SplatResolutionV ) ;
+	ExtractMasksToChannels();
+	DoUpdateDominantLayerData( m_SplatResolutionU, m_SplatResolutionV );
 #endif
 }
 
@@ -3146,7 +3251,7 @@ r3dTerrain2::UpdateDominantLayerData()
 int
 r3dTerrain2::GetNumDecals() const
 {
-	return (int)m_DecalRecords.Count() ;
+	return (int)m_DecalRecords.Count();
 }
 
 //------------------------------------------------------------------------
@@ -3154,7 +3259,7 @@ r3dTerrain2::GetNumDecals() const
 const r3dTerrain2::DecalRecord&
 r3dTerrain2::GetDecalRecord( int idx ) const
 {
-	return m_DecalRecords[ idx ] ;
+	return m_DecalRecords[ idx ];
 }
 
 //------------------------------------------------------------------------
@@ -3162,16 +3267,16 @@ r3dTerrain2::GetDecalRecord( int idx ) const
 void
 r3dTerrain2::SetDecalRecord( int idx, const DecalRecord& record )
 {
-	int needUpdate = memcmp( &record, &m_DecalRecords[ idx ], sizeof record ) ;
-	m_DecalRecords[ idx ] = record ;
+	int needUpdate = memcmp( &record, &m_DecalRecords[ idx ], sizeof record );
+	m_DecalRecords[ idx ] = record;
 
-	r3d_assert( record.TypeIdx >= 0 ) ;
+	r3d_assert( record.TypeIdx >= 0 );
 
 	if( needUpdate )
 	{
-		RECT rect ;
-		FillDecalRect( &rect, record ) ;
-		RefreshAtlasTiles( rect ) ;
+		RECT rect;
+		FillDecalRect( &rect, record );
+		RefreshAtlasTiles( rect );
 	}
 }
 
@@ -3180,7 +3285,7 @@ r3dTerrain2::SetDecalRecord( int idx, const DecalRecord& record )
 void
 r3dTerrain2::AddDecalRecord()
 {
-	m_DecalRecords.PushBack( DecalRecord() ) ;
+	m_DecalRecords.PushBack( DecalRecord() );
 }
 
 //------------------------------------------------------------------------
@@ -3188,8 +3293,8 @@ r3dTerrain2::AddDecalRecord()
 void
 r3dTerrain2::UpdateQualitySettings()
 {
-	const QualitySettings& qs = SelectQualitySettings() ;
-	SetQualitySettings( qs, false, 0 ) ;
+	const QualitySettings& qs = SelectQualitySettings();
+	SetQualitySettings( qs, false, 0 );
 }
 
 //------------------------------------------------------------------------
@@ -3198,35 +3303,35 @@ void
 r3dTerrain2::Resize( int newVertexCountX, int newVertexCountZ )
 {
 	// check for powers of 2
-	r3d_assert( !( ~newVertexCountX + 1 + newVertexCountX ) ) ;
-	r3d_assert( !( ~newVertexCountZ + 1 + newVertexCountZ ) ) ;
-	r3d_assert( newVertexCountX >= 256 && newVertexCountX <= 4096 ) ;
-	r3d_assert( newVertexCountZ >= 256 && newVertexCountZ <= 4096 ) ;
+	r3d_assert( !( ~newVertexCountX + 1 + newVertexCountX ) );
+	r3d_assert( !( ~newVertexCountZ + 1 + newVertexCountZ ) );
+	r3d_assert( newVertexCountX >= 256 && newVertexCountX <= 4096 );
+	r3d_assert( newVertexCountZ >= 256 && newVertexCountZ <= 4096 );
 
 	r3d_assert( m_PhysicsHeightField );
 
 	r3d_assert(_CrtCheckMemory());
 
 	r3dTL::TArray< PxI16 > hfShrinkedSamples( m_VertexCountX * m_VertexCountZ );
-	SaveHeightField( &hfShrinkedSamples ) ;
+	SaveHeightField( &hfShrinkedSamples );
 
 	TCHAR tempFolder [MAX_PATH * 2];
 
-	int res = GetTempPath (MAX_PATH, tempFolder) ;
+	int res = GetTempPath (MAX_PATH, tempFolder);
 	
-	r3d_assert( res ) ;
+	r3d_assert( res );
 
-	strcat( tempFolder, "tempterra" ) ;
-	mkdir( tempFolder ) ;
+	strcat( tempFolder, "tempterra" );
+	mkdir( tempFolder );
 
-	DoSave( tempFolder, hfShrinkedSamples, newVertexCountX, newVertexCountZ ) ;	
+	DoSave( tempFolder, hfShrinkedSamples, newVertexCountX, newVertexCountZ );	
 
-	Destroy() ;
-	Construct() ;
+	Destroy();
+	Construct();
 
-	DoLoad( tempFolder ) ;
+	DoLoad( tempFolder );
 
-	Terrain2 = this ;
+	Terrain2 = this;
 }
 
 //------------------------------------------------------------------------
@@ -3237,22 +3342,22 @@ r3dTerrain2::UpdateLayersForMask( int idx )
 	if( !m_LayerChannels.Count() )
 	{
 		// first timer - have to extract all
-		ExtractMasksToChannels() ;
+		ExtractMasksToChannels();
 	}
 	else
 	{
-		ExtractMaskToChannels( idx ) ;
+		ExtractMaskToChannels( idx );
 	}
 
-	for( int i = 0, e = LAYERS_PER_MASK ; i < e ; i ++ )
+	for( int i = 0, e = LAYERS_PER_MASK; i < e; i ++ )
 	{
-		int lidx = idx * LAYERS_PER_MASK + i ;
+		int lidx = idx * LAYERS_PER_MASK + i;
 
 		if( lidx >= (int)m_Layers.Count() )
-			break ;
+			break;
 
-		InitLayerBaseBitMask( lidx ) ;
-		InitLayerBitMaskChain( lidx ) ;
+		InitLayerBaseBitMask( lidx );
+		InitLayerBitMaskChain( lidx );
 	}
 }
 
@@ -3260,56 +3365,56 @@ r3dTerrain2::UpdateLayersForMask( int idx )
 
 struct EnsureParams
 {
-	int width ;
-	int height ;
-	r3dD3DTextureTunnel* result ;	
-	const char* path ;
+	int width;
+	int height;
+	r3dD3DTextureTunnel* result;	
+	const char* path;
 };
 
 static void EnsureInMainThread( void* param )
 {
-	EnsureParams *eparams = (EnsureParams*)param ;
+	EnsureParams *eparams = (EnsureParams*)param;
 
-	IDirect3DTexture9* convertedTex( NULL ) ;
+	IDirect3DTexture9* convertedTex( NULL );
 
-	D3D_V( D3DXCreateTextureFromFileEx( r3dRenderer->pd3ddev, eparams->path, eparams->width, eparams->height, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &convertedTex ) ) ;
+	D3D_V( D3DXCreateTextureFromFileEx( r3dRenderer->pd3ddev, eparams->path, eparams->width, eparams->height, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &convertedTex ) );
 
-	eparams->result->Set( convertedTex ) ;
+	eparams->result->Set( convertedTex );
 }
 
 void
 r3dTerrain2::EnsureMaskFormat( int idx )
 {
-	r3dTexture* mask = m_Masks[ idx ] ;
+	r3dTexture* mask = m_Masks[ idx ];
 
 	if( mask->GetD3DFormat() != TERRA2_LAYERMASK_FORMAT )
 	{
-		r3dOutToLog( "Terrain2: WARNING: layer mask %d has improper format - converting.\n", idx ) ;
+		r3dOutToLog( "Terrain2: WARNING: layer mask %d has improper format - converting.\n", idx );
 
-		char fname[ MAX_PATH * 2 ] ;
-		strcpy( fname, mask->getFileLoc().FileName ) ;
+		char fname[ MAX_PATH * 2 ];
+		strcpy( fname, mask->getFileLoc().FileName );
 
-		int width = mask->GetWidth() ;
-		int height = mask->GetHeight() ;
+		int width = mask->GetWidth();
+		int height = mask->GetHeight();
 
-		r3dRenderer->DeleteTexture( mask ) ;
+		r3dRenderer->DeleteTexture( mask );
 
-		EnsureParams eparams ;
-		r3dD3DTextureTunnel tunnel ;
+		EnsureParams eparams;
+		r3dD3DTextureTunnel tunnel;
 
-		eparams.width	= width ;
-		eparams.height	= height ;
-		eparams.result	= &tunnel ;
-		eparams.path	= fname ;
+		eparams.width	= width;
+		eparams.height	= height;
+		eparams.result	= &tunnel;
+		eparams.path	= fname;
 
-		ProcessCustomDeviceQueueItem( EnsureInMainThread, &eparams ) ;
+		ProcessCustomDeviceQueueItem( EnsureInMainThread, &eparams );
 
-		mask = r3dRenderer->AllocateTexture() ;
+		mask = r3dRenderer->AllocateTexture();
 
-		mask->Setup( width, height, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false ) ;
-		mask->OverwriteFileLocation( fname ) ;
+		mask->Setup( width, height, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false );
+		mask->OverwriteFileLocation( fname );
 
-		m_Masks[ idx ] = mask ;
+		m_Masks[ idx ] = mask;
 	}
 }
 
@@ -3318,7 +3423,7 @@ r3dTerrain2::EnsureMaskFormat( int idx )
 const r3dString&
 r3dTerrain2::GetNormalDetailTextureName()
 {
-	return m_DetailNormalTexSrc ;
+	return m_DetailNormalTexSrc;
 }
 
 //------------------------------------------------------------------------
@@ -3326,7 +3431,7 @@ r3dTerrain2::GetNormalDetailTextureName()
 r3dTexture*
 r3dTerrain2::GetNormalDetailTexture()
 {
-	return m_DetailNormalTex ;
+	return m_DetailNormalTex;
 }
 
 //------------------------------------------------------------------------
@@ -3336,23 +3441,22 @@ r3dTerrain2::SetNormalDetailTexture( const r3dString& Name )
 {
 	if( m_DetailNormalTexSrc != Name )
 	{
-		m_DetailNormalTexSrc = Name ;
+		m_DetailNormalTexSrc = Name;
 
 		if( m_DetailNormalTexSrc.Length() )
 		{
-			LoadDetailNormalTex() ;
+			LoadDetailNormalTex();
 		}
 		else
 		{
 			if( m_DetailNormalTex )
 			{
-				r3dRenderer->DeleteTexture( m_DetailNormalTex ) ;
-				m_DetailNormalTex = NULL ;
+				r3dRenderer->DeleteTexture( m_DetailNormalTex );
+				m_DetailNormalTex = NULL;
 			}
 		}
 
-		UpdateNormals() ;
-
+		UpdateNormals();
 	}
 }
 
@@ -3361,15 +3465,15 @@ r3dTerrain2::SetNormalDetailTexture( const r3dString& Name )
 void r3dTerrain2::UpdateNormals()
 {
 
-	Floats heights ;
+	Floats heights;
 
-	heights.Resize( m_VertexCountX * m_VertexCountZ ) ;
+	heights.Resize( m_VertexCountX * m_VertexCountZ );
 
-	Vectors temp0, temp1 ;
+	Vectors temp0, temp1;
 
-	SaveHeightField( &heights ) ;
+	SaveHeightField( &heights );
 
-	UpdateNormals( heights, &temp0, &temp1, NULL ) ;
+	UpdateNormals( heights, &temp0, &temp1, NULL );
 }
 
 //------------------------------------------------------------------------
@@ -3378,43 +3482,43 @@ void
 r3dTerrain2::SwitchVFetchMode()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_AllowVFetch = !m_AllowVFetch ;
+	m_AllowVFetch = !m_AllowVFetch;
 
 	if( m_AllowVFetch )
 	{
 		if( m_HeightTex )
-			r3dRenderer->DeleteTexture( m_HeightTex ) ;
+			r3dRenderer->DeleteTexture( m_HeightTex );
 
-		m_HeightTex = r3dRenderer->AllocateTexture() ;
+		m_HeightTex = r3dRenderer->AllocateTexture();
 
-		m_HeightTex->Create( m_VertexCountX, m_VertexCountZ, D3DFMT_L16, 1 ) ;
+		m_HeightTex->Create( m_VertexCountX, m_VertexCountZ, D3DFMT_L16, 1 );
 
-		UINT16* locked = (UINT16*)m_HeightTex->Lock( 1 ) ;
+		UINT16* locked = (UINT16*)m_HeightTex->Lock( 1 );
 
-		for( int i = 0, e = m_VertexCountX * m_VertexCountZ ; i < e ; i ++, locked ++ )
+		for( int i = 0, e = m_VertexCountX * m_VertexCountZ; i < e; i ++, locked ++ )
 		{
-			*locked = UINT16( (int)m_HeightArr[ i ] * 2 ) ;
+			*locked = UINT16( (int)m_HeightArr[ i ] * 2 );
 		}
 
-		m_HeightTex->Unlock() ;
+		m_HeightTex->Unlock();
 	}
 	else
 	{
-		CreateDynaVertexBuffer() ;
+		CreateDynaVertexBuffer();
 
-		UINT16* locked = (UINT16*)m_HeightTex->Lock( 0 ) ;
+		UINT16* locked = (UINT16*)m_HeightTex->Lock( 0 );
 
-		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ ) ;
+		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ );
 
-		for( int i = 0, e = m_VertexCountX * m_VertexCountZ ; i < e ; i ++, locked ++ )
+		for( int i = 0, e = m_VertexCountX * m_VertexCountZ; i < e; i ++, locked ++ )
 		{
-			m_HeightArr[ i ] = *locked / 2 ;
+			m_HeightArr[ i ] = *locked / 2;
 		}
 
-		m_HeightTex->Unlock() ;		
+		m_HeightTex->Unlock();		
 
-		r3dRenderer->DeleteTexture( m_HeightTex ) ;
-		m_HeightTex = NULL ;
+		r3dRenderer->DeleteTexture( m_HeightTex );
+		m_HeightTex = NULL;
 	}
 #endif
 }
@@ -3425,10 +3529,10 @@ r3dTerrain2::SwitchVFetchMode()
 float
 r3dTerrain2::GetHeight( const r3dPoint3D& pos )	/*OVERRIDE*/
 {
-	r3d_assert( m_PhysicsHeightField ) ;
+	r3d_assert( m_PhysicsHeightField );
 
-	float rx = pos.x / m_CellSize ;
-	float rz = pos.z / m_CellSize ;
+	float rx = pos.x / m_CellSize;
+	float rz = pos.z / m_CellSize;
 
 	PxReal x = R3D_MAX( R3D_MIN( rx, m_VertexCountX  - 1.5f ), 0.f );
 	PxReal z = R3D_MAX( R3D_MIN( rz, m_VertexCountZ - 1.5f ), 0.f );
@@ -3469,42 +3573,42 @@ r3dTerrain2::GetNormal( const r3dPoint3D& pos )	/*OVERRIDE*/
 void
 r3dTerrain2::GetHeightRange( float* oMinHeight, float* oMaxHeight, r3dPoint2D start, r3dPoint2D end ) /*OVERRIDE*/
 {
-	const r3dTerrainDesc& desc = GetDesc() ;
+	const r3dTerrainDesc& desc = GetDesc();
 
 	int	x0	= (int)( start.x / desc.CellSize );
 	int	z0	= (int)( start.y / desc.CellSize );
 	int	x1	= (int)( end.x / desc.CellSize );
 	int	z1	= (int)( end.y / desc.CellSize );
 
-	x0 = R3D_MAX( R3D_MIN( x0, (int)desc.CellCountX - 1 ), 0 ) ;
-	x1 = R3D_MAX( R3D_MIN( x1, (int)desc.CellCountX - 1 ), 0 ) ;
+	x0 = R3D_MAX( R3D_MIN( x0, (int)desc.CellCountX - 1 ), 0 );
+	x1 = R3D_MAX( R3D_MIN( x1, (int)desc.CellCountX - 1 ), 0 );
 
-	z0 = R3D_MAX( R3D_MIN( z0, (int)desc.CellCountZ - 1 ), 0 ) ;
-	z1 = R3D_MAX( R3D_MIN( z1, (int)desc.CellCountZ - 1 ), 0 ) ;
+	z0 = R3D_MAX( R3D_MIN( z0, (int)desc.CellCountZ - 1 ), 0 );
+	z1 = R3D_MAX( R3D_MIN( z1, (int)desc.CellCountZ - 1 ), 0 );
 
-	int xmi = R3D_MIN( x0, x1 ) ;
-	int xma = R3D_MAX( x0, x1 ) ;
+	int xmi = R3D_MIN( x0, x1 );
+	int xma = R3D_MAX( x0, x1 );
 
-	int zmi = R3D_MIN( z0, z1 ) ;
-	int zma = R3D_MAX( z0, z1 ) ;
+	int zmi = R3D_MIN( z0, z1 );
+	int zma = R3D_MAX( z0, z1 );
 
-	int iwidth = (int) desc.CellCountX ;
+	int iwidth = (int) desc.CellCountX;
 
-	float minHeight = FLT_MAX ;
-	float maxHeight = -FLT_MAX ;
+	float minHeight = FLT_MAX;
+	float maxHeight = -FLT_MAX;
 
-	for( int j = z0 ; j <= z1; j ++ )
+	for( int j = z0; j <= z1; j ++ )
 	{
-		for( int i = x0 ; i <= x1; i ++ )
+		for( int i = x0; i <= x1; i ++ )
 		{
-			float h = GetHeight( i, j ) ;
-			minHeight = R3D_MIN( h, minHeight ) ;
-			maxHeight = R3D_MAX( h, maxHeight ) ;
+			float h = GetHeight( i, j );
+			minHeight = R3D_MIN( h, minHeight );
+			maxHeight = R3D_MAX( h, maxHeight );
 		}
 	}
 
-	*oMinHeight = minHeight ;
-	*oMaxHeight = maxHeight ;
+	*oMinHeight = minHeight;
+	*oMaxHeight = maxHeight;
 }
 
 //------------------------------------------------------------------------
@@ -3516,8 +3620,8 @@ r3dTerrain2::GetMaterialType( const r3dPoint3D& pnt ) /*OVERRIDE*/
 	if( !m_DominantLayerData.Count() )
 		return g_pMaterialTypes->GetDefaultMaterial();
 
-	int domLayerDataWidth = m_DominantLayerData.Width() ;
-	int domLayerDataHeight = m_DominantLayerData.Height() ;
+	int domLayerDataWidth = m_DominantLayerData.Width();
+	int domLayerDataHeight = m_DominantLayerData.Height();
 
 	int	X     = (int)( pnt.X / m_CellSize * domLayerDataWidth / m_SplatResolutionU );
 	int	Z     = (int)( pnt.Z / m_CellSize * domLayerDataHeight / m_SplatResolutionV );
@@ -3525,7 +3629,7 @@ r3dTerrain2::GetMaterialType( const r3dPoint3D& pnt ) /*OVERRIDE*/
 	X = R3D_MIN( R3D_MAX( X, 0 ), (int)domLayerDataWidth - 1 );
 	Z = R3D_MIN( R3D_MAX( Z, 0 ), (int)domLayerDataHeight - 1 );
 
-	int lidx = m_DominantLayerData[ Z ][ X ] ;
+	int lidx = m_DominantLayerData[ Z ][ X ];
 
 	if( lidx >= 0 && lidx < (int)m_MatTypeIdxes.Count() )
 	{
@@ -3544,7 +3648,7 @@ r3dTerrain2::GetMaterialType( const r3dPoint3D& pnt ) /*OVERRIDE*/
 bool
 r3dTerrain2::IsLoaded() /*OVERRIDE*/
 {
-	return !!m_IsLoaded ;
+	return !!m_IsLoaded;
 }
 
 //------------------------------------------------------------------------
@@ -3556,50 +3660,66 @@ r3dTerrain2::PrepareOthographicTerrainRender() /*OVERRIDE*/
 #if R3D_TERRAIN_V2_GRAPHICS
 
 	// deallocate everything ( it'll get auto allocated before normal render again )
-	RemoveAllocatedTiles() ;
+	RemoveAllocatedTiles();
 
 	//------------------------------------------------------------------------
 
-	int tileMip = 0 ;
+	int tileMip = 0;
 
-	for( int v = m_QualitySettings.VertexTileDim ; v < 64 ; v *= 2 )
+	for( int v = m_QualitySettings.VertexTileDim; v < 64; v *= 2 )
 	{
-		tileMip ++ ;
+		tileMip ++;
 	}
 
-	tileMip = R3D_MIN( tileMip, m_NumActiveQualityLayers - 1 ) ;
+	tileMip = R3D_MIN( tileMip, m_NumActiveQualityLayers - 1 );
 
-	int tileVertexCount = m_QualitySettings.VertexTileDim << tileMip ;
+	int tileVertexCount = m_QualitySettings.VertexTileDim << tileMip;
 
-	int tileCountX = m_VertexCountX / tileVertexCount ;
-	int tileCountZ = m_VertexCountZ / tileVertexCount ;
+	int tileCountX = m_VertexCountX / tileVertexCount;
+	int tileCountZ = m_VertexCountZ / tileVertexCount;
 
-	for( int z = 0, e = tileCountZ ; z < e ; z ++ )
+	for( int z = 0, e = tileCountZ; z < e; z ++ )
 	{
-		for( int x = 0, e = tileCountX ; x < e ; x ++ )
+		for( int x = 0, e = tileCountX; x < e; x ++ )
 		{
-			AddToAllocatedTiles( x, z, tileMip, 0 ) ;
+			AddToAllocatedTiles( x, z, tileMip, 0 );
 		}
 	}
 
-	StartTileUpdating() ;
+	StartTileUpdating();
 
 	{
-		AllocatedTileArr& targetMipArr = m_AllocTileLodArray[ tileMip ] ;
+		AllocatedTileArr& targetMipArr = m_AllocTileLodArray[ tileMip ];
 
-		for( int i = 0, e = (int)targetMipArr.Count() ; i < e ; i ++ )
+		for( int i = 0, e = (int)targetMipArr.Count(); i < e; i ++ )
 		{
-			AllocatedTile& atile = targetMipArr[ i ] ;
+			AllocatedTile& atile = targetMipArr[ i ];
 
-			AllocateAtlasTile( &atile ) ;
-			UpdateTileInAtlas( &atile ) ;
+			AllocateAtlasTile( &atile );
+			UpdateTileInAtlas( &atile );
 		}
 	}
 	
-	StopTileUpdating() ;
+	StopTileUpdating();
+
+	StartTileRoadUpdating();
+
+	if( m_RoadInfoMipChain.Count() )
+	{
+		AllocatedTileArr& targetMipArr = m_AllocTileLodArray[ tileMip ];
+
+		for( int i = 0, e = (int)targetMipArr.Count(); i < e; i ++ )
+		{
+			AllocatedTile& atile = targetMipArr[ i ];
+			UpdateAtlasTileRoads( &atile );
+		}
+	}
+
+	StopTileRoadUpdating();
+
 #endif
 
-	return true ;
+	return true;
 }
 
 //------------------------------------------------------------------------
@@ -3616,34 +3736,36 @@ r3dTerrain2::DrawOrthographicTerrain( const r3dCamera& Cam, bool UseZ ) /*OVERRI
 	else
 		r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
-	r3dRenderer->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, 1.0f, 0 );
+	D3D_V( r3dRenderer->pd3ddev->Clear( 0, NULL, D3DCLEAR_TARGET, 0xff000000, r3dRenderer->GetClearZValue(), 0 ) );
 
 	// need white alpha or else our d3dxsave/d3dxload bezzle produces enterily black dxt1...
-	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 													D3DCOLORWRITEENABLE_BLUE ) );
 
 
 
-	StartTileRendering() ;
+	StartTileRendering();
 
-	for( int i = 0, e = (int) m_AllocTileLodArray.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int) m_AllocTileLodArray.Count(); i < e; i ++ )
 	{
-		AllocatedTileArr& arr = m_AllocTileLodArray[ i ] ;
+		AllocatedTileArr& arr = m_AllocTileLodArray[ i ];
 
-		for( int i = 0, e = arr.Count() ; i < e ; i ++ )
+		for( int i = 0, e = arr.Count(); i < e; i ++ )
 		{
-			RenderTile(	&arr[ i ] ) ;
+			RenderTile(	&arr[ i ] );
 		}
 	}
 
-	EndTileRendering() ;
+	EndTileRendering();
 
-	D3D_V( r3dRenderer->SetRenderState(	D3DRS_COLORWRITEENABLE,
-													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN |
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState(	D3DRS_COLORWRITEENABLE, 
+													D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | 
 													D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA ) );
 
-	RemoveAllocatedTiles() ;
+	RemoveAllocatedTiles();
+
+	FreeAtlas();
 #endif
 
 	return true;
@@ -3672,15 +3794,15 @@ r3dTerrain2::ReloadTextures() /*OVERRIDE*/
 	ReloadTexture( m_BaseLayer.DiffuseTex, DownScale );
 	ReloadTexture( m_BaseLayer.NormalTex, DownScale );
 
-	for( int i = 0, e = m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
 		ReloadTexture( m_Layers[ i ].DiffuseTex, DownScale );
 		ReloadTexture( m_Layers[ i ].NormalTex, DownScale );
 	}
 
-	UpdateQualitySettings() ;
+	UpdateQualitySettings();
 
-	RefreshAtlasTiles() ;
+	RefreshAtlasTiles();
 }
 
 //------------------------------------------------------------------------
@@ -3690,28 +3812,28 @@ r3dTexture*
 r3dTerrain2::GetDominantTexture( const r3dPoint3D &pos ) /*OVERRIDE*/
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	const r3dTerrainDesc& desc = GetDesc() ;
+	const r3dTerrainDesc& desc = GetDesc();
 
-	int x = int( pos.x / desc.CellSize ) * m_DominantLayerData.Width() / desc.CellCountX ;
-	int z = int( pos.z / desc.CellSize ) * m_DominantLayerData.Height() / desc.CellCountZ ;
+	int x = int( pos.x / desc.CellSize ) * m_DominantLayerData.Width() / desc.CellCountX;
+	int z = int( pos.z / desc.CellSize ) * m_DominantLayerData.Height() / desc.CellCountZ;
 
-	x = R3D_MAX( R3D_MIN( x, (int)m_DominantLayerData.Width() - 1 ), 0 ) ;
-	z = R3D_MAX( R3D_MIN( z, (int)m_DominantLayerData.Height() - 1 ), 0 ) ;
+	x = R3D_MAX( R3D_MIN( x, (int)m_DominantLayerData.Width() - 1 ), 0 );
+	z = R3D_MAX( R3D_MIN( z, (int)m_DominantLayerData.Height() - 1 ), 0 );
 
-	int domiLayer = m_DominantLayerData[ z ][ x ] ;
+	int domiLayer = m_DominantLayerData[ z ][ x ];
 
 	if( !domiLayer )
-		return m_BaseLayer.DiffuseTex ;
+		return m_BaseLayer.DiffuseTex;
 	else
 	{
 		if( domiLayer > 0 && domiLayer <= (int)m_Layers.Count() )
 		{
-			return m_Layers[ domiLayer - 1 ].DiffuseTex ;
+			return m_Layers[ domiLayer - 1 ].DiffuseTex;
 		}
 	}
 #endif
 
-	return NULL ;
+	return NULL;
 }
 
 //------------------------------------------------------------------------
@@ -3719,51 +3841,51 @@ r3dTerrain2::GetDominantTexture( const r3dPoint3D &pos ) /*OVERRIDE*/
 void
 r3dTerrain2::Construct()
 {
-	m_TileCountX				= 0 ;
-	m_TileCountZ				= 0 ;
-	m_AtlasTileCountPerSide		= 0 ;
-	m_TempDiffuseRT				= NULL ;
-	m_TempNormalRT				= NULL ;
-	m_TileVertexBuffer			= NULL ;
-	m_TileIndexBuffer			= NULL ;
-	m_HeightTex					= NULL ;
-	m_NormalTex					= NULL ;
-	m_ColorTex					= NULL ;
-	m_LastDiffuseRT				= NULL ;
-	m_LastNormalRT				= NULL ;
-	m_DetailNormalTex			= NULL ;
-	m_UnitQuadVertexBuffer		= NULL ;
-	m_TerrainPosToSplatU		= 0.f ;
-	m_TerrainPosToSplatV		= 0.f ;
-	m_HeightScale				= 30.f ;
-	m_HeightOffset				= 0.f ;
-	m_TotalTerrainXLength		= 0.f ;
-	m_TotalTerrainZLength		= 0.f ;
-	m_NumActiveQualityLayers	= 0 ;
-	m_TotalAllocatedTiles		= 0 ;
-	m_MaxAllocatedTiles			= 0 ;
-	m_4VertTileIndexOffset		= 0 ;
-	m_DebugVisIndexOffset		= 0 ;
-	m_TileUnitWorldDim			= 0.f ;
-	m_VertexCountX				= 0 ;
-	m_VertexCountZ				= 0 ;
-	m_SplatResolutionU			= 0 ;
-	m_SplatResolutionV			= 0 ;
-	m_PhysicsTerrain			= 0 ;
-	m_PhysicsHeightField		= 0 ;
-	m_HFScale					= 1.0f ;
-	m_InvHFScale				= 1.0f ;
-	m_HeightFieldDataCRC32		= 0 ;
-	m_RoadTileUpdateZFar		= 0.f ;
-	m_IsLoaded					= 0 ;
-	m_IsQualityUpdated			= 0 ;
-	m_DynamicVertexBuffer		= 0 ;
-	m_DynamicVertexBufferPtr	= 0 ;
-	m_AllowVFetch				= 0 ;
+	m_TileCountX				= 0;
+	m_TileCountZ				= 0;
+	m_AtlasTileCountPerSide		= 0;
+	m_TempDiffuseRT				= NULL;
+	m_TempNormalRT				= NULL;
+	m_TileVertexBuffer			= NULL;
+	m_TileIndexBuffer			= NULL;
+	m_HeightTex					= NULL;
+	m_NormalTex					= NULL;
+	m_ColorTex					= NULL;
+	m_LastDiffuseRT				= NULL;
+	m_LastNormalRT				= NULL;
+	m_DetailNormalTex			= NULL;
+	m_UnitQuadVertexBuffer		= NULL;
+	m_TerrainPosToSplatU		= 0.f;
+	m_TerrainPosToSplatV		= 0.f;
+	m_HeightScale				= 30.f;
+	m_HeightOffset				= 0.f;
+	m_TotalTerrainXLength		= 0.f;
+	m_TotalTerrainZLength		= 0.f;
+	m_NumActiveQualityLayers	= 0;
+	m_TotalAllocatedTiles		= 0;
+	m_MaxAllocatedTiles			= 0;
+	m_4VertTileIndexOffset		= 0;
+	m_DebugVisIndexOffset		= 0;
+	m_TileUnitWorldDim			= 0.f;
+	m_VertexCountX				= 0;
+	m_VertexCountZ				= 0;
+	m_SplatResolutionU			= 0;
+	m_SplatResolutionV			= 0;
+	m_PhysicsTerrain			= 0;
+	m_PhysicsHeightField		= 0;
+	m_HFScale					= 1.0f;
+	m_InvHFScale				= 1.0f;
+	m_HeightFieldDataCRC32		= 0;
+	m_RoadTileUpdateZFar		= 0.f;
+	m_IsLoaded					= 0;
+	m_IsQualityUpdated			= 0;
+	m_DynamicVertexBuffer		= 0;
+	m_DynamicVertexBufferPtr	= 0;
+	m_AllowVFetch				= 0;
 
-	m_NormalDensity				= 1 ;
+	m_NormalDensity				= 1;
 
-	m_BaseLayer.Name = "Base Layer" ;
+	m_BaseLayer.Name = "Base Layer";
 
 #if R3D_TERRAIN_V2_GRAPHICS
 	m_AllowVFetch = r3dRenderer->SupportsVertexTextureFetch;
@@ -3787,11 +3909,11 @@ r3dTerrain2::Destroy()
 
 	if( Terrain == Terrain2 )
 	{
-		Terrain = NULL ;
+		Terrain = NULL;
 	}
 
 	Terrain2 = NULL;
-	Close() ;
+	Close();
 }
 
 //------------------------------------------------------------------------
@@ -3801,7 +3923,7 @@ r3dTerrain2::CreateDynaVertexBuffer()
 {
 	if( !m_DynamicVertexBuffer )
 	{
-		m_DynamicVertexBuffer = new r3dVertexBuffer( 128 * 1024, sizeof( r3dDynaTerraVertex), 0, true ) ;	
+		m_DynamicVertexBuffer = new r3dVertexBuffer( 128 * 1024, sizeof( r3dDynaTerraVertex), 0, true );	
 	}
 }
 
@@ -3813,57 +3935,57 @@ r3dTerrain2::ExtractMaskToChannels( int midx )
 	// new layer added?
 	if( m_LayerChannels.Count() < m_Layers.Count() )
 	{
-		m_LayerChannels.Resize( m_Layers.Count() ) ;
+		m_LayerChannels.Resize( m_Layers.Count() );
 	}
 
-	int c = midx * LAYERS_PER_MASK ;
+	int c = midx * LAYERS_PER_MASK;
 
-	ID3DXBuffer* fileInMem ;
+	ID3DXBuffer* fileInMem;
 
-	r3dTexture* source = m_Masks[ midx ] ;
+	r3dTexture* source = m_Masks[ midx ];
 
-	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, source->AsTex2D(), NULL ) ) ;
+	D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, source->AsTex2D(), NULL ) );
 
-	IDirect3DTexture9* r5g6b6 ;
+	IDirect3DTexture9* r5g6b6;
 
 	D3D_V( D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(), source->GetWidth(), source->GetHeight(), 1, 0, 
-												D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &r5g6b6 ) ) ;
+												D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &r5g6b6 ) );
 
 
-	D3DLOCKED_RECT lrect ;
-	D3D_V( r5g6b6->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) ) ;
+	D3DLOCKED_RECT lrect;
+	D3D_V( r5g6b6->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) );
 
-	int have1 = c + 1 < (int)m_Layers.Count() ;
-	int have2 = c + 2 < (int)m_Layers.Count() ;
+	int have1 = c + 1 < (int)m_Layers.Count();
+	int have2 = c + 2 < (int)m_Layers.Count();
 
 	struct Channeled16
 	{
-		UINT16 b : 5 ;
-		UINT16 g : 6 ;
-		UINT16 r : 5 ;
-	} * locked = ( Channeled16* ) lrect.pBits ;
+		UINT16 b : 5;
+		UINT16 g : 6;
+		UINT16 r : 5;
+	} * locked = ( Channeled16* ) lrect.pBits;
 
-	int totalCount = source->GetWidth() * source->GetHeight() ;
+	int totalCount = source->GetWidth() * source->GetHeight();
 
-	m_LayerChannels[ c + 0 ].Resize( totalCount ) ;
+	m_LayerChannels[ c + 0 ].Resize( totalCount );
 
-	if( have1 ) m_LayerChannels[ c + 1 ].Resize( totalCount ) ;
-	if( have2 ) m_LayerChannels[ c + 2 ].Resize( totalCount ) ;
+	if( have1 ) m_LayerChannels[ c + 1 ].Resize( totalCount );
+	if( have2 ) m_LayerChannels[ c + 2 ].Resize( totalCount );
 
-	for( int i = 0, e = totalCount ; i < e ; i ++, locked ++ )
+	for( int i = 0, e = totalCount; i < e; i ++, locked ++ )
 	{
 		// add a little extra, bcoz continuous dxt compression seems to fade intensity away.
 
-		m_LayerChannels[ c + 0 ][ i ] = 255.5f * locked->r / 31.f ;
+		m_LayerChannels[ c + 0 ][ i ] = 255.5f * locked->r / 31.f;
 
-		if( have1 )	m_LayerChannels[ c + 1 ][ i ] = 255.5f * locked->g / 63.f ;
-		if( have2 )	m_LayerChannels[ c + 2 ][ i ] = 255.5f * locked->b / 31.f ;
+		if( have1 )	m_LayerChannels[ c + 1 ][ i ] = 255.5f * locked->g / 63.f;
+		if( have2 )	m_LayerChannels[ c + 2 ][ i ] = 255.5f * locked->b / 31.f;
 	}
 
-	D3D_V( r5g6b6->UnlockRect( 0 ) ) ;
+	D3D_V( r5g6b6->UnlockRect( 0 ) );
 
-	SAFE_RELEASE( r5g6b6 ) ;
-	SAFE_RELEASE( fileInMem ) ;
+	SAFE_RELEASE( r5g6b6 );
+	SAFE_RELEASE( fileInMem );
 }
 
 //------------------------------------------------------------------------
@@ -3872,11 +3994,11 @@ void
 r3dTerrain2::ExtractMasksToChannels()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_LayerChannels.Resize( m_Layers.Count() ) ;
+	m_LayerChannels.Resize( m_Layers.Count() );
 
-	for( int i = 0, e = m_Masks.Count()  ; i < e ; i ++ )
+	for( int i = 0, e = m_Masks.Count() ; i < e; i ++ )
 	{
-		ExtractMaskToChannels( i ) ;
+		ExtractMaskToChannels( i );
 	}
 #endif
 }
@@ -3887,97 +4009,130 @@ void
 r3dTerrain2::StoreChannelsInMasks()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int i = 0, e = (int)m_Masks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_Masks.Count(); i < e; i ++ )
 	{
-		r3dRenderer->DeleteTexture( m_Masks[ i ] ) ;
+		r3dRenderer->DeleteTexture( m_Masks[ i ] );
 	}
 
-	m_Masks.Resize( m_LayerChannels.Count() / LAYERS_PER_MASK + ( m_LayerChannels.Count() % LAYERS_PER_MASK ? 1 : 0 ) ) ;
+	m_Masks.Resize( m_LayerChannels.Count() / LAYERS_PER_MASK + ( m_LayerChannels.Count() % LAYERS_PER_MASK ? 1 : 0 ) );
 
-	int maskTexWidth = m_SplatResolutionU ;
-	int maskTexHeight = m_SplatResolutionV ;
+	int maskTexWidth = m_SplatResolutionU;
+	int maskTexHeight = m_SplatResolutionV;
 
-	IDirect3DTexture9* r5g6b5 ;
-	D3D_V( r3dRenderer->pd3ddev->CreateTexture( maskTexWidth, maskTexHeight, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &r5g6b5, NULL ) ) ;
+	IDirect3DTexture9* r5g6b5;
+	D3D_V( r3dRenderer->pd3ddev->CreateTexture( maskTexWidth, maskTexHeight, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &r5g6b5, NULL ) );
 
-	for( int i = 0, e = m_Masks.Count(), c = 0 ; i < e ; i ++, c += LAYERS_PER_MASK )
+	for( int i = 0, e = m_Masks.Count(), c = 0; i < e; i ++, c += LAYERS_PER_MASK )
 	{
-		D3DLOCKED_RECT lrect ;
-		D3D_V( r5g6b5->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) ) ;
+		D3DLOCKED_RECT lrect;
+		D3D_V( r5g6b5->LockRect( 0, &lrect, NULL, D3DLOCK_READONLY ) );
 
 		struct Channeled16
 		{
-			UINT16 b : 5 ;
-			UINT16 g : 6 ;
-			UINT16 r : 5 ;
-		} * locked = ( Channeled16* ) lrect.pBits ;
+			UINT16 b : 5;
+			UINT16 g : 6;
+			UINT16 r : 5;
+		} * locked = ( Channeled16* ) lrect.pBits;
 
-		int have1 = c + 1 < (int)m_LayerChannels.Count() ;
-		int have2 = c + 2 < (int)m_LayerChannels.Count() ;
+		int have1 = c + 1 < (int)m_LayerChannels.Count();
+		int have2 = c + 2 < (int)m_LayerChannels.Count();
 
 		{
-			for( int i = 0, e = maskTexWidth * maskTexHeight ; i < e ; i ++, locked ++ )
+			for( int i = 0, e = maskTexWidth * maskTexHeight; i < e; i ++, locked ++ )
 			{
-				locked->r = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 0 ][ i ] * 31.f / 255.f ), 0 ), 31 ) ;		
+				locked->r = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 0 ][ i ] * 31.f / 255.f ), 0 ), 31 );		
 				if( have1 ) 
-					locked->g = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 1 ][ i ] * 63.f / 255.f ), 0 ), 63 ) ;
+					locked->g = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 1 ][ i ] * 63.f / 255.f ), 0 ), 63 );
 				else
-					locked->g = 0 ;
+					locked->g = 0;
 
 				if( have2 ) 
-					locked->b = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 2 ][ i ] * 31.f / 255.f ), 0 ), 31 ) ;
+					locked->b = R3D_MIN( R3D_MAX( int( m_LayerChannels[ c + 2 ][ i ] * 31.f / 255.f ), 0 ), 31 );
 				else
-					locked->b = 0 ;
+					locked->b = 0;
 
-				if( locked->r < 2 ) locked->r = 0 ;
-				if( locked->g < 2 ) locked->g = 0 ;
-				if( locked->b < 2 ) locked->b = 0 ;
+				if( locked->r < 2 ) locked->r = 0;
+				if( locked->g < 2 ) locked->g = 0;
+				if( locked->b < 2 ) locked->b = 0;
 			}
 		}
 
-		D3D_V( r5g6b5->UnlockRect( 0 ) ) ;
+		D3D_V( r5g6b5->UnlockRect( 0 ) );
 
-		ID3DXBuffer* fileInMem( NULL ) ;
+		ID3DXBuffer* fileInMem( NULL );
 
-		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, r5g6b5, NULL ) ) ;
+		D3D_V( D3DXSaveTextureToFileInMemory( &fileInMem, D3DXIFF_DDS, r5g6b5, NULL ) );
 
-		IDirect3DTexture9* dxt1 ;
+		IDirect3DTexture9* dxt1;
 
 		D3D_V( D3DXCreateTextureFromFileInMemoryEx(		r3dRenderer->pd3ddev, fileInMem->GetBufferPointer(), fileInMem->GetBufferSize(),
 														maskTexWidth, maskTexHeight, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, 
-														D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &dxt1 ) ) ;
+														D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL, NULL, &dxt1 ) );
 
-		r3dTexture* targ = r3dRenderer->AllocateTexture() ;
+		r3dTexture* targ = r3dRenderer->AllocateTexture();
 
-		r3dD3DTextureTunnel tunnel ;
-		tunnel.Set( dxt1 ) ;
+		r3dD3DTextureTunnel tunnel;
+		tunnel.Set( dxt1 );
 
-		targ->Setup( maskTexWidth, maskTexHeight, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false ) ;
+		targ->Setup( maskTexWidth, maskTexHeight, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false );
 
-		m_Masks[ i ] = targ ;
+		m_Masks[ i ] = targ;
 
-		SAFE_RELEASE( fileInMem ) ;
+		SAFE_RELEASE( fileInMem );
 	}
 
-	SAFE_RELEASE( r5g6b5 ) ;
+	SAFE_RELEASE( r5g6b5 );
 #endif
 }
 
 //------------------------------------------------------------------------
 
+struct CreateBlankTexParams
+{
+	r3dD3DTextureTunnel* Tunnel;
+	int Width;
+	int Height;
+	D3DFORMAT TargetFmt;
+};
+
+static void CreateBlankTextureInMainThread( void* param )
+{
+	CreateBlankTexParams * params = static_cast< CreateBlankTexParams* >( param );
+
+	IDirect3DTexture9* tex;
+	D3D_V( r3dRenderer->pd3ddev->CreateTexture( params->Width, params->Height, 1, 0, D3DFMT_R5G6B5, D3DPOOL_SYSTEMMEM, &tex, NULL ) );
+
+	D3DLOCKED_RECT lrect;
+	D3D_V( tex->LockRect( 0, &lrect, NULL, 0 ) );
+
+	memset( lrect.pBits, 0, lrect.Pitch * params->Height );
+
+	D3D_V( tex->UnlockRect( 0 ) );
+
+	ID3DXBuffer* savedTexture;
+
+	D3D_V( D3DXSaveTextureToFileInMemory( &savedTexture, D3DXIFF_DDS, tex, NULL ) );
+
+	SAFE_RELEASE( tex );
+
+	D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, savedTexture->GetBufferPointer(), savedTexture->GetBufferSize(), params->Width, params->Height, 1, 0, TERRA2_LAYERMASK_FORMAT, D3DPOOL_MANAGED, D3DX_FILTER_NONE, D3DX_FILTER_NONE, 0, NULL,  NULL, &tex ) );
+
+	params->Tunnel->Set( tex );
+}
+
 int
 r3dTerrain2::DoLoad( const char* dir )
 {
-	const char* dirName = dir ;
+	const char* dirName = dir;
 
-	char tempStr[ 1024 ] ;
+	char tempStr[ 1024 ];
 
 	sprintf( tempStr, FNAME_TERRAIN2_INI, dirName );
 
 	Script_c script;
 
 	if ( ! script.OpenFile( tempStr ) )
-		return 0 ;
+		return 0;
 
 	char buffer[ MAX_PATH ];
 
@@ -3989,191 +4144,191 @@ r3dTerrain2::DoLoad( const char* dir )
 
 		if ( ! strcmp( buffer, "vert_count_x:" ) )
 		{
-			m_VertexCountX = script.GetInt() ;
+			m_VertexCountX = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vert_count_z:" ) )
 		{
-			m_VertexCountZ = script.GetInt() ;
+			m_VertexCountZ = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "splat_res_u:" ) )
 		{
-			m_SplatResolutionU = script.GetInt() ;
+			m_SplatResolutionU = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "splat_res_v:" ) )
 		{
-			m_SplatResolutionV = script.GetInt() ;
+			m_SplatResolutionV = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "tile_unit_size:" ) )
 		{
-			m_TileUnitWorldDim = script.GetFloat() ;			
+			m_TileUnitWorldDim = script.GetFloat();			
 		}
 		else
 		if( ! strcmp( buffer, "height_offset:" ) )
 		{
-			m_HeightOffset = script.GetFloat() ;
+			m_HeightOffset = script.GetFloat();
 		}
 		else
 		if( ! strcmp( buffer, "height_scale:" ) )
 		{
-			m_HeightScale = script.GetFloat() ;
+			m_HeightScale = script.GetFloat();
 		}
 		else
 		if( ! strcmp( buffer, "atlas_tile_dim:" ) )
 		{
-			int atlasDim = script.GetInt() ;
+			int atlasDim = script.GetInt();
 
-			m_BaseQualitySettings[ QS_HIGH ].AtlasTileDim = atlasDim ;
-			m_BaseQualitySettings[ QS_MED ].AtlasTileDim = atlasDim ;
-			m_BaseQualitySettings[ QS_LOW ].AtlasTileDim = atlasDim ;
+			m_BaseQualitySettings[ QS_HIGH ].AtlasTileDim = atlasDim;
+			m_BaseQualitySettings[ QS_MED ].AtlasTileDim = atlasDim;
+			m_BaseQualitySettings[ QS_LOW ].AtlasTileDim = atlasDim;
 		}
 		else
 		if( ! strcmp( buffer, "atlas_tile_dim2:" ) )
 		{
-			m_BaseQualitySettings[ QS_HIGH ].AtlasTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_HIGH ].AtlasTileDim = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "atlas_tile_dim1:" ) )
 		{
-			m_BaseQualitySettings[ QS_MED ].AtlasTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_MED ].AtlasTileDim = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "atlas_tile_dim0:" ) )
 		{
-			m_BaseQualitySettings[ QS_LOW ].AtlasTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_LOW ].AtlasTileDim = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vertex_tile_dim:" ) )
 		{
-			int vertexTileDim = script.GetInt() ;
+			int vertexTileDim = script.GetInt();
 
-			m_BaseQualitySettings[ QS_HIGH ].VertexTileDim = vertexTileDim ;
-			m_BaseQualitySettings[ QS_MED ].VertexTileDim = vertexTileDim ;
-			m_BaseQualitySettings[ QS_LOW ].VertexTileDim = vertexTileDim ;
+			m_BaseQualitySettings[ QS_HIGH ].VertexTileDim = vertexTileDim;
+			m_BaseQualitySettings[ QS_MED ].VertexTileDim = vertexTileDim;
+			m_BaseQualitySettings[ QS_LOW ].VertexTileDim = vertexTileDim;
 		}
 		else
 		if( ! strcmp( buffer, "vertex_tile_dim2:" ) )
 		{
-			m_BaseQualitySettings[ QS_HIGH ].VertexTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_HIGH ].VertexTileDim = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vertex_tile_dim1:" ) )
 		{
-			m_BaseQualitySettings[ QS_MED ].VertexTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_MED ].VertexTileDim = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vertex_tile_dim0:" ) )
 		{
-			m_BaseQualitySettings[ QS_LOW ].VertexTileDim = script.GetInt() ;
+			m_BaseQualitySettings[ QS_LOW ].VertexTileDim = script.GetInt();
 		}
 		else
 		if(  ! strcmp( buffer, "base_layer" ) )
 		{			
-			LoadLayerFromScript( &script, &m_BaseLayer ) ;
+			LoadLayerFromScript( &script, &m_BaseLayer );
 		}
 		else
 		if(  ! strcmp( buffer, "layer" ) )
 		{
-			m_Layers.Resize( m_Layers.Count() + 1 ) ;
-			LoadLayerFromScript( &script, &m_Layers[ m_Layers.Count() - 1 ] ) ;
+			m_Layers.Resize( m_Layers.Count() + 1 );
+			LoadLayerFromScript( &script, &m_Layers[ m_Layers.Count() - 1 ] );
 		}
 		else
 		if( ! strcmp( buffer, "vertex_density:" ) ) 
 		{
-			int vertDensity = script.GetInt() ;
+			int vertDensity = script.GetInt();
 
-			m_BaseQualitySettings[ QS_HIGH ].VertexDensity = vertDensity ;
-			m_BaseQualitySettings[ QS_MED ].VertexDensity = vertDensity ;
-			m_BaseQualitySettings[ QS_LOW ].VertexDensity = vertDensity ;
+			m_BaseQualitySettings[ QS_HIGH ].VertexDensity = vertDensity;
+			m_BaseQualitySettings[ QS_MED ].VertexDensity = vertDensity;
+			m_BaseQualitySettings[ QS_LOW ].VertexDensity = vertDensity;
 		}
 		else
 		if( ! strcmp( buffer, "vertex_density2:" ) ) 
 		{
-			m_BaseQualitySettings[ QS_HIGH ].VertexDensity = script.GetInt() ;
+			m_BaseQualitySettings[ QS_HIGH ].VertexDensity = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vertex_density1:" ) ) 
 		{
-			m_BaseQualitySettings[ QS_MED ].VertexDensity = script.GetInt() ;
+			m_BaseQualitySettings[ QS_MED ].VertexDensity = script.GetInt();
 		}
 		else
 		if( ! strcmp( buffer, "vertex_density0:" ) ) 
 		{
-			m_BaseQualitySettings[ QS_LOW ].VertexDensity = script.GetInt() ;
+			m_BaseQualitySettings[ QS_LOW ].VertexDensity = script.GetInt();
 		}
 		else
 		if( !strcmp( buffer, "normal_density:" ) ) 
 		{
-			m_NormalDensity = script.GetInt() ;
+			m_NormalDensity = script.GetInt();
 		}
 		else
 		if( !strcmp( buffer, "normal_det_mix:" ) )
 		{
-			m_Settings.DetailNormalMix = script.GetFloat() ;
+			m_Settings.DetailNormalMix = script.GetFloat();
 		}
 		else
 		if( !strcmp( buffer, "normal_detail_tex:") )
 		{
-			char buf[ 1024 ] ;
-			script.GetString( buf, 1023 ) ;
+			char buf[ 1024 ];
+			script.GetString( buf, 1023 );
 
-			m_DetailNormalTexSrc = buf ;
+			m_DetailNormalTexSrc = buf;
 		}
 		else
 		{
-			char tstr[ 256 ] ;
+			char tstr[ 256 ];
 
-			int found = 0 ;
+			int found = 0;
 
-			for( int tq = QS_LOW, tqe = QS_COUNT ; tq < tqe && !found ; tq ++ )
+			for( int tq = QS_LOW, tqe = QS_COUNT; tq < tqe && !found; tq ++ )
 			{
-				for( int i = 0, e = NUM_QUALITY_LAYERS ; i < e; i ++ )
+				for( int i = 0, e = NUM_QUALITY_LAYERS; i < e; i ++ )
 				{
-					sprintf( tstr, "lod%d_%d:", i, tq ) ;
+					sprintf( tstr, "lod%d_%d:", i, tq );
 
 					if( !strcmp( buffer, tstr ) )
 					{
-						m_BaseQualitySettings[ tq ].TileCounts[ i ] = script.GetInt() ;
-						found = 1 ;
-						break ;
+						m_BaseQualitySettings[ tq ].TileCounts[ i ] = script.GetInt();
+						found = 1;
+						break;
 					}
 				}
 			}
 
 			if( !found )
 			{
-				for( int i = 0, e = NUM_QUALITY_LAYERS ; i < e; i ++ )
+				for( int i = 0, e = NUM_QUALITY_LAYERS; i < e; i ++ )
 				{
-					sprintf( tstr, "lod%d:", i ) ;
+					sprintf( tstr, "lod%d:", i );
 
 					if( !strcmp( buffer, tstr ) )
 					{
-						int lod = script.GetInt() ;
-						m_BaseQualitySettings[ QS_HIGH ].TileCounts[ i ]  = lod ;
-						m_BaseQualitySettings[ QS_MED ].TileCounts[ i ]  = lod ;
-						m_BaseQualitySettings[ QS_LOW ].TileCounts[ i ]  = lod ;
-						found = 1 ;
-						break ;
+						int lod = script.GetInt();
+						m_BaseQualitySettings[ QS_HIGH ].TileCounts[ i ]  = lod;
+						m_BaseQualitySettings[ QS_MED ].TileCounts[ i ]  = lod;
+						m_BaseQualitySettings[ QS_LOW ].TileCounts[ i ]  = lod;
+						found = 1;
+						break;
 					}
 				}
 			}
 
 			if( !found )
 			{
-				for( int tq = QS_LOW, tqe = QS_COUNT ; tq < tqe && !found ; tq ++ )
+				for( int tq = QS_LOW, tqe = QS_COUNT; tq < tqe && !found; tq ++ )
 				{
-					for( int i = 0, e = m_BaseQualitySettings[ tq ].TileVertexDensitySteps.COUNT ; i < e; i ++ )
+					for( int i = 0, e = m_BaseQualitySettings[ tq ].TileVertexDensitySteps.COUNT; i < e; i ++ )
 					{
-						sprintf( tstr, "vertex_density_step%d_%d:", i, tq ) ;
+						sprintf( tstr, "vertex_density_step%d_%d:", i, tq );
 
 						if( !strcmp( buffer, tstr ) )
 						{
-							m_BaseQualitySettings[ tq ].TileVertexDensitySteps[ i ] = script.GetInt() ;
-							found = 1 ;
-							break ;
+							m_BaseQualitySettings[ tq ].TileVertexDensitySteps[ i ] = script.GetInt();
+							found = 1;
+							break;
 						}
 					}
 				}
@@ -4181,20 +4336,20 @@ r3dTerrain2::DoLoad( const char* dir )
 
 			if( !found )
 			{
-				for( int i = 0, e = m_BaseQualitySettings[ QS_LOW ].TileVertexDensitySteps.COUNT ; i < e; i ++ )
+				for( int i = 0, e = m_BaseQualitySettings[ QS_LOW ].TileVertexDensitySteps.COUNT; i < e; i ++ )
 				{
-					sprintf( tstr, "vertex_density_step%d:", i ) ;
+					sprintf( tstr, "vertex_density_step%d:", i );
 
 					if( !strcmp( buffer, tstr ) )
 					{
-						int tileVertDensity = script.GetInt() ;
+						int tileVertDensity = script.GetInt();
 
-						m_BaseQualitySettings[ QS_HIGH ].TileVertexDensitySteps[ i ] = tileVertDensity ;
-						m_BaseQualitySettings[ QS_MED ].TileVertexDensitySteps[ i ] = tileVertDensity ;
-						m_BaseQualitySettings[ QS_LOW ].TileVertexDensitySteps[ i ] = tileVertDensity ;
+						m_BaseQualitySettings[ QS_HIGH ].TileVertexDensitySteps[ i ] = tileVertDensity;
+						m_BaseQualitySettings[ QS_MED ].TileVertexDensitySteps[ i ] = tileVertDensity;
+						m_BaseQualitySettings[ QS_LOW ].TileVertexDensitySteps[ i ] = tileVertDensity;
 
-						found = 1 ;
-						break ;
+						found = 1;
+						break;
 					}
 				}
 			}
@@ -4203,71 +4358,94 @@ r3dTerrain2::DoLoad( const char* dir )
 
 	if( !m_SplatResolutionU )
 	{
-		m_SplatResolutionU = m_VertexCountX ;
-		m_SplatResolutionV = m_VertexCountZ ;
+		m_SplatResolutionU = m_VertexCountX;
+		m_SplatResolutionV = m_VertexCountZ;
 	}
 	else
 	{
-		m_SplatResolutionU = R3D_MIN( m_SplatResolutionU, m_VertexCountX ) ;
-		m_SplatResolutionV = R3D_MIN( m_SplatResolutionV, m_VertexCountZ ) ;
+		m_SplatResolutionU = R3D_MIN( m_SplatResolutionU, m_VertexCountX );
+		m_SplatResolutionV = R3D_MIN( m_SplatResolutionV, m_VertexCountZ );
 	}
 
 
-	m_QualitySettings = SelectQualitySettings() ;
+	m_QualitySettings = SelectQualitySettings();
 
-	RecalcVars() ;
-	RecalcLayerVars() ;
+	RecalcVars();
+	RecalcLayerVars();
 
 	r3dOutToLog("TERRAIN2: Finished reading script file\n");
 	script.CloseFile();
 
 	if( !LoadBin( dirName ) )
-		return 0 ;
+		return 0;
 
-	Init() ;
+	Init();
 
 #if R3D_TERRAIN_V2_GRAPHICS
-	int desiredMaskCount = m_Layers.Count() / 3 + ( m_Layers.Count() % 3 ? 1 : 0 ) ;
+	int desiredMaskCount = m_Layers.Count() / 3 + ( m_Layers.Count() % 3 ? 1 : 0 );
 
-	char fullPath[ 1024 ] ;
+	char fullPath[ 1024 ];
 
-	for( int i = 0, e = desiredMaskCount ; i < e; i ++ )
+	for( int i = 0, e = desiredMaskCount; i < e; i ++ )
 	{
-		PrintFullSplatPath( dirName, i, fullPath ) ;
+		PrintFullSplatPath( dirName, i, fullPath );
 
-		r3dTexture* splat = r3dRenderer->LoadTexture( fullPath ) ;
-		m_Masks.PushBack( splat ) ;
+		r3dTexture* splat = r3dRenderer->LoadTexture( fullPath );
 
-		EnsureMaskFormat( i ) ;
+		if( splat->IsMissing() )
+		{
+			r3dRenderer->DeleteTexture( splat );
+			splat = NULL;
+
+			splat = r3dRenderer->AllocateTexture();
+
+			CreateBlankTexParams params;
+
+			r3dD3DTextureTunnel tunnel;
+
+			params.Height		= m_SplatResolutionV;
+			params.Width		= m_SplatResolutionU;
+			params.Tunnel		= &tunnel;
+			params.TargetFmt	= TERRA2_LAYERMASK_FORMAT;
+
+			ProcessCustomDeviceQueueItem( CreateBlankTextureInMainThread, &params );
+
+			splat->Setup( m_SplatResolutionU, m_SplatResolutionV, 1, TERRA2_LAYERMASK_FORMAT, 1, &tunnel, false );
+			splat->OverwriteFileLocation( fullPath );
+		}
+
+		m_Masks.PushBack( splat );
+
+		EnsureMaskFormat( i );
 	}
 
-	InitLayers() ;
+	InitLayers();
 
-	PrintFullColorPath( dirName, fullPath ) ;
+	PrintFullColorPath( dirName, fullPath );
 
-	m_ColorTex = r3dRenderer->LoadTexture( fullPath ) ;
+	m_ColorTex = r3dRenderer->LoadTexture( fullPath );
 
-	PrintFullNormalPath( dirName, fullPath ) ;
+	PrintFullNormalPath( dirName, fullPath );
 
 	if( !m_NormalTex )
 	{
-		m_NormalTex = r3dRenderer->LoadTexture( fullPath ) ;
-		ConformNormalTex() ;
+		m_NormalTex = r3dRenderer->LoadTexture( fullPath );
+		ConformNormalTex();
 	}
 
 	if( g_bEditMode && !m_DetailNormalTex )
 	{
-		LoadDetailNormalTex() ;
+		LoadDetailNormalTex();
 	}
 
 #endif
 
-	UpdateDesc() ;
+	UpdateDesc();
 
-	m_IsQualityUpdated = 0 ;
-	m_IsLoaded = 1 ;
+	m_IsQualityUpdated = 0;
+	m_IsLoaded = 1;
 
-	return 1 ;
+	return 1;
 }
 
 //------------------------------------------------------------------------
@@ -4284,45 +4462,45 @@ static void PrintSplatLocation( char (& buf ) [ 1024 ], int idx )
 
 static void PrintFullSplatPath( const char* levelDir, int i, char (& buf ) [ 1024 ] )
 {
-	char tempStr[ 1024 ] ;
-	PrintSplatLocation( tempStr, i ) ;
+	char tempStr[ 1024 ];
+	PrintSplatLocation( tempStr, i );
 
-	r3dscpy( buf, levelDir ) ;
-	strcat( buf, "\\" ) ;
-	strcat( buf, tempStr ) ;
+	r3dscpy( buf, levelDir );
+	strcat( buf, "\\" );
+	strcat( buf, tempStr );
 }
 
 static void PrintFullNormalPath( const char* levelDir, char (& buf ) [ 1024 ] )
 {
-	char *tempStr= "Terrain2\\Normal.dds" ;
+	char *tempStr= "Terrain2\\Normal.dds";
 
-	r3dscpy( buf, levelDir ) ;
-	strcat( buf, "\\" ) ;
-	strcat( buf, tempStr ) ;
+	r3dscpy( buf, levelDir );
+	strcat( buf, "\\" );
+	strcat( buf, tempStr );
 }
 
 static void PrintFullColorPath( const char* levelDir, char (& buf ) [ 1024 ] )
 {
-	char *tempStr= "Terrain2\\Color.dds" ;
+	char *tempStr= "Terrain2\\Color.dds";
 
-	r3dscpy( buf, levelDir ) ;
-	strcat( buf, "\\" ) ;
-	strcat( buf, tempStr ) ;
+	r3dscpy( buf, levelDir );
+	strcat( buf, "\\" );
+	strcat( buf, tempStr );
 }
 
 static void SaveScaledTexture( const char* fullPath, r3dTexture* srcTex, int newWidth, int newHeight  )
 {
-	ID3DXBuffer* targetBuf( NULL ) ;
-	D3D_V( D3DXSaveTextureToFileInMemory( &targetBuf, D3DXIFF_DDS, srcTex->AsTex2D(), NULL ) ) ;
+	ID3DXBuffer* targetBuf( NULL );
+	D3D_V( D3DXSaveTextureToFileInMemory( &targetBuf, D3DXIFF_DDS, srcTex->AsTex2D(), NULL ) );
 
-	IDirect3DTexture9* sysmemRescaledTex( NULL ) ;
-	D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, targetBuf->GetBufferPointer(), targetBuf->GetBufferSize(), newWidth, newHeight, 1, 0, srcTex->GetD3DFormat(), D3DPOOL_SYSTEMMEM, D3DX_FILTER_TRIANGLE, D3DX_FILTER_NONE, 0, NULL, NULL, &sysmemRescaledTex ) ) ;
+	IDirect3DTexture9* sysmemRescaledTex( NULL );
+	D3D_V( D3DXCreateTextureFromFileInMemoryEx( r3dRenderer->pd3ddev, targetBuf->GetBufferPointer(), targetBuf->GetBufferSize(), newWidth, newHeight, 1, 0, srcTex->GetD3DFormat(), D3DPOOL_SYSTEMMEM, D3DX_FILTER_TRIANGLE, D3DX_FILTER_NONE, 0, NULL, NULL, &sysmemRescaledTex ) );
 
-	D3DXSaveTextureToFile( fullPath, D3DXIFF_DDS, sysmemRescaledTex, NULL ) ;
+	D3DXSaveTextureToFile( fullPath, D3DXIFF_DDS, sysmemRescaledTex, NULL );
 
-	SAFE_RELEASE( sysmemRescaledTex ) ;
+	SAFE_RELEASE( sysmemRescaledTex );
 
-	SAFE_RELEASE( targetBuf ) ;
+	SAFE_RELEASE( targetBuf );
 }
 
 int
@@ -4334,49 +4512,49 @@ r3dTerrain2::DoSave( const char* targetDir, const Shorts& hfShrinkedSamples, int
 	{
 		SaveRestoreCurrentQS( r3dTerrain2 * a_father )
 		{			
-			father = a_father ;
+			father = a_father;
 
-			savedQS = father->m_QualitySettings ;
-			father->RecalcVars() ;
+			savedQS = father->m_QualitySettings;
+			father->RecalcVars();
 		}
 
 		~SaveRestoreCurrentQS()
 		{
-			father->m_QualitySettings = savedQS ;
-			father->RecalcVars() ;
+			father->m_QualitySettings = savedQS;
+			father->RecalcVars();
 		}
 
-		QualitySettings savedQS ;
-		r3dTerrain2 * father ;
+		QualitySettings savedQS;
+		r3dTerrain2 * father;
 
-	} saveRestoreCurrentQS ( this ); saveRestoreCurrentQS ;
+	} saveRestoreCurrentQS ( this ); saveRestoreCurrentQS;
 
-	const QualitySettings& saveQS = m_BaseQualitySettings[ QS_HIGH ] ;
+	const QualitySettings& saveQS = m_BaseQualitySettings[ QS_HIGH ];
 
-	OptimizeLayerMasks() ;
+	OptimizeLayerMasks();
 	// relies on OptimizeLayerMasks to extract all texture channel data 
-	DoUpdateDominantLayerData( m_SplatResolutionU, m_SplatResolutionV ) ;
+	DoUpdateDominantLayerData( m_SplatResolutionU, m_SplatResolutionV );
 
-	const char * fileName = targetDir ;
+	const char * fileName = targetDir;
 
 	{
-		char terraDir[ 1024 ] ;
-		strcpy( terraDir, fileName ) ;
-		strcat( terraDir, "\\Terrain2" ) ;
-		mkdir( terraDir ) ;
+		char terraDir[ 1024 ];
+		strcpy( terraDir, fileName );
+		strcat( terraDir, "\\Terrain2" );
+		mkdir( terraDir );
 	}
 
-	SaveBin( fileName, hfShrinkedSamples, rescaleVertexCountX, rescaleVertexCountZ ) ;
+	SaveBin( fileName, hfShrinkedSamples, rescaleVertexCountX, rescaleVertexCountZ );
 
 	FILE* hFile = fopen_for_write( Va( FNAME_TERRAIN2_INI, fileName ), "wt");
 	assert( hFile );
 	if ( !hFile )
-		return 0 ;
+		return 0;
 
-	int rescaleSplatResolutionU = R3D_MIN( m_SplatResolutionU, rescaleVertexCountX ) ;
-	int rescaleSplatResolutionV = R3D_MIN( m_SplatResolutionV, rescaleVertexCountZ ) ;
+	int rescaleSplatResolutionU = R3D_MIN( m_SplatResolutionU, rescaleVertexCountX );
+	int rescaleSplatResolutionV = R3D_MIN( m_SplatResolutionV, rescaleVertexCountZ );
 
-	float scaleFactor = float( m_VertexCountX ) / rescaleVertexCountX  ;
+	float scaleFactor = float( m_VertexCountX ) / rescaleVertexCountX ;
 
 	fprintf( hFile, "vert_count_x:\t\t%d\n", rescaleVertexCountX );
 	fprintf( hFile, "vert_count_z:\t\t%d\n", rescaleVertexCountZ );
@@ -4388,46 +4566,46 @@ r3dTerrain2::DoSave( const char* targetDir, const Shorts& hfShrinkedSamples, int
 	fprintf( hFile, "normal_density:\t%d\n", m_NormalDensity );
 	fprintf( hFile, "normal_det_mix:\t%f\n", m_Settings.DetailNormalMix );
 
-	fprintf( hFile, "normal_detail_tex:\t\"%s\"\n", m_DetailNormalTexSrc.Length() ? m_DetailNormalTexSrc.c_str() : "" ) ;
+	fprintf( hFile, "normal_detail_tex:\t\"%s\"\n", m_DetailNormalTexSrc.Length() ? m_DetailNormalTexSrc.c_str() : "" );
 
-	for( int tq = QS_LOW, tqe = QS_COUNT ; tq < tqe ; tq ++ )
+	for( int tq = QS_LOW, tqe = QS_COUNT; tq < tqe; tq ++ )
 	{
-		for( int i = 0, e = m_NumActiveQualityLayers ; i < e; i ++ )
+		for( int i = 0, e = m_NumActiveQualityLayers; i < e; i ++ )
 		{
 			fprintf( hFile, "lod%d_%d:\t\t%d\n", i, tq, m_BaseQualitySettings[ tq ].TileCounts[ i ] );		
 		}
 
-		for( int i = 0, e = saveQS.TileVertexDensitySteps.COUNT ; i < e; i ++ )
+		for( int i = 0, e = saveQS.TileVertexDensitySteps.COUNT; i < e; i ++ )
 		{
 			fprintf( hFile, "vertex_density_step%d_%d:\t\t%d\n", i, tq, m_BaseQualitySettings[ tq ].TileVertexDensitySteps[ i ] );		
 		}
 
-		fprintf( hFile, "vertex_density%d:\t\t%d\n", tq, m_BaseQualitySettings[ tq ].VertexDensity ) ;
+		fprintf( hFile, "vertex_density%d:\t\t%d\n", tq, m_BaseQualitySettings[ tq ].VertexDensity );
 
-		fprintf( hFile, "atlas_tile_dim%d:\t\t%d\n", tq, m_BaseQualitySettings[ tq ].AtlasTileDim ) ;
-		fprintf( hFile, "vertex_tile_dim%d:\t%d\n", tq, m_BaseQualitySettings[ tq ].VertexTileDim ) ;
+		fprintf( hFile, "atlas_tile_dim%d:\t\t%d\n", tq, m_BaseQualitySettings[ tq ].AtlasTileDim );
+		fprintf( hFile, "vertex_tile_dim%d:\t%d\n", tq, m_BaseQualitySettings[ tq ].VertexTileDim );
 	}
 	
 	fprintf( hFile, "\nbase_layer\n" );
 	SaveLayerToScript( hFile, m_BaseLayer, "" );
 
-	for( int i = 0, e = (int)m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_Layers.Count(); i < e; i ++ )
 	{
 		fprintf( hFile, "layer\n" );
-		SaveLayerToScript( hFile, m_Layers[ i ], "" ) ;
+		SaveLayerToScript( hFile, m_Layers[ i ], "" );
 	}
 
-	fclose( hFile ) ;
+	fclose( hFile );
 
-	char fullPath[ 1024 ] ;
+	char fullPath[ 1024 ];
 
-	for( int i = 0, e = m_Masks.Count() ; i < e; i ++ )
+	for( int i = 0, e = m_Masks.Count(); i < e; i ++ )
 	{
-		r3dTexture* splatTex = m_Masks[ i ] ;
+		r3dTexture* splatTex = m_Masks[ i ];
 
-		PrintFullSplatPath( fileName, i, fullPath ) ;
+		PrintFullSplatPath( fileName, i, fullPath );
 
-		splatTex->OverwriteFileLocation( fullPath ) ;
+		splatTex->OverwriteFileLocation( fullPath );
 
 		if( m_SplatResolutionU == rescaleSplatResolutionU 
 				&&
@@ -4437,138 +4615,138 @@ r3dTerrain2::DoSave( const char* targetDir, const Shorts& hfShrinkedSamples, int
 		}
 		else
 		{
-			SaveScaledTexture( fullPath, splatTex, rescaleSplatResolutionU, rescaleSplatResolutionV ) ;
+			SaveScaledTexture( fullPath, splatTex, rescaleSplatResolutionU, rescaleSplatResolutionV );
 		}
 	}
 	
-	PrintFullColorPath( fileName, fullPath ) ;
+	PrintFullColorPath( fileName, fullPath );
 
 	if( m_SplatResolutionU == rescaleSplatResolutionU 
 			&&
 		m_SplatResolutionV == rescaleSplatResolutionV )
 	{
-		m_ColorTex->Save( fullPath ) ;
+		m_ColorTex->Save( fullPath );
 	}
 	else
 	{
-		SaveScaledTexture( fullPath, m_ColorTex, rescaleSplatResolutionU, rescaleSplatResolutionV ) ;
+		SaveScaledTexture( fullPath, m_ColorTex, rescaleSplatResolutionU, rescaleSplatResolutionV );
 	}
 
 	{
-		PrintFullNormalPath( fileName, fullPath ) ;
+		PrintFullNormalPath( fileName, fullPath );
 
-		m_NormalTex->Save( fullPath ) ;
-		m_NormalTex->OverwriteFileLocation( fullPath ) ;
+		m_NormalTex->Save( fullPath );
+		m_NormalTex->OverwriteFileLocation( fullPath );
 	}
 	
 #endif
 
-	return 1 ;
+	return 1;
 }
 
 static void RescaleThroughTexture( r3dTerrain2::Shorts* dest, const r3dTerrain2::Shorts& src, int srcVertexCountX, int srcVertexCountZ, int destVertexCountX, int destVertexCountZ )
 {
-	r3d_assert( src.Count() == srcVertexCountX * srcVertexCountZ ) ;
+	r3d_assert( src.Count() == srcVertexCountX * srcVertexCountZ );
 
-	dest->Resize( destVertexCountX * destVertexCountZ ) ;
+	dest->Resize( destVertexCountX * destVertexCountZ );
 
-	IDirect3DTexture9* r32ftex ;
-	D3D_V( r3dRenderer->pd3ddev->CreateTexture( srcVertexCountX, srcVertexCountZ, 1, 0, D3DFMT_R32F, D3DPOOL_SYSTEMMEM, &r32ftex, NULL ) ) ;
+	IDirect3DTexture9* r32ftex;
+	D3D_V( r3dRenderer->pd3ddev->CreateTexture( srcVertexCountX, srcVertexCountZ, 1, 0, D3DFMT_R32F, D3DPOOL_SYSTEMMEM, &r32ftex, NULL ) );
 
-	D3DLOCKED_RECT lrect ;
-	D3D_V( r32ftex->LockRect( 0, &lrect, NULL, 0 ) ) ;
+	D3DLOCKED_RECT lrect;
+	D3D_V( r32ftex->LockRect( 0, &lrect, NULL, 0 ) );
 
-	for( int z = 0, e = srcVertexCountZ ; z < e ; z ++ )
+	for( int z = 0, e = srcVertexCountZ; z < e; z ++ )
 	{
-		for( int x = 0, e = srcVertexCountX ; x < e ; x ++ )
+		for( int x = 0, e = srcVertexCountX; x < e; x ++ )
 		{
-			((float*)((char*)lrect.pBits + z * lrect.Pitch))[ x ] = src[ x + z * srcVertexCountX ] ;
+			((float*)((char*)lrect.pBits + z * lrect.Pitch))[ x ] = src[ x + z * srcVertexCountX ];
 		}
 	}
 
-	D3D_V( r32ftex->UnlockRect( 0 ) ) ;
+	D3D_V( r32ftex->UnlockRect( 0 ) );
 
-	ID3DXBuffer* targetBuffer ;
-	D3D_V( D3DXSaveTextureToFileInMemory( &targetBuffer, D3DXIFF_DDS, r32ftex, NULL ) ) ;
+	ID3DXBuffer* targetBuffer;
+	D3D_V( D3DXSaveTextureToFileInMemory( &targetBuffer, D3DXIFF_DDS, r32ftex, NULL ) );
 
-	SAFE_RELEASE( r32ftex ) ;
+	SAFE_RELEASE( r32ftex );
 
 	D3DXCreateTextureFromFileInMemoryEx(	r3dRenderer->pd3ddev, targetBuffer->GetBufferPointer(), targetBuffer->GetBufferSize(), 
 											destVertexCountX, destVertexCountZ, 
 											1, 0, D3DFMT_R32F, D3DPOOL_SYSTEMMEM, 
-											D3DX_FILTER_TRIANGLE, D3DX_FILTER_NONE, 0, NULL, NULL, &r32ftex ) ;
+											D3DX_FILTER_TRIANGLE, D3DX_FILTER_NONE, 0, NULL, NULL, &r32ftex );
 
-	SAFE_RELEASE( targetBuffer ) ;
+	SAFE_RELEASE( targetBuffer );
 
-	D3D_V( r32ftex->LockRect( 0, &lrect, NULL, 0 ) ) ;
+	D3D_V( r32ftex->LockRect( 0, &lrect, NULL, 0 ) );
 
-	for( int z = 0, e = destVertexCountZ ; z < e ; z ++ )
+	for( int z = 0, e = destVertexCountZ; z < e; z ++ )
 	{
-		for( int x = 0, e = destVertexCountX ; x < e ; x ++ )
+		for( int x = 0, e = destVertexCountX; x < e; x ++ )
 		{
-			(*dest)[ x + z * destVertexCountX ] = (short)( R3D_MIN( R3D_MAX( ((float*)((char*)lrect.pBits + z * lrect.Pitch))[ x ], -32768.f ), 32767.f ) ) ; 
+			(*dest)[ x + z * destVertexCountX ] = (short)( R3D_MIN( R3D_MAX( ((float*)((char*)lrect.pBits + z * lrect.Pitch))[ x ], -32768.f ), 32767.f ) ); 
 		}
 	}
 
-	D3D_V( r32ftex->UnlockRect( 0 ) ) ;
+	D3D_V( r32ftex->UnlockRect( 0 ) );
 
-	SAFE_RELEASE( r32ftex ) ;
+	SAFE_RELEASE( r32ftex );
 }
 
 //------------------------------------------------------------------------
 
 static void ScaleBitMask( r3dBitMaskArray2D* destMask, const r3dBitMaskArray2D& srcMask, int srcVertexCountX, int srcVertexCountZ, int destVertexCountX, int destVertexCountZ )
 {
-	destMask->Resize( destVertexCountX, destVertexCountZ ) ;
-	destMask->ZeroAll() ;
+	destMask->Resize( destVertexCountX, destVertexCountZ );
+	destMask->ZeroAll();
 
 	if( srcVertexCountX >= destVertexCountX )
 	{
-		r3d_assert( srcVertexCountZ >= destVertexCountZ ) ;
+		r3d_assert( srcVertexCountZ >= destVertexCountZ );
 
-		int scaleZ = srcVertexCountZ / destVertexCountZ ;
-		int scaleX = srcVertexCountX / destVertexCountX ;
+		int scaleZ = srcVertexCountZ / destVertexCountZ;
+		int scaleX = srcVertexCountX / destVertexCountX;
 
-		for( int z = 0, e = destVertexCountZ ; z < e ; z ++ )
+		for( int z = 0, e = destVertexCountZ; z < e; z ++ )
 		{
-			for( int x = 0, e = destVertexCountX ; x < e ; x ++ )
+			for( int x = 0, e = destVertexCountX; x < e; x ++ )
 			{
-				bool set = false ;
-				for( int sz = 0, e = scaleZ ; sz < e ; sz ++ )
+				bool set = false;
+				for( int sz = 0, e = scaleZ; sz < e; sz ++ )
 				{
-					for( int sx = 0, e = scaleX ; sx < e ; sx ++ )
+					for( int sx = 0, e = scaleX; sx < e; sx ++ )
 					{
 						if( srcMask.Get( x * scaleX + sx, z * scaleZ + sz ) )
 						{
-							set = true ;
-							break ;
+							set = true;
+							break;
 						}
 					}
 				}
 
-				destMask->Set( x, z, set ) ;
+				destMask->Set( x, z, set );
 			}
 		}
 	}
 	else
 	{
-		r3d_assert( destVertexCountZ >= srcVertexCountZ ) ;
+		r3d_assert( destVertexCountZ >= srcVertexCountZ );
 
-		int scaleZ = destVertexCountZ / srcVertexCountZ ;
-		int scaleX = destVertexCountX / srcVertexCountX ;
+		int scaleZ = destVertexCountZ / srcVertexCountZ;
+		int scaleX = destVertexCountX / srcVertexCountX;
 
-		for( int z = 0, e = srcVertexCountZ ; z < e ; z ++ )
+		for( int z = 0, e = srcVertexCountZ; z < e; z ++ )
 		{
-			for( int x = 0, e = srcVertexCountX ; x < e ; x ++ )
+			for( int x = 0, e = srcVertexCountX; x < e; x ++ )
 			{
 				if( !srcMask.Get( x, z ) )
-					continue ;
+					continue;
 
-				for( int sz = 0, e = scaleZ ; sz < e ; sz ++ )
+				for( int sz = 0, e = scaleZ; sz < e; sz ++ )
 				{
-					for( int sx = 0, e = scaleX ; sx < e ; sx ++ )
+					for( int sx = 0, e = scaleX; sx < e; sx ++ )
 					{
-						destMask->Set( x * scaleX + sx, z * scaleZ + sz, true ) ;
+						destMask->Set( x * scaleX + sx, z * scaleZ + sz, true );
 					}
 				}
 			}
@@ -4589,7 +4767,7 @@ r3dTerrain2::SaveBin( const char* dirName, const Shorts& hfShrinkedSamples, int 
 	hFile = fopen_for_write( Va( FNAME_TERRAIN2_BIN, dirName ), "wb");
 	r3d_assert( hFile );
 	if ( ! hFile )
-		return 0 ;
+		return 0;
 
 	uint32_t dwSignature = TERRAIN2_SIGNATURE;
 	uint32_t dwVersion = TERRAIN2_VERSION;
@@ -4597,52 +4775,52 @@ r3dTerrain2::SaveBin( const char* dirName, const Shorts& hfShrinkedSamples, int 
 	fwrite( &dwSignature, sizeof( dwSignature ), 1, hFile );
 	fwrite( &dwVersion, sizeof( dwVersion ), 1, hFile );
 
-	const Shorts* saveSource = &hfShrinkedSamples ;
+	const Shorts* saveSource = &hfShrinkedSamples;
 
-	Shorts hfRescaledSamples ;
+	Shorts hfRescaledSamples;
 
 	if( rescaleVertexCountX != m_VertexCountX
 			||
 		rescaleVertexCountZ != m_VertexCountZ )
 	{
-		RescaleThroughTexture( &hfRescaledSamples, hfShrinkedSamples, m_VertexCountX, m_VertexCountZ, rescaleVertexCountX, rescaleVertexCountZ ) ;
+		RescaleThroughTexture( &hfRescaledSamples, hfShrinkedSamples, m_VertexCountX, m_VertexCountZ, rescaleVertexCountX, rescaleVertexCountZ );
 
-		saveSource = &hfRescaledSamples ;
+		saveSource = &hfRescaledSamples;
 	}
 
-	uint32_t finalSampleCount = saveSource->Count() ;
+	uint32_t finalSampleCount = saveSource->Count();
 
-	fwrite( &finalSampleCount, sizeof finalSampleCount, 1, hFile ) ;
+	fwrite( &finalSampleCount, sizeof finalSampleCount, 1, hFile );
 
 	fwrite( &(*saveSource)[0], finalSampleCount * sizeof (*saveSource)[0], 1, hFile );
 	m_HeightFieldDataCRC32 = r3dCRC32((const BYTE *)&(*saveSource)[0], saveSource->Count() * sizeof( (*saveSource)[0] ));
 
-	int tileLayersCount = m_LayerBaseBitMasks.Count() ;
-	fwrite( &tileLayersCount, sizeof(tileLayersCount), 1, hFile ) ;
+	int tileLayersCount = m_LayerBaseBitMasks.Count();
+	fwrite( &tileLayersCount, sizeof(tileLayersCount), 1, hFile );
 
-	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count(); i < e; i ++ )
 	{
-		const r3dBitMaskArray2D* srcBits = &m_LayerBaseBitMasks[ i ] ;
+		const r3dBitMaskArray2D* srcBits = &m_LayerBaseBitMasks[ i ];
 
-		r3dBitMaskArray2D scaleDownBits ;
+		r3dBitMaskArray2D scaleDownBits;
 
 		if( rescaleVertexCountX != m_VertexCountX
 				||
 			rescaleVertexCountZ != m_VertexCountZ )
 		{
-			ScaleBitMask( &scaleDownBits, *srcBits, m_VertexCountX, m_VertexCountZ, rescaleVertexCountX, rescaleVertexCountZ ) ;
-			srcBits = &scaleDownBits ;
+			ScaleBitMask( &scaleDownBits, *srcBits, m_VertexCountX, m_VertexCountZ, rescaleVertexCountX, rescaleVertexCountZ );
+			srcBits = &scaleDownBits;
 		}
 
-		int one = srcBits->GetDataSize() ;
-		fwrite( &one, sizeof one, 1, hFile ) ;
-		fwrite( srcBits->GetDataPtr(), srcBits->GetDataSize(), 1, hFile ) ;
+		int one = srcBits->GetDataSize();
+		fwrite( &one, sizeof one, 1, hFile );
+		fwrite( srcBits->GetDataPtr(), srcBits->GetDataSize(), 1, hFile );
 	}
 
-	int width_height[ 2 ] ;
+	int width_height[ 2 ];
 	
-	width_height[ 0 ] = m_DominantLayerData.Width() ;
-	width_height[ 1 ] = m_DominantLayerData.Height() ;
+	width_height[ 0 ] = m_DominantLayerData.Width();
+	width_height[ 1 ] = m_DominantLayerData.Height();
 
 	if( rescaleVertexCountX != m_VertexCountX
 			||
@@ -4652,17 +4830,17 @@ r3dTerrain2::SaveBin( const char* dirName, const Shorts& hfShrinkedSamples, int 
 		// scaled terrain save may be temporary save only
 		// dominant layer will be recalculated properly during unscaled save
 		// hence we are fine with saving here erroneous data (unscaled data with scaled dimensions)
-		width_height[ 0 ] = R3D_MIN( m_SplatResolutionU, rescaleVertexCountX ) ;
-		width_height[ 1 ] = R3D_MIN( m_SplatResolutionV, rescaleVertexCountZ ) ;
+		width_height[ 0 ] = R3D_MIN( m_SplatResolutionU, rescaleVertexCountX );
+		width_height[ 1 ] = R3D_MIN( m_SplatResolutionV, rescaleVertexCountZ );
 	}
 
-	fwrite( width_height, sizeof width_height, 1, hFile ) ;
-	fwrite( m_DominantLayerData.GetDataPtr(), width_height[ 0 ] * width_height[ 1 ] * sizeof m_DominantLayerData[ 0 ][ 0 ], 1, hFile ) ;
+	fwrite( width_height, sizeof width_height, 1, hFile );
+	fwrite( m_DominantLayerData.GetDataPtr(), width_height[ 0 ] * width_height[ 1 ] * sizeof m_DominantLayerData[ 0 ][ 0 ], 1, hFile );
 
 	fclose(hFile);
 #endif
 
-	return 1 ;
+	return 1;
 }
 
 //------------------------------------------------------------------------
@@ -4670,31 +4848,31 @@ r3dTerrain2::SaveBin( const char* dirName, const Shorts& hfShrinkedSamples, int 
 void
 r3dTerrain2::ExpendBaseBitMasksFrom101()
 {
-	int oldBaseTileCountX ;
-	int oldBaseTileCountZ ;
+	int oldBaseTileCountX;
+	int oldBaseTileCountZ;
 
-	GetBaseTileCounts_101( &oldBaseTileCountX, &oldBaseTileCountZ ) ;
+	GetBaseTileCounts_101( &oldBaseTileCountX, &oldBaseTileCountZ );
 
-	int baseTileCountX ;
-	int baseTileCountZ ;
+	int baseTileCountX;
+	int baseTileCountZ;
 
-	GetBaseTileCounts( &baseTileCountX, &baseTileCountZ ) ;
+	GetBaseTileCounts( &baseTileCountX, &baseTileCountZ );
 
-	int scaleX = baseTileCountX / oldBaseTileCountX ;
-	int scaleZ = baseTileCountZ / oldBaseTileCountZ ;
+	int scaleX = baseTileCountX / oldBaseTileCountX;
+	int scaleZ = baseTileCountZ / oldBaseTileCountZ;
 
-	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count(); i < e; i ++ )
 	{
-		r3dBitMaskArray2D oldBits = m_LayerBaseBitMasks[ i ] ;
-		r3dBitMaskArray2D& bits = m_LayerBaseBitMasks[ i ] ;
+		r3dBitMaskArray2D oldBits = m_LayerBaseBitMasks[ i ];
+		r3dBitMaskArray2D& bits = m_LayerBaseBitMasks[ i ];
 
-		bits.Resize( baseTileCountX, baseTileCountZ ) ;
+		bits.Resize( baseTileCountX, baseTileCountZ );
 
-		for( int z = 0, ze = baseTileCountZ ; z < ze ; z ++ )
+		for( int z = 0, ze = baseTileCountZ; z < ze; z ++ )
 		{
-			for( int x = 0, xe = baseTileCountX ; x < xe ; x ++ )
+			for( int x = 0, xe = baseTileCountX; x < xe; x ++ )
 			{
-				bits.Set( x, z, oldBits.Get( x / scaleX, z / scaleZ ) ) ;
+				bits.Set( x, z, oldBits.Get( x / scaleX, z / scaleZ ) );
 			}
 		}
 	}
@@ -4704,25 +4882,25 @@ r3dTerrain2::ExpendBaseBitMasksFrom101()
 
 static void FixBitMaskData( r3dBitMaskArray2D* oArray, const r3dTerrain2::Bytes& data )
 {
-	int nominalSize = oArray->GetWidth() * oArray->GetHeight() ;
+	int nominalSize = oArray->GetWidth() * oArray->GetHeight();
 
-	int sizeRatio = data.Count() * 8 / nominalSize ;
+	int sizeRatio = data.Count() * 8 / nominalSize;
 
-	int sideRatio = (int) sqrtf( (float)sizeRatio ) ;
+	int sideRatio = (int) sqrtf( (float)sizeRatio );
 
-	r3d_assert( sideRatio * sideRatio == sizeRatio ) ;
+	r3d_assert( sideRatio * sideRatio == sizeRatio );
 
-	r3dBitMaskArray2D fixupArray ;
+	r3dBitMaskArray2D fixupArray;
 
-	fixupArray.Resize( sideRatio * oArray->GetWidth(), sideRatio * oArray->GetHeight() ) ;
+	fixupArray.Resize( sideRatio * oArray->GetWidth(), sideRatio * oArray->GetHeight() );
 
-	fixupArray.SetData( &data[ 0 ], data.Count() ) ;
+	fixupArray.SetData( &data[ 0 ], data.Count() );
 
-	for( int z = 0, e = oArray->GetHeight() ; z < e ; z ++ )
+	for( int z = 0, e = oArray->GetHeight(); z < e; z ++ )
 	{
-		for( int x = 0, e = oArray->GetHeight() ; x < e ; x ++ )
+		for( int x = 0, e = oArray->GetHeight(); x < e; x ++ )
 		{
-			oArray->Set( x, z, fixupArray.Get( x, z ) ) ;
+			oArray->Set( x, z, fixupArray.Get( x, z ) );
 		}
 	}
 }
@@ -4733,20 +4911,20 @@ r3dTerrain2::LoadBin( const char* dirName )
 	r3dFile* hFile = r3d_open( Va( FNAME_TERRAIN2_BIN, dirName ), "rb");
 	r3d_assert( hFile );
 	if ( ! hFile )
-		return 0 ;
+		return 0;
 
 	struct AtExit
 	{
-		r3dFile*		closeMe ;
+		r3dFile*		closeMe;
 
 		~AtExit()
 		{
-			fclose( closeMe ) ;
+			fclose( closeMe );
 		}
-	} atExit = { hFile } ;
+	} atExit = { hFile };
 
-	uint32_t dwSignature = -1 ;
-	uint32_t dwVersion = -1 ;
+	uint32_t dwSignature = -1;
+	uint32_t dwVersion = -1;
 
 	fread( &dwSignature, sizeof( dwSignature ), 1, hFile );
 	fread( &dwVersion, sizeof( dwVersion ), 1, hFile );
@@ -4759,133 +4937,148 @@ r3dTerrain2::LoadBin( const char* dirName )
 		)
 	)
 	{
-		r3dOutToLog( "r3dTerrain2::LoadBin: unkown .heightmap file version\n!" ) ;
-		return 0 ;
+		r3dOutToLog( "r3dTerrain2::LoadBin: unkown .heightmap file version\n!" );
+		return 0;
 	}
 
-	PreparePhysXHeightFieldDesc_NoAlloc( &m_PhysicsHeightFieldDesc ) ;
+	PreparePhysXHeightFieldDesc_NoAlloc( &m_PhysicsHeightFieldDesc );
 
-	uint32_t hmSize = GetHeightFieldDataSize( m_PhysicsHeightFieldDesc ) ;
-	uint32_t desiredSampleCount = hmSize / m_PhysicsHeightFieldDesc.samples.stride ;
+	uint32_t hmSize = GetHeightFieldDataSize( m_PhysicsHeightFieldDesc );
+	uint32_t desiredSampleCount = hmSize / m_PhysicsHeightFieldDesc.samples.stride;
 
-	uint32_t sampleCount ;
+	uint32_t sampleCount;
 
-	fread( &sampleCount, sizeof sampleCount, 1, hFile ) ;
+	fread( &sampleCount, sizeof sampleCount, 1, hFile );
 
 	if( sampleCount != desiredSampleCount )
 	{
-		r3dOutToLog( "r3dTerrain2::LoadBin: Heightmap/Terrain Settings mismatch! Can't load!\n" ) ;
+		r3dOutToLog( "r3dTerrain2::LoadBin: Heightmap/Terrain Settings mismatch! Can't load!\n" );
 	}
 
-	Shorts samples( sampleCount ) ;
+	Shorts samples( sampleCount );
 
-	fread( &samples[ 0 ], sampleCount * sizeof samples[ 0 ], 1, hFile ) ;
+	fread( &samples[ 0 ], sampleCount * sizeof samples[ 0 ], 1, hFile );
 
-	char normalMapFile[ 1024 ] ;
-	PrintFullNormalPath( dirName, normalMapFile ) ;
+	char normalMapFile[ 1024 ];
+	PrintFullNormalPath( dirName, normalMapFile );
 
-	bool needCalcNormals = false ;
+	bool needCalcNormals = false;
 
 	if( !r3dFileExists( normalMapFile ) )
 	{
-		LoadDetailNormalTex() ;
+		LoadDetailNormalTex();
 
-		needCalcNormals = true ;
+		needCalcNormals = true;
 	}
 
-	InitFromHeights( samples, needCalcNormals ) ;
+	InitFromHeights( samples, needCalcNormals );
 
 	if( !g_bEditMode )
 	{
 		if( m_DetailNormalTex )
 		{
-			r3dRenderer->DeleteTexture( m_DetailNormalTex ) ;
-			m_DetailNormalTex = NULL ;
+			r3dRenderer->DeleteTexture( m_DetailNormalTex );
+			m_DetailNormalTex = NULL;
 		}
 	}
 
 	m_HeightFieldDataCRC32 = r3dCRC32((const BYTE *)&samples[0], samples.Count() * sizeof( samples[0] ) );
 
-	int tileLayersCount ;
-	fread( &tileLayersCount, sizeof(tileLayersCount), 1, hFile ) ;
+	int tileLayersCount;
+	fread( &tileLayersCount, sizeof(tileLayersCount), 1, hFile );
 
-	r3d_assert( tileLayersCount == m_Layers.Count() ) ;
+	r3d_assert( tileLayersCount >= (int)m_Layers.Count() );
 
-	m_LayerBaseBitMasks.Resize( tileLayersCount ) ;
+	int fileLayerCount = tileLayersCount;
 
-	Bytes data ;
+	if( tileLayersCount > (int)m_Layers.Count() )
+	{
+		r3dArtBug( "Terrain2 was uploaded in inconsistent state - layer count in terrain2.bin is greater than in terrain2.ini. Someone forgot to upload terrain2.ini?" );
+		tileLayersCount = m_Layers.Count();
+	}
 
-	int baseTileCountX ;
-	int baseTileCountZ ;
+	m_LayerBaseBitMasks.Resize( tileLayersCount );
+
+	Bytes data;
+
+	int baseTileCountX;
+	int baseTileCountZ;
 
 	if( dwVersion == TERRAIN2_VERSION_101 )
 	{
-		GetBaseTileCounts_101( &baseTileCountX, &baseTileCountZ ) ;
+		GetBaseTileCounts_101( &baseTileCountX, &baseTileCountZ );
 	}
 	else
 	{
-		GetBaseTileCounts( &baseTileCountX, &baseTileCountZ ) ;
+		GetBaseTileCounts( &baseTileCountX, &baseTileCountZ );
 	}
 
-	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_LayerBaseBitMasks.Count(); i < e; i ++ )
 	{
-		r3dBitMaskArray2D& bits = m_LayerBaseBitMasks[ i ] ;
-		bits.Resize( baseTileCountX, baseTileCountZ ) ;
+		r3dBitMaskArray2D& bits = m_LayerBaseBitMasks[ i ];
+		bits.Resize( baseTileCountX, baseTileCountZ );
 
-		int one = 0 ;
-		fread( &one, sizeof one, 1, hFile ) ;
+		int one = 0;
+		fread( &one, sizeof one, 1, hFile );
 
-		data.Resize( one ) ;
+		data.Resize( one );
 
-		fread( &data[ 0 ], data.Count() * sizeof data[ 0 ], 1, hFile ) ;
+		fread( &data[ 0 ], data.Count() * sizeof data[ 0 ], 1, hFile );
 
 		// fix erroneously saved data
 		if( (int)data.Count() > bits.GetDataSize() )
 		{
-			FixBitMaskData( &bits, data ) ;
+			FixBitMaskData( &bits, data );
 		}
 		else
 		{
-			bits.SetData( &data[ 0 ], data.Count() ) ;
+			bits.SetData( &data[ 0 ], data.Count() );
 		}
+	}
+
+	for( int i = (int)m_LayerBaseBitMasks.Count(), e = fileLayerCount; i < e; i ++ )
+	{
+		int one = 0;
+		fread( &one, sizeof one, 1, hFile );
+		fseek( hFile, one * sizeof( data[ 0 ] ), SEEK_CUR );
 	}
 
 	if( dwVersion == TERRAIN2_VERSION_101 )
 	{
-		ExpendBaseBitMasksFrom101() ;
+		ExpendBaseBitMasksFrom101();
 	}
 
-	int width_height[ 2 ] ;
+	int width_height[ 2 ];
 
-	fread( width_height, sizeof width_height, 1, hFile ) ;
+	fread( width_height, sizeof width_height, 1, hFile );
 
-	r3dTL::TArray< UINT8 > temp ;
+	r3dTL::TArray< UINT8 > temp;
 
-	temp.Resize( width_height[ 0 ] * width_height[ 1 ] ) ;
+	temp.Resize( width_height[ 0 ] * width_height[ 1 ] );
 
-	fread( &temp[ 0 ], temp.Count() * sizeof temp[ 0 ], 1, hFile ) ;
+	fread( &temp[ 0 ], temp.Count() * sizeof temp[ 0 ], 1, hFile );
 
-	m_DominantLayerData.Swap( temp, width_height[ 0 ], width_height[ 1 ] ) ;
+	m_DominantLayerData.Swap( temp, width_height[ 0 ], width_height[ 1 ] );
 	
-	InitLayerBitMaskChains() ;
+	InitLayerBitMaskChains();
 
-	return 1 ;
+	return 1;
 }
 
 //------------------------------------------------------------------------
 
 void r3dTerrain2::ExtractFloatHeights( const Shorts& shorts, Floats* oFloats )
 {
-	SetupHFScale() ;
+	SetupHFScale();
 
-	oFloats->Resize( shorts.Count() ) ;
+	oFloats->Resize( shorts.Count() );
 
-	for( int i = 0, e = shorts.Count() ; i < e ; i ++ )
+	for( int i = 0, e = shorts.Count(); i < e; i ++ )
 	{
-		int x = i % m_VertexCountX ;
-		int z = i / m_VertexCountX ;
+		int x = i % m_VertexCountX;
+		int z = i / m_VertexCountX;
 
-		(*oFloats)[ x * m_VertexCountZ + z ] = shorts[ i ] * m_InvHFScale ;
+		(*oFloats)[ x * m_VertexCountZ + z ] = shorts[ i ] * m_InvHFScale;
 	}
 
 }
@@ -4897,50 +5090,50 @@ r3dTerrain2::InitFromHeights( const Shorts& shorts, bool recalcNormals )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 	if( m_HeightTex )
-		r3dRenderer->DeleteTexture( m_HeightTex ) ;
+		r3dRenderer->DeleteTexture( m_HeightTex );
 
 	if( m_AllowVFetch )
 	{
-		m_HeightTex = r3dRenderer->AllocateTexture() ;
-		m_HeightTex->Create( m_VertexCountX, m_VertexCountZ, D3DFMT_L16, 1 ) ;
+		m_HeightTex = r3dRenderer->AllocateTexture();
+		m_HeightTex->Create( m_VertexCountX, m_VertexCountZ, D3DFMT_L16, 1 );
 
-		UShorts().Swap( m_HeightArr ) ;
+		UShorts().Swap( m_HeightArr );
 	}
 	else
 	{
-		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ ) ;
+		m_HeightArr.Resize( m_VertexCountX * m_VertexCountZ );
 	}
 
-	UpdateGraphicsHeightField( shorts, NULL ) ;
+	UpdateGraphicsHeightField( shorts, NULL );
 
-	InitTileField( shorts ) ;
+	InitTileField( shorts );
 #endif
 
 	//------------------------------------------------------------------------
 	// convert shorts to floats compute normal map
 
-	Floats heights ;
+	Floats heights;
 
-	ExtractFloatHeights( shorts, &heights ) ;
+	ExtractFloatHeights( shorts, &heights );
 
 #if R3D_TERRAIN_V2_GRAPHICS
 	if( recalcNormals )
 	{
 		if( m_NormalTex )
-			r3dRenderer->DeleteTexture( m_NormalTex ) ;
+			r3dRenderer->DeleteTexture( m_NormalTex );
 
-		m_NormalTex = r3dRenderer->AllocateTexture() ;
+		m_NormalTex = r3dRenderer->AllocateTexture();
 
-		m_NormalTex->Create( m_VertexCountX * m_NormalDensity, m_VertexCountZ * m_NormalDensity, D3DFMT_R5G6B5, 1 ) ;
+		m_NormalTex->Create( m_VertexCountX * m_NormalDensity, m_VertexCountZ * m_NormalDensity, D3DFMT_R5G6B5, 1 );
 
-		Vectors temp0 ;
-		Vectors temp1 ;
+		Vectors temp0;
+		Vectors temp1;
 
-		RecalcNormalMap( heights, &temp0, &temp1, NULL ) ;
+		RecalcNormalMap( heights, &temp0, &temp1, NULL );
 	}
 #endif
 
-	UpdatePhysHeightField( shorts ) ;
+	UpdatePhysHeightField( shorts );
 }
 
 //------------------------------------------------------------------------
@@ -4980,17 +5173,17 @@ int
 r3dTerrain2::LoadLayerFromScript( Script_c *script, r3dTerrainLayer *layer )
 {
 #if !R3D_TERRAIN_V2_GRAPHICS
-	return 0 ;
+	return 0;
 #endif
 
 	char buffer[ MAX_PATH ];
 	char szName[ MAX_PATH ];
 
-	int hasTextures = 0 ;
+	int hasTextures = 0;
 
 	int DownScale = GetTerraTexDownScale();
 
-	layer->MaterialTypeName = "" ;
+	layer->MaterialTypeName = "";
 
 	script->SkipToken( "{" );
 	while ( ! script->EndOfFile() )
@@ -5002,11 +5195,11 @@ r3dTerrain2::LoadLayerFromScript( Script_c *script, r3dTerrainLayer *layer )
 		if( ! strcmp( buffer, "name:" ) )
 		{
 			script->GetString( szName, sizeof( szName ) );
-			layer->Name = szName ;
+			layer->Name = szName;
 		}
 		else if ( ! strcmp( buffer, "map_diffuse:" ) )
 		{
-			hasTextures = 1 ;
+			hasTextures = 1;
 
 			script->GetString( szName, sizeof( szName ) );
 
@@ -5014,7 +5207,7 @@ r3dTerrain2::LoadLayerFromScript( Script_c *script, r3dTerrainLayer *layer )
 		}
 		else if ( ! strcmp( buffer, "map_normal:" ) )
 		{
-			hasTextures = 1 ;
+			hasTextures = 1;
 
 			script->GetString( szName, sizeof( szName ) );
 			layer->NormalTex = r3dRenderer->LoadTexture( szName, D3DFMT_UNKNOWN, false, DownScale );
@@ -5039,11 +5232,11 @@ r3dTerrain2::LoadLayerFromScript( Script_c *script, r3dTerrainLayer *layer )
 
 			script->GetLine( buff, sizeof buff - 1 );
 
-			layer->MaterialTypeName = buff ;
+			layer->MaterialTypeName = buff;
 		}
 	}
 
-	return hasTextures ;
+	return hasTextures;
 }
 
 //------------------------------------------------------------------------
@@ -5070,10 +5263,10 @@ r3dTerrain2::UpdateHFShape()
 
 	r3d_assert(_CrtCheckMemory());
 	PxU32	w = (PxU32)this->m_VertexCountX,
-			h = (PxU32)this->m_VertexCountZ ;
+			h = (PxU32)this->m_VertexCountZ;
 
 	// do not create a new shape, just update current shape with new parameters
-	hfGeom.heightScale		= m_InvHFScale ;
+	hfGeom.heightScale		= m_InvHFScale;
 	hfGeom.rowScale			= m_TotalTerrainZLength / PxReal(h);
 	hfGeom.columnScale		= m_TotalTerrainXLength / PxReal(w);
 
@@ -5118,13 +5311,13 @@ void
 r3dTerrain2::PreparePhysXHeightFieldDesc_NoAlloc( PxHeightFieldDesc* hfDesc )
 {
 	int w = m_VertexCountX, 
-		h = m_VertexCountZ ;
+		h = m_VertexCountZ;
 
 	hfDesc->format				= PxHeightFieldFormat::eS16_TM;
 	hfDesc->nbColumns			= w;
 	hfDesc->nbRows				= h;
 	hfDesc->convexEdgeThreshold	= 0;
-	// PhysX 3.4: thickness is deprecated.
+	hfDesc->thickness			= -1000.0f;
 
 	// allocate storage for samples
 	hfDesc->samples.stride		= sizeof(PxU32);
@@ -5136,7 +5329,7 @@ r3dTerrain2::PreparePhysXHeightFieldDesc_NoAlloc( PxHeightFieldDesc* hfDesc )
 void
 r3dTerrain2::PreparePhysXHeightFieldDesc( PxHeightFieldDesc* hfDesc )
 {
-	PreparePhysXHeightFieldDesc_NoAlloc( hfDesc ) ;
+	PreparePhysXHeightFieldDesc_NoAlloc( hfDesc );
 
 	hfDesc->samples.data		= malloc( hfDesc->samples.stride * hfDesc->nbColumns* hfDesc->nbRows );
 
@@ -5158,30 +5351,30 @@ r3dTerrain2::FinishPhysXHeightFieldDesc	( PxHeightFieldDesc* hfDesc )
 void
 r3dTerrain2::UpdatePhysHeightField( const Shorts& source )
 {
-	PreparePhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc ) ;
+	PreparePhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc );
 
 	SetupHFScale();
 
 	if( m_PhysicsTerrain )
 	{
-		m_PhysicsTerrain->release() ;
-		m_PhysicsTerrain = NULL ;
+		m_PhysicsTerrain->release();
+		m_PhysicsTerrain = NULL;
 	}
 	
 	if( m_PhysicsHeightField )
 	{
-		m_PhysicsHeightField->release() ;
-		m_PhysicsHeightField = NULL ;
+		m_PhysicsHeightField->release();
+		m_PhysicsHeightField = NULL;
 	}
 
 	PxU32	w = (PxU32)m_VertexCountX,
-			h = (PxU32)m_VertexCountZ ;
+			h = (PxU32)m_VertexCountZ;
 
-	char* currentByte = (char*)m_PhysicsHeightFieldDesc.samples.data ;
+	char* currentByte = (char*)m_PhysicsHeightFieldDesc.samples.data;
 
-	for ( int i = 0, e = h * w ;  i < e ; i ++ )
+	for ( int i = 0, e = h * w;  i < e; i ++ )
 	{
-		PxI16 height = (PxI32) source[ i ] ;
+		PxI16 height = (PxI32) source[ i ];
 
 		PxHeightFieldSample* currentSample = (PxHeightFieldSample*)currentByte;
 		currentSample->height = height;
@@ -5191,10 +5384,7 @@ r3dTerrain2::UpdatePhysHeightField( const Shorts& source )
 		currentByte += m_PhysicsHeightFieldDesc.samples.stride;		
 	}
 
-	m_PhysicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		m_PhysicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	m_PhysicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField( m_PhysicsHeightFieldDesc );
 
 	FinishPhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc );
 
@@ -5209,7 +5399,7 @@ r3dTerrain2::UpdatePhysHeightField( const Shorts& source )
 	PxFilterData qfilterData(1<<PHYSCOLL_STATIC_GEOMETRY, 0, 0, 0);
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 #endif
 	aHeightFieldShape->setQueryFilterData(qfilterData);
@@ -5235,7 +5425,7 @@ r3dTerrain2::UpdatePhysHeightField ( const Floats& heightFieldData )
 		m_PhysicsHeightField = 0;
 	}
 
-	const Floats& source = heightFieldData ;
+	const Floats& source = heightFieldData;
 	r3d_assert( source.Count() == m_VertexCountX * m_VertexCountZ );
 
 	r3d_assert(_CrtCheckMemory());
@@ -5260,7 +5450,7 @@ r3dTerrain2::UpdatePhysHeightField ( const Floats& heightFieldData )
 	float norm = m_HFScale;
 
 	PxU32	w = (PxU32)m_VertexCountX,
-			h = (PxU32)m_VertexCountZ ;
+			h = (PxU32)m_VertexCountZ;
 
 	for (PxU32 column = 0; column < w; column++)
 	{
@@ -5277,10 +5467,7 @@ r3dTerrain2::UpdatePhysHeightField ( const Floats& heightFieldData )
 		}
 	}
 
-	m_PhysicsHeightField = g_pPhysicsWorld->Cooking->createHeightField(
-		m_PhysicsHeightFieldDesc,
-		g_pPhysicsWorld->PhysXSDK->getPhysicsInsertionCallback()
-	);
+	m_PhysicsHeightField = g_pPhysicsWorld->PhysXSDK->createHeightField(m_PhysicsHeightFieldDesc);
 
 	FinishPhysXHeightFieldDesc( &m_PhysicsHeightFieldDesc ); 
 
@@ -5295,7 +5482,7 @@ r3dTerrain2::UpdatePhysHeightField ( const Floats& heightFieldData )
 	PxFilterData qfilterData(1<<PHYSCOLL_STATIC_GEOMETRY, 0, 0, 0);
 #ifndef WO_SERVER
 #if VEHICLES_ENABLED
-	PxSetupDrivableShapeQueryFilterData(&qfilterData);
+	VehicleSetupDrivableShapeQueryFilterData(qfilterData);
 #endif
 #endif
 	aHeightFieldShape->setQueryFilterData(qfilterData);
@@ -5316,7 +5503,7 @@ r3dTerrain2::UpdateSceneBox()
 	extern float gSceneBox_LevelBase;
 	extern unsigned int gSceneBox_MinObjCount;
 
-	float worldSize = R3D_MAX( m_TotalTerrainXLength, m_TotalTerrainZLength ) ;
+	float worldSize = R3D_MAX( m_TotalTerrainXLength, m_TotalTerrainZLength );
 
 	if( worldSize > 10000.0f)
 	{
@@ -5334,9 +5521,9 @@ r3dTerrain2::UpdateSceneBox()
 
 void r3dTerrain2::RecalcLayerVar( r3dTerrainLayer* oLayer )
 {
-	oLayer->ShaderScaleU = oLayer->ScaleU * m_TerrainPosToSplatU ;
+	oLayer->ShaderScaleU = oLayer->ScaleU * m_TerrainPosToSplatU;
 	// note SplatU again - to maintain uniformity on non square terrains
-	oLayer->ShaderScaleV = oLayer->ScaleV * m_TerrainPosToSplatU ;
+	oLayer->ShaderScaleV = oLayer->ScaleV * m_TerrainPosToSplatU;
 }
 
 //------------------------------------------------------------------------
@@ -5344,76 +5531,76 @@ void r3dTerrain2::RecalcLayerVar( r3dTerrainLayer* oLayer )
 void
 r3dTerrain2::RecalcTileCounts()
 {
-	m_TileCountX = m_VertexCountX / m_QualitySettings.VertexTileDim ;
-	m_TileCountZ = m_VertexCountZ / m_QualitySettings.VertexTileDim ;
+	m_TileCountX = m_VertexCountX / m_QualitySettings.VertexTileDim;
+	m_TileCountZ = m_VertexCountZ / m_QualitySettings.VertexTileDim;
 }
 
 //------------------------------------------------------------------------
 
 void r3dTerrain2::UpdateDesc()
 {
-	r3dTerrainDesc desc ;
+	r3dTerrainDesc desc;
 
-	desc.LayerCount = m_Layers.Count() + 1 ;
+	desc.LayerCount = m_Layers.Count() + 1;
 
-	desc.XSize = m_TotalTerrainXLength ;
-	desc.ZSize = m_TotalTerrainZLength ;
+	desc.XSize = m_TotalTerrainXLength;
+	desc.ZSize = m_TotalTerrainZLength;
 
-	desc.CellCountX = m_VertexCountX ;
-	desc.CellCountZ = m_VertexCountZ ;
+	desc.CellCountX = m_VertexCountX;
+	desc.CellCountZ = m_VertexCountZ;
 
-	desc.SplatResolutionU = m_SplatResolutionU ;
-	desc.SplatResolutionV = m_SplatResolutionV ;
+	desc.SplatResolutionU = m_SplatResolutionU;
+	desc.SplatResolutionV = m_SplatResolutionV;
 
-	desc.MinHeight = m_HeightOffset ;
-	desc.MaxHeight = m_HeightOffset + m_HeightScale ;
+	desc.MinHeight = m_HeightOffset;
+	desc.MaxHeight = m_HeightOffset + m_HeightScale;
 
-	desc.CellSize = m_CellSize ;
-	desc.CellCountPerTile = m_QualitySettings.VertexTileDim ;
+	desc.CellSize = m_CellSize;
+	desc.CellCountPerTile = m_QualitySettings.VertexTileDim;
 
-	SetDesc( desc ) ;
+	SetDesc( desc );
 }
 
 //------------------------------------------------------------------------
 
 void r3dTerrain2::RecalcVars()
 {
-	m_QualitySettings.Sync() ;
+	m_QualitySettings.Sync();
 
-	RecalcTileCounts() ;
+	RecalcTileCounts();
 
-	m_AtlasTileCountPerSide		= ATLAS_TEXTURE_DIM / m_QualitySettings.AtlasTileDim ;
-	m_AtlasTileCountPerSideInv	= 1.0f / m_AtlasTileCountPerSide ;
+	m_AtlasTileCountPerSide		= ATLAS_TEXTURE_DIM / m_QualitySettings.AtlasTileDim;
+	m_AtlasTileCountPerSideInv	= 1.0f / m_AtlasTileCountPerSide;
 
-	m_TileWorldDims[ 0 ] = m_TileUnitWorldDim * m_QualitySettings.VertexTileDim ;
+	m_TileWorldDims[ 0 ] = m_TileUnitWorldDim * m_QualitySettings.VertexTileDim;
 
-	m_HalfTileWorldDims[ 0 ] = m_TileWorldDims[ 0 ] * 0.5f ;
+	m_HalfTileWorldDims[ 0 ] = m_TileWorldDims[ 0 ] * 0.5f;
 
-	for( int i = 1, e = m_TileWorldDims.COUNT ; i < e ; i ++ )
+	for( int i = 1, e = m_TileWorldDims.COUNT; i < e; i ++ )
 	{
-		m_TileWorldDims[ i ] = m_TileWorldDims[ i - 1 ] * 2.0f ;
-		m_HalfTileWorldDims[ i ] = m_TileWorldDims[ i - 1 ] ;
+		m_TileWorldDims[ i ] = m_TileWorldDims[ i - 1 ] * 2.0f;
+		m_HalfTileWorldDims[ i ] = m_TileWorldDims[ i - 1 ];
 	}
 
-	for( int i = 0 ; i < NUM_QUALITY_LAYERS ; i ++ )
+	for( int i = 0; i < NUM_QUALITY_LAYERS; i ++ )
 	{
-		m_QualitySettings.TileDistances[ i ] = m_QualitySettings.TileCounts[ i ] * m_TileWorldDims[ i ] ;
+		m_QualitySettings.TileDistances[ i ] = m_QualitySettings.TileCounts[ i ] * m_TileWorldDims[ i ];
 
 		if( i )
 		{
-			m_QualitySettings.TileDistances[ i ] += m_QualitySettings.TileDistances[ i - 1 ] ;
+			m_QualitySettings.TileDistances[ i ] += m_QualitySettings.TileDistances[ i - 1 ];
 		}
 	}
 
-	m_TotalTerrainXLength = m_TileCountX * m_TileWorldDims [ 0 ] ;
-	m_TotalTerrainZLength = m_TileCountZ * m_TileWorldDims [ 0 ] ;
+	m_TotalTerrainXLength = m_TileCountX * m_TileWorldDims [ 0 ];
+	m_TotalTerrainZLength = m_TileCountZ * m_TileWorldDims [ 0 ];
 
-	m_TerrainPosToSplatU = 0.5f / m_TotalTerrainXLength ;
-	m_TerrainPosToSplatV = 0.5f / m_TotalTerrainZLength ;
+	m_TerrainPosToSplatU = 0.5f / m_TotalTerrainXLength;
+	m_TerrainPosToSplatV = 0.5f / m_TotalTerrainZLength;
 
-	m_CellSize = m_TileWorldDims [ 0 ] / m_QualitySettings.VertexTileDim ;
+	m_CellSize = m_TileWorldDims [ 0 ] / m_QualitySettings.VertexTileDim;
 
-	UpdateDesc() ;
+	UpdateDesc();
 }
 
 //------------------------------------------------------------------------
@@ -5421,49 +5608,49 @@ void r3dTerrain2::RecalcVars()
 void r3dTerrain2::InitTileField( const Shorts& heightField )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	RecalcVars() ;
-	SetupHFScale() ;
+	RecalcVars();
+	SetupHFScale();
 
-	int tileCountX = m_TileCountX ;
-	int tileCountZ = m_TileCountZ ;
+	int tileCountX = m_TileCountX;
+	int tileCountZ = m_TileCountZ;
 
-	m_VisibleTiles.Reserve( m_TileCountX * m_TileCountZ ) ;
+	m_VisibleTiles.Reserve( m_TileCountX * m_TileCountZ );
 
-	m_NumActiveQualityLayers = NUM_QUALITY_LAYERS ;
+	m_NumActiveQualityLayers = NUM_QUALITY_LAYERS;
 
-	for( int L = 0, e = NUM_QUALITY_LAYERS ; L < e ; L ++ )
+	for( int L = 0, e = NUM_QUALITY_LAYERS; L < e; L ++ )
 	{
-		tileCountX /= 2 ;
-		tileCountZ /= 2 ;
+		tileCountX /= 2;
+		tileCountZ /= 2;
 
 		if( !tileCountX || !tileCountZ )
 		{
-			m_NumActiveQualityLayers = L ;
-			break ;
+			m_NumActiveQualityLayers = L;
+			break;
 		}
 	}
 
-	m_TileInfoMipChain.Resize( m_NumActiveQualityLayers ) ;
+	m_TileInfoMipChain.Resize( m_NumActiveQualityLayers );
 
-	m_TileInfoMipChain[ 0 ].Resize( m_TileCountX, m_TileCountZ ) ;
+	m_TileInfoMipChain[ 0 ].Resize( m_TileCountX, m_TileCountZ );
 
-	tileCountX = m_TileCountX ;
-	tileCountZ = m_TileCountZ ;
+	tileCountX = m_TileCountX;
+	tileCountZ = m_TileCountZ;
 
-	for( int i = 1, e = m_TileInfoMipChain.Count() ; i < e ; i ++ )
+	for( int i = 1, e = m_TileInfoMipChain.Count(); i < e; i ++ )
 	{
 
-		TileInfoArr2D& mip		= m_TileInfoMipChain[ i ] ;
+		TileInfoArr2D& mip		= m_TileInfoMipChain[ i ];
 
-		tileCountX /= 2 ;
-		tileCountZ /= 2 ;
+		tileCountX /= 2;
+		tileCountZ /= 2;
 
-		mip.Resize( tileCountX, tileCountZ ) ;
+		mip.Resize( tileCountX, tileCountZ );
 	}
 	
-	m_AllocTileLodArray.Resize( m_NumActiveQualityLayers ) ;
+	m_AllocTileLodArray.Resize( m_NumActiveQualityLayers );
 
-	RecalcTileInfo( heightField, NULL ) ;
+	RecalcTileInfo( heightField, NULL );
 #endif
 }
 
@@ -5473,113 +5660,113 @@ void
 r3dTerrain2::RecalcTileInfo( const Shorts& heightField, const RECT* rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	RECT r ;
+	RECT r;
 
 	if( rect )
 	{
-		r = * rect ;
+		r = * rect;
 	}
 	else
 	{
-		r.left = 0 ;
-		r.right = m_VertexCountX ;
-		r.top = 0 ;
-		r.bottom = m_VertexCountZ ;
+		r.left = 0;
+		r.right = m_VertexCountX;
+		r.top = 0;
+		r.bottom = m_VertexCountZ;
 	}
 
-	r.left		/= m_QualitySettings.VertexTileDim ;
-	r.right		/= m_QualitySettings.VertexTileDim ;
-	r.top		/= m_QualitySettings.VertexTileDim ;
-	r.bottom	/= m_QualitySettings.VertexTileDim ;
+	r.left		/= m_QualitySettings.VertexTileDim;
+	r.right		/= m_QualitySettings.VertexTileDim;
+	r.top		/= m_QualitySettings.VertexTileDim;
+	r.bottom	/= m_QualitySettings.VertexTileDim;
 
-	r.left		= R3D_MAX( R3D_MIN( (int)r.left, m_TileCountX ), 0 ) ;
-	r.right		= R3D_MAX( R3D_MIN( (int)r.right, m_TileCountX ), 0 ) ;
-	r.top		= R3D_MAX( R3D_MIN( (int)r.top, m_TileCountZ ), 0 ) ;
-	r.bottom	= R3D_MAX( R3D_MIN( (int)r.bottom, m_TileCountZ ), 0 ) ;
+	r.left		= R3D_MAX( R3D_MIN( (int)r.left, m_TileCountX ), 0 );
+	r.right		= R3D_MAX( R3D_MIN( (int)r.right, m_TileCountX ), 0 );
+	r.top		= R3D_MAX( R3D_MIN( (int)r.top, m_TileCountZ ), 0 );
+	r.bottom	= R3D_MAX( R3D_MIN( (int)r.bottom, m_TileCountZ ), 0 );
 
-	int tileCountX = m_TileCountX ;
-	int tileCountZ = m_TileCountZ ;
+	int tileCountX = m_TileCountX;
+	int tileCountZ = m_TileCountZ;
 
-	int vertDim = m_QualitySettings.VertexTileDim ;
-	int fullXVertDim = m_TileCountX * m_QualitySettings.VertexTileDim ;
-	int fullZVertDim = m_TileCountZ * m_QualitySettings.VertexTileDim ;
+	int vertDim = m_QualitySettings.VertexTileDim;
+	int fullXVertDim = m_TileCountX * m_QualitySettings.VertexTileDim;
+	int fullZVertDim = m_TileCountZ * m_QualitySettings.VertexTileDim;
 
-	TileInfoArr2D& arr = m_TileInfoMipChain[ 0 ] ;
+	TileInfoArr2D& arr = m_TileInfoMipChain[ 0 ];
 
-	for( int zz = r.top ; zz < r.bottom ; zz ++ )
+	for( int zz = r.top; zz < r.bottom; zz ++ )
 	{
-		for( int xx = r.left ; xx < r.right ; xx ++ )
+		for( int xx = r.left; xx < r.right; xx ++ )
 		{
-			int ax = xx ;
-			int az = zz ;
+			int ax = xx;
+			int az = zz;
 
-			vertDim = m_QualitySettings.VertexTileDim ;
+			vertDim = m_QualitySettings.VertexTileDim;
 
-			int tcx = tileCountX ;
-			int tcz = tileCountZ ;
+			int tcx = tileCountX;
+			int tcz = tileCountZ;
 
-			int heightMin = +0x10000 ;
-			int heightMax = -0x10000 ;
+			int heightMin = +0x10000;
+			int heightMax = -0x10000;
 
 			for( int	sz = az * vertDim, 
-				sze = R3D_MIN( ( az + 1 ) * vertDim + 1, fullZVertDim ) ; 
-				sz < sze ; sz ++ )
+				sze = R3D_MIN( ( az + 1 ) * vertDim + 1, fullZVertDim ); 
+				sz < sze; sz ++ )
 			{
 				for( int	sx = ax * vertDim, 
-					sxe = R3D_MIN( ( ax + 1 ) * vertDim + 1, fullXVertDim ) ; 
-					sx < sxe ; sx ++ )
+					sxe = R3D_MIN( ( ax + 1 ) * vertDim + 1, fullXVertDim ); 
+					sx < sxe; sx ++ )
 				{
-					int height = heightField[ sz + sx * fullZVertDim ] ;
+					int height = heightField[ sz + sx * fullZVertDim ];
 
-					heightMin = R3D_MIN( height, heightMin ) ;
-					heightMax = R3D_MAX( height, heightMax ) ;
+					heightMin = R3D_MIN( height, heightMin );
+					heightMax = R3D_MAX( height, heightMax );
 				}
 			}
 
-			TileInfo& tinfo = arr[ az ][ ax ] ;
+			TileInfo& tinfo = arr[ az ][ ax ];
 
-			tinfo.HeightMin		= heightMin * m_InvHFScale ;
-			tinfo.HeightRange	= ( heightMax - heightMin ) * m_InvHFScale ;
+			tinfo.HeightMin		= heightMin * m_InvHFScale;
+			tinfo.HeightRange	= ( heightMax - heightMin ) * m_InvHFScale;
 		}
 	}
 
-	for( int i = 1, e = m_TileInfoMipChain.Count() ; i < e ; i ++ )
+	for( int i = 1, e = m_TileInfoMipChain.Count(); i < e; i ++ )
 	{
 
-		TileInfoArr2D& prevMip	= m_TileInfoMipChain[ i - 1 ] ;
-		TileInfoArr2D& mip		= m_TileInfoMipChain[ i - 0 ] ;
+		TileInfoArr2D& prevMip	= m_TileInfoMipChain[ i - 1 ];
+		TileInfoArr2D& mip		= m_TileInfoMipChain[ i - 0 ];
 
-		int prevTileCountX = tileCountX ;
+		int prevTileCountX = tileCountX;
 
-		tileCountX /= 2 ;
-		tileCountZ /= 2 ;
+		tileCountX /= 2;
+		tileCountZ /= 2;
 
-		for( int z = 0, e = tileCountZ ; z < e ; z ++ )
+		for( int z = 0, e = tileCountZ; z < e; z ++ )
 		{
-			for( int x = 0, e = tileCountX ; x < e ; x ++ )
+			for( int x = 0, e = tileCountX; x < e; x ++ )
 			{
-				int ax = x * 2 ;
-				int az = z * 2 ;
+				int ax = x * 2;
+				int az = z * 2;
 
-				TileInfo& tarInfo = mip[ z ][ x ] ;
+				TileInfo& tarInfo = mip[ z ][ x ];
 
-				const TileInfo& srcInfo00 = prevMip[ az + 0 ][ ax + 0 ] ;
-				const TileInfo& srcInfo10 = prevMip[ az + 0 ][ ax + 1 ] ;
-				const TileInfo& srcInfo01 = prevMip[ az + 1 ][ ax + 0 ] ;
-				const TileInfo& srcInfo11 = prevMip[ az + 1 ][ ax + 1 ] ;
+				const TileInfo& srcInfo00 = prevMip[ az + 0 ][ ax + 0 ];
+				const TileInfo& srcInfo10 = prevMip[ az + 0 ][ ax + 1 ];
+				const TileInfo& srcInfo01 = prevMip[ az + 1 ][ ax + 0 ];
+				const TileInfo& srcInfo11 = prevMip[ az + 1 ][ ax + 1 ];
 
 				tarInfo.HeightMin = R3D_MIN(
 					R3D_MIN( srcInfo00.HeightMin, srcInfo01.HeightMin ),
 					R3D_MIN( srcInfo10.HeightMin, srcInfo11.HeightMin )
-					) ;
+					);
 
 				float heightMax = 
 					R3D_MAX(
 					R3D_MAX( srcInfo00.HeightMin + srcInfo00.HeightRange, srcInfo10.HeightMin + srcInfo10.HeightRange ),
 					R3D_MAX( srcInfo01.HeightMin + srcInfo01.HeightRange, srcInfo11.HeightMin + srcInfo11.HeightRange )
-					) ;
+					);
 
-				tarInfo.HeightRange = heightMax - tarInfo.HeightMin ;
+				tarInfo.HeightRange = heightMax - tarInfo.HeightMin;
 			}
 		}
 	}
@@ -5592,19 +5779,19 @@ void
 r3dTerrain2::InitLayerBaseBitMask( int idx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int baseCountX ;
-	int baseCountZ ;
+	int baseCountX;
+	int baseCountZ;
 
-	GetBaseTileCounts( &baseCountX, &baseCountZ ) ;
+	GetBaseTileCounts( &baseCountX, &baseCountZ );
 
-	m_LayerBaseBitMasks[ idx ].Resize( baseCountX, baseCountZ ) ;
-	m_LayerBaseBitMasks[ idx ].ZeroAll() ;
+	m_LayerBaseBitMasks[ idx ].Resize( baseCountX, baseCountZ );
+	m_LayerBaseBitMasks[ idx ].ZeroAll();
 
-	for( int z = 0, t = 0, e = baseCountZ ; z < e; z ++ )
+	for( int z = 0, t = 0, e = baseCountZ; z < e; z ++ )
 	{
-		for( int x = 0, e = baseCountX ; x < e; x ++, t ++ )
+		for( int x = 0, e = baseCountX; x < e; x ++, t ++ )
 		{
-			UpdateBaseBitMask( &m_LayerBaseBitMasks[ idx ], x, z, m_LayerChannels[ idx ] ) ;
+			UpdateBaseBitMask( &m_LayerBaseBitMasks[ idx ], x, z, m_LayerChannels[ idx ] );
 		}
 	}
 #endif
@@ -5616,11 +5803,11 @@ void
 r3dTerrain2::InitLayerBaseBitMasks()
 {
 #if R3D_TERRAIN_V2_GRAPHICS	
-	m_LayerBaseBitMasks.Resize( m_Layers.Count() ) ;
+	m_LayerBaseBitMasks.Resize( m_Layers.Count() );
 
-	for( int i = 0, e = m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
-		InitLayerBaseBitMask( i ) ;
+		InitLayerBaseBitMask( i );
 	}
 #endif
 }
@@ -5631,13 +5818,13 @@ void
 r3dTerrain2::InitLayerBitMaskChain( int idx )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_LayerBitMasksMipChains[ idx ].Clear() ;
+	m_LayerBitMasksMipChains[ idx ].Clear();
 
-	for( int z = 0, t = 0,  e = m_TileCountZ ; z < e; z ++ )
+	for( int z = 0, t = 0,  e = m_TileCountZ; z < e; z ++ )
 	{
-		for( int x = 0, e = m_TileCountX ; x < e; x ++, t ++ )
+		for( int x = 0, e = m_TileCountX; x < e; x ++, t ++ )
 		{
-			UpdateTileBitMaskChain( &m_LayerBitMasksMipChains[ idx ], m_LayerBaseBitMasks[ idx ], x, z ) ;
+			UpdateTileBitMaskChain( &m_LayerBitMasksMipChains[ idx ], m_LayerBaseBitMasks[ idx ], x, z );
 		}
 	}
 #endif
@@ -5649,11 +5836,11 @@ void
 r3dTerrain2::InitLayerBitMaskChains()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_LayerBitMasksMipChains.Resize( m_Layers.Count() ) ;
+	m_LayerBitMasksMipChains.Resize( m_Layers.Count() );
 
-	for( int i = 0, e = m_Layers.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_Layers.Count(); i < e; i ++ )
 	{
-		InitLayerBitMaskChain( i ) ;
+		InitLayerBitMaskChain( i );
 	}
 #endif
 }
@@ -5663,38 +5850,38 @@ r3dTerrain2::InitLayerBitMaskChains()
 void
 r3dTerrain2::InitLayers()
 {
-	for( int i = 0, m = 0, ch = 0, e = m_Layers.Count() ; i < e; i ++, ch ++ )
+	for( int i = 0, m = 0, ch = 0, e = m_Layers.Count(); i < e; i ++, ch ++ )
 	{
 		if( ch == 3 )
 		{
-			m ++ ;
-			ch = 0 ;
+			m ++;
+			ch = 0;
 		}
 
-		r3dTerrainLayer* layer = &m_Layers[ i ] ;
+		r3dTerrainLayer* layer = &m_Layers[ i ];
 
-		layer->ChannelIdx = ch ;
+		layer->ChannelIdx = ch;
 
 		switch( ch )
 		{
 		case 0:
-			layer->ChannelMask = float4( 1, 0, 0, 0 ) ;
-			break ;
+			layer->ChannelMask = float4( 1, 0, 0, 0 );
+			break;
 		case 1:
-			layer->ChannelMask = float4( 0, 1, 0, 0 ) ;
-			break ;
+			layer->ChannelMask = float4( 0, 1, 0, 0 );
+			break;
 		case 2:
-			layer->ChannelMask = float4( 0, 0, 1, 0 ) ;
-			break ;
+			layer->ChannelMask = float4( 0, 0, 1, 0 );
+			break;
 		}
 
-		layer->MaskTex = m_Masks[ m ] ;
+		layer->MaskTex = m_Masks[ m ];
 	}
 
-	m_BaseLayer.ChannelIdx = 0 ;
-	m_BaseLayer.ChannelMask = float4( 1, 0, 0, 0 ) ;
+	m_BaseLayer.ChannelIdx = 0;
+	m_BaseLayer.ChannelMask = float4( 1, 0, 0, 0 );
 
-	DistributeLayerMasks() ;
+	DistributeLayerMasks();
 }
 
 //------------------------------------------------------------------------
@@ -5703,17 +5890,17 @@ void
 r3dTerrain2::DistributeLayerMasks()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int maskIdx = 0 ;
+	int maskIdx = 0;
 
-	for( int i = 0, e = m_Layers.Count(), j = 0 ; i < e ; i ++, j ++ )
+	for( int i = 0, e = m_Layers.Count(), j = 0; i < e; i ++, j ++ )
 	{
 		if( j == 3 )
 		{
-			maskIdx ++ ;
-			j = 0 ;
+			maskIdx ++;
+			j = 0;
 		}
 
-		m_Layers[ i ].MaskTex = m_Masks[ maskIdx ] ;
+		m_Layers[ i ].MaskTex = m_Masks[ maskIdx ];
 	}
 #endif
 }
@@ -5724,55 +5911,56 @@ void
 r3dTerrain2::RecalcNormalMap( const Floats& heights, Vectors* tempVectors0, Vectors* tempVectors1, const RECT* rect )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	RECT r ;
+
+	RECT r;
 
 	if( rect )
 	{
-		r = * rect ;
+		r = * rect;
 	}
 	else
 	{
-		r.left		= 0 ;
-		r.right		= m_VertexCountX ;
-		r.top		= 0 ;
-		r.bottom	= m_VertexCountZ ;
+		r.left		= 0;
+		r.right		= m_VertexCountX;
+		r.top		= 0;
+		r.bottom	= m_VertexCountZ;
 	}
 
-	int xTotal = m_VertexCountX ;
-	int zTotal = m_VertexCountZ ;
+	int xTotal = m_VertexCountX;
+	int zTotal = m_VertexCountZ;
 
 	struct
 	{
 		float operator() ( int x, int z )
 		{
-			return (*heights)[ x + z * xTot ] ;
+			return (*heights)[ x + z * xTot ];
 		}
 
-		int xTot ;
+		int xTot;
 
-		const Floats * heights ;
+		const Floats * heights;
 
-	} getHeight = { xTotal, &heights } ;
+	} getHeight = { xTotal, &heights };
 
-	Vectors& NormalMapData = *tempVectors0 ;
-	Vectors& NormalBuf = *tempVectors1 ;
+	Vectors& NormalMapData = *tempVectors0;
+	Vectors& NormalBuf = *tempVectors1;
 
-	NormalMapData.Resize( xTotal * zTotal ) ;
+	NormalMapData.Resize( xTotal * zTotal );
 	NormalBuf.Resize( NormalMapData.Count() );
 
-	int bx0 = r.left - 2 ;
-	int bx1 = r.right + 2 ;
-	int bz0 = r.top - 2 ;
-	int bz1 = r.bottom + 2 ;
+	int bx0 = r.left - 2;
+	int bx1 = r.right + 2;
+	int bz0 = r.top - 2;
+	int bz1 = r.bottom + 2;
 
-	bx0 = R3D_MIN( R3D_MAX( bx0, 0 ), m_VertexCountX ) ;
-	bx1 = R3D_MIN( R3D_MAX( bx1, 0 ), m_VertexCountX ) ;
-	bz0 = R3D_MIN( R3D_MAX( bz0, 0 ), m_VertexCountZ ) ;
-	bz1 = R3D_MIN( R3D_MAX( bz1, 0 ), m_VertexCountZ ) ;
+	bx0 = R3D_MIN( R3D_MAX( bx0, 0 ), m_VertexCountX );
+	bx1 = R3D_MIN( R3D_MAX( bx1, 0 ), m_VertexCountX );
+	bz0 = R3D_MIN( R3D_MAX( bz0, 0 ), m_VertexCountZ );
+	bz1 = R3D_MIN( R3D_MAX( bz1, 0 ), m_VertexCountZ );
 
-	for ( int z = bz0, ze = bz1 ; z < ze; z++ )
+	for ( int z = bz0, ze = bz1; z < ze; z++ )
 	{
-		for ( int x = bx0, xe = bx1 ; x < xe; x++ )
+		for ( int x = bx0, xe = bx1; x < xe; x++ )
 		{
 			int xx = R3D_MIN( x, xTotal - 1 );
 			int zz = R3D_MIN( z, zTotal - 1 );
@@ -5817,9 +6005,9 @@ r3dTerrain2::RecalcNormalMap( const Floats& heights, Vectors* tempVectors0, Vect
 			dirz = 1;
 		}
 
-		for ( int z = bz0, ze = bz1 ; z < ze ; z++ )
+		for ( int z = bz0, ze = bz1; z < ze; z++ )
 		{
-			for ( int x = bx0, xe = bx1 ; x < xe ; x++ )
+			for ( int x = bx0, xe = bx1; x < xe; x++ )
 			{
 
 				int xc = x, zc = z;
@@ -5841,72 +6029,72 @@ r3dTerrain2::RecalcNormalMap( const Floats& heights, Vectors* tempVectors0, Vect
 		}
 	}
 
-	RECT nr = r ;
+	RECT nr = r;
 
-	nr.left *= m_NormalDensity ;
-	nr.right *= m_NormalDensity ;
-	nr.top *= m_NormalDensity ;
-	nr.bottom *= m_NormalDensity ;
+	nr.left *= m_NormalDensity;
+	nr.right *= m_NormalDensity;
+	nr.top *= m_NormalDensity;
+	nr.bottom *= m_NormalDensity;
 
 	struct R5G6B5
 	{
-		UINT16 b : 5 ;
-		UINT16 g : 6 ;
-		UINT16 r : 5 ;
+		UINT16 b : 5;
+		UINT16 g : 6;
+		UINT16 r : 5;
 	} * lockee = static_cast<R5G6B5*> ( m_NormalTex->Lock( 1, &nr ) ), 
-	  * detail_lockee = NULL ;
+	  * detail_lockee = NULL;
 
 	if( m_DetailNormalTex )
-		detail_lockee = static_cast<R5G6B5*> ( m_DetailNormalTex->Lock( 0, &nr ) ) ;
+		detail_lockee = static_cast<R5G6B5*> ( m_DetailNormalTex->Lock( 0, &nr ) );
 
-	int pitch = m_NormalTex->GetLockPitch() / sizeof *lockee ;
-	int detail_pitch = pitch ;
+	int pitch = m_NormalTex->GetLockPitch() / sizeof *lockee;
+	int detail_pitch = pitch;
 	
-	if( m_DetailNormalTex) 
-		detail_pitch = m_DetailNormalTex->GetLockPitch() / sizeof *lockee ;
+	if( m_DetailNormalTex )
+		detail_pitch = m_DetailNormalTex->GetLockPitch() / sizeof *lockee;
 
-	r3d_assert( pitch == detail_pitch ) ;
+	r3d_assert( pitch == detail_pitch );
 
-	for( int z = r.top, ze = r.bottom ; z < ze ; z ++ )
+	for( int z = r.top, ze = r.bottom; z < ze; z ++ )
 	{
-		for( int x = r.left, xe = r.right ; x < xe ; x ++ )
+		for( int x = r.left, xe = r.right; x < xe; x ++ )
 		{
-			const r3dPoint3D& n = NormalMapData[ x + z * xTotal ] ;			
+			const r3dPoint3D& n = NormalMapData[ x + z * xTotal ];			
 
-			for( int nz = z * m_NormalDensity, e = nz + m_NormalDensity ; nz < e ; nz ++ )
+			for( int nz = z * m_NormalDensity, e = nz + m_NormalDensity; nz < e; nz ++ )
 			{
-				for( int nx = x * m_NormalDensity, e = nx + m_NormalDensity ; nx < e ; nx ++ )
+				for( int nx = x * m_NormalDensity, e = nx + m_NormalDensity; nx < e; nx ++ )
 				{
-					int idx = ( nx - nr.left ) + ( nz - nr.top ) * pitch ;
+					int idx = ( nx - nr.left ) + ( nz - nr.top ) * pitch;
 
-					R5G6B5& sample = lockee[ idx ] ;
+					R5G6B5& sample = lockee[ idx ];
 
-					r3dPoint3D fn = n ;
+					r3dPoint3D fn = n;
 
 					if( detail_lockee )
 					{
-						R5G6B5& detail = detail_lockee[ idx ] ;
+						R5G6B5& detail = detail_lockee[ idx ];
 
 						r3dPoint3D detailNormal(	detail.r / 31.f * 2.f - 1.f, 
 													detail.b / 31.f * 2.f - 1.f,
-													detail.g / 63.f * 2.f - 1.f ) ;
+													detail.g / 63.f * 2.f - 1.f );
 
-						fn = R3D_LERP( fn, detailNormal, m_Settings.DetailNormalMix ) ;
-						fn.Normalize() ;
+						fn = R3D_LERP( fn, detailNormal, m_Settings.DetailNormalMix );
+						fn.Normalize();
 					}
 
-					sample.r = R3D_MIN( R3D_MAX( int( ( fn.x * 0.5f + 0.5f ) * 31 ), 0 ), 31 ) ;
-					sample.g = R3D_MIN( R3D_MAX( int( ( fn.y * 0.5f + 0.5f ) * 63 ), 0 ), 63 ) ;
-					sample.b = R3D_MIN( R3D_MAX( int( ( fn.z * 0.5f + 0.5f ) * 31 ), 0 ), 31 ) ;
+					sample.r = R3D_MIN( R3D_MAX( int( ( fn.x * 0.5f + 0.5f ) * 31 ), 0 ), 31 );
+					sample.g = R3D_MIN( R3D_MAX( int( ( fn.y * 0.5f + 0.5f ) * 63 ), 0 ), 63 );
+					sample.b = R3D_MIN( R3D_MAX( int( ( fn.z * 0.5f + 0.5f ) * 31 ), 0 ), 31 );
 				}
 			}
 		}
 	}
 
 	if( m_DetailNormalTex )
-		m_DetailNormalTex->Unlock() ;
+		m_DetailNormalTex->Unlock();
 
-	m_NormalTex->Unlock() ;
+	m_NormalTex->Unlock();
 #endif
 }
 
@@ -5916,23 +6104,23 @@ void
 r3dTerrain2::UpdateBaseBitMask( r3dBitMaskArray2D* array, int baseTileX, int baseTileZ, const Floats& mask )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int sz = baseTileZ * QualitySettings::MIN_VERTEX_TILE_DIM - 1 , sze = sz + QualitySettings::MIN_VERTEX_TILE_DIM + 2 ; sz < sze ; sz ++ )
+	for( int sz = baseTileZ * QualitySettings::MIN_VERTEX_TILE_DIM - 1 , sze = sz + QualitySettings::MIN_VERTEX_TILE_DIM + 2; sz < sze; sz ++ )
 	{
-		for( int sx = baseTileX * QualitySettings::MIN_VERTEX_TILE_DIM - 1 , sxe = sx + QualitySettings::MIN_VERTEX_TILE_DIM + 2 ; sx < sxe ; sx ++ )
+		for( int sx = baseTileX * QualitySettings::MIN_VERTEX_TILE_DIM - 1 , sxe = sx + QualitySettings::MIN_VERTEX_TILE_DIM + 2; sx < sxe; sx ++ )
 		{
 			if( sx < 0 || sx >= m_VertexCountX )
-				continue ;
+				continue;
 
 			if( sz < 0 || sz >= m_VertexCountZ )
-				continue ;
+				continue;
 
-			int mx = sx * m_SplatResolutionU / m_VertexCountX ;
-			int mz = sz * m_SplatResolutionV / m_VertexCountZ ;
+			int mx = sx * m_SplatResolutionU / m_VertexCountX;
+			int mz = sz * m_SplatResolutionV / m_VertexCountZ;
 
 			if( mask[ mx + mz * m_SplatResolutionU ] > 1.f )
 			{
-				array->Set( baseTileX, baseTileZ, true ) ;
-				return ;
+				array->Set( baseTileX, baseTileZ, true );
+				return;
 			}
 		}
 	}
@@ -5945,42 +6133,42 @@ void
 r3dTerrain2::UpdateTileBitMaskChain( LayerBitMaskMipChain* oChain, const r3dBitMaskArray2D& array, int tileX, int tileZ )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int scale = m_QualitySettings.VertexTileDim / r3dTerrain2::QualitySettings::MIN_VERTEX_TILE_DIM ;
+	int scale = m_QualitySettings.VertexTileDim / r3dTerrain2::QualitySettings::MIN_VERTEX_TILE_DIM;
 
-	for( int sz = tileZ * scale , sze = sz + scale ; sz < sze ; sz ++ )
+	for( int sz = tileZ * scale , sze = sz + scale; sz < sze; sz ++ )
 	{
-		for( int sx = tileX * scale , sxe = sx + scale ; sx < sxe ; sx ++ )
+		for( int sx = tileX * scale , sxe = sx + scale; sx < sxe; sx ++ )
 		{
 			if( array.Get( sx, sz ) )
 			{
 				if( !oChain->Count() )
 				{
-					oChain->Resize( m_NumActiveQualityLayers ) ;
+					oChain->Resize( m_NumActiveQualityLayers );
 
-					int tileCountX = m_TileCountX ;
-					int tileCountZ = m_TileCountZ ;
+					int tileCountX = m_TileCountX;
+					int tileCountZ = m_TileCountZ;
 
-					for( int i = 0, e = m_NumActiveQualityLayers ; i < e ; i ++ )
+					for( int i = 0, e = m_NumActiveQualityLayers; i < e; i ++ )
 					{
-						(*oChain)[ i ].Resize( tileCountX, tileCountZ ) ;
+						(*oChain)[ i ].Resize( tileCountX, tileCountZ );
 
-						tileCountX = R3D_MAX( tileCountX / 2, 1 ) ;
-						tileCountZ = R3D_MAX( tileCountZ / 2, 1 ) ;
+						tileCountX = R3D_MAX( tileCountX / 2, 1 );
+						tileCountZ = R3D_MAX( tileCountZ / 2, 1 );
 					}
 				}
 
-				int tx = tileX ;
-				int tz = tileZ ;
+				int tx = tileX;
+				int tz = tileZ;
 
-				for( int i = 0, e = m_NumActiveQualityLayers ; i < e ; i ++ )
+				for( int i = 0, e = m_NumActiveQualityLayers; i < e; i ++ )
 				{
-					(*oChain)[ i ].Set( tx, tz, true ) ;
+					(*oChain)[ i ].Set( tx, tz, true );
 
-					tx /= 2 ;
-					tz /= 2 ;
+					tx /= 2;
+					tz /= 2;
 				}
 				
-				return ;
+				return;
 			}
 		}
 	}
@@ -5994,7 +6182,7 @@ R3D_FORCEINLINE static void PushDebugBBox( const r3dBoundBox& bbox )
 #if R3D_TERRAIN_V2_GRAPHICS
 	void PushDebugBox(	r3dPoint3D p0, r3dPoint3D p1, r3dPoint3D p2, r3dPoint3D p3,
 						r3dPoint3D p4, r3dPoint3D p5, r3dPoint3D p6, r3dPoint3D p7,
-						r3dColor color ) ;
+						r3dColor color );
 
 	PushDebugBox(	bbox.Org,
 					bbox.Org + r3dPoint3D( bbox.Size.x, 0.f, 0.f ),
@@ -6005,7 +6193,7 @@ R3D_FORCEINLINE static void PushDebugBBox( const r3dBoundBox& bbox )
 					bbox.Org + r3dPoint3D( 0.f, bbox.Size.y, bbox.Size.z ), 
 					bbox.Org + r3dPoint3D( bbox.Size.x, bbox.Size.y, bbox.Size.z ),
 					r3dColor( 0, 255, 0 )
-				) ;
+				);
 #endif
 }
 
@@ -6013,40 +6201,40 @@ R3D_FORCEINLINE
 float
 r3dTerrain2::GetPaddingCoef() const
 {
-	return ( m_QualitySettings.AtlasTileDim + 2.f * r_terrain2_padding->GetInt() ) / m_QualitySettings.AtlasTileDim ;
+	return ( m_QualitySettings.AtlasTileDim + 2.f * r_terrain2_padding->GetInt() ) / m_QualitySettings.AtlasTileDim;
 }
 
 void
 r3dTerrain2::UpdateVisibleTiles()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_VisibleTiles.Clear() ;
+	m_VisibleTiles.Clear();
 
-	for( int L = 0, e = m_NumActiveQualityLayers ; L < e ; L ++ )
+	for( int L = 0, e = m_NumActiveQualityLayers; L < e; L ++ )
 	{
-		AllocatedTileArr& layer = m_AllocTileLodArray[ L ] ;
+		AllocatedTileArr& layer = m_AllocTileLodArray[ L ];
 
-		float size = m_TileWorldDims[ L ] ;
+		float size = m_TileWorldDims[ L ];
 
-		for( int i = 0, e = layer.Count() ; i < e ; i ++ )
+		for( int i = 0, e = layer.Count(); i < e; i ++ )
 		{
-			const AllocatedTile& tile = layer[ i ] ;
+			const AllocatedTile& tile = layer[ i ];
 
-			const TileInfo& info = m_TileInfoMipChain[ L ][ tile.Z ][ tile.X ] ;
+			const TileInfo& info = m_TileInfoMipChain[ L ][ tile.Z ][ tile.X ];
 
-			r3dBoundBox bbox ;
-			bbox.Org = r3dPoint3D( tile.X * size, info.HeightMin, tile.Z * size ) ;
-			bbox.Size = r3dPoint3D( size, info.HeightRange, size ) ;
+			r3dBoundBox bbox;
+			bbox.Org = r3dPoint3D( tile.X * size, info.HeightMin, tile.Z * size );
+			bbox.Size = r3dPoint3D( size, info.HeightRange, size );
 
 			if( r3dRenderer->IsBoxInsideFrustum( bbox ) )
 			{		
-				m_VisibleTiles.PushBack( &tile ) ;
+				m_VisibleTiles.PushBack( &tile );
 
 #ifndef FINAL_BUILD
-#if 1
+#if 0
 				if( r_debug_helper->GetInt() )
 				{
-					PushDebugBBox( bbox ) ;
+					PushDebugBBox( bbox );
 				}
 #endif
 #endif
@@ -6057,7 +6245,7 @@ r3dTerrain2::UpdateVisibleTiles()
 #if 0
 	if( m_VisibleTiles.Count() > 2 )
 	{
-		std::sort( &m_VisibleTiles[ 0 ], &m_VisibleTiles[ 0 ] + m_VisibleTiles.Count() - 1, tile_comp_func ) ;
+		std::sort( &m_VisibleTiles[ 0 ], &m_VisibleTiles[ 0 ] + m_VisibleTiles.Count() - 1, tile_comp_func );
 	}
 #endif
 #endif
@@ -6069,36 +6257,36 @@ void
 r3dTerrain2::AddToAllocatedTiles( int x, int z, int L, int conFlags )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::AddToAllocatedTiles" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::AddToAllocatedTiles" );
 
-	AllocatedTileArr& arr = m_AllocTileLodArray[ L ] ;
+	AllocatedTileArr& arr = m_AllocTileLodArray[ L ];
 
-	int W = ( m_TileCountX >> L ) ;
+	int W = ( m_TileCountX >> L );
 
-	int incomingId = W * z + x ;
+	int incomingId = W * z + x;
 
-	int l = 0 ;
-	int r = arr.Count() - 1 ;
+	int l = 0;
+	int r = arr.Count() - 1;
 
-	int insert_idx = -1 ;
+	int insert_idx = -1;
 
 	if( r >= l )
 	{
-		for( ; ; )
+		for(;; )
 		{
-			int idx = ( l + r ) / 2 ;
+			int idx = ( l + r ) / 2;
 
-			int id = arr[ idx ].Z * W + arr[ idx ].X ;
+			int id = arr[ idx ].Z * W + arr[ idx ].X;
 
 			if( id > incomingId )
 			{
 				if( r == l )
 				{
-					insert_idx = r ;
-					break ;
+					insert_idx = r;
+					break;
 				}
 
-				r = idx ;
+				r = idx;
 			}
 			else
 			{
@@ -6106,51 +6294,51 @@ r3dTerrain2::AddToAllocatedTiles( int x, int z, int L, int conFlags )
 				{
 					if( r == l )
 					{
-						insert_idx = l + 1 ;
-						break ;
+						insert_idx = l + 1;
+						break;
 					}
 
-					l = idx + 1 ;
+					l = idx + 1;
 				}
 				else
 				{
-					arr[ idx ].Tagged = 1 ;
-					arr[ idx ].ConFlags = conFlags ;
-					break ;
+					arr[ idx ].Tagged = 1;
+					arr[ idx ].ConFlags = conFlags;
+					break;
 				}
 			}
 		}
 	}
 	else
 	{
-		insert_idx = 0 ;
+		insert_idx = 0;
 	}
 
 	if( insert_idx >= 0 )
 	{
-		AllocatedTile tile ;
+		AllocatedTile tile;
 
-		tile.X = x ;
-		tile.Z = z ;
-		tile.AtlasVolumeID = -1 ;
-		tile.AtlasTileID = -1 ;
+		tile.X = x;
+		tile.Z = z;
+		tile.AtlasVolumeID = -1;
+		tile.AtlasTileID = -1;
 
-		tile.Tagged = 1 ;
-		tile.L = L ;
+		tile.Tagged = 1;
+		tile.L = L;
 
-		tile.ConFlags = conFlags ;
+		tile.ConFlags = conFlags;
 
-		arr.Insert( insert_idx, tile ) ;
+		arr.Insert( insert_idx, tile );
 	}
 
 #ifdef _DEBUG
 #if 0
-	for( int i = 1, e = arr.Count() ; i < e ; i ++  )
+	for( int i = 1, e = arr.Count(); i < e; i ++  )
 	{
-		int id0 = arr[ i - 1 ].X + arr[ i - 1 ].Z * W ;
-		int id1 = arr[ i + 0 ].X + arr[ i + 0 ].Z * W ;
+		int id0 = arr[ i - 1 ].X + arr[ i - 1 ].Z * W;
+		int id1 = arr[ i + 0 ].X + arr[ i + 0 ].Z * W;
 
-		r3d_assert( id1 > id0 ) ;
+		r3d_assert( id1 > id0 );
 	}
 #endif
 #endif
@@ -6163,213 +6351,213 @@ void
 r3dTerrain2::UpdateTiles( const r3dCamera& cam )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateAtlas" ) ;
+	R3DPROFILE_FUNCTION( "r3dTerrain2::UpdateAtlas" );
 
 	//------------------------------------------------------------------------
 	// untag
 
-	for( int L = 0, e = m_NumActiveQualityLayers ; L < e ; L ++ )
+	for( int L = 0, e = m_NumActiveQualityLayers; L < e; L ++ )
 	{
-		AllocatedTileArr& arr = m_AllocTileLodArray[ L ] ;
+		AllocatedTileArr& arr = m_AllocTileLodArray[ L ];
 
-		for( int i = 0, e = arr.Count() ; i < e ; i ++ )
+		for( int i = 0, e = arr.Count(); i < e; i ++ )
 		{
-			AllocatedTile& tile = arr[ i ] ;
-			tile.Tagged = 0 ;
+			AllocatedTile& tile = arr[ i ];
+			tile.Tagged = 0;
 		}
 	}
 
 	//------------------------------------------------------------------------
 	// update activity according to camera		
 
-	R3DPROFILE_START( "Tile Activity" ) ;
+	R3DPROFILE_START( "Tile Activity" );
 
-	int tcx = m_TileCountX ;
-	int tcz = m_TileCountZ ;
+	int tcx = m_TileCountX;
+	int tcz = m_TileCountZ;
 
-	r3dTL::TFixedArray< int, NUM_QUALITY_LAYERS > countXs ;
-	r3dTL::TFixedArray< int, NUM_QUALITY_LAYERS > countZs ;
+	r3dTL::TFixedArray< int, NUM_QUALITY_LAYERS > countXs;
+	r3dTL::TFixedArray< int, NUM_QUALITY_LAYERS > countZs;
 
-	for( int i = 0, e = m_NumActiveQualityLayers ; i < e ; i ++ )
+	for( int i = 0, e = m_NumActiveQualityLayers; i < e; i ++ )
 	{
-		countXs[ i ] = tcx ;
-		countZs[ i ] = tcz ;
+		countXs[ i ] = tcx;
+		countZs[ i ] = tcz;
 
-		tcx = R3D_MAX( tcx / 2, 1 ) ;
-		tcz = R3D_MAX( tcz / 2, 1 ) ;
+		tcx = R3D_MAX( tcx / 2, 1 );
+		tcz = R3D_MAX( tcz / 2, 1 );
 	}
 
-	int z_bottom_prev	= 0 ;
-	int z_top_prev		= countZs[ m_NumActiveQualityLayers - 1 ] ;
-	int x_left_prev		= 0 ;
-	int	x_right_prev	= countXs[ m_NumActiveQualityLayers - 1 ] ;
+	int z_bottom_prev	= 0;
+	int z_top_prev		= countZs[ m_NumActiveQualityLayers - 1 ];
+	int x_left_prev		= 0;
+	int	x_right_prev	= countXs[ m_NumActiveQualityLayers - 1 ];
 
-	for( int L = m_NumActiveQualityLayers - 1 ; L >= 1 ; L -- )
+	for( int L = m_NumActiveQualityLayers - 1; L >= 1; L -- )
 	{
-		int sx = m_TileCountX / countXs[ L ] ;
-		int sz = m_TileCountZ / countZs[ L ] ;
+		int sx = m_TileCountX / countXs[ L ];
+		int sz = m_TileCountZ / countZs[ L ];
 
-		int connMask = 0xffffffff ;
+		int connMask = 0xffffffff;
 
 		if( m_QualitySettings.TileVertexDensities[ L - 1 ] < m_QualitySettings.TileVertexDensities[ L ] )
 		{
-			connMask = 0 ;
+			connMask = 0;
 		}
 
 		//------------------------------------------------------------------------
 
-		float halfDim = m_HalfTileWorldDims[ L ] ;
+		float halfDim = m_HalfTileWorldDims[ L ];
 
-		float distDown = cam.Z - m_QualitySettings.TileDistances[ L - 1 ] + halfDim ;
+		float distDown = cam.Z - m_QualitySettings.TileDistances[ L - 1 ] + halfDim;
 
-		int endZ = (int) ( distDown / m_TileWorldDims[ L ] ) ;
-		endZ = R3D_MIN( R3D_MAX( endZ, 0 ), countZs[ L ] ) ;
+		int endZ = (int) ( distDown / m_TileWorldDims[ L ] );
+		endZ = R3D_MIN( R3D_MAX( endZ, 0 ), countZs[ L ] );
 
-		float distUp = cam.Z + m_QualitySettings.TileDistances[ L - 1 ] + halfDim ;
+		float distUp = cam.Z + m_QualitySettings.TileDistances[ L - 1 ] + halfDim;
 
-		int startZ = ( int ) ( distUp / m_TileWorldDims[ L ] ) ;
-		startZ = R3D_MIN( R3D_MAX( startZ, 0 ), countZs[ L ] ) ;
+		int startZ = ( int ) ( distUp / m_TileWorldDims[ L ] );
+		startZ = R3D_MIN( R3D_MAX( startZ, 0 ), countZs[ L ] );
 
-		float distLeft = cam.X - m_QualitySettings.TileDistances[ L - 1 ] + halfDim ;
+		float distLeft = cam.X - m_QualitySettings.TileDistances[ L - 1 ] + halfDim;
 
-		int endX = ( int )( distLeft / m_TileWorldDims[ L ] ) ;
-		endX = R3D_MIN( R3D_MAX( endX, 0 ), countXs[ L ] ) ;
+		int endX = ( int )( distLeft / m_TileWorldDims[ L ] );
+		endX = R3D_MIN( R3D_MAX( endX, 0 ), countXs[ L ] );
 
-		float distRight = cam.X + m_QualitySettings.TileDistances[ L - 1 ] + halfDim ;
+		float distRight = cam.X + m_QualitySettings.TileDistances[ L - 1 ] + halfDim;
 
-		int startX = ( int )( distRight / m_TileWorldDims[ L ] ) ;
-		startX = R3D_MIN( R3D_MAX( startX, 0 ), countXs[ L ] ) ;
+		int startX = ( int )( distRight / m_TileWorldDims[ L ] );
+		startX = R3D_MIN( R3D_MAX( startX, 0 ), countXs[ L ] );
 
 		//------------------------------------------------------------------------
 		// bottom
 
-		for( int z = z_bottom_prev, e = endZ ; z < e ; z ++ )
+		for( int z = z_bottom_prev, e = endZ; z < e; z ++ )
 		{
-			for( int x = x_left_prev, e = x_right_prev ; x < e ; x ++ )
+			for( int x = x_left_prev, e = x_right_prev; x < e; x ++ )
 			{
-				int connFlags = 0 ;
+				int connFlags = 0;
 
 				if( z == endZ - 1 && x >= endX && x < startX  )
 				{
-					connFlags |= SOUTH_CONNECTION ;
+					connFlags |= SOUTH_CONNECTION;
 				}
 
-				AddToAllocatedTiles( x, z, L, connFlags & connMask ) ;
+				AddToAllocatedTiles( x, z, L, connFlags & connMask );
 			}
 		}
 
 		//------------------------------------------------------------------------
 		// up
 
-		for( int z = startZ, e = z_top_prev ; z < e ; z ++ )
+		for( int z = startZ, e = z_top_prev; z < e; z ++ )
 		{
-			for( int x = x_left_prev, e = x_right_prev ; x < e ; x ++ )
+			for( int x = x_left_prev, e = x_right_prev; x < e; x ++ )
 			{
-				int connFlags = 0 ;
+				int connFlags = 0;
 
 				if( z == startZ && x >= endX && x < startX )
 				{
-					connFlags |= NORTH_CONNECTION ;
+					connFlags |= NORTH_CONNECTION;
 				}
 
-				AddToAllocatedTiles( x, z, L, connFlags & connMask ) ;
+				AddToAllocatedTiles( x, z, L, connFlags & connMask );
 			}
 		}
 
 		//------------------------------------------------------------------------
 		// left
 
-		for( int z = z_bottom_prev, e = z_top_prev ; z < e ; z ++ )
+		for( int z = z_bottom_prev, e = z_top_prev; z < e; z ++ )
 		{
-			for( int x = x_left_prev, e = endX ; x < e ; x ++ )
+			for( int x = x_left_prev, e = endX; x < e; x ++ )
 			{
-				int connFlags = 0 ;
+				int connFlags = 0;
 
 				if( x == endX - 1 && z >= endZ && z < startZ )
 				{
-					connFlags |= EAST_CONNECTION ;
+					connFlags |= EAST_CONNECTION;
 				}
 
-				AddToAllocatedTiles( x, z, L, connFlags & connMask ) ;
+				AddToAllocatedTiles( x, z, L, connFlags & connMask );
 			}
 		}
 
 		//------------------------------------------------------------------------
 		// right
 
-		for( int z = z_bottom_prev, e = z_top_prev ; z < e ; z ++ )
+		for( int z = z_bottom_prev, e = z_top_prev; z < e; z ++ )
 		{
-			for( int x = startX, e = x_right_prev ; x < e ; x ++ )
+			for( int x = startX, e = x_right_prev; x < e; x ++ )
 			{
-				int connFlags = 0 ;
+				int connFlags = 0;
 
 				if( x == startX && z >= endZ && z < startZ )
 				{
-					connFlags |= WEST_CONNECTION ;
+					connFlags |= WEST_CONNECTION;
 				}
 	
-				AddToAllocatedTiles( x, z, L, connFlags & connMask ) ;
+				AddToAllocatedTiles( x, z, L, connFlags & connMask );
 			}
 		}
 
-		z_bottom_prev = endZ * 2 ;
-		z_top_prev = startZ * 2 ;
+		z_bottom_prev = endZ * 2;
+		z_top_prev = startZ * 2;
 
-		x_left_prev	= endX * 2 ;
-		x_right_prev = startX * 2 ;
+		x_left_prev	= endX * 2;
+		x_right_prev = startX * 2;
 	}
 
 	// fill in highest lod in remaining tiles
-	for( int z = z_bottom_prev, e = z_top_prev ; z < e ; z ++ )
+	for( int z = z_bottom_prev, e = z_top_prev; z < e; z ++ )
 	{
-		for( int x = x_left_prev, e = x_right_prev ; x < e ; x ++ )
+		for( int x = x_left_prev, e = x_right_prev; x < e; x ++ )
 		{
-			AddToAllocatedTiles( x, z, 0, 0 ) ;
+			AddToAllocatedTiles( x, z, 0, 0 );
 		}
 	}
 
-	R3DPROFILE_END( "Tile Activity" ) ;
+	R3DPROFILE_END( "Tile Activity" );
 
 	//------------------------------------------------------------------------
 	// sync activity with atlas tile allocation
 
-	R3DPROFILE_START( "Render tiles" ) ;
+	R3DPROFILE_START( "Render tiles" );
 
-	m_TilesToUpdate.Clear() ;
+	m_TilesToUpdate.Clear();
 
-	for( int L = 0, e = m_NumActiveQualityLayers ; L < e ; L ++ )
+	for( int L = 0, e = m_NumActiveQualityLayers; L < e; L ++ )
 	{
-		AllocatedTileArr& arr = m_AllocTileLodArray[ L ] ;
+		AllocatedTileArr& arr = m_AllocTileLodArray[ L ];
 
-		for( int i = (int)arr.Count() - 1 ; i >= 0 ; i -- )
+		for( int i = (int)arr.Count() - 1; i >= 0; i -- )
 		{
-			AllocatedTile& tile = arr[ i ] ;
+			AllocatedTile& tile = arr[ i ];
 
 			if( !tile.Tagged )
 			{
 				// tile.AtlasVolumeID >= 0 because it may have "refreshed" to -1 in editor etc.
 				if( tile.AtlasVolumeID >= 0 )
 				{
-					FreeAtlasTile( &tile ) ;
+					FreeAtlasTile( &tile );
 				}
-				arr.Erase( i ) ;
+				arr.Erase( i );
 			}
 		}
 
-		for( int i = 0, e = (int)arr.Count() ; i < e ; i ++ )
+		for( int i = 0, e = (int)arr.Count(); i < e; i ++ )
 		{
-			AllocatedTile& tile = arr[ i ] ;
+			AllocatedTile& tile = arr[ i ];
 
 			if( tile.AtlasTileID <= 0 )
 			{
-				AllocateAtlasTile( &tile ) ;
-				m_TilesToUpdate.PushBack( &tile ) ;
+				AllocateAtlasTile( &tile );
+				m_TilesToUpdate.PushBack( &tile );
 			}
 #if 0
 			else
 			{
-				r3d_assert( tile.AtlasVolumeID >= 0 ) ;
-				m_TilesToUpdate.PushBack( &tile ) ;
+				r3d_assert( tile.AtlasVolumeID >= 0 );
+				m_TilesToUpdate.PushBack( &tile );
 			}
 #endif
 		}
@@ -6377,40 +6565,26 @@ r3dTerrain2::UpdateTiles( const r3dCamera& cam )
 
 	if( m_TilesToUpdate.Count() > 2 )
 	{
-		std::sort( &m_TilesToUpdate[ 0 ], &m_TilesToUpdate[ 0 ] + m_TilesToUpdate.Count() - 1, tile_comp_func_ATLAS_ID ) ;
+		std::sort( &m_TilesToUpdate[ 0 ], &m_TilesToUpdate[ 0 ] + m_TilesToUpdate.Count() - 1, tile_comp_func_ATLAS_ID );
 	}
 
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::UpdateTiles" ) ;
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::UpdateTiles" );
 
-	StartTileUpdating() ;
+	StartTileUpdating();
 
-	for( int i = 0, e = m_TilesToUpdate.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_TilesToUpdate.Count(); i < e; i ++ )
 	{
-		const AllocatedTile* tile = m_TilesToUpdate[ i ] ;
-		UpdateTileInAtlas( tile ) ;
+		const AllocatedTile* tile = m_TilesToUpdate[ i ];
+		UpdateTileInAtlas( tile );
 	}
 
-	StopTileUpdating() ;
+	StopTileUpdating();
 
-	D3DPERF_EndEvent() ;
+	D3DPERF_EndEvent();
 
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::UpdateAtlasTileRoads" ) ;
-	// start and stop no matter what, this will prevent a pair of bugs
-	StartTileRoadUpdating() ;
+	UpdateTileRoads();
 
-	if( m_RoadInfoMipChain.Count() && m_QualitySettings.BakeRoads )
-	{
-		for( int i = 0, e = m_TilesToUpdate.Count() ; i < e ; i ++ )
-		{
-			const AllocatedTile* tile = m_TilesToUpdate[ i ] ;
-			UpdateAtlasTileRoads( tile ) ;
-		}
-	}
-
-	StopTileRoadUpdating() ;
-	D3DPERF_EndEvent() ;
-
-	R3DPROFILE_END( "Render tiles" ) ;
+	R3DPROFILE_END( "Render tiles" );
 #endif
 }
 
@@ -6421,17 +6595,38 @@ r3dTerrain2::UpdateTileMips()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
 #if GENERATE_MIPS
-	StartMipChainsTileRendering() ;
+	StartMipChainsTileRendering();
 
-	for( int i = 0, e = m_TilesWantMips.Count() ; i < e; i ++ )
+	for( int i = 0, e = m_TilesWantMips.Count(); i < e; i ++ )
 	{
-		RenderTileMipChain( m_TilesWantMips[ i ] ) ;
+		RenderTileMipChain( m_TilesWantMips[ i ] );
 	}
 
-	m_TilesWantMips.Clear() ;
+	m_TilesWantMips.Clear();
 
-	StopMipChainsTileRendering() ;
+	StopMipChainsTileRendering();
 #endif
+#endif
+}
+
+void r3dTerrain2::UpdateTileRoads()
+{
+#if R3D_TERRAIN_V2_GRAPHICS
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::UpdateAtlasTileRoads" );
+	// start and stop no matter what, this will prevent a pair of bugs
+	StartTileRoadUpdating();
+
+	if( m_RoadInfoMipChain.Count() && m_QualitySettings.BakeRoads )
+	{
+		for( int i = 0, e = m_TilesToUpdate.Count(); i < e; i ++ )
+		{
+			const AllocatedTile* tile = m_TilesToUpdate[ i ];
+			UpdateAtlasTileRoads( tile );
+		}
+	}
+
+	StopTileRoadUpdating();
+	D3DPERF_EndEvent();
 #endif
 }
 
@@ -6441,25 +6636,39 @@ void
 r3dTerrain2::AddAtlasVolume()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	AtlasVolume volume ;
+	AtlasVolume volume;
 
-	int mipCount = MipCount( m_QualitySettings.AtlasTileDim ) - 2 ;
+	int mipCount = MipCount( m_QualitySettings.AtlasTileDim ) - 2;
 	// we're making 4x4 mip monocolor and ignore the rest, because otherwise we have to waste too
 	// much extra space to allow smooth tile to tile transition
 
 #if !GENERATE_MIPS
-	mipCount = 1 ;
+	mipCount = 1;
 #endif
 
-	volume.Diffuse = r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_DIFFUSE", ATLAS_TEXTURE_DIM, ATLAS_TEXTURE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, mipCount ) ;
-	volume.Normal = r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_NORMAL", ATLAS_TEXTURE_DIM, ATLAS_TEXTURE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, mipCount ) ;	
+	volume.Diffuse = r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_DIFFUSE", ATLAS_TEXTURE_DIM, ATLAS_TEXTURE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, mipCount );
+	volume.Normal = r3dScreenBuffer::CreateClass( "TERRAIN_ATLAS_NORMAL", ATLAS_TEXTURE_DIM, ATLAS_TEXTURE_DIM, ATLAS_FMT, r3dScreenBuffer::Z_NO_Z, 0, mipCount );	
 
-	volume.Occupied.Resize( m_AtlasTileCountPerSide * m_AtlasTileCountPerSide, 0 ) ;
+	volume.Occupied.Resize( m_AtlasTileCountPerSide * m_AtlasTileCountPerSide, 0 );
 
-	volume.FreeTiles = m_AtlasTileCountPerSide * m_AtlasTileCountPerSide ;
+	volume.FreeTiles = m_AtlasTileCountPerSide * m_AtlasTileCountPerSide;
 
-	m_Atlas.PushBack( volume ) ;
+	m_Atlas.PushBack( volume );
 #endif
+}
+
+//------------------------------------------------------------------------
+
+void
+r3dTerrain2::FreeAtlas()
+{
+	for( int i = 0, e = m_Atlas.Count(); i < e; i ++ )
+	{
+		SAFE_DELETE( m_Atlas[ i ].Diffuse );
+		SAFE_DELETE( m_Atlas[ i ].Normal );
+	}
+
+	m_Atlas.Clear();
 }
 
 //------------------------------------------------------------------------
@@ -6468,34 +6677,34 @@ void
 r3dTerrain2::AllocateAtlasTile( AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int i = 0 ; ; i ++ )
+	for( int i = 0;; i ++ )
 	{
 		if( i >= (int)m_Atlas.Count() )
 		{
-			AddAtlasVolume() ;
+			AddAtlasVolume();
 		}
 
-		AtlasVolume& vol = m_Atlas[ i ] ;
+		AtlasVolume& vol = m_Atlas[ i ];
 
 		if( !vol.FreeTiles )
-			continue ;
+			continue;
 
-		for( int t = 0, e = vol.Occupied.Count() ; t < e ; t ++ )
+		for( int t = 0, e = vol.Occupied.Count(); t < e; t ++ )
 		{
 			if( !vol.Occupied[ t ] )
 			{
-				vol.FreeTiles -- ;
-				vol.Occupied[ t ] = 1 ;
-				tile->AtlasTileID = t ;
-				tile->AtlasVolumeID = i ;
-				m_TotalAllocatedTiles ++ ;
-				m_MaxAllocatedTiles = R3D_MAX( m_MaxAllocatedTiles, m_TotalAllocatedTiles ) ;
-				return ;
+				vol.FreeTiles --;
+				vol.Occupied[ t ] = 1;
+				tile->AtlasTileID = t;
+				tile->AtlasVolumeID = i;
+				m_TotalAllocatedTiles ++;
+				m_MaxAllocatedTiles = R3D_MAX( m_MaxAllocatedTiles, m_TotalAllocatedTiles );
+				return;
 			}
 		}
 	}
 
-	r3dError( "r3dTerrain2::AllocateAtlasTile: out of space!" ) ;
+	r3dError( "r3dTerrain2::AllocateAtlasTile: out of space!" );
 #endif
 }
 
@@ -6505,26 +6714,26 @@ void
 r3dTerrain2::FreeAtlasTile( AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3d_assert( tile->AtlasTileID >= 0 && tile->AtlasVolumeID >= 0 ) ;
+	r3d_assert( tile->AtlasTileID >= 0 && tile->AtlasVolumeID >= 0 );
 
 #ifdef _DEBUG
-	for( int i = 0, e = m_TilesToUpdate.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_TilesToUpdate.Count(); i < e; i ++ )
 	{
-		r3d_assert( tile != m_TilesToUpdate[ i ] ) ;
+		r3d_assert( tile != m_TilesToUpdate[ i ] );
 	}
 #endif
 
 	// 'damage control' in final build
 	if( tile->AtlasVolumeID >= 0 )
 	{
-		m_Atlas[ tile->AtlasVolumeID ].Occupied[ tile->AtlasTileID ] = 0 ;
-		m_Atlas[ tile->AtlasVolumeID ].FreeTiles ++ ;
+		m_Atlas[ tile->AtlasVolumeID ].Occupied[ tile->AtlasTileID ] = 0;
+		m_Atlas[ tile->AtlasVolumeID ].FreeTiles ++;
 
-		m_TotalAllocatedTiles -- ;
+		m_TotalAllocatedTiles --;
 	}
 
-	tile->AtlasVolumeID = -1 ;
-	tile->AtlasTileID = -1 ;
+	tile->AtlasVolumeID = -1;
+	tile->AtlasTileID = -1;
 #endif
 }
 
@@ -6533,12 +6742,12 @@ r3dTerrain2::FreeAtlasTile( AllocatedTile* tile )
 int2
 r3dTerrain2::GetTileAtlasXZ( const AllocatedTile* tile ) const
 {
-	int idInAtlas = tile->AtlasTileID ;
+	int idInAtlas = tile->AtlasTileID;
 
-	int x = idInAtlas % m_AtlasTileCountPerSide ;
-	int z = idInAtlas / m_AtlasTileCountPerSide ;
+	int x = idInAtlas % m_AtlasTileCountPerSide;
+	int z = idInAtlas / m_AtlasTileCountPerSide;
 
-	return int2( x, z ) ;
+	return int2( x, z );
 }
 
 //------------------------------------------------------------------------
@@ -6547,13 +6756,13 @@ void
 r3dTerrain2::StartUsingTileGeom( bool forAtlas )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_TileVertexBuffer->Set( 0 ) ;
-	m_TileIndexBuffer->Set() ;
+	m_TileVertexBuffer->Set( 0 );
+	m_TileIndexBuffer->Set();
 
 	if( !forAtlas && !m_AllowVFetch )
-		r3dRenderer->SetVertexDecl( g_TerraDynaVDecl ) ;
+		r3dRenderer->SetVertexDecl( g_TerraDynaVDecl );
 	else
-		r3dRenderer->SetVertexDecl( g_TerraVDecl ) ;
+		r3dRenderer->SetVertexDecl( g_TerraVDecl );
 
 #endif
 }
@@ -6564,7 +6773,7 @@ void
 r3dTerrain2::StopUsingTileGeom()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dRenderer->SetVertexDecl( R3D_MESH_VERTEX::getDecl() ) ;
+	r3dRenderer->SetVertexDecl( R3D_MESH_VERTEX::getDecl() );
 #endif
 }
 
@@ -6574,21 +6783,21 @@ void
 r3dTerrain2::SetupTileAtlasRTs( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	AtlasVolume& vol = m_Atlas[ tile->AtlasVolumeID ] ;
+	AtlasVolume& vol = m_Atlas[ tile->AtlasVolumeID ];
 
 	if( vol.Diffuse != m_LastDiffuseRT )
 	{
 		if( m_LastDiffuseRT )
 		{
-			m_LastDiffuseRT->Deactivate( 0 ) ;
-			m_LastNormalRT->Deactivate( 0 ) ;
+			m_LastDiffuseRT->Deactivate( 0 );
+			m_LastNormalRT->Deactivate( 0 );
 		}
 
-		vol.Diffuse->Activate( 0 ) ;
-		vol.Normal->Activate( 1 ) ;
+		vol.Diffuse->Activate( 0 );
+		vol.Normal->Activate( 1 );
 
-		m_LastDiffuseRT = vol.Diffuse ;
-		m_LastNormalRT = vol.Normal ;
+		m_LastDiffuseRT = vol.Diffuse;
+		m_LastNormalRT = vol.Normal;
 	}
 #endif
 }
@@ -6599,27 +6808,24 @@ void
 r3dTerrain2::StartTileUpdating()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	StartUsingTileGeom( true ) ;
+	StartUsingTileGeom( true );
 
-	r3dRenderer->SetMipMapBias( 0.f ) ;
+	r3dRenderer->SetMipMapBias( 0.f );
 
-	r3dRenderer->SetCullMode( D3DCULL_NONE ) ;
+	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ ) ;
+	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_NZ );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) ) ;
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
 	//------------------------------------------------------------------------
 	// sampler sColor                 : register ( s11 );
 	{
-		r3dRenderer->SetTex( m_ColorTex, 11 ) ;
+		r3dRenderer->SetTex( m_ColorTex, 11 );
 	}
 
-	if( m_AllowVFetch )
-	{
-		r3dRenderer->SetTex( m_NormalTex, 12 ) ;
-	}
+	r3dRenderer->SetTex( m_NormalTex, 12 );
 
 	//------------------------------------------------------------------------
 	// setup WRAP for these:
@@ -6628,12 +6834,12 @@ r3dTerrain2::StartTileUpdating()
 	// sampler sDiffuse[ MAX_LAYERS ] : register ( s2 );
 	// sampler sNormal[ MAX_LAYERS ]  : register ( s5 );
 
-	for( int i = 0, e = 8 ; i < e; i ++ )
+	for( int i = 0, e = 8; i < e; i ++ )
 	{
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
-		r3dSetFiltering( R3D_BILINEAR, i ) ;
+		r3dSetFiltering( R3D_BILINEAR, i );
 	}
  
 	//------------------------------------------------------------------------
@@ -6642,24 +6848,24 @@ r3dTerrain2::StartTileUpdating()
 	// sampler sColor                 : register ( s11 );
 	// sampler sVertexNormal          : register ( s12 );
 
-	for( int i = 8, e = 13 ; i < e; i ++ )
+	for( int i = 8, e = 13; i < e; i ++ )
 	{
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
-		r3dSetFiltering( R3D_BILINEAR, i ) ;
+		r3dSetFiltering( R3D_BILINEAR, i );
 	}
 
 	//------------------------------------------------------------------------
 	// setup vertex textures
-	D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
-	r3dRenderer->SetTex( m_NormalTex, D3DVERTEXTEXTURESAMPLER0 ) ;
-	r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 ) ;
+	r3dRenderer->SetTex( m_NormalTex, D3DVERTEXTEXTURESAMPLER0 );
+	r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 );
 
-	m_LastDiffuseRT = NULL ;
-	m_LastNormalRT = NULL ;
+	m_LastDiffuseRT = NULL;
+	m_LastNormalRT = NULL;
 #endif
 }
 
@@ -6669,12 +6875,12 @@ void
 r3dTerrain2::SetAtlasTilePosTransform( const AllocatedTile* tile, float4* oConst )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int2 atlasXZ = GetTileAtlasXZ( tile ) ;
+	int2 atlasXZ = GetTileAtlasXZ( tile );
 
-	oConst->x = m_AtlasTileCountPerSideInv ;
-	oConst->y = m_AtlasTileCountPerSideInv ;
-	oConst->z = ( atlasXZ.x + 0.5f ) * m_AtlasTileCountPerSideInv * 2.0f - 1.0f ;
-	oConst->w = ( atlasXZ.y + 0.5f ) * m_AtlasTileCountPerSideInv * 2.0f - 1.0f ;
+	oConst->x = m_AtlasTileCountPerSideInv;
+	oConst->y = m_AtlasTileCountPerSideInv;
+	oConst->z = ( atlasXZ.x + 0.5f ) * m_AtlasTileCountPerSideInv * 2.0f - 1.0f;
+	oConst->w = ( atlasXZ.y + 0.5f ) * m_AtlasTileCountPerSideInv * 2.0f - 1.0f;
 #endif
 }
 
@@ -6684,96 +6890,96 @@ void
 r3dTerrain2::SetTileUpdateVSConsts( const AllocatedTile* tile, int passN, const IntArr& layerIndexes )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dTL::TFixedArray< float4, 6 > vsConsts ;
+	r3dTL::TFixedArray< float4, 6 > vsConsts;
 
-	float extraSpaceCoef = GetPaddingCoef() ;
+	float extraSpaceCoef = GetPaddingCoef();
 
-	int L = tile->L ;
+	int L = tile->L;
 
 	struct
 	{
 		void operator() ( float4* tarConst, const r3dTerrainLayer* layer, const AllocatedTile* tile, float tileDim, float extraSpaceCoef )
 		{
-			float multU = layer->ShaderScaleU * tileDim ;
-			float multV = layer->ShaderScaleV * tileDim ;
+			float multU = layer->ShaderScaleU * tileDim;
+			float multV = layer->ShaderScaleV * tileDim;
 
-			tarConst->x = multU * extraSpaceCoef ;
-			tarConst->y = multV * extraSpaceCoef ;
-			tarConst->z = multU + tile->X * tileDim * layer->ShaderScaleU * 2.0f ;
-			tarConst->w = multV + tile->Z * tileDim * layer->ShaderScaleV * 2.0f ;
+			tarConst->x = multU * extraSpaceCoef;
+			tarConst->y = multV * extraSpaceCoef;
+			tarConst->z = multU + tile->X * tileDim * layer->ShaderScaleU * 2.0f;
+			tarConst->w = multV + tile->Z * tileDim * layer->ShaderScaleV * 2.0f;
 		}
-	} setLayerConsts ;
+	} setLayerConsts;
 
 	struct
 	{
 		void operator() ( float4* tarConst )
 		{
-			tarConst->x = tarConst->y = tarConst->z = tarConst->w = 0.5f ;
+			tarConst->x = tarConst->y = tarConst->z = tarConst->w = 0.5f;
 		}
-	} setUnusedConst ;
+	} setUnusedConst;
 
 	//------------------------------------------------------------------------
-	// float4 gToPos               : register( c0 ) ;
+	// float4 gToPos               : register( c0 );
 	{
-		SetAtlasTilePosTransform( tile, vsConsts + 0 ) ;
+		SetAtlasTilePosTransform( tile, vsConsts + 0 );
 	}
 
 	//------------------------------------------------------------------------
-	// float4 gToSplatTexc         : register( c1 ) ;
+	// float4 gToSplatTexc         : register( c1 );
 	{
-		float halfTileDim = m_HalfTileWorldDims[ L ] ;
-		float tileDim = m_TileWorldDims[ L ] ;
+		float halfTileDim = m_HalfTileWorldDims[ L ];
+		float tileDim = m_TileWorldDims[ L ];
 
-		vsConsts[ 1 ].x = halfTileDim * m_TerrainPosToSplatU * 2.0f * extraSpaceCoef ;
-		vsConsts[ 1 ].y = halfTileDim * m_TerrainPosToSplatV * 2.0f * extraSpaceCoef ;
+		vsConsts[ 1 ].x = halfTileDim * m_TerrainPosToSplatU * 2.0f * extraSpaceCoef;
+		vsConsts[ 1 ].y = halfTileDim * m_TerrainPosToSplatV * 2.0f * extraSpaceCoef;
 
-		vsConsts[ 1 ].z = ( tile->X * tileDim + halfTileDim ) * m_TerrainPosToSplatU * 2.0f ;
-		vsConsts[ 1 ].w = ( tile->Z * tileDim + halfTileDim ) * m_TerrainPosToSplatV * 2.0f ;
+		vsConsts[ 1 ].z = ( tile->X * tileDim + halfTileDim ) * m_TerrainPosToSplatU * 2.0f;
+		vsConsts[ 1 ].w = ( tile->Z * tileDim + halfTileDim ) * m_TerrainPosToSplatV * 2.0f;
 
 		if( m_Masks.Count() )
 		{
-			r3dTexture* firstMask = m_Masks[ 0 ] ;
+			r3dTexture* firstMask = m_Masks[ 0 ];
 
-			vsConsts[ 1 ].z += 0.5f / firstMask->GetWidth() ;
-			vsConsts[ 1 ].w += 0.5f / firstMask->GetHeight() ;
+			vsConsts[ 1 ].z += 0.5f / firstMask->GetWidth();
+			vsConsts[ 1 ].w += 0.5f / firstMask->GetHeight();
 		}
 	}
 
 	//------------------------------------------------------------------------
-	// float4 gToBaseTileTexc      : register( c2 ) ;
+	// float4 gToBaseTileTexc      : register( c2 );
 	{
 		if( !passN )
 		{
-			setLayerConsts( vsConsts + 2, &m_BaseLayer, tile, m_TileWorldDims[ L ], extraSpaceCoef ) ;
+			setLayerConsts( vsConsts + 2, &m_BaseLayer, tile, m_TileWorldDims[ L ], extraSpaceCoef );
 		}
 		else
 		{
-			setUnusedConst( vsConsts + 2 ) ;
+			setUnusedConst( vsConsts + 2 );
 		}
 	}
 
 	//------------------------------------------------------------------------
 
-	int startLayer = passN * LAYERS_PER_MASK ;
-	int layerCount = R3D_MIN( int( layerIndexes.Count() - startLayer ), (int)LAYERS_PER_MASK ) ;
+	int startLayer = passN * LAYERS_PER_MASK;
+	int layerCount = R3D_MIN( int( layerIndexes.Count() - startLayer ), (int)LAYERS_PER_MASK );
 
 	//------------------------------------------------------------------------
-	// float4 gToTile0Texc         : register( c3 ) ;
-	// float4 gToTile1Texc         : register( c4 ) ;
-	// float4 gToTile2Texc         : register( c5 ) ;
+	// float4 gToTile0Texc         : register( c3 );
+	// float4 gToTile1Texc         : register( c4 );
+	// float4 gToTile2Texc         : register( c5 );
 
-	for( int i = startLayer, c = 0, e = startLayer + layerCount ; i < e; i ++, c ++ )
+	for( int i = startLayer, c = 0, e = startLayer + layerCount; i < e; i ++, c ++ )
 	{
-		const r3dTerrainLayer* layer = &m_Layers[ layerIndexes[ i ] ] ;
-		setLayerConsts( vsConsts + 3 + c, layer, tile, m_TileWorldDims[ L ], extraSpaceCoef ) ;
+		const r3dTerrainLayer* layer = &m_Layers[ layerIndexes[ i ] ];
+		setLayerConsts( vsConsts + 3 + c, layer, tile, m_TileWorldDims[ L ], extraSpaceCoef );
 	}
 
-	for( int c = layerCount, e = 3 ; c < e ; c ++ )
+	for( int c = layerCount, e = 3; c < e; c ++ )
 	{
-		setUnusedConst( vsConsts + 3 + c ) ;
+		setUnusedConst( vsConsts + 3 + c );
 	}
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[0].x, vsConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[0].x, vsConsts.COUNT ) );
 #endif
 }
 
@@ -6783,21 +6989,21 @@ void
 r3dTerrain2::SetTileUpdatePSConsts( const AllocatedTile* tile, int startLayer, const IntArr& layerIndexes )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int layerCount = layerIndexes.Count() - startLayer ;
+	int layerCount = layerIndexes.Count() - startLayer;
 
-	layerCount = R3D_MIN( layerCount , (int)LAYERS_PER_MASK ) ;
+	layerCount = R3D_MIN( layerCount , (int)LAYERS_PER_MASK );
 
 	if( layerCount )
 	{
-		r3dTL::TFixedArray< float4, LAYERS_PER_MASK > psConsts ;
+		r3dTL::TFixedArray< float4, LAYERS_PER_MASK > psConsts;
 
-		for( int i = 0, e = layerCount ; i < e ; i ++ )
+		for( int i = 0, e = layerCount; i < e; i ++ )
 		{
-			psConsts[ i ] = m_Layers[ layerIndexes[ startLayer + i ] ].ChannelMask ;
+			psConsts[ i ] = m_Layers[ layerIndexes[ startLayer + i ] ].ChannelMask;
 		}
 
 		// float3 gSplatControls[3]    : register( c0 );
-		r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, layerCount ) ;
+		r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, layerCount );
 	}
 #endif
 }
@@ -6807,18 +7013,18 @@ r3dTerrain2::SetTileUpdatePSConsts( const AllocatedTile* tile, int startLayer, c
 void
 r3dTerrain2::FillTempTileLayerArray( int x, int z, int L  )
 {
-	m_TempLayerIndexes.Clear() ;
+	m_TempLayerIndexes.Clear();
 
-	for( int i = 0, e = m_LayerBitMasksMipChains.Count() ; i < e ; i ++ )
+	for( int i = 0, e = m_LayerBitMasksMipChains.Count(); i < e; i ++ )
 	{
-		LayerBitMaskMipChain& chain = m_LayerBitMasksMipChains[ i ] ;
+		LayerBitMaskMipChain& chain = m_LayerBitMasksMipChains[ i ];
 
 		if( chain.Count() )
 		{
-			r3dBitMaskArray2D& arr = chain[ L ] ;
+			r3dBitMaskArray2D& arr = chain[ L ];
 			if( arr.Get( x, z ) )
 			{
-				m_TempLayerIndexes.PushBack( i ) ;
+				m_TempLayerIndexes.PushBack( i );
 			}
 		}
 	}
@@ -6830,52 +7036,52 @@ void
 r3dTerrain2::UpdateTileInAtlas( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int qlMultiplier = 1 << tile->L ;
+	int qlMultiplier = 1 << tile->L;
 
-	FillTempTileLayerArray( tile->X, tile->Z, tile->L ) ;
+	FillTempTileLayerArray( tile->X, tile->Z, tile->L );
 
-	int totalLayerCount = (int)m_TempLayerIndexes.Count() ;
+	int totalLayerCount = (int)m_TempLayerIndexes.Count();
 
-	int passCount = totalLayerCount / LAYERS_PER_MASK ;
+	int passCount = totalLayerCount / LAYERS_PER_MASK;
 
 	if( totalLayerCount % LAYERS_PER_MASK )
-		passCount ++ ;
+		passCount ++;
 
 	if( !passCount )
-		passCount = 1 ;
+		passCount = 1;
 
-	int startLayer = 0 ;
+	int startLayer = 0;
 
-	SetupTileAtlasRTs( tile ) ;
+	SetupTileAtlasRTs( tile );
 
-	for( int i = 0, e = passCount ; i < e; i ++, startLayer += LAYERS_PER_MASK )
+	for( int i = 0, e = passCount; i < e; i ++, startLayer += LAYERS_PER_MASK )
 	{
-		int final = i == passCount - 1 ;
+		int final = i == passCount - 1;
 
-		int layerCount = R3D_MIN( (int)( totalLayerCount - LAYERS_PER_MASK * i), (int)LAYERS_PER_MASK ) ;
+		int layerCount = R3D_MIN( (int)( totalLayerCount - LAYERS_PER_MASK * i), (int)LAYERS_PER_MASK );
 
-		SetTileUpdateVSConsts( tile, i, m_TempLayerIndexes ) ;
+		SetTileUpdateVSConsts( tile, i, m_TempLayerIndexes );
 
 		// vertex shader
 		{
-			GenerateAtlasVertexShaderId vsid ;
-			vsid.unused = 0 ;
+			GenerateAtlasVertexShaderId vsid;
+			vsid.unused = 0;
 
-			r3dRenderer->SetValidVertexShader( g_AtlasVertexShaderIdMap[ vsid.Id ] ) ;
+			r3dRenderer->SetValidVertexShader( g_AtlasVertexShaderIdMap[ vsid.Id ] );
 		}
 
-		SetTileUpdatePSConsts( tile, startLayer, m_TempLayerIndexes ) ;
+		SetTileUpdatePSConsts( tile, startLayer, m_TempLayerIndexes );
 
 		// pixel shader
 		{
-			GenerateAtlasPixelShaderId psid ;
-			psid.numLayers = layerCount ;
-			psid.firstBatch = i == 0 ;
+			GenerateAtlasPixelShaderId psid;
+			psid.numLayers = layerCount;
+			psid.firstBatch = i == 0;
 
-			int id = g_AtlasPixelShaderIdMap[ psid.Id ] ;
-			r3d_assert( id >= 0 ) ;
+			int id = g_AtlasPixelShaderIdMap[ psid.Id ];
+			r3d_assert( id >= 0 );
 
-			r3dRenderer->SetPixelShader( id ) ;
+			r3dRenderer->SetPixelShader( id );
 		}
 
 		//------------------------------------------------------------------------
@@ -6884,17 +7090,17 @@ r3dTerrain2::UpdateTileInAtlas( const AllocatedTile* tile )
 		{
 			if( !i )
 			{
-				r3dRenderer->SetTex( m_BaseLayer.DiffuseTex, 0 ) ;
-				r3dRenderer->SetTex( m_BaseLayer.NormalTex, 1 ) ;
+				r3dRenderer->SetTex( m_BaseLayer.DiffuseTex, 0 );
+				r3dRenderer->SetTex( m_BaseLayer.NormalTex, 1 );
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE ) );
 			}
 			else
 			{
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) );
 
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) ) ;
-				D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCALPHA ) ) ;
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ONE ) );
+				D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCALPHA ) );
 			}
 		}
 
@@ -6902,58 +7108,58 @@ r3dTerrain2::UpdateTileInAtlas( const AllocatedTile* tile )
 		// sampler sDiffuse[3]            : register ( s2 );
 		// sampler sNormal[3]             : register ( s5 );
 		{
-			for( int i = startLayer, s = 0, e = startLayer + layerCount ; i < e ; i ++, s ++ )
+			for( int i = startLayer, s = 0, e = startLayer + layerCount; i < e; i ++, s ++ )
 			{
-				const r3dTerrainLayer* layer = &m_Layers[ m_TempLayerIndexes [ i ] ] ;
+				const r3dTerrainLayer* layer = &m_Layers[ m_TempLayerIndexes [ i ] ];
 
-				r3dRenderer->SetTex( layer->DiffuseTex, 2 + s ) ;
-				r3dRenderer->SetTex( layer->NormalTex, 5 + s ) ;
+				r3dRenderer->SetTex( layer->DiffuseTex, 2 + s );
+				r3dRenderer->SetTex( layer->NormalTex, 5 + s );
 			}
 		}
 
 		//------------------------------------------------------------------------
 		// sampler sSplat[3]              : register ( s8 );
 		{
-			for( int i = startLayer, s = 0, e = startLayer + layerCount ; i < e ; i ++, s ++ )
+			for( int i = startLayer, s = 0, e = startLayer + layerCount; i < e; i ++, s ++ )
 			{
-				const r3dTerrainLayer* layer = &m_Layers[ m_TempLayerIndexes [ i ] ] ;
+				const r3dTerrainLayer* layer = &m_Layers[ m_TempLayerIndexes [ i ] ];
 
-				r3dRenderer->SetTex( layer->MaskTex, 8 + s ) ;
+				r3dRenderer->SetTex( layer->MaskTex, 8 + s );
 			}
 		}
 
-		int density = m_QualitySettings.TileVertexDensities[ tile->L ] ;
+		int density = m_QualitySettings.TileVertexDensities[ tile->L ];
 
-		int primitiveCount = m_ConnectionIndexCounts[ density ][ 0 ] ;
-		int indexOffset = m_ConnectionIndexOffsets[ density ][ 0 ] ;
-		int vertexOffset = m_ConnectionVertexOffsets[ density ] ;
+		int primitiveCount = m_ConnectionIndexCounts[ density ][ 0 ];
+		int indexOffset = m_ConnectionIndexOffsets[ density ][ 0 ];
+		int vertexOffset = m_ConnectionVertexOffsets[ density ];
 
 		r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 		r3dRenderer->Stats.AddNumTerrainTris( primitiveCount );
-		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount ) ;
+		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount );
 	}
 
 	// modulate
 	{
-		GenerateAtlasPixelShaderId psid ;
+		GenerateAtlasPixelShaderId psid;
 
-		psid.Id = 0 ;
-		psid.modulationBatch = 1 ;
+		psid.Id = 0;
+		psid.modulationBatch = 1;
 
-		int id = g_AtlasPixelShaderIdMap[ psid.Id ] ;
+		int id = g_AtlasPixelShaderIdMap[ psid.Id ];
 
-		r3d_assert( id >= 0 ) ;
+		r3d_assert( id >= 0 );
 
-		r3dRenderer->SetPixelShader( id ) ;
+		r3dRenderer->SetPixelShader( id );
 
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE ) );
 
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) ) ;
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_ZERO ) );
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR ) );
 
 		r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 		r3dRenderer->Stats.AddNumTerrainTris( 2 );
-		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, ( m_QualitySettings.VertexTileDim + 1 ) * ( m_QualitySettings.VertexTileDim + 1 ), m_4VertTileIndexOffset, 2 ) ;
+		r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, 0, 0, ( m_QualitySettings.VertexTileDim + 1 ) * ( m_QualitySettings.VertexTileDim + 1 ), m_4VertTileIndexOffset, 2 );
 	}
 #endif
 }
@@ -6964,13 +7170,13 @@ void
 r3dTerrain2::StopTileUpdating()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	StopUsingTileGeom() ;
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
-	r3dRenderer->RestoreCullMode() ;
+	StopUsingTileGeom();
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
+	r3dRenderer->RestoreCullMode();
 
-	FlushAtlasRTs() ;
+	FlushAtlasRTs();
 
-	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW ) ;
+	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 #endif
 }
 
@@ -6982,14 +7188,14 @@ r3dTerrain2::FlushAtlasRTs()
 #if R3D_TERRAIN_V2_GRAPHICS
 	if(	m_LastDiffuseRT )
 	{
-		r3d_assert( m_LastNormalRT ) ;
+		r3d_assert( m_LastNormalRT );
 
-		m_LastDiffuseRT->Deactivate() ;
-		m_LastNormalRT->Deactivate() ;
+		m_LastDiffuseRT->Deactivate();
+		m_LastNormalRT->Deactivate();
 	}
 
-	m_LastDiffuseRT = 0 ;
-	m_LastNormalRT = 0 ;
+	m_LastDiffuseRT = 0;
+	m_LastNormalRT = 0;
 #endif
 }
 
@@ -6999,16 +7205,16 @@ void
 r3dTerrain2::StartTileRoadUpdating()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_RoadTileUpdateZFar = m_HeightOffset + m_HeightScale * 2.33f ;
+	m_RoadTileUpdateZFar = m_HeightOffset + m_HeightScale * 2.33f;
 
-	r3dRenderer->SetValidVertexShader( VS_FILLGBUFFER_ID ) ;
-	r3dRenderer->SetPixelShader( g_RoadAtlasPixelShaderId ) ;
+	r3dRenderer->SetValidVertexShader( VS_FILLGBUFFER_ID );
+	r3dRenderer->SetPixelShader( g_RoadAtlasPixelShaderId );
 
-	r3dRenderer->SetCullMode( D3DCULL_CCW ) ;
+	r3dRenderer->SetCullMode( D3DCULL_CCW );
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_NZ | R3D_BLEND_PUSH );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 #endif
 }
 
@@ -7018,25 +7224,28 @@ void
 r3dTerrain2::SetupTileRoadUpdateCamera( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	float dim = m_TileWorldDims[ tile->L ] ;
+	float dim = m_TileWorldDims[ tile->L ];
 
-	float tx = ( tile->X + 0.5f ) * dim ;
-	float tz = ( tile->Z + 0.5f ) * dim ;
+	float tx = ( tile->X + 0.5f ) * dim;
+	float tz = ( tile->Z + 0.5f ) * dim;
 
-	D3DXMATRIX view ;
-	D3DXVECTOR3 eye = D3DXVECTOR3( tx, m_HeightOffset + m_HeightScale * 1.22f, tz ) ;
-	D3DXVECTOR3 at = D3DXVECTOR3( tx, m_HeightOffset, tz ) ;
-	D3DXVECTOR3 up = D3DXVECTOR3( 0, 0, 1 ) ;
+	D3DXMATRIX view;
+	D3DXVECTOR3 eye = D3DXVECTOR3( tx, m_HeightOffset + m_HeightScale * 1.22f, tz );
+	D3DXVECTOR3 at = D3DXVECTOR3( tx, m_HeightOffset, tz );
+	D3DXVECTOR3 up = D3DXVECTOR3( 0, 0, 1 );
 
-	D3DXMatrixLookAtLH( &view, &eye, &at, &up ) ;
+	D3DXMatrixLookAtLH( &view, &eye, &at, &up );
 
-	D3DXMATRIX proj ;
+	D3DXMATRIX proj;
 
-	float projDim = dim * GetPaddingCoef() ;
+	float projDim = dim * GetPaddingCoef();
 
-	D3DXMatrixOrthoLH( &proj, projDim, projDim, 0.01f, m_RoadTileUpdateZFar ) ;
+	float n = 0.01f;
+	float f = m_RoadTileUpdateZFar;
 
-	r3dRenderer->SetCameraEx( view, proj, (r3dPoint3D&)eye, 0.01f, m_RoadTileUpdateZFar ) ;
+	r3dRenderer->BuildMatrixOrthoLH( &proj, projDim, projDim, n, f );
+
+	r3dRenderer->SetCameraEx( view, proj, 0.01f, m_RoadTileUpdateZFar, false );
 #endif
 }
 
@@ -7046,42 +7255,42 @@ void
 r3dTerrain2::UpdateAtlasTileRoads( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int tileVertSize = ( 1 << tile->L ) * m_QualitySettings.VertexTileDim ;
+	int tileVertSize = ( 1 << tile->L ) * m_QualitySettings.VertexTileDim;
 
-	int sz = R3D_MAX( m_QualitySettings.RoadVertexDimStart / tileVertSize, 1 ) ;
+	int sz = R3D_MAX( m_QualitySettings.RoadVertexDimStart / tileVertSize, 1 );
 
-	int startRoadMip = m_NumActiveQualityLayers - m_RoadInfoMipChain.Count() ;
+	int startRoadMip = m_NumActiveQualityLayers - m_RoadInfoMipChain.Count();
 
-	int mipI = R3D_MAX( tile->L - startRoadMip, 0 ) ;
+	int mipI = R3D_MAX( tile->L - startRoadMip, 0 );
 
-	SetupTileRoadUpdateCamera( tile ) ;
+	SetupTileRoadUpdateCamera( tile );
 
-	SetupTileAtlasRTs( tile ) ;
+	SetupTileAtlasRTs( tile );
 
-	if( RoadInfo* info = m_RoadInfoMipChain[ mipI ][ tile->Z / sz ][ tile->X / sz ] )
+	if( RoadInfo* info = &m_RoadInfoMipChain[ mipI ][ tile->Z / sz ][ tile->X / sz ] )
 	{
-		int2 atlasXZ = GetTileAtlasXZ( tile ) ;
+		int2 atlasXZ = GetTileAtlasXZ( tile );
 
 		r3dRenderer->SetViewport( 	float( atlasXZ.x * m_QualitySettings.AtlasTileDim ), 
 									float( ATLAS_TEXTURE_DIM - ( atlasXZ.y + 1 ) * m_QualitySettings.AtlasTileDim ),
 									float( m_QualitySettings.AtlasTileDim ),
-									float( m_QualitySettings.AtlasTileDim )	) ;
+									float( m_QualitySettings.AtlasTileDim )	);
 
-		for( ; info ; )
+		for(; info; )
 		{
-			for( int i = 0, e = ROAD_INFO_LENGTH - 1 ; i < e ; i ++ )
+			for( int i = 0, e = ROAD_INFO_LENGTH - 1; i < e; i ++ )
 			{
-				obj_Road* obj = static_cast<obj_Road*> ( ( *info )[ i ] );
+				obj_Road* obj = static_cast<obj_Road*> ( info->ptrs[ i ] );
 
 				if( !obj )
-					break ;
+					break;
 
 #if R3D_TERRAIN_V2_GRAPHICS
-				obj->DrawRoadToTerraAtlas() ;
+				obj->DrawRoadToTerraAtlas();
 #endif
 			}
 
-			info = (RoadInfo*)(*info)[ ROAD_INFO_LENGTH - 1 ] ;
+			info = static_cast< RoadInfo* >( info->ptrs[ ROAD_INFO_LENGTH - 1 ] );
 		}
 	}
 #endif
@@ -7093,18 +7302,18 @@ void
 r3dTerrain2::StopTileRoadUpdating()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	extern r3dCamera gCam ;
-	r3dRenderer->SetCamera( gCam ) ;
+	extern r3dCamera gCam;
+	r3dRenderer->SetCamera( gCam, false );
 
-	FlushAtlasRTs() ;
+	FlushAtlasRTs();
 
-	r3dRenderer->RestoreCullMode() ;
+	r3dRenderer->RestoreCullMode();
 
 	r3dRenderer->SetRenderingMode( R3D_BLEND_POP );
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, TRUE ) );
 
-	r3dRenderer->SetVertexShader() ;
-	r3dRenderer->SetPixelShader() ;
+	r3dRenderer->SetVertexShader();
+	r3dRenderer->SetPixelShader();
 #endif
 }
 
@@ -7117,22 +7326,22 @@ r3dTerrain2::StartMipChainsTileRendering()
 	r3dRenderer->SetValidVertexShader( g_AtlasMipVSId );
 	r3dRenderer->SetPixelShader( g_AtlasMipPSId );
 
-	for( int i = 0, e = 2 ; i < e ; i ++ )
+	for( int i = 0, e = 2; i < e; i ++ )
 	{
-		r3dSetFiltering( R3D_BILINEAR, i ) ;
+		r3dSetFiltering( R3D_BILINEAR, i );
 
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPFILTER, D3DTEXF_POINT ) );
 
-		float bias = float( -11.0f ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&bias ) ) ;
+		float bias = float( -11.0f );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&bias ) );
 
 	}
 
-	m_UnitQuadVertexBuffer->Set( 0 ) ;
-	r3dRenderer->SetVertexDecl( g_TerraVDecl ) ;
-	r3dRenderer->SetCullMode( D3DCULL_NONE ) ;
+	m_UnitQuadVertexBuffer->Set( 0 );
+	r3dRenderer->SetVertexDecl( g_TerraVDecl );
+	r3dRenderer->SetCullMode( D3DCULL_NONE );
 #endif
 }
 
@@ -7142,97 +7351,97 @@ void
 r3dTerrain2::RenderTileMipChain( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderTileMipChain" ) ;
+	D3DPERF_BeginEvent( 0, L"r3dTerrain2::RenderTileMipChain" );
 
-	int2 atlasXZ = GetTileAtlasXZ( tile ) ;
+	int2 atlasXZ = GetTileAtlasXZ( tile );
 
-	const AtlasVolume& av = m_Atlas[ tile->AtlasVolumeID ] ;
+	const AtlasVolume& av = m_Atlas[ tile->AtlasVolumeID ];
 
-	r3dScreenBuffer* atlasDiffuse = av.Diffuse ;
-	r3dScreenBuffer* atlasNormal = av.Normal ;
+	r3dScreenBuffer* atlasDiffuse = av.Diffuse;
+	r3dScreenBuffer* atlasNormal = av.Normal;
 
-	float mipMult = 1.0f ;
+	float mipMult = 1.0f;
 	
-	for( int i = 1, e = atlasDiffuse->ActualNumMipLevels ; i < e ; i ++, mipMult *= 2.0f )
+	for( int i = 1, e = atlasDiffuse->ActualNumMipLevels; i < e; i ++, mipMult *= 2.0f )
 	{
-		const r3dScreenBuffer::Dims& dims = atlasDiffuse->MipDims[ i ] ;
+		const r3dScreenBuffer::Dims& dims = atlasDiffuse->MipDims[ i ];
 
-		m_TempDiffuseRT->Activate( 0 ) ;
-		m_TempNormalRT->Activate( 1 ) ;
+		m_TempDiffuseRT->Activate( 0 );
+		m_TempNormalRT->Activate( 1 );
 
-		r3dRenderer->SetTex( atlasDiffuse->Tex, 0 ) ;
-		r3dRenderer->SetTex( atlasNormal->Tex, 1 ) ;
+		r3dRenderer->SetTex( atlasDiffuse->Tex, 0 );
+		r3dRenderer->SetTex( atlasNormal->Tex, 1 );
 
-		D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_MAXMIPLEVEL, i - 1 ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_MAXMIPLEVEL, i - 1 ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_MAXMIPLEVEL, i - 1 ) );
 
-		r3dTL::TFixedArray< float4, 2 > vsConst ;
-
-		//------------------------------------------------------------------------
-		// float4 gToPos               : register( c0 ) ;
-
-		float4 *vconst = vsConst + 0 ;
-
-		vconst->x = dims.Width / atlasDiffuse->Width ;
-		vconst->y = dims.Height / atlasDiffuse->Height ;
-		vconst->z = -1.0f + vconst->x ;
-		vconst->w = +1.0f - vconst->y ;
+		r3dTL::TFixedArray< float4, 2 > vsConst;
 
 		//------------------------------------------------------------------------
-		// float4 gToTexc              : register( c1 ) ;
+		// float4 gToPos               : register( c0 );
 
-		vconst = vsConst + 1 ;
+		float4 *vconst = vsConst + 0;
 
-		SetAtlasTileTexcTransform( tile, vconst ) ;
+		vconst->x = dims.Width / atlasDiffuse->Width;
+		vconst->y = dims.Height / atlasDiffuse->Height;
+		vconst->z = -1.0f + vconst->x;
+		vconst->w = +1.0f - vconst->y;
 
-		vconst->z += mipMult / atlasDiffuse->Width ;
-		vconst->w += mipMult / atlasDiffuse->Height ;
+		//------------------------------------------------------------------------
+		// float4 gToTexc              : register( c1 );
 
-		D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
+		vconst = vsConst + 1;
+
+		SetAtlasTileTexcTransform( tile, vconst );
+
+		vconst->z += mipMult / atlasDiffuse->Width;
+		vconst->w += mipMult / atlasDiffuse->Height;
+
+		D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) );
 
 		r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 		r3dRenderer->Stats.AddNumTerrainTris( 2 );
-		r3dRenderer->Draw( D3DPT_TRIANGLESTRIP, 0, 2 ) ;
+		r3dRenderer->Draw( D3DPT_TRIANGLESTRIP, 0, 2 );
 
-		m_TempDiffuseRT->Deactivate( 0 ) ;
-		m_TempNormalRT->Deactivate( 0 ) ;
+		m_TempDiffuseRT->Deactivate( 0 );
+		m_TempNormalRT->Deactivate( 0 );
 
 		// copy mip
 		{
-			atlasDiffuse->Activate( 0, 0, i ) ;
-			atlasNormal->Activate( 1, 0, i ) ;
+			atlasDiffuse->Activate( 0, 0, i );
+			atlasNormal->Activate( 1, 0, i );
 
-			r3dRenderer->SetTex( m_TempDiffuseRT->Tex, 0 ) ;
-			r3dRenderer->SetTex( m_TempNormalRT->Tex, 1 ) ;
-
-			//------------------------------------------------------------------------
-			// float4 gToPos               : register( c0 ) ;
-
-			vconst = vsConst + 0 ;
-			SetAtlasTilePosTransform( tile, vconst ) ;
+			r3dRenderer->SetTex( m_TempDiffuseRT->Tex, 0 );
+			r3dRenderer->SetTex( m_TempNormalRT->Tex, 1 );
 
 			//------------------------------------------------------------------------
-			// float4 gToTexc              : register( c1 ) ;
+			// float4 gToPos               : register( c0 );
 
-			vconst = vsConst + 1 ;
+			vconst = vsConst + 0;
+			SetAtlasTilePosTransform( tile, vconst );
 
-			vconst->x = 0.25f / mipMult ;
-			vconst->y = -0.25f / mipMult ;
-			vconst->z = vconst->x ;
-			vconst->w = dims.Height / atlasDiffuse->Height + vconst->y ;
+			//------------------------------------------------------------------------
+			// float4 gToTexc              : register( c1 );
 
-			D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) ) ;
+			vconst = vsConst + 1;
+
+			vconst->x = 0.25f / mipMult;
+			vconst->y = -0.25f / mipMult;
+			vconst->z = vconst->x;
+			vconst->w = dims.Height / atlasDiffuse->Height + vconst->y;
+
+			D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConst[ 0 ].x, vsConst.COUNT ) );
 
 			r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 			r3dRenderer->Stats.AddNumTerrainTris( 2 );
-			r3dRenderer->Draw( D3DPT_TRIANGLESTRIP, 0, 2 ) ;
+			r3dRenderer->Draw( D3DPT_TRIANGLESTRIP, 0, 2 );
 
-			atlasDiffuse->Deactivate( 0 ) ;
-			atlasNormal->Deactivate( 0 ) ;
+			atlasDiffuse->Deactivate( 0 );
+			atlasNormal->Deactivate( 0 );
 		}
 	}
 
-	D3DPERF_EndEvent() ;
+	D3DPERF_EndEvent();
 #endif
 }
 
@@ -7242,18 +7451,18 @@ void
 r3dTerrain2::StopMipChainsTileRendering()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int i = 0, e = 2 ; i < e ; i ++ )
+	for( int i = 0, e = 2; i < e; i ++ )
 	{
-		r3dSetFiltering( R3D_BILINEAR, i ) ;
+		r3dSetFiltering( R3D_BILINEAR, i );
 
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MAXMIPLEVEL, 0 ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, 0 ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MAXMIPLEVEL, 0 ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( i, D3DSAMP_MIPMAPLODBIAS, 0 ) );
 	}
 
-	r3dRenderer->SetVertexDecl( R3D_MESH_VERTEX::getDecl() ) ;
-	r3dRenderer->RestoreCullMode() ;
+	r3dRenderer->SetVertexDecl( R3D_MESH_VERTEX::getDecl() );
+	r3dRenderer->RestoreCullMode();
 #endif
 }
 
@@ -7263,15 +7472,15 @@ void
 r3dTerrain2::SetupTileRenderingVertexStates()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	StartUsingTileGeom( false ) ;	
+	StartUsingTileGeom( false );	
 
 	if( m_AllowVFetch )
 	{
-		r3dRenderer->SetTex( m_HeightTex, D3DVERTEXTEXTURESAMPLER0 ) ;
+		r3dRenderer->SetTex( m_HeightTex, D3DVERTEXTEXTURESAMPLER0 );
 
-		r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 ) ;
-		D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-		D3D_V( r3dRenderer->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+		r3dSetFiltering( R3D_POINT, D3DVERTEXTEXTURESAMPLER0 );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+		D3D_V( r3dRenderer->pd3ddev->SetSamplerState( D3DVERTEXTEXTURESAMPLER0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 	}
 #endif
 }
@@ -7282,59 +7491,59 @@ void
 r3dTerrain2::StartTileRendering()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetupTileRenderingVertexStates() ;
+	SetupTileRenderingVertexStates();
 
-	r3dRenderer->SetCullMode( D3DCULL_CCW ) ;
+	r3dRenderer->SetCullMode( D3DCULL_CCW );
 
-	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 0 ) ;
-	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 1 ) ;
+	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 0 );
+	r3dSetAnisotropy( r_terrain2_anisotropy->GetInt(), 1 );
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP ) );
 
-	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW ) ;
+	r3dRenderer->SetRenderingMode( R3D_BLEND_NOALPHA | R3D_BLEND_ZC | R3D_BLEND_ZW );
 
 	// common pixel shader constants
 	{
-		r3dTL::TFixedArray< float4, 2 > psConsts ;
+		r3dTL::TFixedArray< float4, 2 > psConsts;
 
-		// float4 g_SpecularPow            :  register( c0 ) ;
-		psConsts[ 0 ] = float4( m_Settings.Specular, 0.f, 0.f, 0.f ) ;
+		// float4 g_SpecularPow_DefSSAO    :  register( c0 );
+		psConsts[ 0 ] = float4( m_Settings.Specular, r_ssao_clear_val->GetFloat(), 0.f, 0.f );
 
-		// float4 g_Light                  :  register( c1 ) ;
-		extern r3dSun* Sun ;
-		psConsts[ 1 ] = float4( Sun->SunDir.x, Sun->SunDir.y, Sun->SunDir.z, 0.0f ) ;
+		// float4 g_Light                  :  register( c1 );
+		extern r3dSun* Sun;
+		psConsts[ 1 ] = float4( Sun->SunDir.x, Sun->SunDir.y, Sun->SunDir.z, 0.0f );
 
-		D3D_V( r3dRenderer->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, &psConsts[ 0 ].x, psConsts.COUNT ) );
 	}
 
 	// Vertex Shader
 	{
-		Terrain2VertexShaderId vsid ;
-		vsid.shadowPath = 0 ;
-		vsid.depthPath = 0 ;
-		vsid.vfetchless = !m_AllowVFetch ;
+		Terrain2VertexShaderId vsid;
+		vsid.shadowPath = 0;
+		vsid.depthPath = 0;
+		vsid.vfetchless = !m_AllowVFetch;
 
-		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] ) ;
+		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] );
 	}
 
 	// Pixel Shader
 	{
-		Terrain2PixelShaderId psid ;
+		Terrain2PixelShaderId psid;
 
-		psid.aux = r_lighting_quality->GetInt() == 1 ? 0 : 1 ;
-		psid.forward_lighting = r_in_minimap_render->GetInt() ?  1 : 0 ;
+		psid.aux = r_lighting_quality->GetInt() == 1 ? 0 : 1;
+		psid.forward_lighting = r_in_minimap_render->GetInt() ?  1 : 0;
 
-		r3dRenderer->SetPixelShader( g_Terrain2PixelShaderIdMap[ psid.Id ] ) ;
+		r3dRenderer->SetPixelShader( g_Terrain2PixelShaderIdMap[ psid.Id ] );
 	}
 
 #ifndef FINAL_BUILD
 	if( r_terra_wire->GetInt() )
 	{
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_FILLMODE , D3DFILL_WIREFRAME ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE , D3DFILL_WIREFRAME ) );
 	}
 #endif
 #endif
@@ -7346,21 +7555,21 @@ void
 r3dTerrain2::SetAtlasTileTexcTransform( const AllocatedTile* tile, float4* oTransform )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	int2 atlasXZ = GetTileAtlasXZ( tile ) ;
+	int2 atlasXZ = GetTileAtlasXZ( tile );
 
-	float antiBorder = m_QualitySettings.AtlasTileDim / float ( m_QualitySettings.AtlasTileDim + 2 * r_terrain2_padding->GetInt() ) ;
+	float antiBorder = m_QualitySettings.AtlasTileDim / float ( m_QualitySettings.AtlasTileDim + 2 * r_terrain2_padding->GetInt() );
 
-	float antiBorderAddU = float( r_terrain2_padding->GetInt() ) / ATLAS_TEXTURE_DIM * antiBorder ;
-	float antiBorderAddV = float( r_terrain2_padding->GetInt() ) / ATLAS_TEXTURE_DIM * antiBorder ;
+	float antiBorderAddU = float( r_terrain2_padding->GetInt() ) / ATLAS_TEXTURE_DIM * antiBorder;
+	float antiBorderAddV = float( r_terrain2_padding->GetInt() ) / ATLAS_TEXTURE_DIM * antiBorder;
 
-	float uvScaleMul0 = m_AtlasTileCountPerSideInv * 0.5f  ;
-	float uvScaleMul1 = uvScaleMul0 * antiBorder ;
+	float uvScaleMul0 = m_AtlasTileCountPerSideInv * 0.5f ;
+	float uvScaleMul1 = uvScaleMul0 * antiBorder;
 
-	oTransform->x = uvScaleMul1 ;
-	oTransform->y = -uvScaleMul1 ;
+	oTransform->x = uvScaleMul1;
+	oTransform->y = -uvScaleMul1;
 
-	oTransform->z = uvScaleMul1 + atlasXZ.x * m_AtlasTileCountPerSideInv + 0.5f / ATLAS_TEXTURE_DIM + antiBorderAddU ;
-	oTransform->w = 1.0f - uvScaleMul1 - atlasXZ.y * m_AtlasTileCountPerSideInv - 0.5f / ATLAS_TEXTURE_DIM - antiBorderAddV ;
+	oTransform->z = uvScaleMul1 + atlasXZ.x * m_AtlasTileCountPerSideInv + 0.5f / ATLAS_TEXTURE_DIM + antiBorderAddU;
+	oTransform->w = 1.0f - uvScaleMul1 - atlasXZ.y * m_AtlasTileCountPerSideInv - 0.5f / ATLAS_TEXTURE_DIM - antiBorderAddV;
 #endif
 }
 
@@ -7370,60 +7579,61 @@ void
 r3dTerrain2::SetTileRenderVSConsts( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dTL::TFixedArray< float4, 6 > vsConsts ;
+	r3dTL::TFixedArray< float4, 6 > vsConsts;
 
-	float qlMult = float( 1 << tile->L ) ;
+	float qlMult = float( 1 << tile->L );
 
-	float halfTileDim = m_HalfTileWorldDims [ tile->L ] ;
-	float tileDim = m_TileWorldDims[ tile->L ] ;
+	float halfTileDim = m_HalfTileWorldDims [ tile->L ];
+	float tileDim = m_TileWorldDims[ tile->L ];
 
 	//------------------------------------------------------------------------
-	// float4x4 gWVP               : register( c0 ) ;
+	// float4x4 gWVP               : register( c0 );
 	{
-		float x = tile->X * tileDim ;
-		float z = tile->Z * tileDim ;
+		float x = tile->X * tileDim - r3dRenderer->LocalizationPos.x;
+		float z = tile->Z * tileDim - r3dRenderer->LocalizationPos.z;
+		float y = - r3dRenderer->LocalizationPos.y;
 
-		float dim = halfTileDim  ;
+		float dim = halfTileDim ;
 
 		// fill in World
 		D3DXMATRIX mtx (
-				dim,		0.f,			0.f,		0.f,
-				0.f,		m_HeightScale,	0.f,		0.f,
-				0.f,		0.f,			dim,		0.f,
-				dim + x,	m_HeightOffset,	dim + z,	1.f
-			) ;
+				dim,		0.f,				0.f,		0.f,
+				0.f,		m_HeightScale,		0.f,		0.f,
+				0.f,		0.f,				dim,		0.f,
+				dim + x,	m_HeightOffset + y,	dim + z,	1.f
+			);
 
-		D3DXMatrixMultiplyTranspose( (D3DXMATRIX*)&vsConsts[ 0 ], &mtx, &r3dRenderer->ViewProjMatrix ) ;		
+		D3DXMatrixMultiplyTranspose( (D3DXMATRIX*)&vsConsts[ 0 ], &mtx, &r3dRenderer->ViewProjMatrix_Localized );		
 	}
 
 	//------------------------------------------------------------------------
-	// float4 gToHeightTexc        : register( c4 ) ;
+	// float4 gToHeightTexc        : register( c4 );
 	if( m_HeightTex )
 	{
-		float4* cnst = vsConsts + 4 ;
+		float4* cnst = vsConsts + 4;
 
-		cnst->x = halfTileDim * m_TerrainPosToSplatU * 2.0f ;
-		cnst->y = halfTileDim * m_TerrainPosToSplatV * 2.0f ;
+		cnst->x = halfTileDim * m_TerrainPosToSplatU * 2.0f;
+		cnst->y = halfTileDim * m_TerrainPosToSplatV * 2.0f;
 
-		cnst->z = ( tile->X * tileDim + halfTileDim ) * m_TerrainPosToSplatU * 2.0f ;
-		cnst->w = ( tile->Z * tileDim + halfTileDim ) * m_TerrainPosToSplatV * 2.0f ;
+		cnst->z = ( tile->X * tileDim + halfTileDim ) * m_TerrainPosToSplatU * 2.0f;
+		cnst->w = ( tile->Z * tileDim + halfTileDim ) * m_TerrainPosToSplatV * 2.0f;
 
-		cnst->z += 0.5f / m_HeightTex->GetWidth() ;
-		cnst->w += 0.5f / m_HeightTex->GetHeight() ;
+		cnst->z += 0.5f / m_HeightTex->GetWidth();
+		cnst->w += 0.5f / m_HeightTex->GetHeight();
 	}
 	else
 	{
-		vsConsts[ 4 ] = float4( 0, 0, 0, 0 ) ;
+		vsConsts[ 4 ] = float4( 0, 0, 0, 0 );
 	}
 
 	//------------------------------------------------------------------------
-	// float4 gToPSTexc            : register( c5 ) ;
+	// float4 gToPSTexc            : register( c5 );
 	{
-		float4* cnst = vsConsts + 5 ;
-		SetAtlasTileTexcTransform( tile, cnst ) ;
+		float4* cnst = vsConsts + 5;
+		SetAtlasTileTexcTransform( tile, cnst );
 	}
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( 0, &vsConsts[ 0 ].x, vsConsts.COUNT ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, &vsConsts[ 0 ].x, vsConsts.COUNT ) );
 #endif
 }
 
@@ -7432,98 +7642,98 @@ r3dTerrain2::SetTileRenderVSConsts( const AllocatedTile* tile )
 void
 r3dTerrain2::SetDynaBufferFor( const AllocatedTile* tile, int density, int staticBufferOffset )
 {
-	m_TileVertexBuffer->Set( 0, staticBufferOffset ) ;
+	m_TileVertexBuffer->Set( 0, staticBufferOffset );
 
-	int sideCount = ( 1 << density ) * m_QualitySettings.VertexTileDim + 1 ;
+	int sideCount = ( 1 << density ) * m_QualitySettings.VertexTileDim + 1;
 
-	int count = sideCount * sideCount ;
+	int count = sideCount * sideCount;
 
-	int connSide = sideCount - 1 ;
+	int connSide = sideCount - 1;
 
 	if( tile->ConFlags )
-		count += connSide * 4 ;
+		count += connSide * 4;
 
-	r3d_assert( count < m_DynamicVertexBuffer->GetItemCount() ) ;
+	r3d_assert( count < m_DynamicVertexBuffer->GetItemCount() );
 
 	if( m_DynamicVertexBufferPtr + count > m_DynamicVertexBuffer->GetItemCount() )
 	{
-		m_DynamicVertexBufferPtr = 0 ;
+		m_DynamicVertexBufferPtr = 0;
 	}
 	
-	int tileSize = ( 1 << tile->L ) * m_QualitySettings.VertexTileDim ;
-	int step = tileSize / ( m_QualitySettings.VertexTileDim * ( 1 << density ) ) ;
+	int tileSize = ( 1 << tile->L ) * m_QualitySettings.VertexTileDim;
+	int step = tileSize / ( m_QualitySettings.VertexTileDim * ( 1 << density ) );
 
-	r3dDynaTerraVertex* vtx = (r3dDynaTerraVertex*) m_DynamicVertexBuffer->Lock( m_DynamicVertexBufferPtr, count ) ;
+	r3dDynaTerraVertex* vtx = (r3dDynaTerraVertex*) m_DynamicVertexBuffer->Lock( m_DynamicVertexBufferPtr, count );
 
-	int checker = 0 ;
+	int checker = 0;
 
-	for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize ; z <= ze ; z += step )
+	for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize; z <= ze; z += step )
 	{
-		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize ; x <= xe ; x += step, vtx ++, checker ++ )
+		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize; x <= xe; x += step, vtx ++, checker ++ )
 		{
-			int ax = x ;
-			int az = z ;
+			int ax = x;
+			int az = z;
 
 			if( ax >= m_VertexCountX )
-				ax = m_VertexCountX - 1 ;
+				ax = m_VertexCountX - 1;
 
 			if( az >= m_VertexCountZ )
 			{
-				az = m_VertexCountZ - 1 ;
+				az = m_VertexCountZ - 1;
 			}
 
-			vtx->height = m_HeightArr[ az * m_VertexCountX + ax ] ;
+			vtx->height = m_HeightArr[ az * m_VertexCountX + ax ];
 		}
 	}
 
 	if( tile->ConFlags )
 	{
-		int zoffset = tile->Z * tileSize * m_VertexCountX ;
-		int halfStep = step / 2 ;
+		int zoffset = tile->Z * tileSize * m_VertexCountX;
+		int halfStep = step / 2;
 
-		r3d_assert( halfStep ) ;
+		r3d_assert( halfStep );
 
-		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize ; x < xe ; x += step, vtx ++, checker ++ )
+		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize; x < xe; x += step, vtx ++, checker ++ )
 		{
-			vtx->height = m_HeightArr[ zoffset + x + halfStep ] ;
+			vtx->height = m_HeightArr[ zoffset + x + halfStep ];
 		}
 
-		int z_plus = ( tile->Z + 1 ) * tileSize ;
+		int z_plus = ( tile->Z + 1 ) * tileSize;
 
 		if( z_plus >= m_VertexCountZ )
-			z_plus = m_VertexCountZ - 1 ;
+			z_plus = m_VertexCountZ - 1;
 
-		zoffset = z_plus * m_VertexCountX ;
+		zoffset = z_plus * m_VertexCountX;
 
-		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize ; x < xe ; x += step, vtx ++, checker ++ )
+		for( int x = tile->X * tileSize, xe = ( tile->X + 1 ) * tileSize; x < xe; x += step, vtx ++, checker ++ )
 		{
-			vtx->height = m_HeightArr[ zoffset + x + halfStep ] ;
+			vtx->height = m_HeightArr[ zoffset + x + halfStep ];
 		}
 		
-		int xoffset = tile->X * tileSize ; 
-		for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize ; z < ze ; z += step, vtx ++, checker ++ )
+		int xoffset = tile->X * tileSize; 
+		for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize; z < ze; z += step, vtx ++, checker ++ )
 		{
-			vtx->height = m_HeightArr[ ( z + halfStep ) * m_VertexCountX + xoffset ] ;
+			vtx->height = m_HeightArr[ ( z + halfStep ) * m_VertexCountX + xoffset ];
 		}
 
-		xoffset = ( tile->X + 1 ) * tileSize ; 
+		xoffset = ( tile->X + 1 ) * tileSize; 
 
 		if( xoffset >= m_VertexCountX )
-			xoffset = m_VertexCountX - 1 ;
+			xoffset = m_VertexCountX - 1;
 
-		for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize ; z < ze ; z += step, vtx ++, checker ++ )
+		for( int z = tile->Z * tileSize, ze = ( tile->Z + 1 ) * tileSize; z < ze; z += step, vtx ++, checker ++ )
 		{
-			vtx->height = m_HeightArr[ ( z + halfStep ) * m_VertexCountX + xoffset ] ;
+			vtx->height = m_HeightArr[ ( z + halfStep ) * m_VertexCountX + xoffset ];
 		}
 	}
 
-	r3d_assert( count == checker ) ;
+	r3d_assert( count == checker );
 
-	m_DynamicVertexBuffer->Unlock() ;
+	m_DynamicVertexBuffer->Unlock();
 
-	m_DynamicVertexBuffer->Set( 1, m_DynamicVertexBufferPtr ) ;
+	m_DynamicVertexBuffer->Set( 1, m_DynamicVertexBufferPtr );
 
-	m_DynamicVertexBufferPtr += count ;
+	m_DynamicVertexBufferPtr += count;
 }
 
 //------------------------------------------------------------------------
@@ -7532,30 +7742,30 @@ void
 r3dTerrain2::RenderTile( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetTileRenderVSConsts( tile ) ;
+	SetTileRenderVSConsts( tile );
 
-	const AtlasVolume& vol = m_Atlas[ tile->AtlasVolumeID ] ;
+	const AtlasVolume& vol = m_Atlas[ tile->AtlasVolumeID ];
 
-	r3dRenderer->SetTex( vol.Diffuse->Tex, 0 ) ;
-	r3dRenderer->SetTex( vol.Normal->Tex, 1 ) ;
+	r3dRenderer->SetTex( vol.Diffuse->Tex, 0 );
+	r3dRenderer->SetTex( vol.Normal->Tex, 1 );
 
-	int connFlags = tile->ConFlags ;
+	int connFlags = tile->ConFlags;
 
-	int density = m_QualitySettings.TileVertexDensities[ tile->L ] ;
+	int density = m_QualitySettings.TileVertexDensities[ tile->L ];
 
-	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ] ;
-	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ] ;
-	int vertexOffset = m_ConnectionVertexOffsets[ density ] ;
+	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ];
+	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ];
+	int vertexOffset = m_ConnectionVertexOffsets[ density ];
 
 	if( !m_AllowVFetch )
 	{
-		SetDynaBufferFor( tile, density, vertexOffset ) ;
-		vertexOffset = 0 ;
+		SetDynaBufferFor( tile, density, vertexOffset );
+		vertexOffset = 0;
 	}
 
 	r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 	r3dRenderer->Stats.AddNumTerrainTris( primitiveCount );
-	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount ) ;
+	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount );
 #endif
 }
 
@@ -7565,26 +7775,26 @@ void
 r3dTerrain2::EndTileRendering()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dRenderer->RestoreCullMode() ;
+	r3dRenderer->RestoreCullMode();
 	StopUsingTileGeom()	;
 
 #ifndef FINAL_BUILD
 	if( r_terra_wire->GetInt() )
 	{
-		D3D_V( r3dRenderer->SetRenderState( D3DRS_FILLMODE , D3DFILL_SOLID ) ) ;
+		D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_FILLMODE , D3DFILL_SOLID ) );
 	}
 #endif
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) ) ;
-	D3D_V( r3dRenderer->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP ) );
 
 	// restore default max anisotropy
-	r3dSetDefaultMaxAnisotropy() ;
-	r3dSetFiltering( R3D_ANISOTROPIC, 0 ) ;
-	r3dSetFiltering( R3D_ANISOTROPIC, 1 ) ;
+	r3dSetDefaultMaxAnisotropy();
+	r3dSetFiltering( R3D_ANISOTROPIC, 0 );
+	r3dSetFiltering( R3D_ANISOTROPIC, 1 );
 #endif
 }
 
@@ -7594,24 +7804,25 @@ void
 r3dTerrain2::StartShadowRender()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetupTileRenderingVertexStates() ;
+	SetupTileRenderingVertexStates();
 
 	// Vertex Shader
 	{
-		Terrain2VertexShaderId vsid ;
-		vsid.shadowPath = 1 ;
-		vsid.depthPath = 0 ;
-		vsid.vfetchless = !m_AllowVFetch ;
+		Terrain2VertexShaderId vsid;
+		vsid.shadowPath = 1;
+		vsid.depthPath = 0;
+		vsid.vfetchless = !m_AllowVFetch;
+		vsid.recticular_warp = r3dRenderer->ShadowPassType == SPT_ORTHO_WARPED;
 
-		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] ) ;
+		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] );
 	}
 
 	// Pixel Shader
 	{
-		r3dRenderer->SetPixelShader( g_Terrain2ShadowPSId ) ;
+		r3dRenderer->SetPixelShader( g_Terrain2ShadowPSId );
 	}	
 
-	r3dRenderer->SetCullMode( D3DCULL_CW ) ;
+	r3dRenderer->SetCullMode( D3DCULL_CW );
 #endif
 }
 
@@ -7621,19 +7832,25 @@ void
 r3dTerrain2::RenderShadowTile( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetTileRenderVSConsts( tile ) ;
+	SetTileRenderVSConsts( tile );
 
-	int connFlags = tile->ConFlags ;
+	int connFlags = tile->ConFlags;
 
-	int density = m_QualitySettings.TileVertexDensities[ tile->L ] ;
+	int density = m_QualitySettings.TileVertexDensities[ tile->L ];
 
-	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ] ;
-	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ] ;
-	int vertexOffset = m_ConnectionVertexOffsets[ density ] ;
+	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ];
+	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ];
+	int vertexOffset = m_ConnectionVertexOffsets[ density ];
+
+	if( !m_AllowVFetch )
+	{
+		SetDynaBufferFor( tile, density, vertexOffset );
+		vertexOffset = 0;
+	}
 
 	r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 	r3dRenderer->Stats.AddNumTerrainTris( primitiveCount );
-	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount ) ;
+	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount );
 #endif
 }
 
@@ -7643,7 +7860,7 @@ void
 r3dTerrain2::StopShadowRender()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dRenderer->RestoreCullMode() ;
+	r3dRenderer->RestoreCullMode();
 	StopUsingTileGeom()	;
 #endif
 }
@@ -7654,19 +7871,19 @@ void
 r3dTerrain2::StartDepthRender()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetupTileRenderingVertexStates() ;
+	SetupTileRenderingVertexStates();
 
 	// Vertex Shader
 	{
-		Terrain2VertexShaderId vsid ;
-		vsid.shadowPath = 0 ;
-		vsid.depthPath = 1 ;
-		vsid.vfetchless = !m_AllowVFetch ;
+		Terrain2VertexShaderId vsid;
+		vsid.shadowPath = 0;
+		vsid.depthPath = 1;
+		vsid.vfetchless = !m_AllowVFetch;
 
-		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] ) ;
+		r3dRenderer->SetValidVertexShader( g_Terrain2VertexShaderIdMap[ vsid.Id ] );
 	}
 
-	r3dRenderer->SetCullMode( D3DCULL_CCW ) ;
+	r3dRenderer->SetCullMode( D3DCULL_CCW );
 #endif
 }
 
@@ -7676,19 +7893,19 @@ void
 r3dTerrain2::RenderDepthTile( const AllocatedTile* tile )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	SetTileRenderVSConsts( tile ) ;
+	SetTileRenderVSConsts( tile );
 
-	int connFlags = tile->ConFlags ;
+	int connFlags = tile->ConFlags;
 
-	int density = m_QualitySettings.TileVertexDensities[ tile->L ] ;
+	int density = m_QualitySettings.TileVertexDensities[ tile->L ];
 
-	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ] ;
-	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ] ;
-	int vertexOffset = m_ConnectionVertexOffsets[ density ] ;
+	int primitiveCount = m_ConnectionIndexCounts[ density ][ connFlags ];
+	int indexOffset = m_ConnectionIndexOffsets[ density ][ connFlags ];
+	int vertexOffset = m_ConnectionVertexOffsets[ density ];
 
 	r3dRenderer->Stats.AddNumTerrainDraws( 1 );
 	r3dRenderer->Stats.AddNumTerrainTris( primitiveCount );
-	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount ) ;
+	r3dRenderer->DrawIndexed( D3DPT_TRIANGLELIST, vertexOffset, 0, m_TileVertexBuffer->GetItemCount(), indexOffset, primitiveCount );
 #endif
 }
 
@@ -7698,7 +7915,7 @@ void
 r3dTerrain2::StopDepthRender()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	r3dRenderer->RestoreCullMode() ;
+	r3dRenderer->RestoreCullMode();
 	StopUsingTileGeom()	;
 #endif
 }
@@ -7708,8 +7925,8 @@ r3dTerrain2::StopDepthRender()
 void
 r3dTerrain2::GetBaseTileCounts( int* oBaseTileCountX, int* oBaseTileCountZ )
 {
-	*oBaseTileCountX = m_VertexCountX / QualitySettings::MIN_VERTEX_TILE_DIM ;
-	*oBaseTileCountZ = m_VertexCountZ / QualitySettings::MIN_VERTEX_TILE_DIM ;
+	*oBaseTileCountX = m_VertexCountX / QualitySettings::MIN_VERTEX_TILE_DIM;
+	*oBaseTileCountZ = m_VertexCountZ / QualitySettings::MIN_VERTEX_TILE_DIM;
 }
 
 //------------------------------------------------------------------------
@@ -7717,8 +7934,8 @@ r3dTerrain2::GetBaseTileCounts( int* oBaseTileCountX, int* oBaseTileCountZ )
 void
 r3dTerrain2::GetBaseTileCounts_101( int* oBaseTileCountX, int* oBaseTileCountZ )
 {
-	*oBaseTileCountX = m_VertexCountX / QualitySettings::MIN_VERTEX_TILE_DIM_V101 ;
-	*oBaseTileCountZ = m_VertexCountZ / QualitySettings::MIN_VERTEX_TILE_DIM_V101 ;
+	*oBaseTileCountX = m_VertexCountX / QualitySettings::MIN_VERTEX_TILE_DIM_V101;
+	*oBaseTileCountZ = m_VertexCountZ / QualitySettings::MIN_VERTEX_TILE_DIM_V101;
 }
 
 //------------------------------------------------------------------------
@@ -7727,17 +7944,17 @@ void
 r3dTerrain2::FreeAtlasTiles()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	for( int i = 0, e = (int)m_AllocTileLodArray.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_AllocTileLodArray.Count(); i < e; i ++ )
 	{
-		AllocatedTileArr& arr = m_AllocTileLodArray[ i ] ;
+		AllocatedTileArr& arr = m_AllocTileLodArray[ i ];
 
-		for( int i = 0, e = (int)arr.Count() ; i < e ; i ++ )
+		for( int i = 0, e = (int)arr.Count(); i < e; i ++ )
 		{
-			AllocatedTile& tile = arr[ i ] ;
+			AllocatedTile& tile = arr[ i ];
 
 			if( tile.AtlasVolumeID >= 0 )
 			{
-				FreeAtlasTile( &tile ) ;
+				FreeAtlasTile( &tile );
 			}
 		}
 	}
@@ -7750,12 +7967,12 @@ void
 r3dTerrain2::RemoveAllocatedTiles()
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	m_TilesToUpdate.Clear() ;
-	FreeAtlasTiles() ;
+	m_TilesToUpdate.Clear();
+	FreeAtlasTiles();
 
-	for( int i = 0, e = (int)m_AllocTileLodArray.Count() ; i < e ; i ++ )
+	for( int i = 0, e = (int)m_AllocTileLodArray.Count(); i < e; i ++ )
 	{
-		m_AllocTileLodArray[ i ].Clear() ;
+		m_AllocTileLodArray[ i ].Clear();
 	}
 #endif
 }
@@ -7766,28 +7983,25 @@ void
 r3dTerrain2::DoUpdateDominantLayerData( int baseWidth, int baseHeight )
 {
 #if R3D_TERRAIN_V2_GRAPHICS
-	Floats2D maxMaskValues ;
 
-	r3d_assert( !m_LayerChannels.Count() || m_LayerChannels[ 0 ].Count() == baseWidth * baseHeight ) ;
+	r3d_assert( !m_LayerChannels.Count() || m_LayerChannels[ 0 ].Count() == baseWidth * baseHeight );
 
-	m_DominantLayerData.Clear() ;
-	m_DominantLayerData.Resize( baseWidth, baseHeight, 0 ) ;
-	maxMaskValues.Resize( baseWidth, baseHeight, 0 ) ;
+	m_DominantLayerData.Clear();
+	m_DominantLayerData.Resize( baseWidth, baseHeight, 0 );
 
-	for( int L = 0, e = m_LayerChannels.Count() ; L < e ; L ++ )
+	for( int L = 0, e = m_LayerChannels.Count(); L < e; L ++ )
 	{
-		const LayerChannel& channel = m_LayerChannels[ L ] ;
+		const LayerChannel& channel = m_LayerChannels[ L ];
 
-		for( int z = 0, e = baseHeight ; z < e ; z ++ )
+		for( int z = 0, e = baseHeight; z < e; z ++ )
 		{
-			for( int x = 0, e = baseWidth ; x < e ; x ++ )
+			for( int x = 0, e = baseWidth; x < e; x ++ )
 			{
-				float val = channel[ x + z * baseWidth ] ;
-				if( val > maxMaskValues[ z ][ x ] )
+				float val = channel[ x + z * baseWidth ];
+				if( val > 127 )
 				{
-					maxMaskValues[ z ][ x ] = val ;
 					// 0 is base layer
-					m_DominantLayerData[ z ][ x ] = L + 1 ;
+					m_DominantLayerData[ z ][ x ] = L + 1;
 				}
 			}
 		}
@@ -7797,7 +8011,7 @@ r3dTerrain2::DoUpdateDominantLayerData( int baseWidth, int baseHeight )
 
 //------------------------------------------------------------------------
 
-static r3dTerrain2::QualitySettings g_EmptyQS ;
+static r3dTerrain2::QualitySettings g_EmptyQS;
 
 const r3dTerrain2::QualitySettings&
 r3dTerrain2::SelectQualitySettings()
@@ -7805,15 +8019,15 @@ r3dTerrain2::SelectQualitySettings()
 	switch( r_terrain_quality->GetInt() )
 	{
 	case 1:
-		return m_BaseQualitySettings[ QS_LOW ] ;
+		return m_BaseQualitySettings[ QS_LOW ];
 	case 2:
-		return m_BaseQualitySettings[ QS_MED ] ;
+		return m_BaseQualitySettings[ QS_MED ];
 	case 3:
-		return m_BaseQualitySettings[ QS_HIGH ] ;
+		return m_BaseQualitySettings[ QS_HIGH ];
 	}
 
-	r3dError( "r3dTerrain2::SelectQualitySettings: quality settings out of range!" ) ;
-	return g_EmptyQS ;
+	r3dError( "r3dTerrain2::SelectQualitySettings: quality settings out of range!" );
+	return g_EmptyQS;
 }
 
 //------------------------------------------------------------------------
@@ -7821,30 +8035,30 @@ r3dTerrain2::SelectQualitySettings()
 void
 r3dTerrain2::PopulateInferiorQualitySettings()
 {	
-	m_BaseQualitySettings[ QS_MED ] = m_BaseQualitySettings[ QS_HIGH ] ;
-	m_BaseQualitySettings[ QS_LOW ] = m_BaseQualitySettings[ QS_HIGH ] ;
+	m_BaseQualitySettings[ QS_MED ] = m_BaseQualitySettings[ QS_HIGH ];
+	m_BaseQualitySettings[ QS_LOW ] = m_BaseQualitySettings[ QS_HIGH ];
 
 	// Low QS
 	{
-		QualitySettings& newQS = m_BaseQualitySettings[ QS_LOW ] ;
+		QualitySettings& newQS = m_BaseQualitySettings[ QS_LOW ];
 
-		newQS.VertexTileDim *= 2 ;
-		newQS.AtlasTileDim /= 4 ;
+		newQS.VertexTileDim *= 2;
+		newQS.AtlasTileDim /= 4;
 
-		for( int i = 0,  e = NUM_QUALITY_LAYERS ; i < e ; i ++ )
+		for( int i = 0,  e = NUM_QUALITY_LAYERS; i < e; i ++ )
 		{
-			newQS.TileDistances[ i ] /= 2 ;
+			newQS.TileDistances[ i ] /= 2;
 		}
 
-		newQS.VertexDensity /= 4 ;
+		newQS.VertexDensity /= 4;
 	}
 
 	// Med QS
 	{
-		QualitySettings& newQS = m_BaseQualitySettings[ QS_MED ] ;
+		QualitySettings& newQS = m_BaseQualitySettings[ QS_MED ];
 
-		newQS.VertexDensity /= 2 ;
-		newQS.AtlasTileDim /= 2 ;
+		newQS.VertexDensity /= 2;
+		newQS.AtlasTileDim /= 2;
 	}
 }
 
@@ -7854,14 +8068,14 @@ void r3dTerrain2::UpdateEditor()
 {
 	if( g_bEditMode )
 	{
-		float newTime = r3dGetTime() ;
-		float dt = newTime - gSaveCountDownLastTime ;
+		float newTime = r3dGetTime();
+		float dt = newTime - gSaveCountDownLastTime;
 
-		gSaveCountDownLastTime = newTime ;
+		gSaveCountDownLastTime = newTime;
 
 		if( !HasTextureReloadListener( TerraTextureReloadListener ) )
 		{
-			gSaveCountDown -= dt ;
+			gSaveCountDown -= dt;
 			if( gSaveCountDown <= 0 )
 				AddTextureReloadListener( TerraTextureReloadListener );
 		}
@@ -7872,39 +8086,41 @@ void r3dTerrain2::UpdateEditor()
 
 struct LoadTextureParams
 {
-	r3dTexture** tex ;
-	int desiredWidth ;
-	int desiredHeight ;
-	D3DFORMAT desiredFmt ;
+	r3dTexture** tex;
+	int desiredWidth;
+	int desiredHeight;
+	D3DFORMAT desiredFmt;
 };
 
 void LoadTexInMainThread( void* vparams )
 {
-	LoadTextureParams* params = static_cast<LoadTextureParams*> ( vparams ) ;
+	LoadTextureParams* params = static_cast<LoadTextureParams*> ( vparams );
 
-	ID3DXBuffer * buffer( NULL ) ;
+	ID3DXBuffer * buffer( NULL );
 
-	D3D_V( D3DXSaveTextureToFileInMemory( &buffer, D3DXIFF_DDS, (*params->tex)->AsTex2D(), NULL ) ) ;
+	D3D_V( D3DXSaveTextureToFileInMemory( &buffer, D3DXIFF_DDS, (*params->tex)->AsTex2D(), NULL ) );
 
-	r3dRenderer->DeleteTexture( *params->tex ) ;
-	*params->tex = NULL ;
+	r3dRenderer->DeleteTexture( *params->tex );
+	*params->tex = NULL;
 
 
-	r3dD3DTextureTunnel tunnel ;
+	r3dD3DTextureTunnel tunnel;
 
+	// NOTE : for game, we use system mem - because we only need it to lock & merge with terrain normals.
+	// for editor, we use managed - to be able to lock & read + to be able to display it in UI...
 	r3dDeviceTunnel::D3DXCreateTextureFromFileInMemoryEx( 
 							buffer->GetBufferPointer(), 
 								buffer->GetBufferSize(), 
 									params->desiredWidth, 
 										params->desiredHeight,
-											1, 0, params->desiredFmt, D3DPOOL_MANAGED, D3DX_FILTER_LINEAR, D3DX_FILTER_NONE, 
-												0, 0, 0, &tunnel, "Terrain2NormalDetail" ) ;
+											1, 0, params->desiredFmt, g_bEditMode ? D3DPOOL_MANAGED : D3DPOOL_SYSTEMMEM, D3DX_FILTER_LINEAR, D3DX_FILTER_NONE, 
+												0, 0, 0, &tunnel, "Terrain2NormalDetail" );
 
-	*params->tex = r3dRenderer->AllocateTexture() ;
+	*params->tex = r3dRenderer->AllocateTexture();
 
-	(**params->tex).Setup( params->desiredWidth, params->desiredHeight, 1, params->desiredFmt, 1, &tunnel, false ) ;
+	(**params->tex).Setup( params->desiredWidth, params->desiredHeight, 1, params->desiredFmt, 1, &tunnel, false );
 
-	SAFE_RELEASE( buffer ) ;
+	SAFE_RELEASE( buffer );
 
 }
 
@@ -7912,27 +8128,27 @@ void r3dTerrain2::LoadDetailNormalTex()
 {
 	if( m_DetailNormalTex )
 	{
-		r3dRenderer->DeleteTexture( m_DetailNormalTex ) ;
-		m_DetailNormalTex = NULL ;
+		r3dRenderer->DeleteTexture( m_DetailNormalTex );
+		m_DetailNormalTex = NULL;
 	}
 
 	if( r3dFileExists( m_DetailNormalTexSrc.c_str() ) )
 	{
-		m_DetailNormalTex = r3dRenderer->LoadTexture( m_DetailNormalTexSrc.c_str(), D3DFMT_R5G6B5 ) ;
+		m_DetailNormalTex = r3dRenderer->LoadTexture( m_DetailNormalTexSrc.c_str(), D3DFMT_R5G6B5 );
 
 		if( m_DetailNormalTex->GetWidth() != m_VertexCountX * m_NormalDensity
 				||
 			m_DetailNormalTex->GetHeight() != m_VertexCountZ * m_NormalDensity
 				)
 		{
-			LoadTextureParams params ;
+			LoadTextureParams params;
 
-			params.desiredWidth = m_VertexCountX * m_NormalDensity ;
-			params.desiredHeight = m_VertexCountZ * m_NormalDensity ;
-			params.desiredFmt = D3DFMT_R5G6B5 ;
-			params.tex = &m_DetailNormalTex ;
+			params.desiredWidth = m_VertexCountX * m_NormalDensity;
+			params.desiredHeight = m_VertexCountZ * m_NormalDensity;
+			params.desiredFmt = D3DFMT_R5G6B5;
+			params.tex = &m_DetailNormalTex;
 
-			ProcessCustomDeviceQueueItem( LoadTexInMainThread, &params ) ;
+			ProcessCustomDeviceQueueItem( LoadTexInMainThread, &params );
 		}
 	}
 
@@ -7948,14 +8164,14 @@ r3dTerrain2::ConformNormalTex()
 		m_NormalTex->GetHeight() != m_VertexCountZ * m_NormalDensity
 		)
 	{
-		LoadTextureParams params ;
+		LoadTextureParams params;
 
-		params.desiredWidth = m_VertexCountX * m_NormalDensity ;
-		params.desiredHeight = m_VertexCountZ * m_NormalDensity ;
-		params.desiredFmt = D3DFMT_R5G6B5 ;
-		params.tex = &m_NormalTex ;
+		params.desiredWidth = m_VertexCountX * m_NormalDensity;
+		params.desiredHeight = m_VertexCountZ * m_NormalDensity;
+		params.desiredFmt = D3DFMT_R5G6B5;
+		params.tex = &m_NormalTex;
 
-		ProcessCustomDeviceQueueItem( LoadTexInMainThread, &params ) ;
+		ProcessCustomDeviceQueueItem( LoadTexInMainThread, &params );
 	}
 }
 
@@ -7969,71 +8185,71 @@ r3dTerrain2* Terrain2;
 
 static int CountConnectionIndices( int vertexTileDim, int sideLodConnections )
 {
-	int total ;
+	int total;
 
 	if( vertexTileDim == 1 )
 	{
 		switch( sideLodConnections )
 		{
 		case 0: 
-			total = 2 ;
-			break ;
+			total = 2;
+			break;
 		case NORTH_CONNECTION:
 		case EAST_CONNECTION:
 		case SOUTH_CONNECTION:
 		case WEST_CONNECTION:
-			total = 3 ;
-			break ;
+			total = 3;
+			break;
 		case NORTH_CONNECTION | EAST_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 		case NORTH_CONNECTION | SOUTH_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 		case EAST_CONNECTION | SOUTH_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 		case NORTH_CONNECTION | EAST_CONNECTION | SOUTH_CONNECTION:
-			total = 5 ;
-			break ;
+			total = 5;
+			break;
 		case NORTH_CONNECTION | WEST_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 
 		case EAST_CONNECTION | WEST_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION | WEST_CONNECTION:
-			total = 5 ;
-			break ;
+			total = 5;
+			break;
 
 		case SOUTH_CONNECTION | WEST_CONNECTION:
-			total = 4 ;
-			break ;
+			total = 4;
+			break;
 
 		case NORTH_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
-			total = 5 ;
-			break ;
+			total = 5;
+			break;
 
 		case EAST_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
-			total = 5 ;
-			break ;
+			total = 5;
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
-			total = 6 ;
-			break ;
+			total = 6;
+			break;
 
 		default:
-			total = 2 ;
-			break ;
+			total = 2;
+			break;
 		}
 	}
 	else
 	{
 		total = ( vertexTileDim - 2 ) * ( vertexTileDim - 2 ) * 2;
 
-		int ratio = 2 ;
+		int ratio = 2;
 
 		int connectCount = ratio * 2 + ( ratio + 1 ) * ( vertexTileDim - 2 );
 		int looseCount = ( vertexTileDim - 2 ) * 2 + 2;
@@ -8058,341 +8274,341 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 {
 	uint16_t* start = target;
 
-	const int CELL_VERT_SIZE = vertexTileDim + 1 ;
+	const int CELL_VERT_SIZE = vertexTileDim + 1;
 
-	const int TO_NEXT_LINE	= CELL_VERT_SIZE ;
+	const int TO_NEXT_LINE	= CELL_VERT_SIZE;
 
-	int northVertStart	= ( vertexTileDim + 1 ) * ( vertexTileDim + 1 ) ;
-	int southVertStart	= northVertStart	+ vertexTileDim ;
-	int westVertStart	= southVertStart	+ vertexTileDim ;
-	int eastVertStart	= westVertStart		+ vertexTileDim ;
+	int northVertStart	= ( vertexTileDim + 1 ) * ( vertexTileDim + 1 );
+	int southVertStart	= northVertStart	+ vertexTileDim;
+	int westVertStart	= southVertStart	+ vertexTileDim;
+	int eastVertStart	= westVertStart		+ vertexTileDim;
 
 	if( vertexTileDim == 1 )
 	{
-		int vidx = 0 ;
+		int vidx = 0;
 
 		switch( sideLodConnections )
 		{
 		case 0:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+
+			break;
 
 		case NORTH_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
-			break ;
+
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+			break;
 
 		case EAST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = eastVertStart ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = eastVertStart;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
-			break ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = eastVertStart ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = eastVertStart;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		case SOUTH_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+
+			break;
 
 		case NORTH_CONNECTION | SOUTH_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
-			break ;
+
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+			break;
 
 		case EAST_CONNECTION | SOUTH_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
 			*target ++ = vidx + 1;
-			*target ++ = southVertStart ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = eastVertStart;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION | SOUTH_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
 			*target ++ = vidx + 1;
-			*target ++ = southVertStart ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = eastVertStart;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		case WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + 1 ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
 			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = vidx + 1;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
+
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+
+			break;
 
 		case NORTH_CONNECTION | WEST_CONNECTION :
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
 			*target ++ = vidx + 1;
-			break ;
+			break;
 
 		case EAST_CONNECTION | WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = vidx + 1;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = eastVertStart ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = eastVertStart;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION | WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = eastVertStart ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = eastVertStart;
+			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		case SOUTH_CONNECTION | WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + 1 ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
 			*target ++ = vidx + 1;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + 1;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
+
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+
+			break;
 
 		case NORTH_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
 			*target ++ = vidx + 1;
 
-			break ;
+			break;
 
 		case EAST_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
 
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + 1 ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
 			*target ++ = vidx + 1;
 
 			*target ++ = vidx + 1;
-			*target ++ = southVertStart ;
-			*target ++ = eastVertStart ;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
+			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = vidx + 1;
+			*target ++ = southVertStart;
+			*target ++ = eastVertStart;
+
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
+
+			break;
 
 		case NORTH_CONNECTION | EAST_CONNECTION | SOUTH_CONNECTION | WEST_CONNECTION:
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
-			*target ++ = northVertStart ;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
+			*target ++ = northVertStart;
 
-			*target ++ = northVertStart ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = westVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = northVertStart;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart;
 			*target ++ = vidx + 1;
 
 			*target ++ = vidx + 1;
-			*target ++ = southVertStart ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = eastVertStart;
 
-			*target ++ = southVertStart ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
-			*target ++ = eastVertStart ;
+			*target ++ = southVertStart;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = eastVertStart;
 
-			break ;
+			break;
 
 		default:
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
-
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
 			*target ++ = vidx + 1;
 
-			break ;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
+			*target ++ = vidx + 1;
+
+			break;
 		}
 	}
 	else
 	{
-		bool NorthAndWest		= sideLodConnections & NORTH_CONNECTION && sideLodConnections & WEST_CONNECTION ;
-		bool NotNorthAndNotWest	= !(sideLodConnections & NORTH_CONNECTION) && !(sideLodConnections & WEST_CONNECTION) ;
+		bool NorthAndWest		= sideLodConnections & NORTH_CONNECTION && sideLodConnections & WEST_CONNECTION;
+		bool NotNorthAndNotWest	= !(sideLodConnections & NORTH_CONNECTION) && !(sideLodConnections & WEST_CONNECTION);
 
-		bool SouthAndEast		= sideLodConnections & SOUTH_CONNECTION && sideLodConnections & EAST_CONNECTION ;
-		bool NotSouthAndNotEast	= !(sideLodConnections & SOUTH_CONNECTION) && !(sideLodConnections & EAST_CONNECTION) ;
+		bool SouthAndEast		= sideLodConnections & SOUTH_CONNECTION && sideLodConnections & EAST_CONNECTION;
+		bool NotSouthAndNotEast	= !(sideLodConnections & SOUTH_CONNECTION) && !(sideLodConnections & EAST_CONNECTION);
 
 		// inside
 		{
@@ -8402,16 +8618,16 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 			{
 				for( uint32_t j = 1, e = vertexTileDim - 1; j < e; j += 1, vidx += 1 )
 				{
-					*target ++ = vidx ;
-					*target ++ = vidx + TO_NEXT_LINE ;
-					*target ++ = vidx + 1 ;
+					*target ++ = vidx;
+					*target ++ = vidx + TO_NEXT_LINE;
+					*target ++ = vidx + 1;
 
-					*target ++ = vidx + TO_NEXT_LINE ;
-					*target ++ = vidx + TO_NEXT_LINE + 1 ;
+					*target ++ = vidx + TO_NEXT_LINE;
+					*target ++ = vidx + TO_NEXT_LINE + 1;
 					*target ++ = vidx + 1;
 				}
 
-				vidx += 3 ;
+				vidx += 3;
 			}
 		}
 
@@ -8424,13 +8640,13 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 
 			if( !NorthAndWest )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = northVertStart ;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = northVertStart;
 
-				*target ++ = northVertStart ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + 1 ;
+				*target ++ = northVertStart;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + 1;
 			}
 
 			vidx = 1;
@@ -8438,28 +8654,28 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 			// interior
 			for( int i = 1, e = vertexTileDim - 1; i < e; i ++, vidx ++ )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = northVertStart + i ;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = northVertStart + i;
 
-				*target ++ = northVertStart + i ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + 1 ;
+				*target ++ = northVertStart + i;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + 1;
 
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + TO_NEXT_LINE + 1 ;
+				*target ++ = vidx + 1;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + TO_NEXT_LINE + 1;
 			}
 
 			// exterior 1
 
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = northVertStart + vertexTileDim - 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = northVertStart + vertexTileDim - 1;
 
-			*target ++ = northVertStart + vertexTileDim - 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = northVertStart + vertexTileDim - 1;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 		}
 		else
 		{
@@ -8468,9 +8684,9 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 			// exterior 0
 			if( !NotNorthAndNotWest )
 			{
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + TO_NEXT_LINE + 1 ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + TO_NEXT_LINE + 1;
+				*target ++ = vidx + 1;
 			}
 
 			vidx += 1;
@@ -8478,19 +8694,19 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 			// interior
 			for( int i = 1; i < vertexTileDim - 1; i += 1, vidx += 1 )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + 1;
 
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx + TO_NEXT_LINE + 1 ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx + TO_NEXT_LINE + 1;
+				*target ++ = vidx + 1;
 			}
 
 			// exterior 1
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 		}
 
 		// construct east connection
@@ -8500,151 +8716,151 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 
 			// exterior 0
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = eastVertStart ;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = eastVertStart;
 
-				*target ++ = eastVertStart ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = vidx + TO_NEXT_LINE ;
+				*target ++ = eastVertStart;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = vidx + TO_NEXT_LINE;
 			}
 
 			vidx += TO_NEXT_LINE;
 
 			// interior
-			for( int i = 1, e = vertexTileDim - 1 ; i < e; i += 1, vidx += TO_NEXT_LINE )
+			for( int i = 1, e = vertexTileDim - 1; i < e; i += 1, vidx += TO_NEXT_LINE )
 			{
-				*target ++ = vidx - 1 ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = vidx ;
+				*target ++ = vidx - 1;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = vidx;
 
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = eastVertStart + i ;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = eastVertStart + i;
 
-				*target ++ = eastVertStart + i ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = vidx + TO_NEXT_LINE ;
+				*target ++ = eastVertStart + i;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = vidx + TO_NEXT_LINE;
 			}
 
 			// exterior 1
 
 			if( !SouthAndEast )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx - 1 + TO_NEXT_LINE ;
-				*target ++ = eastVertStart + vertexTileDim - 1 ;
+				*target ++ = vidx;
+				*target ++ = vidx - 1 + TO_NEXT_LINE;
+				*target ++ = eastVertStart + vertexTileDim - 1;
 
-				*target ++ = eastVertStart + vertexTileDim - 1 ;
-				*target ++ = vidx - 1 + TO_NEXT_LINE ;
-				*target ++ = vidx + TO_NEXT_LINE ;
+				*target ++ = eastVertStart + vertexTileDim - 1;
+				*target ++ = vidx - 1 + TO_NEXT_LINE;
+				*target ++ = vidx + TO_NEXT_LINE;
 			}
 		}
 		else
 		{
 			int vidx = CELL_VERT_SIZE - 1;
 
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE - 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE - 1;
+			*target ++ = vidx + TO_NEXT_LINE;
 
 			vidx += TO_NEXT_LINE;
 
 			// interior
 			for( int i = 1; i < vertexTileDim - 1; i ++, vidx += TO_NEXT_LINE )
 			{
-				*target ++ = vidx - 1 ;
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = vidx ;
+				*target ++ = vidx - 1;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = vidx;
 
-				*target ++ = vidx + TO_NEXT_LINE - 1 ;
-				*target ++ = vidx + TO_NEXT_LINE ;
-				*target ++ = vidx ;
+				*target ++ = vidx + TO_NEXT_LINE - 1;
+				*target ++ = vidx + TO_NEXT_LINE;
+				*target ++ = vidx;
 			}
 
-			*target ++ = vidx - 1 ;
-			*target ++ = vidx + TO_NEXT_LINE - 1 ;
-			*target ++ = vidx ;		
+			*target ++ = vidx - 1;
+			*target ++ = vidx + TO_NEXT_LINE - 1;
+			*target ++ = vidx;		
 		}
 
 
 		// construct south connection
 		if( sideLodConnections & SOUTH_CONNECTION )
 		{
-			int vidx = vertexTileDim * CELL_VERT_SIZE ;
+			int vidx = vertexTileDim * CELL_VERT_SIZE;
 
 			// exterior 0
 			{
-				*target ++ = vidx  ;
-				*target ++ = southVertStart ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = vidx ;
+				*target ++ = southVertStart;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 
-				*target ++ = southVertStart ;
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = southVertStart;
+				*target ++ = vidx + 1;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 			}
 
-			vidx += 1 ;
+			vidx += 1;
 
 			// interior
 			for( int i = 1, e = vertexTileDim - 1; i < e; i ++, vidx ++ )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE ;
+				*target ++ = vidx;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
+				*target ++ = vidx - TO_NEXT_LINE;
 
-				*target ++ = vidx ;
-				*target ++ = southVertStart + i ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = vidx;
+				*target ++ = southVertStart + i;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 
-				*target ++ = southVertStart + i ;
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = southVertStart + i;
+				*target ++ = vidx + 1;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 			}
 
 			// exterior 1
 
 			if( !SouthAndEast ) 
 			{
-				*target ++ = southVertStart + CELL_VERT_SIZE - 2 ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
-				*target ++ = vidx ;
+				*target ++ = southVertStart + CELL_VERT_SIZE - 2;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
+				*target ++ = vidx;
 
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
-				*target ++ = southVertStart + CELL_VERT_SIZE - 2 ;
+				*target ++ = vidx + 1;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
+				*target ++ = southVertStart + CELL_VERT_SIZE - 2;
 			}
 		}
 		else
 		{
-			int vidx = vertexTileDim * CELL_VERT_SIZE ;
+			int vidx = vertexTileDim * CELL_VERT_SIZE;
 
 			// exterior 0
-			*target ++ = vidx ;
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx - TO_NEXT_LINE + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + 1;
+			*target ++ = vidx - TO_NEXT_LINE + 1;
 
-			vidx += 1 ;
+			vidx += 1;
 
 			// interior
 			for( int i = 1; i < vertexTileDim - 1; i ++, vidx ++ )
 			{
-				*target ++ = vidx ;
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = vidx;
+				*target ++ = vidx + 1;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 
-				*target ++ = vidx ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
-				*target ++ = vidx - TO_NEXT_LINE ;
+				*target ++ = vidx;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
+				*target ++ = vidx - TO_NEXT_LINE;
 			}
 
 			// exterior 1
 
 			if( !NotSouthAndNotEast )
 			{
-				*target ++ = vidx - TO_NEXT_LINE ;
-				*target ++ = vidx ;
-				*target ++ = vidx - TO_NEXT_LINE + 1 ;
+				*target ++ = vidx - TO_NEXT_LINE;
+				*target ++ = vidx;
+				*target ++ = vidx - TO_NEXT_LINE + 1;
 			}
 		}
 
@@ -8657,13 +8873,13 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 
 			if( !NorthAndWest )
 			{
-				*target ++ = vidx ;
-				*target ++ = westVertStart ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx;
+				*target ++ = westVertStart;
+				*target ++ = vidx + 1;
 
-				*target ++ = westVertStart ;
-				*target ++ = vidx + CELL_VERT_SIZE ;
-				*target ++ = vidx + 1 ;
+				*target ++ = westVertStart;
+				*target ++ = vidx + CELL_VERT_SIZE;
+				*target ++ = vidx + 1;
 			}
 
 			vidx += TO_NEXT_LINE;
@@ -8671,28 +8887,28 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 			// interior
 			for( int i = 1, e = vertexTileDim - 1; i < e; i ++, vidx += TO_NEXT_LINE )
 			{
-				*target ++ = vidx ;
-				*target ++ = westVertStart + i ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx;
+				*target ++ = westVertStart + i;
+				*target ++ = vidx + 1;
 
-				*target ++ = westVertStart + i ;
-				*target ++ = vidx + CELL_VERT_SIZE  ;
-				*target ++ = vidx + 1 ;
+				*target ++ = westVertStart + i;
+				*target ++ = vidx + CELL_VERT_SIZE ;
+				*target ++ = vidx + 1;
 
 				*target ++ = vidx + 1;
 				*target ++ = vidx + CELL_VERT_SIZE;
-				*target ++ = vidx + TO_NEXT_LINE + 1 ;
+				*target ++ = vidx + TO_NEXT_LINE + 1;
 			}
 
 			// exterior 1
 			{
-				*target ++ = vidx ;
-				*target ++ = westVertStart + CELL_VERT_SIZE - 2 ;
-				*target ++ = vidx + 1 ;
+				*target ++ = vidx;
+				*target ++ = westVertStart + CELL_VERT_SIZE - 2;
+				*target ++ = vidx + 1;
 
-				*target ++ = westVertStart + CELL_VERT_SIZE - 2 ; ;
-				*target ++ = vidx + CELL_VERT_SIZE ;
-				*target ++ = vidx + 1 ;
+				*target ++ = westVertStart + CELL_VERT_SIZE - 2;;
+				*target ++ = vidx + CELL_VERT_SIZE;
+				*target ++ = vidx + 1;
 			}
 
 		}
@@ -8700,87 +8916,87 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 		{
 			int vidx = 0;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
 
 			vidx += TO_NEXT_LINE;
 
 			// interior
 			for( int i = 1; i < vertexTileDim - 1; i ++, vidx += TO_NEXT_LINE )
 			{
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx ;
-				*target ++ = vidx + TO_NEXT_LINE ;
+				*target ++ = vidx + 1;
+				*target ++ = vidx;
+				*target ++ = vidx + TO_NEXT_LINE;
 
-				*target ++ = vidx + TO_NEXT_LINE + 1 ;
-				*target ++ = vidx + 1 ;
-				*target ++ = vidx + TO_NEXT_LINE ;
+				*target ++ = vidx + TO_NEXT_LINE + 1;
+				*target ++ = vidx + 1;
+				*target ++ = vidx + TO_NEXT_LINE;
 			}
 
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
 		}
 
 		if( NorthAndWest )
 		{
 			int vidx = 0;
 
-			*target ++ = northVertStart ;
-			*target ++ = vidx ;
-			*target ++ = westVertStart ;
+			*target ++ = northVertStart;
+			*target ++ = vidx;
+			*target ++ = westVertStart;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = northVertStart ;
-			*target ++ = vidx + CELL_VERT_SIZE ;
+			*target ++ = vidx + 1;
+			*target ++ = northVertStart;
+			*target ++ = vidx + CELL_VERT_SIZE;
 
-			*target ++ = northVertStart ;
-			*target ++ = westVertStart ;
-			*target ++ = vidx + CELL_VERT_SIZE ;
+			*target ++ = northVertStart;
+			*target ++ = westVertStart;
+			*target ++ = vidx + CELL_VERT_SIZE;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
 		}
 
 		if( SouthAndEast )
 		{
-			int vidx = ( vertexTileDim - 1 + 1 ) * CELL_VERT_SIZE - 1 - 1 ;
+			int vidx = ( vertexTileDim - 1 + 1 ) * CELL_VERT_SIZE - 1 - 1;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
 
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = southVertStart + CELL_VERT_SIZE - 2 ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = southVertStart + CELL_VERT_SIZE - 2;
 
-			*target ++ = eastVertStart + CELL_VERT_SIZE - 2 ;
-			*target ++ = southVertStart + CELL_VERT_SIZE - 2 ;
-			*target ++ = vidx + TO_NEXT_LINE + 1 ;
+			*target ++ = eastVertStart + CELL_VERT_SIZE - 2;
+			*target ++ = southVertStart + CELL_VERT_SIZE - 2;
+			*target ++ = vidx + TO_NEXT_LINE + 1;
 
-			*target ++ = eastVertStart + CELL_VERT_SIZE - 2 ;
-			*target ++ = vidx + 1 ;
-			*target ++ = southVertStart + CELL_VERT_SIZE - 2 ; ;		
+			*target ++ = eastVertStart + CELL_VERT_SIZE - 2;
+			*target ++ = vidx + 1;
+			*target ++ = southVertStart + CELL_VERT_SIZE - 2;;		
 		}
 
 		if( NotNorthAndNotWest )
 		{
-			int vidx = 0 ;
+			int vidx = 0;
 
-			*target ++ = vidx ;
-			*target ++ = vidx + TO_NEXT_LINE ;
-			*target ++ = vidx + 1 ;
+			*target ++ = vidx;
+			*target ++ = vidx + TO_NEXT_LINE;
+			*target ++ = vidx + 1;
 		}
 
 		if( NotSouthAndNotEast )
 		{
-			int vidx = ( vertexTileDim - 1 + 1 ) * CELL_VERT_SIZE - 1 - 1 ;
+			int vidx = ( vertexTileDim - 1 + 1 ) * CELL_VERT_SIZE - 1 - 1;
 
 			*target ++ = vidx + 1 + TO_NEXT_LINE;
-			*target ++ = vidx + 1 ;
-			*target ++ = vidx + TO_NEXT_LINE ;
+			*target ++ = vidx + 1;
+			*target ++ = vidx + TO_NEXT_LINE;
 		}
 	}
 
@@ -8793,33 +9009,33 @@ static int ConstructConnectionIndices( uint16_t* target, int vertexTileDim, int 
 
 static void FillDecalRect( RECT* oRect, const r3dTerrain2::DecalRecord& drec )
 {
-	r3d_assert( drec.TypeIdx >= 0 ) ;
+	r3d_assert( drec.TypeIdx >= 0 );
 
-	const r3dTerrainDesc& tdesc = Terrain2->GetDesc() ;
+	const r3dTerrainDesc& tdesc = Terrain2->GetDesc();
 
-	const r3dTerrain2::QualitySettings& qsts = Terrain2->GetCurrentQualitySettings() ;
+	const r3dTerrain2::QualitySettings& qsts = Terrain2->GetCurrentQualitySettings();
 
-	const DecalType& type = g_pDecalChief->GetTypeByIdx( drec.TypeIdx ) ;
+	const DecalType& type = g_pDecalChief->GetTypeByIdx( drec.TypeIdx );
 
-	float scaleX = type.ScaleX * drec.Scale ;
-	float scaleZ = ( type.UniformScale ? type.ScaleX : type.ScaleY ) * drec.Scale ;
+	float scaleX = type.ScaleX * drec.Scale;
+	float scaleZ = ( type.UniformScale ? type.ScaleX : type.ScaleY ) * drec.Scale;
 
-	float diagonal = sqrtf( scaleX * scaleX + scaleZ * scaleZ ) ;
+	float diagonal = sqrtf( scaleX * scaleX + scaleZ * scaleZ );
 
-	float startX = drec.X - diagonal * 0.5f ;
-	float startZ = drec.Z - diagonal * 0.5f ;
-	float endX = drec.X + diagonal * 0.5f ;
-	float endZ = drec.Z + diagonal * 0.5f ;
+	float startX = drec.X - diagonal * 0.5f;
+	float startZ = drec.Z - diagonal * 0.5f;
+	float endX = drec.X + diagonal * 0.5f;
+	float endZ = drec.Z + diagonal * 0.5f;
 
-	oRect->left		= LONG( startX / tdesc.CellSize / qsts.VertexTileDim ) ;
-	oRect->right	= LONG( endX / tdesc.CellSize / qsts.VertexTileDim ) ;
-	oRect->top		= LONG( startZ / tdesc.CellSize / qsts.VertexTileDim ) ;
-	oRect->bottom	= LONG( endZ / tdesc.CellSize / qsts.VertexTileDim ) ;
+	oRect->left		= LONG( startX / tdesc.CellSize / qsts.VertexTileDim );
+	oRect->right	= LONG( endX / tdesc.CellSize / qsts.VertexTileDim );
+	oRect->top		= LONG( startZ / tdesc.CellSize / qsts.VertexTileDim );
+	oRect->bottom	= LONG( endZ / tdesc.CellSize / qsts.VertexTileDim );
 
-	oRect->left = R3D_MIN( R3D_MAX( (int)oRect->left, 0 ), tdesc.CellCountX - 1 ) ;
-	oRect->right = R3D_MIN( R3D_MAX( (int)oRect->right, 0 ), tdesc.CellCountX - 1 ) ;
-	oRect->top = R3D_MIN( R3D_MAX( (int)oRect->top, 0 ), tdesc.CellCountZ - 1 ) ;
-	oRect->bottom = R3D_MIN( R3D_MAX( (int)oRect->bottom, 0 ), tdesc.CellCountZ - 1 ) ;	
+	oRect->left = R3D_MIN( R3D_MAX( (int)oRect->left, 0 ), tdesc.CellCountX - 1 );
+	oRect->right = R3D_MIN( R3D_MAX( (int)oRect->right, 0 ), tdesc.CellCountX - 1 );
+	oRect->top = R3D_MIN( R3D_MAX( (int)oRect->top, 0 ), tdesc.CellCountZ - 1 );
+	oRect->bottom = R3D_MIN( R3D_MAX( (int)oRect->bottom, 0 ), tdesc.CellCountZ - 1 );	
 }
 
 
@@ -8827,7 +9043,7 @@ void SwitchTerraFetch()
 {
 	if( Terrain2 )
 	{
-		Terrain2->SwitchVFetchMode() ;
+		Terrain2->SwitchVFetchMode();
 	}
 }
 
@@ -8835,18 +9051,18 @@ static void TerraTextureReloadListener( r3dTexture* tex )
 {
 	if( Terrain2 )
 	{
-		int lc = Terrain2->GetDesc().LayerCount ;
-		int maskCount = lc / r3dTerrain2::LAYERS_PER_MASK ;
+		int lc = Terrain2->GetDesc().LayerCount;
+		int maskCount = lc / r3dTerrain2::LAYERS_PER_MASK;
 
-		for( int i = 0, e = maskCount ; i < e ; i ++ )
+		for( int i = 0, e = maskCount; i < e; i ++ )
 		{
-			r3dTexture* layer = Terrain2->GetLayerMask( i ) ;
+			r3dTexture* layer = Terrain2->GetLayerMask( i );
 
 			if( layer == tex )
 			{
-				Terrain2->EnsureMaskFormat( i ) ;
-				Terrain2->UpdateLayersForMask( i ) ;
-				Terrain2->RefreshAtlasTiles() ;
+				Terrain2->EnsureMaskFormat( i );
+				Terrain2->UpdateLayersForMask( i );
+				Terrain2->RefreshAtlasTiles();
 			}
 		}
 	}

@@ -24,6 +24,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 namespace Scaleform { namespace Platform {
 
+#define  SF_PLATFORM_APP_COLOR_FORMAT           DXGI_FORMAT_R8G8B8A8_UNORM
+#define  SF_PLATFORM_APP_DEPTHSTENCIL_FORMAT    DXGI_FORMAT_D24_UNORM_S8_UINT
+
 class DeviceImpl : public NewOverrideBase<Stat_Default_Mem>
 {
 public:
@@ -31,8 +34,6 @@ public:
     ~DeviceImpl();
 
     DXGI_FORMAT determineFormat(const ViewConfig& config) const;
-    DXGI_FORMAT determineDepthStencilFormat(const ViewConfig& config) const;
-
     void      calcSwapChainParams(DXGI_SWAP_CHAIN_DESC* params, const ViewConfig& config);    
 
     bool adjustFullScreenRes(DXGI_FORMAT format, Size<unsigned>* size);
@@ -40,7 +41,7 @@ public:
 
     bool initGraphics(const ViewConfig& config, Device::Window* window, ThreadId renderThreadId = 0);
 
-    bool createResourceViews(const ViewConfig& config);
+    bool createResourceViews();
     bool destroyResourceViews();
 
     bool createSwapChain(const ViewConfig& config);
@@ -109,100 +110,43 @@ DeviceImpl::~DeviceImpl()
 
 DXGI_FORMAT DeviceImpl::determineFormat(const ViewConfig& config) const
 {    
+    unsigned format = SF_PLATFORM_APP_COLOR_FORMAT;
+
     IDXGIOutput* poutput;
     if ( pDXGIAdapter == 0 || FAILED(pDXGIAdapter->EnumOutputs(0, &poutput)))
-	{
-		SF_DEBUG_WARNING(1, "Could not enumerate output modes. Using DXGI_FORMAT_R8G8B8A8_UNORM.");
-        return DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
+        return (DXGI_FORMAT)format;
     
     // Use 128/64-bit bit depth if requested and supported.
-    static const int MaximumModes = 512;
-    DXGI_MODE_DESC modeDesc[MaximumModes];
+    DXGI_MODE_DESC modeDesc;
     ZeroMemory(&modeDesc, sizeof modeDesc);
     UINT modeCount = 0;
-    unsigned startFormat, endFormat;
-    switch(config.ColorBits)
+    switch(config.BitDepth)
     {
-    default: 
-        SF_DEBUG_WARNING1(1, "Only 32 and 64 bit color buffers are supported (requested %d bits). Using 32bit.", config.ColorBits);
-        // Intentional fallthrough.
-    case -1:
-    case 32:
-        startFormat = DXGI_FORMAT_R8G8B8A8_TYPELESS; 
-        endFormat = DXGI_FORMAT_R8G8B8A8_SINT;
-        break;
     case 64: 
-        startFormat = DXGI_FORMAT_R16G16B16A16_TYPELESS; 
-        endFormat = DXGI_FORMAT_R16G16B16A16_SINT;
-                break;
-        }
-
-    unsigned format;
-    for ( format = startFormat; format <= endFormat; ++format )
-    {
-        HRESULT hr = poutput->GetDisplayModeList((DXGI_FORMAT)format, DXGI_ENUM_MODES_INTERLACED | DXGI_ENUM_MODES_SCALING, &modeCount, 0);
-        if ( SUCCEEDED(hr) && modeCount > 0)
+        for ( format = DXGI_FORMAT_R16G16B16A16_TYPELESS; format <= DXGI_FORMAT_R16G16B16A16_SINT; ++format )
         {
-            SF_DEBUG_ASSERT2(modeCount < MaximumModes, "Exceeded maximum expected display modes for a format (max=%d, actual=%d)", MaximumModes, modeCount);
-            hr = poutput->GetDisplayModeList((DXGI_FORMAT)format, DXGI_ENUM_MODES_INTERLACED | DXGI_ENUM_MODES_SCALING, &modeCount, modeDesc);
+            modeCount = 1;
+            HRESULT hr = poutput->GetDisplayModeList((DXGI_FORMAT)format, DXGI_ENUM_MODES_INTERLACED | DXGI_ENUM_MODES_SCALING, &modeCount, &modeDesc);
             if ( (SUCCEEDED(hr) || hr == DXGI_ERROR_MORE_DATA) && modeCount > 0)
                 break;
         }
+        break;
+    default:
+    case 32:
+        for ( format = DXGI_FORMAT_R8G8B8A8_TYPELESS; format <= DXGI_FORMAT_R8G8B8A8_SINT; ++format )
+        {
+            modeCount = 1;
+            HRESULT hr = poutput->GetDisplayModeList((DXGI_FORMAT)format, DXGI_ENUM_MODES_INTERLACED | DXGI_ENUM_MODES_SCALING, &modeCount, &modeDesc);
+            if ( (SUCCEEDED(hr) || hr == DXGI_ERROR_MORE_DATA) && modeCount > 0)
+                break;
+        }
+        break;
     }
 
     if ( modeCount > 0 )
-	{
-        return modeDesc[0].Format;
-	}
+        return modeDesc.Format;
     else
-	{
-		SF_DEBUG_WARNING(1, "Could find suitable buffer mode. Trying DXGI_FORMAT_R8G8B8A8_UNORM.");
-        return DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
-}
-
-DXGI_FORMAT DeviceImpl::determineDepthStencilFormat(const ViewConfig& config) const
-{
-    unsigned stencilBits = config.StencilBits == 1 ? 8 : config.StencilBits;
-    unsigned depthBits = config.DepthBits == -1 ? 24 : config.DepthBits;
-
-    bool stencilValid = stencilBits == 0 || stencilBits == 8;
-    SF_DEBUG_WARNING1(!stencilValid, "Stencil buffers must be either 0 or 8 bits (requested %d). Using 8-bit stencil.", stencilBits);
-    if (!stencilValid)
-        stencilBits = 8;    
-    bool depthValid = depthBits == 0 || depthBits == 16 || depthBits == 24 || depthBits == 32;
-    SF_DEBUG_WARNING1(!depthValid, "Depth buffers must be either 0, 16, 24 or 32 bits (requested %d). Using 24-bit depth.", depthBits);
-    if (!depthValid)
-        depthBits = 24;
-
-    // Figure out what possible formats we have, based on how many stencil bits are requested.
-    switch(stencilBits)
-    {
-    case 0:
-        switch(depthBits)
-        {
-        case 0:     return DXGI_FORMAT_UNKNOWN;                 // No depth or stencil.
-        case 16:    return DXGI_FORMAT_D16_UNORM;
-        case 24:    SF_DEBUG_WARNING(1, "Requested D24S0, but no matching format exists. Using D24S8.");
-                    return DXGI_FORMAT_D24_UNORM_S8_UINT;
-        case 32:    return DXGI_FORMAT_D32_FLOAT;
-        }
-        break;
-    case 8:
-        switch(depthBits)
-        {
-        case 0:     SF_DEBUG_WARNING(1, "Requested D0S8, but no matching format exists. Using D24S8.");
-                    return DXGI_FORMAT_D24_UNORM_S8_UINT;
-        case 16:    SF_DEBUG_WARNING(1, "Requested D16S8, but no matching format exists. Using D24S8.");
-                    return DXGI_FORMAT_D24_UNORM_S8_UINT;
-        case 24:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
-        case 32:    return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-        }
-        break;
-    }
-    SF_DEBUG_ASSERT(0, "Unhandled combination of depth/stencil bits.");
-    return DXGI_FORMAT_D24_UNORM_S8_UINT;
+        return SF_PLATFORM_APP_COLOR_FORMAT;
 }
 
 void DeviceImpl::calcSwapChainParams(DXGI_SWAP_CHAIN_DESC* params, const ViewConfig& config)
@@ -305,15 +249,11 @@ bool DeviceImpl::initGraphics(const ViewConfig& config, Device::Window* window,
 #endif
 
 #if (SF_D3D_VERSION == 11)
-    static const int maxFeatures = 6;
-    D3D_FEATURE_LEVEL featureLevels[maxFeatures] = 
+    D3D_FEATURE_LEVEL featureLevels[3] = 
     {
         D3D_FEATURE_LEVEL_11_0,
         D3D_FEATURE_LEVEL_10_1,
         D3D_FEATURE_LEVEL_10_0,
-        D3D_FEATURE_LEVEL_9_3,
-        D3D_FEATURE_LEVEL_9_2,
-        D3D_FEATURE_LEVEL_9_1,
     };
 
     // If a software device is requested, use the WARP driver.
@@ -321,23 +261,20 @@ bool DeviceImpl::initGraphics(const ViewConfig& config, Device::Window* window,
     D3D_DRIVER_TYPE driverType = config.HasFlag(View_SoftwareRendering) ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_HARDWARE;
 
     // Create the D3DDevice.
-    if (FAILED(D3D11CreateDevice( 0, driverType, 0, flags, featureLevels, maxFeatures, 
+    if (FAILED(D3D11CreateDevice( 0, driverType, 0, flags, featureLevels, 3, 
         D3D1x(SDK_VERSION), &pDevice, &FeatureLevel, &pDeviceContext ) ))
     {        
         pWindow = 0;
         hWnd = 0;
         return false;
     }
-    SF_DEBUG_MESSAGE1(FeatureLevel != D3D_FEATURE_LEVEL_11_0, "Created D3D11 with a lower feature level (0x%x)\n", FeatureLevel);
+    SF_DEBUG_MESSAGE1(FeatureLevel != D3D_FEATURE_LEVEL_11_0, "Created D3D11 with a lower feature level (0x%x)", FeatureLevel);
 #elif (SF_D3D_VERSION == 10)
-    static const int maxFeatures = 5;
+    static const int maxFeatures = 2;
     D3D10_FEATURE_LEVEL1 featureLevels[maxFeatures] = 
     {
         D3D10_FEATURE_LEVEL_10_1,
         D3D10_FEATURE_LEVEL_10_0,
-        D3D10_FEATURE_LEVEL_9_3,
-        D3D10_FEATURE_LEVEL_9_2,
-        D3D10_FEATURE_LEVEL_9_1,
     };
 
     // If a software device is requested, use the WARP driver.
@@ -360,14 +297,14 @@ bool DeviceImpl::initGraphics(const ViewConfig& config, Device::Window* window,
         hWnd = 0;
         return false;
     }
-    SF_DEBUG_MESSAGE1(featureLevels[bestFeature] != D3D_FEATURE_LEVEL_10_1, "Created D3D10.1 with a lower feature level (0x%x)\n", featureLevels[bestFeature]);
+    SF_DEBUG_MESSAGE1(featureLevels[bestFeature] != D3D_FEATURE_LEVEL_10_1, "Created D3D10.1 with a lower feature level (0x%x)", featureLevels[bestFeature]);
     pDeviceContext = pDevice;
 #endif
 
     if ( !createSwapChain(config) )
         return false;
 
-    if ( !createResourceViews(config))
+    if ( !createResourceViews())
         return false;
 
     unsigned hflags = 0;
@@ -434,7 +371,7 @@ bool DeviceImpl::reconfigureGraphics(const ViewConfig& config)
         }
     }
 
-    if ( !createResourceViews(config))
+    if ( !createResourceViews())
         return false;
     pHal->RestoreAfterReset();
     Status = Device_Ready;
@@ -445,7 +382,7 @@ bool DeviceImpl::reconfigureGraphics(const ViewConfig& config)
     return true;
 }
 
-bool DeviceImpl::createResourceViews(const ViewConfig& config)
+bool DeviceImpl::createResourceViews()
 {
     // Create the views for the backbuffer and depthstencil.
     ID3D1x(Texture2D)* pviewTexture;
@@ -466,12 +403,7 @@ bool DeviceImpl::createResourceViews(const ViewConfig& config)
     dsdesc.Height = bbdesc.Height;
     dsdesc.MipLevels = 1;
     dsdesc.ArraySize = 1;
-
-    dsdesc.Format = determineDepthStencilFormat(config);
-
-    // UNKNOWN == no depth/stencil buffer.
-    if (dsdesc.Format != DXGI_FORMAT_UNKNOWN)
-    {
+    dsdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsdesc.SampleDesc.Count = bbdesc.SampleDesc.Count;
     dsdesc.SampleDesc.Quality = bbdesc.SampleDesc.Quality; 
     dsdesc.Usage = D3D1x(USAGE_DEFAULT);
@@ -482,7 +414,6 @@ bool DeviceImpl::createResourceViews(const ViewConfig& config)
     if ( FAILED(hr) )
         return false;
     pDevice->CreateDepthStencilView(pDepthStencil, 0, &pDepthStencilView.GetRawRef());
-    }
 
     // Set it in the context.
     ID3D1x(RenderTargetView)* prtView = pRenderTargetView.GetPtr();
@@ -506,37 +437,31 @@ bool DeviceImpl::createSwapChain(const ViewConfig& config)
     if (!destroySwapChain())
         return false;
 
+    calcSwapChainParams(&SwapChainDesc, config);
+
     // Can't create the swap chain without a device.
     if ( pDevice == 0 )
         return false;
 
-    // Query everything we can get at this point.
     IDXGIDevice*        pdevice;
     IDXGIFactory*       pfactory;
     IDXGIAdapter*       padapter;
-    if ( FAILED(pDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&pdevice)) ||
-        FAILED(pdevice->GetParent(__uuidof(IDXGIAdapter), (void **)&padapter)) ||
-        FAILED(padapter->GetParent(__uuidof(IDXGIFactory), (void **)&pfactory)))
-    {
-        return false;
-    }
-    pDXGIDevice = pdevice;
-    pDXGIFactory = pfactory;
-    pDXGIAdapter = padapter;
-    calcSwapChainParams(&SwapChainDesc, config);
-
     Ptr<IDXGISwapChain> pswapChain;
 
-    if (FAILED(pfactory->CreateSwapChain(pdevice, &SwapChainDesc, &pswapChain.GetRawRef())))
+    if ( FAILED(pDevice->QueryInterface(__uuidof(IDXGIDevice), (void **)&pdevice)) ||
+         FAILED(pdevice->GetParent(__uuidof(IDXGIAdapter), (void **)&padapter)) ||
+         FAILED(padapter->GetParent(__uuidof(IDXGIFactory), (void **)&pfactory)) ||
+         FAILED(pfactory->CreateSwapChain(pdevice, &SwapChainDesc, &pswapChain.GetRawRef())))
     {
-        pDXGIDevice = 0;
-        pDXGIFactory = 0;
-        pDXGIAdapter = 0;
         return false;
     }
 
     // Disable DXGI automatic Alt-Enter to enter fullscreen. Use Alt+U instead.
     pfactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES);
+
+    pDXGIDevice = pdevice;
+    pDXGIFactory = pfactory;
+    pDXGIAdapter = padapter;
     pDXGISwapChain = pswapChain;
 
     FSAAEnabled = config.HasFlag(View_FSAA);
@@ -602,7 +527,6 @@ Device::Device(Render::ThreadCommandQueue *commandQueue)
 {
     pImpl = SF_NEW DeviceImpl(commandQueue);
 }
-
 Device::~Device()
 {
     delete pImpl;
@@ -629,8 +553,6 @@ bool Device::GraphicsConfigOnMainThread() const
     return true;
 }
 
-void Device::ResizeFrame(void*) { }
-    
 bool Device::AdjustViewConfig(ViewConfig* config)
 {
     return pImpl->adjustViewConfig(config);

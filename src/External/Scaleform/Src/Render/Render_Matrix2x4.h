@@ -130,8 +130,6 @@ class Matrix2x4 : public Matrix2x4Data<T>
 
     // Set the matrix to the identity matrix
     SF_EXPORT void     SetIdentity();
-    // Set the matrix to all zero components
-    SF_EXPORT void     SetZero();
 
     // Copy matrix to float rows[2][4]
     inline void        GetAsFloat2x4(float (*rows)[4]) const;
@@ -294,7 +292,18 @@ class Matrix2x4 : public Matrix2x4Data<T>
     // Matrix equality
     inline friend bool                operator == (const Matrix2x4 &m1, const Matrix2x4 &m2)
 	{
+#if 0
+        return  (m1.M[0][0] == m2.M[0][0]) && 
+			    (m1.M[0][1] == m2.M[0][1]) && 
+			    (m1.M[0][2] == m2.M[0][2]) && 
+                (m1.M[0][3] == m2.M[0][3]) && 
+			    (m1.M[1][0] == m2.M[1][0]) && 
+			    (m1.M[1][1] == m2.M[1][1]) && 
+			    (m1.M[1][2] == m2.M[1][2]) &&
+                (m1.M[1][3] == m2.M[1][3]);
+#else
         return memcmp(m1.M, m2.M, sizeof(Matrix2x4<T>)) == 0;
+#endif
 	}
     inline friend bool                operator != (const Matrix2x4 &m1, const Matrix2x4 &m2)
 	{
@@ -386,7 +395,7 @@ inline Matrix2x4<T>::Matrix2x4()
 }
 
 template<typename T>
-inline Matrix2x4<T>::Matrix2x4(const Matrix2x4<T> &m)
+inline Matrix2x4<T>::Matrix2x4(const Matrix2x4 &m)
 {
     SetMatrix(m);
 }
@@ -410,7 +419,7 @@ inline Matrix2x4<T>::Matrix2x4(T v0, T v1, T v2, T v3, T v4, T v5)
 }
 
 template<typename T>
-inline void    Matrix2x4<T>::SetMatrix(const Matrix2x4<T> &m)
+inline void    Matrix2x4<T>::SetMatrix(const Matrix2x4 &m)
 {
     M[0][0] = m.M[0][0];
     M[0][1] = m.M[0][1];
@@ -725,20 +734,6 @@ void    Matrix2x4<T>::SetIdentity()
     M[0][3] = 0.0f;
     M[1][0] = 0.0f;
     M[1][1] = 1.0f;
-    M[1][2] = 0.0f;
-    M[1][3] = 0.0f;
-}
-
-// Set the Matrix2x4 to identity.
-template<typename T>
-void Matrix2x4<T>::SetZero()
-{
-    M[0][0] = 0.0f;
-    M[0][1] = 0.0f;
-    M[0][2] = 0.0f;
-    M[0][3] = 0.0f;
-    M[1][0] = 0.0f;
-    M[1][1] = 0.0f;
     M[1][2] = 0.0f;
     M[1][3] = 0.0f;
 }

@@ -57,9 +57,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Enables multitouch support.
 //#define GFX_MULTITOUCH_SUPPORT_ENABLE
 
-// Use Scaleform internal gesture recognizer
-//#define GFX_GESTURE_RECOGNIZE
-
 #if defined(SF_OS_ANDROID) || defined(SF_OS_IPHONE) || defined(SF_OS_3DS) || defined(SF_OS_WINMETRO)
 #define GFX_MULTITOUCH_SUPPORT_ENABLE
 #endif
@@ -132,7 +129,9 @@ otherwise accompanies this software in either electronic or hard copy form.
 // The name of the library is libpng.lib for all configurations;
 // the path is different. For example, VC8, 64-bit, Release Static
 // library is located at %(GFX)\3rdParty\libpng\lib\x64\msvc80\release_mt_static
+#ifndef SF_OS_WINMETRO
 #define SF_ENABLE_LIBPNG
+#endif
 
 // Enable the use of SIMD optimized functions, if available. If the platform does
 // not support a SIMD instruction set, then this option will be disabled in SF_SIMD.h.
@@ -144,17 +143,13 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 // Enable the use of TCP/IP sockets
 // This is needed for AMP
+#ifndef SF_OS_WINMETRO
 #define SF_ENABLE_SOCKETS
-#ifdef SF_BUILD_SHIPPING
-	#undef SF_ENABLE_SOCKETS
 #endif
 
 // Enable use of PCRE - Perl Compatible Regular Expressions
 #define SF_ENABLE_PCRE
 
-
-// Enable AS3 Application Domain 
-#define SF_ENABLE_APP_DOMAIN
 
 // ***** Memory/Allocation Configuration
 //---------------------------------------------------------------------------
@@ -276,6 +271,15 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Wwise sound support (AK Wwise SDK is available separately)
 //#define GFX_SOUND_WWISE
 
+// Disable sound support for Durango. Note: temporary use of SF_OS_WINMETRO constant for Durango.
+#if defined(SF_OS_WINMETRO) && defined(_DURANGO)
+#undef GFX_SOUND_FMOD
+#endif
+
+#if defined(SF_OS_WINMETRO)
+#undef GFX_SOUND_FMOD
+#endif
+
 // Define this macro to enable sound support (including core and ActionScript)
 #if defined(GFX_SOUND_FMOD) && !defined(GFX_ENABLE_SOUND)
     // Enable sound if FMOD has been enabled/detected
@@ -287,6 +291,11 @@ otherwise accompanies this software in either electronic or hard copy form.
     defined(SF_OS_XBOX360) ||  defined(SF_OS_PS3)   || defined(SF_OS_WII) || defined(SF_OS_WIIU))
     // Enable video only for CRI supported platforms
     #define GFX_ENABLE_VIDEO
+#endif
+
+// Disable video support for Durango. Note: temporary use of SF_OS_WINMETRO constant for Durango.
+#if defined(SF_OS_WINMETRO) && defined(_DURANGO)
+#undef GFX_ENABLE_VIDEO
 #endif
 
 // Enable video system sound interfaces
@@ -307,21 +316,12 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Enable core XML support
 #define GFX_ENABLE_XML
 
-#if defined(SF_OS_WINMETRO)
-// Use standard C++11 thread library
-#ifdef SF_ENABLE_THREADS
-#define SF_USE_STD11_THREADS
-#endif
-// Disable TCP/IP sockets (AMP)
-#undef SF_ENABLE_SOCKETS
-// Disable video support
-#undef GFX_ENABLE_VIDEO
-// Disable core IME support
-#define SF_NO_IME_SUPPORT
-#endif
-
 // Disable core IME support
 //#define SF_NO_IME_SUPPORT
+
+#ifdef SF_OS_WINMETRO
+#define SF_NO_IME_SUPPORT
+#endif
 
 #ifdef SF_NO_IME_SUPPORT
 #define GFC_NO_LANGBAR_SUPPORT
@@ -388,6 +388,10 @@ otherwise accompanies this software in either electronic or hard copy form.
 // Define this macro to throw assertion if any mipmap levels generation occurred in
 // renderer during the runtime.
 //#define GFX_ASSERT_ON_RENDERER_MIPMAP_GEN
+
+/*#ifdef FINAL_BUILD
+#define SF_BUILD_SHIPPING 1
+#endif*/
 
 // Scaleform Profiling configuration (Shipping + Debug Information), internal use only  
 #ifdef SF_BUILD_PROFILING

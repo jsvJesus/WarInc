@@ -2,14 +2,11 @@
 #include "r3d.h"
 
 #include "NetCellMover.h"
-#include "GameObjects/EventTransport.h"
-#include "ClientGameLogic.h"
 
-#ifndef WO_SERVER
 bool CNetCellMover::IsDataChanged(const netMoveData_s& md)
 {
-	// always send update every 5 sec (to fix possible problems with lost packets)
-	if(r3dGetTime() >= nextUpdate + 5.0f)
+	// always send update every 60 sec (just in case)
+	if(r3dGetTime() >= nextUpdate + 60.0f)
 		return true;
 
 	if(md.state != lastMd.state)
@@ -28,18 +25,17 @@ bool CNetCellMover::IsDataChanged(const netMoveData_s& md)
 	return false;			
 }
 
-void CNetCellMover::SendPosUpdate(const moveData_s& in_data)
+DWORD CNetCellMover::SendPosUpdate(const moveData_s& in_data, PKT_C2C_MoveSetCell_s* n1, PKT_C2C_MoveRel_s* n2)
 {
 	r3d_assert(owner->NetworkLocal);
 	R3DPROFILE_FUNCTION("CNetCellMover_SendPosUpdate");
-
-    if(!gClientLogic().serverConnected_)
-        return;
 	
+	DWORD pktFlags = 0;
+
 	// do not send anything before update ticks
 	const float curTime = r3dGetTime();
 	if(curTime < nextUpdate)
-	  return;
+	  return pktFlags;
 	
 	// bring angle to [0..360] and pack to [0..255]
 	int turnAngle = (int)in_data.turnAngle;
@@ -69,10 +65,9 @@ void CNetCellMover::SendPosUpdate(const moveData_s& in_data)
 	   fabs(dy) >= cellSize ||
 	   fabs(dz) >= cellSize)
 	{
-		// send reliable
-		PKT_C2C_MoveSetCell_s n;
-		n.pos = md.pos;
-		p2pSendToHost(owner, &n, sizeof(n), true);
+		// fill change cell packet
+		n1->pos = md.pos;
+		pktFlags |= 1;
 		
 		lastMd.cell = md.pos;
 		dx = 0;
@@ -82,7 +77,7 @@ void CNetCellMover::SendPosUpdate(const moveData_s& in_data)
 
 	// don't send update if nothing was changed
 	if(!IsDataChanged(md))
-	  return;
+	  return pktFlags;
 	
 	// convert to [0..254] within cell of last update
 	int rel_x = 127 + (int)(dx * 127.0f / cellSize);
@@ -93,14 +88,13 @@ void CNetCellMover::SendPosUpdate(const moveData_s& in_data)
 	r3d_assert(rel_z < 255);
 
 	// build delta packet
-	PKT_C2C_MoveRel_s n;
-	n.rel_x     = (BYTE)rel_x;
-	n.rel_y     = (BYTE)rel_y;
-	n.rel_z     = (BYTE)rel_z;
-	n.turnAngle = md.turnAngle;
-	n.bendAngle = md.bendAngle;
-	n.state     = md.state;
-	p2pSendToHost(owner, &n, sizeof(n), false);
+	pktFlags |= 2;
+	n2->rel_x     = (BYTE)rel_x;
+	n2->rel_y     = (BYTE)rel_y;
+	n2->rel_z     = (BYTE)rel_z;
+	n2->turnAngle = md.turnAngle;
+	n2->bendAngle = md.bendAngle;
+	n2->state     = md.state;
 	
 	// update last send values
 	lastMd.turnAngle = md.turnAngle;
@@ -112,8 +106,9 @@ void CNetCellMover::SendPosUpdate(const moveData_s& in_data)
 	nextUpdate += updateDelta;
 	if(nextUpdate < curTime) 
 		nextUpdate = curTime + updateDelta;
+		
+	return pktFlags;
 }
-#endif
 
 void CNetCellMover::SetCell(const PKT_C2C_MoveSetCell_s& n)
 {

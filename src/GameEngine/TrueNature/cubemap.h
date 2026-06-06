@@ -44,15 +44,10 @@ struct CubemapTransform
 
 	static void getProjMatrix(D3DXMATRIX& projection)
 	{
-		static D3DXMATRIX proj;
-		static bool inited = false;
-		if(!inited)
-		{
-			D3DXMatrixPerspectiveFovLH(&proj, R3D_PI_2, 1.0f, 1.0f, SKY_FAR_PLANE);
-			inited = true;
-		}
+		float n = 1.0f;
+		float f = SKY_FAR_PLANE;
 
-		projection = proj;
+		r3dRenderer->BuildMatrixPerspectiveFovLH(&projection, R3D_PI_2, 1.0f, n, f);
 	}
 
 	static void getMatrices(const D3DXVECTOR3& pos, Matrices& mtx)

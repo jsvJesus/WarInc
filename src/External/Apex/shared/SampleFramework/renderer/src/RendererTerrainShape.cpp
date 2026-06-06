@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,7 +35,6 @@
 //
 // RendererTerrainShape : convenience class for generating a box mesh.
 //
-#include "PsShare.h"
 #include <RendererTerrainShape.h>
 
 #include <Renderer.h>
@@ -49,22 +48,17 @@
 #include <RendererMesh.h>
 #include <RendererMeshDesc.h>
 
-#include "PxVec3.h"
+#include <RendererMemoryMacros.h>
 
-/*
-static physx::PxVec3 operator*(const physx::PxVec3 &a, const physx::PxVec3 &b)
-{
-	return physx::PxVec3(a.x*b.x, a.y*b.y, a.z*b.z);
-}
-*/
+using namespace SampleRenderer;
 
 RendererTerrainShape::RendererTerrainShape(Renderer &renderer, 
-										   physx::PxVec3 *verts, physx::PxU32 numVerts, 
-										   physx::PxVec3 *normals, physx::PxU32 numNorms,
-										   physx::PxU16 *faces, physx::PxU32 numFaces) :
-	RendererShape(renderer)
+	PxVec3 *verts, PxU32 numVerts, 
+	PxVec3 *normals, PxU32 numNorms,
+	PxU16 *faces, PxU32 numFaces,
+	PxF32 uvScale) :
+RendererShape(renderer)
 {
-	const physx::PxF32 uvscale = 0.01f; // make this an input param?
 	RendererVertexBufferDesc vbdesc;
 	vbdesc.hint = RendererVertexBuffer::HINT_STATIC;
 	vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_POSITION]  = RendererVertexBuffer::FORMAT_FLOAT3;
@@ -75,24 +69,24 @@ RendererTerrainShape::RendererTerrainShape(Renderer &renderer,
 	RENDERER_ASSERT(m_vertexBuffer, "Failed to create Vertex Buffer.");
 	if(m_vertexBuffer)
 	{
-		physx::PxU32 positionStride = 0;
+		PxU32 positionStride = 0;
 		void *vertPositions = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
-		physx::PxU32 normalStride = 0;
+		PxU32 normalStride = 0;
 		void *vertNormals = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL, normalStride);
-		physx::PxU32 uvStride = 0;
+		PxU32 uvStride = 0;
 		void *vertUVs = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_TEXCOORD0, uvStride);
 		if(vertPositions && vertNormals)
 		{
-			for(physx::PxU32 i=0; i<numVerts; i++)
+			for(PxU32 i=0; i<numVerts; i++)
 			{
-				memcpy(vertPositions, verts+i, sizeof(physx::PxVec3));
-				memcpy(vertNormals, normals+i, sizeof(physx::PxVec3));
-				((physx::PxF32*)vertUVs)[0] = verts[i].x * uvscale;
-				((physx::PxF32*)vertUVs)[1] = verts[i].z * uvscale;
+				memcpy(vertPositions, verts+i, sizeof(PxVec3));
+				memcpy(vertNormals, normals+i, sizeof(PxVec3));
+				((PxF32*)vertUVs)[0] = verts[i].x * uvScale;
+				((PxF32*)vertUVs)[1] = verts[i].z * uvScale;
 
-				vertPositions = (void*)(((physx::PxU8*)vertPositions) + positionStride);
-				vertNormals   = (void*)(((physx::PxU8*)vertNormals)   + normalStride);
-				vertUVs       = (void*)(((physx::PxU8*)vertUVs)       + uvStride);
+				vertPositions = (void*)(((PxU8*)vertPositions) + positionStride);
+				vertNormals   = (void*)(((PxU8*)vertNormals)   + normalStride);
+				vertUVs       = (void*)(((PxU8*)vertUVs)       + uvStride);
 			}
 		}
 		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL);
@@ -100,8 +94,8 @@ RendererTerrainShape::RendererTerrainShape(Renderer &renderer,
 		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_TEXCOORD0);
 	}
 
-	physx::PxU32 numIndices = numFaces*3;
-	
+	PxU32 numIndices = numFaces*3;
+
 	RendererIndexBufferDesc ibdesc;
 	ibdesc.hint       = RendererIndexBuffer::HINT_STATIC;
 	ibdesc.format     = RendererIndexBuffer::FORMAT_UINT16;
@@ -110,14 +104,14 @@ RendererTerrainShape::RendererTerrainShape(Renderer &renderer,
 	RENDERER_ASSERT(m_indexBuffer, "Failed to create Index Buffer.");
 	if(m_indexBuffer)
 	{
-		physx::PxU16 *indices = (physx::PxU16*)m_indexBuffer->lock();
+		PxU16 *indices = (PxU16*)m_indexBuffer->lock();
 		if(indices)
 		{
 			memcpy(indices, faces, sizeof(*faces)*numFaces*3);
 		}
 		m_indexBuffer->unlock();
 	}
-	
+
 	if(m_vertexBuffer && m_indexBuffer)
 	{
 		RendererMeshDesc meshdesc;
@@ -136,11 +130,7 @@ RendererTerrainShape::RendererTerrainShape(Renderer &renderer,
 
 RendererTerrainShape::~RendererTerrainShape(void)
 {
-	if(m_vertexBuffer) m_vertexBuffer->release();
-	if(m_indexBuffer)  m_indexBuffer->release();
-	if(m_mesh)
-	{
-		m_mesh->release();
-		m_mesh = 0;
-	}
+	SAFE_RELEASE(m_vertexBuffer);
+	SAFE_RELEASE(m_indexBuffer);
+	SAFE_RELEASE(m_mesh);
 }

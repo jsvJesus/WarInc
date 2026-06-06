@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -34,22 +34,24 @@
  */
 #include <RendererMeshContext.h>
 
+using namespace SampleRenderer;
+
 RendererMeshContext::RendererMeshContext(void)
 {
 	mesh             = 0;
 	material         = 0;
 	materialInstance = 0;
 	transform        = 0;
+	shaderData       = 0;
 	boneMatrices     = 0;
 	numBones         = 0;
-	m_renderer       = 0;
-    cullMode         = CLOCKWISE;
-	screenSpace		 = false;
+	cullMode         = CLOCKWISE;
+	screenSpace      = false;
+	fillMode         = SOLID;
 }
 
 RendererMeshContext::~RendererMeshContext(void)
 {
-	RENDERER_ASSERT(isLocked()==false, "Mesh Context still locked to a Renderer instance during destruction!");
 }
 
 bool RendererMeshContext::isValid(void) const
@@ -58,9 +60,4 @@ bool RendererMeshContext::isValid(void) const
 	if(!mesh)     ok = false;
 	if(!material) ok = false;
 	return ok;
-}
-
-bool RendererMeshContext::isLocked(void) const
-{
-	return m_renderer ? true : false;
 }

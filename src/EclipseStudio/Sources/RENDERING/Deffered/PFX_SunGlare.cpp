@@ -114,17 +114,17 @@ PFX_SunGlare::PrepareImpl( r3dScreenBuffer* dest, r3dScreenBuffer* /*src*/ ) /*O
 
 	mData.PixelShaderID = mPSIDs[ numSamples - 1 ];
 
-	r3dRenderer->SetPixelShaderConstantF(  0, (float *)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  0, (float *)vConsts, sizeof vConsts / sizeof vConsts[ 0 ] );
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER ) );
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( 0, D3DSAMP_BORDERCOLOR, 0 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( 0, D3DSAMP_BORDERCOLOR, 0 ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER ) );
-	D3D_V( r3dRenderer->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER ) );
 
-	D3D_V( r3dRenderer->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_BORDERCOLOR, 0 ) );
+	D3D_V( r3dRenderer->pd3ddev->SetSamplerState( PostFXChief::FREE_TEX_STAGE_START, D3DSAMP_BORDERCOLOR, 0 ) );
 
 }
 //------------------------------------------------------------------------

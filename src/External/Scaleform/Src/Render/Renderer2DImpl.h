@@ -91,7 +91,6 @@ public:
     // Delegated interface.
     bool    BeginFrame();
     void    EndFrame();
-    void    FinishFrame();
     bool    BeginScene()    { return pHal->BeginScene(); }
     void    EndScene()      { pHal->EndScene(); }
 

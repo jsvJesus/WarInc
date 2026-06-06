@@ -343,7 +343,7 @@ void r3dSetIdentityTransform( int constant )
 	D3DXMATRIX matrix ;
 	D3DXMatrixIdentity( &matrix ) ;
 
-	D3D_V( r3dRenderer->SetVertexShaderConstantF( constant, (float*)&matrix, 4 ) ) ;
+	D3D_V( r3dRenderer->pd3ddev->SetVertexShaderConstantF( constant, (float*)&matrix, 4 ) ) ;
 }
 
 //------------------------------------------------------------------------
@@ -351,7 +351,7 @@ void r3dSetIdentityTransform( int constant )
 void r3dSetFwdColorShaders( r3dColor colr )
 {
 	float psConst[4] = { colr.R / 255.f, colr.G / 255.f, colr.B / 255.f, colr.A / 255.f };
-	r3dRenderer->SetPixelShaderConstantF( 0, psConst, 1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 0, psConst, 1 );
 
 	r3dRenderer->SetPixelShader( g_FwdColorPS );
 	r3dRenderer->SetVertexShader( g_FwdColorVS );
@@ -524,18 +524,15 @@ void r3dUtilInit()
 		//	Create screen space vertex buffers
 		if (g_ScreenSpaceQuadsVB == 0)
 		{
-			const size_t fsQuadDataSize = sizeof(FS_QUAD);
-			const size_t hsQuadDataSize = sizeof(HS_QUAD);
-			const UINT vertexSize = D3DXGetDeclVertexSize(elems, 0);
-
-			const size_t totalQuadDataSize = fsQuadDataSize + hsQuadDataSize;
-			const UINT vertexCount = static_cast<UINT>( totalQuadDataSize / vertexSize );
-
+			size_t fsQuadDataSize = sizeof(FS_QUAD);
+			size_t hsQuadDataSize = sizeof(HS_QUAD);
+			UINT vertexSize = D3DXGetDeclVertexSize(elems, 0);
+			UINT vertexCount = (fsQuadDataSize + hsQuadDataSize) / vertexSize;
 			g_ScreenSpaceQuadsVB = new r3dVertexBuffer(vertexCount, vertexSize);
-
-			char* data = reinterpret_cast<char*>(g_ScreenSpaceQuadsVB->Lock());
-
+			char * data = reinterpret_cast<char*>(g_ScreenSpaceQuadsVB->Lock());
+			//	FS_QUAD
 			memcpy_s(data, g_ScreenSpaceQuadsVB->GetDataLength(), FS_QUAD, fsQuadDataSize);
+			//	HS_QUAD
 			memcpy_s(data + fsQuadDataSize, g_ScreenSpaceQuadsVB->GetDataLength() - fsQuadDataSize, HS_QUAD, hsQuadDataSize);
 
 			g_ScreenSpaceQuadsVB->Unlock();

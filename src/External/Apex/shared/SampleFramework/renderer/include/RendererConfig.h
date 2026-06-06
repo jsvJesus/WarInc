@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,15 +35,11 @@
 #ifndef RENDERER_CONFIG_H
 #define RENDERER_CONFIG_H
 
-#include "PsShare.h"
-#include "Px.h"
-#include "PxUserOutputStream.h"
+#include <RendererFoundation.h>
 #include <assert.h>
 
 #define RENDERER_TEXT(_foo)   #_foo
 #define RENDERER_TEXT2(_foo)  RENDERER_TEXT(_foo)
-
-extern char gShadersDir[];
 
 // number of lights required before it switches from forward rendering to deferred rendering.
 #define RENDERER_DEFERRED_THRESHOLD  0x7FFFFFFF // set to a big number just to disable it for now...
@@ -53,6 +49,9 @@ extern char gShadersDir[];
 
 // If turned on, asserts get compiled in as print statements in release mode.
 #define RENDERER_ENABLE_CHECKED_RELEASE 0
+
+// If enabled, all lights will be bound in a single pass. Requires appropriate shader support.
+#define RENDERER_ENABLE_SINGLE_PASS_LIGHTING 0
 
 // maximum number of bones per-drawcall allowed.
 #if defined(__CELLOS_LV2__)
@@ -71,107 +70,179 @@ extern char gShadersDir[];
 #define RENDERER_INSTANCE_VEL_LIFE_CHANNEL 12
 #define RENDERER_INSTANCE_DENSITY_CHANNEL  13
 
+#define RENDERER_INSTANCE_UV_CHANNEL       12
+#define RENDERER_INSTANCE_LOCAL_CHANNEL    13
+
+#define RENDERER_DISPLACEMENT_CHANNEL      14
+#define RENDERER_X_DISPLACEMENT_CHANNEL    13
+#define RENDERER_Y_DISPLACEMENT_CHANNEL    14
+#define RENDERER_Z_DISPLACEMENT_CHANNEL    15
+#define RENDERER_DISPLACEMENT_FLAGS_CHANNEL 15
+
 // Compiler specific configuration...
 #if defined(_MSC_VER)
-	#define RENDERER_VISUALSTUDIO
-	#pragma warning(disable : 4127) // conditional expression is constant
-	#pragma warning(disable : 4100) // unreferenced formal parameter
-	
-#elif defined(__GNUC__)
-	#define RENDERER_GCC
+#define RENDERER_VISUALSTUDIO
+#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable : 4100) // unreferenced formal parameter
 
+#elif defined(__GNUC__)
+#define RENDERER_GCC
+#elif defined (SN_TARGET_PSP2)
+	#define RENDERER_GXM
 #else
-	#error Unknown Compiler!
-	
+#error Unknown Compiler!
+
 #endif
 
 // Platform specific configuration...
 #if defined(WIN32) || defined(WIN64)
-	#define RENDERER_WINDOWS
-	#define RENDERER_ENABLE_OPENGL
-	#define RENDERER_ENABLE_DIRECT3D9
-	#define RENDERER_ENABLE_DIRECT3D10
-	#define RENDERER_ENABLE_CG
-	#define RENDERER_ENABLE_NVPERFHUD
-	#define RENDERER_ENABLE_TGA_SUPPORT
-	#if defined(WIN64)
-		#define RENDERER_64BIT
-	#endif
-	
-	#define WIN32_LEAN_AND_MEAN
-	#define NOMINMAX
-	#include <windows.h>
-	
-#elif defined(__APPLE__)
-	#define RENDERER_MACOSX
-	#define RENDERER_ENABLE_OPENGL
-	#define RENDERER_ENABLE_CG
+#define RENDERER_WINDOWS
+#define RENDERER_ENABLE_DIRECT3D9
+#define RENDERER_ENABLE_DIRECT3D11
+#define RENDERER_ENABLE_NVPERFHUD
+#define RENDERER_ENABLE_TGA_SUPPORT
+#if defined(WIN64)
+#define RENDERER_64BIT
+#endif
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#elif defined(__APPLE__) && !defined(__arm__)
+#define RENDERER_MACOSX
+#define RENDERER_ENABLE_OPENGL
+#define RENDERER_ENABLE_CG
+#if !defined(PX_PPC)
+#define RENDERER_ENABLE_TGA_SUPPORT
+#endif
 
 #elif defined(_XBOX) && _XBOX_VER == 200
-	#define RENDERER_XBOX360
-	#define RENDERER_ENABLE_DIRECT3D9	
-	#define NOMINMAX
-	#include <xtl.h>
+#define RENDERER_XBOX360
+#define RENDERER_ENABLE_DIRECT3D9
+#define NOMINMAX
+#define RENDERER_ENABLE_TGA_SUPPORT
+#define RENDERER_BIG_ENDIAN
 
 #elif defined(__CELLOS_LV2__)
-	#define RENDERER_PS3
+#define RENDERER_PS3
+#define RENDERER_ENABLE_OPENGL
+#define RENDERER_ENABLE_LIBGCM
+#define RENDERER_ENABLE_CG
+#define RENDERER_ENABLE_TGA_SUPPORT
+#define RENDERER_BIG_ENDIAN
+
+#elif defined(__CYGWIN__)
+#define RENDERER_LINUX
+#define RENDERER_ENABLE_OPENGL
+#define RENDERER_ENABLE_CG
+#define RENDERER_ENABLE_TGA_SUPPORT
+
+#elif defined(ANDROID)
+	#define RENDERER_DEBUG
+	#define RENDERER_ANDROID
+	#define RENDERER_TABLET
+	#define RENDERER_ENABLE_GLES2
+	#define RENDERER_ENABLE_TGA_SUPPORT
+
+#elif defined(__linux__)
+	#define RENDERER_LINUX
 	#define RENDERER_ENABLE_OPENGL
-	#define RENDERER_ENABLE_LIBGCM
 	#define RENDERER_ENABLE_CG
-	
+	#define RENDERER_ENABLE_TGA_SUPPORT
+
+#elif defined(__APPLE__) && defined(__arm__)
+	#define RENDERER_DEBUG
+	#define RENDERER_IOS
+	#define RENDERER_TABLET
+	#define RENDERER_ENABLE_GLES2
+	#define RENDERER_ENABLE_TGA_SUPPORT
+	#define RENDERER_ENABLE_PVR_SUPPORT
+
+#elif defined(SN_TARGET_PSP2)
+	#define RENDERER_PSP2
+	#define RENDERER_ENABLE_LIBGXM
+	#define RENDERER_ENABLE_TGA_SUPPORT
+	#define RENDERER_ENABLE_GXT_SUPPORT 
 #else
-	#error "Unknown Platform!"
-	
+#error "Unknown Platform!"
+
+#endif
+
+// To enable creating a Razor capture file, add ENABLE_RAZOR_CAPTURE to the Preprocessor Definitions in SampleRenderer-MT  
+#if defined (ENABLE_RAZOR_CAPTURE)
+	#define RAZOR_CAPTURE_NAME "app0:razor_capture.sgx"
+	#include <razor_capture.h>
 #endif
 
 #if defined(_DEBUG)
-	#define RENDERER_DEBUG
+#define RENDERER_DEBUG
 #endif
 
+
 #if defined(RENDERER_DEBUG)
-	#if defined(RENDERER_WINDOWS)
-		#define RENDERER_ASSERT(_exp, _msg)                     \
-		    if(!(_exp))                                         \
-		    {                                                   \
-		        MessageBoxA(0, _msg, "Renderer Assert", MB_OK); \
-		        __debugbreak();                                 \
-		    }
-	#else
-		#define RENDERER_ASSERT(_exp, _msg) assert(_exp && (_msg));
-	#endif
-#elif RENDERER_ENABLE_CHECKED_RELEASE
-	#if defined(RENDERER_VISUALSTUDIO)
-		#define RENDERER_ASSERT(_exp, _msg)                                          \
-			if(!(_exp))                                                              \
-			{                                                                        \
-				OutputDebugStringA("*** (" __FILE__":"RENDERER_TEXT2(__LINE__)") "); \
-				OutputDebugStringA(_msg);                                            \
-				OutputDebugStringA(" ***\n");                                        \
-			}
-	#else
-		#define RENDERER_ASSERT(_exp, _msg) if(!(_exp)) printf("*** (" __FILE__ ":" RENDERER_TEXT2(__LINE__)") %s ***\n", _msg);
-	#endif
+#if defined(RENDERER_WINDOWS)
+#define RENDERER_ASSERT(_exp, _msg)                     \
+	if(!(_exp))                                         \
+	{                                                   \
+		MessageBoxA(0, _msg, "Renderer Assert", MB_OK); \
+		__debugbreak();                                 \
+	}
 #else
-	#define RENDERER_ASSERT(_exp, _msg)
+#define RENDERER_ASSERT(_exp, _msg) assert(_exp && (_msg));
+#endif
+#elif RENDERER_ENABLE_CHECKED_RELEASE
+#if defined(RENDERER_VISUALSTUDIO)
+#define RENDERER_ASSERT(_exp, _msg)                                          \
+	if(!(_exp))                                                              \
+	{                                                                        \
+		OutputDebugStringA("*** (" __FILE__":"RENDERER_TEXT2(__LINE__)") "); \
+		OutputDebugStringA(_msg);                                            \
+		OutputDebugStringA(" ***\n");                                        \
+	}
+#else
+#define RENDERER_ASSERT(_exp, _msg) if(!(_exp)) printf("*** (" __FILE__ ":" RENDERER_TEXT2(__LINE__)") %s ***\n", _msg);
+#endif
+#else
+#define RENDERER_ASSERT(_exp, _msg)
 #endif
 
 #define RENDERER_OUTPUT_MESSAGE(_rendererPtr, _msg) \
-	if((_rendererPtr) && (_rendererPtr)->getOutputStream()) \
+	if((_rendererPtr) && (_rendererPtr)->getErrorCallback()) \
 	{ \
-		(_rendererPtr)->getOutputStream()->reportError(physx::PxErrorCode::eDEBUG_INFO, (_msg), __FILE__, __LINE__); \
+		(_rendererPtr)->getErrorCallback()->reportError(PxErrorCode::eDEBUG_INFO, (_msg), __FILE__, __LINE__); \
 	}
 
 
-#if RENDERER_ENABLE_DRESSCODE
-	#include <dresscode.h>
-	#define RENDERER_PERFZONE(_name) dcZone(#_name);
+#if defined(RENDERER_ANDROID)
+	#include <android/log.h>
+	#define LOG_INFO(title, ...) ((void)__android_log_print(ANDROID_LOG_INFO, title, __VA_ARGS__))
 #else
-#ifdef AGPERFMON
-#include "AgPerfMonEventSrcAPI.h"
-	#define RENDERER_PERFZONE(_name) SAMPLE_PERF_SCOPE(_name)
+
+#if 0
+	#include <stdio.h>
+	#include <stdarg.h>
+
+	static void printInfo(const char* title, const char* message, ...)
+	{
+		char buff[4096];
+		
+		printf("%s ", title);
+		va_list va;
+		va_start(va, message);
+		vsprintf(buff, message, va);
+		va_end(va);
+		if (strlen(buff)>=4096)
+			assert(!"buffer overflow!!");
+		
+		printf("%s\n", buff);
+	}
+
+	#define LOG_INFO(title, ...) (printInfo(title, __VA_ARGS__))
 #else
-#define RENDERER_PERFZONE(_name)
+	#define LOG_INFO(title, ...)
 #endif
+
 #endif
 
 #ifdef RENDERER_XBOX360
@@ -180,5 +251,22 @@ extern char gShadersDir[];
 #define RENDERER_INSTANCING 1
 #endif
 
+namespace SampleRenderer
+{
+	// 2D and 3D Textures have identical external interfaces
+	//    Using a typedef provides compatibility with legacy code that used only 2D textures
+	class RendererTexture;
+	class RendererTextureDesc;
+	typedef RendererTexture     RendererTexture2D;
+	typedef RendererTextureDesc RendererTexture2DDesc;
+	typedef RendererTexture     RendererTexture3D;
+	typedef RendererTextureDesc RendererTexture3DDesc;
+}
+#if defined(RENDERER_ANDROID) && !defined(LOGI)
+#	include <android/log.h>
+#	define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "RendererConfig", __VA_ARGS__))
+#else
+#	define LOGI(X)
+#endif
 
 #endif

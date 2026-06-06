@@ -58,14 +58,9 @@ public:
             return ((CPUInfo[3] & (1 << 26)) != 0);        
     #endif
 #elif defined(SF_CC_GNU)
-    #if defined(__SSE2__) && __SSE2__
-        // The compiler is only compiling for processors that have SSE2 support.
-        return true;
-    #else
         int CPUInfo[4] = {-1};
         asm("cpuid": "=a" (CPUInfo[0]), "=b" (CPUInfo[1]), "=c" (CPUInfo[2]), "=d" (CPUInfo[3]) : "a" (1));
         return ((CPUInfo[3] & (1 << 26)) != 0);
-    #endif
 #else
         return false;
 #endif

@@ -430,11 +430,7 @@ public:
     unsigned                GetMaxLength() const { return (unsigned)pDocument->GetMaxLength(); }
     unsigned                GetMaxVScroll() const { return pDocument->GetMaxVScroll(); }
     const StringLH&         GetOriginalTextValue() const { return OriginalTextValue; }
-    // Returns text or html. If reqHtml = true but the textfield is not HTML-enabled
-    // it still will return plain text (default behavior in AS2). 
     ASString                GetText(bool reqHtml) const; 
-    // Returns html. Unlike GetText(true), this method will return HTML regardless.
-    ASString                GetHtml() const ;
     Text::DocView::ViewTextAutoSize GetTextAutoSize() const { return pDocument->GetTextAutoSize(); }
     UPInt                   GetTextLength() const { return pDocument->GetLength(); }
     SF_INLINE TextFieldDef* GetTextFieldDef() const { return pDef; }

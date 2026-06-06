@@ -1,40 +1,32 @@
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+ 
 #ifndef __NX_GAUSS_H__
 #define __NX_GAUSS_H__
-
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
 
 #include <PxSimpleTypes.h>
 #include <float.h>
@@ -43,8 +35,10 @@
 
 /*! \file */
 
-namespace physx {
-namespace apex {
+namespace physx
+{
+namespace apex
+{
 
 /**
 \class NxGauss
@@ -99,6 +93,12 @@ http://en.wikipedia.org/wiki/Linear_congruential_generator
 
 PX_PUSH_PACK_DEFAULT
 
+/**
+	The ascii rep stuff currently uses _fcvt which doesn't work on the PS3.
+	Some of the methods here may be duplicated in PxAsciiConversion.h
+ */
+#define NXGAUSS_USE_ASCII_REPRESENTATIONS 0
+
 class NxGauss
 {
 public:
@@ -111,98 +111,152 @@ public:
 		mSeed = 0;
 		mMean = 0;
 		mStandardDeviation = 0;
-		mMin = PX_MIN_F32;
+		mMin = -PX_MAX_F32;
 		mMax = PX_MAX_F32;
 		mFlags = 0;
 	}
 
-	PX_INLINE NxGauss(physx::PxF32 mean,physx::PxF32 stdev=0,physx::PxF32 fmin=PX_MIN_F32,physx::PxF32 fmax=PX_MAX_F32,bool linear=false,physx::PxU32 seed=0)
+	PX_INLINE NxGauss(physx::PxF32 mean, physx::PxF32 stdev = 0, physx::PxF32 fmin = -PX_MAX_F32, physx::PxF32 fmax = PX_MAX_F32, bool linear = false, physx::PxU32 seed = 0)
 	{
-		set(mean,stdev,fmin,fmax,linear,seed);
+		set(mean, stdev, fmin, fmax, linear, seed);
 	}
-	PX_INLINE NxGauss(const char *str)
+
+#if NXGAUSS_USE_ASCII_REPRESENTATIONS
+	PX_INLINE NxGauss(const char* str)
 	{
 		atog(str);
 	}
+#endif
 
-	PX_INLINE void set(physx::PxF32 mean,physx::PxF32 stdev=0,physx::PxF32 fmin=PX_MIN_F32,physx::PxF32 fmax=PX_MAX_F32,bool linear=false,physx::PxU32 seed=0);
+	PX_INLINE void  set(physx::PxF32 mean, physx::PxF32 stdev = 0, physx::PxF32 fmin = -PX_MAX_F32, physx::PxF32 fmax = PX_MAX_F32, bool linear = false, physx::PxU32 seed = 0);
+	PX_INLINE void	setSeed(physx::PxU32 seed)
+	{
+		mSeed = seed;    // set the random number seed.
+	}
+	PX_INLINE void  setLinearDistribution(void)
+	{
+		mFlags |= GF_LINEAR;
+	};
+	PX_INLINE void  setGaussianDistribution(void)
+	{
+		mFlags &= ~GF_LINEAR;
+	};
 
-	PX_INLINE void	setSeed(physx::PxU32 seed) { mSeed = seed; }  // set the random number seed.
-	PX_INLINE void	atog(const char *str); // ASCII to Gaussian conversion.
-	PX_INLINE void  setLinearDistribution(void) { mFlags|=GF_LINEAR; };
-	PX_INLINE void  setGaussianDistribution(void) { mFlags&=~GF_LINEAR; };
+#if NXGAUSS_USE_ASCII_REPRESENTATIONS
+	PX_INLINE void	atog(const char* str); // ASCII to Gaussian conversion.
+	PX_INLINE bool	gtoa(char* buffer, physx::PxU32 bufferSize, physx::PxU32 precision = 9) const; // converts the Gaussian into a string, returns false if it couldn't fit the result into the buffer.
 
-	PX_INLINE bool	gtoa(char *buffer,physx::PxU32 bufferSize,physx::PxU32 precision=9) const; // converts the Gaussian into a string, returns false if it couldn't fit the result into the buffer.
+	static PX_INLINE bool  addChar(char * &dest, const char* end, char c); // add a character to a destination buffer without overflow, returns false if it overflowed.
+	static PX_INLINE bool  getFloatString(physx::PxF32 v, char* dest, physx::PxU32 maxlen, physx::PxU32 precision = 9); // helper method to convert a floating point number to ASCII of a specified precision.  Special cases FLT_MAX and FLT_MIN
+	static PX_INLINE physx::PxF32 atof(const char* n, const char** p); // convert an ASCII representation back into a float value. Special case for FLT_MAX and FLT_MIN
+	static PX_INLINE bool  ftoa(physx::PxF32 v, char* n, physx::PxU32 maxlen, physx::PxU32 precision = 9); // Converts a float to ASCII of a specific precision and to a destination buffer.
+	static PX_INLINE bool  addString(const char* str, char* buffer, physx::PxU32& bindex, physx::PxU32 maxBuffer);
+	// Converts a string into its Gaussian components.
+	static PX_INLINE physx::PxU32 strtogmd(const char* spec,
+	                                       const char** end,
+	                                       physx::PxF32& mean,
+	                                       physx::PxF32& deviation,
+	                                       physx::PxF32& min,
+	                                       physx::PxF32& max,
+	                                       bool& linear);
+#endif
+
 	PX_INLINE physx::PxF32	getSample(void); // sample the random distribution.  This is not a 'const' because sampling it changes the random number seed.
-	PX_INLINE physx::PxF32	getMean(void) const { return mMean; };
-	PX_INLINE physx::PxF32	getStandardDeviation(void) const { return mStandardDeviation; };
-	PX_INLINE physx::PxF32	getMin(void) const { return mMin; };
-	PX_INLINE physx::PxF32	getMax(void) const { return mMax; };
-	PX_INLINE void  setMean(physx::PxF32 mean) { mMean = mean; set(mMean,mStandardDeviation,mMin,mMax,isLinearDistribution(),mSeed); };
-	PX_INLINE void  setStandardDeviation(physx::PxF32 st) { mStandardDeviation = st; set(mMean,mStandardDeviation,mMin,mMax,isLinearDistribution(),mSeed); };
-	PX_INLINE void  setMin(physx::PxF32 m) { mMin = m; set(mMean,mStandardDeviation,mMin,mMax,isLinearDistribution(),mSeed); };
-	PX_INLINE void  setMax(physx::PxF32 m) { mMax =m; set(mMean,mStandardDeviation,mMin,mMax,isLinearDistribution(),mSeed); };
-	PX_INLINE bool  isLinearDistribution(void) const { return ((mFlags&GF_LINEAR) ? true : false); };
-	PX_INLINE bool  isGaussianDistribution(void) const { return ((mFlags&GF_LINEAR) ? false : true); };
-	PX_INLINE physx::PxF32 ranf(void); // returns a random floating point number between 0-1
+	PX_INLINE physx::PxF32	getMean(void) const
+	{
+		return mMean;
+	};
+	PX_INLINE physx::PxF32	getStandardDeviation(void) const
+	{
+		return mStandardDeviation;
+	};
+	PX_INLINE physx::PxF32	getMin(void) const
+	{
+		return mMin;
+	};
+	PX_INLINE physx::PxF32	getMax(void) const
+	{
+		return mMax;
+	};
+	PX_INLINE void  		setMean(physx::PxF32 mean)
+	{
+		mMean = mean;
+		set(mMean, mStandardDeviation, mMin, mMax, isLinearDistribution(), mSeed);
+	};
+	PX_INLINE void  		setStandardDeviation(physx::PxF32 st)
+	{
+		mStandardDeviation = st;
+		set(mMean, mStandardDeviation, mMin, mMax, isLinearDistribution(), mSeed);
+	};
+	PX_INLINE void  		setMin(physx::PxF32 m)
+	{
+		mMin = m;
+		set(mMean, mStandardDeviation, mMin, mMax, isLinearDistribution(), mSeed);
+	};
+	PX_INLINE void  		setMax(physx::PxF32 m)
+	{
+		mMax = m;
+		set(mMean, mStandardDeviation, mMin, mMax, isLinearDistribution(), mSeed);
+	};
+	PX_INLINE bool  		isLinearDistribution(void) const
+	{
+		return ((mFlags & GF_LINEAR) ? true : false);
+	};
+	PX_INLINE bool  		isGaussianDistribution(void) const
+	{
+		return ((mFlags & GF_LINEAR) ? false : true);
+	};
+	PX_INLINE physx::PxF32	ranf(void); // returns a random floating point number between 0-1
 
-    static PX_INLINE bool  addChar(char * &dest,const char *end,char c);  // add a character to a destination buffer without overflow, returns false if it overflowed.
-	static PX_INLINE bool  getFloatString(physx::PxF32 v,char *dest,physx::PxU32 maxlen,physx::PxU32 precision=9); // helper method to convert a floating point number to ASCII of a specified precision.  Special cases FLT_MAX and FLT_MIN
-	static PX_INLINE physx::PxF32 atof(const char *n,const char **p); // convert an ASCII representation back into a float value. Special case for FLT_MAX and FLT_MIN
-    static PX_INLINE bool  ftoa(physx::PxF32 v,char *n,physx::PxU32 maxlen,physx::PxU32 precision=9);  // Converts a float to ASCII of a specific precision and to a destination buffer.
-	static PX_INLINE bool  addString(const char *str,char *buffer,physx::PxU32 &bindex,physx::PxU32 maxBuffer);
-	// Converts a string into it's Gaussian components.
-    static PX_INLINE physx::PxU32 strtogmd(const char* spec,
-                             const char** end,
-                             physx::PxF32& mean,
-                             physx::PxF32& deviation,
-                             physx::PxF32& min,
-                             physx::PxF32& max,
-                             bool &linear );
+
 
 private:
 	enum GaussFlag
 	{
 		GF_NONE		= 0,
-		GF_STDEV	= (1<<0),      //  true if it has a non-zero standard deviation.
-		GF_MIN_MAX	= (1<<1),    //  true if it has a clamped min/max range.
-		GF_LINEAR	= (1<<2),    // true if it is a linear distribution.
-		GF_SECOND	= (1<<3),    // used internally to designate which gaussian pair to return.
+		GF_STDEV	= (1 << 0),    //  true if it has a non-zero standard deviation.
+		GF_MIN_MAX	= (1 << 1),  //  true if it has a clamped min/max range.
+		GF_LINEAR	= (1 << 2),  // true if it is a linear distribution.
+		GF_SECOND	= (1 << 3),  // used internally to designate which gaussian pair to return.
 	};
 
 
-    PX_INLINE bool  hasGaussFlag(GaussFlag f) const { return ((mFlags&f) ? true : false); };
+	PX_INLINE bool  hasGaussFlag(GaussFlag f) const
+	{
+		return ((mFlags & f) ? true : false);
+	};
 
 	physx::PxF32	mMean;					// The mean value of the Gassian distribution.
 	physx::PxF32	mStandardDeviation;		// The standard deviation of the Gassian distribution.
 	physx::PxF32	mMin;					// The clamped minimum value.
 	physx::PxF32	mMax;					// The clamped maximum value.
 	physx::PxU32   mSeed;					// The current random number seed value.
-    physx::PxU32   mFlags;					// Internal private flags describing the state of the Gaussian
-    physx::PxF32   mSecondValue;			// Gaussian numbers are generated in pairs, this is the next one to be retreived.
+	physx::PxU32   mFlags;					// Internal private flags describing the state of the Gaussian
+	physx::PxF32   mSecondValue;			// Gaussian numbers are generated in pairs, this is the next one to be retreived.
 };
 
-PX_INLINE void	NxGauss::atog(const char *str) // ASCII to Gaussian conversion.
+#if NXGAUSS_USE_ASCII_REPRESENTATIONS
+PX_INLINE void	NxGauss::atog(const char* str) // ASCII to Gaussian conversion.
 {
-    mFlags = 0;
-    bool linear;
-	physx::PxF32 m,s,m1,m2;
-    strtogmd(str,0,m,s,m1,m2,linear);
-	set(m,s,m1,m2,linear,0);
+	mFlags = 0;
+	bool linear;
+	physx::PxF32 m, s, m1, m2;
+	strtogmd(str, 0, m, s, m1, m2, linear);
+	set(m, s, m1, m2, linear, 0);
 }
 
-PX_INLINE bool  NxGauss::addString(const char *str,char *buffer,physx::PxU32 &bindex,physx::PxU32 maxBuffer) // Add a string to a buffer without overflow
+PX_INLINE bool  NxGauss::addString(const char* str, char* buffer, physx::PxU32& bindex, physx::PxU32 maxBuffer) // Add a string to a buffer without overflow
 {
 	bool ret = true;
 
-	physx::PxU32 bend = maxBuffer-1;
+	physx::PxU32 bend = maxBuffer - 1;
 
-	if ( bindex < bend )
+	if (bindex < bend)
 	{
-		while ( *str )
+		while (*str)
 		{
 			buffer[bindex++] = *str++;
-			if ( bindex == bend )
+			if (bindex == bend)
 			{
 				ret = false;
 				break;
@@ -217,59 +271,75 @@ PX_INLINE bool  NxGauss::addString(const char *str,char *buffer,physx::PxU32 &bi
 	return ret;
 }
 
-PX_INLINE bool  NxGauss::getFloatString(physx::PxF32 v,char *dest,physx::PxU32 maxlen,physx::PxU32 precision)
+PX_INLINE bool  NxGauss::getFloatString(physx::PxF32 v, char* dest, physx::PxU32 maxlen, physx::PxU32 precision)
 {
 	bool ret = true;
 
 	char temp[_CVTBUFSIZE];
-	if ( v == 0 )
+	if (v == 0)
 	{
-		temp[0] = '0'; temp[1] = 0;
+		temp[0] = '0';
+		temp[1] = 0;
 	}
-	else if ( v == 1 )
+	else if (v == 1)
 	{
-		temp[0] = '1'; temp[1] = 0;
+		temp[0] = '1';
+		temp[1] = 0;
 	}
-	else if ( v == -1 )
+	else if (v == -1)
 	{
-		temp[0] = '-'; temp[1] = '1'; temp[2] = 0;
+		temp[0] = '-';
+		temp[1] = '1';
+		temp[2] = 0;
 	}
-	else if ( v == PX_MIN_F32 )
+	else if (v == -PX_MAX_F32)
 	{
-		strncpy(temp,"-FLT_MAX",_CVTBUFSIZE);
+		strncpy(temp, "-FLT_MAX", _CVTBUFSIZE);
 	}
-	else if ( v == PX_MAX_F32 )
+	else if (v == PX_MAX_F32)
 	{
-		strncpy(temp,"FLT_MAX",_CVTBUFSIZE);
+		strncpy(temp, "FLT_MAX", _CVTBUFSIZE);
 	}
 	else
 	{
 		char num[_CVTBUFSIZE];
-		ftoa(v,num,_CVTBUFSIZE,precision);
-		const char *dot = num;
-		while ( *dot && *dot != '.' ) dot++;
-		if ( *dot == '.' )
+		ftoa(v, num, _CVTBUFSIZE, precision);
+		const char* dot = num;
+		while (*dot && *dot != '.')
 		{
-			char *scan = (char *)(dot+1);
-			while ( *scan ) scan++;
-			scan--;
-			while ( *scan != '.' && *scan == '0' )
-				scan--;
-			if ( *scan == '.' )
-				*scan = 0;
-			else
-				scan[1] = 0;
+			dot++;
 		}
-		strncpy(temp,num,_CVTBUFSIZE);
+		if (*dot == '.')
+		{
+			char* scan = (char*)(dot + 1);
+			while (*scan)
+			{
+				scan++;
+			}
+			scan--;
+			while (*scan != '.' && *scan == '0')
+			{
+				scan--;
+			}
+			if (*scan == '.')
+			{
+				*scan = 0;
+			}
+			else
+			{
+				scan[1] = 0;
+			}
+		}
+		strncpy(temp, num, _CVTBUFSIZE);
 	}
-	char *dscan = dest;
-	const char *scan  = temp;
+	char* dscan = dest;
+	const char* scan  = temp;
 	physx::PxU32 icount = 0;
-	while ( *scan )
+	while (*scan)
 	{
 		*dscan++ = *scan++;
 		icount++;
-		if ( icount == (maxlen-1) )
+		if (icount == (maxlen - 1))
 		{
 			ret = false;
 			break;
@@ -279,222 +349,161 @@ PX_INLINE bool  NxGauss::getFloatString(physx::PxF32 v,char *dest,physx::PxU32 m
 	return ret;
 }
 
-PX_INLINE physx::PxF32 NxGauss::atof(const char *n,const char **pos) 
+PX_INLINE physx::PxF32 NxGauss::atof(const char* n, const char** pos)
 {
 	physx::PxF32 ret = 0;
 
-	if ( strcmp(n,"FLT_MAX") == 0 )
+	if (strcmp(n, "FLT_MAX") == 0)
 	{
 		ret = PX_MAX_F32;
-		pos[0] = n+7;
+		pos[0] = n + 7;
 	}
-	else if ( strcmp(n,"FLT_MIN") == 0 )
+	else if (strcmp(n, "FLT_MIN") == 0)
 	{
-		ret = PX_MIN_F32;
-		pos[0] = n+7;
+		ret = -PX_MAX_F32;
+		pos[0] = n + 7;
 	}
 	else
 	{
-		ret = (physx::PxF32)strtod( (char*)n,(char **) pos );
+		ret = (physx::PxF32)strtod((char*)n, (char**) pos);
 	}
 	return ret;
 }
 
-PX_INLINE bool	NxGauss::gtoa(char * buffer,physx::PxU32 bufferSize,physx::PxU32 precision) const // converts the gaussian into a string, returns false if it couldn't fit the result into the buffer.
+PX_INLINE bool	NxGauss::gtoa(char* buffer, physx::PxU32 bufferSize, physx::PxU32 precision) const // converts the gaussian into a string, returns false if it couldn't fit the result into the buffer.
 {
 	physx::PxU32 index = 0;
 	buffer[0] = 0;
 	char temp[_CVTBUFSIZE];
-	getFloatString(mMean,temp,_CVTBUFSIZE,precision);
-	bool ret = addString(temp,buffer,index,bufferSize);
-	if ( hasGaussFlag(GF_STDEV))
+	getFloatString(mMean, temp, _CVTBUFSIZE, precision);
+	bool ret = addString(temp, buffer, index, bufferSize);
+	if (hasGaussFlag(GF_STDEV))
 	{
-		getFloatString(mStandardDeviation,temp,_CVTBUFSIZE,precision);
-		ret = addString(":",buffer,index,bufferSize);
-		ret = addString(temp,buffer,index,bufferSize);
+		getFloatString(mStandardDeviation, temp, _CVTBUFSIZE, precision);
+		ret = addString(":", buffer, index, bufferSize);
+		ret = addString(temp, buffer, index, bufferSize);
 	}
-	if ( hasGaussFlag(GF_MIN_MAX))
+	if (hasGaussFlag(GF_MIN_MAX))
 	{
 		char temp1[_CVTBUFSIZE];
 		char temp2[_CVTBUFSIZE];
-		getFloatString(mMin,temp1,_CVTBUFSIZE,precision);
-		getFloatString(mMax,temp2,_CVTBUFSIZE,precision);
-		ret = addString("<",buffer,index,bufferSize);
-		ret = addString(temp1,buffer,index,bufferSize);
-		ret = addString(":",buffer,index,bufferSize);
-		ret = addString(temp2,buffer,index,bufferSize);
-		ret = addString(">",buffer,index,bufferSize);
+		getFloatString(mMin, temp1, _CVTBUFSIZE, precision);
+		getFloatString(mMax, temp2, _CVTBUFSIZE, precision);
+		ret = addString("<", buffer, index, bufferSize);
+		ret = addString(temp1, buffer, index, bufferSize);
+		ret = addString(":", buffer, index, bufferSize);
+		ret = addString(temp2, buffer, index, bufferSize);
+		ret = addString(">", buffer, index, bufferSize);
 	}
-	if ( hasGaussFlag(GF_LINEAR))
-		ret = addString("!",buffer,index,bufferSize);
-
-	return ret;
-}
-
-PX_INLINE physx::PxF32	NxGauss::getSample(void) // sample the random distribution.  This is not a 'const' because sampling it changes the random number seed.
-{
-	physx::PxF32 ret = 0;
-
-    if ( hasGaussFlag(GF_SECOND) )
-    {
-        ret = mSecondValue*mStandardDeviation+mMean;
-        mFlags&=~GF_SECOND;
-    }
-    else
-    {
-		if ( hasGaussFlag(GF_LINEAR))
-		{
-			ret = ((ranf()*mStandardDeviation*2)-mStandardDeviation)+mMean;
-		}
-		else
-		{
-
-			physx::PxF32 x1,x2,w;
-			do
-			{
-				x1 = 2.0f * ranf() - 1.0f;
-				x2 = 2.0f * ranf() - 1.0f;
-				w = x1 * x1 + x2 * x2;
-			} while ( w >= 1.0f );
-
-			w = sqrtf( (-2.0f * logf( w ) ) / w );
-
-			ret = x1 * w;
-			mSecondValue = x2 * w;
-
-			ret = ret*mStandardDeviation+mMean;
-
-			mFlags|=GF_SECOND;
-		}
-    }
-
-	if ( hasGaussFlag(GF_MIN_MAX)) // if we are clamping the results, then apply the limits
+	if (hasGaussFlag(GF_LINEAR))
 	{
-		if ( ret < mMin ) ret = mMin;
-		if ( ret > mMax ) ret = mMax;
+		ret = addString("!", buffer, index, bufferSize);
 	}
 
 	return ret;
 }
 
-PX_INLINE bool  NxGauss::addChar(char * &dest,const char *end,char c)
+PX_INLINE bool  NxGauss::addChar(char * &dest, const char* end, char c)
 {
-    bool ret = true;
-    if ( dest < end )
-    {
-        *dest++ = c;
-    }
-    else
-    {
-        ret = false;
-    }
-    return ret;
+	bool ret = true;
+	if (dest < end)
+	{
+		*dest++ = c;
+	}
+	else
+	{
+		ret = false;
+	}
+	return ret;
 }
 
-PX_INLINE bool  NxGauss::ftoa(physx::PxF32 v,char *n,physx::PxU32 maxlen,physx::PxU32 precision)
+PX_INLINE bool  NxGauss::ftoa(physx::PxF32 v, char* n, physx::PxU32 maxlen, physx::PxU32 precision)
 {
-    bool ret = true;
+	bool ret = true;
 
-    int decimal,sign;
-	const char *temp = _fcvt((float)v,precision,&decimal,&sign);
-	char *num = n;
-    const char *end = n+maxlen-1;
-    if ( sign )
-    {
-        ret = addChar(num,end,'-');
-    }
-	if ( decimal <= 0 )
+	int decimal, sign;
+	const char* temp = _fcvt((float)v, precision, &decimal, &sign);
+	char* num = n;
+	const char* end = n + maxlen - 1;
+	if (sign)
 	{
-		ret = addChar(num,end,'0');
-		ret = addChar(num,end,'.');
-		for (int i=decimal; i<0; i++)
+		ret = addChar(num, end, '-');
+	}
+	if (decimal <= 0)
+	{
+		ret = addChar(num, end, '0');
+		ret = addChar(num, end, '.');
+		for (int i = decimal; i < 0; i++)
 		{
-		  addChar(num,end,'0');
+			addChar(num, end, '0');
 		}
 		decimal = -1;
 	}
-    for (int i=0; i<_CVTBUFSIZE; i++)
-    {
-        if ( temp[i] == 0 ) break;
-        if ( i == decimal )
-        {
-            ret = addChar(num,end,'.');
-        }
-        ret = addChar(num,end,temp[i]);
-    }
+	for (int i = 0; i < _CVTBUFSIZE; i++)
+	{
+		if (temp[i] == 0)
+		{
+			break;
+		}
+		if (i == decimal)
+		{
+			ret = addChar(num, end, '.');
+		}
+		ret = addChar(num, end, temp[i]);
+	}
 
-    *num = 0;
+	*num = 0;
 
-    return ret;
-}
-
-PX_INLINE void NxGauss::set(physx::PxF32 mean,physx::PxF32 stdev,physx::PxF32 fmin,physx::PxF32 fmax,bool linear,physx::PxU32 seed)
-{
-	mMean = mean;
-	mStandardDeviation = stdev;
-	mMin = fmin;
-	mMax = fmax;
-	mSeed   = seed;
-	mFlags  = 0;
-	if ( linear ) mFlags|=GF_LINEAR;
-	if ( mStandardDeviation != 0 ) mFlags|=GF_STDEV;
-	if ( mMin != PX_MIN_F32 || mMax != PX_MAX_F32 ) mFlags|=GF_MIN_MAX;
-}
-
-
-PX_INLINE physx::PxF32 NxGauss::ranf(void) // returns a random floating point number between 0-1
-{
-    mSeed = (mSeed * 214013L + 2531011L) & 0x7fffffff;
-    return (physx::PxF32)(mSeed&0x7FFF)*(1.0f/32767.0f);
+	return ret;
 }
 
 // convert string to gaussian number.  Return code
 // indicates number of arguments found.
 PX_INLINE physx::PxU32 NxGauss::strtogmd(const char* _spec,
-                        const char** end,
-                    physx::PxF32 &mean,
-                    physx::PxF32 &deviation,
-                    physx::PxF32 &vmin,
-                    physx::PxF32 &vmax,
-                    bool  &linear )
+        const char** end,
+        physx::PxF32& mean,
+        physx::PxF32& deviation,
+        physx::PxF32& vmin,
+        physx::PxF32& vmax,
+        bool&  linear)
 {
 	physx::PxU32 ret = 0;
 	const char* pos;
-	vmin  = PX_MIN_F32; // default min
+	vmin  = -PX_MAX_F32; // default min
 	vmax  = PX_MAX_F32; // default max
 	linear = false;    // default is gaussian distribution
 	deviation = 0;     // default standard deviation is zero
 	mean = 0;
-	const char *spec = (const char *)_spec;
-	physx::PxF32 v = (physx::PxF32) NxGauss::atof(spec, &pos ); // convert the input string to float
-	if ( pos != spec ) // if we did not encounter a valid number then...
+	const char* spec = (const char*)_spec;
+	physx::PxF32 v = (physx::PxF32) NxGauss::atof(spec, &pos);  // convert the input string to float
+	if (pos != spec)   // if we did not encounter a valid number then...
 	{
 		mean = v;
 		ret++;
-		if( *pos == ':' || *pos == ',' ) // is the next character the standard deviation seperator?
+		if (*pos == ':' || *pos == ',')  // is the next character the standard deviation seperator?
 		{
-			spec = pos+1;
-			v  = (physx::PxF32) NxGauss::atof( spec, &pos );
-			if ( pos != spec )
+			spec = pos + 1;
+			v  = (physx::PxF32) NxGauss::atof(spec, &pos);
+			if (pos != spec)
 			{
 				deviation = v;
 				ret++;
-				if ( *pos == '<' || *pos == '[' )
+				if (*pos == '<' || *pos == '[')
 				{
-					spec = pos+1;
-					v  = (physx::PxF32) NxGauss::atof( spec, &pos );
-					if ( pos != spec )
+					spec = pos + 1;
+					v  = (physx::PxF32) NxGauss::atof(spec, &pos);
+					if (pos != spec)
 					{
 						vmin = v;
 						ret++;
-						if ( *pos == ',' || *pos == ':' )
+						if (*pos == ',' || *pos == ':')
 						{
-							spec = pos+1;
-							v = (physx::PxF32) NxGauss::atof(spec,&pos);
-							if ( pos != spec )
+							spec = pos + 1;
+							v = (physx::PxF32) NxGauss::atof(spec, &pos);
+							if (pos != spec)
 							{
 								vmax = v;
-								if ( *pos == ']' || *pos == '>' )
+								if (*pos == ']' || *pos == '>')
 								{
 									pos++;
 								}
@@ -506,19 +515,104 @@ PX_INLINE physx::PxU32 NxGauss::strtogmd(const char* _spec,
 		}
 	}
 
-	if ( *pos == '!' ) // see if the last character is an exclamation mark, indicating a linear distribution
+	if (*pos == '!')   // see if the last character is an exclamation mark, indicating a linear distribution
 	{
 		linear = true;
 		pos++;
 	}
 
-	if( end != 0 )
+	if (end != 0)
 	{
 		*end = pos;
 	}
 
 	return ret;
-};
+}
+
+#endif /* #if NXGAUSS_USE_ASCII_REPRESENTATIONS */
+
+PX_INLINE physx::PxF32	NxGauss::getSample(void) // sample the random distribution.  This is not a 'const' because sampling it changes the random number seed.
+{
+	physx::PxF32 ret = 0;
+
+	if (hasGaussFlag(GF_SECOND))
+	{
+		ret = mSecondValue * mStandardDeviation + mMean;
+		mFlags &= ~GF_SECOND;
+	}
+	else
+	{
+		if (hasGaussFlag(GF_LINEAR))
+		{
+			ret = ((ranf() * mStandardDeviation * 2) - mStandardDeviation) + mMean;
+		}
+		else
+		{
+
+			physx::PxF32 x1, x2, w;
+			do
+			{
+				x1 = 2.0f * ranf() - 1.0f;
+				x2 = 2.0f * ranf() - 1.0f;
+				w = x1 * x1 + x2 * x2;
+			}
+			while (w >= 1.0f);
+
+			w = sqrtf((-2.0f * logf(w)) / w);
+
+			ret = x1 * w;
+			mSecondValue = x2 * w;
+
+			ret = ret * mStandardDeviation + mMean;
+
+			mFlags |= GF_SECOND;
+		}
+	}
+
+	if (hasGaussFlag(GF_MIN_MAX))  // if we are clamping the results, then apply the limits
+	{
+		if (ret < mMin)
+		{
+			ret = mMin;
+		}
+		if (ret > mMax)
+		{
+			ret = mMax;
+		}
+	}
+
+	return ret;
+}
+
+
+PX_INLINE void NxGauss::set(physx::PxF32 mean, physx::PxF32 stdev, physx::PxF32 fmin, physx::PxF32 fmax, bool linear, physx::PxU32 seed)
+{
+	mMean = mean;
+	mStandardDeviation = stdev;
+	mMin = fmin;
+	mMax = fmax;
+	mSeed   = seed;
+	mFlags  = 0;
+	if (linear)
+	{
+		mFlags |= GF_LINEAR;
+	}
+	if (mStandardDeviation != 0)
+	{
+		mFlags |= GF_STDEV;
+	}
+	if (mMin != -PX_MAX_F32 || mMax != PX_MAX_F32)
+	{
+		mFlags |= GF_MIN_MAX;
+	}
+}
+
+
+PX_INLINE physx::PxF32 NxGauss::ranf(void) // returns a random floating point number between 0-1
+{
+	mSeed = (mSeed * 214013L + 2531011L) & 0x7fffffff;
+	return (physx::PxF32)(mSeed & 0x7FFF) * (1.0f / 32767.0f);
+}
 
 #if defined(PX_WINDOWS)
 #pragma warning(pop)
@@ -527,6 +621,7 @@ PX_INLINE physx::PxU32 NxGauss::strtogmd(const char* _spec,
 
 PX_POP_PACK
 
-}} // end namespace physx::apex
+}
+} // end namespace physx::apex
 
 #endif

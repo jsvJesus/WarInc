@@ -1,45 +1,40 @@
-#include "NxApex.h"
-#ifndef NX_USER_RENDER_INSTANCEBUFFER_DESC_H
-#define NX_USER_RENDER_INSTANCEBUFFER_DESC_H
-/*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
- *
- * NOTICE TO USER:
- *
- * This source code is subject to NVIDIA ownership rights under U.S. and
- * international Copyright laws.  Users and possessors of this source code
- * are hereby granted a nonexclusive, royalty-free license to use this code
- * in individual and commercial software.
- *
- * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
- * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
- * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
- * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
- * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
- * OR PERFORMANCE OF THIS SOURCE CODE.
- *
- * U.S. Government End Users.   This source code is a "commercial item" as
- * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
- * "commercial computer  software"  and "commercial computer software
- * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
- * and is provided to the U.S. Government only as a commercial end item.
- * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
- * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
- * source code with only those rights set forth herein.
- *
- * Any use of this source code in individual and commercial software must
- * include, in the user documentation and internal comments to the code,
- * the above Disclaimer and U.S. Government End Users Notice.
- */
+// This code contains NVIDIA Confidential Information and is disclosed to you
+// under a form of NVIDIA software license agreement provided separately to you.
+//
+// Notice
+// NVIDIA Corporation and its licensors retain all intellectual property and
+// proprietary rights in and to this software and related documentation and
+// any modifications thereto. Any use, reproduction, disclosure, or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA Corporation is strictly prohibited.
+//
+// ALL NVIDIA DESIGN SPECIFICATIONS, CODE ARE PROVIDED "AS IS.". NVIDIA MAKES
+// NO WARRANTIES, EXPRESSED, IMPLIED, STATUTORY, OR OTHERWISE WITH RESPECT TO
+// THE MATERIALS, AND EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF NONINFRINGEMENT,
+// MERCHANTABILITY, AND FITNESS FOR A PARTICULAR PURPOSE.
+//
+// Information and code furnished is believed to be accurate and reliable.
+// However, NVIDIA Corporation assumes no responsibility for the consequences of use of such
+// information or for any infringement of patents or other rights of third parties that may
+// result from its use. No license is granted by implication or otherwise under any patent
+// or patent rights of NVIDIA Corporation. Details are subject to change without notice.
+// This code supersedes and replaces all information previously supplied.
+// NVIDIA Corporation products are not authorized for use as critical
+// components in life support devices or systems without express written approval of
+// NVIDIA Corporation.
+//
+// Copyright (c) 2008-2012 NVIDIA Corporation. All rights reserved.
+
+#ifndef NX_USER_RENDER_INSTANCE_BUFFER_DESC_H
+#define NX_USER_RENDER_INSTANCE_BUFFER_DESC_H
 
 /*!
 \file
 \brief class NxUserRenderInstanceBufferDesc, structs NxRenderDataFormat and NxRenderInstanceSemantic
 */
+
+#include "NxUserRenderResourceManager.h"
+#include "NxApexRenderDataFormat.h"
 
 namespace physx
 {
@@ -55,6 +50,7 @@ namespace apex
 {
 
 PX_PUSH_PACK_DEFAULT
+
 #pragma warning(push)
 #pragma warning(disable:4121)
 
@@ -63,6 +59,9 @@ PX_PUSH_PACK_DEFAULT
 */
 struct NxRenderInstanceSemantic
 {
+	/**
+	\brief Enume of the potential instance buffer semantics
+	*/
 	enum Enum
 	{
 		POSITION = 0,	//!< position of instance
@@ -70,9 +69,45 @@ struct NxRenderInstanceSemantic
 		VELOCITY_LIFE,	//!< velocity & life remain (1.0=new .. 0.0=dead) baked together
 		DENSITY,		//!< particle density at instance location
 		COLOR,			//!< color of instance
+		COLOR_FLOAT4,	//!< color of instance with float4 format
+		UV_OFFSET,		//!< an offset to apply to all U,V coordinates
+		LOCAL_OFFSET,	//!< the static initial position offset of the instance
+
+		USER_DATA,		//!< User data - 32 bits
 
 		NUM_SEMANTICS	//!< Count of semantics, not a valid semantic.
 	};
+
+	/**
+	\brief Get semantic format
+	*/
+	static PX_INLINE NxRenderDataFormat::Enum getSemanticFormat(Enum semantic)
+	{
+		switch (semantic)
+		{
+		case POSITION:
+			return NxRenderDataFormat::FLOAT3;
+		case ROTATION_SCALE:
+			return NxRenderDataFormat::FLOAT3x3;
+		case VELOCITY_LIFE:
+			return NxRenderDataFormat::FLOAT4;
+		case DENSITY:
+			return NxRenderDataFormat::FLOAT1;
+		case COLOR:
+			return NxRenderDataFormat::B8G8R8A8;
+		case COLOR_FLOAT4:
+			return NxRenderDataFormat::FLOAT4;
+		case UV_OFFSET:
+			return NxRenderDataFormat::FLOAT2;
+		case LOCAL_OFFSET:
+			return NxRenderDataFormat::FLOAT3;
+		case USER_DATA:
+			return NxRenderDataFormat::UINT1;
+		default:
+			PX_ALWAYS_ASSERT();
+			return NxRenderDataFormat::NUM_FORMATS;
+		}
+	}
 };
 
 /**
@@ -95,6 +130,9 @@ public:
 		stride = 0;
 	}
 
+	/**
+	\brief Check if parameter's values are correct
+	*/
 	bool isValid(void) const
 	{
 		physx::PxU32 numFailed = 0;
@@ -134,9 +172,10 @@ public:
 };
 
 #pragma warning(pop)
+
 PX_POP_PACK
 
 }
 } // end namespace physx::apex
 
-#endif
+#endif // NX_USER_RENDER_INSTANCE_BUFFER_DESC_H

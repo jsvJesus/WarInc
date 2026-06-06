@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,18 +37,21 @@
 //
 #include <RendererShape.h>
 
-RendererShape::RendererShape(Renderer &renderer) :
-	m_renderer(renderer)
+using namespace SampleRenderer;
+
+RendererShape::RendererShape(Renderer& renderer) :
+	m_renderer	(renderer),
+	m_mesh		(NULL),
+	m_userData	(NULL)
 {
-	m_mesh = 0;
 }
 
 RendererShape::~RendererShape(void)
 {
 	RENDERER_ASSERT(m_mesh==0, "Mesh was not properly released before Shape destruction.");
 }
-	
-RendererMesh *RendererShape::getMesh(void)
+
+RendererMesh* RendererShape::getMesh(void)
 {
 	return m_mesh;
 }

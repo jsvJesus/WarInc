@@ -1,6 +1,3 @@
-#ifndef PX_PROCESS_RENDER_DEBUG_H
-
-#define PX_PROCESS_RENDER_DEBUG_H
 /*
  * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
  *
@@ -35,12 +32,16 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
+
+#ifndef PX_PROCESS_RENDER_DEBUG_H
+#define PX_PROCESS_RENDER_DEBUG_H
+
 #include "PxRenderDebug.h"
 
 namespace physx
 {
-	namespace shdfnd2
-	{
+namespace general_renderdebug4
+{
 
 #define MAX_LINE_VERTEX 2048
 #define MAX_SOLID_VERTEX 2048
@@ -62,9 +63,9 @@ public:
 	virtual void processRenderDebug(const DebugPrimitive **dplist,
 									PxU32 pcount,
 									RenderDebugInterface *iface,
-									PxProcessRenderDebug::DisplayType type) = 0;
+									DisplayType type) = 0;
 
-	virtual void flush(RenderDebugInterface *iface,PxProcessRenderDebug::DisplayType type) = 0;
+	virtual void flush(RenderDebugInterface *iface,DisplayType type) = 0;
 
 	virtual void flushFrame(RenderDebugInterface *iface) = 0;
 
@@ -87,6 +88,7 @@ PxProcessRenderDebug * createProcessRenderDebug(void);
 PX_POP_PACK
 
 }; // end of namespace
+using namespace general_renderdebug4;
 }; // end of namespace
 
 #endif

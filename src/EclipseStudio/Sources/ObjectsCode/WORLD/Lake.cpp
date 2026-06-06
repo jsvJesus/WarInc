@@ -41,7 +41,6 @@ AUTOREGISTER_CLASS(obj_Lake);
 
 	float		LakePlaneY = 101.0;
 	float		LakeDepth  = 100;
-	const int	nCells = 128;
 
 extern r3dScreenBuffer*	DepthBuffer;
 
@@ -49,6 +48,8 @@ obj_Lake		*objOceanPlane;
 
 
 obj_Lake::obj_Lake()
+: PlaneScale( 1.f )
+, CurrentScale( 0.f )
 {
 	memset(WaterColor,0, sizeof(WaterColor));
 	FoamTexture = 0;
@@ -56,6 +57,7 @@ obj_Lake::obj_Lake()
 	ColorTexture = 0;
 	MaskTexture = 0;
 
+	DrawDistanceSq = FLT_MAX;
 }
 
 
@@ -68,7 +70,7 @@ float obj_Lake :: DrawPropertyEditor(float scrx, float scry, float scrw, float s
 
  if( IsParentOrEqual( &ClassData, startClass ) )
  {
-	 starty += imgui_Static(scrx, starty, "NOTHING TO EDIT");
+	 starty += imgui_Value_Slider( scrx, starty, "Plane Scale", &PlaneScale, 1.0f, 8.0f, "%.2f" );
  }
 
  return starty-scry;
@@ -88,14 +90,8 @@ BOOL obj_Lake::OnCreate()
 	char Str[256];
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags      |= OBJFLAG_SkipCastRay 
-						| 
-					OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows
-						|	
-					OBJFLAG_ForceSleep;
-					;
+	setSkipOcclusionCheck(true);
+	ObjFlags      |= OBJFLAG_SkipCastRay | OBJFLAG_DisableShadows |	OBJFLAG_ForceSleep;
 
 #ifndef FINAL_BUILD
 	extern int __HaveOcean;
@@ -110,28 +106,11 @@ BOOL obj_Lake::OnCreate()
 	bRenderRefraction = 1;
 
 	WaterBase::OnCreateBase();
-	CreateRefractionBuffer();
+	CreateWaterBuffers();
 
 	OceanPlane = new r3dXPSObject<R3D_WATER_VERTEX>;
 
-	r3dBoundBox bboxLocal ;
-
-	if(Terrain)
-	{
-		const r3dTerrainDesc& desc = Terrain->GetDesc() ;
-
-		OceanPlane->InitGrid(0, 0, int( desc.CellCountX / nCells ), int( desc.CellCountZ / nCells ), desc.CellSize * nCells, 0.0f);
-		bboxLocal.Size = r3dPoint3D( desc.XSize, 1.0f, desc.ZSize ) ;
-	}
-	else
-	{
-		OceanPlane->InitGrid(0, 0, int( 1024.0f / nCells ), int( 1024.0f / nCells ), 128.0f * nCells, 0.0f);
-		bboxLocal.Size = r3dPoint3D( 1024.0f * 128.0f, 1.0f, 1024.0f * 128.0f);
-	}
-
-	bboxLocal.Org = r3dPoint3D(0,LakePlaneY,0);
-
-	SetBBoxLocal( bboxLocal ) ;
+	UpdateGrid();
 
 	UpdateTransform();
 
@@ -176,25 +155,64 @@ BOOL obj_Lake::Update()
 {
 	//apply dynamically changed height
 
-	r3dBoundBox bboxLocal = GetBBoxLocal() ;
+	UpdateGrid();
+
+	r3dBoundBox bboxLocal = GetBBoxLocal();
 
 	bboxLocal.Org = r3dPoint3D(0,LakePlaneY,0);
 
-	SetBBoxLocal( bboxLocal ) ;
+	SetBBoxLocal( bboxLocal );
 
 	UpdateTransform();
 	return TRUE;
 }
 
+void obj_Lake::UpdateGrid()
+{
+	if( CurrentScale != PlaneScale )
+	{
+		r3dBoundBox bboxLocal ;
 
+		float Width, Height, CellSize;
 
-void
-obj_Lake::DrawComposite( const r3dCamera& Cam )
+		if(Terrain)
+		{
+			const r3dTerrainDesc& desc = Terrain->GetDesc() ;
+
+			Width = desc.XSize;
+			Height = desc.ZSize;
+		}
+		else
+		{
+			Width = 1024.0f * 8.0f;
+			Height = 1024.0f * 8.0f ;
+		}
+
+		CellSize = R3D_MAX( Width / 64.0f, Height / 64.0f );
+
+		float startX = ( Width - Width * PlaneScale ) * 0.5f;
+		float startY = ( Height - Height * PlaneScale ) * 0.5f;
+
+		Width *= PlaneScale;
+		Height *= PlaneScale;
+
+		OceanPlane->InitGrid( (int)startX,(int)startY, int( Width / CellSize ), int( Height / CellSize ), CellSize, 0.0f);
+		bboxLocal.Size = r3dPoint3D( Width, 1.0f, Height ) ;
+
+		bboxLocal.Org = r3dPoint3D( -startX * CellSize, LakePlaneY, -startY * CellSize );
+
+		SetBBoxLocal( bboxLocal ) ;
+
+		CurrentScale = PlaneScale;
+	}
+}
+
+void obj_Lake::DrawComposite( const r3dCamera& Cam )
 {
 #ifndef WO_SERVER
 	R3DPROFILE_FUNCTION("Lake::DoDraw");
 
-	RenderBegin(Cam, LakePlaneY, false);
+	RenderBegin(Cam, LakePlaneY);
 
 	OceanPlane->Draw();
 
@@ -290,12 +308,17 @@ void obj_Lake::ReadSerializedData(pugi::xml_node& node)
 
 	if( !ch_node.attribute( "offset_x" ).empty() )
 	{
-		PlaneOffsetX = ch_node.attribute( "offset_x" ).as_float() ;
+		PlaneOffsetX = ch_node.attribute( "offset_x" ).as_float();
 	}
 
 	if( !ch_node.attribute( "offset_z" ).empty() )
 	{
-		PlaneOffsetZ = ch_node.attribute( "offset_z" ).as_float() ;
+		PlaneOffsetZ = ch_node.attribute( "offset_z" ).as_float();
+	}
+
+	if( !ch_node.attribute( "plane_scale" ).empty() )
+	{
+		PlaneScale = ch_node.attribute( "plane_scale" ).as_float();
 	}
 
 	if ( ! ch_node.empty() )
@@ -330,8 +353,10 @@ void obj_Lake::WriteSerializedData(pugi::xml_node& node)
 	pugi::xml_node ch_node = node.append_child();
 	ch_node.set_name( "new_lake" );
 
-	ch_node.append_attribute( "offset_x" ) = PlaneOffsetX ;
-	ch_node.append_attribute( "offset_z" ) = PlaneOffsetZ ;
+	ch_node.append_attribute( "offset_x" ) = PlaneOffsetX;
+	ch_node.append_attribute( "offset_z" ) = PlaneOffsetZ;
+
+	ch_node.append_attribute( "plane_scale" ) = PlaneScale;
 
 	if ( WaterColor[0] )
 	{

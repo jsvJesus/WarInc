@@ -108,11 +108,9 @@ void CUserFriends::SetCurrentStats(pugi::xml_document& xmlFile)
 			
 		Stats_s st;
 		st.friendID = ID;
-		st.stats.HonorPoints = xmlItem.attribute("XP").as_uint();
+		st.stats.XP          = xmlItem.attribute("XP").as_uint();
 		st.stats.Kills       = xmlItem.attribute("k").as_uint();
 		st.stats.Deaths      = xmlItem.attribute("d").as_uint();
-		st.stats.Wins        = xmlItem.attribute("w").as_uint();
-		st.stats.Losses      = xmlItem.attribute("l").as_uint();
 		st.stats.TimePlayed  = xmlItem.attribute("t").as_uint();
 		friendStats_.push_back(st);
 

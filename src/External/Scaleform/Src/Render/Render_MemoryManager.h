@@ -29,14 +29,14 @@ namespace Scaleform { namespace Render {
 
 enum MemoryType
 {
-    Memory_Normal               = 0,
-    Memory_Uncached             = 0x0100,
+    Memory_Normal            = 0,
+    Memory_Uncached          = 0x0100,
 
-    Memory_X360_Physical        = 0x1000,
-    Memory_X360_EDRAM           = 0x1001,
+    Memory_X360_Physical     = 0x1000,
+    Memory_X360_EDRAM        = 0x1001,
 
-    Memory_PS3_MainVideo        = 0x2000,
-    Memory_PS3_RSX              = 0x2002,
+    Memory_PS3_MainVideo     = 0x2000,
+    Memory_PS3_RSX           = 0x2002,
 
     Memory_PSVita_Main          = 0x3000,
     Memory_PSVita_MainUncached  = 0x3100,
@@ -46,16 +46,11 @@ enum MemoryType
     Memory_PSVita_Fragment      = 0x3022,
     Memory_PSVita_Shader        = 0x3032,
 
-    Memory_3DS_Device           = 0x4000,
-    Memory_3DS_VideoA           = 0x4001,
-    Memory_3DS_VideoB           = 0x4002,
+    Memory_3DS_Device        = 0x4000,
+    Memory_3DS_VideoA        = 0x4001,
+    Memory_3DS_VideoB        = 0x4002,
 
-    Memory_Wii_MEM1             = 0x5000,
-
-    // The ORBIS memory regions are only available in non-final hardware.
-    Memory_Orbis_PrivateVideo   = 0x6000,
-    Memory_Orbis_SharedVideo    = 0x6001,
-    Memory_Orbis_SharedSystem   = 0x6002,
+    Memory_Wii_MEM1          = 0x5000,
 };
 
 // ***** MemoryManager

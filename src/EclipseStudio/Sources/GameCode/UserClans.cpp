@@ -7,7 +7,6 @@
 CUserClans::CUserClans()
 {
 	InitializeCriticalSection(&csClans_);
-	gotNewData = false;
 }
 
 CUserClans::~CUserClans()
@@ -45,7 +44,7 @@ void CUserClans::RemoveMember(int MemberID)
 {
 	for(TClanMemberList::iterator it = clanMembers_.begin(); it != clanMembers_.end(); ++it)
 	{
-		if(it->CustomerID == MemberID)
+		if(it->CharID == MemberID)
 		{
 			clanMembers_.erase(it);
 			return;
@@ -60,7 +59,7 @@ CUserClans::ClanMember_s* CUserClans::GetMember(int MemberID)
 {
 	for(TClanMemberList::iterator it = clanMembers_.begin(); it != clanMembers_.end(); ++it)
 	{
-		if(it->CustomerID == MemberID)
+		if(it->CharID == MemberID)
 		{
 			return &(*it);
 		}
@@ -92,25 +91,26 @@ void CUserClans::ParseClanInfo(pugi::xml_node& xmlNode, ClanInfo_s& clan)
 
 void CUserClans::ParseClanMember(pugi::xml_node& xmlNode, ClanMember_s& member)
 {
-	member.CustomerID        = xmlNode.attribute("id").as_int();
+	member.CharID            = xmlNode.attribute("id").as_int();
 	member.ClanRank          = xmlNode.attribute("cr").as_uint();
+	r3dscpy(member.gamertag, xmlNode.attribute("gt").value());
 	member.ContributedGP     = xmlNode.attribute("cgp").as_uint();
 	member.ContributedXP     = xmlNode.attribute("cxp").as_uint();
-	member.stats.HonorPoints = xmlNode.attribute("xp").as_uint();
-	member.stats.Kills       = xmlNode.attribute("k").as_uint();
-	member.stats.Deaths      = xmlNode.attribute("d").as_uint();
-	member.stats.Wins        = xmlNode.attribute("w").as_uint();
-	member.stats.Losses      = xmlNode.attribute("l").as_uint();
-	member.stats.TimePlayed  = xmlNode.attribute("tp").as_uint();
 
-	r3dscpy(member.gamertag, xmlNode.attribute("gt").value());
-	
+	member.stats.XP              = xmlNode.attribute("xp").as_uint();
+	member.stats.TimePlayed      = xmlNode.attribute("tp").as_uint();
+	member.stats.Reputation      = xmlNode.attribute("r").as_uint();
+	member.stats.KilledZombies   = xmlNode.attribute("ts00").as_uint();
+	member.stats.KilledSurvivors = xmlNode.attribute("ts01").as_uint();
+	member.stats.KilledBandits   = xmlNode.attribute("ts02").as_uint();
+
 	return;
 }
 
 int CUserClans::ApiClanCheckIfCreateNeedMoney(int* out_NeedMoney)
 {
 	CWOBackendReq req(&gUserProfile, "api_ClanCreate.aspx");
+	req.AddParam("CharID", gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func", "check1");
 	if(!req.Issue())
 	{
@@ -123,11 +123,13 @@ int CUserClans::ApiClanCheckIfCreateNeedMoney(int* out_NeedMoney)
 
 int CUserClans::ApiClanCreate(const CreateParams_s& params)
 {
-	r3d_assert(gUserProfile.ProfileData.ClanID == 0);
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	r3d_assert(slot.ClanID == 0);
 	r3d_assert(params.ClanName[0]!='\0');
 	r3d_assert(params.ClanTag[0]!='\0');
 
 	CWOBackendReq req(&gUserProfile, "api_ClanCreate.aspx");
+	req.AddParam("CharID",          slot.LoadoutID);
 	req.AddParam("func",            "create");
 	req.AddParam("ClanName",        params.ClanName);
 	req.AddParam("ClanNameColor",   params.ClanNameColor);
@@ -149,9 +151,9 @@ int CUserClans::ApiClanCreate(const CreateParams_s& params)
 		return 9;
 	}
 	
-	gUserProfile.ProfileData.ClanID   = ClanID;
-	gUserProfile.ProfileData.ClanRank = 0;
-	gUserProfile.ProfileData.Stats.GamePoints = newGPBalance;
+	slot.ClanID   = ClanID;
+	slot.ClanRank = 0;
+	gUserProfile.ProfileData.GamePoints = newGPBalance;
 	
 	// retreive new clan info
 	return ApiClanGetInfo(ClanID, &clanInfo_, &clanMembers_);
@@ -161,6 +163,7 @@ int CUserClans::ApiClanGetInfo(int ClanID, ClanInfo_s* out_info, CUserClans::TCl
 {
 	r3d_assert(out_info);
 	CWOBackendReq req(&gUserProfile, "api_ClanGetInfo.aspx");
+	req.AddParam("CharID",     gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func",       "info");
 	req.AddParam("ClanID",     ClanID);
 	req.AddParam("GetMembers", out_members ? 1 : 0);
@@ -196,6 +199,7 @@ int CUserClans::ApiClanGetInfo(int ClanID, ClanInfo_s* out_info, CUserClans::TCl
 int CUserClans::ApiClanGetLeaderboard()
 {
 	CWOBackendReq req(&gUserProfile, "api_ClanGetInfo.aspx");
+	req.AddParam("CharID", gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func", "lb");
 	if(!req.Issue())
 	{
@@ -222,9 +226,11 @@ int CUserClans::ApiClanGetLeaderboard()
 
 int CUserClans::ApiClanLeave()
 {
-	r3d_assert(gUserProfile.ProfileData.ClanID);
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	r3d_assert(slot.ClanID);
 	
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID", slot.LoadoutID);
 	req.AddParam("func", "leave");
 	if(!req.Issue())
 	{
@@ -232,7 +238,7 @@ int CUserClans::ApiClanLeave()
 	}
 	
 	// reset
-	gUserProfile.ProfileData.ClanID = 0;
+	slot.ClanID = 0;
 	clanInfo_ = ClanInfo_s();
 	clanMembers_.clear();
 
@@ -244,6 +250,7 @@ int CUserClans::ApiClanKick(int MemberID)
 	r3d_assert(GetMember(MemberID) != NULL);
 
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID", gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func", "kick");
 	req.AddParam("MemberID", MemberID);
 	if(!req.Issue())
@@ -260,6 +267,7 @@ int CUserClans::ApiClanSetRank(int MemberID, int Rank)
 	r3d_assert(GetMember(MemberID) != NULL);
 
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID",   gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func",     "setrank");
 	req.AddParam("MemberID", MemberID);
 	req.AddParam("Rank",     Rank);
@@ -277,6 +285,7 @@ int CUserClans::ApiClanSetRank(int MemberID, int Rank)
 int CUserClans::ApiClanSetLore(const char* lore)
 {
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID", gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func", "setlore");
 	req.AddParam("Lore", lore);
 	if(!req.Issue())
@@ -290,30 +299,34 @@ int CUserClans::ApiClanSetLore(const char* lore)
 
 int CUserClans::ApiClanDonateGPToClan(int GP)
 {
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
 	r3d_assert(GP > 0);
-	r3d_assert(gUserProfile.ProfileData.Stats.GamePoints >= GP);
+	r3d_assert(gUserProfile.ProfileData.GamePoints >= GP);
 	
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
-	req.AddParam("func", "gpclan");
-	req.AddParam("GP",   GP);
+	req.AddParam("CharID", slot.LoadoutID);
+	req.AddParam("func",   "gpclan");
+	req.AddParam("GP",     GP);
 	if(!req.Issue())
 	{
 		return GetResultCode2("ApiClanDonateGPToClan", req);
 	}
 	
-	ClanMember_s* member = GetMember(gUserProfile.CustomerID);
+	ClanMember_s* member = GetMember(slot.LoadoutID);
 	if(member)
 		member->ContributedGP += GP;
 	clanInfo_.ClanGP += GP;
-	gUserProfile.ProfileData.Stats.GamePoints -= GP;
+	gUserProfile.ProfileData.GamePoints -= GP;
 	return 0;
 }
 
 int CUserClans::ApiClanDonateGPToMember(int MemberID, int GP)
 {
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
 	r3d_assert(clanInfo_.ClanGP >= GP);
 
 	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID",   slot.LoadoutID);
 	req.AddParam("func",     "gpmember");
 	req.AddParam("GP",       GP);
 	req.AddParam("MemberID", MemberID);
@@ -322,32 +335,39 @@ int CUserClans::ApiClanDonateGPToMember(int MemberID, int GP)
 		return GetResultCode2("ApiClanDonateGPToMember", req);
 	}
 	
+	if(MemberID == slot.LoadoutID)
+	{
+		gUserProfile.ProfileData.GamePoints += GP;
+	}
 	clanInfo_.ClanGP -= GP;
 	return 0;
 }
 
 int CUserClans::ApiClanBuyAddMembers(int AddMemberIdx)
 {
-	r3d_assert(gUserProfile.ProfileData.ClanID > 0);
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	r3d_assert(slot.ClanID > 0);
 	r3d_assert(AddMemberIdx >= 0 && AddMemberIdx < 6);
 	r3d_assert(gUserProfile.ShopClanAddMembers_GP[AddMemberIdx] > 0);
 	r3d_assert(gUserProfile.ShopClanAddMembers_Num[AddMemberIdx] > 0);
 	
-	// buy "add clan item" for permantnt GP
-	int rc = gUserProfile.ApiBuyItem(301144 + AddMemberIdx, 4);
-	if(rc != 0) {
-		return rc;
+	CWOBackendReq req(&gUserProfile, "api_ClanMgr.aspx");
+	req.AddParam("CharID",   slot.LoadoutID);
+	req.AddParam("func",     "buyslot");
+	req.AddParam("idx",      AddMemberIdx);
+	if(!req.Issue())
+	{
+		return GetResultCode2("ApiClanBuyAddMembers", req);
 	}
 	
 	clanInfo_.MaxClanMembers += gUserProfile.ShopClanAddMembers_Num[AddMemberIdx];
-	gUserProfile.ProfileData.Stats.GamePoints -= gUserProfile.ShopClanAddMembers_GP[AddMemberIdx];
 	return 0;
 }
-
 
 int CUserClans::ApiClanSendInvite(const char* gamertag)
 {
 	CWOBackendReq req(&gUserProfile, "api_ClanInvites.aspx");
+	req.AddParam("CharID",   gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID].LoadoutID);
 	req.AddParam("func",     "send");
 	req.AddParam("Gamertag", gamertag);
 	if(!req.Issue())
@@ -360,7 +380,10 @@ int CUserClans::ApiClanSendInvite(const char* gamertag)
 
 int CUserClans::ApiClanAnswerInvite(int ClanInviteID, int Accept)
 {
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+
 	CWOBackendReq req(&gUserProfile, "api_ClanInvites.aspx");
+	req.AddParam("CharID",   slot.LoadoutID);
 	req.AddParam("func",     "answer");
 	req.AddParam("InviteID", ClanInviteID);
 	req.AddParam("Answer",   Accept ? 1 : 0);
@@ -379,8 +402,8 @@ int CUserClans::ApiClanAnswerInvite(int ClanInviteID, int Accept)
 	
 	if(Accept)
 	{
-		gUserProfile.ProfileData.ClanID   = ClanID;
-		gUserProfile.ProfileData.ClanRank = 99;
+		slot.ClanID   = ClanID;
+		slot.ClanRank = 99;
 
 		return ApiClanGetInfo(ClanID, &clanInfo_, &clanMembers_);
 	}
@@ -390,9 +413,11 @@ int CUserClans::ApiClanAnswerInvite(int ClanInviteID, int Accept)
 
 int CUserClans::ApiClanApplyAnswer(int ClanApplID, bool Accept)
 {
-	r3d_assert(gUserProfile.ProfileData.ClanID);
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	r3d_assert(slot.ClanID);
 	
 	CWOBackendReq req(&gUserProfile, "api_ClanApply.aspx");
+	req.AddParam("CharID", slot.LoadoutID);
 	req.AddParam("func",   "answer");
 	req.AddParam("ApplID", ClanApplID);
 	req.AddParam("Answer", Accept ? 1 : 0);
@@ -408,9 +433,11 @@ int CUserClans::ApiClanApplyAnswer(int ClanApplID, bool Accept)
 
 int CUserClans::ApiClanApplyToJoin(int ClanID, const char* note)
 {
-	r3d_assert(gUserProfile.ProfileData.ClanID == 0);
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	r3d_assert(slot.ClanID == 0);
 	
 	CWOBackendReq req(&gUserProfile, "api_ClanApply.aspx");
+	req.AddParam("CharID", slot.LoadoutID);
 	req.AddParam("func",   "apply");
 	req.AddParam("ClanID", ClanID);
 	req.AddParam("Note",   note);
@@ -418,6 +445,25 @@ int CUserClans::ApiClanApplyToJoin(int ClanID, const char* note)
 	{
 		return GetResultCode2("ApiClanApplyToJoin", req);
 	}
+	
+	return 0;
+}
+
+int CUserClans::ApiGetClanStatus()
+{
+	wiCharDataFull& slot = gUserProfile.ProfileData.ArmorySlots[gUserProfile.SelectedCharID];
+	
+	CWOBackendReq req(&gUserProfile, "api_ClanGetStatus.aspx");
+	req.AddParam("CharID", slot.LoadoutID);
+	if(!req.Issue())
+	{
+		return GetResultCode2("ApiGetClanNotifications", req);
+	}
+	
+	pugi::xml_document xmlFile;
+	req.ParseXML(xmlFile);
+	
+	SetCurrentData(xmlFile);
 	
 	return 0;
 }
@@ -431,7 +477,6 @@ void CUserClans::SetCurrentData(pugi::xml_node& xmlNode)
 	ParseClanCurrentData(xmlClans.child("cldata"));
 	ParseClanInvites(xmlClans.child("clinvites"));
 	ParseClanApplications(xmlClans.child("clapps"));
-	gotNewData = true;
 }
 
 void CUserClans::ParseClanCurrentData(pugi::xml_node& xmlNode)
@@ -450,14 +495,14 @@ void CUserClans::ParseClanApplications(pugi::xml_node& xmlNode)
 	{
 		ClanApplication_s capply;
 		capply.ClanApplID = xmlApply.attribute("id").as_int();
-		capply.Gamertag = xmlApply.attribute("gt").value();
-		capply.Note = xmlApply.attribute("note").value();
-		capply.stats.HonorPoints= xmlApply.attribute("xp").as_int();
-		capply.stats.Kills= xmlApply.attribute("k").as_int();
-		capply.stats.Deaths= xmlApply.attribute("d").as_int();
-		capply.stats.Wins= xmlApply.attribute("w").as_int();
-		capply.stats.Losses= xmlApply.attribute("l").as_int();
-		capply.stats.TimePlayed= xmlApply.attribute("tp").as_int();
+		capply.Gamertag   = xmlApply.attribute("gt").value();
+		capply.Note       = xmlApply.attribute("note").value();
+		capply.stats.XP              = xmlApply.attribute("xp").as_uint();
+		capply.stats.TimePlayed      = xmlApply.attribute("tp").as_uint();
+		capply.stats.Reputation      = xmlApply.attribute("r").as_uint();
+		capply.stats.KilledZombies   = xmlApply.attribute("ts00").as_uint();
+		capply.stats.KilledSurvivors = xmlApply.attribute("ts01").as_uint();
+		capply.stats.KilledBandits   = xmlApply.attribute("ts02").as_uint();
 
 		clanApplications_.push_back(capply);
 

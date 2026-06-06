@@ -60,10 +60,6 @@ template <typename T> SF_INLINE int     IRound(const T a)
 template <typename T> SF_INLINE unsigned URound(const T a)
     { return (unsigned)(a + 0.5); }
 
-template <typename T> SF_INLINE bool    ToleranceEqual(const T a, const T b, const T tolerance)
-{
-    return (a + tolerance >= b) && (a - tolerance <= b);
-}
 // These functions stand to fix a stupid VC++ warning (with /Wp64 on):
 // "warning C4267: 'argument' : conversion from 'size_t' to 'const unsigned', possible loss of data"
 // Use these functions instead of gmin/gmax if the argument has size

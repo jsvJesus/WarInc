@@ -1,0 +1,303 @@
+/*
+ * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ *
+ * NOTICE TO USER:
+ *
+ * This source code is subject to NVIDIA ownership rights under U.S. and
+ * international Copyright laws.  Users and possessors of this source code
+ * are hereby granted a nonexclusive, royalty-free license to use this code
+ * in individual and commercial software.
+ *
+ * NVIDIA MAKES NO REPRESENTATION ABOUT THE SUITABILITY OF THIS SOURCE
+ * CODE FOR ANY PURPOSE.  IT IS PROVIDED "AS IS" WITHOUT EXPRESS OR
+ * IMPLIED WARRANTY OF ANY KIND.  NVIDIA DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOURCE CODE, INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
+ * IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL,
+ * OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+ * OF USE, DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION,  ARISING OUT OF OR IN CONNECTION WITH THE USE
+ * OR PERFORMANCE OF THIS SOURCE CODE.
+ *
+ * U.S. Government End Users.   This source code is a "commercial item" as
+ * that term is defined at  48 C.F.R. 2.101 (OCT 1995), consisting  of
+ * "commercial computer  software"  and "commercial computer software
+ * documentation" as such terms are  used in 48 C.F.R. 12.212 (SEPT 1995)
+ * and is provided to the U.S. Government only as a commercial end item.
+ * Consistent with 48 C.F.R.12.212 and 48 C.F.R. 227.7202-1 through
+ * 227.7202-4 (JUNE 1995), all U.S. Government End Users acquire the
+ * source code with only those rights set forth herein.
+ *
+ * Any use of this source code in individual and commercial software must
+ * include, in the user documentation and internal comments to the code,
+ * the above Disclaimer and U.S. Government End Users Notice.
+ */
+#include "OGLRendererVertexBuffer.h"
+
+#if defined(RENDERER_ENABLE_OPENGL)
+
+#include <RendererVertexBufferDesc.h>
+
+#if defined(PX_WINDOWS)
+#include <PxCudaContextManager.h>
+#endif
+
+OGLRendererVertexBuffer::OGLRendererVertexBuffer(const RendererVertexBufferDesc &desc, bool deferredUnlock) :
+	RendererVertexBuffer(desc)
+{
+	m_deferredUnlock = deferredUnlock;
+	m_vbo = 0;
+	
+	RENDERER_ASSERT(GLEW_ARB_vertex_buffer_object, "Vertex Buffer Objects not supported on this machine!");
+	if(GLEW_ARB_vertex_buffer_object)
+	{
+		GLenum usage = GL_STATIC_DRAW_ARB;
+		if(getHint() == HINT_DYNAMIC)
+		{
+			usage = GL_DYNAMIC_DRAW_ARB;
+		}
+		
+		RENDERER_ASSERT(m_stride && desc.maxVertices, "Unable to create Vertex Buffer of zero size.");
+		if(m_stride && desc.maxVertices)
+		{
+			glGenBuffersARB(1, &m_vbo);
+			RENDERER_ASSERT(m_vbo, "Failed to create Vertex Buffer Object.");
+		}
+		if(m_vbo)
+		{
+			m_maxVertices = desc.maxVertices;
+			physx::PxU32 bufferSize = m_stride * m_maxVertices;
+			glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
+			glBufferDataARB(GL_ARRAY_BUFFER_ARB, bufferSize, 0, usage);
+			glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+
+#if defined(PX_WINDOWS)
+			if(m_interopContext && m_mustBeRegisteredInCUDA)
+			{
+				RENDERER_ASSERT(m_deferredUnlock == false, "Deferred VB Unlock must be disabled when CUDA Interop is in use.")
+				m_registeredInCUDA = m_interopContext->registerResourceInCudaGL(m_InteropHandle, (physx::PxU32) m_vbo);
+			}
+#endif
+		}
+	}
+}
+
+OGLRendererVertexBuffer::~OGLRendererVertexBuffer(void)
+{
+	if(m_vbo)
+	{
+#if defined(PX_WINDOWS)
+		if(m_registeredInCUDA)
+		{
+			m_interopContext->unregisterResourceInCuda(m_InteropHandle);
+		}
+#endif
+		glDeleteBuffersARB(1, &m_vbo);
+	}
+}
+
+void OGLRendererVertexBuffer::swizzleColor(void *colors, physx::PxU32 stride, physx::PxU32 numColors)
+{
+	void *end = ((physx::PxU8*)colors)+(stride*numColors);
+	for(; colors < end; colors=((physx::PxU8*)colors)+stride)
+	{
+		((RendererColor*)colors)->swizzleRB();
+	}
+}
+
+void *OGLRendererVertexBuffer::lock(void)
+{
+	void *buffer = 0;
+	RENDERER_PERFZONE( OGLRendererVertexBufferLock );
+	if(m_vbo)
+	{
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
+		buffer = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+	}
+	return buffer;
+}
+
+void OGLRendererVertexBuffer::unlock(void)
+{
+	if(m_vbo)
+	{
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+	}
+}
+
+static GLuint getGLFormatSize(RendererVertexBuffer::Format format)
+{
+	physx::PxU32 size = 0;
+	switch(format)
+	{
+		case RendererVertexBuffer::FORMAT_FLOAT1:   size = 1; break;
+		case RendererVertexBuffer::FORMAT_FLOAT2:   size = 2; break;
+		case RendererVertexBuffer::FORMAT_FLOAT3:   size = 3; break;
+		case RendererVertexBuffer::FORMAT_FLOAT4:   size = 4; break;
+		case RendererVertexBuffer::FORMAT_UBYTE4:   size = 4; break;
+		case RendererVertexBuffer::FORMAT_USHORT4:  size = 4; break;
+		case RendererVertexBuffer::FORMAT_COLOR:    size = 4; break;
+	}
+	RENDERER_ASSERT(size, "Unable to compute number of Vertex Buffer elements.");
+	return size;
+}
+
+static GLenum getGLFormatType(RendererVertexBuffer::Format format)
+{
+	GLenum type = 0;
+	switch(format)
+	{
+		case RendererVertexBuffer::FORMAT_FLOAT1:
+		case RendererVertexBuffer::FORMAT_FLOAT2:
+		case RendererVertexBuffer::FORMAT_FLOAT3:
+		case RendererVertexBuffer::FORMAT_FLOAT4:
+			type = GL_FLOAT;
+			break;
+		case RendererVertexBuffer::FORMAT_UBYTE4:
+			type = GL_BYTE;
+			break;
+		case RendererVertexBuffer::FORMAT_USHORT4:
+			type = GL_SHORT;
+			break;
+		case RendererVertexBuffer::FORMAT_COLOR:
+			type = GL_UNSIGNED_BYTE;
+			break;
+	}
+	RENDERER_ASSERT(type, "Unable to compute GLType for Vertex Buffer Format.");
+	return type;
+}
+
+static GLenum getGLSemantic(RendererVertexBuffer::Semantic semantic)
+{
+	GLenum glsemantic = 0;
+	switch(semantic)
+	{
+		case RendererVertexBuffer::SEMANTIC_POSITION: glsemantic = GL_VERTEX_ARRAY;        break;
+		case RendererVertexBuffer::SEMANTIC_COLOR:    glsemantic = GL_COLOR_ARRAY;         break;
+		case RendererVertexBuffer::SEMANTIC_NORMAL:   glsemantic = GL_NORMAL_ARRAY;        break;
+		case RendererVertexBuffer::SEMANTIC_TANGENT:  glsemantic = GL_TEXTURE_COORD_ARRAY; break;
+
+		case RendererVertexBuffer::SEMANTIC_TEXCOORD0:
+		case RendererVertexBuffer::SEMANTIC_TEXCOORD1:
+		case RendererVertexBuffer::SEMANTIC_TEXCOORD2:
+		case RendererVertexBuffer::SEMANTIC_TEXCOORD3:
+		case RendererVertexBuffer::SEMANTIC_BONEINDEX:
+		case RendererVertexBuffer::SEMANTIC_BONEWEIGHT:
+			glsemantic = GL_TEXTURE_COORD_ARRAY;
+			break;
+	}
+	RENDERER_ASSERT(glsemantic, "Unable to compute the GL Semantic for Vertex Buffer Semantic.");
+	return glsemantic;
+}
+
+void OGLRendererVertexBuffer::bind(physx::PxU32 streamID, physx::PxU32 firstVertex)
+{
+	RENDERER_PERFZONE(OGLRendererVertexBufferBind);
+	prepareForRender();
+	const physx::PxU8 *buffer = ((physx::PxU8*)0) + firstVertex*m_stride;
+	if(m_vbo)
+	{
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo);
+		for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+		{
+			Semantic semantic = (Semantic)i;
+			const SemanticDesc &sm = m_semanticDescs[semantic];
+			if(sm.format < NUM_FORMATS)
+			{
+				switch(semantic)
+				{
+					case SEMANTIC_POSITION:
+						RENDERER_ASSERT(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for POSITION semantic.");
+						if(sm.format >= FORMAT_FLOAT1 && sm.format <= FORMAT_FLOAT4)
+						{
+							glVertexPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						}
+						break;
+					case SEMANTIC_COLOR:
+						RENDERER_ASSERT(sm.format == FORMAT_COLOR, "Unsupported Vertex Buffer Format for COLOR semantic.");
+						if(sm.format == FORMAT_COLOR)
+						{
+							glColorPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						}
+						break;
+					case SEMANTIC_NORMAL:
+						RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for NORMAL semantic.");
+						if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
+						{
+							glNormalPointer(getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						}
+						break;
+					case SEMANTIC_TANGENT:
+						RENDERER_ASSERT(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4, "Unsupported Vertex Buffer Format for TANGENT semantic.");
+						if(sm.format == FORMAT_FLOAT3 || sm.format == FORMAT_FLOAT4)
+						{
+							const physx::PxU32 channel = RENDERER_TANGENT_CHANNEL;
+							glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+							glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+							glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						}
+						break;
+					case SEMANTIC_TEXCOORD0:
+					case SEMANTIC_TEXCOORD1:
+					case SEMANTIC_TEXCOORD2:
+					case SEMANTIC_TEXCOORD3:
+					{
+						const physx::PxU32 channel = semantic - SEMANTIC_TEXCOORD0;
+						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						break;
+					}
+					case SEMANTIC_BONEINDEX:
+					{
+						const physx::PxU32 channel = RENDERER_BONEINDEX_CHANNEL;
+						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						break;
+					}
+					case SEMANTIC_BONEWEIGHT:
+					{
+						const physx::PxU32 channel = RENDERER_BONEWEIGHT_CHANNEL;
+						glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + channel));
+						glTexCoordPointer(getGLFormatSize(sm.format), getGLFormatType(sm.format), m_stride, buffer+sm.offset);
+						break;
+					}
+					default:
+						RENDERER_ASSERT(0, "Unable to bind Vertex Buffer Semantic.");
+				}
+				glEnableClientState(getGLSemantic(semantic));
+			}
+		}
+		glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+	}
+}
+
+void OGLRendererVertexBuffer::unbind(physx::PxU32 streamID)
+{
+	for(physx::PxU32 i=0; i<NUM_SEMANTICS; i++)
+	{
+		Semantic semantic = (Semantic)i;
+		const SemanticDesc &sm = m_semanticDescs[semantic];
+		if(sm.format < NUM_FORMATS)
+		{
+			GLenum glsemantic = getGLSemantic(semantic);
+			if(glsemantic != GL_TEXTURE_COORD_ARRAY)
+			{
+				glDisableClientState(glsemantic);
+			}
+		}
+	}
+	for(physx::PxU32 i=0; i<8; i++)
+	{
+		glActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + i));
+		glClientActiveTextureARB((GLenum)(GL_TEXTURE0_ARB + i));
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	}
+}
+
+#endif // #if defined(RENDERER_ENABLE_OPENGL)

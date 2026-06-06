@@ -301,10 +301,6 @@ public:
     {
         SF_ASSERT(Memory::GetHeapByAddress(this) == Memory::GetGlobalHeap());
     }
-    ~LoadUpdateSync()
-    {
-        //@DBG printf("~LoadUpdateSync\n");
-    }
 
     Mutex&          GetMutex()      { return mMutex; }
     void            UpdateNotify()  { WC.NotifyAll(); }
@@ -958,14 +954,11 @@ public:
         // Get multiple states at once to avoid extra locking.
         State*                        pstates[7]    = {0,0,0,0,0,0,0};
         const static State::StateType stateQuery[7] =
-        { State::State_FileOpener,     
-        State::State_URLBuilder,
-        State::State_ImageCreator,   
-        State::State_ImportVisitor,
-        State::State_FontPackParams,
-        State::State_FontCompactorParams,
-        State::State_ImagePackerParams
-        };
+          { State::State_FileOpener,     State::State_URLBuilder,
+            State::State_ImageCreator,   State::State_ImportVisitor,
+            State::State_FontPackParams,
+            State::State_ImagePackerParams
+          };
 
         // Get states and assign them locally.
         psharedState->GetStatesAddRef(pstates, stateQuery, 7);
@@ -1320,11 +1313,6 @@ public:
 
 #ifdef SF_ENABLE_THREADS
         LoadUpdateSync*     GetBindUpdateSync() const  { return pBindUpdate; }
-        void                ReleaseBindUpdateSync() 
-        { 
-            //SF_ASSERT(pBindUpdate->IsLoadFinished());
-            pBindUpdate = NULL; 
-        }
 #endif
         // Wait for for bind state flag or error. Return true for success,
         // false if bind state was changed to error without setting the flags.
@@ -1926,7 +1914,6 @@ public:
 
     enum PlaceObject3Flags
     {
-        PO3_Invisible       = 0x20,
         PO3_HasImage        = 0x10,
         PO3_HasClassName    = 0x08,
         PO3_BitmapCaching   = 0x04,

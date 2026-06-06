@@ -82,14 +82,15 @@ BOOL obj_ApexDestructible::Update()
 	if (!destructibleActor) return FALSE;
 	destructibleActor->Update();
 
-	bbox_local = destructibleActor->GetBBox();
+	r3dBoundBox bbox_local = destructibleActor->GetBBox();
+	SetBBoxLocal(bbox_local);
 
 	UpdateTransform();
 
-	D3DXMATRIX m;
-	D3DXMatrixInverse(&m, 0, &mTransform);
-	bbox_world = bbox_local;
+	r3dBoundBox bbox_world = bbox_local;
 	bbox_local.Org -= GetPosition();
+
+	SetBBoxLocalAndWorld(bbox_local, bbox_world);
 
 	return TRUE;
 }
@@ -141,11 +142,14 @@ BOOL obj_ApexDestructible::OnCreate()
 	if (!destructibleActor)
 		return FALSE;
 		
-	bbox_local = destructibleActor->GetBBox();
+	r3dBoundBox bbox_local = destructibleActor->GetBBox();
 	bbox_local.Org -= GetPosition();
+
+	SetBBoxLocal(bbox_local);
+
 	UpdateTransform();
 
-	SetObjFlags(OBJFLAG_SkipOcclusionCheck);
+	setSkipOcclusionCheck(true);
 
 	return TRUE;
 }
@@ -236,7 +240,7 @@ GameObject * obj_ApexDestructible::Clone()
 		return 0;
 
 	clone->SetRotationVector(GetRotationVector());
-	clone->SetObjFlags(OBJFLAG_SkipOcclusionCheck);
+	close->setSkipOcclusionCheck(true);
 
 	return clone;
 }

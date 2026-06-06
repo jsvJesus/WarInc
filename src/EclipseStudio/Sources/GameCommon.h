@@ -89,14 +89,6 @@ extern int bRenderRefraction;
 #include "Rendering\DX9\RenderDX9.h"
 #include "Rendering\Deffered\RenderDeffered.h"
 
-
-enum ETeamId {
-  TEAM_BLUE = 0,
-  TEAM_RED,
-  TEAM_UNKNOWN,
-  TEAM_MAX_ID = TEAM_UNKNOWN,
-};
-
 #define GLOBAL_ANIM_FOLDER "data\\Animations5"
 
 #endif __GAMECOMMON_H

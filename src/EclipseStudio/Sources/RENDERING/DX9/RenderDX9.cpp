@@ -23,6 +23,15 @@ r3dScreenBuffer*	TempScreenBuffer;
 r3dScreenBuffer*	BlurBuffer;
 r3dScreenBuffer*	TempBuffer;
 
+r3dScreenBuffer*	One8Buffer0;
+r3dScreenBuffer*	One8Buffer1;
+r3dScreenBuffer*	One16Buffer0;
+r3dScreenBuffer*	One16Buffer1;
+r3dScreenBuffer*	One32Buffer0;
+r3dScreenBuffer*	One32Buffer1;
+r3dScreenBuffer*	One64Buffer0;
+r3dScreenBuffer*	One64Buffer1;
+
 r3dScreenBuffer*	TempSMBuffer;
 
 r3dScreenBuffer*	SunShadowMap;
@@ -67,26 +76,26 @@ void r3dDrawPB(float x, float y, float w, float h)
  V[3] = V[1];
  V[5] = V[2];
 
-r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 	
  D3D_V( d3dc._SetVertexShader(0) );
  r3dDrawTriangleList(V, _countof(V));
 
- r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
- r3dRenderer->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(2, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+ r3dRenderer->pd3ddev->SetSamplerState(3, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
 }
 
@@ -97,8 +106,8 @@ void DrawDepthEffectMask ()
 
 	r3dRenderer->SetTex(DepthBuffer->Tex,4);
 
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	D3DXVECTOR4 CamVector(gCam.x,gCam.y,gCam.z,1.0f);
 	
@@ -110,8 +119,8 @@ void DrawDepthEffectMask ()
 
 	D3DXVECTOR4 TintVector(55.0f/255.0f*Shade, 153.0f/255.0f*Shade, 221.0f/255.0f*Shade, ShadeAddit);
 	
-	r3dRenderer->SetPixelShaderConstantF(  9, (float *)&TintVector,  1 );
-	r3dRenderer->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  9, (float *)&TintVector,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
 	
 	r3dRenderer->SetPixelShader("PS_ZDRAW");
 	r3dRenderer->SetVertexShader("VS_ZDRAW");
@@ -122,7 +131,7 @@ void DrawDepthEffectMask ()
 	ShaderMat =  mWorld * 	r3dRenderer->ViewProjMatrix;
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	GameWorld().Draw( rsDrawDepthEffect );
 
@@ -131,8 +140,8 @@ void DrawDepthEffectMask ()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	D3DPERF_EndEvent ();
 }
@@ -147,26 +156,28 @@ void DrawDepthEffect()
 	for(uint32_t i = 0; i < obj_WaterPlane::m_dWaterPlanes.Count (); i++ )
 	{
 		obj_WaterPlane * pP = obj_WaterPlane::m_dWaterPlanes[i];
-		if(pP->GetWaterPlaneFollowTerrainFlag())	continue;
+
+		const obj_WaterPlane::Settings& sts = pP->GetSettings();
 
 		r3dBoundBox const & bBox = pP->GetBBoxWorld();
 		if(gCam.X >= bBox.Org.X && gCam.X <= bBox.Org.X + bBox.Size.X &&
 			 gCam.Z >= bBox.Org.Z && gCam.Z <= bBox.Org.Z + bBox.Size.Z &&
-			 gCam.Y <= pP->GetWaterPlaneHeight() + deltaHeight)
+			 gCam.Y <= sts.WaterPlaneHeight + deltaHeight)
 		{
 			//check for grid's cell where the camera is presents
-			uint32_t iW, iH;
-			pP->GetGridDimensions( iW, iH);
 
-			uint32_t i = uint32_t(gCam.x/pP->GetCellGridSize());
-			if(i >= iW)	continue;
+			int i, j;
 
-			uint32_t j = uint32_t(gCam.z/pP->GetCellGridSize());
-			if(j >= iH)	continue;
+			const obj_WaterPlane::Info& info = pP->GetInfo();
+
+			pP->GetCellIndexes( gCam, &i, &j );
+
+			if( i < 0 || i >= info.CellCountX )	continue;
+			if( j < 0 || j >= info.CellCountZ )	continue;
 
 			if(pP->GetWaterGridValue(i,j)==0)	continue;
 
-			if( pPlane==0 || ( pPlane->GetWaterPlaneHeight() < pP->GetWaterPlaneHeight() + deltaHeight ) )
+			if( pPlane==0 || ( pPlane->GetSettings().WaterPlaneHeight < pP->GetSettings().WaterPlaneHeight + deltaHeight ) )
 				pPlane = pP;
 		}
 	}
@@ -176,16 +187,16 @@ void DrawDepthEffect()
 	float height = LakePlaneY + deltaHeight;
 	WaterBase* wb = 0;
 	if(objOceanPlane && gCam.Y < LakePlaneY + deltaHeight)
-		if(pPlane && pPlane->GetWaterPlaneHeight() > LakePlaneY)
+		if(pPlane && pPlane->GetSettings().WaterPlaneHeight > LakePlaneY)
 		{
 			wb = pPlane;
-			height = pPlane->GetWaterPlaneHeight() + deltaHeight;
+			height = pPlane->GetSettings().WaterPlaneHeight + deltaHeight;
 		}
 		else	wb = objOceanPlane;
 	else
 	{
 		wb = pPlane;
-		if(pPlane)	height = pPlane->GetWaterPlaneHeight() + deltaHeight;
+		if(pPlane)	height = pPlane->GetSettings().WaterPlaneHeight + deltaHeight;
 	}
 
 	if(wb!=0)	g_waterLevel = height - deltaHeight;
@@ -203,9 +214,9 @@ void DrawDepthEffect()
 	float DepthZ = r3dRenderer->FarClip * 0.9375f;
 	D3DXVECTOR4 CamVector(gCam.x,gCam.y,gCam.z,1.0f/DepthZ);
 
-	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, false);
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_STENCILENABLE, false);
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_CLAMP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_CLAMP );
 
 	float fdeepColor_LakeHeight[4];
 	float fShallowColor_Depth[4];
@@ -220,18 +231,18 @@ void DrawDepthEffect()
 	fBumpness_RefrIndex_TileSize[0] = 50 - wb->bumpness;	fBumpness_RefrIndex_TileSize[1] = wb->uRefractionIndex;	fBumpness_RefrIndex_TileSize[2] = wb->tileSize;	fBumpness_RefrIndex_TileSize[3] = 1;
 	texLerp.x = wb->SetNormalTextures(2,3,10.f);
 
-	r3dRenderer->SetPixelShaderConstantF( 14, fdeepColor_LakeHeight,  1 );
-	r3dRenderer->SetPixelShaderConstantF( 15, fShallowColor_Depth,  1 );
-	r3dRenderer->SetPixelShaderConstantF( 16, fAttenColor_Dist,  1 );
-	r3dRenderer->SetPixelShaderConstantF( 17, fBumpness_RefrIndex_TileSize,  1 );
-	r3dRenderer->SetPixelShaderConstantF( 18, &texLerp.x,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 14, fdeepColor_LakeHeight,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 15, fShallowColor_Depth,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 16, fAttenColor_Dist,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 17, fBumpness_RefrIndex_TileSize,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF( 18, &texLerp.x,  1 );
 
 
 	D3DXVECTOR4 NearFarPlane(r3dRenderer->NearClip, r3dRenderer->FarClip, 0, 0);
-	r3dRenderer->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  10, (float *)&CamVector,  1 );
 	D3DXVECTOR4 halfInvRes( 1.f / r3dRenderer->ViewW, 1.f / r3dRenderer->ViewH, 0.f, 0.f );
-	r3dRenderer->SetPixelShaderConstantF(  11, (float *)&halfInvRes,  1 );
-	r3dRenderer->SetPixelShaderConstantF(  12, (float *)&NearFarPlane,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  11, (float *)&halfInvRes,  1 );
+	r3dRenderer->pd3ddev->SetPixelShaderConstantF(  12, (float *)&NearFarPlane,  1 );
 
 
 
@@ -245,13 +256,13 @@ void DrawDepthEffect()
 	//D3DXMatrixInverse(&ShaderMat, NULL, &ShaderMat );
 	D3DXMatrixTranspose( &ShaderMat, &ShaderMat );
 
-	r3dRenderer->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
+	r3dRenderer->pd3ddev->SetVertexShaderConstantF( 0, (float *)&ShaderMat,  4 );
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_MODULATE | R3D_BLEND_NZ);
 	//dest = dest*alpha + src;
-	r3dRenderer->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-	r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
-	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
+	r3dRenderer->pd3ddev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
 
 	r3dDrawBox2DZ(0,0, r3dRenderer->ScreenW, r3dRenderer->ScreenH, DepthZ, r3dColor(255,150,0));
 	
@@ -261,8 +272,8 @@ void DrawDepthEffect()
 
 	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
 
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
-	r3dRenderer->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSU,   D3DTADDRESS_WRAP );
+	r3dRenderer->pd3ddev->SetSamplerState( 4, D3DSAMP_ADDRESSV,   D3DTADDRESS_WRAP );
 
 	r3dRenderer->SetTex(NULL);
 	r3dRenderer->SetMaterial(NULL);
@@ -310,49 +321,29 @@ const char* SSAOMethodToString( SSAOMethod method )
 	{
 	case SSM_REF:
 		return "REF";
-
 	case SSM_DEFAULT:
 		return "DEFAULT";
-
 	case SSM_HQ:
 		return "HQ";
-
-	case SSM_HBAO_PLUS:
-		return "HBAO_PLUS";
-
 	default:
-		return "DEFAULT";
+		return "";
 	}
 }
 
 SSAOMethod StringToSSAOMethod( const char* szName )
 {
-	if ( !strcmp( szName, "NORMAL" ) ||
-		 !strcmp( szName, "REF" ) )
-	{
+	if ( ! strcmp( szName, "NORMAL" ) || 
+		 ! strcmp( szName, "REF" ) )
 		return SSM_REF;
-	}
-
-	if ( !strcmp( szName, "ALT_LW" ) ||
-		 !strcmp( szName, "DEFAULT" ) ||
-		 !strcmp( szName, "HSAO" ) )
-	{
+	else if (	! strcmp( szName, "ALT_LW" ) ||
+				! strcmp( szName, "DEFAULT" ) ||
+				! strcmp( szName, "HSAO" ) )
 		return SSM_DEFAULT;
-	}
-
-	if ( !strcmp( szName, "ALT" ) ||
-		 !strcmp( szName, "HQ" ) )
-	{
+	else if (	! strcmp( szName, "ALT" ) || 
+				! strcmp( szName, "HQ" ) )
 		return SSM_HQ;
-	}
 
-	if ( !strcmp( szName, "HBAO" ) ||
-		 !strcmp( szName, "HBAO_PLUS" ) ||
-		 !strcmp( szName, "HBAO+" ) )
-	{
-		return SSM_HBAO_PLUS;
-	}
-
+	assert( false );
 	return SSM_DEFAULT;
 }
 

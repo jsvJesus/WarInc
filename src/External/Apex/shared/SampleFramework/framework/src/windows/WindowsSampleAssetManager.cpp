@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -38,7 +38,7 @@
 #include <windows.h>
 
 
-bool SampleAssetManager::searchForPath(const char* path, char* buffer, int bufferSize, int maxRecursion)
+bool SampleFramework::searchForPath(const char* path, char* buffer, int bufferSize, bool isReadOnly, int maxRecursion)
 {
 	char* tmpBuffer = (char*)alloca(bufferSize);
 	strcpy_s(buffer, bufferSize, path);

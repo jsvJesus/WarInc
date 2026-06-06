@@ -117,11 +117,11 @@ public:
     { SF_UNUSED3(pt, testShape, pinst); return false; }  
 
     // Obtains character bounds in local coordinate space.
-    virtual RectF      GetBoundsLocal(float morphRatio = 0) const
-    { SF_UNUSED(morphRatio); return RectF(0); }   
+    virtual RectF      GetBoundsLocal() const
+    { return RectF(0); }   
 
-    virtual RectF      GetRectBoundsLocal(float morphRatio = 0) const
-    { SF_UNUSED(morphRatio); return RectF(0); }   
+    virtual RectF      GetRectBoundsLocal() const
+    { return RectF(0); }   
        
     virtual unsigned    GetVersion() const
     { SF_ASSERT(0); return 0; }

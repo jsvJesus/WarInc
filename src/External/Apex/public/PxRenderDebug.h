@@ -1,5 +1,3 @@
-#ifndef __PX_RENDER_DEBUG_H__
-#define __PX_RENDER_DEBUG_H__
 /*
  * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
  *
@@ -35,22 +33,24 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 
+#ifndef PX_RENDER_DEBUG_H
+#define PX_RENDER_DEBUG_H
+
 /*!
 \file
 \brief debug rendering classes and structures
 */
 
-#include "PsShare.h"
-#include "PxVec3.h"
-#include "PxQuat.h"
-#include "PxMat33.h"
-#include "PxMat44.h"
-#include "PxBounds3.h"
+#include "foundation/PxVec3.h"
+#include "foundation/PxQuat.h"
+#include "foundation/PxMat33.h"
+#include "foundation/PxMat44.h"
+#include "foundation/PxBounds3.h"
 #include "PxRenderDebugData.h"
 
 namespace physx
 {
-	namespace shdfnd2
+	namespace general_renderdebug4
 	{
 
 /**
@@ -227,59 +227,65 @@ public:
 
 	virtual void debugRect2d(PxF32 x1,PxF32 y1,PxF32 x2,PxF32 y2) = 0;
 
-	virtual void  debugPolygon(PxU32 pcount,const physx::PxVec3 *points) = 0;
+	virtual void  debugPolygon(PxU32 pcount,const PxVec3 *points) = 0;
 
-	virtual void  debugLine(const physx::PxVec3 &p1,const physx::PxVec3 &p2) = 0;
+	virtual void  debugLine(const PxVec3 &p1,const PxVec3 &p2) = 0;
 
-	virtual void  debugGradientLine(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const PxU32 &c1,const PxU32 &c2) = 0;
+	virtual void  debugGradientLine(const PxVec3 &p1,const PxVec3 &p2,const PxU32 &c1,const PxU32 &c2) = 0;
 
-	virtual void  debugOrientedLine(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const PxMat44 &transform) = 0;
+	virtual void  debugOrientedLine(const PxVec3 &p1,const PxVec3 &p2,const PxMat44 &transform) = 0;
 
-	virtual void  debugRay(const physx::PxVec3 &p1,const physx::PxVec3 &p2) = 0;
+	virtual void  debugRay(const PxVec3 &p1,const PxVec3 &p2) = 0;
 
-	virtual void  debugCylinder(const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 radius) = 0;
+	virtual void  debugCylinder(const PxVec3 &p1,const PxVec3 &p2,PxF32 radius) = 0;
 
-	virtual void  debugThickRay(const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 raySize=0.02f) = 0;
+	virtual void  debugThickRay(const PxVec3 &p1,const PxVec3 &p2,PxF32 raySize=0.02f) = 0;
 
-	virtual void  debugPlane(const physx::PxVec3 &normal,PxF32 dCoff,PxF32 radius1,PxF32 radius2) = 0;
+	virtual void  debugPlane(const PxVec3 &normal,PxF32 dCoff,PxF32 radius1,PxF32 radius2) = 0;
 
-	virtual void  debugTri(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3) = 0;
+	virtual void  debugTri(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3) = 0;
 
-	virtual void  debugTriNormals(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const physx::PxVec3 &n1,const physx::PxVec3 &n2,const physx::PxVec3 &n3) = 0;
+	virtual void  debugTriNormals(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxVec3 &n1,const PxVec3 &n2,const PxVec3 &n3) = 0;
 
-	virtual void  debugGradientTri(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) = 0;
+	virtual void  debugGradientTri(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) = 0;
 
-	virtual void  debugGradientTriNormals(const physx::PxVec3 &p1,const physx::PxVec3 &p2,const physx::PxVec3 &p3,const physx::PxVec3 &n1,const physx::PxVec3 &n2,const physx::PxVec3 &n3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) = 0;
+	virtual void  debugGradientTriNormals(const PxVec3 &p1,const PxVec3 &p2,const PxVec3 &p3,const PxVec3 &n1,const PxVec3 &n2,const PxVec3 &n3,const PxU32 &c1,const PxU32 &c2,const PxU32 &c3) = 0;
 
-	virtual void  debugBound(const physx::PxVec3 &bmin,const physx::PxVec3 &bmax) = 0;
+	virtual void  debugBound(const PxVec3 &bmin,const PxVec3 &bmax) = 0;
 
-	virtual void  debugBound(const physx::PxBounds3 &b) = 0;
+	virtual void  debugBound(const PxBounds3 &b) = 0;
 
-	virtual void  debugOrientedBound(const physx::PxVec3 &sides,const PxMat44 &transform) = 0;
+	virtual void  debugOrientedBound(const PxVec3 &sides,const PxMat44 &transform) = 0;
 
-	virtual void  debugOrientedBound(const physx::PxVec3 &bmin,const physx::PxVec3 &bmax,const physx::PxVec3 &pos,const physx::PxQuat &quat) = 0; // the rotation as a quaternion
+	virtual void  debugOrientedBound(const PxVec3 &bmin,const PxVec3 &bmax,const PxVec3 &pos,const PxQuat &quat) = 0; // the rotation as a quaternion
 
-	virtual void  debugOrientedBound(const physx::PxVec3 &bmin,const physx::PxVec3 &bmax,const PxMat44 &xform) = 0; // the rotation as a quaternion
+	virtual void  debugOrientedBound(const PxVec3 &bmin,const PxVec3 &bmax,const PxMat44 &xform) = 0; // the rotation as a quaternion
 
-	virtual void  debugSphere(const physx::PxVec3 &pos,PxF32 radius) = 0;
+	virtual void  debugSphere(const PxVec3 &pos,PxF32 radius) = 0;
 
-	virtual void  debugOrientedSphere(PxF32 radius,const PxMat44 &transform) = 0;
+	virtual void  debugOrientedSphere(PxF32 radius, PxU32 subdivision, const PxMat44 &transform) = 0;
+
+	virtual void  debugOrientedSphere(const PxVec3 &radius, PxU32 subdivision, const PxMat44 &transform) = 0;
 
 	virtual void  debugOrientedCapsule(PxF32 radius,PxF32 height,PxU32 subdivision,const PxMat44 &transform) = 0;
 
+	virtual void  debugOrientedCapsuleTapered(PxF32 radius1, PxF32 radius2, PxF32 height, PxU32 subdivision, const PxMat44& transform) = 0;
+
 	virtual void  debugOrientedCylinder(PxF32 radius,PxF32 height,PxU32 subdivision,bool closeSides,const PxMat44 &transform) = 0;
 
-	virtual void  debugPoint(const physx::PxVec3 &pos,PxF32 radius) = 0;
+	virtual void  debugPoint(const PxVec3 &pos,PxF32 radius) = 0;
+	virtual void  debugPoint(const PxVec3 &pos,const PxVec3 &scale) = 0;
+	virtual void  debugQuad(const PxVec3 &pos,const PxVec2 &scale,PxF32 orientation) = 0;
 
 	virtual void  debugAxes(const PxMat44 &transform,PxF32 distance=0.1f,PxF32 brightness=1.0f) = 0;
 
-    virtual void debugArc(const physx::PxVec3 &center,const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 arrowSize=0.1f,bool showRoot=false) = 0;
+    virtual void debugArc(const PxVec3 &center,const PxVec3 &p1,const PxVec3 &p2,PxF32 arrowSize=0.1f,bool showRoot=false) = 0;
 
-    virtual void debugThickArc(const physx::PxVec3 &center,const physx::PxVec3 &p1,const physx::PxVec3 &p2,PxF32 thickness=0.02f,bool showRoot=false) = 0;
+    virtual void debugThickArc(const PxVec3 &center,const PxVec3 &p1,const PxVec3 &p2,PxF32 thickness=0.02f,bool showRoot=false) = 0;
 
-    virtual void debugText(const physx::PxVec3 &pos,const char *fmt,...) = 0;
+    virtual void debugText(const PxVec3 &pos,const char *fmt,...) = 0;
 
-    virtual void debugOrientedText(const physx::PxVec3 &pos,const physx::PxQuat &rot,const char *fmt,...) = 0;
+    virtual void debugOrientedText(const PxVec3 &pos,const PxQuat &rot,const char *fmt,...) = 0;
 
     virtual void debugOrientedText(const PxMat44 &xform,const char *fmt,...) = 0;
 
@@ -291,13 +297,13 @@ public:
 	virtual const PxF32 *getViewMatrix(void) const = 0;
 	virtual const PxF32 *getProjectionMatrix(void) const = 0;
 
-	virtual void  eulerToQuat(const physx::PxVec3 &angles, physx::PxQuat &q) = 0; // angles are in degrees.
+	virtual void  eulerToQuat(const PxVec3 &angles, PxQuat &q) = 0; // angles are in degrees.
 
 	virtual PxI32 beginDrawGroup(const PxMat44 &pose) = 0;
 
 	virtual void  setDrawGroupPose(PxI32 blockId,const PxMat44 &pose) = 0;
 
-	virtual void  debugDetailedSphere(const physx::PxVec3 &pos,PxF32 radius,PxU32 stepCount) = 0;
+	virtual void  debugDetailedSphere(const PxVec3 &pos,PxF32 radius,PxU32 stepCount) = 0;
 
 	virtual void  setPose(const PxMat44 &pose) = 0;
 
@@ -334,7 +340,7 @@ public:
 	*/
 	virtual PxU32 getDebugColor(float red, float green, float blue) const = 0;
 
-	virtual void getDebugBounds(physx::PxBounds3 &b) const = 0;
+	virtual void getDebugBounds(PxBounds3 &b) const = 0;
 
 	virtual void renderIndexedTriangleMesh(PxU32 triangleMeshId,const char *material,
 		PxU32 transformCount,
@@ -368,6 +374,7 @@ protected:
 PX_POP_PACK
 
 }; // end of namespace 
+using namespace general_renderdebug4;
 }; // end of namespace
 
-#endif // __PX_RENDER_DEBUG_H__
+#endif // PX_RENDER_DEBUG_H

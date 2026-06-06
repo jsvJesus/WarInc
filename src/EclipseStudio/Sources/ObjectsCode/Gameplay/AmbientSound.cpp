@@ -7,6 +7,8 @@
 #include "GameObjects\ObjManag.h"
 #include "../../Editors/ObjectManipulator3d.h"
 
+#include "GameLevel.h"
+
 #include "rendering/Deffered/DeferredHelpers.h"
 
 #include "AmbientSound.h"
@@ -16,11 +18,18 @@ AUTOREGISTER_CLASS(obj_AmbientSound);
 
 static r3dTexture *SoundIcon = NULL;
 
+int obj_AmbientSound::forceShowSoundBubble = 0;
+
 obj_AmbientSound::obj_AmbientSound()
 : sndEvent(0)
 , sndID(-1)
+, min3DDist(0)
+, max3DDist(0)
+, masterVolume(1.0f)
+, startTime(0.0f)
+, endTime(24.0f)
+, fadeTime(0.0)
 {
-	memset(SoundFilename, 0, sizeof(SoundFilename));
 	ObjTypeFlags |= OBJTYPE_Sound;
 }
 
@@ -38,12 +47,8 @@ BOOL obj_AmbientSound::OnCreate()
 	parent::OnCreate();
 
 	DrawOrder	= OBJ_DRAWORDER_LAST;
-	ObjFlags	|=	OBJFLAG_SkipOcclusionCheck
-						|
-					OBJFLAG_DisableShadows 
-						|
-					OBJFLAG_ForceSleep
-					;
+	setSkipOcclusionCheck(true);
+	ObjFlags	|=	OBJFLAG_DisableShadows | OBJFLAG_ForceSleep;
 
 	r3dBoundBox bboxLocal ;
 
@@ -57,28 +62,17 @@ BOOL obj_AmbientSound::OnCreate()
 	return 1;
 }
 
-void obj_AmbientSound::LoadNewSound(int sndID, bool paused)
-{
-	if (sndEvent)
-	{
-		SoundSys.Stop(sndEvent);
-		SoundSys.Release(sndEvent);
-		sndEvent = 0;
-	}
-
-	sndEvent = SoundSys.Play(sndID, GetPosition());
-}
 #ifndef FINAL_BUILD
-
-void
-obj_AmbientSound::UpdateSound( const std::string& soundPath )
+void obj_AmbientSound::UpdateSound( const std::string& soundPath )
 {
-	strcpy_s(SoundFilename, _countof(SoundFilename), soundPath.c_str());
+	FileName = soundPath.c_str();
 	sndID = SoundSys.GetEventIDByPath(soundPath.c_str());
 	SoundSys.Release(sndEvent);
+	sndEvent = NULL;
+	max3DDist = 0.0f; // reset after selecting new sound, to get proper values from fmod
 }
 
-float	obj_AmbientSound::DrawPropertyEditor(float scrx, float scry, float scrw, float scrh, const AClass* startClass, const GameObjects& selected)
+float obj_AmbientSound::DrawPropertyEditor(float scrx, float scry, float scrw, float scrh, const AClass* startClass, const GameObjects& selected)
 {
 
 	float starty = scry;
@@ -88,9 +82,28 @@ float	obj_AmbientSound::DrawPropertyEditor(float scrx, float scry, float scrw, f
 	if( IsParentOrEqual( &ClassData, startClass ) )
 	{
 		starty += imgui_Static ( scrx, starty, "Sound Properties" );
+		starty += imgui_Checkbox(scrx, starty, "Show Sound Bubbles", &forceShowSoundBubble, 1);
+		starty += imgui_Value_Slider(scrx, starty, "Min 3D Dist", &min3DDist, 0.0f, max3DDist, "%0.2f");
+		starty += imgui_Value_Slider(scrx, starty, "Max 3D Dist", &max3DDist, min3DDist, 10000.0f, "%0.2f");
+		starty += imgui_Value_Slider(scrx, starty, "Master Volume", &masterVolume, 0.0f, 1.0f, "%0.2f");
+		starty += imgui_Value_Slider(scrx, starty, "Start Time", &startTime, 0.0f, 24.0f, "%0.2f");
+		starty += imgui_Value_Slider(scrx, starty, "End Time", &endTime, 0.0f, 24.0f, "%0.2f");
+		starty += imgui_Value_Slider(scrx, starty, "Fade Time", &fadeTime, 0.0f, 24.0f, "%0.2f");
+
+		static int applyToAllSelected = 0;
+		starty += imgui_Checkbox(scrx, starty, "Apply To All", &applyToAllSelected, 1);
+		if(applyToAllSelected)
+		{
+			PropagateChange( masterVolume, &obj_AmbientSound::masterVolume, selected ) ;
+			PropagateChange( startTime, &obj_AmbientSound::startTime, selected ) ;
+			PropagateChange( endTime, &obj_AmbientSound::endTime, selected ) ;
+			PropagateChange( fadeTime, &obj_AmbientSound::fadeTime, selected ) ;
+			applyToAllSelected = 0;
+		}
+
 		starty += imgui_Static ( scrx, starty, "Ambient Sound Source:" );
-		starty += imgui_Static ( scrx, starty, SoundFilename );
-		
+		starty += imgui_Static ( scrx, starty, FileName.c_str() );
+
 		const stringlist_t & sl = SoundSys.GetSoundsList();
 		static float offset = 0;
 		static int selectedSoundIndex = 0;
@@ -103,7 +116,7 @@ float	obj_AmbientSound::DrawPropertyEditor(float scrx, float scry, float scrw, f
 			PropagateChange(newPath, &obj_AmbientSound::UpdateSound, selected ) ;
 		}
 	}
-	
+
 	return starty-scry;
 }
 #endif
@@ -122,20 +135,118 @@ BOOL obj_AmbientSound::OnDestroy()
 BOOL obj_AmbientSound::Update()
 {
 	const r3dPoint3D &pos = GetPosition();
+
+	extern bool g_bEditMode;
+	if(g_bEditMode)
+	{
+		m_isSerializable = FileName.Length() != 0;
+	}
+
+	// one time init
+	if(max3DDist == 0.0f && sndEvent == NULL && sndID>0)
+	{
+		sndEvent = SoundSys.Play(sndID, pos);
+		if(sndEvent)
+		{
+			if(SoundSys.Is3DSound(sndEvent))
+			{
+				SoundSys.GetProperty(sndEvent, FMOD_EVENTPROPERTY_3D_MINDISTANCE, &min3DDist);
+				SoundSys.GetProperty(sndEvent, FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &max3DDist);
+			}
+			else
+				max3DDist = 100.0f;
+
+			SoundSys.Release(sndEvent);
+			sndEvent = NULL;
+		}
+	}
+
+	float dist = (gCam-pos).Length();
+	bool isAudible = dist < max3DDist;
+
+	float curGTime = r3dGameLevel::Environment.__CurTime;
+	float volumeMod = 1.0f;
+	if(startTime < endTime) // day sounds
+	{
+		if(curGTime < (startTime-fadeTime))
+		{
+			isAudible = false;
+			volumeMod = 0.0f;
+		}
+		else if(curGTime >= (startTime-fadeTime) && curGTime < (startTime)) // fade in
+		{
+			volumeMod = R3D_CLAMP((curGTime-(startTime-fadeTime))/fadeTime, 0.0f, 1.0f);
+		}
+		else if(curGTime >= (endTime-fadeTime) && curGTime < (endTime)) // fade out
+		{
+			volumeMod = 1.0f-R3D_CLAMP((curGTime-(endTime-fadeTime))/fadeTime, 0.0f, 1.0f);
+		}
+		else if(curGTime > endTime)
+		{
+			isAudible = false;
+			volumeMod = 0.0f;
+		}
+	}
+	else // night sounds
+	{
+		if(curGTime >= endTime && curGTime <= (startTime-fadeTime))
+		{
+			isAudible = false;
+			volumeMod = 0.0f;
+		}
+		else if(curGTime>=(endTime-fadeTime) && curGTime < endTime) // fade out
+		{
+			volumeMod = 1.0f-R3D_CLAMP((curGTime-(endTime-fadeTime))/fadeTime, 0.0f, 1.0f);
+		}
+		else if(curGTime>(startTime-fadeTime) && curGTime < startTime) // fade in
+		{
+			volumeMod = R3D_CLAMP((curGTime-(startTime-fadeTime))/fadeTime, 0.0f, 1.0f);
+		}
+	}
+
 	if (!SoundSys.IsHandleValid(sndEvent))
 	{
-		SoundSys.Release(sndEvent);
-		sndEvent = SoundSys.Play(sndID, pos);
+		if(sndEvent)
+		{
+			SoundSys.Release(sndEvent);
+			sndEvent = NULL;
+		}
+		if(isAudible)
+		{
+			sndEvent = SoundSys.Play(sndID, pos);
+			SoundSys.SetPaused(sndEvent, true); // start paused to prevent one tick spike in sound volume before we set min\max distances
+		}
 	}
 	else
 	{
-		if (!SoundSys.IsAudible(sndEvent, pos))
+		if (!isAudible)
 		{
-			SoundSys.Release(sndEvent);
+			if(sndEvent)
+			{
+				SoundSys.Release(sndEvent);
+				sndEvent = NULL;
+			}
 		}
 		else
 		{
-			SoundSys.Set3DAttributes(sndEvent, &pos, 0, 0);
+			SoundSys.SetSoundPos(sndEvent, pos);
+			
+			if(SoundSys.Is3DSound(sndEvent))
+			{
+				SoundSys.SetProperty(sndEvent, FMOD_EVENTPROPERTY_3D_MINDISTANCE, &min3DDist);
+				SoundSys.SetProperty(sndEvent, FMOD_EVENTPROPERTY_3D_MAXDISTANCE, &max3DDist);
+				float volume = masterVolume*volumeMod;
+				SoundSys.SetProperty(sndEvent, FMOD_EVENTPROPERTY_VOLUME, &volume);
+			}
+			else // if sound is 2D, simulate linear roll off
+			{
+				float volume = (1.0f - R3D_CLAMP((dist-min3DDist)/(max3DDist-min3DDist), 0.0f, 1.0f))*masterVolume*volumeMod;
+				SoundSys.SetProperty(sndEvent, FMOD_EVENTPROPERTY_VOLUME, &volume);
+
+			}
+
+			if(SoundSys.GetPaused(sndEvent))
+				SoundSys.SetPaused(sndEvent, false);
 		}
 	}
 	return 1;
@@ -197,6 +308,12 @@ void obj_AmbientSound::AppendRenderables( RenderArray ( & render_arrays  )[ rsCo
 	if( r_hide_icons->GetInt() )
 		return ;
 
+	float idd = r_icons_draw_distance->GetFloat();
+	idd *= idd;
+
+	if( ( Cam - GetPosition() ).LengthSq() > idd )
+		return;
+
 	{
 		AmbientSoundRenderable rend;
 		rend.Init();
@@ -218,20 +335,17 @@ void obj_AmbientSound::AppendRenderables( RenderArray ( & render_arrays  )[ rsCo
 #endif
 }
 
-int g_bEnableSoundRadiusDraw = 0;
 extern ObjectManipulator3d g_Manipulator3d;
 void obj_AmbientSound::DoDraw()
 {
 #ifndef FINAL_BUILD
-	if(g_bEnableSoundRadiusDraw || g_Manipulator3d.IsSelected(this))
+	if(forceShowSoundBubble || g_Manipulator3d.IsSelected(this))
 	{
-		r3dColor clr = r3dColor::yellow;
+		r3dColor clr = g_Manipulator3d.IsSelected(this)?r3dColor::white:r3dColor::yellow;
 		clr.A = 128;
 		r3dRenderer->SetRenderingMode( R3D_BLEND_ALPHA | R3D_BLEND_ZC );
 
-		float maxDist = SoundSys.GetSoundMaxDistance(sndID);
-
-		r3dDrawUniformSphere ( GetPosition(), maxDist, gCam, clr );
+		r3dDrawUniformSphere ( GetPosition(), max3DDist, gCam, clr );
 		r3dRenderer->Flush();
 	}
 #endif
@@ -242,8 +356,24 @@ void obj_AmbientSound::ReadSerializedData(pugi::xml_node& node)
 	GameObject::ReadSerializedData(node);
 	pugi::xml_node ambientSoundNode = node.child("ambientSound");
 	const char *fn = ambientSoundNode.attribute("Sound").value();
-	strcpy_s(SoundFilename, _countof(SoundFilename), fn);
-	sndID = SoundSys.GetEventIDByPath(SoundFilename);
+	FileName = fn;
+	sndID = SoundSys.GetEventIDByPath(FileName.c_str());
+
+	if(!ambientSoundNode.attribute("min3DDist").empty())
+	{
+		min3DDist = ambientSoundNode.attribute("min3DDist").as_float();
+		max3DDist = ambientSoundNode.attribute("max3DDist").as_float();
+	}
+	if(!ambientSoundNode.attribute("volume").empty())
+		masterVolume = ambientSoundNode.attribute("volume").as_float();
+
+	if(!ambientSoundNode.attribute("startTime").empty())
+	{
+		startTime = ambientSoundNode.attribute("startTime").as_float();
+		endTime = ambientSoundNode.attribute("endTime").as_float();
+		fadeTime = ambientSoundNode.attribute("fadeTime").as_float();
+	}
+
 }
 
 void obj_AmbientSound::WriteSerializedData(pugi::xml_node& node)
@@ -251,6 +381,28 @@ void obj_AmbientSound::WriteSerializedData(pugi::xml_node& node)
 	GameObject::WriteSerializedData(node);
 	pugi::xml_node ambientSoundNode = node.append_child();
 	ambientSoundNode.set_name("ambientSound");
-	ambientSoundNode.append_attribute("Sound") = SoundFilename;
+	ambientSoundNode.append_attribute("Sound") = FileName.c_str();
+	ambientSoundNode.append_attribute("min3DDist") = min3DDist;
+	ambientSoundNode.append_attribute("max3DDist") = max3DDist;
+	ambientSoundNode.append_attribute("volume") = masterVolume;
+	ambientSoundNode.append_attribute("startTime") = startTime;
+	ambientSoundNode.append_attribute("endTime") = endTime;
+	ambientSoundNode.append_attribute("fadeTime") = fadeTime;
 }
 
+GameObject*	obj_AmbientSound::Clone()
+{
+	obj_AmbientSound * pClone = (obj_AmbientSound*)( srv_CreateGameObject ( "obj_AmbientSound", "cloneAmbientSound", GetPosition() ) );
+	r3d_assert ( pClone );
+
+	pClone->FileName = FileName;
+	pClone->min3DDist = min3DDist;
+	pClone->max3DDist = max3DDist;
+	pClone->masterVolume = masterVolume;
+	pClone->startTime = startTime;
+	pClone->endTime= endTime;
+	pClone->fadeTime= fadeTime;
+	pClone->sndID = SoundSys.GetEventIDByPath(FileName.c_str());
+
+	return pClone;
+}

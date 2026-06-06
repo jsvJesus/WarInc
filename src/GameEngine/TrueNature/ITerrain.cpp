@@ -123,6 +123,23 @@ r3dITerrain::DrawOrthographicDiffuseTexture( int DownScale )
 void
 r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 {
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
+
 	int Width = (int)( m_Desc.XSize / m_Desc.CellSize ) ;
 	int Height = (int)( m_Desc.ZSize / m_Desc.CellSize ) ;
 
@@ -194,7 +211,6 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 			PrevView			= r3dRenderer->ViewMatrix;
 			PrevProj			= r3dRenderer->ProjMatrix;
-			PrevCamPosition		= r3dRenderer->CameraPosition;
 			PrevNear			= r3dRenderer->NearClip;
 			PrevFar				= r3dRenderer->FarClip;			
 
@@ -228,14 +244,14 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 			r3dRenderer->SetViewport( (float)PrevVP.X, (float)PrevVP.Y, (float)PrevVP.Width, (float)PrevVP.Height );
 
-			r3dRenderer->SetCameraEx( PrevView, PrevProj, PrevCamPosition, PrevNear, PrevFar );
+			r3dRenderer->SetCameraEx( PrevView, PrevProj, PrevNear, PrevFar, false );
 
 			r3dRenderer->SetRenderingMode( R3D_BLEND_POP  );
 
 			r3dRenderer->RestoreCullMode();
 
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
-			D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, PrevScissor ) );
+			D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, PrevStencil ) );
 		}
 
 		IDirect3DSurface9*	PrevRTs[ 4 ];
@@ -244,7 +260,6 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 		D3DXMATRIX	PrevView;
 		D3DXMATRIX	PrevProj;
-		r3dPoint3D	PrevCamPosition;
 		float		PrevNear;
 		float		PrevFar;
 		DWORD		PrevScissor;
@@ -267,15 +282,15 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 	r3dRenderer->SetCullMode( D3DCULL_NONE );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, FALSE ) );
 
-	D3D_V( r3dRenderer->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
+	D3D_V( r3dRenderer->pd3ddev->SetRenderState( D3DRS_STENCILENABLE, FALSE ) );
 
 	float nearClip = 0.f;
 	float farClip = m_Desc.MaxHeight * 2.f ;
 
 	D3DXMATRIX proj;
-	D3DXMatrixOrthoOffCenterLH( &proj, 0, m_Desc.XSize, 0, m_Desc.ZSize, nearClip, farClip );
+	r3dRenderer->BuildMatrixOrthoOffCenterLH( &proj, 0, m_Desc.XSize, 0, m_Desc.ZSize, nearClip, farClip );
 
 	float camY = m_Desc.MaxHeight * 1.5f;
 
@@ -286,7 +301,7 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 	D3DXMatrixLookAtLH( &view, &vEye, &vAt, &vUp );
 
-	r3dRenderer->SetCameraEx( view, proj, r3dPoint3D(0,0,0), nearClip, farClip );
+	r3dRenderer->SetCameraEx( view, proj, nearClip, farClip, false );
 
 	r3dCamera cam ( r3dPoint3D( vEye.x, vEye.y, vEye.z ) );
 
@@ -298,10 +313,10 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 
 	cam.FOV			= 90;
 
-	cam.bOrtho	= true;
-	cam.Width	= m_Desc.XSize ;
-	cam.Height	= m_Desc.ZSize ;
-	cam.Aspect	= 1.f;
+	cam.ProjectionType	= r3dCamera::PROJTYPE_ORTHO;
+	cam.Width			= m_Desc.XSize ;
+	cam.Height			= m_Desc.ZSize ;
+	cam.Aspect			= 1.f;
 
 	for( ; ; )
 	{
@@ -329,7 +344,7 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 				D3DXVECTOR4(1.0f / texFullWidth, 0.0f, numTaps, 1 / numTaps),
 				D3DXVECTOR4(2.0f, 0, 0, 0)
 			};
-			r3dRenderer->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
 			r3dDrawBoxFS((float)texWidth, (float)texFullHeight, r3dColor::white, rtFull->Tex);
 
 			rtIntermediate->Deactivate();
@@ -339,7 +354,7 @@ r3dITerrain::DrawOrthographicDiffuseTexture_MainThread( int DownScale )
 			numTaps = static_cast<float>(texFullHeight) / texHeight;
 			psParams[0] = D3DXVECTOR4(0.0f, 1.0f / texFullHeight, numTaps, 1 / numTaps );
 			psParams[1] = D3DXVECTOR4(1.0f, 0, 0, 0);
-			r3dRenderer->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
+			r3dRenderer->pd3ddev->SetPixelShaderConstantF(0, &psParams[0].x, _countof(psParams));
 			r3dDrawBoxFS((float)texWidth, (float)texHeight, r3dColor::white, rtIntermediate->Tex);
 
 			rt->Deactivate();
@@ -636,16 +651,6 @@ BOOL terra_FindIntersection(const r3dPoint3D &vFrom, const r3dPoint3D &vTo, r3dP
 	}
 
 	return FALSE;
-}
-
-BOOL terra_FindIntersection(r3dPoint3D &vFrom, r3dPoint3D &vTo, r3dPoint3D &colpos, int iterations)
-{
-	return terra_FindIntersection(
-		static_cast<const r3dPoint3D&>(vFrom),
-		static_cast<const r3dPoint3D&>(vTo),
-		colpos,
-		iterations
-	);
 }
 
 //------------------------------------------------------------------------

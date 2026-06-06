@@ -22,7 +22,7 @@ public:
 		if(limit == 0)
 			return 0;
 
-		URandomState* s = State;
+		URandomState* s = State ;
 
 		size_t index1 = s->index1;
 		size_t index2 = s->index2;
@@ -30,7 +30,7 @@ public:
 		index1 = (index1 + 1) % 55;
 		index2 = (index2 + 1) % 55;
 
-		unsigned long val1 = s->table[index1] - s->table[index2];
+		size_t val1 = s->table[index1] - s->table[index2];
 
 		s->index1 = index1;
 		s->index2 = index2;
@@ -129,7 +129,7 @@ void u_srand(unsigned long j)
 
 float u_GetRandom()
 {
-  return (float)u_random(65000) / 65000.0f;
+  return (float)u_random(65000) / 64999.0f;
 }
 
 float u_GetRandom(float r1, float r2)

@@ -9,7 +9,13 @@
 
 bool			imgui_disable_gui = false;
 
+int g_imgui_InDrag = 0;
+int g_imgui_LockRbr = 0;
+
 DesktopManager_c * g_pDesktopManager = NULL;
+
+static void Start_Text_Edit(const char* valtext, void* edit_val);
+static bool Do_Text_Edit(float x, float y, bool bInFocus);
 
 //--------------------------------------------------------------------------------------------------------
 void InitDesktopSystem()
@@ -207,7 +213,7 @@ void Desktop_c::Draw()
 
 	if ( m_bHorizontal && m_fVirtualWidth > m_fViewWidth )
 	{
-		imgui_DrawHSlider( m_fViewPosX, m_fViewPosY + m_fViewHeight - 10, m_fViewWidth, 0, 1, &m_fScrollPosX, false );
+		imgui_DrawHSlider( m_fViewPosX, m_fViewPosY + m_fViewHeight - 10, m_fViewWidth, 0, 1, &m_fScrollPosX, NULL, NULL, false );
 		m_fPosX = m_fScrollPosX * R3D_MAX( 0.0f, m_fVirtualWidth - m_fViewWidth );
 	}
 	else
@@ -238,7 +244,7 @@ void Desktop_c::Activate()
 	rc.right = m_fViewPosX + m_fViewWidth;
 	rc.bottom = m_fViewPosY + m_fViewHeight;
 
-	r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
 	HRESULT hr = r3dRenderer->pd3ddev->SetScissorRect( &rc );
 	r3d_assert( SUCCEEDED( hr ) );
 	m_bActive = true;
@@ -248,7 +254,7 @@ void Desktop_c::Activate()
 void Desktop_c::Deactivate()
 {
 	r3d_assert( m_bActive );
-	r3dRenderer->SetRenderState( D3DRS_SCISSORTESTENABLE, false );
+	r3dRenderer->pd3ddev->SetRenderState( D3DRS_SCISSORTESTENABLE, false );
 	m_bActive = false;
 }
 
@@ -319,7 +325,7 @@ void r3dDrawRoundBox2D(float x, float y, float w, float h, float r, r3dColor clr
 
   for(int i=0; i<(n+1)*4; ++i) {
     v[i].color = clr.GetPacked();
-    v[i].z     = 0;    //Z;
+    v[i].z     = r3dRenderer->GetNearPlaneZValue();    //Z;
     v[i].rwh   = 1.0f; //Z;//1.0f / Z;
     v[i].tu    = 0; 
     v[i].tv    = 0; 
@@ -407,6 +413,16 @@ void imgui_Update()
   }
 
   Mouse->QueryWheelMotion( &imgui_mzMotion );
+
+  g_imgui_InDrag --;
+
+  if( g_imgui_InDrag < 0 )
+    g_imgui_InDrag = 0;
+
+  g_imgui_LockRbr --;
+
+  if( g_imgui_LockRbr < 0 )
+    g_imgui_LockRbr = 0;
   
   return;
 }
@@ -677,13 +693,12 @@ bool imgui_DrawList(float sx, float sy, float sw, float sh, const stringlist_t& 
 
   int onNum = -1;
 	
-  //int CurSelected = CurSelection >= 0 ? CurSelection : 0;
-
+  int CurSelected = CurSelection >= 0 ? CurSelection : 0;
   
-  if ( arr_offset && (int)(CurSelection + *arr_offset + 0.5) >= 0 && bChangedVal )
+  if ( arr_offset && (int)(CurSelected + *arr_offset + 0.5) >= 0 && bChangedVal )
   {
-	  if ( CurSelection < *arr_offset || CurSelection > linesInWnd )
-		  *arr_offset = *arr_offset + CurSelection;
+	  if ( CurSelected < *arr_offset || CurSelected > linesInWnd )
+		  *arr_offset = *arr_offset + CurSelected;
   }
 
   r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
@@ -815,13 +830,165 @@ bool imgui_DrawList(float sx, float sy, float sw, float sh, const stringlist_t& 
 		}
 	}
 
-	if(imgui_val == NULL && imgui_lbr && onNum != -1) {
+	if(imgui_val == NULL && imgui_lbr && onNum != -1 && !g_imgui_InDrag) {
 		imgui_val = edit_val;
 		*edit_val = onNum;
 		return true;
 	}
 
   return bResult;
+}
+
+bool imgui_DrawList(float sx, float sy, float sw, float sh, const stringlist_t& names, float* arr_offset, r3dTL::TArray<int>* edit_values, bool bUseDesktop /*= true*/, bool bChangedVal /*= false*/, bool bLeftAlign /*= false*/ )
+{
+	if(imgui_disable_gui)
+		return 0;
+
+	if ( bUseDesktop )
+	{
+		if ( ! Desktop().IsWindowVisible( sx, sy, sx + sw, sy + sh ) )
+			return false;
+		sx -= Desktop().GetX();
+		sy -= Desktop().GetY();
+	}
+
+	g_bCursorIsOver2d |= (imgui_mx > sx-g_fSizeThreshold && imgui_mx < sx+sw+g_fSizeThreshold && imgui_my > sy-g_fSizeThreshold && imgui_my < sy+sh+g_fSizeThreshold);
+
+	const float font_height = 14;
+
+	const int entries     = int(names.size());
+	const int linesInWnd  = int(sh / (font_height + 3)) - 1;
+
+	float x = sx + 5;
+	float y = sy + 5;
+	float w = sw - 10;
+
+	int onNum = -1;
+
+	r3dRenderer->SetRenderingMode(R3D_BLEND_ALPHA);
+	r3dDrawBox2D(sx,sy, sw, sh, imgui_bkgDlg);
+
+	if(entries > linesInWnd)
+	{
+		imgui_DrawVSlider(sx+sw-16-5, y, sh-5-font_height-7, 0.0f, (float)(entries-linesInWnd), arr_offset, false );
+		w = sw - 10 -5 - 16;
+	}
+
+	if(imgui_mx > sx && imgui_mx < sx+sw && imgui_my > sy && imgui_my < sy+sh) {
+
+		if(Keyboard->IsPressed(kbsDown)) {
+			*arr_offset += 1.0f;
+		}
+
+		if(Keyboard->IsPressed(kbsUp)) {
+			*arr_offset -= 1.0f;
+		}
+
+		*arr_offset -= float(imgui_mzMotion / 120) * 4.0f;
+	}
+
+	if(*arr_offset > float(entries-linesInWnd)) 
+		*arr_offset = float(entries-linesInWnd);
+	if(*arr_offset < 0)
+		*arr_offset = 0;
+
+	int offset = int(*arr_offset);
+
+	for(int i=0; i<linesInWnd; i++) {
+
+		r3dColor24 TCol = imgui_valCol;
+
+		int idx = i + offset;
+		if(idx >= entries)
+			break;
+
+		r3dDrawBox2D(x, y, w, font_height, r3dColor24(100,100,100,200));
+
+		if(imgui_mx >= x && imgui_mx <= x + w && imgui_my >= y && imgui_my <= y+font_height) {
+			onNum = idx;
+
+			TCol = r3dColor24(255,168,0); 
+			r3dDrawBox2D(x, y, w, font_height, r3dColor24(100,100,255,150));
+		}
+
+		int selected = 0;
+
+		for( int ii = 0, e = (int)edit_values->Count(); ii < e; ii ++ )
+		{
+			int offseted = (*edit_values)[ ii ] - offset;
+
+			if( offseted == i )
+			{
+				selected = 1;
+				break;
+			}
+		}
+
+		if( selected )
+		{
+			TCol = r3dColor24(255,0,0); 
+			r3dDrawBox2D(x-1, y-1, w+2, font_height+2, r3dColor24(255,0,0));
+			r3dDrawBox2D(x, y, w, font_height, r3dColor24(150,150,155));
+		}
+
+		const char* name = names[idx].c_str();
+
+		float fPosCorrection;
+		if ( bLeftAlign )
+		{
+			SIZE sz1;
+			MenuFont_Editor->GetTextExtent(name, &sz1);
+			fPosCorrection = float( sz1.cx ) / 2;
+		}
+		else
+			fPosCorrection = w / 2;
+
+		MenuFont_Editor->DrawScaledText(x-1 + fPosCorrection, y-1+font_height/2, 1,1,1, r3dColor(0,0,0), name, D3DFONT_CENTERED);
+		MenuFont_Editor->DrawScaledText(x + fPosCorrection, y+font_height/2, 1,1,1, TCol, name, D3DFONT_CENTERED);
+
+		y += font_height + 3;
+	}
+
+	bool bResult = false;
+
+	if( imgui_lbr && onNum != -1 && !g_imgui_InDrag)
+	{
+		int foundIdx = -1;
+
+		for( int i = 0, e = edit_values->Count(); i < e; i ++ )
+		{
+			if( (*edit_values)[ i ] == onNum )
+			{
+				foundIdx = i;
+				break;
+			}
+		}
+
+		if( foundIdx < 0 )
+		{
+			if( Keyboard->IsPressed( kbsLeftControl ) )
+			{
+				edit_values->PushBack( onNum );
+			}
+			else
+			{
+				edit_values->Clear();
+				edit_values->PushBack( onNum );
+			}
+		}
+		else
+		{
+			if( Keyboard->IsPressed( kbsLeftControl ) )
+			{
+				if( (int)edit_values->Count() > foundIdx )
+					edit_values->Erase( foundIdx );
+			}
+		}
+
+		return true;
+	}
+
+	return bResult;
 }
 
 bool imgui_DrawListColored(float sx, float sy, float sw, float sh, const clrstringlist_t& names, float* arr_offset, int* edit_val, bool bUseDesktop, bool bLeftAlign )
@@ -951,7 +1118,7 @@ bool imgui_DrawListColored(float sx, float sy, float sw, float sh, const clrstri
 
 
 
-  if(imgui_val == NULL && imgui_lbr && onNum != -1) {
+  if(imgui_val == NULL && imgui_lbr && onNum != -1 && !g_imgui_InDrag) {
     imgui_val = edit_val;
     *edit_val = onNum;
     return true;
@@ -960,37 +1127,95 @@ bool imgui_DrawListColored(float sx, float sy, float sw, float sh, const clrstri
   return false;
 }
 
-float imgui_DrawHSliderV(bool isFloat, float x, float y, float width, float minval, float maxval, void* edit_val, bool bUseDesktop = true )
+float imgui_DrawHSliderV(bool isFloat, float x, float y, float width, float minval, float maxval, void* edit_val, char* fmt, void* editTag, bool bUseDesktop = true )
 {
-	if(imgui_disable_gui)
-		return 0;
+  if(imgui_disable_gui)
+    return 0;
 
-	const float DEF_HEIGHT = 16;
-	float value = isFloat ? *(float*)edit_val : *(int*)edit_val;
+  const float DEF_HEIGHT = 16;
+  float value = isFloat ? *(float*)edit_val : *(int*)edit_val;
 
-	if ( bUseDesktop )
-	{
-		if ( ! Desktop().IsWindowVisible( x, y, x + width, y + DEF_HEIGHT ) )
-			return value;
-		x -= Desktop().GetX();
-		y -= Desktop().GetY();
-	}
+  float ht = DEF_HEIGHT;
 
-	g_bCursorIsOver2d |= (imgui_mx > x-g_fSizeThreshold && imgui_mx < x+width+g_fSizeThreshold && imgui_my > y-g_fSizeThreshold && imgui_my < y+DEF_HEIGHT+g_fSizeThreshold);
+  if ( bUseDesktop )
+  {
+    if ( ! Desktop().IsWindowVisible( x, y, x + width, y + DEF_HEIGHT ) )
+      return value;
+    x -= Desktop().GetX();
+    y -= Desktop().GetY();
+  }
+
+  g_bCursorIsOver2d |= (imgui_mx > x-g_fSizeThreshold && imgui_mx < x+width+g_fSizeThreshold && imgui_my > y-g_fSizeThreshold && imgui_my < y+DEF_HEIGHT+g_fSizeThreshold);
+
+  bool inText = false;
+
+  if( fmt )
+  {
+    float TEXT_SIZE = 30.0f;
+
+    char TempS[128];
+    if( isFloat )
+      sprintf(TempS, fmt, *(float*)edit_val );
+    else
+      sprintf(TempS, fmt, *(int*)edit_val );
+
+    SIZE sz2;
+
+    int textx = x + width - TEXT_SIZE + 4;
+
+    MenuFont_Editor->GetTextExtent( TempS, &sz2 );
+    bool inFocus = (imgui_mx > textx && imgui_mx < textx+sz2.cx && imgui_my > y && imgui_my < y + ht);
+
+    if( imgui_lbp && !imgui_textEditActive )
+    {
+      if( inFocus )
+      {
+        Start_Text_Edit(TempS, editTag);
+        inText = true;
+      }
+    }
+
+    if(imgui_textEditActive && imgui_val == editTag)
+    {
+      inText = true;
+      if(Do_Text_Edit(textx, y+2, inFocus))
+      {
+        if(isFloat)
+        {
+          value = atof(imgui_editText);
+          *(float*)edit_val = value;
+        }
+        else
+        {
+          value = atoi(imgui_editText);
+          *(int*)edit_val = (int)value;
+        }
+      }
+    }
+    else
+    {
+
+      MenuFont_Editor->PrintF( textx, y + 2, r3dColor(255, 255, 255), TempS );
+    }
+
+    width -= TEXT_SIZE - 2.f;
+
+  }
   
   r3dDrawBox2D(x,y,width,DEF_HEIGHT,imgui_borderCol);
   r3dDrawBox2D(x+2,y+2,width-4,DEF_HEIGHT - 4,imgui_bkgCol);
 
-  if(imgui_val == NULL && imgui_lbp) {
+  if(imgui_val == NULL && imgui_lbp && !inText) {
     if(imgui_mx >= x && imgui_mx <= x+width && imgui_my >= y && imgui_my <= y+DEF_HEIGHT)
       imgui_val = edit_val;
   }
   
-  if(edit_val == imgui_val && imgui_lbp) {
+  if(edit_val == imgui_val && imgui_lbp && !inText ) {
     value  = imgui_mx - x;
     value /= width;
     value *= (maxval-minval);
     value += minval;
+    g_imgui_InDrag = 2;
   }
 
   value = R3D_CLAMP(value, minval, maxval);
@@ -1007,18 +1232,18 @@ float imgui_DrawHSliderV(bool isFloat, float x, float y, float width, float minv
   return value;
 }
 
-float imgui_DrawHSlider(float x, float y, float width, float minval, float maxval, float* edit_val, bool bUseDesktop ) 
+float imgui_DrawHSlider(float x, float y, float width, float minval, float maxval, float* edit_val, char* fmt, void* editTag, bool bUseDesktop ) 
 {
 	if(imgui_disable_gui)
 		return 0;
-  return imgui_DrawHSliderV(true, x, y, width, minval, maxval, edit_val, bUseDesktop );
+  return imgui_DrawHSliderV(true, x, y, width, minval, maxval, edit_val, fmt, editTag, bUseDesktop );
 }
 
 float imgui_DrawHSliderI(float x, float y, float width, float minval, float maxval, int* edit_val, bool bUseDesktop) 
 {
 	if(imgui_disable_gui)
 		return 0;
-  return imgui_DrawHSliderV(false, x, y, width, minval, maxval, edit_val, bUseDesktop);
+  return imgui_DrawHSliderV(false, x, y, width, minval, maxval, edit_val, NULL, edit_val, bUseDesktop);
 }
 
 
@@ -1052,6 +1277,7 @@ float imgui_DrawVSlider(float x, float y, float height, float minval, float maxv
     value /= height;
     value *= (maxval-minval);
     value += minval;
+    g_imgui_InDrag = 2;
   }
 
   value = R3D_CLAMP(value, minval, maxval);
@@ -1266,7 +1492,7 @@ int imgui_Value_SliderV(bool isFloat, float x, float y, const char* name, void* 
   }
 
   if(doslider) {
-    imgui_DrawHSliderV(isFloat, x+100, y+4, wid-170, minval, maxval, edit_val, false);
+    imgui_DrawHSliderV(isFloat, x+100, y+4, wid-170, minval, maxval, edit_val, NULL, edit_val, false);
   }
     
   if(inFocus) {
@@ -1384,7 +1610,18 @@ int imgui_Checkbox(float x, float y, int wid, int ht, const char* name, int* edi
   int temp_val = (*edit_val & flag) ? 1 : 0;
 
   int inFocus = 0;
-  if(imgui_val == NULL && imgui_mx > x && imgui_mx < (x + wid) && imgui_my > y && imgui_my < y + ht) 
+
+  int checkBoxX = x+wid-2-20;
+  int checkBoxY = y+2;
+  int checkBoxW = 20;
+  int checkBoxH = 20;
+
+  if( imgui_val == NULL && 
+      imgui_mx > checkBoxX && 
+      imgui_mx < checkBoxX + checkBoxW && 
+      imgui_my > checkBoxY && 
+      imgui_my < checkBoxY + checkBoxH &&
+      !g_imgui_InDrag )
     inFocus = 1;
 
   g_bCursorIsOver2d |= imgui_mx > x-g_fSizeThreshold && imgui_mx < (x + wid)+g_fSizeThreshold && imgui_my > y-g_fSizeThreshold && imgui_my < y + ht+g_fSizeThreshold;
@@ -1392,15 +1629,21 @@ int imgui_Checkbox(float x, float y, int wid, int ht, const char* name, int* edi
   if(imgui_lbr && inFocus)
     temp_val =  1 - temp_val;
 
-  if(inFocus)
-      r3dDrawBox2D(x+wid-2-20,y+2,20,20,r3dColor(255,0,0));
-  else
-      r3dDrawBox2D(x+wid-2-20,y+2,20,20,r3dColor(255,255,255));
+  r3dColor borderClr;
+  r3dColor innerClr;
 
-  if (temp_val)
-     r3dDrawBox2D(x+wid-2-20+1,y+2+1,20-2,20-2,r3dColor(0,255,0));
+  if(inFocus)
+      borderClr = r3dColor(255,0,0);
   else
-     r3dDrawBox2D(x+wid-2-20+1,y+2+1,20-2,20-2,r3dColor(0,15,0));
+      borderClr = r3dColor(255,255,255);
+
+  if( temp_val )
+      innerClr = r3dColor(0,255,0);
+  else
+      innerClr = r3dColor(0,15,0);
+
+  r3dDrawBox2D( checkBoxX, checkBoxY, checkBoxW, checkBoxH, borderClr );
+  r3dDrawBox2D( checkBoxX+1, checkBoxY+1, checkBoxW-2, checkBoxH-2, innerClr );
 
    *edit_val &= ~flag;
    if(temp_val) 
@@ -1554,16 +1797,16 @@ int imgui_DrawColorPicker(float x, float y, const char* name, r3dColor* edit_val
 		// we have some other picker active - just draw sliders here
 		r3d_assert(imgui_val);
 
-		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[0], false);
+		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[0], "%.0f", &edit_val->R, false);
 		y += 17;
-		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[1], false);
+		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[1], "%.0f", &edit_val->G, false);
 		y += 17;
-		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[2], false);
+		imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[2], "%.0f", &edit_val->B, false);
 		y += 17;
 
 		if(withAlpha) 
 		{
-			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[3], false);
+			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &fc[3], "%.0f", &edit_val->A, false);
 			y += 17;
 		}
 
@@ -1571,12 +1814,11 @@ int imgui_DrawColorPicker(float x, float y, const char* name, r3dColor* edit_val
 		if ( bHSV )
 		{
 			y += 4;
-			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &fc_hsv[0], false ); 
+			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &fc_hsv[0], "%.0f", &edit_val->R, false ); 
 			y += 17;
-			imgui_DrawHSlider(x +60, y, width-65, 0.0f, 1, &fc_hsv[1], false ); 	
+			imgui_DrawHSlider(x +60, y, width-65, 0.0f, 1, &fc_hsv[1], "%.0f", &edit_val->G, false ); 	
 			y += 17;
-
-			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &fc_hsv[2], false );
+			imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &fc_hsv[2], "%.0f", &edit_val->B, false );
 			y += 17;
 		}
     
@@ -1598,40 +1840,40 @@ int imgui_DrawColorPicker(float x, float y, const char* name, r3dColor* edit_val
 		saved_fc_hsv[2] = fc_hsv[2];	
 	}	
  
-  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[0], false ); 
+  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[0], "%.0f", &saved_fc[0], false ); 
   if(imgui_val == &saved_fc[0]) 
 	  saved_inst = edit_val;
   y += 17;
-  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[1], false ); 
+  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[1], "%.0f", &saved_fc[1], false ); 
   if(imgui_val == &saved_fc[1]) 
 	  saved_inst = edit_val;
   y += 17;
-  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[2], false ); 
+  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[2], "%.0f", &saved_fc[2], false ); 
   if(imgui_val == &saved_fc[2]) 
 	  saved_inst = edit_val;
   y += 17;
   if(withAlpha)
   {
-	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[3], false ); if(imgui_val == &saved_fc[3]) saved_inst = edit_val;
+	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 255.0f, &saved_fc[3], "%.0f", &saved_fc[3], false ); if(imgui_val == &saved_fc[3]) saved_inst = edit_val;
 	  y += 17;
   }
 
   if ( bHSV )
   {
 	  y += 4;
-	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &saved_fc_hsv[0], false ); 
+	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &saved_fc_hsv[0], "%.0f", &saved_fc_hsv[0], false ); 
 	  if(imgui_val == &saved_fc_hsv[0]) 
 		  saved_inst_hsv = edit_val;
 	  MenuFont_Editor->PrintF(x+10, y+2, imgui_nameCol, "H: %.0f", saved_fc_hsv[0]*255.f );
 	  y += 17;
 
-	  imgui_DrawHSlider(x +60, y, width-65, 0.0f, 1, &saved_fc_hsv[1], false ); 
+	  imgui_DrawHSlider(x +60, y, width-65, 0.0f, 1, &saved_fc_hsv[1], "%.0f", &saved_fc_hsv[1], false ); 
 	  if(imgui_val == &saved_fc_hsv[1]) 
 		  saved_inst_hsv = edit_val;
 	  MenuFont_Editor->PrintF(x+10, y+2, imgui_nameCol, "S: %.0f", saved_fc_hsv[1]*255.f );
 	  y += 17;
 
-	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &saved_fc_hsv[2], false );
+	  imgui_DrawHSlider(x + 60, y, width-65, 0.0f, 1, &saved_fc_hsv[2], "%.0f", &saved_fc_hsv[2], false );
 	  if(imgui_val == &saved_fc_hsv[2])
 		  saved_inst_hsv = edit_val;
 	  MenuFont_Editor->PrintF(x+10, y+2, imgui_nameCol, "V: %.0f", saved_fc_hsv[2]*255.f );
@@ -1659,7 +1901,7 @@ int imgui_DrawColorPicker(float x, float y, const char* name, r3dColor* edit_val
 }
 
 
-int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2* edit_val, float width, bool bUseDesktop )
+int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2* edit_val, float width, float currentTime, bool bUseDesktop )
 {
 	if(imgui_disable_gui)
 		return 0;
@@ -1707,7 +1949,7 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
     float gx = x +4+ (v1.time / 1.0f) * (width-8);
     float gy = y+2;
 
-    if(imgui_mx >= (gx-4) && imgui_mx <= (gx+4) && imgui_my >= gy && imgui_my <= (gy+gradH)) {
+    if( !g_imgui_InDrag && imgui_mx >= (gx-4) && imgui_mx <= (gx+4) && imgui_my >= gy && imgui_my <= (gy+gradH)) {
       onIdx = i;
     }
     
@@ -1725,13 +1967,18 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
 
   bool inFocus = false;
 
-  if(imgui_mx >= x && imgui_mx <= x+width && imgui_my >= y && imgui_my <= (y+gradH)) {
+  if(!g_imgui_InDrag && imgui_mx >= x && imgui_mx <= x+width && imgui_my >= y && imgui_my <= (y+gradH)) {
     inFocus = true;
   }
 
   if(imgui_val == NULL && inFocus && onIdx == -1) 
     r3dDrawBox2D(imgui_mx, y-2, 2, gradH+4, r3dColor::white);
 
+  if( currentTime >= 0.f && currentTime <= 1.f )
+  {
+    float lx = x + 4 + (currentTime / 1.0f) * (width-8);
+    r3dDrawLine2D( lx, y + 2, lx, y + gradH + 2, 2.0f, r3dColor::green );
+  }
 
  // draw RGB color pickers
   y += gradH + 10;
@@ -1742,14 +1989,13 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
 
     r3dDrawBox2D(x+10, y, 17, 47, r3dColor(fc[0], fc[1], fc[2], 255.0f));
 
-    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[0], false);
+    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[0], "%.0f", &fc[0], false);
     y += 17;
-    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[1], false);
+    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[1], "%.0f", &fc[1], false);
     y += 17;
-    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[2], false);
+    imgui_DrawHSlider(x + 30, y, width-30-2, 0.0f, 255.0f, &fc[2], "%.0f", &fc[2], false);
     y += 17;
   }
-
 
  // do dragging
   if(imgui_val == edit_val && saved_idx != -1) {
@@ -1768,16 +2014,21 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
   
   if(imgui_val == NULL) 
   {
-    if(onIdx != -1 && imgui_rbr) {
-      // remove previously selected point
-      if(onIdx != 0 && onIdx != gr.NumValues-1) {
-        gr.NumValues--;
-        memmove(&gr.Values[onIdx], &gr.Values[onIdx+1], sizeof(gr.Values[0]) * (gr.NumValues - onIdx));
-      
-        saved_inst = NULL;
-        saved_idx  = -1;
-        return Ht+1;
-      }
+    if(onIdx != -1 ) {
+	  g_imgui_LockRbr = 2;
+	  if( imgui_rbr )
+	  {
+		  // remove previously selected point
+		  if(onIdx != 0 && onIdx != gr.NumValues-1)
+		  {
+			  gr.NumValues--;
+			  memmove(&gr.Values[onIdx], &gr.Values[onIdx+1], sizeof(gr.Values[0]) * (gr.NumValues - onIdx));
+
+			  saved_inst = NULL;
+			  saved_idx  = -1;
+			  return Ht+1;
+		  }
+	  }
     }
   
     if(imgui_lbr && inFocus && onIdx == -1) {
@@ -1788,7 +2039,7 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
       saved_idx  = gr.AddValue3f(time, 255, 255, 255);
     }
 
-    if(imgui_lbp && onIdx != -1) {
+    if(!g_imgui_InDrag && imgui_lbp && onIdx != -1) {
       // select point
       saved_inst = edit_val;
       saved_idx  = onIdx;
@@ -1810,7 +2061,7 @@ int imgui_DrawColorGradient(float x, float y, const char* name, r3dTimeGradient2
 
 
 int imgui_DrawFloatGradient(float in_x, float in_y, const char* name, r3dTimeGradient2* edit_val, float in_w, float in_h, 
-							float minVal, float maxVal, int x_steps /*= 10*/, int y_steps /*= 10*/, int x_precision /*= 2*/, int y_precision /*= 2*/, bool bUseDesktop )
+							float minVal, float maxVal, int x_steps /*= 10*/, int y_steps /*= 10*/, int x_precision /*= 2*/, int y_precision /*= 2*/, float currentTime /*= -1.0f*/, bool bUseDesktop )
 {
 	if(imgui_disable_gui)
 		return 0;
@@ -1825,7 +2076,7 @@ int imgui_DrawFloatGradient(float in_x, float in_y, const char* name, r3dTimeGra
 	g_bCursorIsOver2d |= (imgui_mx > in_x-g_fSizeThreshold && imgui_mx < in_x+in_w+g_fSizeThreshold && imgui_my > in_y-g_fSizeThreshold && imgui_my < in_y+in_h+g_fSizeThreshold);
 
   static UICurveEditor curveEditor;
-  curveEditor.DrawIM(in_x, in_y, in_w, in_h, name, edit_val, 0, minVal, maxVal, x_steps, y_steps, x_precision, y_precision, false );
+  curveEditor.DrawIM(in_x, in_y, in_w, in_h, name, edit_val, 0, minVal, maxVal, x_steps, y_steps, x_precision, y_precision, currentTime, false );
 
   // smooth checkbox
   {
@@ -1848,8 +2099,11 @@ int imgui_DrawFloatGradient(float in_x, float in_y, const char* name, r3dTimeGra
 	  int temp_val = edit_val->Smooth;
 
 	  int inFocus = 0;
-	  if(imgui_val == NULL && imgui_mx > x && imgui_mx < (x + wid) && imgui_my > y && imgui_my < y + ht) 
-		  inFocus = 1;
+	  if( imgui_val == NULL && 
+		  imgui_mx > x && imgui_mx < (x + wid) && 
+		  imgui_my > y && imgui_my < y + ht
+		  && !g_imgui_InDrag )
+		    inFocus = 1;
 
 	  g_bCursorIsOver2d |= imgui_mx > x-g_fSizeThreshold && imgui_mx < (x + wid)+g_fSizeThreshold && imgui_my > y-g_fSizeThreshold && imgui_my < y + ht+g_fSizeThreshold;
 
@@ -1968,7 +2222,7 @@ int imgui_Toolbar(float sx, float sy, float sw, float sh, int *edit_val, int Min
 	  int yy = sy +sh/2 - sz.cy/2-5;
 
 	  int hover = 0;
-	  if(imgui_mx > xx && imgui_mx < xx+Bw && imgui_my > yy && imgui_my < yy+sz.cy+10) {
+	  if(imgui_mx > xx && imgui_mx < xx+Bw && imgui_my > yy && imgui_my < yy+sz.cy+10 && !g_imgui_InDrag) {
         hover = 1;
       }
     
@@ -1996,8 +2250,9 @@ int imgui_Toolbar(float sx, float sy, float sw, float sh, int *edit_val, int Min
 
 bool imgui_Button(float sx, float sy, float sw, float sh, const char* name, int selected, bool bUseDesktop )
 {
-	if(imgui_disable_gui)
+	if( imgui_disable_gui )
 		return 0;
+
 	if ( bUseDesktop )
 	{
 		if ( ! Desktop().IsWindowVisible( sx, sy, sx + sw, sy + sh ) )
@@ -2009,7 +2264,7 @@ bool imgui_Button(float sx, float sy, float sw, float sh, const char* name, int 
 	g_bCursorIsOver2d |= (imgui_mx > sx-g_fSizeThreshold && imgui_mx < sx+sw+g_fSizeThreshold && imgui_my > sy-g_fSizeThreshold && imgui_my < sy+sh+g_fSizeThreshold);
 
   int hover = 0;
-  if(imgui_mx > sx && imgui_mx < sx+sw && imgui_my > sy && imgui_my < sy+sh) {
+  if(imgui_mx > sx && imgui_mx < sx+sw && imgui_my > sy && imgui_my < sy+sh && !g_imgui_InDrag) {
     hover = 1;
   }
     
@@ -2116,6 +2371,35 @@ int imgui_Static(float x, float y, const char* name,  const int Width, bool bUse
   MenuFont_Editor->PrintF( tx, ty, imgui_nameCol, "%s", name);
 
   return ht +1;
+}
+
+int	imgui_Print(float x, float y,const char* name,  bool bUseDesktop )
+{
+	if( imgui_disable_gui )
+		return 0;
+
+	SIZE sz1;
+
+	MenuFont_Editor->GetTextExtent( name, &sz1 );
+
+	float wid = (float)sz1.cx;
+	float ht = (float)sz1.cy;
+
+	if ( bUseDesktop )
+	{
+		if ( ! Desktop().IsWindowVisible( x, y, x + wid, y + ht ) )
+			return ht +1;
+		x -= Desktop().GetX();
+		y -= Desktop().GetY();
+	}
+
+	g_bCursorIsOver2d |= (imgui_mx > x-g_fSizeThreshold && imgui_mx < x+wid+g_fSizeThreshold && imgui_my > y-g_fSizeThreshold && imgui_my < y+ht+g_fSizeThreshold);
+
+	r3dDrawBox2D(x,y,wid,ht,imgui_bkgDlg);
+
+	MenuFont_Editor->PrintF( x, y, imgui_nameCol, "%s", name);
+
+	return ht +1;
 }
 
 

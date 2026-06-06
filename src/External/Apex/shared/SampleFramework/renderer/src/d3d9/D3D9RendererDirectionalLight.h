@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -43,17 +43,22 @@
 
 #include "D3D9Renderer.h"
 
-class D3D9RendererDirectionalLight : public RendererDirectionalLight
+namespace SampleRenderer
 {
+
+	class D3D9RendererDirectionalLight : public RendererDirectionalLight
+	{
 	public:
 		D3D9RendererDirectionalLight(D3D9Renderer &renderer, const RendererDirectionalLightDesc &desc);
 		virtual ~D3D9RendererDirectionalLight(void);
-		
+
 		virtual void bind(void) const;
-		
+
 	private:
 		D3D9Renderer &m_renderer;
-};
+	};
+
+} // namespace SampleRenderer
 
 #endif // #if defined(RENDERER_ENABLE_DIRECT3D9)
 #endif

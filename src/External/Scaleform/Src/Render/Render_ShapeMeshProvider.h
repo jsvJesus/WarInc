@@ -42,8 +42,6 @@ public:
     TransformerWrapper(const TransformerType* tr) : Tr(tr) {}
     virtual void Transform(float* x, float* y) const { Tr->Transform(x, y); }
     virtual float GetScale() const { return Tr->GetScale(); }
-    virtual float GetXScale() const { return Tr->GetXScale(); }
-    virtual float GetYScale() const { return Tr->GetYScale(); }
 };
 
 
@@ -112,13 +110,7 @@ public:
                                      StrokeGenerator* gen, const ToleranceParams* tol) const;
 
     virtual bool    HitTestShape(const Matrix2F& m, float x, float y, float morphRatio,
-        StrokeGenerator* gen, const ToleranceParams* tol) const
-    {
-        return HitTestShape(m, x, y, morphRatio, gen, tol, NULL);
-    }
-
-    bool            HitTestShape(const Matrix2F& m, float x, float y, float morphRatio,
-                                 StrokeGenerator* gen, const ToleranceParams* tol, Scale9GridInfo* s9g) const;
+                                 StrokeGenerator* gen, const ToleranceParams* tol) const;
 
     virtual unsigned    GetLayerCount() const { return (unsigned)DrawLayers.GetSize(); }
     virtual unsigned    GetFillCount(unsigned drawLayer, unsigned meshGenFlags) const;

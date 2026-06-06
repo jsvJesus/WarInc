@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -35,6 +35,8 @@
 #include <RendererTargetDesc.h>
 #include <RendererTexture2D.h>
 
+using namespace SampleRenderer;
+
 RendererTargetDesc::RendererTargetDesc(void)
 {
 	textures            = 0;
@@ -45,8 +47,8 @@ RendererTargetDesc::RendererTargetDesc(void)
 bool RendererTargetDesc::isValid(void) const
 {
 	bool ok = true;
-	physx::PxU32 width  = 0;
-	physx::PxU32 height = 0;
+	PxU32 width  = 0;
+	PxU32 height = 0;
 	if(numTextures != 1) ok = false; // for now we only support single render targets at the moment.
 	if(textures)
 	{
@@ -55,7 +57,7 @@ bool RendererTargetDesc::isValid(void) const
 			width  = textures[0]->getWidth();
 			height = textures[0]->getHeight();
 		}
-		for(physx::PxU32 i=0; i<numTextures; i++)
+		for(PxU32 i=0; i<numTextures; i++)
 		{
 			if(!textures[i]) ok = false;
 			else

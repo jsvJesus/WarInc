@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,20 +32,25 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "D3D9RendererDirectionalLight.h"
+
+#include <RendererConfig.h>
 
 #if defined(RENDERER_ENABLE_DIRECT3D9)
+
+#include "D3D9RendererDirectionalLight.h"
+
+using namespace SampleRenderer;
 
 D3D9RendererDirectionalLight::D3D9RendererDirectionalLight(D3D9Renderer &renderer, const RendererDirectionalLightDesc &desc) :
 	RendererDirectionalLight(desc),
 	m_renderer(renderer)
 {
-	
+
 }
 
 D3D9RendererDirectionalLight::~D3D9RendererDirectionalLight(void)
 {
-	
+
 }
 
 void D3D9RendererDirectionalLight::bind(void) const

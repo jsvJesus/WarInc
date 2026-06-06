@@ -33,6 +33,7 @@ namespace Scaleform { namespace GFx {
 class FontResource;
 class MovieDef;
 
+
 class FontLib : public State
 {
     class FontLibImpl *pImpl;
@@ -85,21 +86,10 @@ public:
     // library during authoring of SWF content in Flash Studio. For example,
     // if 'fonts_en.swf' was used as a default source of imported fonts then use
     // this name. Default value is 'gfxfontlib.swf' for compatibility reasons.
-    //void                SetSubstitute(const char* filename);
-    //const String&       GetSubstitute() const;
+    void                SetSubstitute(const char* filename);
+    const String&       GetSubstitute() const;
 };
 
-// *** Default Font Lib Name state
-class DefaultFontLibNameState : public State
-{
-    StringLH Name;
-public:
-    DefaultFontLibNameState():State(State::State_DefaultFontLibName) {}
-    virtual ~DefaultFontLibNameState() {}
-
-    void            SetName(const char* n)  { Name = n; }
-    const StringLH& GetName() const         { return Name; }
-};
 
 
 // *** External class inlines dependent on us

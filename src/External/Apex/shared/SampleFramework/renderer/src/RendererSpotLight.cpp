@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -32,10 +32,10 @@
  * include, in the user documentation and internal comments to the code,
  * the above Disclaimer and U.S. Government End Users Notice.
  */
-#include "PsShare.h"
 #include <RendererSpotLight.h>
 #include <RendererSpotLightDesc.h>
 
+using namespace SampleRenderer;
 
 RendererSpotLight::RendererSpotLight(const RendererSpotLightDesc &desc) :
 	RendererLight(desc)
@@ -51,22 +51,22 @@ RendererSpotLight::~RendererSpotLight(void)
 
 }
 
-const physx::PxVec3 &RendererSpotLight::getPosition(void) const
+const PxVec3 &RendererSpotLight::getPosition(void) const
 {
 	return m_position;
 }
 
-void RendererSpotLight::setPosition(const physx::PxVec3 &pos)
+void RendererSpotLight::setPosition(const PxVec3 &pos)
 {
 	m_position = pos;
 }
 
-const physx::PxVec3 &RendererSpotLight::getDirection(void) const
+const PxVec3 &RendererSpotLight::getDirection(void) const
 {
 	return m_direction;
 }
 
-void RendererSpotLight::setDirection(const physx::PxVec3 &dir)
+void RendererSpotLight::setDirection(const PxVec3 &dir)
 {
 	RENDERER_ASSERT(dir.magnitudeSquared() >= 0.1f, "Trying to give Direction Light invalid Direction value.");
 	if(dir.magnitudeSquared() >= 0.1f)
@@ -76,17 +76,17 @@ void RendererSpotLight::setDirection(const physx::PxVec3 &dir)
 	}
 }
 
-physx::PxF32 RendererSpotLight::getInnerRadius(void) const
+PxF32 RendererSpotLight::getInnerRadius(void) const
 {
 	return m_innerRadius;
 }
 
-physx::PxF32 RendererSpotLight::getOuterRadius(void) const
+PxF32 RendererSpotLight::getOuterRadius(void) const
 {
 	return m_outerRadius;
 }
 
-void RendererSpotLight::setRadius(physx::PxF32 innerRadius, physx::PxF32 outerRadius)
+void RendererSpotLight::setRadius(PxF32 innerRadius, PxF32 outerRadius)
 {
 	RENDERER_ASSERT(innerRadius>=0 && innerRadius<=outerRadius, "Invalid Spot Light radius values.");
 	if(innerRadius>=0 && innerRadius<=outerRadius)
@@ -96,17 +96,17 @@ void RendererSpotLight::setRadius(physx::PxF32 innerRadius, physx::PxF32 outerRa
 	}
 }
 
-physx::PxF32 RendererSpotLight::getInnerCone(void) const
+PxF32 RendererSpotLight::getInnerCone(void) const
 {
 	return m_innerCone;
 }
 
-physx::PxF32 RendererSpotLight::getOuterCone(void) const
+PxF32 RendererSpotLight::getOuterCone(void) const
 {
 	return m_outerCone;
 }
 
-void RendererSpotLight::setCone(physx::PxF32 innerCone, physx::PxF32 outerCone)
+void RendererSpotLight::setCone(PxF32 innerCone, PxF32 outerCone)
 {
 	RENDERER_ASSERT(innerCone<=1 && innerCone>=outerCone, "Invalid Spot Light cone values.");
 	if(innerCone<=1 && innerCone>=outerCone)

@@ -25,6 +25,23 @@ void GenerateEnvmap( r3dTexture* tex, const r3dString& texName, const r3dPoint3D
 
 	IDirect3DCubeTexture9* cube;
 
+	struct EnableDisableDistanceCull
+	{
+		EnableDisableDistanceCull()
+		{
+			oldValue = r_allow_distance_cull->GetInt();
+			r_allow_distance_cull->SetInt( 0 );
+		}
+
+		~EnableDisableDistanceCull()
+		{
+			r_allow_distance_cull->SetInt( oldValue );
+		}
+
+		int oldValue;
+
+	} enableDisableDistanceCull; (void)enableDisableDistanceCull;
+
 	// tell' em all not to draw themselves
 	struct ClearRestoreRenderSettings
 	{
@@ -113,7 +130,7 @@ void GenerateEnvmap( r3dTexture* tex, const r3dString& texName, const r3dPoint3D
 		gCam.vPointTo	= dirs[ i ];
 		gCam.vUP		= ups[ i ];
 
-		r3dRenderer->SetCamera( gCam );
+		r3dRenderer->SetCamera( gCam, false );
 
 		GameRender();
 

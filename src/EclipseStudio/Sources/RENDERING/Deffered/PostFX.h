@@ -70,26 +70,16 @@ protected:
 
 //------------------------------------------------------------------------
 
-template <typename T>
-static const char* PostFX_GetTypeName()
-{
-#if defined(_MSC_VER)
-	static const char* funcSig = __FUNCSIG__;
-	return funcSig;
-#else
-	static const char* funcSig = __PRETTY_FUNCTION__;
-	return funcSig;
-#endif
-}
-
-template <typename T>
-PostFX::PostFX(T* /*child*/)
-: mName(PostFX_GetTypeName<T>())
-, mSettingsPushed(0)
+template < typename T >
+/*explicit*/
+PostFX::PostFX( T* /*child*/ )
+: mName( typeid(T).name() )
+, mSettingsPushed( 0 )
 #ifdef R3DPROFILE_ENABLED
 , nameHash(0)
 #endif
 {
+
 }
 
 //------------------------------------------------------------------------

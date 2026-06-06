@@ -37,7 +37,7 @@ BOOL obj_DebugTexture::OnCreate()
 	parent::OnCreate();
 
 	ObjFlags	|= OBJFLAG_DisableShadows ;
-	ObjFlags	|= OBJFLAG_SkipOcclusionCheck ;
+	setSkipOcclusionCheck(true);
 	ObjFlags	|= OBJFLAG_SkipCastRay ;
 	ObjFlags	|= OBJFLAG_AlwaysDraw ;
 	ObjFlags	|= OBJFLAG_ForceSleep;

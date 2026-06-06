@@ -7,32 +7,64 @@ class r3dAtmosphere
   public:
 	float __CurTime;
 
-	r3dTexture*			StaticSkyTex ;
-	r3dMesh*			StaticSkyMesh ;
+	enum SkyPhase
+	{
+		SKY_PHASE_DAWN,
+		SKY_PHASE_DAY,
+		SKY_PHASE_DUSK,
+		SKY_PHASE_NIGHT,
+		SKY_PHASE_COUNT
+	};
 
-	r3dString			StaticSkyTexName ;
-	r3dString			StaticSkyMeshName ;
+	typedef r3dTL::TFixedArray< r3dTexture*, SKY_PHASE_COUNT > SkyPhaseTextures;
+	typedef r3dTL::TFixedArray< r3dString, SKY_PHASE_COUNT > SkyPhaseTextureNames;
+	typedef r3dTL::TFixedArray< float, SKY_PHASE_COUNT > SkyPhaseFloats;
 
-	float				ParticleShadingCoef ;
+	SkyPhaseTextures		StaticSkyTextures;
+	SkyPhaseTextures		StaticSkyGlowTextures;
 
-	float				StaticTexGenScaleX ;
-	float				StaticTexGenScaleY ;
+	SkyPhaseTextureNames	StaticSkyTextureNames;
+	SkyPhaseTextureNames	StaticSkyGlowTextureNames;
 
-	float				StaticTexGetOffsetX ;
-	float				StaticTexGetOffsetY ;
+	SkyPhaseFloats			StaticSkyIntensities;
 
-	int					bStaticSkyEnable ;
-	int					bCustomStaticMeshEnable ;
-	int					bStaticSkyPlanarMapping ;
+	r3dMesh*			StaticSkyMesh;
 
-	int					SunLightOn ;
+	r3dString			StaticSkyMeshName;
+
+	float				ParticleShadingCoef;
+
+	float				StaticTexGenScaleX;
+	float				StaticTexGenScaleY;
+
+	float				StaticTexGetOffsetX;
+	float				StaticTexGetOffsetY;
+
+	int					bStaticSkyEnable;
+	int					bCustomStaticMeshEnable;
+	int					bStaticSkyPlanarMapping;
+
+	int					SunLightOn;
+
+	float				DawnStart;
+	float				DawnEnd;
+
+	float				DuskStart;
+	float				DuskEnd;
 
 	r3dTimeGradient2	SunColor;
-	r3dTimeGradient2	SkyColor;
+	r3dColor			GetCurrentSunColor();
+
+	r3dTimeGradient2	SunAmbientColor;
+	r3dColor			GetCurrentSunAmbientColor();
+
 	float				SunIntensity;
 	r3dTimeGradient2	LambdaCol;
+	r3dColor			GetCurrentLambdaColor();
 
 	r3dTimeGradient2	BacklightColor;
+	r3dColor			GetCurrentBacklightColor();
+
 	float				BacklightIntensity;
 
 	int					bVolumeFog;
@@ -62,11 +94,28 @@ class r3dAtmosphere
 	float				SkyFog_End;
 
 	r3dTimeGradient2 	HGg;
+	float				GetCurrentHGg();
+
 	r3dTimeGradient2 	InscatteringMultiplier;
+	float				GetCurrentInscatteringMultiplier();
+
 	r3dTimeGradient2 	BetaRayMultiplier;
+	float				GetCurrentBetaRayMultiplier();
+
 	r3dTimeGradient2 	BetaMieMultiplier;
+	float				GetCurrentBetaMieMultiplier();
+
 	r3dTimeGradient2 	SunIntensityCoef;
+	float				GetCurrentSunIntensityCoef();
+
 	r3dTimeGradient2 	Turbitity;
+	float				GetCurrentTurbitity();
+
+	r3dTimeGradient2	SunSpotAmplify;
+	r3dTimeGradient2	SunSpotPow;
+	r3dTimeGradient2	SunSpotColor;
+	r3dTimeGradient2	SunSpotIntensity;
+
 	float				SkyDomeWindFactor;
 	float				SkyDomeCloudsScale;
 	float				SkyDomeCloudsDensity;
@@ -81,30 +130,36 @@ class r3dAtmosphere
 	float				CloudFadeOutStartDist;
 	float				CloudFadeOutEndDist;
 	float				SunElevationAngle;
+	float				SunDirectionAngle;
 
-	float				SSSDiffuse ;
-	float				SSSSpecular ;
+	float				SunMovementAngleRange;
+
+	float				MoonLongitude;
+	float				MoonLatitude;
+	
+	r3dTimeGradient2	MoonLightColor;
+	float				MoonIntensity;
+
+	r3dColor			GetCurrentMoonLightColor();
+
+	r3dTimeGradient2	MoonAmbientColor;
+	r3dColor			GetCurrentMoonAmbientColor();
+
+	float EnvGetDayT();
+	float EnvGetNightT();
+
+	float				SSSDiffuse;
+	float				SSSSpecular;
 	float				SSSSpecPower;
 
-	class GameObject*	RainParticleSystem ;
-	char				RainParticleSystemName[ 64 ] ;
+	float				SkyDomeRotationY;
 
-	float				RainStrength;
-	float				Wetness;
-
-	int					WetWeaponEnabled;
-	float				WetWeaponAmount;
-	float				WetWeaponDark;
-	float				WetWeaponGlossBoost;
-	float				WetWeaponSpecMul;
-	float				WetWeaponStreaks;
-	float				WetWeaponStreakScale;
-	float				WetWeaponStreakSpeed;
+	class GameObject*	RainParticleSystem;
+	char				RainParticleSystemName[ 64 ];
 
   public:
 	r3dAtmosphere()
-	: StaticSkyTex( 0 )
-	, StaticSkyMesh( 0 )
+	: StaticSkyMesh( 0 )
 	, RainParticleSystem( 0 )
 	, FogVersion( 0 )
 	{
@@ -130,33 +185,160 @@ class r3dAtmosphere
   void  ReloadTextures();
   void	Update();
 
-	void	SetRainParticle( const char* Name ) ;
-	void	ClearRainParticle();
-
-	void	SetRainStrength( float Value );
-	void	SetWetness( float Value );
-
-	float	GetRainStrength() const { return RainStrength; }
-	float	GetWetness() const { return Wetness; }
-
-	int		GetWetWeaponEnabled() const { return WetWeaponEnabled; }
-	float	GetWetWeaponAmount() const { return WetWeaponAmount; }
-	float	GetWetWeaponDark() const { return WetWeaponDark; }
-	float	GetWetWeaponGlossBoost() const { return WetWeaponGlossBoost; }
-	float	GetWetWeaponSpecMul() const { return WetWeaponSpecMul; }
-	float	GetWetWeaponStreaks() const { return WetWeaponStreaks; }
-	float	GetWetWeaponStreakScale() const { return WetWeaponStreakScale; }
-	float	GetWetWeaponStreakSpeed() const { return WetWeaponStreakSpeed; }
-
-	void	ClampWeatherState();
-	void	ApplyRainStateToParticles();
+  void	SetRainParticle( const char* Name );
+  void	ClearRainParticle();
 
   void	EnableStaticSky();
   void	DisableStaticSky();
-  void	SetStaticSkyTexture( const r3dString& textureName ) ;
-  void	SetStaticSkyMesh( const r3dString& meshName ) ;	
+  void	SetStaticSkyTextures( const SkyPhaseTextureNames& textureNames, const SkyPhaseTextureNames& glowTextureNames );
+  void	SetStaticSkyMesh( const r3dString& meshName );	
   
-  void	ConvertFog_V0() ;
-  void	ConvertFog_V1() ;
+  void	ConvertFog_V0();
+  void	ConvertFog_V1();
 };
 
+void GetAdjecantSkyPhasesAndLerpT( r3dAtmosphere::SkyPhase *oPhase0, r3dAtmosphere::SkyPhase *oPhase1, float* oLerpT );
+const char* SkyPhaseToName( r3dAtmosphere::SkyPhase phase );
+
+r3dPoint3D GetMoonVec();
+
+r3dPoint3D GetEnvLightDir();
+float4 GetEnvLightColor();
+float4 GetEnvLightAmbient();
+
+r3dColor GetEnvBackLightColor();
+
+float GetEnvSkyIntensity();
+
+bool IsNight();
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::EnvGetDayT()
+{
+	const r3dAtmosphere& atmo = *this;
+
+	float t = ( atmo.__CurTime - atmo.DawnStart ) / ( atmo.DuskEnd - atmo.DawnStart );
+
+	return R3D_CLAMP( t, 0.f, 1.f );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::EnvGetNightT()
+{
+	const r3dAtmosphere& atmo = *this;
+
+	float t = 0.f;
+
+	float L = ( 24.f - atmo.DuskEnd + atmo.DawnStart);
+
+	if( atmo.__CurTime >= atmo.DuskEnd )
+	{
+		t = ( atmo.__CurTime - atmo.DuskEnd ) / L;
+	}
+	else
+	{
+		if( atmo.__CurTime < atmo.DawnStart )
+		{
+			t = ( atmo.__CurTime + ( 24.f - atmo.DuskEnd ) ) / L;
+		}
+		else
+		{
+			if( atmo.__CurTime < ( atmo.DawnEnd + atmo.DuskStart ) * 0.5f )
+				t = 1.f;
+			else
+				t = 0.f;
+		}
+	}
+
+	return R3D_CLAMP( t, 0.f, 1.f );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentSunColor()
+{
+	return SunColor.GetColorValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentSunAmbientColor()
+{
+	return SunAmbientColor.GetColorValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentLambdaColor()
+{
+	return LambdaCol.GetColorValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentBacklightColor()
+{
+	return BacklightColor.GetColorValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentHGg()
+{
+	return HGg.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentInscatteringMultiplier()
+{
+	return InscatteringMultiplier.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentBetaRayMultiplier()
+{
+	return BetaRayMultiplier.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentBetaMieMultiplier()
+{
+	return BetaMieMultiplier.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentSunIntensityCoef()
+{
+	return SunIntensityCoef.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE float r3dAtmosphere::GetCurrentTurbitity()
+{
+	return Turbitity.GetFloatValue( EnvGetDayT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentMoonLightColor()
+{
+	return MoonLightColor.GetColorValue( EnvGetNightT() );
+}
+
+//------------------------------------------------------------------------
+
+R3D_FORCEINLINE r3dColor r3dAtmosphere::GetCurrentMoonAmbientColor()
+{
+	return MoonAmbientColor.GetColorValue( EnvGetNightT() );
+}
+
+extern int g_OverrideAmbientAndIntensity;
+extern float g_OverrideIntensity;
+extern r3dColor g_OverrideAmbientColor;

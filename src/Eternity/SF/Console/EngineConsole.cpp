@@ -11,14 +11,6 @@
 extern	CD3DFont*	MenuFont_Editor;
 
 EngineConsole* g_pEngineConsole;
-static int ConsoleStrLen(const char* s)
-{
-	if (!s)
-		return 0;
-
-	const size_t len = strlen(s);
-	return len > INT_MAX ? INT_MAX : static_cast<int>(len);
-}
 
 bool IsConsoleVisible()
 {
@@ -441,17 +433,18 @@ bool EngineConsole::SendControlKey( uint16_t send )
 }
 
 //--------------------------------------------------------------------------------------------------------
-void EngineConsole::AddToCmdHistory(const char* szString)
+void EngineConsole::AddToCmdHistory( const char * szString )
 {
-	int iLineLen = ConsoleStrLen(szString);
-
-	if (iLineLen >= CONSOLE_LINE_SIZE)
+	int iLineLen = strlen( szString );
+	if ( iLineLen > CONSOLE_LINE_SIZE )
+	{
 		iLineLen = CONSOLE_LINE_SIZE - 1;
+	}
 
-	memcpy(m_szHistory[m_iCurrentHistory], szString, iLineLen);
-	m_szHistory[m_iCurrentHistory][iLineLen] = '\0';
+	r3dscpy_s( m_szHistory[ m_iCurrentHistory ], iLineLen + 1, szString );
+	m_szHistory[ m_iCurrentHistory ][ iLineLen ] = '\0';
 
-	m_iCurrentHistory = (m_iCurrentHistory == (CONSOLE_MAX_HISTORY - 1)) ? 0 : (m_iCurrentHistory + 1);
+	m_iCurrentHistory = ( m_iCurrentHistory == ( CONSOLE_MAX_HISTORY - 1 ) ) ? ( 0 ) : ( m_iCurrentHistory + 1 );
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -472,43 +465,47 @@ void EngineConsole::SendChar( uint8_t send )
 }
 
 //--------------------------------------------------------------------------------------------------------
-int EngineConsole::GetHistoryPrev(char* szOut)
+int EngineConsole::GetHistoryPrev( char * szOut )
 {
-	for (int i = 0; i < CONSOLE_MAX_HISTORY; i++)
-	{
-		m_iCurrentHistory = (m_iCurrentHistory == 0) ? (CONSOLE_MAX_HISTORY - 1) : (m_iCurrentHistory - 1);
+	int i;
 
-		if (m_szHistory[m_iCurrentHistory][0])
+	for ( i = 0; i < CONSOLE_MAX_HISTORY; i++ )
+	{
+		m_iCurrentHistory = ( m_iCurrentHistory == 0 ) ? ( CONSOLE_MAX_HISTORY - 1 ) : ( m_iCurrentHistory - 1 );
+		
+		if ( m_szHistory[ m_iCurrentHistory ] ) 
 			break;
 	}
 
-	if (m_szHistory[m_iCurrentHistory][0])
+	if ( m_szHistory[ m_iCurrentHistory ] )
 	{
-		r3dscpy(szOut, m_szHistory[m_iCurrentHistory]);
-		return ConsoleStrLen(szOut);
+		r3dscpy( szOut, m_szHistory[ m_iCurrentHistory ] );
+		return strlen( szOut );
 	}
 
-	return ConsoleStrLen(szOut);
+	return strlen( szOut );
 }
 
 //--------------------------------------------------------------------------------------------------------
-int EngineConsole::GetHistoryNext(char* szOut)
+int EngineConsole::GetHistoryNext( char * szOut )
 {
-	for (int i = 0; i < CONSOLE_MAX_HISTORY; i++)
-	{
-		m_iCurrentHistory = (m_iCurrentHistory == (CONSOLE_MAX_HISTORY - 1)) ? 0 : (m_iCurrentHistory + 1);
+	int i;
 
-		if (m_szHistory[m_iCurrentHistory][0])
+	for ( i = 0; i < CONSOLE_MAX_HISTORY; i++ )
+	{
+		m_iCurrentHistory = ( m_iCurrentHistory == ( CONSOLE_MAX_HISTORY - 1 ) ) ? ( 0 ) : ( m_iCurrentHistory + 1 );
+	
+		if ( m_szHistory[ m_iCurrentHistory ] ) 
 			break;
 	}
 
-	if (m_szHistory[m_iCurrentHistory][0])
+	if ( m_szHistory[ m_iCurrentHistory ] )
 	{
-		r3dscpy(szOut, m_szHistory[m_iCurrentHistory]);
-		return ConsoleStrLen(szOut);
+		r3dscpy( szOut, m_szHistory[ m_iCurrentHistory ] );
+		return strlen( szOut );
 	}
 
-	return ConsoleStrLen(szOut);
+	return strlen( szOut );
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -553,7 +550,7 @@ void EngineConsole::NextComplitCmd()
 
 	r3dscpy_s( m_szCmdLine, sizeof( TString ), s );
 
-	m_iCursorPos = ConsoleStrLen(m_szCmdLine);
+	m_iCursorPos = strlen( m_szCmdLine );
 	RequestUpdateCursorPos();
 
 	m_nFirstCmd++;

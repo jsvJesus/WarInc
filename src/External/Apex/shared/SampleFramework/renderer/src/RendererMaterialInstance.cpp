@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -33,44 +33,36 @@
  * the above Disclaimer and U.S. Government End Users Notice.
  */
 #include <RendererMaterialInstance.h>
-#include <PxAssert.h>
 #include <RendererMaterial.h>
 
+using namespace SampleRenderer;
+
 RendererMaterialInstance::RendererMaterialInstance(RendererMaterial &material) :
-	m_material(material)
+m_material(material)
 {
 	m_data = 0;
-	physx::PxU32 dataSize = m_material.getMaterialInstanceDataSize();
+	PxU32 dataSize = m_material.getMaterialInstanceDataSize();
 	if(dataSize > 0)
 	{
-		m_data = new physx::PxU8[dataSize];
+		m_data = new PxU8[dataSize];
 		memset(m_data, 0, dataSize);
+	}
+}
+
+RendererMaterialInstance::RendererMaterialInstance(const RendererMaterialInstance& other) :
+m_material(other.m_material)
+{
+	PxU32 dataSize = m_material.getMaterialInstanceDataSize();
+	if (dataSize > 0)
+	{
+		m_data = new PxU8[dataSize];
+		memcpy(m_data, other.m_data, dataSize);
 	}
 }
 
 RendererMaterialInstance::~RendererMaterialInstance(void)
 {
 	if(m_data) delete [] m_data;
-}
-
-const RendererMaterial::Variable *RendererMaterialInstance::findVariable(const char *name, RendererMaterial::VariableType varType)
-{
-	RendererMaterial::Variable *var = 0;
-	physx::PxU32 numVariables = (physx::PxU32)m_material.m_variables.size();
-	for(physx::PxU32 i=0; i<numVariables; i++)
-	{
-		RendererMaterial::Variable &v = *m_material.m_variables[i];
-		if(!strcmp(v.getName(), name))
-		{
-			var = &v;
-			break;
-		}
-	}
-	if(var && var->getType() != varType)
-	{
-		var = 0;
-	}
-	return var;
 }
 
 void RendererMaterialInstance::writeData(const RendererMaterial::Variable &var, const void *data)

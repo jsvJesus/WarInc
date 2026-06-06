@@ -2,7 +2,7 @@
 #ifndef SAMPLE_APPLICATION_H
 #define SAMPLE_APPLICATION_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -37,159 +37,158 @@
  */
 #include <Renderer.h>
 #include <RendererWindow.h>
+#include <RendererDesc.h>
 
-#include "Px.h"
-#include "PxSimpleTypes.h"
-#include "PxVec3.h"
-#include "PxMat34Legacy.h"
-#include "PsTime.h"
+#include <FrameworkFoundation.h>
 
 #include <SampleAssetManager.h>
+#include <PsTime.h>
+#include "foundation/PxMat44.h"
+#include <SampleUserInput.h>
 
-class SampleCommandLine;
+namespace physx { 
+	class PxProfileZone;
+	class PxProfileZoneManager;
+	class PxProfileEventSender;
+}
 
 #define SMOOTH_CAM
 
-template <typename T, bool AssumeOrthonormal = true>
-class Transform
+namespace SampleFramework
 {
-public:
-	Transform() : m_dirty(true) {}
 
-	void         setForwardTransform( const T& t )
-	{ 
-		m_fwd = t;
-		m_dirty = true;
-	}
+	class SampleCommandLine;
 
-	void         setInverseTransform( const T& t )
-	{ 
-		m_inv = t;
-		m_inv.getInverse( m_fwd );
-		m_dirty = false;
-	}
-
-	const T&	getForwardTransform() const
-	{ 
-		return m_fwd;
-	}
-
-	const T&	getInverseTransform() const
+	template <typename T>
+	class Transform
 	{
-		if(AssumeOrthonormal && m_dirty)
-		{
-			m_fwd.getInverseRT( m_inv );
-			m_dirty = false;
-		}
-		if(!AssumeOrthonormal && m_dirty)
-		{
-			m_fwd.getInverse( m_inv );
-			m_dirty = false;
-		}
-		return m_inv;
-	}
-
-private:
-			T    m_fwd;
-	mutable T    m_inv;
-	mutable bool m_dirty;
-};
-
-// PT: TODO: share this with PxApplication
-struct GamepadControls
-{
-	enum Button {
-		DIGI_UP, DIGI_DOWN, DIGI_LEFT, DIGI_RIGHT,
-		START, SELECT,
-		LEFT_STICK, RIGHT_STICK,
-		NORTH, SOUTH, WEST, EAST,
-		LEFT_SHOULDER_TOP, RIGHT_SHOULDER_TOP,
-		LEFT_SHOULDER_BOT, RIGHT_SHOULDER_BOT,
-		NUM_PAD_BUTTONS
-	} Button;
-
-	enum Axis {
-		RIGHT_STICK_X, RIGHT_STICK_Y,
-		LEFT_STICK_X, LEFT_STICK_Y,
-		NUM_PAD_AXES
-	} Axis;
-};
-
-class SampleApplication : public RendererWindow
-{
 	public:
-		SampleApplication(const SampleCommandLine& cmdline, const char* assetPathPrefix="media", MouseButton camMoveButton = MOUSE_LEFT);
+		Transform() : m_dirty(true) {}
+
+		void         setForwardTransform( const T& t )
+		{ 
+			m_fwd = t;
+			m_dirty = true;
+		}
+
+		void         setInverseTransform( const T& t )
+		{ 
+			m_inv = t;
+			m_fwd = t.inverseRT();
+			m_dirty = false;
+		}
+
+		const T&	getForwardTransform() const
+		{ 
+			return m_fwd;
+		}
+
+		const T&	getInverseTransform() const
+		{
+			if(m_dirty)
+			{
+				m_inv = m_fwd.inverseRT();
+				m_dirty = false;
+			}
+			return m_inv;
+		}
+
+	private:
+		T    m_fwd;
+		mutable T    m_inv;
+		mutable bool m_dirty;
+	};
+
+	class SampleApplication : public SampleRenderer::RendererWindow, public InputEventListener
+	{
+	public:
+		SampleApplication(const SampleCommandLine& cmdline, const char* assetPathPrefix="media", PxI32 camMoveButton = -1);
 		virtual								~SampleApplication(void);
-		
-				Renderer*					getRenderer(void)								{ return m_renderer; }
-				SampleAssetManager*			getAssetManager(void)							{ return m_assetManager; }
-				inline const char*			getAssetPathPrefix(void)				const	{ return m_assetPathPrefix; }
-				const physx::PxMat34Legacy&	getEyeTransform(void)					const	{ return m_worldToView.getInverseTransform(); }
-				void						setEyeTransform(const physx::PxMat34Legacy& eyeTransform);
-				void						setEyeTransform(const physx::PxVec3& pos, const physx::PxVec3& rot);
-				void						setViewTransform(const physx::PxMat34Legacy& viewTransform);
-				const physx::PxMat34Legacy&	getViewTransform(void)					const;
-				bool						isKeyDown(KeyCode keyCode)				const	{ return m_keyState[keyCode];			}
-				bool						isMouseButtonDown(MouseButton button)	const	{ return m_mouseButtonState[button];	}
-	
-	public:
+		SampleRenderer::Renderer*	getRenderer(void)								{ return m_renderer; }
+		SampleAssetManager*			getAssetManager(void)							{ return m_assetManager; }
+		inline const char*			getAssetPathPrefix(void)				const	{ return m_assetPathPrefix; }
+
+		const PxMat44&				getEyeTransform(void)					const	{ return m_worldToView.getInverseTransform(); }
+		void						setEyeTransform(const PxMat44& eyeTransform);
+		void						setEyeTransform(const PxVec3& pos, const PxVec3& rot);
+		void						setViewTransform(const PxMat44& viewTransform);
+		const PxMat44&				getViewTransform(void)					const;
+
+		const SampleCommandLine&	getCommandLine(void)					const	{ return m_cmdline; }
+
 		virtual	void						onInit(void) = 0;
 		virtual	void						onShutdown(void) = 0;
+
+		virtual	float						tweakElapsedTime(float dtime)	{ return dtime;	}
 		virtual	void						onTickPreRender(float dtime) = 0;
 		virtual	void						onRender(void) = 0;
 		virtual	void						onTickPostRender(float dtime) = 0;
-		
-	public:
+
 		virtual	void						onOpen(void);
 		virtual	bool						onClose(void);
-		
+
 		virtual	void						onDraw(void);
-		
-		virtual	void						onMouseMove(physx::PxU32 x, physx::PxU32 y);
-		virtual	void						onMouseDown(physx::PxU32 /*x*/, physx::PxU32 /*y*/, MouseButton button);
-		virtual	void						onMouseUp(physx::PxU32 /*x*/, physx::PxU32 /*y*/, MouseButton button);
 
+		virtual void						onAnalogInputEvent(const InputEvent& , float val);
+		virtual bool						onDigitalInputEvent(const InputEvent& , bool val);
+		virtual void						onPointerInputEvent(const InputEvent&, physx::PxU32 x, physx::PxU32 y, physx::PxReal dx, physx::PxReal dy);
 
-		
-		virtual	void						onKeyDown(KeyCode keyCode);
-		virtual	void						onKeyUp(KeyCode keyCode);
+		virtual void						rotateCamera(PxF32 dx, PxF32 dy);
+		virtual void						moveCamera(PxF32 dx, PxF32 dy);
 
-		// PT: we need those on PC as well, not just on consoles
-		virtual	void						onGamepadButton(physx::PxU32 button, bool buttonDown);
-		virtual	void						onGamepadAxis(physx::PxU32 axis, physx::PxReal absolutePosition);
-		void								rotateCamera(physx::PxF32 dx, physx::PxF32 dy);
 		virtual	void						doInput(void);
+		virtual void						fatalError(const char * msg);
+
+		virtual PxF32						getRotationSpeedScale(void)		const	{ return m_rotationSpeedScale;	}
+		virtual void						setRotationSpeedScale(PxF32 scale)		{ m_rotationSpeedScale = scale;	}
+		virtual PxF32						getMoveSpeedScale(void)			const	{ return m_moveSpeedScale;		}
+		virtual void						setMoveSpeedScale(PxF32 scale)			{ m_moveSpeedScale = scale;	}
+
+		virtual bool						getRightStickRotate(void)		const	{ return m_rightStickRotate;	}
+		virtual void						setRightStickRotate(bool rsr)			{ m_rightStickRotate = rsr;	}
 
 	protected:
+
+		virtual void						setupRendererDescription(SampleRenderer::RendererDesc& renDesc);
+
 		const SampleCommandLine&			m_cmdline;
 
-				physx::PxF32				m_sceneSize;
-		
-				Renderer*					m_renderer;
-				
-				char						m_assetPathPrefix[256];
-				SampleAssetManager*			m_assetManager;
-				
-				physx::PxVec3				m_eyeRot;
-				Transform<physx::PxMat34Legacy>	m_worldToView;
-				
-				physx::PxU32				m_mouseX, m_mouseY;
-				bool						m_mouseButtonState[NUM_MOUSE_BUTTONS];
-				bool						m_keyState[NUM_KEY_CODES];
-				physx::PxF32				m_gamepadAxisState[NUM_GAMEPAD_AXIS];
+		physx::PxProfileZone*				mProfileZone;
 
-				MouseButton					m_camMoveButton;
-				
-    #if defined(SMOOTH_CAM)
-				physx::PxVec3				m_targetEyeRot;
-				physx::PxVec3				m_targetEyePos;
-    #endif
-private:
-				physx::PxU64				m_timeCounter;
-				physx::Time					m_time;
+		PxF32						m_sceneSize;
 
-	// get rid of stupid C4512
-				void						operator=(const SampleApplication&);
-};
+		SampleRenderer::Renderer*			m_renderer;
+		SampleRenderer::RendererDesc		m_renDesc;
+
+		char						m_assetPathPrefix[256];
+		SampleAssetManager*			m_assetManager;
+
+		PxVec3						m_eyeRot;
+		Transform<PxMat44>			m_worldToView;
+
+		PxI32						m_camMoveButton;
+
+#if defined(SMOOTH_CAM)
+		PxVec3						m_targetEyeRot;
+		PxVec3						m_targetEyePos;
+#endif
+		physx::PxU64				m_timeCounter;
+		physx::shdfnd::Time			m_time;
+		PxF32						m_lastDTime;
+		bool						m_disableRendering;
+
+		void*						android_window_ptr;
+		PxF32						m_rotationSpeedScale;
+		PxF32						m_moveSpeedScale;
+
+		bool						m_rightStickRotate;
+		bool						m_rewriteBuffers;
+
+	private:
+		// get rid of stupid C4512
+		void						operator=(const SampleApplication&);
+	};
+
+} //namespace SampleFramework
 
 #endif

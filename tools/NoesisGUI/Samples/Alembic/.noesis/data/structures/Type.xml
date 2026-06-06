@@ -1,5 +1,0 @@
-<Enum Name="Type">
-  <Item Name="CRYSTALS" Value="0"/>
-  <Item Name="POTIONS" Value="1"/>
-  <Item Name="RINGS" Value="2"/>
-</Enum>

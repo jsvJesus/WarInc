@@ -15,6 +15,9 @@ virtual	void		Close();
 
 virtual	void		PreRender();
 virtual	void		Render();
+
+virtual void		AppendPostFXes();
+
 virtual	void		PostProcess();
 
 // need this separate to be able to make render targets react to resolution changes

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -48,59 +48,61 @@
 #include <RendererMesh.h>
 #include <RendererMeshDesc.h>
 
-#include "PxVec3.h"
+#include <RendererMemoryMacros.h>
+
+using namespace SampleRenderer;
 
 typedef struct
 {
-	physx::PxVec3 positions[4];
-	physx::PxVec3 normal;
+	PxVec3 positions[4];
+	PxVec3 normal;
 } BoxFace;
 
 static const BoxFace g_BoxFaces[] =
 {
 	{ // Z+
-		physx::PxVec3(-1,-1, 1), physx::PxVec3(-1, 1, 1), physx::PxVec3( 1, 1, 1), physx::PxVec3( 1,-1, 1),
-		physx::PxVec3( 0, 0, 1)
+		{PxVec3(-1,-1, 1), PxVec3(-1, 1, 1), PxVec3( 1, 1, 1), PxVec3( 1,-1, 1)},
+			PxVec3( 0, 0, 1)
 	},
 	{ // X+
-		physx::PxVec3( 1,-1, 1), physx::PxVec3( 1, 1, 1), physx::PxVec3( 1, 1,-1), physx::PxVec3( 1,-1,-1),
-		physx::PxVec3( 1, 0, 0)
+		{PxVec3( 1,-1, 1), PxVec3( 1, 1, 1), PxVec3( 1, 1,-1), PxVec3( 1,-1,-1)},
+			PxVec3( 1, 0, 0)
 	},
 	{ // Z-
-		physx::PxVec3( 1,-1,-1), physx::PxVec3( 1, 1,-1), physx::PxVec3(-1, 1,-1), physx::PxVec3(-1,-1,-1),
-		physx::PxVec3( 0, 0,-1)
+		{PxVec3( 1,-1,-1), PxVec3( 1, 1,-1), PxVec3(-1, 1,-1), PxVec3(-1,-1,-1)},
+			PxVec3( 0, 0,-1)
 	},
 	{ // X-
-		physx::PxVec3(-1,-1,-1), physx::PxVec3(-1, 1,-1), physx::PxVec3(-1, 1, 1), physx::PxVec3(-1,-1, 1),
-		physx::PxVec3(-1, 0, 0)
+		{PxVec3(-1,-1,-1), PxVec3(-1, 1,-1), PxVec3(-1, 1, 1), PxVec3(-1,-1, 1)},
+			PxVec3(-1, 0, 0)
 	},
 	{ // Y+
-		physx::PxVec3(-1, 1, 1), physx::PxVec3(-1, 1,-1), physx::PxVec3( 1, 1,-1), physx::PxVec3( 1, 1, 1),
-		physx::PxVec3( 0, 1, 0)
+		{PxVec3(-1, 1, 1), PxVec3(-1, 1,-1), PxVec3( 1, 1,-1), PxVec3( 1, 1, 1)},
+			PxVec3( 0, 1, 0)
 	},
 	{ // Y-
-		physx::PxVec3(-1,-1,-1), physx::PxVec3(-1,-1, 1), physx::PxVec3( 1,-1, 1), physx::PxVec3( 1,-1,-1),
-		physx::PxVec3( 0,-1, 0)
+		{PxVec3(-1,-1,-1), PxVec3(-1,-1, 1), PxVec3( 1,-1, 1), PxVec3( 1,-1,-1)},
+			PxVec3( 0,-1, 0)
 	}
 };
 
-static const physx::PxVec3 g_BoxUVs[] =
+static const PxVec3 g_BoxUVs[] =
 {
-	physx::PxVec3(0,1,0), physx::PxVec3(0,0,0),
-	physx::PxVec3(1,0,0), physx::PxVec3(1,1,0),
+	PxVec3(0,1,0), PxVec3(0,0,0),
+	PxVec3(1,0,0), PxVec3(1,1,0),
 };
 
-static physx::PxVec3 operator*(const physx::PxVec3 &a, const physx::PxVec3 &b)
+static PxVec3 operator*(const PxVec3 &a, const PxVec3 &b)
 {
-	return physx::PxVec3(a.x*b.x, a.y*b.y, a.z*b.z);
+	return PxVec3(a.x*b.x, a.y*b.y, a.z*b.z);
 }
 
-RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &extents) :
-	RendererShape(renderer)
+RendererBoxShape::RendererBoxShape(Renderer &renderer, const PxVec3 &extents, const PxReal* userUVs) :
+RendererShape(renderer)
 {
-	const physx::PxU32 numVerts     = 24;
-	const physx::PxU32 numIndices   = 36;
-	
+	const PxU32 numVerts     = 24;
+	const PxU32 numIndices   = 36;
+
 	RendererVertexBufferDesc vbdesc;
 	vbdesc.hint = RendererVertexBuffer::HINT_STATIC;
 	vbdesc.semanticFormats[RendererVertexBuffer::SEMANTIC_POSITION]  = RendererVertexBuffer::FORMAT_FLOAT3;
@@ -111,26 +113,34 @@ RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &exte
 	RENDERER_ASSERT(m_vertexBuffer, "Failed to create Vertex Buffer.");
 	if(m_vertexBuffer)
 	{
-		physx::PxU32 positionStride = 0;
+		PxU32 positionStride = 0;
 		void *positions = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_POSITION, positionStride);
-		physx::PxU32 normalStride = 0;
+		PxU32 normalStride = 0;
 		void *normals = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL, normalStride);
-		physx::PxU32 uvStride = 0;
+		PxU32 uvStride = 0;
 		void *uvs = m_vertexBuffer->lockSemantic(RendererVertexBuffer::SEMANTIC_TEXCOORD0, uvStride);
-		if(positions && normals)
+		if(positions && normals && uvs)
 		{
-			for(physx::PxU32 i=0; i<6; i++)
+			for(PxU32 i=0; i<6; i++)
 			{
 				const BoxFace &bf = g_BoxFaces[i];
-				for(physx::PxU32 j=0; j<4; j++)
+				for(PxU32 j=0; j<4; j++)
 				{
-					physx::PxVec3 &p  = *(physx::PxVec3*)positions; positions = ((physx::PxU8*)positions) + positionStride;
-					physx::PxVec3 &n  = *(physx::PxVec3*)normals;   normals   = ((physx::PxU8*)normals)   + normalStride;
-					physx::PxF32 *uv =  (physx::PxF32*)uvs;       uvs       = ((physx::PxU8*)uvs)       + uvStride;
+					PxVec3 &p  = *(PxVec3*)positions; positions = ((PxU8*)positions) + positionStride;
+					PxVec3 &n  = *(PxVec3*)normals;   normals   = ((PxU8*)normals)   + normalStride;
+					PxF32 *uv  =  (PxF32*)uvs;        uvs       = ((PxU8*)uvs)       + uvStride;
 					n = bf.normal;
 					p = bf.positions[j] * extents;
-					uv[0] = g_BoxUVs[j].x;
-					uv[1] = g_BoxUVs[j].y;
+					if(userUVs)
+					{
+						uv[0] = *userUVs++;
+						uv[1] = *userUVs++;
+					}
+					else
+					{
+						uv[0] = g_BoxUVs[j].x;
+						uv[1] = g_BoxUVs[j].y;
+					}
 				}
 			}
 		}
@@ -138,7 +148,7 @@ RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &exte
 		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_NORMAL);
 		m_vertexBuffer->unlockSemantic(RendererVertexBuffer::SEMANTIC_POSITION);
 	}
-	
+
 	RendererIndexBufferDesc ibdesc;
 	ibdesc.hint       = RendererIndexBuffer::HINT_STATIC;
 	ibdesc.format     = RendererIndexBuffer::FORMAT_UINT16;
@@ -147,12 +157,12 @@ RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &exte
 	RENDERER_ASSERT(m_indexBuffer, "Failed to create Index Buffer.");
 	if(m_indexBuffer)
 	{
-		physx::PxU16 *indices = (physx::PxU16*)m_indexBuffer->lock();
+		PxU16 *indices = (PxU16*)m_indexBuffer->lock();
 		if(indices)
 		{
-			for(physx::PxU8 i=0; i<6; i++)
+			for(PxU8 i=0; i<6; i++)
 			{
-				const physx::PxU16 base = i*4;
+				const PxU16 base = i*4;
 				*(indices++) = base+0;
 				*(indices++) = base+1;
 				*(indices++) = base+2;
@@ -163,7 +173,7 @@ RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &exte
 		}
 		m_indexBuffer->unlock();
 	}
-	
+
 	if(m_vertexBuffer && m_indexBuffer)
 	{
 		RendererMeshDesc meshdesc;
@@ -182,11 +192,7 @@ RendererBoxShape::RendererBoxShape(Renderer &renderer, const physx::PxVec3 &exte
 
 RendererBoxShape::~RendererBoxShape(void)
 {
-	if(m_vertexBuffer) m_vertexBuffer->release();
-	if(m_indexBuffer)  m_indexBuffer->release();
-	if(m_mesh)
-	{
-		m_mesh->release();
-		m_mesh = 0;
-	}
+	SAFE_RELEASE(m_vertexBuffer);
+	SAFE_RELEASE(m_indexBuffer);
+	SAFE_RELEASE(m_mesh);
 }

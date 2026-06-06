@@ -2,7 +2,7 @@
 #ifndef SAMPLE_TEXTURE_ASSET_H
 #define SAMPLE_TEXTURE_ASSET_H
 /*
- * Copyright 2009-2011 NVIDIA Corporation.  All rights reserved.
+ * Copyright 2008-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:
  *
@@ -39,35 +39,56 @@
 
 #include <stdio.h>
 
-class Renderer;
-class RendererTexture2D;
-
-class SampleTextureAsset : public SampleAsset
+namespace SampleRenderer
 {
-	friend class SampleAssetManager;
+	class Renderer;
+	class RendererTexture;
+}
+
+namespace SampleFramework
+{
+
+	class SampleTextureAsset : public SampleAsset
+	{
+		friend class SampleAssetManager;
 
 	public:
 		enum Type
 		{
 			DDS,
 			TGA,
+			BMP,
+			GXT,
+			PVR,
 			TEXTURE_FILE_TYPE_COUNT,
 		};
 	protected:
-		SampleTextureAsset(Renderer &renderer, FILE &file, const char *path, Type texType);
+		SampleTextureAsset(SampleRenderer::Renderer &renderer, FILE &file, const char *path, Type texType);
+		SampleTextureAsset(SampleRenderer::Renderer &renderer, 
+						   const void* pixels, int width, int height, int bitsPerPixel, 
+						   bool invertWidth, bool invertHeight, bool swapRB,
+						   const char* path);
 		virtual ~SampleTextureAsset(void);
-		
+
 	public:
-		RendererTexture2D *getTexture(void);
-	
+		SampleRenderer::RendererTexture *getTexture(void);
+		const SampleRenderer::RendererTexture *getTexture(void) const;
+
 	public:
 		virtual bool isOk(void) const;
-		
-	private:
-		void loadDDS(Renderer &renderer, FILE &file);
-		void loadTGA(Renderer &renderer, FILE &file);
 
-		RendererTexture2D *m_texture;
-};
+	private:
+		void loadDDS(SampleRenderer::Renderer &renderer, FILE &file);
+		void loadTGA(SampleRenderer::Renderer &renderer, FILE &file);
+		void loadBitmap(SampleRenderer::Renderer &renderer, 
+		                const void* pixels, int width, int bitsPerPixel, int height, 
+		                bool invertWidth = false, bool invertHeight = false, bool swapRB = false);
+		void loadGXT(SampleRenderer::Renderer &renderer, FILE &file);
+		void loadPVR(SampleRenderer::Renderer &renderer, FILE &file);
+
+		SampleRenderer::RendererTexture *m_texture;
+	};
+
+} // namespace SampleFramework
 
 #endif

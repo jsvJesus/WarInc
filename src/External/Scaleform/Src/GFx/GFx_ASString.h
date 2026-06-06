@@ -904,7 +904,6 @@ public:
     const ASStringNodeHolder& GetBuiltinNodeHolder(Builtin_Type btype) const { return Builtins[btype]; }
     const ASString& GetBuiltin(Builtin_Type btype) const            { return (const ASString&)GetBuiltinNodeHolder(btype); }
     ASString        CreateConstString(const char *pstr) const       { return pStringManager->CreateConstString(pstr); }
-    ASString        CreateConstString(const char *pstr, UPInt length) const { return pStringManager->CreateConstString(pstr, length); }
     ASString        CreateString(const char *pstr) const            { return pStringManager->CreateString(pstr); }
     ASString        CreateString(const wchar_t *pwstr, SPInt len = -1) const { return pStringManager->CreateString(pwstr, len); }
     ASString        CreateString(const char *pstr, UPInt length) const  { return pStringManager->CreateString(pstr, length); }
