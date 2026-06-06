@@ -2,32 +2,65 @@
 #include "r3d.h"
 
 #include "APIScaleformGfx.h"
-#include "r3dDX11.h"
-#include "r3dDX11Geometry.h"
-#include "r3dDX11State.h"
 
 #undef SetStreamSourceFreq
 
+#ifdef SetRenderTarget
+#undef SetRenderTarget
+#endif
+
+#ifdef GetRenderTarget
+#undef GetRenderTarget
+#endif
+
+#ifdef SetDepthStencilSurface
+#undef SetDepthStencilSurface
+#endif
+
+#ifdef GetDepthStencilSurface
+#undef GetDepthStencilSurface
+#endif
+
+#ifdef SetViewport
+#undef SetViewport
+#endif
+
+#ifdef GetViewport
+#undef GetViewport
+#endif
+
 #ifndef SF_D3D_VERSION
-#define SF_D3D_VERSION 11
+#define SF_D3D_VERSION 9
 #endif
 
 #include "GFx_Kernel.h"
-#include "GFx_Renderer_D3D1x.h"
-#include "Render/D3D1x/D3D1x_HAL.h"
+#include "GFx_Renderer_D3D9.h"
 #include "GFx_FontProvider_Win32.h"
+#include "Render/Renderer2D.h"
 
-// See r3dRender.h
 #define SetStreamSourceFreq DoSetStreamSourceFreq
 
 #include "Render/ImageFiles/PNG_ImageFile.h"
 #include "Render/ImageFiles/DDS_ImageFile.h"
 
-
 #include "LangMngr.h"
 
-// libs
 #include "WarIncScaleformLink.h"
+
+static bool r3dScaleformShouldUseDX9UI()
+{
+	if(!r3dRenderer)
+		return false;
+
+	if(!r3dRenderer->IsDX9UIEnabled())
+		return false;
+
+	IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
+	if(!dev9)
+		return false;
+
+	return true;
+}
 
 static bool r3dScaleformShouldUseNativeDX11()
 {
@@ -246,14 +279,15 @@ class TranslatorImpl : public Scaleform::GFx::Translator
 class APIScaleformGfx : public r3dIResource
 {
 	friend void r3dScaleformReset();
+
 public:
 	Scaleform::GFx::Loader loader;
-	Scaleform::Ptr<Scaleform::Render::D3D1x::HAL> RendererHAL11;
-	Scaleform::Ptr<Scaleform::Render::Renderer2D>  Renderer;
+	Scaleform::Ptr<Scaleform::Render::D3D9::HAL> RendererHAL9;
+	Scaleform::Ptr<Scaleform::Render::Renderer2D> Renderer;
 
-	r3dScaleformMovie*		pCurMovie;		// movie currently being processed
-	r3dScaleformMovie*		pKbdCaptureMovie;	// movie to receive keyboard input
-	bool					UseDX11HAL;
+	r3dScaleformMovie*		pCurMovie;
+	r3dScaleformMovie*		pKbdCaptureMovie;
+	bool					UseDX9HAL;
 
 protected:
 	virtual	void		D3DCreateResource();
@@ -268,7 +302,6 @@ public:
 	void		SetFontLib();
 	Scaleform::Render::HAL* GetHAL() const;
 };
-
 
 APIScaleformGfx*	gAPIScaleformGfx = NULL;
 
@@ -506,7 +539,7 @@ APIScaleformGfx::APIScaleformGfx( const r3dIntegrityGuardian& ig ) :
 r3dIResource( ig ),
 pCurMovie(NULL),
 pKbdCaptureMovie(NULL),
-UseDX11HAL(false)
+UseDX9HAL(false)
 {
 }
 
@@ -518,21 +551,21 @@ void APIScaleformGfx::D3DCreateResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(RendererHAL11)
-		RendererHAL11->RestoreAfterReset();
+	if(RendererHAL9)
+		RendererHAL9->RestoreAfterReset();
 }
 
 void APIScaleformGfx::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if(RendererHAL11)
-		RendererHAL11->PrepareForReset();
+	if(RendererHAL9)
+		RendererHAL9->PrepareForReset();
 }
 
 Scaleform::Render::HAL* APIScaleformGfx::GetHAL() const
 {
-	return (Scaleform::Render::HAL*)RendererHAL11.GetPtr();
+	return (Scaleform::Render::HAL*)RendererHAL9.GetPtr();
 }
 
 bool APIScaleformGfx::Create()
@@ -543,89 +576,69 @@ bool APIScaleformGfx::Create()
 	Scaleform::Ptr<r3dGFxFSCommandHandler> fxFSCommandHandler = *new r3dGFxFSCommandHandler();
 	Scaleform::Ptr<r3dGFxExternalInterface> fxEICommandHandler = *new r3dGFxExternalInterface();
 	Scaleform::Ptr<r3dGFxUserEventHandler> fxEventHandler = *new r3dGFxUserEventHandler();
-	//Scaleform::Ptr<r3dGFxImageCreator> fxImageCreator = *new r3dGFxImageCreator();
 	Scaleform::Ptr<r3dGFxLog> fxLog = *new r3dGFxLog();
 	Scaleform::Ptr<Scaleform::GFx::ASSupport> pAS2Support = *new Scaleform::GFx::AS2Support();
-	//Scaleform::Ptr<Scaleform::GFx::ASSupport> pAS3Support = *new Scaleform::GFx::AS3Support();
 	Scaleform::Ptr<Scaleform::GFx::ImageFileHandlerRegistry> fxImageFileRegistry = *new Scaleform::GFx::ImageFileHandlerRegistry();
 
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::JPEG::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::PNG::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::TGA::FileReader::Instance);
 	fxImageFileRegistry->AddHandler(&Scaleform::Render::DDS::FileReader::Instance);
+
 	loader.SetImageFileHandlerRegistry(fxImageFileRegistry);
-
-
 	loader.SetAS2Support(pAS2Support);
-	//loader.SetAS3Support(pAS3Support);
-	loader.SetFileOpener(fxFileOpener); 
+	loader.SetFileOpener(fxFileOpener);
 	loader.SetFSCommandHandler(fxFSCommandHandler);
 	loader.SetExternalInterface(fxEICommandHandler);
 	loader.SetUserEventHandler(fxEventHandler);
-	//loader.SetImageCreator(fxImageCreator);
 	loader.SetLog(fxLog);
-
 
 	Scaleform::Ptr<TranslatorImpl> ptranslator = *new TranslatorImpl();
 	loader.SetTranslator(ptranslator);
 
-	// for dynamic font caching, required for text effects to work
-// 	GFxFontCacheManager::TextureConfig fontCacheConfig; 
-// 	fontCacheConfig.TextureWidth   = 1024; 
-// 	fontCacheConfig.TextureHeight  = 1024; 
-// 	fontCacheConfig.MaxNumTextures = 6; // trying to increase, should help with a bug when stuck on a login page and UI doesn't show up
-// 	fontCacheConfig.MaxSlotHeight  = 48; 
-// 	fontCacheConfig.SlotPadding    = 2; 
-// 	loader.GetFontCacheManager()->SetTextureConfig(fontCacheConfig); 
-// 	loader.GetFontCacheManager()->EnableDynamicCache(true); 
-// 	loader.GetFontCacheManager()->SetMaxRasterScale(1.2f);
-
-	// load font library
 	SetFontLib();
 
-	// For D3D, it is good to override image creator to keep image data,
-	// so that it can be restored in case of a lost device.
 	Scaleform::Ptr<Scaleform::GFx::ImageCreator> fxImageCreator = *new Scaleform::GFx::ImageCreator();
 	loader.SetImageCreator(fxImageCreator);
 
-	UseDX11HAL = r3dScaleformShouldUseNativeDX11();
+	UseDX9HAL = r3dScaleformShouldUseDX9UI();
 
-	if(!UseDX11HAL)
+	if(!UseDX9HAL)
 	{
-		r3dError("GFx: native DX11 renderer is required\n");
+		r3dError("GFx: DX9 UI renderer is required\n");
 		return false;
 	}
 
-	RendererHAL11 = *new Scaleform::Render::D3D1x::HAL();
+	IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
 
-	if(!RendererHAL11)
+	RendererHAL9 = *new Scaleform::Render::D3D9::HAL();
+
+	if(!RendererHAL9)
 	{
-		r3dError("GFx: Failed to create D3D1x HAL\n");
+		r3dError("GFx: Failed to create D3D9 HAL\n");
 		return false;
 	}
 
-	Scaleform::Render::D3D1x::HALInitParams initParams(
-		g_r3dDX11.GetDevice(),
-		g_r3dDX11.GetContext()
+	Scaleform::Render::D3D9::HALInitParams initParams(
+		dev9,
+		r3dRenderer->d3dpp,
+		0
 	);
 
-	if(!RendererHAL11->InitHAL(initParams))
+	if(!RendererHAL9->InitHAL(initParams))
 	{
-		r3dError("GFx: D3D1x HAL InitHAL failed\n");
+		r3dError("GFx: D3D9 HAL InitHAL failed\n");
 		return false;
 	}
 
-	if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL11.GetPtr())))
+	if(!(Renderer = new Scaleform::Render::Renderer2D(RendererHAL9.GetPtr())))
 	{
-		r3dError("GFx: Failed to create DX11 Renderer2D\n");
+		r3dError("GFx: Failed to create D3D9 Renderer2D\n");
 		return false;
 	}
 
-	r3dOutToLog("GFx: initialized native DX11 renderer\n");
+	r3dOutToLog("GFx: initialized DX9 UI renderer\n");
 
-	//D3DCreateResource();
-
-	// PT: fucks up loading of Cyrillic fonts (crash inside of scaleform)
 	if(0)
 	{
 		Scaleform::Ptr<Scaleform::GFx::FontProviderWin32> fontProvider = *new Scaleform::GFx::FontProviderWin32(::GetDC(0));
@@ -636,15 +649,15 @@ bool APIScaleformGfx::Create()
 	RegisterMsgProc ( r3dScaleformGfxWinProc );
 
 #ifdef FINAL_BUILD
-#else //FINAL_BUILD
+#else
 #ifdef SF_AMP_SERVER
 	Scaleform::AmpServer::GetInstance().SetListeningPort(7534);
 	Scaleform::AmpServer::GetInstance().SetConnectedApp("WarInc");
 	Scaleform::AmpServer::GetInstance().OpenConnection();
-#endif //SF_AMP_SERVER
-#endif // FINAL_BUILD
+#endif
+#endif
 
-	return true;    
+	return true;
 }
 
 void APIScaleformGfx::SetFontLib()
@@ -678,24 +691,21 @@ void APIScaleformGfx::SetFontLib()
 
 void APIScaleformGfx::Destroy()
 {
-
 	R3D_ENSURE_MAIN_THREAD();
+
 #ifdef FINAL_BUILD
-#else //FINAL_BUILD
+#else
 #ifdef SF_AMP_SERVER
 	Scaleform::AmpServer::GetInstance().CloseConnection();
-#endif //SF_AMP_SERVER
-#endif // FINAL_BUILD
-	
-	//D3DReleaseResource();
+#endif
+#endif
 
-	// release it here, because of static ptr
-	if(RendererHAL11)
-		RendererHAL11->ShutdownHAL();
+	if(RendererHAL9)
+		RendererHAL9->ShutdownHAL();
 
 	Renderer = NULL;
-	RendererHAL11 = NULL;
-	UseDX11HAL = false;
+	RendererHAL9 = NULL;
+	UseDX9HAL = false;
 
 	void UnregisterMsgProc (Win32MsgProc_fn);
 	UnregisterMsgProc ( r3dScaleformGfxWinProc );
@@ -749,7 +759,7 @@ bool r3dScaleformMovie::Load(const char* fname, bool set_keyboard_focus)
 
 	R3DPROFILE_FUNCTION("r3dScaleformMovie::Load");
 	r3d_assert(gAPIScaleformGfx);
-	r3d_assert(gAPIScaleformGfx->UseDX11HAL);
+	r3d_assert(gAPIScaleformGfx->UseDX9HAL);
 
 	Unload();
 
@@ -897,29 +907,20 @@ static Scaleform::Render::Texture* r3dScaleformSetImageTexture(
 
 Scaleform::Render::Texture* r3dScaleformMovie::BoundRTToImageDX11(const char* resName, ID3D11Texture2D* pRenderTarget, int RTWidth, int RTHeight)
 {
-	if(!gAPIScaleformGfx || !gAPIScaleformGfx->UseDX11HAL || !pRenderTarget)
-		return NULL;
-
-	Scaleform::GFx::ImageResource* pimageRes = r3dScaleformGetImageResource(pMovieDef, resName);
-	if(!pimageRes)
-		return NULL;
-
-	Scaleform::Render::D3D1x::TextureManager* pmanager =
-		(Scaleform::Render::D3D1x::TextureManager*)gAPIScaleformGfx->RendererHAL11->GetTextureManager();
-
-	if(!pmanager)
-		return NULL;
-
-	Scaleform::Render::Texture* pHWTexture =
-		pmanager->CreateTexture(pRenderTarget, Scaleform::Render::ImageSize(RTWidth, RTHeight));
-
-	if(pHWTexture)
+#ifndef FINAL_BUILD
+	static int s_logged = 0;
+	if(!s_logged)
 	{
-		r3dOutToLog("GFx DX11: BoundRTToImageDX11('%s') attached %dx%d DX11 texture\n",
-			resName ? resName : "", RTWidth, RTHeight);
+		r3dOutToLog("GFx: BoundRTToImageDX11 disabled in DX9 UI mode. res=%s size=%dx%d\n",
+			resName ? resName : "",
+			RTWidth,
+			RTHeight
+		);
+		s_logged = 1;
 	}
+#endif
 
-	return r3dScaleformSetImageTexture(pimageRes, pHWTexture, RTWidth, RTHeight);
+	return NULL;
 }
 
 void r3dScaleformMovie::UpdateTextureMatrices(const char* resName, int RTWidth, int RTHeight)
@@ -1013,86 +1014,14 @@ void r3dScaleformMovie::UpdateAndDraw(bool skipDraw)
 		pMovie->Advance(0.0f, 0, !skipDraw);
 	}
 
-	if(gAPIScaleformGfx->UseDX11HAL)
+	if(!skipDraw)
 	{
-		if(!skipDraw)
-		{
-			ID3D11DeviceContext* context = g_r3dDX11.GetContext();
-			ID3D11RenderTargetView* rtv = g_r3dDX11.GetBackBufferRTV();
-			ID3D11DepthStencilView* dsv = g_r3dDX11.GetDepthStencilView();
+		gAPIScaleformGfx->Renderer->BeginFrame();
 
-			if(context && rtv && gAPIScaleformGfx->RendererHAL11)
-			{
-				ID3D11RenderTargetView* oldRTV = NULL;
-				ID3D11DepthStencilView* oldDSV = NULL;
-				context->OMGetRenderTargets(1, &oldRTV, &oldDSV);
+		if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
+			gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
 
-				UINT oldViewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-				D3D11_VIEWPORT oldViewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
-				context->RSGetViewports(&oldViewportCount, oldViewports);
-
-				const UINT rtWidth = R3D_MAX((UINT)g_r3dDX11.GetWidth(), 1u);
-				const UINT rtHeight = R3D_MAX((UINT)g_r3dDX11.GetHeight(), 1u);
-
-				static Scaleform::Render::RenderTarget* gfxRT11 = NULL;
-				static Scaleform::Render::DepthStencilBuffer* gfxDSB11 = NULL;
-				static UINT gfxRT11Width = 0;
-				static UINT gfxRT11Height = 0;
-
-				if(!gfxRT11 || !gfxDSB11 || gfxRT11Width != rtWidth || gfxRT11Height != rtHeight)
-				{
-					gfxRT11Width = rtWidth;
-					gfxRT11Height = rtHeight;
-
-					gfxRT11 = new Scaleform::Render::RenderTarget(
-						NULL,
-						Scaleform::Render::RBuffer_User,
-						Scaleform::Render::ImageSize(gfxRT11Width, gfxRT11Height)
-					);
-
-					gfxDSB11 = new Scaleform::Render::DepthStencilBuffer(
-						NULL,
-						Scaleform::Render::ImageSize(gfxRT11Width, gfxRT11Height)
-					);
-				}
-
-				if(gfxRT11 && gfxDSB11)
-				{
-					Scaleform::Render::D3D1x::RenderTargetData::UpdateData(gfxRT11, rtv, gfxDSB11, dsv);
-
-					if(gAPIScaleformGfx->RendererHAL11->SetRenderTarget(gfxRT11, 1))
-					{
-						gAPIScaleformGfx->Renderer->BeginFrame();
-
-						if(hMovieDisplay.NextCapture(gAPIScaleformGfx->Renderer->GetContextNotify()))
-							gAPIScaleformGfx->Renderer->Display(hMovieDisplay);
-
-						gAPIScaleformGfx->Renderer->EndFrame();
-					}
-
-					Scaleform::Render::D3D1x::RenderTargetData::UpdateData(gfxRT11, NULL, gfxDSB11, NULL);
-				}
-
-				if(oldViewportCount > 0)
-					context->RSSetViewports(oldViewportCount, oldViewports);
-
-				context->OMSetRenderTargets(1, &oldRTV, oldDSV);
-				SAFE_RELEASE(oldRTV);
-				SAFE_RELEASE(oldDSV);
-
-				g_r3dDX11State.InvalidateCache();
-				g_r3dDX11Geometry.InvalidateCache();
-			}
-		}
-
-		gAPIScaleformGfx->pCurMovie = NULL;
-
-#ifndef FINAL_BUILD
-		g_ScaleFormUpdateAndDraw += r3dGetTime() - updateStart;
-		g_ScaleFormUpdateAndDrawCount++;
-#endif
-
-		return;
+		gAPIScaleformGfx->Renderer->EndFrame();
 	}
 
 	gAPIScaleformGfx->pCurMovie = NULL;
