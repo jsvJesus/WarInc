@@ -20,6 +20,30 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 
+#ifdef SetRenderTarget
+#undef SetRenderTarget
+#endif
+
+#ifdef GetRenderTarget
+#undef GetRenderTarget
+#endif
+
+#ifdef SetDepthStencilSurface
+#undef SetDepthStencilSurface
+#endif
+
+#ifdef GetDepthStencilSurface
+#undef GetDepthStencilSurface
+#endif
+
+#ifdef SetViewport
+#undef SetViewport
+#endif
+
+#ifdef GetViewport
+#undef GetViewport
+#endif
+
 #pragma warning(pop)
 
 #pragma comment(lib, "d3d11.lib")
@@ -63,6 +87,14 @@ namespace
 			p->Release();
 			p = NULL;
 		}
+	}
+
+	static IDirect3DDevice9* GetDX9Device()
+	{
+		if(!r3dRenderer)
+			return NULL;
+
+		return r3dRenderer->pd3ddev;
 	}
 
 	class r3dDX9UIBridgeImpl
@@ -157,7 +189,7 @@ namespace
 			if(!Init())
 				return false;
 
-			IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
+			IDirect3DDevice9* dev9 = GetDX9Device();
 			if(!dev9 || !UISurface9)
 				return false;
 
@@ -199,7 +231,7 @@ namespace
 			if(!Capturing)
 				return;
 
-			IDirect3DDevice9* dev9 = r3dRenderer ? r3dRenderer->pd3ddev : NULL;
+			IDirect3DDevice9* dev9 = GetDX9Device();
 
 			if(dev9 && UISurface9 && SystemSurface9)
 				dev9->GetRenderTargetData(UISurface9, SystemSurface9);
@@ -348,7 +380,7 @@ namespace
 	private:
 		bool CreateD3D9Resources()
 		{
-			IDirect3DDevice9* dev9 = r3dRenderer ? r3dRenderer->pd3ddev : NULL;
+			IDirect3DDevice9* dev9 = GetDX9Device();
 			if(!dev9)
 				return false;
 
@@ -669,7 +701,7 @@ namespace
 			if(!r3dRenderer || !r3dRenderer->pd3ddev)
 				return;
 
-			IDirect3DDevice9* dev9 = r3dRenderer->pd3ddev;
+			IDirect3DDevice9* dev9 = GetDX9Device();
 
 			if(OldRT9)
 				dev9->SetRenderTarget(0, OldRT9);
