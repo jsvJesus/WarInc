@@ -584,6 +584,7 @@ private:
 	volatile bool					deviceLost_;
 	bool							allowShaderLoading_;
 	bool							UseD3D9Present;
+	bool							UseD3D9UI;
 
 	r3dZRange						ZRange ;
 
@@ -640,8 +641,14 @@ public:
 	void		EndRender( bool present = false );
 	void		StartFrame();
 	void		EndFrame();
-	void		SetUseD3D9Present(bool enabled) { (void)enabled; UseD3D9Present = false; }
+	void		SetUseD3D9Present(bool enabled) { UseD3D9Present = enabled; }
 	bool		GetUseD3D9Present() const { return UseD3D9Present; }
+
+	void		SetUseD3D9UI(bool enabled) { UseD3D9UI = enabled; }
+	bool		GetUseD3D9UI() const { return UseD3D9UI; }
+
+	bool		IsDX11GamePresent() const { return !UseD3D9Present; }
+	bool		IsDX9UIEnabled() const { return UseD3D9UI; }
 	void		SetBackBufferViewport();
 	void		GetBackBufferViewport( float* x, float* y, float* width, float* height );
 	void		StartRenderSimple(int bClear = 1);

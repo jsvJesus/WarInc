@@ -2177,6 +2177,7 @@ r3dRenderLayer::r3dRenderLayer()
 : ActiveStereoEye( R3D_STEREO_EYE_MONO )
 , PresentEye( R3D_STEREO_EYE_MONO )
 , UseD3D9Present(false)
+, UseD3D9UI(true)
 {
 	bInited = 0;
 	pfnGetVertColor    = NULL;
