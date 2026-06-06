@@ -7,6 +7,10 @@
 #include "HUDFilters.h"
 #include "GameLevel.h"
 
+#ifndef WO_SERVER
+#include "r3dDX11.h"
+#endif
+
 void ReloadCCLUT3DTexture(const char* newName, HUDFilters filter);
 
 PFX_1DLUTColorCorrection	gPFX_1DLUTColorCorrectionRGB( false );
@@ -224,6 +228,24 @@ static void ApplyModernFeatureSwitches()
 		extern int __SSAOBlurEnable;
 		__SSAOBlurEnable = 1;
 	}
+}
+
+static bool DisableModernGraphicsForNativeDX11()
+{
+#ifndef WO_SERVER
+	if(r3dRenderer &&
+		g_r3dDX11.IsInitialized() &&
+		!r3dRenderer->GetUseD3D9Present())
+	{
+		r_modern_graphics->SetInt(0);
+		r_modern_force_postfx->SetInt(0);
+		r_modern_fxaa->SetInt(0);
+		r_modern_reshade_look->SetInt(0);
+		return true;
+	}
+#endif
+
+	return false;
 }
 
 static void ApplyModernFilmToneConstants()
@@ -543,6 +565,9 @@ void ApplyModernFogAndAmbientTuning()
 
 void ApplyModernGraphicsTuning()
 {
+	if(DisableModernGraphicsForNativeDX11())
+		return;
+
 	if(!r_modern_graphics->GetBool())
 		return;
 

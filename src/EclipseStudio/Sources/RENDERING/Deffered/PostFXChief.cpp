@@ -269,22 +269,6 @@ PostFXChief::Execute( bool toBackBuffer, bool resetTargets )
 
 	bool canPatch = true ;
 
-#ifndef WO_SERVER
-	if(IsDX11NativePresentPath())
-	{
-		canPatch = false;
-
-#ifndef FINAL_BUILD
-		static int s_logCount = 0;
-		if(s_logCount < 8)
-		{
-			r3dOutToLog("DX11 DBG: PostFXChief patch-to-backbuffer disabled for native DX11\n");
-			++s_logCount;
-		}
-#endif
-	}
-#endif
-
 #ifndef FINAL_BUILD
 	// some grab screens need last image, which may be in fact
 	// operated on in final buffer due to optimizational "patching".
@@ -580,7 +564,6 @@ PostFXChief::CopyOutput()
 	if(IsDX11NativePresentPath())
 	{
 		rect = GetDX11BackBufferRect();
-		sts.ForceFiltering = true;
 	}
 #endif
 
@@ -776,19 +759,6 @@ PostFXChief::PrepareBackBufferRender()
 		r3dRenderer->AllowNullViewport = 0;
 		r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 		r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
-
-#ifndef FINAL_BUILD
-		static int s_logCount = 0;
-		if(s_logCount < 64)
-		{
-			r3dOutToLog(
-				"DX11 DBG: PostFX final output -> backbuffer %.0fx%.0f\n",
-				w,
-				h
-			);
-			++s_logCount;
-		}
-#endif
 
 		return;
 	}

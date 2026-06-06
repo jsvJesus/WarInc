@@ -18,8 +18,6 @@ float4 vFilmToneEF_EB_WL   : register(c1);
 float4 vFilmToneEXPADJ     : register(c2);
 float4 vExposure_InvGamma  : register(c3);
 
-float4 g_FeatureSwitches   : register(c49);
-
 #include "Lib\Tonemapping.hls"
 
 float4 main(float4 uv1_uv2 : TEXCOORD0)
@@ -35,19 +33,9 @@ float4 main(float4 uv1_uv2 : TEXCOORD0)
 
 	float ExposureBias = vFilmToneEF_EB_WL.z;
 	float Col = tex2D(sExposure, float2(0.5f, 0.5f)).r;
-
-	float exposure = pow(2.0f, ExposureBias + Col);
-
-	if (g_FeatureSwitches.y > 0.5f)
-	{
-		TexCol.rgb = TM_ApplyACES(TexCol.rgb, exposure);
-	}
-	else
-	{
-		TexCol.rgb = TM_ApplyFilmToneNew(TexCol.rgb, exposure);
-	}
-
-	TexCol.rgb = pow(max(TexCol.rgb, 0.0f), vExposure_InvGamma.y);
+	
+	TexCol.rgb = TM_ApplyFilmToneNew(TexCol.rgb, pow(2.0f, ExposureBias + Col));
+	TexCol.rgb = pow(TexCol.rgb, vExposure_InvGamma.y);
 
 	return TexCol;
 }

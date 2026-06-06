@@ -23,6 +23,9 @@
 #include <vector>
 
 struct ID3D11Buffer;
+struct ID3D11InputLayout;
+struct ID3D11PixelShader;
+struct ID3D11VertexShader;
 class r3dDX11Shader;
 
 class r3dDX11LegacyGeometryBridge
@@ -137,7 +140,9 @@ private:
 	std::vector<VertexBufferEntry> VertexBuffers;
 	std::vector<IndexBufferEntry> IndexBuffers;
 
-	r3dDX11Shader* FixedFunction2DShader;
+	ID3D11VertexShader* FixedFunction2DVS;
+	ID3D11PixelShader* FixedFunction2DPS;
+	ID3D11InputLayout* FixedFunction2DInputLayout;
 	ID3D11Buffer* FixedFunction2DConstants;
 };
 

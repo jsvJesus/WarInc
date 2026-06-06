@@ -316,10 +316,10 @@ REG_VAR( r_hbao_power			, 2.0f		, 0 );
 REG_VAR( r_hbao_blur_sharpness		, 16.0f		, 0 );
 
 // PBR toggle
-REG_VAR_C( r_pbr_enabled		, 1		, 0	, 1, VF_CONSTRAINT );
+REG_VAR_C( r_pbr_enabled		, 0		, 0	, 1, VF_CONSTRAINT );
 
 // ACES tonemapping toggle
-REG_VAR_C( r_aces_tonemap		, 1		, 0	, 1, VF_CONSTRAINT );
+REG_VAR_C( r_aces_tonemap		, 0		, 0	, 1, VF_CONSTRAINT );
 
 // SSS debug
 REG_VAR( r_sss_distortion		, 0.0f		, 0 );
@@ -368,8 +368,8 @@ REG_VAR( r_allow_gpu_timestamps,	1,				0 );
 // Modern Graphics Tuning
 //------------------------------------------------------------------------
 
-REG_VAR( r_modern_graphics,					1,			VF_SAVE );
-REG_VAR( r_modern_force_postfx,				1,			VF_SAVE );
+REG_VAR( r_modern_graphics,					0,			VF_SAVE );
+REG_VAR( r_modern_force_postfx,				0,			VF_SAVE );
 
 REG_VAR( r_modern_film_a,					0.15f,		VF_SAVE );
 REG_VAR( r_modern_film_b,					0.50f,		VF_SAVE );
@@ -398,15 +398,15 @@ REG_VAR( r_modern_gamma,					0.98f,		VF_SAVE );
 REG_VAR( r_modern_contrast,					1.08f,		VF_SAVE );
 REG_VAR( r_modern_brightness,				-0.025f,	VF_SAVE );
 
-REG_VAR( r_modern_fxaa,						1,			VF_SAVE );
+REG_VAR( r_modern_fxaa,						0,			VF_SAVE );
 
-REG_VAR( r_modern_reshade_look,				1,			VF_SAVE );
+REG_VAR( r_modern_reshade_look,				0,			VF_SAVE );
 
 REG_VAR( r_modern_reshade_phdr_strength,	0.30f,		VF_SAVE );
 REG_VAR( r_modern_reshade_phdr_exposure,	0.10f,		VF_SAVE );
 
-REG_VAR( r_modern_reshade_jasharpen,		1.00f,		VF_SAVE );
-REG_VAR( r_modern_reshade_unsharp,			1.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_jasharpen,		0.00f,		VF_SAVE );
+REG_VAR( r_modern_reshade_unsharp,			0.00f,		VF_SAVE );
 REG_VAR( r_modern_reshade_unsharp_blur,		1.00f,		VF_SAVE );
 
 REG_VAR( r_modern_reshade_vignette_amount,	-1.00f,		VF_SAVE );

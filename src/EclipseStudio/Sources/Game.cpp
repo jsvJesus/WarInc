@@ -660,7 +660,7 @@ static void UpdateEditorUILayer();
 static void ProcessEditorUICommands();
 static void RenderEditorUIDebug();
 #ifndef WO_SERVER
-static void ForceDX11BackBufferForEditorUI(const char* where)
+static void ForceDX11BackBufferForEditorUI(const char*)
 {
 	if(!r3dRenderer)
 		return;
@@ -684,20 +684,6 @@ static void ForceDX11BackBufferForEditorUI(const char* where)
 	r3dRenderer->AllowNullViewport = 0;
 	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 	r3dRenderer->DoSetViewport(0.0f, 0.0f, w, h);
-
-#ifndef FINAL_BUILD
-	static int s_logCount = 0;
-	if(s_logCount < 64)
-	{
-		r3dOutToLog(
-			"DX11 DBG: Force backbuffer for editor UI at %s, size=%.0fx%.0f\n",
-			where ? where : "unknown",
-			w,
-			h
-		);
-		++s_logCount;
-	}
-#endif
 }
 #endif
 void GameStateGameLoop()

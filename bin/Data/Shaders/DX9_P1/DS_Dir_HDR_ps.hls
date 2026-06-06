@@ -121,7 +121,7 @@ float4      g_FeatureSwitches  : register( c49 );  // x=PBR, y=ACES, z=SSS
 // END OF LIGHTPROBE CONSTANTS
 
 #ifndef PBR_ENABLED
-#define PBR_ENABLED 1
+#define PBR_ENABLED 0
 #endif
 
 #ifndef PBR_AMBIENT_SPECULAR
@@ -278,7 +278,7 @@ float4 main(float4 uv1_uv2 : TEXCOORD0,
 
 	float4 FinalColor = float4(0, 0, 0, 1);
 
-	if (g_FeatureSwitches.x > 0.5f)
+	if (PBR_ENABLED)
 	{
 		// ── PBR Lighting (GGX + Smith + Fresnel) ─────────────────
 

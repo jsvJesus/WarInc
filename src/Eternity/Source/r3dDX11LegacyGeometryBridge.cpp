@@ -18,6 +18,7 @@
 #pragma warning(disable: 4820)
 #include <dxgi.h>
 #include <d3d11.h>
+#include <d3dcompiler.h>
 #include <d3d9.h>
 #pragma warning(pop)
 
@@ -27,6 +28,7 @@
 #include "r3dDX11InputLayout.h"
 #include "r3dDX11LegacyGeometryBridge.h"
 #include "r3dDX11Shader.h"
+#include "r3dDX11State.h"
 #include "r3dD3DCache.h"
 #include "VShader.h"
 
@@ -78,6 +80,10 @@
 #undef IASetIndexBuffer
 #endif
 
+#ifdef D3DRS_CULLMODE
+#undef D3DRS_CULLMODE
+#endif
+
 #ifdef VSSetConstantBuffers
 #undef VSSetConstantBuffers
 #endif
@@ -97,7 +103,7 @@ struct r3dDX11Legacy2DConstants
 };
 
 static const char r3dDX11Legacy2DShaderSource[] =
-	"cbuffer Legacy2DConstants : register(b15)\r\n"
+	"cbuffer Legacy2DConstants : register(b13)\r\n"
 	"{\r\n"
 	"	float4 Legacy2DParams;\r\n"
 	"};\r\n"
@@ -107,11 +113,7 @@ static const char r3dDX11Legacy2DShaderSource[] =
 	"{\r\n"
 	"	float4 Position : POSITION0;\r\n"
 	"	float4 Color0 : COLOR0;\r\n"
-	"	float4 Color1 : COLOR1;\r\n"
 	"	float2 Tex0 : TEXCOORD0;\r\n"
-	"	float2 Tex1 : TEXCOORD1;\r\n"
-	"	float2 Tex2 : TEXCOORD2;\r\n"
-	"	float2 Tex3 : TEXCOORD3;\r\n"
 	"};\r\n"
 	"struct VSOut\r\n"
 	"{\r\n"
@@ -123,7 +125,7 @@ static const char r3dDX11Legacy2DShaderSource[] =
 	"{\r\n"
 	"	VSOut output;\r\n"
 	"	output.Position = float4(input.Position.x * Legacy2DParams.x - 1.0f, 1.0f - input.Position.y * Legacy2DParams.y, input.Position.z, 1.0f);\r\n"
-	"	output.Color0 = input.Color0;\r\n"
+	"	output.Color0 = input.Color0.bgra;\r\n"
 	"	output.Tex0 = input.Tex0;\r\n"
 	"	return output;\r\n"
 	"}\r\n"
@@ -146,6 +148,80 @@ static void r3dDX11LegacyGeometryBridge_Release(T*& ptr)
 static void r3dDX11LegacyGeometryBridge_LogHR(const char* text, HRESULT hr)
 {
 	r3dOutToLog("DX11LegacyGeometryBridge: %s failed, HRESULT=0x%08X\n", text, (unsigned int)hr);
+}
+
+static void r3dDX11LegacyGeometryBridge_LogBlob(ID3DBlob* blob)
+{
+	if(!blob || !blob->GetBufferPointer() || !blob->GetBufferSize())
+		return;
+
+	r3dOutToLog(
+		"DX11LegacyGeometryBridge: shader compiler: %.*s\n",
+		(int)blob->GetBufferSize(),
+		(const char*)blob->GetBufferPointer()
+	);
+}
+
+static void r3dDX11LegacyGeometryBridge_Apply2DViewport(ID3D11DeviceContext* context)
+{
+	if(!context || !r3dRenderer)
+		return;
+
+	float x = r3dRenderer->ViewX;
+	float y = r3dRenderer->ViewY;
+	float width = r3dRenderer->ViewW;
+	float height = r3dRenderer->ViewH;
+
+	if(width <= 0.0f)
+		width = (float)(g_r3dDX11.GetWidth() > 0 ? g_r3dDX11.GetWidth() : 1);
+
+	if(height <= 0.0f)
+		height = (float)(g_r3dDX11.GetHeight() > 0 ? g_r3dDX11.GetHeight() : 1);
+
+	D3D11_VIEWPORT viewport;
+	ZeroMemory(&viewport, sizeof(viewport));
+	viewport.TopLeftX = x;
+	viewport.TopLeftY = y;
+	viewport.Width = width;
+	viewport.Height = height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	context->RSSetViewports(1, &viewport);
+}
+
+static void r3dDX11LegacyGeometryBridge_Apply2DRenderState()
+{
+	if(!r3dRenderer)
+		return;
+
+	g_r3dDX11State.InvalidateCache();
+
+	r3dRenderer->SetRenderState(D3DRS_ZENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ZFUNC, D3DCMP_ALWAYS);
+	r3dRenderer->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+	r3dRenderer->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+	r3dRenderer->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+	r3dRenderer->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	r3dRenderer->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
+	r3dRenderer->SetRenderState(
+		D3DRS_COLORWRITEENABLE,
+		D3DCOLORWRITEENABLE_RED |
+		D3DCOLORWRITEENABLE_GREEN |
+		D3DCOLORWRITEENABLE_BLUE |
+		D3DCOLORWRITEENABLE_ALPHA
+	);
+	r3dRenderer->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+	r3dRenderer->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+	r3dRenderer->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+	r3dRenderer->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 }
 
 static UINT r3dDX11LegacyGeometryBridge_GrowBuffer(UINT requiredBytes)
@@ -180,7 +256,9 @@ r3dDX11LegacyGeometryBridge::IndexBufferEntry::IndexBufferEntry()
 r3dDX11LegacyGeometryBridge::r3dDX11LegacyGeometryBridge()
 {
 	Initialized = false;
-	FixedFunction2DShader = NULL;
+	FixedFunction2DVS = NULL;
+	FixedFunction2DPS = NULL;
+	FixedFunction2DInputLayout = NULL;
 	FixedFunction2DConstants = NULL;
 }
 
@@ -217,12 +295,9 @@ bool r3dDX11LegacyGeometryBridge::Init()
 
 void r3dDX11LegacyGeometryBridge::Shutdown()
 {
-	if(FixedFunction2DShader)
-	{
-		delete FixedFunction2DShader;
-		FixedFunction2DShader = NULL;
-	}
-
+	r3dDX11LegacyGeometryBridge_Release(FixedFunction2DInputLayout);
+	r3dDX11LegacyGeometryBridge_Release(FixedFunction2DPS);
+	r3dDX11LegacyGeometryBridge_Release(FixedFunction2DVS);
 	r3dDX11LegacyGeometryBridge_Release(FixedFunction2DConstants);
 
 	for(size_t i = 0; i < VertexBuffers.size(); ++i)
@@ -261,28 +336,139 @@ bool r3dDX11LegacyGeometryBridge::CreateFixedFunction2DResources()
 	if(!device)
 		return false;
 
-	if(!FixedFunction2DShader)
-		FixedFunction2DShader = new r3dDX11Shader();
+	ID3DBlob* vertexBlob = NULL;
+	ID3DBlob* pixelBlob = NULL;
+	ID3DBlob* errors = NULL;
 
-	if(!FixedFunction2DShader->CompileVertexFromMemory(
-		"DX11LegacyFixedFunction2D_vs",
+	UINT flags = 0;
+
+#if defined(_DEBUG)
+	flags |= D3DCOMPILE_DEBUG;
+	flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
+
+	HRESULT hr = D3DCompile(
 		r3dDX11Legacy2DShaderSource,
 		sizeof(r3dDX11Legacy2DShaderSource) - 1,
+		"DX11LegacyFixedFunction2D_vs",
+		NULL,
+		NULL,
 		"vs_main",
-		"vs_4_0"
-	))
+		"vs_4_0",
+		flags,
+		0,
+		&vertexBlob,
+		&errors
+	);
+
+	if(FAILED(hr))
 	{
+		r3dDX11LegacyGeometryBridge_LogBlob(errors);
+		r3dDX11LegacyGeometryBridge_Release(errors);
+		r3dDX11LegacyGeometryBridge_LogHR("D3DCompile fixed-function 2D VS", hr);
 		return false;
 	}
 
-	if(!FixedFunction2DShader->CompilePixelFromMemory(
-		"DX11LegacyFixedFunction2D_ps",
+	r3dDX11LegacyGeometryBridge_Release(errors);
+
+	hr = D3DCompile(
 		r3dDX11Legacy2DShaderSource,
 		sizeof(r3dDX11Legacy2DShaderSource) - 1,
+		"DX11LegacyFixedFunction2D_ps",
+		NULL,
+		NULL,
 		"ps_main",
-		"ps_4_0"
-	))
+		"ps_4_0",
+		flags,
+		0,
+		&pixelBlob,
+		&errors
+	);
+
+	if(FAILED(hr))
 	{
+		r3dDX11LegacyGeometryBridge_LogBlob(errors);
+		r3dDX11LegacyGeometryBridge_Release(errors);
+		r3dDX11LegacyGeometryBridge_Release(vertexBlob);
+		r3dDX11LegacyGeometryBridge_LogHR("D3DCompile fixed-function 2D PS", hr);
+		return false;
+	}
+
+	r3dDX11LegacyGeometryBridge_Release(errors);
+
+	hr = device->CreateVertexShader(
+		vertexBlob->GetBufferPointer(),
+		vertexBlob->GetBufferSize(),
+		NULL,
+		&FixedFunction2DVS
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11LegacyGeometryBridge_Release(vertexBlob);
+		r3dDX11LegacyGeometryBridge_Release(pixelBlob);
+		r3dDX11LegacyGeometryBridge_LogHR("CreateVertexShader fixed-function 2D", hr);
+		return false;
+	}
+
+	hr = device->CreatePixelShader(
+		pixelBlob->GetBufferPointer(),
+		pixelBlob->GetBufferSize(),
+		NULL,
+		&FixedFunction2DPS
+	);
+
+	if(FAILED(hr))
+	{
+		r3dDX11LegacyGeometryBridge_Release(vertexBlob);
+		r3dDX11LegacyGeometryBridge_Release(pixelBlob);
+		r3dDX11LegacyGeometryBridge_LogHR("CreatePixelShader fixed-function 2D", hr);
+		return false;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC layout[3];
+	ZeroMemory(layout, sizeof(layout));
+
+	layout[0].SemanticName = "POSITION";
+	layout[0].SemanticIndex = 0;
+	layout[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	layout[0].InputSlot = 0;
+	layout[0].AlignedByteOffset = 0;
+	layout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	layout[0].InstanceDataStepRate = 0;
+
+	layout[1].SemanticName = "COLOR";
+	layout[1].SemanticIndex = 0;
+	layout[1].Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	layout[1].InputSlot = 0;
+	layout[1].AlignedByteOffset = 16;
+	layout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	layout[1].InstanceDataStepRate = 0;
+
+	layout[2].SemanticName = "TEXCOORD";
+	layout[2].SemanticIndex = 0;
+	layout[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	layout[2].InputSlot = 0;
+	layout[2].AlignedByteOffset = 24;
+	layout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	layout[2].InstanceDataStepRate = 0;
+
+	hr = device->CreateInputLayout(
+		layout,
+		R3D_ARRAYSIZE(layout),
+		vertexBlob->GetBufferPointer(),
+		vertexBlob->GetBufferSize(),
+		&FixedFunction2DInputLayout
+	);
+
+	r3dDX11LegacyGeometryBridge_Release(vertexBlob);
+	r3dDX11LegacyGeometryBridge_Release(pixelBlob);
+
+	if(FAILED(hr))
+	{
+		r3dDX11LegacyGeometryBridge_LogHR("CreateInputLayout fixed-function 2D", hr);
 		return false;
 	}
 
@@ -295,7 +481,7 @@ bool r3dDX11LegacyGeometryBridge::CreateFixedFunction2DResources()
 	desc.MiscFlags = 0;
 	desc.StructureByteStride = 0;
 
-	HRESULT hr = device->CreateBuffer(&desc, NULL, &FixedFunction2DConstants);
+	hr = device->CreateBuffer(&desc, NULL, &FixedFunction2DConstants);
 	if(FAILED(hr))
 	{
 		r3dDX11LegacyGeometryBridge_LogHR("CreateBuffer FixedFunction2DConstants", hr);
@@ -307,7 +493,7 @@ bool r3dDX11LegacyGeometryBridge::CreateFixedFunction2DResources()
 
 bool r3dDX11LegacyGeometryBridge::ApplyFixedFunction2D(IDirect3DVertexDeclaration9* vertexDeclaration)
 {
-	if(!Initialized || !FixedFunction2DShader || !FixedFunction2DConstants || !vertexDeclaration)
+	if(!Initialized || !FixedFunction2DVS || !FixedFunction2DPS || !FixedFunction2DInputLayout || !FixedFunction2DConstants || !vertexDeclaration)
 		return false;
 
 	ID3D11DeviceContext* context = g_r3dDX11.GetContext();
@@ -325,10 +511,13 @@ bool r3dDX11LegacyGeometryBridge::ApplyFixedFunction2D(IDirect3DVertexDeclaratio
 		return false;
 	}
 
-	FixedFunction2DShader->SetActive();
+	r3dDX11LegacyGeometryBridge_Apply2DViewport(context);
+	r3dDX11LegacyGeometryBridge_Apply2DRenderState();
 
-	if(!g_r3dDX11InputLayouts.Set(elements, FixedFunction2DShader))
-		return false;
+	context->IASetInputLayout(FixedFunction2DInputLayout);
+	context->VSSetShader(FixedFunction2DVS, NULL, 0);
+	context->PSSetShader(FixedFunction2DPS, NULL, 0);
+	g_r3dDX11InputLayouts.InvalidateCache();
 
 	const float width = g_r3dDX11.GetWidth() > 0 ? (float)g_r3dDX11.GetWidth() : 1.0f;
 	const float height = g_r3dDX11.GetHeight() > 0 ? (float)g_r3dDX11.GetHeight() : 1.0f;
@@ -342,8 +531,8 @@ bool r3dDX11LegacyGeometryBridge::ApplyFixedFunction2D(IDirect3DVertexDeclaratio
 	context->UpdateSubresource(FixedFunction2DConstants, 0, NULL, &constants, 0, 0);
 
 	ID3D11Buffer* buffers[1] = { FixedFunction2DConstants };
-	context->VSSetConstantBuffers(15, 1, buffers);
-	context->PSSetConstantBuffers(15, 1, buffers);
+	context->VSSetConstantBuffers(13, 1, buffers);
+	context->PSSetConstantBuffers(13, 1, buffers);
 
 	return true;
 }

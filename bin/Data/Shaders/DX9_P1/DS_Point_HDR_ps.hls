@@ -59,7 +59,7 @@ sampler EnvCubeMap 	: register (s8);
 #endif
 
 #ifndef PBR_ENABLED
-#define PBR_ENABLED 1
+#define PBR_ENABLED 0
 #endif
 
 #ifndef PBR_AMBIENT_SPECULAR
@@ -325,7 +325,7 @@ half Thickness = 1-auxData.b ;
 #endif
 
 
-if (g_FeatureSwitches.x > 0.5)
+if (PBR_ENABLED)
 {
 
 	float roughness = PBR_SpecPowerToRoughness(SpecularPOW);

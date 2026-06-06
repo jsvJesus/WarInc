@@ -218,6 +218,11 @@ public:
 	LPDIRECT3DVERTEXDECLARATION9		decl_;
 	r3dD3DVertexBufferTunnel			vrtBuff_;
 	unsigned char* lockedPtr_;
+#ifndef WO_SERVER
+	unsigned char* dx11Mirror_;
+	int dx11MirrorBytes_;
+	int dx11MirrorLocked_;
+#endif
 	
 	int		pos_, actual_, unflushed_, needed_;
 	int 	type ;

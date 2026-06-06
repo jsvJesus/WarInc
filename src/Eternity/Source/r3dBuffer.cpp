@@ -35,6 +35,13 @@ static	HRESULT		hr;
 
 #ifndef WO_SERVER
 
+static bool r3dVertexArrayUseDX11Mirror()
+{
+	return g_r3dDX11.IsInitialized() &&
+		r3dRenderer &&
+		!r3dRenderer->GetUseD3D9Present();
+}
+
 static int r3dD3DQuery_GetDX11Type(D3DQUERYTYPE type, D3D11_QUERY* outType)
 {
 	if(!outType)
@@ -1264,18 +1271,45 @@ void r3dVertexArray::D3DCreateResource()
 {
 	r3dDeviceTunnel::CreateVertexBuffer(size_*stride_, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &vrtBuff_ ) ;
 	r3dDeviceTunnel::SetD3DResourcePrivateData( &vrtBuff_, "r3dVertexArray: VB");
+
+#ifndef WO_SERVER
+	SAFE_DELETE_ARRAY(dx11Mirror_);
+	dx11MirrorBytes_ = size_ * stride_;
+	if(dx11MirrorBytes_ > 0)
+		dx11Mirror_ = new unsigned char[dx11MirrorBytes_];
+#endif
 }
 
 void r3dVertexArray::D3DReleaseResource()
 {
 	R3D_ENSURE_MAIN_THREAD();
 
-	if( !vrtBuff_.Valid() )	return;
+#ifndef WO_SERVER
+	if(dx11MirrorLocked_)
+	{
+		lockedPtr_ = 0;
+		dx11MirrorLocked_ = 0;
+	}
+#endif
+
+	if( !vrtBuff_.Valid() )
+	{
+#ifndef WO_SERVER
+		SAFE_DELETE_ARRAY(dx11Mirror_);
+		dx11MirrorBytes_ = 0;
+#endif
+		return;
+	}
 
 	//unlock buffer if still locked
 
 	if(lockedPtr_!=0)	vrtBuff_->Unlock();
 	vrtBuff_.ReleaseAndReset();
+
+#ifndef WO_SERVER
+	SAFE_DELETE_ARRAY(dx11Mirror_);
+	dx11MirrorBytes_ = 0;
+#endif
 }
 
 r3dVertexArray::r3dVertexArray( const r3dIntegrityGuardian& ig )
@@ -1284,6 +1318,11 @@ r3dVertexArray::r3dVertexArray( const r3dIntegrityGuardian& ig )
 	size_ = 0;
 	pos_  = 0;
 	type = TRIANGLE_LIST;
+#ifndef WO_SERVER
+	dx11Mirror_ = NULL;
+	dx11MirrorBytes_ = 0;
+	dx11MirrorLocked_ = 0;
+#endif
 }
 
 r3dVertexArray::~r3dVertexArray()
@@ -1437,6 +1476,19 @@ void r3dVertexArray::Lock()
 	r3dRenderer->Stats.AddBytesLocked( +toLock );
 	r3dRenderer->Stats.AddNumLocks( 1 );
 
+#ifndef WO_SERVER
+	if(r3dVertexArrayUseDX11Mirror())
+	{
+		const int lockOffset = (pos_ + unflushed_) * stride_;
+		if(!dx11Mirror_ || lockOffset < 0 || lockOffset + (int)toLock > dx11MirrorBytes_)
+			r3dError("r3dVertexArray::Lock DX11 mirror overflow\n");
+
+		lockedPtr_ = dx11Mirror_ + lockOffset;
+		dx11MirrorLocked_ = 1;
+		return;
+	}
+#endif
+
 	vrtBuff_->Lock((pos_ + unflushed_)* stride_, toLock, (void**)&lockedPtr_, flg);
 }
 void r3dVertexArray::Unlock()
@@ -1445,6 +1497,17 @@ void r3dVertexArray::Unlock()
 
 	if(lockedPtr_ == 0) r3dError("r3dVertexArray::Unlock error: is not locked\n");
 	if(actual_ < needed_) r3dError("r3dVertexArray::Unlock error: the buffer is not filled completely\n");
+
+#ifndef WO_SERVER
+	if(dx11MirrorLocked_)
+	{
+		unflushed_ += actual_;
+		actual_ = 0;
+		lockedPtr_ = 0;
+		dx11MirrorLocked_ = 0;
+		return;
+	}
+#endif
 
 	vrtBuff_->Unlock();
 	unflushed_ += actual_;
@@ -1461,6 +1524,31 @@ void r3dVertexArray::Flush()
 	if(unflushed_ == 0)	return;
 
 	d3dc._SetDecl(decl_);
+
+#ifndef WO_SERVER
+	if(r3dVertexArrayUseDX11Mirror())
+	{
+		const unsigned char* vertexData = dx11Mirror_ + pos_ * stride_;
+
+		switch( type )
+		{
+		case LINE_LIST:
+			r3dRenderer->DrawUP(D3DPT_LINELIST, unflushed_ / 2, vertexData, stride_);
+			break ;
+		case LINE_STRIP:
+			r3dRenderer->DrawUP(D3DPT_LINESTRIP, unflushed_ - 1, vertexData, stride_);
+			break ;
+		case TRIANGLE_LIST:
+			r3dRenderer->DrawUP(D3DPT_TRIANGLELIST, unflushed_ / 3, vertexData, stride_);
+			break ;
+		}
+
+		pos_ += unflushed_;
+		unflushed_ = 0;
+		return;
+	}
+#endif
+
 	d3dc._SetStreamSource(0, vrtBuff_.Get(), 0, stride_);
 
 	switch( type )

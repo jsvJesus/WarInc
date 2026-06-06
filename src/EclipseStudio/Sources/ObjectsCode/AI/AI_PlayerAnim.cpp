@@ -497,7 +497,10 @@ static void checkIfAllWeaponsHaveAnimation()
 	}
 
 	if(numWeaponAnimBugs)
-		r3dShowArtBugs();
+	{
+		r3dOutToLog("AnimCSV: %d weapon animation warnings logged, continuing without modal\n", numWeaponAnimBugs);
+		r3dPurgeArtBugs();
+	}
 }
 
 static void fixUsableItemTPSAnim()
