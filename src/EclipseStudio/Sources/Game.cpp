@@ -7,6 +7,7 @@
 
 #ifndef WO_SERVER
 #include "r3dDX11.h"
+#include "r3dDX9UIBridge.h"
 #endif
 
 #include "r3dBackgroundTaskDispatcher.h"
@@ -908,6 +909,17 @@ void GameStateGameLoop()
 	#endif // ENABLE_RECAST_NAVIGATION		
 #endif
 
+#ifndef WO_SERVER
+		bool dx9UIBridgeActive = false;
+
+		if(r3dRenderer &&
+			r3dRenderer->IsDX11GamePresent() &&
+			r3dRenderer->IsDX9UIEnabled())
+		{
+			dx9UIBridgeActive = r3dDX9UIBridge_Begin();
+		}
+#endif
+
 		R3DPROFILE_START("rsDrawFlashUI");
 		GameWorld().Draw( rsDrawFlashUI );
 		R3DPROFILE_END("rsDrawFlashUI");
@@ -931,6 +943,14 @@ void GameStateGameLoop()
 			R3DPROFILE_END("SysInfo Render");
 		}
 		R3DPROFILE_END("HudGui Render");
+
+#ifndef WO_SERVER
+		if(dx9UIBridgeActive)
+		{
+			r3dDX9UIBridge_End(true);
+			ForceDX11BackBufferForEditorUI("after DX9 UI bridge composite");
+		}
+#endif
 
 		//Console.Draw();
 

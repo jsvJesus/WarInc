@@ -370,6 +370,7 @@
     <ClCompile Include="Source\r3dDX11Shader.cpp" />
     <ClCompile Include="Source\r3dDX11State.cpp" />
     <ClCompile Include="Source\r3dDX11Texture.cpp" />
+    <ClCompile Include="Source\r3dDX9UIBridge.cpp" />
     <ClCompile Include="Source\r3dEternityWebBrowser.cpp" />
     <ClCompile Include="Source\r3dFileMan.cpp" />
     <ClCompile Include="Source\r3dFileTracker.cpp" />
@@ -757,6 +758,7 @@
     <ClInclude Include="Include\r3dDX11Shader.h" />
     <ClInclude Include="Include\r3dDX11State.h" />
     <ClInclude Include="Include\r3dDX11Texture.h" />
+    <ClInclude Include="Include\r3dDX9UIBridge.h" />
     <ClInclude Include="INCLUDE\r3dFileMan.h" />
     <ClInclude Include="Include\r3dFileTracker.h" />
     <ClInclude Include="Include\r3dGeoSphere.h" />

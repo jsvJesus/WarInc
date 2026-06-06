@@ -5,8 +5,17 @@
 #include "r3dDX11.h"
 #include "r3dDX11LegacyGeometryBridge.h"
 
+bool r3dDX9UIBridge_IsCapturing();
+
 R3D_FORCEINLINE bool r3dD3DCache_UseDX11Native()
 {
+	if(r3dRenderer &&
+		r3dRenderer->IsDX9UIEnabled() &&
+		r3dDX9UIBridge_IsCapturing())
+	{
+		return false;
+	}
+
 	return g_r3dDX11.IsInitialized() &&
 		r3dRenderer &&
 		!r3dRenderer->GetUseD3D9Present();
