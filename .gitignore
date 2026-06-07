@@ -88,3 +88,27 @@ Desktop.ini
 *.zip
 *.rar
 *.7z
+
+# Root bin reference structure for GitHub/AI context
+# Keep build output and heavy game assets ignored, but allow lightweight source/context
+# files from root-level bin* folders such as /bin and /bin/data.
+!/[Bb]in*/
+!/[Bb]in*/**/
+/[Bb]in*/**
+!/[Bb]in*/**/
+!/[Bb]in*/**/.gitkeep
+!/[Bb]in*/**/.keep
+!/[Bb]in*/**/*.md
+!/[Bb]in*/**/*.txt
+!/[Bb]in*/**/*.json
+!/[Bb]in*/**/*.xml
+!/[Bb]in*/**/*.cfg
+!/[Bb]in*/**/*.ini
+!/[Bb]in*/**/*.csv
+!/[Bb]in*/**/*.yml
+!/[Bb]in*/**/*.yaml
+!/[Bb]in*/**/*.toml
+!/[Bb]in*/**/*.lua
+!/[Bb]in*/**/*.sql
+!/[Bb]in*/**/*.assetlist
+!/[Bb]in*/**/*.manifest

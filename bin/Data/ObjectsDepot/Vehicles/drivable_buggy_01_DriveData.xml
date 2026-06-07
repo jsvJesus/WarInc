@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<vehicle>
+	<ackermann_accuracy val="1" />
+	<gears_switch_time val="0.05" />
+	<chassis>
+		<mass val="1500" />
+	</chassis>
+	<engine>
+		<peak_torque val="4355.26" />
+		<max_omega val="1107.82" />
+	</engine>
+	<differential>
+		<front_rear_torque_split val="0.5" />
+	</differential>
+	<wheel val="Bone_Wheel_004">
+		<mass val="20" />
+		<damping_rate val="0.25" />
+		<max_break_torque val="25000" />
+		<max_hand_break_torque val="4000" />
+		<max_steer_angle val="70.1053" />
+		<toe_angle val="0" />
+		<suspension_spring_strength val="40000" />
+		<suspension_spring_damper_rate val="2378.42" />
+		<suspension_max_compression val="0.3" />
+		<suspension_max_droop val="0.1" />
+	</wheel>
+	<wheel val="Bone_Wheel_003">
+		<mass val="20" />
+		<damping_rate val="0.25" />
+		<max_break_torque val="25000" />
+		<max_hand_break_torque val="4000" />
+		<max_steer_angle val="70.1053" />
+		<toe_angle val="0" />
+		<suspension_spring_strength val="40000" />
+		<suspension_spring_damper_rate val="2378.68" />
+		<suspension_max_compression val="0.3" />
+		<suspension_max_droop val="0.1" />
+	</wheel>
+	<wheel val="Bone_Wheel_002">
+		<mass val="20" />
+		<damping_rate val="0.25" />
+		<max_break_torque val="25000" />
+		<max_hand_break_torque val="0" />
+		<max_steer_angle val="0" />
+		<toe_angle val="0" />
+		<suspension_spring_strength val="40000" />
+		<suspension_spring_damper_rate val="2423.95" />
+		<suspension_max_compression val="0.3" />
+		<suspension_max_droop val="0.1" />
+	</wheel>
+	<wheel val="Bone_Wheel_001">
+		<mass val="20" />
+		<damping_rate val="0.25" />
+		<max_break_torque val="25000" />
+		<max_hand_break_torque val="0" />
+		<max_steer_angle val="0" />
+		<toe_angle val="0" />
+		<suspension_spring_strength val="40000" />
+		<suspension_spring_damper_rate val="2423.05" />
+		<suspension_max_compression val="0.3" />
+		<suspension_max_droop val="0.1" />
+	</wheel>
+</vehicle>

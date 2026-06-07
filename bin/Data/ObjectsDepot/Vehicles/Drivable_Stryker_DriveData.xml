@@ -1,0 +1,239 @@
+<?xml version="1.0"?>
+<vehicle>
+	<!--
+		Ackermann correction allows better cornering by steering the left and right wheels with slightly
+		different steer angles, as computed from simple trigonometry.
+		Choosing a value of 0 completely disables Ackermann steer correction. A value of 1.0, on the other hand,
+		achieves the impossible dream of perfect Ackermann correction.
+		Default value is 1.0.
+		See PxVehicleAckermannGeometryData::mAccuracy.
+	-->
+	<ackermann_accuracy val="1"/>
+
+	<!--
+		Gears switch time in seconds.
+		Default value is 0.5.
+	-->
+	<gears_switch_time val="0.05"/>
+	
+	<!-- Chassis configuration section -->
+	<chassis>
+		<!--
+			Chasis moment of inertia offset from procedurally calculated MOI position of cuboid that bounds the chassis geometry.
+			Default value is (0, 0, 0)
+			See PxVehicleChassisData::mMOI
+		-->
+		<moi_offset x="0" y="0" z="0"/>
+
+		<!--
+			Chassis center of mass offset.
+			Default value is (0, 0, 0)
+			See PxVehicleChassisData::mCMOffset
+		-->
+		<cm_offset x="0" y="0" z="0"/>
+		
+		<!--
+			Chassis mass in kg.
+			Default value is 1500 kg.
+			See PxVehicleChassisData::mMass.
+		-->
+		<mass val="1500"/>
+	</chassis>
+	
+
+	<!-- Engine data -->
+	<engine>
+		<!--
+			This is the maximum torque that is ever available from the engine (in Newton metres).
+			Default value is 500.
+			See PxVehicleEngineData::mPeakTorque.
+		-->
+		<peak_torque val="800"/>
+	
+
+		<!--
+			This is the maximum rotational speed of the engine expressed in radians per second.
+			Default value is 600 (approx 6000 rpm).
+			See PxVehicleEngineData::mMaxOmega.
+		-->
+		<max_omega val="260"/>
+
+		<!--
+			These three values are used to compute the damping rate that is applied to the engine.
+			Default values:
+			 * damping_rate_full_throttle - 0.15
+			 * damping_rate_zero_throttle_clutch_engaged - 2.0
+			 * damping_rate_zero_throttle_clutch_disengaged - 0.35
+			See PxVehicleEngineData::mDampingRateFullThrottle,
+				PxVehicleEngineData::mDampingRateZeroThrottleClutchEngaged,
+				PxVehicleEngineData::mDampingRateZeroThrottleClutchDisengaged
+		-->
+		<damping_rate_full_throttle val="0.15"/>
+		<damping_rate_zero_throttle_clutch_engaged val="2"/>
+		<damping_rate_zero_throttle_clutch_disengaged val="0.35"/>
+	</engine>
+	
+
+	<!-- Differential setup section -->
+	<differential>
+		<!--
+			Differential types are supported:
+			 * 0 - 4-wheel drive with limited slip,
+			 * 1 - front-wheel drive with limited slip,
+			 * 2 - rear-wheel drive with limited slip,
+			 * 3 - 4-wheel drive with open differential,
+			 * 4 - front-wheel drive with open differential,
+			 * 5 - rear-wheel drive with open differential
+		 
+			Default value is 0.
+			See PxVehicleDifferential4WData::mType.
+		-->
+		<type val="0"/>
+		
+		<!--
+			If a 4-wheel drive differential is chosen (open or limited slip) this option allows
+			the drive torque to be split unevenly between the front and rear wheels.
+			Value of 0.5 delivers an equal split of torque between front and rear wheels.
+			Default value is 0.5.
+			See PxVehicleDifferential4WData::mFrontRearSplit
+		-->
+		<front_rear_torque_split val="0.5"/>
+
+		<!--
+			This is similar to the Front Rear Split but instead splits the torque that is
+			available for the front wheels between the front-left and front-right wheels.			Value of 0.5 delivers an equal split of torque between front and rear wheels.
+			Value of 0.5 delivers an equal split of torque between front wheels.
+			Default value is 0.5.
+			See PxVehicleDifferential4WData::mFrontLeftRightSplit
+		-->
+		<front_left_right_torque_split val="0.5"/>
+
+		<!--
+			Same as front_left_right_torque_split, but for rear wheels.
+			Default value is 0.5.
+			See PxVehicleDifferential4WData::mRearLeftRightSplit
+		-->
+		<rear_left_right_torque_split val="0.5"/>
+	
+	</differential>
+
+
+	<!-- Configuration section for each wheel. -->
+	<wheel val="Bone_Wheel_001">
+		<!--
+			Multiply wheel radius calculated from geometry by this value to obtain physics wheel radius
+			Default value 1.0
+			See PxVehicleWheelData::mRadius.
+		-->
+		<radius_multiplier val="1.0"/>
+	
+		<!--
+			Wheel mass in kg. Typical range 20..80.
+			Default value 20 kg.
+			See PxVehicleWheelData::mMass.
+		-->
+		<mass val="20"/>
+	
+		<!--
+			Wheel moment of inertia multiplier. Higher values will result in less wheel spin when stamping on the accelerator
+			Initial value is calculated using formula: 0.5 * Mass * Radius * Radius.
+			Defacult value is 1.0
+			See PxVehicleWheelData::mMOI.
+		-->
+		<moi val="1"/>
+	
+		<!--
+			This value describes how quickly a freely spinning wheel will come to rest.
+			Sensible value range [0.25..2]. Default value is 0.25
+			See PxVehicleWheelData::mDampingRate.
+		-->
+		<damping_rate val="0.25"/>
+		
+		<!--
+			The value of the torque applied to the wheel when the brakes are maximally applied.
+			Default value is 1500.0
+			See PxVehicleWheelData::mMaxBrakeTorque.
+		-->
+		<max_break_torque val="25000"/>
+		
+		<!--
+			This is the same as the max brake torque except for the handbrake rather than the brake.
+			Default value is 0. Specify value around 4000 to the wheels with handbreaks attached.
+			See PxVehicleWheelData::mMaxHandBrakeTorque.
+		-->
+		<max_hand_break_torque val="0"/>
+		
+		<!--
+			This is the value of the steer angle of the wheel (in degrees) when the steering wheel is at full lock.
+			Default value is 0. Meaningful range for steering wheels is [30..90] degrees.
+			See PxVehicleWheelData::mMaxSteer.
+		-->
+		<max_steer_angle val="0"/>
+		
+		<!--
+			This is the angle of the wheel (in degrees) that occurs with no steer applied.
+			Default value is 0.
+			See PxVehicleWheelData::mToeAngle.
+		-->
+		<toe_angle val="0"/>
+		
+		<!--
+			This is the strength of the suspension spring in Newtons per metre.
+			Default value is 35000
+			See PxVehicleSuspensionData::mSpringStrength.
+		-->
+		<suspension_spring_strength val="40000"/>
+
+		<!--
+			This describes the rate at which the spring dissipates the energy stored in the spring.
+			Default value is 4500
+			See PxVehicleSuspensionData::mSpringDamperRate.
+		-->
+		<suspension_spring_damper_rate val="3000"/>
+
+		<!--
+			These maximum compression in metres that the spring can support.
+			Default value is 0.3
+			See PxVehicleSuspensionData::mMaxCompression.
+		-->
+		<suspension_max_compression val="0.3"/>
+
+		<!--
+			These maximum elongation in metres that the spring can support.
+			Default value is 0.1
+			See PxVehicleSuspensionData::mMaxDroop.
+		-->
+		<suspension_max_droop val="0.1"/>
+
+		<!--
+			Suspension movement direction.
+			Default value is (0, -1, 0)
+		-->
+		<suspension_travel_dir x="0" y="-1" z="0"/>
+	
+		<!--
+			Typically, increasing longitudinal stiffness will help the car accelerate and brake.
+			Default value is 1000
+			See PxVehicleTireData::mLongitudinalStiffnessPerUnitGravity.
+		-->
+		<tire_logitudal_stiffness_per_unit_gravity val="1000"/>
+	</wheel>
+	<wheel val="Bone_Wheel_002">
+		<max_break_torque val="25000"/>
+		<suspension_spring_damper_rate val="3000"/>
+		<suspension_spring_strength val="40000"/>
+	</wheel>
+	<wheel val="Bone_Wheel_003">
+		<max_steer_angle val="40"/>
+		<max_break_torque val="25000"/>
+		<suspension_spring_damper_rate val="4000"/>
+		<suspension_spring_strength val="40000"/>
+	</wheel>
+	<wheel val="Bone_Wheel_004">
+		<max_steer_angle val="40"/>
+		<max_break_torque val="25000"/>
+		<suspension_spring_damper_rate val="4000"/>
+		<suspension_spring_strength val="40000"/>
+	</wheel>
+	<!-- Other wheels will receive default values for all parameters -->
+</vehicle>

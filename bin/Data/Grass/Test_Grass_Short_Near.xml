@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!--Grass File-->
+<grass density="0.8" fade_distance="0.8">
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.3" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="97" tint_strength="0.8" />
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.2" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="89" tint_strength="0.805263" />
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.2" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="107" tint_strength="0.894737" />
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.3" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="107" tint_strength="0.742105" />
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.3" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="107" tint_strength="0.905263" />
+	<chunk num_vars="3" mesh="WZ_Grassnew_01_Short.sco" texture="WZ_newGrass_01_D.dds" density="600" mesh_scale="1.4" min_mesh_scaling="0.8" max_mesh_scaling="1" rot_var="0.531579" alpha_ref="107" tint_strength="0.863158" />
+</grass>

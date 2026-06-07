@@ -1,0 +1,6698 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- smartling.translate_paths = strings/string/value -->
+<strings>
+<string>
+<key>LoginMenu_AccountFrozen</key>
+<value>Acceso denegado.
+Se ha bloqueado la cuenta.</value>
+</string>
+<string>
+<key>FailedToCreateClan</key>
+<value>Error al crear el clan</value>
+</string>
+<string>
+<key>FailedToGetClanLeaderboard</key>
+<value>Error al conseguir lista del clan</value>
+</string>
+<string>
+<key>ClanReserveNotEnoughGC</key>
+<value>La Reserva del Clan no tiene esa cantidad de GC</value>
+</string>
+<string>
+<key>FailToDonateGCToClanMember</key>
+<value>Error al donar GC al miembro</value>
+</string>
+<string>
+<key>FailToPromote</key>
+<value>Error al ascender miembro</value>
+</string>
+<string>
+<key>MemberAlreadyHasHighestRank</key>
+<value>El miembro ya tiene el rango más alto</value>
+</string>
+<string>
+<key>FailToDemote</key>
+<value>Error al degradar a un miembro</value>
+</string>
+<string>
+<key>MemberAlreadyHasLowestRank</key>
+<value>El miembro ya tiene el rango más bajo</value>
+</string>
+<string>
+<key>NoSuchClanMember</key>
+<value>No existe dicho miembro del clan</value>
+</string>
+<string>
+<key>YouCannotKickYourself</key>
+<value>No te puedes expulsar a ti mismo</value>
+</string>
+<string>
+<key>FailToKickMember</key>
+<value>Error al expulsar miembro</value>
+</string>
+<string>
+<key>ClanMemberWasKickedFromClan</key>
+<value>¡Se expulsó a un miembro del clan!</value>
+</string>
+<string>
+<key>FailToLeaveClan</key>
+<value>Error al dejar el clan</value>
+</string>
+<string>
+<key>FailToDonateGCToClan</key>
+<value>Erro al donar GC al clan</value>
+</string>
+<string>
+<key>FailToAnswerApplication</key>
+<value>Error al responder a la aplicación</value>
+</string>
+<string>
+<key>FailToSendInvite</key>
+<value>Error al enviar invitación</value>
+</string>
+<string>
+<key>InviteSentSuccess</key>
+<value>¡Invitación enviada con éxito!</value>
+</string>
+<string>
+<key>FailAcceptInvite</key>
+<value>Error al aceptar invitación</value>
+</string>
+<string>
+<key>FailToBuyMoreSlots</key>
+<value>Error al comprar más huecos</value>
+</string>
+<string>
+<key>YouAreAlreadyInClan</key>
+<value>Ya estás en un clan. </value>
+</string>
+<string>
+<key>FailApplyToClan</key>
+<value>Error al aplicar al clan</value>
+</string>
+<string>
+<key>SuccessApplyToClan</key>
+<value>Unión al clan aplicada con éxito</value>
+</string>
+<string>
+<key>YouNeedCharBeforeCreatingClan</key>
+<value>Necesitas crear un superviviente antes de crear un clan</value>
+</string>
+<string>
+<key>ClanNameNoSpecSymbols</key>
+<value>El nombre del clan no puede contener símbolos especiales</value>
+</string>
+<string>
+<key>ClanTagNoSpecSymbols</key>
+<value>La etiqueta del clan no puede contener símbolos especiales</value>
+</string>
+<string>
+<key>CharacterNameCannotContaintSpecialSymbols</key>
+<value>El nombre del personaje no puede contener símbolos especiales</value>
+</string>
+<string>
+<key>CannotCreateMoreThan5Char</key>
+<value>No puedes crear más de 5 personajes</value>
+</string>
+<string>
+<key>ThisNameIsAlreadyInUse</key>
+<value>Este nombre ya está en uso</value>
+</string>
+<string>
+<key>CreateCharacterFail</key>
+<value>Creación de Personaje fallida</value>
+</string>
+<string>
+<key>CannotDeleteCharThatIsClanLeader</key>
+<value>No se puede eliminar un personaje que es el líder del clan</value>
+</string>
+<string>
+<key>FailedToDeleteChar</key>
+<value>Error al eliminar personaje</value>
+</string>
+<string>
+<key>FailedToReviveChar</key>
+<value>Error al resucitar personaje</value>
+</string>
+<string>
+<key>BuyItemFailNoIndex</key>
+<value>error al comprar objeto, no se puede localizar índice de compra</value>
+</string>
+<string>
+<key>BuyItemFail</key>
+<value>Error al comprar objeto</value>
+</string>
+<string>
+<key>BackpackFromInventoryFail</key>
+<value>Error al mover un objeto del inventario a la mochila</value>
+</string>
+<string>
+<key>BackpackToInventoryFail</key>
+<value>Error al mover objetos desde la mochila al inventario</value>
+</string>
+<string>
+<key>FailedToFindBackpack</key>
+<value>¡Error al encontrar mochila!</value>
+</string>
+<string>
+<key>SwitchBackpackSameBackpacks</key>
+<value>Cambiar al mismo tipo de mochila</value>
+</string>
+<string>
+<key>BackpackToBackpackFail</key>
+<value>Error al canjear objetos</value>
+</string>
+<string>
+<key>ConflictRemappingKeys</key>
+<value>Mismo botón asignado para acciones diferentes. Por favor, corrígelo. </value>
+</string>
+<string>
+<key>LoggingIn</key>
+<value>Iniciando sesión...</value>
+</string>
+<string>
+<key>WaitingForJoinAnswer</key>
+<value>Esperando respuesta para unirse</value>
+</string>
+<string>
+<key>WaitConnectingToServer</key>
+<value>Por favor espera, conectando al servidor...</value>
+</string>
+<string>
+<key>WaitValidatingClientVersion</key>
+<value>Por favor espera, validando la versión del cliente...</value>
+</string>
+<string>
+<key>WaitRetrievengLevelName</key>
+<value>Por favor espera, recuperando nombre del nivel...</value>
+</string>
+<string>
+<key>WaitJoinGame</key>
+<value>Esperando a unirse al juego...</value>
+</string>
+<string>
+<key>WaitGameStart</key>
+<value>Esperando el comienzo de la partida...</value>
+</string>
+<string>
+<key>WaitServerCloseGame</key>
+<value>Esperando a que el servidor cierre el juego</value>
+</string>
+<string>
+<key>Connecting</key>
+<value>Conectando...</value>
+</string>
+<string>
+<key>SoundSystemDisabled</key>
+<value>Error al iniciar tu tarjeta de sonido, los sonidos están desactivados. Por favor, comprueba que tienes una y que está funcionando. </value>
+</string>
+<string>
+<key>MSShutdown1</key>
+<value>Servidor Central caído
+ Por favor, sal de la partida. </value>
+</string>
+<string>
+<key>DisconnectMsg</key>
+<value>Desconectado del servidor</value>
+</string>
+<string>
+<key>DisconnectMsgPing</key>
+<value>Desconectado del servidor.
+ Tu ping es demasiado alto, por favor conéctate a un servidor cercano y comprueba que no estás descargando nada en segundo plano</value>
+</string>
+<string>
+<key>DisconnectMsgCheat</key>
+<value>Uso anormal de cliente detectado, tu cuenta ha sido marcada</value>
+</string>
+<string>
+<key>CannotJoinGame</key>
+<value>No puedes unirte a la partida</value>
+</string>
+<string>
+<key>NoConnectionToMasterServer</key>
+<value>No pudo conectarse al Servidor Central, por favor comprueba tu conexión a internet</value>
+</string>
+<string>
+<key>TimeoutToMasterServer</key>
+<value>Tiempo de espera agotado para conectarse al Servidor Central, inténtalo de nuevo más tarde</value>
+</string>
+<string>
+<key>ProblemCreatingGame</key>
+<value>Hubo un problema al crear el juego</value>
+</string>
+<string>
+<key>FailedCreatingGame</key>
+<value>Error al crear partida</value>
+</string>
+<string>
+<key>AlreadyCreatedGame</key>
+<value>Ya has creado la partida</value>
+</string>
+<string>
+<key>GameIsFull</key>
+<value>La partida está completa</value>
+</string>
+<string>
+<key>GameNotFound</key>
+<value>Juego no encontrado</value>
+</string>
+<string>
+<key>JoinDelayActive</key>
+<value>Esta partida estará disponible en pocos segundos. </value>
+</string>
+<string>
+<key>WrongPassword</key>
+<value>Contraseña incorrecta</value>
+</string>
+<string>
+<key>NewLanguageSetAfterRestart</key>
+<value>Para que lo cambios tengan efecto, por favor reinicia la partida. </value>
+</string>
+<string>
+<key>UnableToJoinGameCode</key>
+<value>Imposiuble unirse a la partida, código:%d</value>
+</string>
+<string>
+<key>JoinGameNoGames</key>
+<value>No hay servidores de juego gratuitos disponibles en tu región, por favor, inténtelo de nuevo más tarde. El servidor está completo o finalizando secuencia de reinicio. </value>
+</string>
+<string>
+<key>FailedReceiveGameList</key>
+<value>Error al recibir lista de juegos</value>
+</string>
+<string>
+<key>GameHasMaximumPlayers</key>
+<value>El juego tiene un número máximo de jugadores</value>
+</string>
+<string>
+<key>TimeoutJoiningGame</key>
+<value>Tiempo para unirse a la partida agotado</value>
+</string>
+<string>
+<key>FailedToBuyItem</key>
+<value>Error al comprar objeto</value>
+</string>
+<string>
+<key>FailedToEquipAttachment</key>
+<value>Error al equipar accesorio</value>
+</string>
+<string>
+<key>FailedToGetItemInfo</key>
+<value>Error al conseguir información del objeto</value>
+</string>
+<string>
+<key>ThisGameTagAlreadyExists</key>
+<value>Ya existe esta Gamertag</value>
+</string>
+<string>
+<key>NotEnougMoneyToBuyItem</key>
+<value>Sin dinero suficiente para comprar este objeto</value>
+</string>
+<string>
+<key>NotEnoughGC</key>
+<value>No tienes suficientes GC para esto</value>
+</string>
+<string>
+<key>FetchingGamesListFromServer</key>
+<value>Buscando lista de juegos de un servidor 
+
+ Por favor, espera...</value>
+</string>
+<string>
+<key>JoiningGame</key>
+<value>Uniéndose a la partida</value>
+</string>
+<string>
+<key>CreatingGame</key>
+<value>Creando una partida</value>
+</string>
+<string>
+<key>OneMomentPlease</key>
+<value>Un momento, por favor</value>
+</string>
+<string>
+<key>$OneMomentPlease</key>
+<value>Un momento, por favor</value>
+</string>
+<string>
+<key>NewGamerTagMinLenRequirement</key>
+<value>La nueva Gamertag debe tener al menos 3 caracteres</value>
+</string>
+<string>
+<key>NewGamerTagCannotHaveSpaces</key>
+<value>La Gamertag no puede contener espacios</value>
+</string>
+<string>
+<key>NewGamerTagShouldHaveLettersAndNumbers</key>
+<value>La nueva Gamertag debe contener únicamente letras y números</value>
+</string>
+<string>
+<key>GamerTagNotValid</key>
+<value>La Gamertag no es válida</value>
+</string>
+<string>
+<key>NotEnoughGP</key>
+<value>No tienes suficientes GC</value>
+</string>
+<string>
+<key>RestartGameForChangesToTakeEffect</key>
+<value>Para que lo cambios tengan efecto,​ por favor reinicia la partida.​</value>
+</string>
+<string>
+<key>FailedToLearnSkill</key>
+<value>Error al aprender habilidad</value>
+</string>
+<string>
+<key>RetrievingProfileData</key>
+<value>Cargando datos de juego</value>
+</string>
+<string>
+<key>ClientMustBeUpdated</key>
+<value>Se debe actualizar el cliente, por favor, reinicia el juego</value>
+</string>
+<string>
+<key>LoginMenu_Disconnected</key>
+<value>No puede conectarse al servidor.
+ Por favor, inténtalo de nuevo en unos minutos</value>
+</string>
+<string>
+<key>LoginMenu_CannotConnectServer</key>
+<value>No se puede conectar al servidor. 
+Probablemente está caído en estos momentos. Por favor, inténtalo de nuevo en unos minutos. </value>
+</string>
+<string>
+<key>LoginMenu_ClientUpdateRequired</key>
+<value>Se debe actualizar el cliente, por favor, reinicia el juego</value>
+</string>
+<string>
+<key>LoginMenu_ValidatingLogin</key>
+<value>Validando la información de acceso</value>
+</string>
+<string>
+<key>LoginMenu_CommError</key>
+<value>Error de comunicación</value>
+</string>
+<string>
+<key>LoginMenu_WrongLoginAnswer</key>
+<value>Respuesta de acceso incorrecta</value>
+</string>
+<string>
+<key>LoginMenu_LoginFailed</key>
+<value>Acceso denegado
+ Nombre de usuario o contraseña incorrectos</value>
+</string>
+<string>
+<key>LoginMenu_DoubleLogin</key>
+<value>Tu cuenta ya está en uso en otra sesión</value>
+</string>
+<string>
+<key>FailedToJoinGame</key>
+<value>Error al unirse a la partida</value>
+</string>
+<string>
+<key>FailedToJoinGameStillInGame</key>
+<value>Error al unirse al juego, tu sesión de juego anterior todavía no se ha cerrado. Por favor inténtelo de nuevo</value>
+</string>
+<string>
+<key>GameSessionHasNotClosedYet</key>
+<value>Operación no válida. La sesión de la partida no se ha cerrado todavía. Por favor, inténtalo de nuevo más tarde. </value>
+</string>
+<string>
+<key>ServerRent_FailGetPrice</key>
+<value>Error al conseguir precios para alquiler de servidores</value>
+</string>
+<string>
+<key>ServerRent_FailGetList</key>
+<value>Error al conseguir tu lista de servidores</value>
+</string>
+<string>
+<key>ServerRent_RegionDisabled</key>
+<value>El alquiler de servidor en esta región está desactivado en este momento. </value>
+</string>
+<string>
+<key>ServerRent_NameTooShort</key>
+<value>Por favor, introduce nombre del servidor</value>
+</string>
+<string>
+<key>ServerRent_NameTooBig</key>
+<value>El nombre debe tener 31 caracteres como máximo</value>
+</string>
+<string>
+<key>ServerRent_NeedPassword</key>
+<value>Por favor, introduce una nueva contraseña</value>
+</string>
+<string>
+<key>ServerRent_PasswordTooBig</key>
+<value>Las contraseñas tienen un max de 15 caractéres</value>
+</string>
+<string>
+<key>ServerRent_NameAlreadyInUse</key>
+<value>El nombre de este servidor ya está en uso</value>
+</string>
+<string>
+<key>ServerRent_PriceDesync</key>
+<value>Precio de alquiler del servidor ha cambiado, por favor, reinicia el cliente del juego. </value>
+</string>
+<string>
+<key>ServerRent_RentFail</key>
+<value>Error al alquilar servidor</value>
+</string>
+<string>
+<key>ServerRent_SetPwdFail</key>
+<value>Error al cambiar la contraseña del servidor</value>
+</string>
+<string>
+<key>GroupNoSuchPlayer</key>
+<value>Jugador inexistente</value>
+</string>
+<string>
+<key>GroupPlayerAlreadyInGroup</key>
+<value>Jugador ya en grupo</value>
+</string>
+<string>
+<key>GroupSentInviteSuccess</key>
+<value>Invitación de grupo enviada</value>
+</string>
+<string>
+<key>GroupInviteExpired</key>
+<value>Invitación de grupo caducada</value>
+</string>
+<string>
+<key>GroupNoInviteFound</key>
+<value>Ninguna invitación de grupo de ese jugador</value>
+</string>
+<string>
+<key>GroupIsFull</key>
+<value>El Grupo está completo</value>
+</string>
+<string>
+<key>GroupOnlyLeaderCanInvite</key>
+<value>Solo el líder del grupo puede invitar</value>
+</string>
+<string>
+<key>GroupRcvdInviteFrom</key>
+<value>Invitación de grupo recibida de %s</value>
+</string>
+<string>
+<key>PlayerStatus_Alive</key>
+<value>VIVO</value>
+</string>
+<string>
+<key>ServerStatus_Unknown</key>
+<value>DESCONOCIDO</value>
+</string>
+<string>
+<key>ServerStatus_Pending</key>
+<value>PENDIENTE</value>
+</string>
+<string>
+<key>ServerStatus_Offile</key>
+<value>AJUSTES</value>
+</string>
+<string>
+<key>ServerStatus_Online</key>
+<value>CONECTADO</value>
+</string>
+<string>
+<key>InfoMsg_MaxHealthAlready</key>
+<value>YA TIENES SALUD MÁXIMA</value>
+</string>
+<string>
+<key>InfoMsg_NoTocixInBlood</key>
+<value>SIN TOXICIDAD EN LA SANGRE </value>
+</string>
+<string>
+<key>InfoMsg_NewItemAdded</key>
+<value>NUEVO OBJETO AÑADIDO</value>
+</string>
+<string>
+<key>InfoMsg_DollarsPickedUp</key>
+<value>%d DÓLARES RECOGIDOS</value>
+</string>
+<string>
+<key>InfoMsg_NoFreeBackpackSlots</key>
+<value>LA MOCHILA ESTÁ COMPLETA</value>
+</string>
+<string>
+<key>InfoMsg_TooMuchWeight</key>
+<value>DEMASIADO PESO</value>
+</string>
+<string>
+<key>InfoMsg_ItemAdded</key>
+<value>OBJETO AÑADIDO</value>
+</string>
+<string>
+<key>InfoMsg_BackpackAdded</key>
+<value>MOCHILA AÑADIDA</value>
+</string>
+<string>
+<key>InfoMsg_ItemRemoved</key>
+<value>OBJETO ELIMINADO</value>
+</string>
+<string>
+<key>InfoMsg_ReputationAdded</key>
+<value>%+d REPUTACIÓN</value>
+</string>
+<string>
+<key>InfoMsg_XPAdded</key>
+<value>%d XP AÑADIDA</value>
+</string>
+<string>
+<key>InfoMsg_WeaponDataUpdated</key>
+<value>datos de armas actualizados</value>
+</string>
+<string>
+<key>StatDamage</key>
+<value>Daño</value>
+</string>
+<string>
+<key>StatAccuracy</key>
+<value>Dispersión</value>
+</string>
+<string>
+<key>StatRecoil</key>
+<value>Retroceso</value>
+</string>
+<string>
+<key>StatFireRate</key>
+<value>Frecuencia de disparo</value>
+</string>
+<string>
+<key>StatRange</key>
+<value>Alcance</value>
+</string>
+<string>
+<key>StatCapacity</key>
+<value>Capacidad</value>
+</string>
+<string>
+<key>StatProtection</key>
+<value>Protección</value>
+</string>
+<string>
+<key>StatWeight</key>
+<value>Mobilidad</value>
+</string>
+<string>
+<key>January</key>
+<value>enero</value>
+</string>
+<string>
+<key>February</key>
+<value>febrero</value>
+</string>
+<string>
+<key>March</key>
+<value>marzo</value>
+</string>
+<string>
+<key>April</key>
+<value>abril</value>
+</string>
+<string>
+<key>May</key>
+<value>mayo</value>
+</string>
+<string>
+<key>June</key>
+<value>junio</value>
+</string>
+<string>
+<key>July</key>
+<value>julio</value>
+</string>
+<string>
+<key>August</key>
+<value>agosto</value>
+</string>
+<string>
+<key>September</key>
+<value>septiembre</value>
+</string>
+<string>
+<key>October</key>
+<value>octubre</value>
+</string>
+<string>
+<key>November</key>
+<value>noviembre</value>
+</string>
+<string>
+<key>December</key>
+<value>diciembre</value>
+</string>
+<string>
+<key>$CatInvalid</key>
+<value>NO VÁLIDO</value>
+</string>
+<string>
+<key>$CatAccount</key>
+<value>CUENTA</value>
+</string>
+<string>
+<key>$CatBoosts</key>
+<value>POTENCIADORES</value>
+</string>
+<string>
+<key>$CatMaps</key>
+<value>MAPAS</value>
+</string>
+<string>
+<key>$CatItems</key>
+<value>OBJETOS</value>
+</string>
+<string>
+<key>$CatDeals</key>
+<value>¡OFERTAS ESPECIALES!</value>
+</string>
+<string>
+<key>$CatHeroes</key>
+<value>HÉROES</value>
+</string>
+<string>
+<key>$CatChar</key>
+<value>PERSONAJES</value>
+</string>
+<string>
+<key>$CatAbilities</key>
+<value>CAPACIDADES</value>
+</string>
+<string>
+<key>$CatGear</key>
+<value>EQUIPO</value>
+</string>
+<string>
+<key>$CatHeads</key>
+<value>CABEZAS</value>
+</string>
+<string>
+<key>$CatHeadGear</key>
+<value>PRENDA DE CABEZA</value>
+</string>
+<string>
+<key>$CatASR</key>
+<value>FUSILES DE ASALTO</value>
+</string>
+<string>
+<key>$CatSniper</key>
+<value>FUSILES DE FRANCOTIRADOR</value>
+</string>
+<string>
+<key>$CatSHTG</key>
+<value>ESCOPETAS</value>
+</string>
+<string>
+<key>$CatMG</key>
+<value>AMETRALLADORAS</value>
+</string>
+<string>
+<key>$CatSUP</key>
+<value>APOYO</value>
+</string>
+<string>
+<key>$CatHG</key>
+<value>PISTOLAS</value>
+</string>
+<string>
+<key>$CatSMG</key>
+<value>SUBFUSILES</value>
+</string>
+<string>
+<key>$CatGrenade</key>
+<value>EXPLOSIVOS</value>
+</string>
+<string>
+<key>$CatMysteryBox</key>
+<value>CAJAS DE PROVISIONES</value>
+</string>
+<string>
+<key>$CatLootBox</key>
+<value>SAQUEAR CAJAS</value>
+</string>
+<string>
+<key>$CatFPSAttachment</key>
+<value>ACCESORIOS</value>
+</string>
+<string>
+<key>$CatUsableItem</key>
+<value>OBJETOS</value>
+</string>
+<string>
+<key>$CatMelee</key>
+<value>CUERPO A CUERPO</value>
+</string>
+<string>
+<key>Item</key>
+<value>OBJETO</value>
+</string>
+<string>
+<key>Money</key>
+<value>DINERO</value>
+</string>
+<string>
+<key>Note</key>
+<value>NOTA</value>
+</string>
+<string>
+<key>HoldEToPickUpItem</key>
+<value>PRESIONA &quot;E&quot; PARA RECOGER OBJETO</value>
+</string>
+<string>
+<key>HoldEToPickUpMoney</key>
+<value>PRESIONA &quot;E&quot; PARA RECOGER DINERO </value>
+</string>
+<string>
+<key>ActionUI_StoreTitle</key>
+<value>ACCEDER A TIENDA</value>
+</string>
+<string>
+<key>HoldEToAccessStore</key>
+<value>PRESIONA &quot;E&quot; PARA ACCEDER A TIENDA</value>
+</string>
+<string>
+<key>ActionUI_VaultTitle</key>
+<value>ACCEDER A CAJA FUERTE</value>
+</string>
+<string>
+<key>HoldEToAccessVault</key>
+<value>PRESIONA &quot;E&quot; PARA ACCEDER A LA CAJA FUERTE</value>
+</string>
+<string>
+<key>HoldEToReadNote</key>
+<value>PRESIONA &quot;E&quot; PARA LEER NOTA</value>
+</string>
+<string>
+<key>$FR_ServerTime</key>
+<value>hora del servidor:</value>
+</string>
+<string>
+<key>$FR_Statistics</key>
+<value>ESTADÍSTICAS</value>
+</string>
+<string>
+<key>$FR_Level</key>
+<value>Nivel:</value>
+</string>
+<string>
+<key>$FR_TimePlayed</key>
+<value>Tiempo jugado: </value>
+</string>
+<string>
+<key>$FR_Account</key>
+<value>CUENTA</value>
+</string>
+<string>
+<key>$FR_DisabledLabel</key>
+<value>DESACTIVADO</value>
+</string>
+<string>
+<key>$FR_YouDontHaveEnoughGP</key>
+<value>No tienes suficientes GC</value>
+</string>
+<string>
+<key>$FR_Inventory</key>
+<value>INVENTARIO</value>
+</string>
+<string>
+<key>$FR_SlotType_Body</key>
+<value>CUERPO</value>
+</string>
+<string>
+<key>$FR_SlotType_Armor</key>
+<value>BLINDAJE</value>
+</string>
+<string>
+<key>$FR_SlotType_Head</key>
+<value>CABEZA</value>
+</string>
+<string>
+<key>$FR_SlotType_HArmor</key>
+<value>BLINDAJE PARA CABEZA</value>
+</string>
+<string>
+<key>$FR_SlotType_Primary</key>
+<value>PRINCIPAL</value>
+</string>
+<string>
+<key>$FR_SlotType_Secondary</key>
+<value>SECUNDARIA</value>
+</string>
+<string>
+<key>$FR_SlotType_Handgun</key>
+<value>PISTOLA</value>
+</string>
+<string>
+<key>$FR_SlotType_Item1</key>
+<value>OBJETO 1</value>
+</string>
+<string>
+<key>$FR_SlotType_Item2</key>
+<value>OBJETO 2</value>
+</string>
+<string>
+<key>$FR_SlotType_Item3</key>
+<value>OBJETO 3</value>
+</string>
+<string>
+<key>$FR_SlotType_Item4</key>
+<value>OBJETO 4</value>
+</string>
+<string>
+<key>$FR_SlotType_Items</key>
+<value>OBJETOS</value>
+</string>
+<string>
+<key>$FR_SlotType_Muzzle</key>
+<value>BOCACHA</value>
+</string>
+<string>
+<key>$FR_SlotType_UpperRail</key>
+<value>RIEL SUPERIOR</value>
+</string>
+<string>
+<key>$FR_SlotType_LeftRail</key>
+<value>RIEL IZQUIERDO</value>
+</string>
+<string>
+<key>$FR_SlotType_BottomRail</key>
+<value>RIEL INFERIOR</value>
+</string>
+<string>
+<key>$FR_SlotType_Clip</key>
+<value>PEINE</value>
+</string>
+<string>
+<key>$FR_SlotType_Receiver</key>
+<value>RECEPTÁCULO</value>
+</string>
+<string>
+<key>$FR_SlotType_Stock</key>
+<value>CULATA</value>
+</string>
+<string>
+<key>$FR_SlotType_Barrel</key>
+<value>CAÑÓN</value>
+</string>
+<string>
+<key>$FR_SlotType_Paint</key>
+<value>PINTURA</value>
+</string>
+<string>
+<key>$FR_Store_AlreadyHaveThisItem</key>
+<value>Ya tienes este artículo</value>
+</string>
+<string>
+<key>$FR_Store_SingularDay</key>
+<value>DÍA</value>
+</string>
+<string>
+<key>$FR_Store_PluralDay</key>
+<value>DÍAS</value>
+</string>
+<string>
+<key>$FR_Store_Permanent</key>
+<value>PERMANENTE</value>
+</string>
+<string>
+<key>$FR_Store_PurchaseGP</key>
+<value>CONSEGUIR MÁS GC</value>
+</string>
+<string>
+<key>$FR_EmptySlot</key>
+<value>ESPACIO VACÍO</value>
+</string>
+<string>
+<key>$permanent</key>
+<value>Permanente</value>
+</string>
+<string>
+<key>$FR_Store_AreYouSure</key>
+<value>¿ESTÁS SEGURO DE QUE QUIERES ADQUIRIR ESTE OBJETO?</value>
+</string>
+<string>
+<key>$FR_Store_Youhavenow</key>
+<value>AHORA TIENES: </value>
+</string>
+<string>
+<key>$FR_Store_Youwillhave</key>
+<value>OBTENDRÁS: </value>
+</string>
+<string>
+<key>$permanentCap</key>
+<value>PERMANENTE</value>
+</string>
+<string>
+<key>$FR_optVeryLow</key>
+<value>MUY BAJO</value>
+</string>
+<string>
+<key>$FR_optLow</key>
+<value>BAJO</value>
+</string>
+<string>
+<key>$FR_optMed</key>
+<value>MEDIO</value>
+</string>
+<string>
+<key>$FR_optHig</key>
+<value>ALTO</value>
+</string>
+<string>
+<key>$FR_optUlt</key>
+<value>ULTRA</value>
+</string>
+<string>
+<key>$FR_optCus</key>
+<value>PERSONALIZAR</value>
+</string>
+<string>
+<key>$FR_optNo</key>
+<value>NO</value>
+</string>
+<string>
+<key>$FR_optYes</key>
+<value>SÍ</value>
+</string>
+<string>
+<key>$FR_optOff</key>
+<value>APAGADO</value>
+</string>
+<string>
+<key>$FR_optResolution</key>
+<value>RESOLUCIÓN</value>
+</string>
+<string>
+<key>$FR_optOverallQuality</key>
+<value>CALIDAD GENERAL</value>
+</string>
+<string>
+<key>$FR_optBrightness</key>
+<value>BRILLO</value>
+</string>
+<string>
+<key>$FR_optContrast</key>
+<value>CONTRASTE</value>
+</string>
+<string>
+<key>$FR_optSoundVolume</key>
+<value>VOLUMEN DE SONIDO</value>
+</string>
+<string>
+<key>$FR_optMusicVolume</key>
+<value>VOLUMEN DE LA MÚSICA</value>
+</string>
+<string>
+<key>$FR_optCommVolume</key>
+<value>VOLUMEN DE COMUNICACIONES</value>
+</string>
+<string>
+<key>$FR_optHintSystem</key>
+<value>POSICIÓN DE PUNTERÍA</value>
+</string>
+<string>
+<key>$FR_AimPositionCenter</key>
+<value>CENTRO</value>
+</string>
+<string>
+<key>$FR_AimPositionOffCenter</key>
+<value>DESCENTRADO</value>
+</string>
+<string>
+<key>$FR_optNoRedBlood</key>
+<value>COMANDOS DE VOZ</value>
+</string>
+<string>
+<key>$FR_optFullscreen</key>
+<value>PANTALLA COMPLETA</value>
+</string>
+<string>
+<key>$FR_optAntialiasing</key>
+<value>ANTIALIASING</value>
+</string>
+<string>
+<key>$FR_optVSync</key>
+<value>VSYNC</value>
+</string>
+<string>
+<key>$FR_optSSAO</key>
+<value>SSAO</value>
+</string>
+<string>
+<key>$FR_optTerrDetail</key>
+<value>CALIDAD DEL TERRENO</value>
+</string>
+<string>
+<key>$FR_optTerrTex</key>
+<value>DECORACIONES DE TERRENO</value>
+</string>
+<string>
+<key>$FR_optWaterQual</key>
+<value>CALIDAD DEL AGUA</value>
+</string>
+<string>
+<key>$FR_optShadowQual</key>
+<value>CALIDAD DE SOMBRAS</value>
+</string>
+<string>
+<key>$FR_optLightQual</key>
+<value>CALIDAD DE ILUMINACIÓN</value>
+</string>
+<string>
+<key>$FR_optEffectQual</key>
+<value>CALIDAD DE LAS PARTÍCULAS</value>
+</string>
+<string>
+<key>$FR_optMeshQual</key>
+<value>DETALLES DE ENTRAMADO</value>
+</string>
+<string>
+<key>$FR_optAniso</key>
+<value>ANISOTROPÍA</value>
+</string>
+<string>
+<key>$FR_optPostProcessQual</key>
+<value>POSTPROCESADO</value>
+</string>
+<string>
+<key>$FR_optTexturesQual</key>
+<value>TEXTURAS</value>
+</string>
+<string>
+<key>$FR_optGeneral</key>
+<value>GENERAL</value>
+</string>
+<string>
+<key>$FR_optControls</key>
+<value>CONTROLES</value>
+</string>
+<string>
+<key>$FR_optLanguage</key>
+<value>IDIOMA</value>
+</string>
+<string>
+<key>$FR_optInvertYAxis</key>
+<value>INVERTIR EJE Y</value>
+</string>
+<string>
+<key>$FR_optLeftSideCam</key>
+<value>CÁMARA DEL LADO IZQUIERDO </value>
+</string>
+<string>
+<key>$FR_optMouseWheel</key>
+<value>RUEDA DE RATÓN</value>
+</string>
+<string>
+<key>$FR_optSensitivity</key>
+<value>SENSIBILIDAD</value>
+</string>
+<string>
+<key>$FR_optAcceleration</key>
+<value>ACELERACIÓN</value>
+</string>
+<string>
+<key>$FR_optPress</key>
+<value>PRESIONAR</value>
+</string>
+<string>
+<key>$FR_optToggle</key>
+<value>ACTIVAR/DESACTIVAR</value>
+</string>
+<string>
+<key>$FR_optToggleAim</key>
+<value>APUNTAR</value>
+</string>
+<string>
+<key>$FR_optToggleCrouch</key>
+<value>AGACHARSE</value>
+</string>
+<string>
+<key>$FR_optLanguageSelection</key>
+<value>SELECCIÓN DEL IDIOMA</value>
+</string>
+<string>
+<key>$FR_optLangEnglish</key>
+<value>INGLÉS</value>
+</string>
+<string>
+<key>$FR_optLangFrench</key>
+<value>FRANCÉS</value>
+</string>
+<string>
+<key>$FR_optLangGerman</key>
+<value>ALEMÁN</value>
+</string>
+<string>
+<key>$FR_optLangItalian</key>
+<value>ITALIANO</value>
+</string>
+<string>
+<key>$FR_optLangSpanish</key>
+<value>ESPAÑOL</value>
+</string>
+<string>
+<key>$FR_optLangRussian</key>
+<value>RUSO</value>
+</string>
+<string>
+<key>$FR_optVideo</key>
+<value>VÍDEO</value>
+</string>
+<string>
+<key>$FR_optGraphics</key>
+<value>GRÁFICOS</value>
+</string>
+<string>
+<key>$FR_optAudio</key>
+<value>AUDIO</value>
+</string>
+<string>
+<key>$FR_optGameplay</key>
+<value>JUGABILIDAD</value>
+</string>
+<string>
+<key>$FR_optInvertContrls</key>
+<value>INVERTIR CONTROLES</value>
+</string>
+<string>
+<key>$FR_optMovement</key>
+<value>MOVIMIENTOS</value>
+</string>
+<string>
+<key>$FR_optMouse</key>
+<value>RATÓN</value>
+</string>
+<string>
+<key>$FR_PleaseEnterNewGamertag</key>
+<value>POR FAVOR, INTRODUCE NUEVA GAMERTAG</value>
+</string>
+<string>
+<key>$FR_EnterPasswordToJoinGame</key>
+<value>POR FAVOR, INTRODUZCA CONTRASEÑA PARA UNIRSE A ESTA PARTIDA: </value>
+</string>
+<string>
+<key>$FR_ExitGame</key>
+<value>¿SALIR DEL JUEGO?</value>
+</string>
+<string>
+<key>$FR_browseGamesTopLabel</key>
+<value>P NOMBRE DEL SERVIDOR PING JUGADORES MAPA NOMBRE JUEGO MODO RECOMPENSA LÍDER CLASIFICADO</value>
+</string>
+<string>
+<key>$FR_NumOfPlayers</key>
+<value>NÚMERO DE JUGADORES</value>
+</string>
+<string>
+<key>$FR_ServerRegion</key>
+<value>REGIÓN DEL SERVIDOR</value>
+</string>
+<string>
+<key>$FR_GameName</key>
+<value>NOMBRE DEL JUEGO</value>
+</string>
+<string>
+<key>$FR_Password</key>
+<value>CONTRASEÑA</value>
+</string>
+<string>
+<key>$FR_SaveSettings</key>
+<value>GUARDAR AJUSTES</value>
+</string>
+<string>
+<key>$FR_GameMode</key>
+<value>MODO DE JUEGO</value>
+</string>
+<string>
+<key>$FR_GameMap</key>
+<value>MAPA DEL JUEGO</value>
+</string>
+<string>
+<key>$FR_NotFull</key>
+<value>NO COMPLETO</value>
+</string>
+<string>
+<key>$FR_NotEmpty</key>
+<value>NO ESTÁ VACÍO</value>
+</string>
+<string>
+<key>$FR_WB_Done</key>
+<value>HECHO</value>
+</string>
+<string>
+<key>$FR_Modify</key>
+<value>MODIFICAR</value>
+</string>
+<string>
+<key>$FR_Back</key>
+<value>VOLVER</value>
+</string>
+<string>
+<key>$FR_Save</key>
+<value>GUARDAR</value>
+</string>
+<string>
+<key>$FR_Return</key>
+<value>VOLVER</value>
+</string>
+<string>
+<key>$FR_Equipment</key>
+<value>EQUIPAMIENTO</value>
+</string>
+<string>
+<key>$FR_Install</key>
+<value>INSTALAR</value>
+</string>
+<string>
+<key>$FR_Remove</key>
+<value>ELIMINAR</value>
+</string>
+<string>
+<key>$FR_Equip</key>
+<value>EQUIPAR</value>
+</string>
+<string>
+<key>$FR_Character</key>
+<value>PERSONAJE</value>
+</string>
+<string>
+<key>$FR_Unlock</key>
+<value>DESBLOQUEAR</value>
+</string>
+<string>
+<key>$FR_Cancel</key>
+<value>CANCELAR</value>
+</string>
+<string>
+<key>$FR_Invite</key>
+<value>INVITAR</value>
+</string>
+<string>
+<key>$FR_Buy</key>
+<value>COMPRAR</value>
+</string>
+<string>
+<key>$FR_MoreDetails</key>
+<value>MÁS DETALLES</value>
+</string>
+<string>
+<key>$FR_OK</key>
+<value>ACEPTAR</value>
+</string>
+<string>
+<key>$FR_No</key>
+<value>NO</value>
+</string>
+<string>
+<key>$FR_Yes</key>
+<value>SÍ</value>
+</string>
+<string>
+<key>$FR_Apply</key>
+<value>APLICAR</value>
+</string>
+<string>
+<key>$FR_Reset</key>
+<value>RESTABLECER</value>
+</string>
+<string>
+<key>$FR_RefreshGameList</key>
+<value>ACTUALIZAR LISTA DE PARTIDAS</value>
+</string>
+<string>
+<key>$FR_ChangeFilterOptions</key>
+<value>CAMBIAR OPCIONES DE FILTRO DEL SERVIDOR</value>
+</string>
+<string>
+<key>$FR_ApplyFilter</key>
+<value>APLICAR FILTRO</value>
+</string>
+<string>
+<key>$FR_FilterOptions</key>
+<value>OPCIONES DE FILTRO</value>
+</string>
+<string>
+<key>$FR_FreeSlots</key>
+<value>HUECOS GRATIS</value>
+</string>
+<string>
+<key>$FR_GameNameFilter</key>
+<value>FILTRO DE NOMBRE DE LA PARTIDA</value>
+</string>
+<string>
+<key>$FR_Details</key>
+<value>DETALLES</value>
+</string>
+<string>
+<key>$FR_Start</key>
+<value>EMPEZAR</value>
+</string>
+<string>
+<key>$FR_JoinGame</key>
+<value>UNIRSE AL JUEGO</value>
+</string>
+<string>
+<key>$FR_Learn</key>
+<value>APRENDER</value>
+</string>
+<string>
+<key>$FR_GetItem</key>
+<value>CONSEGUIR OBJETO</value>
+</string>
+<string>
+<key>$FR_NewItem</key>
+<value>NUEVO</value>
+</string>
+<string>
+<key>$FR_Home</key>
+<value>INICIO</value>
+</string>
+<string>
+<key>$FR_Community</key>
+<value>COMUNIDAD</value>
+</string>
+<string>
+<key>$FR_Options</key>
+<value>OPCIONES</value>
+</string>
+<string>
+<key>$FR_Exit</key>
+<value>SALIR</value>
+</string>
+<string>
+<key>$FR_PlayGame</key>
+<value>JUGAR PARTIDA</value>
+</string>
+<string>
+<key>$FR_Play</key>
+<value>JUGAR</value>
+</string>
+<string>
+<key>$FR_Host</key>
+<value>ANFITRIÓN</value>
+</string>
+<string>
+<key>$FR_QuickJoin</key>
+<value>UNIÓN RÁPIDA</value>
+</string>
+<string>
+<key>$FR_ServerBrowser</key>
+<value>BUCADOR DE SERVIDOR</value>
+</string>
+<string>
+<key>$FR_PlayWithFriends</key>
+<value>JUGAR CON AMIGOS</value>
+</string>
+<string>
+<key>$FR_MyServers</key>
+<value>MIS SERVIDORES</value>
+</string>
+<string>
+<key>$FR_MyStrongholds</key>
+<value>MIS PUNTOS FUERTES</value>
+</string>
+<string>
+<key>$FR_SearchingForServer</key>
+<value>BUSCANDO SERVIDOR...</value>
+</string>
+<string>
+<key>$FR_ComingSoon</key>
+<value>PRÓXIMAMENTE</value>
+</string>
+<string>
+<key>$FR_ComingSoon_Comm</key>
+<value>TABLAS DE CLASIFICACIÓN, AMIGOS, CLANES
+ ¡PRÓXIMAMENTE!</value>
+</string>
+<string>
+<key>$FR_Health</key>
+<value>SALUD</value>
+</string>
+<string>
+<key>$FR_SortBy</key>
+<value>ORDENAR POR: </value>
+</string>
+<string>
+<key>$FR_SortGP</key>
+<value>Valorar GC</value>
+</string>
+<string>
+<key>$FR_Ping</key>
+<value>PING</value>
+</string>
+<string>
+<key>$FR_Players</key>
+<value>JUGADORES</value>
+</string>
+<string>
+<key>$FR_MapType</key>
+<value>MAPA</value>
+</string>
+<string>
+<key>$FR_Missions</key>
+<value>MISIONES</value>
+</string>
+<string>
+<key>$FR_Friends</key>
+<value>AMIGOS</value>
+</string>
+<string>
+<key>$FR_EnterFriendsName</key>
+<value>POR FAVOR, INTRODUCE EL NOMBRE DEL AMIGO:</value>
+</string>
+<string>
+<key>$FR_AddFriend</key>
+<value>AÑADIR AMIGO</value>
+</string>
+<string>
+<key>$FR_FriendsStats</key>
+<value>ESTADÍSTICAS DE AMIGOS</value>
+</string>
+<string>
+<key>$FR_RemoveFriend</key>
+<value>ELIMINAR AMIGO</value>
+</string>
+<string>
+<key>$FR_JoinFriendsGame</key>
+<value>UNIRSE AL JUEGO</value>
+</string>
+<string>
+<key>$FR_FriendsDescBlock</key>
+<value>CLASIFICACIÓN:
+ VICTORIAS:
+ DERROTAS:
+ PROPORCIÓN V/D: 
+ASESINATOS:
+ MUERTES: 
+ PROPORCIÓN A/M:
+ TIEMPO JUGADO: </value>
+</string>
+<string>
+<key>$FR_Rank</key>
+<value>CLASIFICACIÓN:</value>
+</string>
+<string>
+<key>$FR_Name</key>
+<value>NOMBRE:</value>
+</string>
+<string>
+<key>$FR_Mode</key>
+<value>MODO:</value>
+</string>
+<string>
+<key>$FR_Clan</key>
+<value>CLAN:</value>
+</string>
+<string>
+<key>$FR_ACCEPT</key>
+<value>ACEPTAR</value>
+</string>
+<string>
+<key>$FR_DECLINE</key>
+<value>RECHAZAR</value>
+</string>
+<string>
+<key>$FR_JOIN</key>
+<value>UNIRSE</value>
+</string>
+<string>
+<key>$FR_ONLINE</key>
+<value>CONECTADO</value>
+</string>
+<string>
+<key>$FR_OFFLINE</key>
+<value>SIN CONEXIÓN</value>
+</string>
+<string>
+<key>$FR_INGAME</key>
+<value>DENTRO DEL JUEGO</value>
+</string>
+<string>
+<key>$FR_FRIENDREQUEST</key>
+<value>SOLICITUD DE AMISTAD</value>
+</string>
+<string>
+<key>$FR_FRIENDREQUESTACCEPTED</key>
+<value>PETICIÓN DE AMISTAD ACEPTADA</value>
+</string>
+<string>
+<key>$FR_USERJOINEDGAME</key>
+<value>UN AMIGO SE UNIÓ AL JUEGO</value>
+</string>
+<string>
+<key>$FR_USEROFFLINE</key>
+<value>AMIGOS DESCONECTADOS</value>
+</string>
+<string>
+<key>$FR_USERONLINE</key>
+<value>AMIGOS CONECTADOS</value>
+</string>
+<string>
+<key>$FR_FRIENDREMOVED</key>
+<value>AMIGO ELIMINADO</value>
+</string>
+<string>
+<key>FriendApiError</key>
+<value>Error, por favor inténtalo de nuevo más tarde</value>
+</string>
+<string>
+<key>FriendNotFound</key>
+<value>No existe ningún jugador con la Gamertag proporcionada</value>
+</string>
+<string>
+<key>FriendAddOk</key>
+<value>Solicitud de amistad enviada al jugador</value>
+</string>
+<string>
+<key>FriendAddWait</key>
+<value>Ya has enviado la solicitud de amistad, espera a que el jugador la acepte</value>
+</string>
+<string>
+<key>FriendAddAlready</key>
+<value>Ya tienes a este jugador como amigo</value>
+</string>
+<string>
+<key>FriendAddDeny</key>
+<value>El Jugador denegó tu solicitud de amistad
+ Para hacerse amigos, por favor dile al jugador que te envíe una solicitud de amistad</value>
+</string>
+<string>
+<key>FriendAddBlock</key>
+<value>Ambos habéis rechazado las solicitudes de amistad. No puedes ser amigo de ese jugador</value>
+</string>
+<string>
+<key>FriendNotInGame</key>
+<value>El jugador no está en la partida ahora mismo</value>
+</string>
+<string>
+<key>$FR_LEADERBOARD</key>
+<value>TABLAS DE CLASIFICACIÓN</value>
+</string>
+<string>
+<key>$FR_Global</key>
+<value>GENERAL</value>
+</string>
+<string>
+<key>$FR_PlayersOnline</key>
+<value>JUGADORES CONECTADOS</value>
+</string>
+<string>
+<key>$FR_News</key>
+<value>NOTICIAS</value>
+</string>
+<string>
+<key>$FR_BackToSurvivors</key>
+<value>VOLVER A SUPERVIVIENTES</value>
+</string>
+<string>
+<key>$FR_EnterSurvivorNameHere</key>
+<value>introduce aquí el nombre del superviviente</value>
+</string>
+<string>
+<key>$FR_Permanently</key>
+<value>PERMANENTEMENTE</value>
+</string>
+<string>
+<key>$FR_Dead</key>
+<value>MUERTO</value>
+</string>
+<string>
+<key>$FR_EarlyRevival</key>
+<value>REANIMACIÓN RÁPIDA</value>
+</string>
+<string>
+<key>$FR_EarlyRevivalCost</key>
+<value>LA REANIMACIÓN RÁPIDA ES OPCIONAL 
+
+ TE COSTARÁ </value>
+</string>
+<string>
+<key>$FR_ClanSearch</key>
+<value>BUSCAR CLAN</value>
+</string>
+<string>
+<key>ClanError_Code20</key>
+<value>No puedes añadir más miembros al clan. Tienes que comprar más huecos para añadir más miembros. </value>
+</string>
+<string>
+<key>ClanError_Code21</key>
+<value>El jugador ya se ha unido a un clan. </value>
+</string>
+<string>
+<key>ClanError_Code22</key>
+<value>No se ha especificado Gamertag. </value>
+</string>
+<string>
+<key>ClanError_Code23</key>
+<value>Permiso denegado.</value>
+</string>
+<string>
+<key>ClanError_Code24</key>
+<value>Puedes enviar una solicitud al clan solo una vez cada 72 horas. </value>
+</string>
+<string>
+<key>ClanError_Code25</key>
+<value>Has alcanzado el número máximo de solicitudes pendientes.</value>
+</string>
+<string>
+<key>ClanError_Code26</key>
+<value>No has adquirido GC o estás intentando donar más GC de las que has adquirido en los últimos 30 días. Las recompensas de GC no son admisibles para donaciones de alianza. Para donar a este clan, primero debes adquirir GC en la tienda. </value>
+</string>
+<string>
+<key>ClanError_Code27</key>
+<value>Este nombre de clan ya está en uso. </value>
+</string>
+<string>
+<key>ClanError_Code28</key>
+<value>Esta etiqueta de clan ya está cogida.</value>
+</string>
+<string>
+<key>ClanError_Code29</key>
+<value>Tu personaje necesita al menos 20 horas de juego para crear el clan. </value>
+</string>
+<string>
+<key>ClanError_AmountToDonateShouldBeMoreThanZero</key>
+<value>La cantidad a donar debe ser mayor de cero. </value>
+</string>
+<string>
+<key>ClanError_NotEnoughGPToDonate</key>
+<value>Estás intentando donar más GC al clan de las que tienes. </value>
+</string>
+<string>
+<key>ClanError_NotEnoughGPInClan</key>
+<value>Estás intentando donar más GC a un miembro del clan de las que tiene la reserva de tu clan. </value>
+</string>
+<string>
+<key>ClanPlayerInviteSentSuccessfully</key>
+<value>Se ha enviado con éxito la invitación al clan.</value>
+</string>
+<string>
+<key>ClanError_CannotDemoteMore</key>
+<value>El Jugador ya tiene el rango más bajo posible.</value>
+</string>
+<string>
+<key>ClanError_BadTag</key>
+<value>La etiqueta de clan contiene símbolos no válidos. </value>
+</string>
+<string>
+<key>$FR_Servers</key>
+<value>SERVIDORES</value>
+</string>
+<string>
+<key>$FR_Settings</key>
+<value>AJUSTES</value>
+</string>
+<string>
+<key>$FR_MyServers_PlayerListTop</key>
+<value>NOMBRE DE JUGADOR MUERTO/VIVO ALINEAMIENTO PUNTUACIÓN EXPULSAR</value>
+</string>
+<string>
+<key>$FR_MyServers_ServerListTop</key>
+<value>SERVIDOR NOMBRE LOCALIZACIÓN MAPA ESTADO TIPO JUGADORES CADUCA EN:</value>
+</string>
+<string>
+<key>$FR_RentStronghold</key>
+<value>ALQUILAR FORTALEZA</value>
+</string>
+<string>
+<key>$FR_RentGameserver</key>
+<value>ALQUILAR UN SERVIDOR DE JUEGO</value>
+</string>
+<string>
+<key>$FR_RenewServer</key>
+<value>RENOVAR SERVIDOR</value>
+</string>
+<string>
+<key>$FR_Renew</key>
+<value>RENOVAR</value>
+</string>
+<string>
+<key>$FR_SkillTree_RepairTree</key>
+<value>ARREGLAR ÁRBOL</value>
+</string>
+<string>
+<key>$FR_SkillTree_WeaponsTree</key>
+<value>ÁRBOL DE ARMAS</value>
+</string>
+<string>
+<key>$FR_SkillTree_PhysicalTree</key>
+<value>ÁRBOL FÍSICO</value>
+</string>
+<string>
+<key>$FR_SkillTree_SurvivalTree</key>
+<value>ÁRBOL DE SUPERVIVENCIA</value>
+</string>
+<string>
+<key>$FR_SkillTree_Physical</key>
+<value>FÍSICO</value>
+</string>
+<string>
+<key>$FR_SkillTree_Weapons</key>
+<value>ARMAS </value>
+</string>
+<string>
+<key>$FR_SkillTree_Repair</key>
+<value>ARREGLAR</value>
+</string>
+<string>
+<key>$FR_SkillTree_Survival</key>
+<value>SUPERVIVENCIA</value>
+</string>
+<string>
+<key>SkillName0</key>
+<value>Vivito y Coleando 1</value>
+</string>
+<string>
+<key>SkillDesc0</key>
+<value>Salud aumentada</value>
+</string>
+<string>
+<key>SkillName1</key>
+<value>Norma  #1 1</value>
+</string>
+<string>
+<key>SkillDesc1</key>
+<value>Aguante Aumentado </value>
+</string>
+<string>
+<key>SkillName2</key>
+<value>Fuerte Como un Toro 1</value>
+</string>
+<string>
+<key>SkillDesc2</key>
+<value>La resistencia aumenta, haciendo que los objetos parezcan más ligeros</value>
+</string>
+<string>
+<key>SkillName3</key>
+<value>No habrá paz para los malvados 1</value>
+</string>
+<string>
+<key>SkillDesc3</key>
+<value>Regeneración de Aguante más rápida </value>
+</string>
+<string>
+<key>SkillName4</key>
+<value>Norma #1 2</value>
+</string>
+<string>
+<key>SkillDesc4</key>
+<value>Aguante Aumentado</value>
+</string>
+<string>
+<key>SkillName5</key>
+<value>No habrá paz para los malvados 2</value>
+</string>
+<string>
+<key>SkillDesc5</key>
+<value>Regeneración de Aguante más rápida</value>
+</string>
+<string>
+<key>SkillName6</key>
+<value>Fuerte Como un Toro 2</value>
+</string>
+<string>
+<key>SkillDesc6</key>
+<value>La resistencia aumenta, haciendo que los objetos parezcan más ligeros</value>
+</string>
+<string>
+<key>SkillName7</key>
+<value>Vivito y Coleando 2</value>
+</string>
+<string>
+<key>SkillDesc7</key>
+<value>Salud aumentada </value>
+</string>
+<string>
+<key>SkillName8</key>
+<value>Combate cercano 1 </value>
+</string>
+<string>
+<key>SkillDesc8</key>
+<value>Daño cuerpo a cuerpo aumentado </value>
+</string>
+<string>
+<key>SkillName9</key>
+<value>En el Blanco </value>
+</string>
+<string>
+<key>SkillDesc9</key>
+<value>Dispersión del arma reducida</value>
+</string>
+<string>
+<key>SkillName10</key>
+<value>Combate cercano 2</value>
+</string>
+<string>
+<key>SkillDesc10</key>
+<value>Daño cuerpo a cuerpo aumentado </value>
+</string>
+<string>
+<key>SkillName11</key>
+<value>Manténlo estable</value>
+</string>
+<string>
+<key>SkillDesc11</key>
+<value>Retroceso del arma más bajo</value>
+</string>
+<string>
+<key>SkillName12</key>
+<value>Concentración 1</value>
+</string>
+<string>
+<key>SkillDesc12</key>
+<value>Contener la respiración más tiempo / francotirador</value>
+</string>
+<string>
+<key>SkillName13</key>
+<value>Combate cercano 3</value>
+</string>
+<string>
+<key>SkillDesc13</key>
+<value>Daño cuerpo a cuerpo aumentado</value>
+</string>
+<string>
+<key>SkillName14</key>
+<value>Concentración 2</value>
+</string>
+<string>
+<key>SkillDesc14</key>
+<value>Contener la respiración más tiempo / francotirador </value>
+</string>
+<string>
+<key>SkillName15</key>
+<value>Manitas</value>
+</string>
+<string>
+<key>SkillDesc15</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName16</key>
+<value>Armero</value>
+</string>
+<string>
+<key>SkillDesc16</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName17</key>
+<value>Manitas </value>
+</string>
+<string>
+<key>SkillDesc17</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName18</key>
+<value>Armero</value>
+</string>
+<string>
+<key>SkillDesc18</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName19</key>
+<value>Huelga de Hambre 1</value>
+</string>
+<string>
+<key>SkillDesc19</key>
+<value>El hambre disminuye más depacio</value>
+</string>
+<string>
+<key>SkillName20</key>
+<value>Sanitario 1</value>
+</string>
+<string>
+<key>SkillDesc20</key>
+<value>Eficacia aumentada de los objetos curativos </value>
+</string>
+<string>
+<key>SkillName21</key>
+<value>Acosador</value>
+</string>
+<string>
+<key>SkillDesc21</key>
+<value>Pasos más silenciosos</value>
+</string>
+<string>
+<key>SkillName22</key>
+<value>Survivalista 1</value>
+</string>
+<string>
+<key>SkillDesc22</key>
+<value>Cuando estás sin comida ni agua, la salud disminuye más despacio </value>
+</string>
+<string>
+<key>SkillName23</key>
+<value>Especialista 1</value>
+</string>
+<string>
+<key>SkillDesc23</key>
+<value>Te haces menos daño al caer </value>
+</string>
+<string>
+<key>SkillName24</key>
+<value>Huelga de Hambre 2</value>
+</string>
+<string>
+<key>SkillDesc24</key>
+<value>El hambre disminuye más depacio </value>
+</string>
+<string>
+<key>SkillName25</key>
+<value>Sanitario 2</value>
+</string>
+<string>
+<key>SkillDesc25</key>
+<value>Eficacia aumentada de los objetos curativos </value>
+</string>
+<string>
+<key>SkillName26</key>
+<value>Survivalista 2</value>
+</string>
+<string>
+<key>SkillDesc26</key>
+<value>Cuando estás sin comida ni agua, la salud disminuye más despacio</value>
+</string>
+<string>
+<key>SkillName27</key>
+<value>Especialista 2</value>
+</string>
+<string>
+<key>SkillDesc27</key>
+<value>Te haces menos daño al caer</value>
+</string>
+<string>
+<key>SkillName28</key>
+<value>Sanitario 3</value>
+</string>
+<string>
+<key>SkillDesc28</key>
+<value>Eficacia aumentada de los objetos curativos</value>
+</string>
+<string>
+<key>SkillName29</key>
+<value>Reforzado</value>
+</string>
+<string>
+<key>SkillDesc29</key>
+<value>Te haces menos daño en general</value>
+</string>
+<string>
+<key>SkillName30</key>
+<value>Acosador Andante</value>
+</string>
+<string>
+<key>SkillDesc30</key>
+<value>Disminuye el radio de detección cuando te acercas a zombis</value>
+</string>
+<string>
+<key>SkillName31</key>
+<value>Degradación de Armamento 1</value>
+</string>
+<string>
+<key>SkillDesc31</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName32</key>
+<value>Degradación de Armamento 2</value>
+</string>
+<string>
+<key>SkillDesc32</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillName33</key>
+<value>Degradación de Armamento 3</value>
+</string>
+<string>
+<key>SkillDesc33</key>
+<value>Próximamente</value>
+</string>
+<string>
+<key>SkillLearnError</key>
+<value>Error al aprender habilidad</value>
+</string>
+<string>
+<key>$HUD_Pause_Apply</key>
+<value>APLICAR</value>
+</string>
+<string>
+<key>$HUD_Pause_Back</key>
+<value>VOLVER</value>
+</string>
+<string>
+<key>$HUD_Pause_Exit</key>
+<value>SALIR</value>
+</string>
+<string>
+<key>$HUD_Pause_ExitGame</key>
+<value>SALIR DEL JUEGO</value>
+</string>
+<string>
+<key>$HUD_Pause_Options</key>
+<value>OPCIONES</value>
+</string>
+<string>
+<key>$HUD_Pause_ReturnToGame</key>
+<value>VOLVER A LA PARTIDA</value>
+</string>
+<string>
+<key>$HUD_Pause_PauseMenu</key>
+<value>MENÚ DE PAUSA</value>
+</string>
+<string>
+<key>$HUD_Pause_Video</key>
+<value>VÍDEO</value>
+</string>
+<string>
+<key>$HUD_Pause_Controls</key>
+<value>CONTROLES</value>
+</string>
+<string>
+<key>$HUD_Pause_Audio</key>
+<value>AUDIO</value>
+</string>
+<string>
+<key>$HUD_Pause_Gameplay</key>
+<value>JUGABILIDAD</value>
+</string>
+<string>
+<key>HUD_DisconnectingIn</key>
+<value>Desconectando en %d segundos...</value>
+</string>
+<string>
+<key>HUD_DisconnectingSoon</key>
+<value>Desconectando pronto...</value>
+</string>
+<string>
+<key>HUD_DisconnectingTitle</key>
+<value>DESCONECTANDO</value>
+</string>
+<string>
+<key>HUD_ServerNameTitle</key>
+<value>NOMBRE DEL SERVIDOR: %s</value>
+</string>
+<string>
+<key>$HUD_ExitToMainMenu</key>
+<value>SALIR AL MENÚ PRINCIPAL</value>
+</string>
+<string>
+<key>$HUD_ExitingIn</key>
+<value>SALIENDO EN [%02d]</value>
+</string>
+<string>
+<key>$HUD_YouAreDead</key>
+<value>ESTÁS MUERTO</value>
+</string>
+<string>
+<key>$HUD_Hold</key>
+<value>PRESIONAR</value>
+</string>
+<string>
+<key>$HUD_Press</key>
+<value>PRESIONAR</value>
+</string>
+<string>
+<key>$HUD_ToPickUp</key>
+<value>RECOGER</value>
+</string>
+<string>
+<key>$HUD_ToSwitchMine</key>
+<value>CAMBIAR</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_Report</key>
+<value>INFORME</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_Kick</key>
+<value>EXPULSAR</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_Ban</key>
+<value>BLOQUEAR</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_InviteGroup</key>
+<value>INVITAR AL GRUPO</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_KickFromGroup</key>
+<value>EXPULSAR DEL GRUPO</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_LeaveGroup</key>
+<value>ABANDONAR GRUPO</value>
+</string>
+<string>
+<key>$HUD_PlayerAction_AcceptGroupInvite</key>
+<value>ACEPTAR INVITACIÓN DE GRUPO</value>
+</string>
+<string>
+<key>$HUD_Chat_Channel1</key>
+<value>CERCANÍA</value>
+</string>
+<string>
+<key>$HUD_Chat_Channel2</key>
+<value>GENERAL</value>
+</string>
+<string>
+<key>$HUD_Chat_Channel3</key>
+<value>CLAN</value>
+</string>
+<string>
+<key>$HUD_Chat_Channel4</key>
+<value>GRUPO</value>
+</string>
+<string>
+<key>$HUD_Msg_JoinedGame</key>
+<value>%s se ha unido a la partida</value>
+</string>
+<string>
+<key>$HUD_Msg_LeftGame</key>
+<value>%s ha dejado la partida</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatHelp</key>
+<value>Ayuda de CHAT:
+/w nombre_persona - susurrar 
+/r - responder al último susurro
+ /g - chat global
+/t - chat de equipo
+/c - chat del clan
+/ignore nombre_persona - ignorar usuario 
+/unignore nombre_persona - dejar de ignorar 
+/suicide - morir y renacer</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatWhisperToYourself</key>
+<value>Te has susurrado a ti mismo. ¡Nadie más conocerá tus secretos!</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatNoSuchUser</key>
+<value>¡Usuario inexistente!</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatWhisperFormat</key>
+<value>El formato para susurrar es: /w nombre_jugador mensaje</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatNoOneToReply</key>
+<value>¡Nadie a quien responder!</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatIgnoreYourself</key>
+<value>No te puedes ignorar a ti mismo. </value>
+</string>
+<string>
+<key>$HUD_Msg_ChatIgnoreFormat</key>
+<value>El formato para ignorar es: /ignore nombre_jugador</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatNoSuchUserInIgnoreList</key>
+<value>¡No existe ese usuario en tu lista de ignorados!</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatUnignoreFormat</key>
+<value>Para dejar de ignorar: /unignore nombre_jugador</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatTypeHelp</key>
+<value>Escribir /help para comandos del chat</value>
+</string>
+<string>
+<key>$HUD_Msg_ChatNotInClan</key>
+<value>No estás en ningún clan. </value>
+</string>
+<string>
+<key>$HUD_Msg_System</key>
+<value>SISTEMA</value>
+</string>
+<string>
+<key>$HUD_Group</key>
+<value>GRUPO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_PrimaryFire</key>
+<value>DISPARO PRINCIPAL</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Aim</key>
+<value>APUNTAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_MoveForw</key>
+<value>AVANZAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_MoveBack</key>
+<value>RETROCEDER</value>
+</string>
+<string>
+<key>$HUD_Cntrl_MoveLeft</key>
+<value>MOVER A LA IZQUIERDA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_MoveRight</key>
+<value>MOVER A LA DERECHA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Sprint</key>
+<value>ESPRINTAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Jump</key>
+<value>SALTAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Crouch</key>
+<value>AGACHARSE</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Interact</key>
+<value>INTERACTUAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Reload</key>
+<value>RECARGAR</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ChangeFireRate</key>
+<value>CAMBIAR MODO DE DISPARO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_PrimaryWeapon</key>
+<value>ARMA PRINCIPAL</value>
+</string>
+<string>
+<key>$HUD_Cntrl_SecondaryWeapon</key>
+<value>ARMA SECUNDARIA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Handgun</key>
+<value>PISTOLA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Item1</key>
+<value>OBJETO 1</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Item2</key>
+<value>OBJETO 2</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Item3</key>
+<value>OBJETO 3</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Item4</key>
+<value>OBJETO 4</value>
+</string>
+<string>
+<key>$HUD_Cntrl_NextItem</key>
+<value>SIGUIENTE OBJETO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_SteadyAim</key>
+<value>ESTABILIZAR PUNTERÍA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Chat</key>
+<value>CHAT</value>
+</string>
+<string>
+<key>$HUD_Cntrl_SwitchMinimap</key>
+<value>ACTIVAR MINIMAPA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ShowScore</key>
+<value>MOSTRAR PUNTUACIÓN</value>
+</string>
+<string>
+<key>$HUD_Cntrl_QuickSwitch</key>
+<value>CAMBIO RÁPIDO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ThrowGrenade</key>
+<value>LANZAR GRANADA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ToggleNightvision</key>
+<value>ACTIVAR/DESACTIVAR VISIÓN NOCTURNA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_SelectWeapons</key>
+<value>SELECCIONAR ARMAS</value>
+</string>
+<string>
+<key>$HUD_Cntrl_MoveCommand</key>
+<value>DESPLAZARSE</value>
+</string>
+<string>
+<key>$HUD_Switch_FPS_TPS</key>
+<value>ACTIVAR VISTA FPS/TPS</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Inventory</key>
+<value>MOSTRAR INVENTARIO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Chat1</key>
+<value>CHAT DE CERCANÍA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Chat2</key>
+<value>CHAT GENERAL</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Chat3</key>
+<value>CHAT DEL CLAN</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Chat4</key>
+<value>CHAT DE GRUPO</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ShowAttachments</key>
+<value>MOSTRAR ACCESORIOS</value>
+</string>
+<string>
+<key>$HUD_Cntrl_FreeHands</key>
+<value>MANOS VACÍAS</value>
+</string>
+<string>
+<key>$HUD_Cntrl_Prone</key>
+<value>TENDENCIA</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ShowPlayers</key>
+<value>MOSTRAR PUNTUACIÓN</value>
+</string>
+<string>
+<key>$HUD_Cntrl_TurnOffHUD</key>
+<value>ACTIVAR/DESACTIVAR HUD</value>
+</string>
+<string>
+<key>$HUD_Cntrl_ToggleFlashlight</key>
+<value>ACTIVAR/DESACTIVAR LINTERNA</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_HEAD</key>
+<value>CABEZA</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_UPPER_BODY</key>
+<value>PARTE SUPERIOR DEL CUERPO</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_LEGS</key>
+<value>PIERNAS</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_HARDCORE</key>
+<value>HARDCORE</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_NORMAL</key>
+<value>NORMAL</value>
+</string>
+<string>
+<key>$FR_INVENTORY_GOLBAL_INVENTORY</key>
+<value>inventario general:</value>
+</string>
+<string>
+<key>$FR_INVENTORY_EQUIPED</key>
+<value>Equipado:</value>
+</string>
+<string>
+<key>$FR_INVENTORY_QUICKSLOTS</key>
+<value>ACCESOS DIRECTOS: </value>
+</string>
+<string>
+<key>$FR_NO_POST_OFFICE_AROUND</key>
+<value>NO HAY NINGUNA CAJA FUERTE CERCA</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_Select_Survivor</key>
+<value>Seleccionar Superviviente</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_SKILL_TREE</key>
+<value>ÁRBOL DE HABILIDADES</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_BANDIT</key>
+<value>PROSCRITO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_NEW_CHARACTER</key>
+<value>NUEVO PERSONAJE</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_REVIVE_NOW</key>
+<value>REVIVIR AHORA</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_HEAL</key>
+<value>CURAR</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_DEAD</key>
+<value>MUERTO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_REVIVE_IN</key>
+<value>REVIVIR EN</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_NEW_SURVIVOR</key>
+<value>CREAR NUEVO SUPERVIVIENTE</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_UNLOCK_CHARACTER</key>
+<value>DESBLOQUEAR PERSONAJE</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE</key>
+<value>CREAR</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_LevelText</key>
+<value>Nivel</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_STATUS</key>
+<value>ESTADO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_TIME_PLAYED</key>
+<value>TIEMPO JUGADO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_EMPTY</key>
+<value>VACÍO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_EMPTY_TEXT</key>
+<value>puedes usar este hueco para un nuevo superviviente</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_CLICK_TO_CREATE</key>
+<value>haz clic para crear un nuevo superviviente</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_EXPERIENCE</key>
+<value>EXPERIENCIA</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_SURVIVED</key>
+<value>SUPERVIVENCIA</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_KILLED_ZOMBIES</key>
+<value>ZOMBIES ELIMINADOS</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_KILLED_BANDITS</key>
+<value>BANDIDOS ASESINADOS</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_KILLED_CIVILIANS</key>
+<value>CIVILES ASESINADOS</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_ALIGNMENT</key>
+<value>ALINEAMIENTO</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_SCREEN_CREATE_LAST_MAP</key>
+<value>ÚLTIMO MAPA</value>
+</string>
+<string>
+<key>$FR_Survivor_EnterNewName</key>
+<value>introducir nombre de nuevo superviviente</value>
+</string>
+<string>
+<key>$FR_Survivor_SelectGameMode</key>
+<value>seleccionar modo de juego</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_REVIVE_SCREEN_HOURS</key>
+<value>HORAS</value>
+</string>
+<string>
+<key>$FR_SURVIVOR_REVIVE_SCREEN_MINS</key>
+<value>MINUTOS</value>
+</string>
+<string>
+<key>$FR_MARKETPLACE_PERMANENT</key>
+<value>PERMANENTE</value>
+</string>
+<string>
+<key>$FR_MARKETPLACE_BUY_FOR</key>
+<value>COMPRAR ESTE OBJETO PARA</value>
+</string>
+<string>
+<key>$FR_STACK</key>
+<value>APILAMIENTO:</value>
+</string>
+<string>
+<key>$FR_PRICE</key>
+<value>PRECIO: </value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_DROP_ERROR</key>
+<value>Tienes que seleccionar un Objeto para soltarlo</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_NEW_CHARACTER</key>
+<value>Nuevo personaje</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_LIGHT_BACKPACK</key>
+<value>Mochila ligera</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_HOURS</key>
+<value>HORAS</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_HOUR</key>
+<value>HORA</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_MINS</key>
+<value>MINUTOS</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_MIN</key>
+<value>MIN</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_CHANGE_BACKPACK</key>
+<value>CAMBIAR MOCHILA</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_DROP_ITEM</key>
+<value>SOLTAR OBJETO</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_BACKPACK_TYPE</key>
+<value>TIPO:</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_MAX_WEIGHT</key>
+<value>PESO MÁXIMO:</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_WEIGHT</key>
+<value>PESO:</value>
+</string>
+<string>
+<key>$FR_PAUSE_INVENTORY_LBS</key>
+<value>KG</value>
+</string>
+<string>
+<key>$FR_PAUSE_USE_ITEM</key>
+<value>USAR OBJETO</value>
+</string>
+<string>
+<key>$FR_PAUSE_EAT</key>
+<value>COMER</value>
+</string>
+<string>
+<key>$FR_PAUSE_DRINK</key>
+<value>BEBER</value>
+</string>
+<string>
+<key>$FR_PAUSE_EQUIP</key>
+<value>EQUIPAR</value>
+</string>
+<string>
+<key>$FR_PAUSE_ATTACH</key>
+<value>ACOPLAR</value>
+</string>
+<string>
+<key>$FR_PAUSE_CHANGEBP</key>
+<value>CAMBIAR MOCHILA</value>
+</string>
+<string>
+<key>$FR_VAULT_TITLE</key>
+<value>CAJA FUERTE</value>
+</string>
+<string>
+<key>FR_PAUSE_TOO_MUCH_WEIGHT</key>
+<value>NIVEL MÁXIMO DE CARGA ALCANZADO</value>
+</string>
+<string>
+<key>$FR_PAUSE_QUIT</key>
+<value>ABANDONAR</value>
+</string>
+<string>
+<key>$FR_PAUSE_BACKTOGAME</key>
+<value>VOLVER AL JUEGO</value>
+</string>
+<string>
+<key>$FR_PAUSE_QUIT_GAME</key>
+<value>ABANDONAR JUEGO</value>
+</string>
+<string>
+<key>$FR_PAUSE_QUIT_SURE</key>
+<value>¿ESTÁS SEGURO DE QUE QUIERES ABANDONAR EL JUEGO?</value>
+</string>
+<string>
+<key>$FR_GENERAL_OPTIONS</key>
+<value>OPCIONES GENERALES</value>
+</string>
+<string>
+<key>$FR_DELETE</key>
+<value>ELIMINAR</value>
+</string>
+<string>
+<key>$FR_Create_Character</key>
+<value>Crear personaje</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_NAME_TOO_SHORT</key>
+<value>El nombre del personaje es demasiado corto</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_UNLOCK</key>
+<value>Necesitas desbloquear el personaje</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_UNLOCK_CHARACTER</key>
+<value>DESBLOQUEAR PERSONAJE</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_PURCHASE_GC</key>
+<value>ADQUIRIR GC</value>
+</string>
+<string>
+<key>$FR_GC_STATEMENT</key>
+<value>REGISTRO DE GC</value>
+</string>
+<string>
+<key>$FR_YOU_SPEND</key>
+<value>GASTAS:</value>
+</string>
+<string>
+<key>$FR_YOU_GET</key>
+<value>CONSIGUES:</value>
+</string>
+<string>
+<key>$FR_select_amount_of_money_to_spend</key>
+<value>POR FAVOR, SELECCIONA LA CANTIDAD DE DINERO QUE TE GUSTARÍA GASTAR</value>
+</string>
+<string>
+<key>$FR_the_more_you_spend</key>
+<value>(cuanto más te gastes, más gc puedes comprar con 1$)</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_CURRENT_GC</key>
+<value>CG ACTUALES</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_CURRENT_XP</key>
+<value>EXP ACTUAL</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_COST</key>
+<value>PRECIO</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_BALANCE</key>
+<value>SALDO</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_TITLE_GC</key>
+<value>DESBLOQUEAR CON MONEDAS DE ORO</value>
+</string>
+<string>
+<key>$FR_CREATE_CHARACTER_TITLE_XP</key>
+<value>DESBLOQUEAR CON PUNTOS DE EXPERIENCIA</value>
+</string>
+<string>
+<key>$FR_CREATE_SURVIVOR_CREATE_NEW</key>
+<value>CREAR NUEVO SUPERVIVIENTE</value>
+</string>
+<string>
+<key>$FR_MY_GC_TRANSACTIONS</key>
+<value>TRANSACCIONES DE GC</value>
+</string>
+<string>
+<key>$FR_MY_GC_TRANSACTIONS_TOP</key>
+<value>  ID FECHA TRANSACCIÓN DESCRIPCIÓN CANTIDAD SALDO</value>
+</string>
+<string>
+<key>FailedToGetGCTransactions</key>
+<value>Error al recuperar historial de transacciones de GC</value>
+</string>
+<string>
+<key>$FR_PLAY_GAME_NO_SURVIVORS</key>
+<value>No tienes Supervivientes. Crea uno. </value>
+</string>
+<string>
+<key>$FR_PLAY_GAME_SURVIVOR_DEAD</key>
+<value>Tu Superviviente está Muerto. Por favor, ¡Resucítalo!</value>
+</string>
+<string>
+<key>$FR_CURRENT_BACKPACK</key>
+<value>Mochila actual</value>
+</string>
+<string>
+<key>$FR_BACKPACK_TYPE</key>
+<value>CLASES DE MOCHILA</value>
+</string>
+<string>
+<key>$FR_CURRECT_WEIGHT</key>
+<value>PESO ACTUAL</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_NoItem</key>
+<value>No existe ese objeto</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_NoPrice</key>
+<value>El objeto no tiene precio</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_NoMoney</key>
+<value>No tienes dinero suficiente</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_NoBackpackSpace</key>
+<value>No tienes suficiente espacio en tu mochila</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_WeightLimit</key>
+<value>No puedes llevar más objetos (demasiado pesado)</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_NoInventorySpace</key>
+<value>No queda espacio en tu inventario general</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_Desync</key>
+<value>Existe una desincronización entre cliente y servidor, por favor reinicie el juego</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_BadTarget</key>
+<value>No se puede mover el objeto a ese hueco</value>
+</string>
+<string>
+<key>InGameUI_ErrorMsg_Fail</key>
+<value>Operación fracasada</value>
+</string>
+<string>
+<key>$FR_BROWSE_BROWSE</key>
+<value>OJEAR</value>
+</string>
+<string>
+<key>$FR_BROWSE_RECENT</key>
+<value>RECIENTE</value>
+</string>
+<string>
+<key>$FR_BROWSE_FAVORITES</key>
+<value>FAVORITOS</value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText1</key>
+<value>opciones JUGADORES </value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText2</key>
+<value>FAV</value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText3</key>
+<value>NOMBRE DEL SERVIDOR</value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText4</key>
+<value>MODO</value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText5</key>
+<value>MAPA</value>
+</string>
+<string>
+<key>$FR_BROWSE_TopText6</key>
+<value>PING</value>
+</string>
+<string>
+<key>$FR_FILTER_REGION</key>
+<value>REGIÓN: </value>
+</string>
+<string>
+<key>$FR_FILTER_FILTERS</key>
+<value>FILTROS:</value>
+</string>
+<string>
+<key>$FR_FILTER_SERVEROPTIONS</key>
+<value>OPCIONES DEL SERVIDOR:</value>
+</string>
+<string>
+<key>$FR_RENT_SERVER</key>
+<value>ALQUILAR SERVIDOR </value>
+</string>
+<string>
+<key>$FR_RENEW_SERVER</key>
+<value>RENOVAR SERVIDOR</value>
+</string>
+<string>
+<key>$FR_JOIN_SERVER</key>
+<value>UNIRSE AL SERVIDOR</value>
+</string>
+<string>
+<key>$FR_APPLY_FILTERS</key>
+<value>APLICAR FILTROS</value>
+</string>
+<string>
+<key>$FR_SERVER_NAME_FILTER</key>
+<value>FILTRO DE NOMBRE</value>
+</string>
+<string>
+<key>$FR_REGION</key>
+<value>REGIÓN</value>
+</string>
+<string>
+<key>$FR_REGION_NA</key>
+<value>NORTEAMÉRICA</value>
+</string>
+<string>
+<key>$FR_REGION_EU</key>
+<value>EUROPA</value>
+</string>
+<string>
+<key>$FR_REGION_RU</key>
+<value>RUSIA</value>
+</string>
+<string>
+<key>$FR_GAMEWORLDS</key>
+<value>MUNDOS VIRTUALES</value>
+</string>
+<string>
+<key>$FR_STRONGHOLDS</key>
+<value>FORTALEZAS</value>
+</string>
+<string>
+<key>$FR_HIDE_EMPTY</key>
+<value>OCULTAR VACIOS</value>
+</string>
+<string>
+<key>$FR_HIDE_FULL</key>
+<value>OCULTAR COMPLETOS</value>
+</string>
+<string>
+<key>$FR_TRACERS</key>
+<value>TRAZADORAS</value>
+</string>
+<string>
+<key>$FR_NAMEPLATES</key>
+<value>PLACAS DE IDENTIFICACIÓN</value>
+</string>
+<string>
+<key>$FR_CROSSHAIR</key>
+<value>PUNTO DE MIRA</value>
+</string>
+<string>
+<key>$FR_PASSWORD_PROTECTED</key>
+<value>PROTEGIDO POR CONTRASEÑA</value>
+</string>
+<string>
+<key>$FR_ShowNameplates</key>
+<value>MOSTRAR PLACAS DE IDENTIFICACIÓN</value>
+</string>
+<string>
+<key>$FR_ShowCrosshair</key>
+<value>MOSTRAR PUNTO DE MIRA</value>
+</string>
+<string>
+<key>$FR_ShowTracers</key>
+<value>MOSTRAR TRAZADORAS</value>
+</string>
+<string>
+<key>$FR_RentalPeriod</key>
+<value>PERIODO DE ALQUILER</value>
+</string>
+<string>
+<key>$FR_RentalPeriod2</key>
+<value>(MESES)</value>
+</string>
+<string>
+<key>$FR_PVE</key>
+<value>PVE</value>
+</string>
+<string>
+<key>$FR_ServerName</key>
+<value>NOMBRE DEL SERVIDOR</value>
+</string>
+<string>
+<key>MapType_Gameworld</key>
+<value>MUNDO VIRTUAL</value>
+</string>
+<string>
+<key>MapType_Stronghold</key>
+<value>FORTALEZA</value>
+</string>
+<string>
+<key>MapColorado</key>
+<value>COLORADO</value>
+</string>
+<string>
+<key>MapCliffside</key>
+<value>ZONA DE ACANTILADOS</value>
+</string>
+<string>
+<key>ServerRental_TimeLeft</key>
+<value>%dD %dH</value>
+</string>
+<string>
+<key>ServerRental_SetupStatusInfo</key>
+<value>ACTUALMENTE UNO DE TUS SERVIDORES ESTÁ EN FASE DE CONFIGURACIÓN O EN FASE PENDIENTE. PUEDE LLEVAR HASTA 12 HORAS QUE TU SERVIDOR ESTÉ PREPARADO. GRACIAS POR TU PACIENCIA. </value>
+</string>
+<string>
+<key>$FR_CLANS</key>
+<value>CLANES</value>
+</string>
+<string>
+<key>$FR_MYCLAN</key>
+<value>MI CLAN</value>
+</string>
+<string>
+<key>$FR_MYCLANAPPLICATIONS</key>
+<value>SOLICITUDES DE MI CLAN</value>
+</string>
+<string>
+<key>$FR_CREATECLAN</key>
+<value>CREAR CLAN</value>
+</string>
+<string>
+<key>$FR_CLANNAME</key>
+<value>NOMBRE DEL CLAN</value>
+</string>
+<string>
+<key>$FR_CLANEXP</key>
+<value>EXP DEL CLAN</value>
+</string>
+<string>
+<key>$FR_CLANMEMBERS</key>
+<value>MIEMBROS DEL CLAN</value>
+</string>
+<string>
+<key>$FR_CLANMEMBERS2</key>
+<value>MIEMBROS:</value>
+</string>
+<string>
+<key>$FR_ClanNameNotLongEnough</key>
+<value>El nombre del clan no es suficientemente largo</value>
+</string>
+<string>
+<key>$FR_ClanTagLengthIncorrect</key>
+<value>La etiqueta del clan debe tener 4 símbolos</value>
+</string>
+<string>
+<key>$FR_ClanChangeIcon</key>
+<value>CAMBIAR ICONO</value>
+</string>
+<string>
+<key>$FR_ClanInvitePlayer</key>
+<value>INVITAR JUGADOR</value>
+</string>
+<string>
+<key>$FR_ClanInvitePlayerText</key>
+<value>¿A QUIEN QUERRÍAS INVITAR A TU CLAN?</value>
+</string>
+<string>
+<key>$FR_ClanPlName</key>
+<value>NOMBRE</value>
+</string>
+<string>
+<key>$FR_ClanPlExp</key>
+<value>EXP</value>
+</string>
+<string>
+<key>$FR_ClanPlST</key>
+<value>TIEMPO DE SUPERVIVENCIA</value>
+</string>
+<string>
+<key>$FR_ClanPlRep</key>
+<value>REPUTACIÓN</value>
+</string>
+<string>
+<key>$FR_ClanPlKZ</key>
+<value>ZOMBIES ELIMINADOS</value>
+</string>
+<string>
+<key>$FR_ClanPlKS</key>
+<value>SUPERVIVIENTES ASESINADOS</value>
+</string>
+<string>
+<key>$FR_ClanPlKB</key>
+<value>BANDIDOS ASESINADOS</value>
+</string>
+<string>
+<key>$FR_ClanPlDG</key>
+<value>GC DONADAS</value>
+</string>
+<string>
+<key>$FR_ClanLeaveClanAreYouSure</key>
+<value>¿ESTÁS SEGURO DE QUE QUIERES DEJAR EL CLAN?</value>
+</string>
+<string>
+<key>$FR_ClanDonateGCHowMuch</key>
+<value>¿CUÁNTAS GC TE GUSTARÍA DONAR?</value>
+</string>
+<string>
+<key>$FR_ClanPromote</key>
+<value>ASCENDER</value>
+</string>
+<string>
+<key>$FR_ClanDemote</key>
+<value>DEGRADAR</value>
+</string>
+<string>
+<key>$FR_ClanKick</key>
+<value>EXPULSAR</value>
+</string>
+<string>
+<key>$FR_ClanGiveGC</key>
+<value>DAR GC</value>
+</string>
+<string>
+<key>$FR_ClanGiveGCHowMuch</key>
+<value>¿CUÁNTAS GC TE GUSTARÍA DAR?</value>
+</string>
+<string>
+<key>$FR_Slots</key>
+<value>HUECOS</value>
+</string>
+<string>
+<key>$FR_GC</key>
+<value>GC</value>
+</string>
+<string>
+<key>$FR_ClanJoin</key>
+<value>UNIRSE AL CLAN</value>
+</string>
+<string>
+<key>$FR_ClanSlotlistTop</key>
+<value>NOMBRE DEL CLAN CREADOR MIEMBROS </value>
+</string>
+<string>
+<key>$FR_ClanSelectColor</key>
+<value>SELECCIONA COLOR</value>
+</string>
+<string>
+<key>$FR_ClanNameYourClan</key>
+<value>NOMBRA TU CLAN:</value>
+</string>
+<string>
+<key>$FR_ClanNameTag</key>
+<value>ETIQUETA DEL CLAN:</value>
+</string>
+<string>
+<key>$FR_ClanLeaveClan</key>
+<value>DEJAR CLAN</value>
+</string>
+<string>
+<key>$FR_ClanBuySlots</key>
+<value>COMPRAR HUECOS</value>
+</string>
+<string>
+<key>$FR_ClanBuySlotsWarning</key>
+<value>LAS GC SE DESCONTARÁN DE TU CUENTA, NO DE LA RESERVA DEL CLAN</value>
+</string>
+<string>
+<key>$FR_ClanReserve</key>
+<value>RESERVA DEL CLAN:</value>
+</string>
+<string>
+<key>$FR_ClanDonateGC</key>
+<value>DONAR GC</value>
+</string>
+<string>
+<key>$FR_ClanYouHaveNewInvite</key>
+<value>¡TIENES UNA NUEVA INVITACIÓN AL CLAN!</value>
+</string>
+<string>
+<key>$FR_NormalMode</key>
+<value>MODO NORMAL</value>
+</string>
+<string>
+<key>$FR_HardcoreMode</key>
+<value>MODO HARDCORE</value>
+</string>
+<string>
+<key>$FR_Continue</key>
+<value>CONTINUAR</value>
+</string>
+<string>
+<key>$FR_UnlockCharacter</key>
+<value>desbloquear personaje:</value>
+</string>
+<string>
+<key>$FR_ReviveNow</key>
+<value>¡REVIVIR AHORA!</value>
+</string>
+<string>
+<key>$FR_WOUNDED</key>
+<value>HERIDO</value>
+</string>
+<string>
+<key>$FR_READY</key>
+<value>¡PREPARADO!</value>
+</string>
+<string>
+<key>$FR_Top</key>
+<value>LÍDER</value>
+</string>
+<string>
+<key>$FR_LB_XP</key>
+<value>EXPERIENCIA</value>
+</string>
+<string>
+<key>$FR_LB_TimePlayed</key>
+<value>TIEMPO SOBREVIVIDO</value>
+</string>
+<string>
+<key>$FR_LB_KZ</key>
+<value>ZOMBIES ELIMINADOS</value>
+</string>
+<string>
+<key>$FR_LB_KS</key>
+<value>SUPERVIVIENTES ASESINADOS</value>
+</string>
+<string>
+<key>$FR_LB_KB</key>
+<value>BANDIDOS ASESINADOS</value>
+</string>
+<string>
+<key>$FR_LB_HEROES</key>
+<value>HÉROES</value>
+</string>
+<string>
+<key>$FR_LB_BANDITS</key>
+<value>VILLANOS</value>
+</string>
+<string>
+<key>$FR_LB_TOP_XP</key>
+<value>POS NOMBRE ESTADO EXP</value>
+</string>
+<string>
+<key>$FR_LB_TOP_ST</key>
+<value>POS NOMBRE ESTADO TIEMPO DE SUPERVIVENCIA</value>
+</string>
+<string>
+<key>$FR_LB_TOP_KZ</key>
+<value>POS NOMBRE ZOMBIS EXTERMINADOS</value>
+</string>
+<string>
+<key>$FR_LB_TOP_KS</key>
+<value>POS NOMBRE ESTADO SUPERVIVIENTES ASESINADOS</value>
+</string>
+<string>
+<key>$FR_LB_TOP_KB</key>
+<value>POS NOMBRE ESTADO PROSCRITOS ABATIDOS</value>
+</string>
+<string>
+<key>$FR_LB_TOP_RT</key>
+<value>POS NOMBRE ESTADO REPUTACIÓN</value>
+</string>
+<string>
+<key>FailedLeaderboardData</key>
+<value>Error al recuperar los datos de la clasificación</value>
+</string>
+<string>
+<key>$FR_SkillTree</key>
+<value>ÁRBOL DE HABILIDADES</value>
+</string>
+<string>
+<key>$FR_DeleteCharacter</key>
+<value>ELIMINAR PERSONAJE</value>
+</string>
+<string>
+<key>$FR_DeleteCharacterConf</key>
+<value>¿Estás seguro de que quieres Eliminar este Personaje?</value>
+</string>
+<string>
+<key>$rep_civilian</key>
+<value>[CIVIL]</value>
+</string>
+<string>
+<key>$rep_paragon</key>
+<value>[PALADÍN]</value>
+</string>
+<string>
+<key>$rep_vigilante</key>
+<value>[VIGILANTE]</value>
+</string>
+<string>
+<key>$rep_guardian</key>
+<value>[PROTECTOR]</value>
+</string>
+<string>
+<key>$rep_lawmen</key>
+<value>[AGENTE]</value>
+</string>
+<string>
+<key>$rep_deputy</key>
+<value>[LUGARTENIENTE]</value>
+</string>
+<string>
+<key>$rep_constable</key>
+<value>[ALGUACIL]</value>
+</string>
+<string>
+<key>$rep_thug</key>
+<value>[MALEANTE]</value>
+</string>
+<string>
+<key>$rep_outlaw</key>
+<value>[DELINCUENTE]</value>
+</string>
+<string>
+<key>$rep_bandit</key>
+<value>[PROSCRITO]</value>
+</string>
+<string>
+<key>$rep_hitman</key>
+<value>[SICARIO]</value>
+</string>
+<string>
+<key>$rep_assassin</key>
+<value>[ASESINO]</value>
+</string>
+<string>
+<key>$rep_villain</key>
+<value>[VILLANO]</value>
+</string>
+<string>
+<key>$ERROR</key>
+<value>ERROR</value>
+</string>
+<string>
+<key>NoteC1</key>
+<value>Bueno, encontré un boli y un trozo de papel en una oficina de abajo... creo que escribiré algo a mi mujer o a cualquiera que la conozca o quiera saber mi historia. Me llamo John Thomas, vivía en Fallsdale con mi mujer Ellen Thomas. Trabajaba en la construcción durante el día y por la noche era un padre de familia. Tenía una familia realmente maravillosa. Cuando comenzaron los disturbios... nos separamos y no nos hemos vuelto a ver. Nuestro plan era encontrarnos aquí en mi trabajo si nos separábamos, pero ninguno volvió. Ahora, nuestro pueblo está invadido con lo que coño sean esas cosas y he estado viviendo en esta jaula 2 semanas, pero ahora me estoy quedando sin provisiones. Echo de menos a mi mujer... creo que iré a buscarla dentro de poco. De todas formas, aquí no queda nada para mi, solo unas cuantas latas de judías más hasta que me quede seco. Ellen, si te llegara esta nota, te quiero y reúnete conmigo en Mountain Crest. </value>
+</string>
+<string>
+<key>NoteC2a</key>
+<value>No puedo creer en lo que se está convirtiendo este mundo. Estaba conduciendo al trabajo esta mañana y un mamonazo borracho estrella su coche contra un poste de la luz delante de mi. Salí del coche intentando ser el Buen Samaritano y el muy imbécil me lo agradece pegándome un mordisco en el puto brazo. Así que aquí estoy, escribiendo en un papel como un jodido carvernícola sin fuerzas por culpa de gilipollas borracho y sin cobertura por por culpa de la mierda de las montañas. Puff, los problemas del mundo moderno  </value>
+</string>
+<string>
+<key>NoteC2b</key>
+<value>Todo esto ha ocurrido demasiado rápido, por si la separación de mi marido no hubiera sido ya demasiado difícil, ahora Nathan me cuenta que mi John ha muerto y que debería volver y quedarme con él. He estado pensando en ir a la obra para ver si de verdad no ha llegado pero me da pánico ir yo sola. Nathan se ha ido hace un buen rato. Se fue a por provisiones hace horas y todavía no ha vuelto y se oyen gemidos y arañazos fuera de la autocaravana. Las llaves no están en la autocaravana, no tengo donde ir y no puedo hacer nada para protegerme. ¡Ya no quiero vivir más en este mundo! 
+
+John, siempre te he amado y te veré pronto, mi amor. </value>
+</string>
+<string>
+<key>NoteC3a</key>
+<value>El ejército llegó esta mañana, negándose a responder a ninguna de mis preguntas excepto que la ciudad está bajo una estricta cuarentena. En todos mis años como Sheriff, he aprendido algunas cosas y una de ellas es reconocer las pamplinas burocráticas cuando las escucho. He sido temporalmente relevado del cargo y me han confinado en la comisaría. Viene humo de la ciudad y juraría que he oído gritos. Aquí hay algo que no huele bien y voy a descubrirlo.
+
+Sheriff Brock</value>
+</string>
+<string>
+<key>NoteC3b</key>
+<value>Aquí el Sheriff Brock. Estoy dejando notas para avisar a todo el que pase por aquí, el ejército NO ES trigo limpio. Les he estado vigilando los últimos días y tratan a esta gente como ganado. Se niegan a responder a NINGUNA de mis preguntas y cuando un grupo de civiles hambrientos y cabreados arremetieron contra las barricadas, ¡les acribillaron a todos! La segunda vez que me acerqué para decirles algo me metieron en esta puñetera celda. Pero lo que no saben es que es MI celda y sé exactamente cómo salir. Me dirigiré hacia el este, pegándome a los árboles. </value>
+</string>
+<string>
+<key>NoteC4a</key>
+<value>Bueno, he encontrado a mi mujer. De todos los sitios donde pensé que la encontraría, esta porquería de caravana no era el primero de mi lista. Te juro que si Nathan está ahí fuera y lo encuentro, me lo cargo yo mismo, vivo o muerto. Ellen, siento mucho no haber podido estar ahí para ti. Tío, tengo que cambiar de tema. Conseguí abrirme paso hasta Mountain Crest. Mientras daba una batida por el pueblo, me encontré un grupo de otras 11 personas y me uní a ellos. No les hacía mucha gracia aceptar a una persona a primera vista, menos mal que este tio, Dwayne y su novia Nelle les convencieron para que me dejaran unirme al grupo. Se ha habado mucho de que los militares de por aquí se están volviendo de gatillo fácil así que estamos pensando en irnos hacia Clearview en la oscuridad de la noche.   </value>
+</string>
+<string>
+<key>NoteC4b</key>
+<value>INFORME 
+
+ DAÑOS COLATERALES
+
+ 12 bajas en total
+ MUJERES
+ Jane Doe
+Jane Doe
+Jane Doe
+
+HOMBRES
+Tyler Sparks
+Heston Barber
+John Thomas
+Anthony Campos
+John Doe
+John Doe
+John Doe
+
+ Identidades recuperadas solicitadas para informe completo de incidentes</value>
+</string>
+<string>
+<key>NoteC5a</key>
+<value>REGLAMENTO BUZURKERS 
+
+ Jim 112
+ Hank 230 
+ Jeffy 85 delante de Jim le disparó en todo su culo</value>
+</string>
+<string>
+<key>NoteC5b</key>
+<value>Hoy Papa dice que oficialmente soy una chica mayor 
+Papi me llevó justo al borde y me dio un fusil y lo apuntó hacia un taburete. Estaba asustada pero no se lo dije porque soy mayor. Me dijo que mirara a través de la cosa de cristal y que buscara a uno de los monstruos. No fue muy difícil porque hay cientos de ellos y veo realmente bien. Cuando vi uno, Papi me sujetó la mano y me dijo que fuera apretando lentamente, que mantuviera la respiración y que siguiera apretando hasta que hiciera PUM. El ruido me retumbó en la cabeza, pero cuando abrí los ojos, el monstruo estaba tirado en el suelo. Estaba muy contenta cuando volvimos al campamento. Mamá me miró realmente disgustada pero da igual porque ahora puedo protegerla 
+Vale, buenas noches diario,
+ te quiere Echo Lana</value>
+</string>
+<string>
+<key>NoteC5c</key>
+<value>En este punto, no se quien va a encontrarse con estos. He estado viviendo en las montañas unos meses desde que me escapé de mi propia jodida celda. Al final, he decidido irme a la ciudad, este virus parece que ha convertido a la mayoría de los habitantes en monstruos descerebrados. Aunque espero que alguien encuentre esto, ya habrán averiguado por su propia cuenta que más les vale MANTENERSE ALEJADOS de cualquiera que parezca diferente. He estado observando los asentamientos de los no infectados y parece que aquí hay 3 campamentos separados. Sobre algunos edificios cercanos al paso elevado, hay tres hombres armados con fusiles y parece que disparan al tuntún. Tras ellos, atrincherados en varios contenedores, veo lo que parecen ser familias. Los dos grupos tienen en marcha algún trato, quizás comida por protección, pero las relaciones son, cuando menos, débiles. Repito, EVITEN al ejército a toda costa. Voy a dirigirme al este, simplemente necesito averiguar lo que está pasando aquí.
+ Sheriff Brock. </value>
+</string>
+<string>
+<key>NoteC5d</key>
+<value>INFORME DE INVENTARIO
+
+ MATERIALES ENTREGADOS, ACUSE DE RECIVO
+
+ 4 cajas de municiones de gran calibre
+ 32 Carabinas M4 
+ 2 cajas de 16 Granadas</value>
+</string>
+<string>
+<key>NoteC5e</key>
+<value>FARMACIA GOLDENSTEIN
+
+ RECETA
+
+ Vendajes 3x
+ vacuna 1x
+ 12 Botellas de Agua de 375 ml 
+ Barritas de Chocolate 4x
+
+ Total: 284. 72$</value>
+</string>
+<string>
+<key>NoteC7a</key>
+<value>Querido Henry,
+
+ No puedo creer lo que mis ojos han visto. Los acontecimientos de los últimos días han sido una puta locura. El martes por la noche, llegó un extraño al pueblo. Parecía enfermo, así que George fue a ayudarle y ¡el muy cabrón le MORDIÓ! ¡¡Le arrancó un trozo de hombro!! horrible. Después de que conseguimos reducirle, le metimos en la cámara frigorífica del almacén. Entonces, a George se le fue la cabeza del todo, y de repente ¡todo el mundo se puso a meterse bocados unos a otros ! Tuve que apalear con un TABURETE a Nora, la mujer de George ¡hasta la MUERTE! Daba igual cuantas veces le diera, ella seguía levantándose. Así que, cogí aquel taburete y le le estuve dando en la cabeza hasta que dejaron de darle espasmos. Nunca me hubiera creído capaz de hacer eso... Desde entonces, me he encerrado en nuestra casa.
+
+ De verdad, espero que estéis bien</value>
+</string>
+<string>
+<key>NoteC7b</key>
+<value>Henry, las cosas están mejorando. Esta mañana han llegado 6 personas desde Clearview. Su jefe es un verdadero manitas y me ha dejado como nuevas las barricadas. De verdad creo  que podemos conseguirlo. 
+¿Dónde estás? </value>
+</string>
+<string>
+<key>NoteC8</key>
+<value>Ma
+ hemos oído un ruido viniendo de Clearview
+ parece como si hubiera una guerra o algo así ahí abajo
+ los chicos y yo vamos a echar un vistazo
+ ahora venimos
+
+
+ un besito de jim hank y jiffy</value>
+</string>
+<string>
+<key>NoteC10</key>
+<value>A mi queridísima Barbara, 
+
+ Me imagino, mientras escribo esto, que debes estar preocupada. De hecho, cuando recibas esto, lo estarás mucho más. Déjame asegurarte que estoy bien. Aunque no sé exactamente lo que está pasando, ahora mismo no estoy en peligro. Han hecho aterrizar a todos los vuelos de fuera de la zona y misteriosamente hemos perdido las líneas telefónicas. Hay un bucle de emisión de radio en todos los canales AM que informa de algo acerca de una cuarentena y de que debemos permanecer en nuestras casas. Tengo que confesar que estoy un poco alterado, porque la ignorancia no conoce límites . Algunos valientes de aquí han salido hacia el pueblo más cercano para descubrir que es lo que está pasando, pero todavía no han vuelto. Seis de nosotros estamos planeando organizar una batida más tarde hoy mismo. 
+
+Espero que esta carta te llegue bien, si realmente te acaba llegando. 
+
+Firmado Andrew Goldstein
+</value>
+</string>
+<string>
+<key>NoteC11</key>
+<value>Amor mío
+ Lo siento mucho. Se me parte en dos el corazón y nunca he llorado tanto en mi vida. Es difícil escribir con la autocaravana sacudiéndose y demás, y difícilmente puedo levantar la vista sin ver a una de esas cosas babeando en las ventanas, queriendo hincarnos el diente. Las chicas están muy asustadas, y ya he visto lo que les hacen a los otros. Uno iba corriendo carretera abajo cuando un grupo de estas cosas le alcanzó y le destripó en pedazos. No puedo dejar que eso les pase a nuestras niñas. Simplemente no puedo. Te has ido hace tanto que ahora el dolor del hambre nos tiene todo el tiempo temblando 
+
+ Voy a hacer lo que debo. 
+
+ Si vuelves alguna vez, perdóname por favor. Te quiero. </value>
+</string>
+<string>
+<key>NoteC12</key>
+<value>No se si estás leyendo esto, cariño, pero lo siento. Tan pronto como llegué a la ciudad, una de esas cosas me mordió. Puedo sentir como el impulso crece en mis entrañas incluso mientras garabateo mis últimas palabras en esta servilleta de mierda. Una lástima que pase esto, saltando desde un acantilado a no más de unos cientos de metros de los que amas, sabiendo que no volverás a ver sus caras angelicales. Di a las chicas que las quiero. </value>
+</string>
+<string>
+<key>NoteC13</key>
+<value>Día 223 
+Ayer vi lo más raro del mundo. Un hombre al que acosaba un grupo de zombis saltó y se subió a la parte de arriba del tejado de mi cobertizo. No me hubiera importado demasiado al principio, de hecho me pareció bastante divertido. Pero en lugar de tumbarse y quedarse tranquilo, el subnormalito se descuelga la escopeta de la espalda y empieza a disparar sin más a la maldita multitud atrayendo a más de esos engendros andantes asquerosos. Si este mamón no para pronto, voy a tener que sacarle de aquí. </value>
+</string>
+<string>
+<key>NoteC14</key>
+<value>espero que no sepan nadar</value>
+</string>
+<string>
+<key>NoteC15</key>
+<value>Hoy, tuve que comerme una ardilla.
+
+
+
+
+
+
+
+... ¡vaya puta mierda!</value>
+</string>
+<string>
+<key>NoteC16a</key>
+<value>He estado vigilando esta ciudad durante un tiempo y creo que nos estamos arriesgando al venir aquí. Si has conseguido llegar a la comisaría de policía, es el lugar más seguro de la ciudad. Los infectados están POR TODAS PARTES. Ve con cuidado. Abre fuego solo cuando sea estrictamente necesario, el ruido los atrae. Comprueba también la puerta trasera si llegas por la puerta delantera. La dejé abierta. 
+Sheriff Brock</value>
+</string>
+<string>
+<key>NoteC16b</key>
+<value>No creo que podamos resistir por mucho tiempo. Nuestra última reserva de suministros se está agotando... ¡incluso, los chicos están hablando de comerse a Jack! Ha estado resfriado los últimos días, creo que están de coña, pero es difícil pillar las bromas aquí. Esas....cosas aporrean las ventanas de la tienda día y noche. Esperábamos que el ejército viniera a salvarnos, pero se han largado tan rápido que me sorprendería si consiguieran transmitir algo por radio.
+
+ Creo que voy a intentar montármelo con este arma. </value>
+</string>
+<string>
+<key>NoteC18</key>
+<value>Beth y Tom, 
+ si volvéis de vuestras vacaciones a Clearview, dirigíos a un terreno más elevado. Últimamente, han estado pasando cosas raras por aquí han y tengo noticias de gente ha estado comiéndose a otra gente y hay montones de helicópteros en el cielo. Nos dirigimos al aeropuerto para quedarnos un tiempo con nuestras familias en Michigan hasta que se acabe esta locura.
+ Tened cuidado,
+
+ Los Vances</value>
+</string>
+<string>
+<key>NoteC19</key>
+<value>La cólera de Dios ya ha llegado, ¡su llegada está cerca! ¡Como está escrito en el libro de Zacarías!
+ Y el Señor enviará una plaga sobre todas las naciones que pelearon contra Jerusalén. Sus habitantes llegarán a ser como cadáveres ambulantes, la carne se les pudrirá. Se les pudrirán los ojos en sus cuencas y la lengua en la boca. 
+
+ Arrepentios: debo ser como el mesías pasa sus fieles. Convertirse en uno de estos cadáveres andantes es mancillar vuestro cuerpo, ¡El templo sagrado de Dios! Liberaré a esta gente; ¡Seré el instrumento del Señor! Esta es mi vocación, para no permitir que esta gente temerosa de Dios cambie y le vendan su alma al diablo; !Debo reunirlos con el Señor antes de que esto ocurra! ¡Cargaré con su culpa! ¡Llevaré esa cruz para que puedan unirse a nuestro Señor en el Cielo!</value>
+</string>
+<string>
+<key>NoteC20</key>
+<value>Este tío está empezando a darme escalofríos. He tenido que esconder mi diario porque cree que le estoy espiando. Lo que es absurdo porque ¿para quién podría estar espiándole? Todavía no me ha dicho cómo se llama, por lo que le llamo Hank el Loco. Deja que me quede aquí porque tengo buena puntería, y como es demasiado mayor, no tiene pulso suficiente ni para disparar a un ciervo ni nada parecido. Creo que es un buen sitio, agradable y seguro, pero he visto locos antes y no creo que esto acabe bien. Estoy pensando en pasar aquí unas semanas más, almacenar alimentos y después ponerme rumbo al sur otra vez, aprovechando que esté borracho. He oído que hay un asentamiento como este ahí abajo, solo que más grande y lleno de buena gente. A lo mejor, incluso puede que vuelva a ver a mamá y a papá... ¡a, es mi cumpleaños, cumplo 14!
+ Buenas noches diario, 
+te quiere, Echo Lana</value>
+</string>
+<string>
+<key>NoteC21</key>
+<value>Día 1
+ Hoy nos hemos visto obligados a salir de nuestro hogar después de un ataque. Mi hija, mi marido y yo estamos encerrados en el establo. Menos mal que hemos sido previsores y hemos guardado aquí algunos víveres. 
+
+ Día 2
+ Hoy, un chaval herido ha estado golpeando la puerta y pidiendo ayuda. Era evidente que estaba herido y me dio pena, así que le dije a mi marido que le dejara quedarse con nosotros hasta que se encontrara mejor. Tiene pinta de buen chaval. Es capaz de hacer que mis hijas se olviden de lo que está pasando y parece que se llevan bien.
+ 
+Día 3 
+ No me creo lo que está pasando. He oído a alguien masticando junto a mi, me he despertado y he visto al chico DEVORÁNDOLE la cara a mi hija. Mi marido se le ha echado encima para apartarlo de ella y el chico se ha revuelto y le ha mordido en la pierna. He echado mano a mi escopeta y he disparado al chico varias veces hasta que ha dejado de moverse. He corrido al lado de mi hija y todavía respiraba ligeramente. </value>
+</string>
+<string>
+<key>NoteC22</key>
+<value>INFORME
+ Soldado Sparks 
+
+
+ Haría esto por vía oficial, pero no estoy seguro de que importe. El Soldado Vance está mostrando un comportamiento cada vez más agresivo. Hemos estado atrapados aquí 2 días después de haber conseguido bloquear las escaleras con barricadas. Sin embargo, con la poca munición y la falta total de víveres, nuestras opciones son muy limitadas. Me parece que esto está empezando a pasarnos factura, cuando Soldado Vance arrojó al Soldado Barber como cebo mientras corríamos para protegernos - lo que es vergonzoso, considerando que el Soldado Barber no estaba ni a un palmo del Soldado Vance cuando pasó esto. No hace falta decir que las cosas se han puesto...tensas. Soldado Sparks cerrando comunicación, posiblemente para siempre. </value>
+</string>
+<string>
+<key>NoteC23</key>
+<value>MEMO 
+
+A todas las tropas apostadas actualmente en el sector C23: 
+ Los procedimientos de estricta cuarentena entran ahora en vigor. 
+Protocolo Z iniciado. 
+ Por Orden Ejecutiva, los Oficiales al Mando reaccionarán sin piedad a los intentos de fuga, civiles u otros.</value>
+</string>
+<string>
+<key>NoteC24</key>
+<value>¡Enhorabuena! ¡Lo recuperaste! 
+
+
+
+
+
+
+...... ¿ahora qué?</value>
+</string>
+<string>
+<key>NoteC25</key>
+<value>
+
+
+Solía ser un superviviente como tú 
+hasta que me dieron con una flecha con en la rodilla</value>
+</string>
+<string>
+<key>NoteC26</key>
+<value>Día 239
+ Hoy me topé con una bastante fresca
+femenina
+ Tuve que resistir a la tentación. Al fin y al cabo, uno nunca sabe lo que puede pillar.
+
+ En vez de eso, tuve que hacerme una pajilla detrás de un árbol</value>
+</string>
+<string>
+<key>NoteC27</key>
+<value>Día 256
+ Hoy he conocido a un viejo superviviente. Un tío raro, no podía callarse. 
+¡&quot;Quédate un rato y escucha&quot;! 
+
+
+, Sí, eso envejece bastante rápido. </value>
+</string>
+<string>
+<key>NoteC28</key>
+<value>¡Es peligroso ir solo! 
+
+... Obviamente. Pero, ¡oye toma esto!</value>
+</string>
+<string>
+<key>NoteC29</key>
+<value>La he liado parda. !!!MIER..¡¡¡</value>
+</string>
+<string>
+<key>NoteC30</key>
+<value>Día 275 
+
+ Anochecer. No queda agua. 
+
+Como no me beba mi propio pis. </value>
+</string>
+<string>
+<key>NoteC31</key>
+<value>Instrucción 34
+
+
+
+
+ Sí, lo hice. </value>
+</string>
+<string>
+<key>NoteC32</key>
+<value>¡¡¡¡APROXIMADAMENTE 9000!!!!
+
+...cuerpos</value>
+</string>
+<string>
+<key>NoteC33</key>
+<value>Esto no funciona en absoluto</value>
+</string>
+<string>
+<key>NoteC34</key>
+<value>¡ABURRIDO! ¿Sabes lo ABURRIDO que es esto sin TELE? ¿¿SIN VÍDEO JUEGOS?? Si no estoy jugando... no sé QUIEN SOY. JODER... ¡necesito jugar! </value>
+</string>
+<string>
+<key>NoteC35</key>
+<value>¡¡¡¡¡¡DESPELLEJA ESE CERDO!!!!!!
+
+
+¡¡¡¡¡¡DÉJALO SECO!!!!!!
+
+
+
+.........¡¡¡JODER, echo de menos el beicon!!!</value>
+</string>
+<string>
+<key>NoteC36</key>
+<value>Barbara, mi amor 
+
+ Lo hago ahora más por mi propio bien que por cualquier otra cosa. En las últimas semanas, mis conocimientos de ingeniería se han mostrado muy útiles, pero no lo suficiente. Han pasado meses desde que tuvimos contacto con el mundo exterior y constantemente nos encontramos huyendo. He visto suficientes muertes para varias vidas - incluso las provocadas por mí mismo. Mi cordura se escapa como agua entre mis dedos - amor, estoy perdido en la oscuridad de mi propia mente, y no sé si volveré a ver la luz. 
+ Tu marido que te quiere, 
+ Andrew Goldstein</value>
+</string>
+<string>
+<key>NoteC37</key>
+<value>Queridísima Bárbara,
+ Hoy he experimentado una nueva amenaza. Hasta ahora, nos hemos enfrentado a grupos de proscritos que merodeaban, incluso al ejército... pero anoche, escuchamos algo que ninguno de nosotros puede explicar. Pasa el tiempo suficiente en este entorno y desarrollarás nuevas habilidades, habilidades específicas para poder sobrevivir. Sentidos agudizados, capacidad de observación - aprendes a escuchar lo que está fuera de lugar, sonidos inesperados en la hierva, así que, sea quien sea el que esté de guardia, siempre está bien alerta. Éste era mi relevo - James y el resto estaban durmiendo en círculo, apagamos el fuego según terminamos de hacer la cena. Estaba apoyado contra un árbol, sin ser visto, ballesta en mano, preparado, cuando lo escuché. Un pequeño gruñido detrás de mi. Giré tan rápido como pude, pero no había nada... ¿qué está ocurriendo? ¿Me estoy volviendo loco de verdad?
+ Eternamente tuyo, 
+ Andrew Goldstein</value>
+</string>
+<string>
+<key>NoteC38</key>
+<value>¡Ehhh! Barb....
+
+ ¡Lo he vuelto a escuchar anoche! Creemos que los hijos de puta se están acercando. No podemos asegurarlo, pero anoche estuvo rondando, berreando como el jodido chupacabras. Nos despertamos y había marcas de zarpazos tan grandes como tu brazo y con un palmo de profundidad en todos los árboles que nos rodeaban. Jajajajaj, ¡está ahí fuera! LO SÉ. Jimmy Jam murió anoche, ¡tenía que matarlo, me dio el punto, siiii!. A, vale, me gustan sus botas. 
+
+ Ejem, eternamente tuyo,
+ Andy Goldstein</value>
+</string>
+<string>
+<key>NoteC39</key>
+<value>Compañeros supervivientes, los infectados ya no son lo único a lo que debemos temer. Mi grupo y yo hemos encontrado muchos grupos itinerantes de lo que solo puedo describir como proscritos. Grupos de supervivientes sin moral ni escrúpulos por matar a otros por las provisiones. Yo mismo he abatido a 4 de estos proscritos ayer mismo - ¡así que mantened los ojos bien abiertos! Es difícil confiar en alguien  hoy en día. Si pretendéis ser amables, acercaos con las armas enfundadas. No dispararemos a menos que tengamos que hacerlo.
+Sheriff Brock</value>
+</string>
+<string>
+<key>NoteC40</key>
+<value>¡Anoche descubrimos algo importante! 
+
+Descubrimos una oficina abandonada y decidimos acampar. Mientras hacía mi guardia, comencé a rebuscar por ahí - resulta que, fueran los que fueran los que trabajaban aquí, el caso es que lo hacían para el gobierno, ¡y trabajaban en una cura! La investigadora no para de hablar de Taxoplasma gondii, la enfermedad de Creutzfeldt-Jakob y algún híbrido con &quot;neurotoxinas alcaloides&quot;. Se llama a sí misma Dr. Sheila Burr, parece que da un sermón, saltando maniáticamente de tema en tema. Al final, después de algo acerca de la Gripe Española, baja el tono citando los primeros versículos de la Biblia. 
+
+ Cosa muy rara. Me quedé mirando. Ojalá supiera realmente lo que significa. </value>
+</string>
+<string>
+<key>NoteC41</key>
+<value>Aquí, Brock. 
+
+ He tenido que moverme. La única manera de sobrevivir estos días, según parece, es permanecer en movimiento y mantenerse oculto. Observo estos grupos haciéndose más fuertes y según lo hacen se vuelven cada vez más radicales. 
+
+ Temo profundamente por mi propia vida a diario. El único beneficio, en este momento, parece ser el arsenal que estos hijos de puta sanguinarios dejan a su paso. No sé de donde están sacando  este equipo de tipo militar pero me he propuesto descubrirlo en las próximas semanas. 
+
+ Si estás leyendo esto, ten cuidado. Esta zona no es segura. He visto algo más, alg</value>
+</string>
+<string>
+<key>NoteC42</key>
+<value>No me puedo quedar. 
+
+ Me siento como si cada momento que pasa, el peligro creciera. 
+
+ He reunido suficiente munición del grupo vecino que tan elocuentemente se hace llamar &quot;los BUZURKERS&quot;. No tienen ni medio cerebro entre los tres, reconocen mi capacidad de rapiñar y, mientras les lleve suministros, están más que de acuerdo con desprenderse de su gran tienda de municiones de tipo militar. Los rumores que circulan alrededor de los asentamientos de los supervivientes en Campos se hacen día a día más raros. He oido historias de monstruos que miden como 3 metros de alto y lo mismo de ancho.
+No les doy ninguna credibilidad, pero una pareja de ancianos vino del norte el otro día, dijo que había menos infectados donde hacía más frío. Por eso me marcho - si leeis esto, y sois amistosos, dirigíos al norte. </value>
+</string>
+<string>
+<key>NoteC43</key>
+<value>Ahora, aquí, estoy escribiendo esto,  me siento solo un poco más tranquilo. Como si la vaga certeza de que en algún momento, en el futuro,  otra persona que vive y respira, leerá mis palabras, pudiera proporcionarme algún consuelo. 
+
+Cuando era más joven, mi padre solía citar a diferentes filósofos y supongo que se me pegó el hábito cuando fui a la universidad - una línea en particular, de Friedrich Nietzsche, me ha perseguido todos estos últimos años. 
+ Y ahora, combatiendo contra estras... cosas, cada día, sin ceder, algunas migajas de deseo desde que la comida rancia es mi única comida, tiene sentido: &quot;No luches contra monstruos porque te volverás un monstruo. Para cuando te quedes mirando al abismo, el abismo también te mira&quot;.
+
+
+...y estoy hambriento. </value>
+</string>
+<string>
+<key>NoteC44</key>
+<value>
+
+
+
+
+esto no es para ti. </value>
+</string>
+<string>
+<key>NoteC45</key>
+<value>Vi las llamas antes de escucharlos. No puedo creer lo que ven mis ojos...mi pueblo entero, mi familia, mis amigos, cualquiera que haya conocido o querido 
+
+
+ se ha ido. Y aún cuando las lágrimas se me escurrían por los, miré arriba... y vi la bandera americana en el costado de los aviones</value>
+</string>
+<string>
+<key>400000_name</key>
+<value>Empuñadura delantera</value>
+</string>
+<string>
+<key>400000_desc</key>
+<value>Este accesorio del riel inferior permitirá al tirador más control del arma. </value>
+</string>
+<string>
+<key>400001_name</key>
+<value>5.45 AK 30</value>
+</string>
+<string>
+<key>400001_desc</key>
+<value>Este es un cargador con 30 cartuchos estándar de 5.45 x 39 mm para la familia de fusiles rusos AK 74M. </value>
+</string>
+<string>
+<key>400003_name</key>
+<value>ACOG</value>
+</string>
+<string>
+<key>400003_desc</key>
+<value>La Acog es una mira telescópica montada en riel usada para ampliar la precisión del tirador en disparos de medio a largo alcance. </value>
+</string>
+<string>
+<key>400004_name</key>
+<value>Láser para Fusil </value>
+</string>
+<string>
+<key>400004_desc</key>
+<value>El accesorio Láser se coloca sobre el lateral de un arma y permite al tirador marcar el objetivo con el láser. </value>
+</string>
+<string>
+<key>400005_name</key>
+<value>Holográfico</value>
+</string>
+<string>
+<key>400005_desc</key>
+<value>El Holovisor es un visor holográfico montado en el riel que se usa para aumentar la precisión del tirador a alcances cercano y medio. </value>
+</string>
+<string>
+<key>400006_name</key>
+<value>SCAR IS</value>
+</string>
+<string>
+<key>400006_desc</key>
+<value>Este es el sistema de mira de alza de acero mejorado para el fusil de asalto Scar. Se acopla en el riel superior. </value>
+</string>
+<string>
+<key>400007_name</key>
+<value>Kobra</value>
+</string>
+<string>
+<key>400007_desc</key>
+<value>La Kobra es una mira de punto rojo montada en un riel que se usa para aumentar la precisión del tirador contra objetivos a alcances cercano y medio . </value>
+</string>
+<string>
+<key>400008_name</key>
+<value>Mira Táctica de Francotirador</value>
+</string>
+<string>
+<key>400008_desc</key>
+<value>Mira telescópica 8x montada en riel para uso a alcance medio. </value>
+</string>
+<string>
+<key>400009_name</key>
+<value>Empuñadura SMG</value>
+</string>
+<string>
+<key>400009_desc</key>
+<value>La empuñadura M 7 proporciona al tirador más control y precisión cuando dispara un arma a alta cadencia de tiro. </value>
+</string>
+<string>
+<key>400010_name</key>
+<value>STANAG 60</value>
+</string>
+<string>
+<key>400010_desc</key>
+<value>Cargador grande de 60 cartuchos OTAN 5.45x45 mm para usar con el M4 y el M16. </value>
+</string>
+<string>
+<key>400012_name</key>
+<value>Bocacha Apagallamas</value>
+</string>
+<string>
+<key>400012_desc</key>
+<value>La Bocacha Apagallamas reduce la visibilidad del destello de un arma cuando se dispara a velocidad normal o rápida. </value>
+</string>
+<string>
+<key>400013_name</key>
+<value>Silenciador </value>
+</string>
+<string>
+<key>400013_desc</key>
+<value>El Silenciador atenuará el sonido de una ráfaga cuando se dispare a velocidad normal o rápida. </value>
+</string>
+<string>
+<key>400015_name</key>
+<value>STANAG 45</value>
+</string>
+<string>
+<key>400015_desc</key>
+<value>Cargador medio de 45 cartuchos de munición 5.45 x 45 mm OTAN para uso con los Fusiles de Asalto M4 y M16. </value>
+</string>
+<string>
+<key>400016_name</key>
+<value>STANAG 30</value>
+</string>
+<string>
+<key>400016_desc</key>
+<value>Cargador estándar de 30 cartuchos de munición 5.45x45 mm OTAN para uso con los Fusiles de Asalto M4 y M16. </value>
+</string>
+<string>
+<key>400017_name</key>
+<value>STANAG C-Mag</value>
+</string>
+<string>
+<key>400017_desc</key>
+<value>Tambor de tamaño máximo de 100 cartuchos de munición 5.45x45 mm OTAN para uso con los Fusiles de Asalto M4 y M16. </value>
+</string>
+<string>
+<key>400018_name</key>
+<value>Linterna para Fusil</value>
+</string>
+<string>
+<key>400018_desc</key>
+<value>La Linterna se puede usar para alumbrar las áreas oscuras y dejar ciego temporalmente al oponente del tirador. </value>
+</string>
+<string>
+<key>400019_name</key>
+<value>Mira compacta</value>
+</string>
+<string>
+<key>400019_desc</key>
+<value>El visor compacto Swiss es una mira telescópica montada en riel para aumentar la precisión del tirador a corto y medio alcance. </value>
+</string>
+<string>
+<key>400020_name</key>
+<value>Mira de Punto Rojo</value>
+</string>
+<string>
+<key>400020_desc</key>
+<value>La Mira de Punto Rojo Swiss es una mira montada en un riel para aumentar la precisión del tirador a corto y medio alcance. </value>
+</string>
+<string>
+<key>400021_name</key>
+<value>Apuntador láser</value>
+</string>
+<string>
+<key>400021_desc</key>
+<value>El apuntador láser se acopla en el lado izquierdo de la pistola y se usa para apuntar al enemigo con una luz láser. </value>
+</string>
+<string>
+<key>400022_name</key>
+<value>Linterna de Pistola </value>
+</string>
+<string>
+<key>400022_desc</key>
+<value>La Linterna de la Pistola se puede usar para alumbrar las áreas oscuras y dejar ciego temporalmente al oponente del tirador. </value>
+</string>
+<string>
+<key>400023_name</key>
+<value>Mira Reflex</value>
+</string>
+<string>
+<key>400023_desc</key>
+<value>La Mira Reflex es una mira telescópica montada en un riel usada para aumentar la precisión del tirador a medio y largo alcance. </value>
+</string>
+<string>
+<key>400024_name</key>
+<value>M4 IS</value>
+</string>
+<string>
+<key>400024_desc</key>
+<value>Es un sistema mejorado de mira de alza de acero para el M4 Blackwater. Se acopla al riel superior. </value>
+</string>
+<string>
+<key>400025_name</key>
+<value>SIG 556 IS</value>
+</string>
+<string>
+<key>400025_desc</key>
+<value>Este es el sistema de mira de alza de acero mejorado para el SG 555. Se acopla al riel superior. </value>
+</string>
+<string>
+<key>400026_name</key>
+<value>MP7 IS</value>
+</string>
+<string>
+<key>400026_desc</key>
+<value>Este es el sistema de mira de alza mejorada para el Mp 7. Se acopla sobre riel superior. </value>
+</string>
+<string>
+<key>400027_name</key>
+<value>PSO-1</value>
+</string>
+<string>
+<key>400027_desc</key>
+<value>El PSO1 es una mira telescópica acoplada en el  riel usada para ampliar la precisión del tirador en disparos de largo alcance. </value>
+</string>
+<string>
+<key>400029_name</key>
+<value>Munición G36 </value>
+</string>
+<string>
+<key>400029_desc</key>
+<value>Este es un cargador con 30 cartuchos de 5.56 x45 mm especialmente diseñado para el Fusil de Asalto G36. </value>
+</string>
+<string>
+<key>400030_name</key>
+<value>VSS-20</value>
+</string>
+<string>
+<key>400030_desc</key>
+<value>Cartucho subsónico de alta penetración 9x36 mm, baja velocidad y alta potencia, diseñado especialmente para fusil de francotirador VSS Vintorez. Cargador ampliado a 20 cartuchos. </value>
+</string>
+<string>
+<key>400031_name</key>
+<value>VSS-10</value>
+</string>
+<string>
+<key>400031_desc</key>
+<value>Cartucho subsónico de alta penetración y baja velocidad 9x36mm de alta potencia especialmente diseñado para rifle de francotirador VSS Vintorez. Cargador estándar de 10 cartuchos.</value>
+</string>
+<string>
+<key>400032_name</key>
+<value>MP7 40</value>
+</string>
+<string>
+<key>400032_desc</key>
+<value>Cargado extendido de 40 cartuchos de HK 4.6x30 mm para el subfusil MP7. </value>
+</string>
+<string>
+<key>400033_name</key>
+<value>MP7 30</value>
+</string>
+<string>
+<key>400033_desc</key>
+<value>Cargador HK 4.6x30 mm de 30 cartuchos para el subfusil MP7. </value>
+</string>
+<string>
+<key>400034_name</key>
+<value>Carg. 9x19 Para</value>
+</string>
+<string>
+<key>400034_desc</key>
+<value>Cargador de 18 cartuchos de 9x19 mm Parabellum diseñado especialmente para la pistola Sig Sauer P226. </value>
+</string>
+<string>
+<key>400035_name</key>
+<value>M249 IS</value>
+</string>
+<string>
+<key>400035_desc</key>
+<value>Este es un sistema de mira de alza de acero mejorado para la ametralladora M249. Se adhiere al riel superior. </value>
+</string>
+<string>
+<key>400036_name</key>
+<value>KT IS</value>
+</string>
+<string>
+<key>400036_desc</key>
+<value>Este es el sistema mejorado de mira de alza para la escopeta Keltech que se coloca en su riel superior. </value>
+</string>
+<string>
+<key>400038_name</key>
+<value>Blackwater Long Range</value>
+</string>
+<string>
+<key>400038_desc</key>
+<value>La mira telescópica Blackwater Long Range es una mira 10x montada en riel diseñada para su uso a largo alcance. </value>
+</string>
+<string>
+<key>400039_name</key>
+<value>Mira telescópica Swiss Arms 8x</value>
+</string>
+<string>
+<key>400039_desc</key>
+<value>Las mira telescópica Swiss Arms es una mira telescópica montada en el riel usada para aumentar la precisión del tiradores a medio y largo alcance. </value>
+</string>
+<string>
+<key>400040_name</key>
+<value>Iron AK74M</value>
+</string>
+<string>
+<key>400040_desc</key>
+<value>Este es el sistema de mira de alza de acero mejorado para el AK-74M n que se acopla a su riel superior. </value>
+</string>
+<string>
+<key>400042_name</key>
+<value>Iron G36</value>
+</string>
+<string>
+<key>400042_desc</key>
+<value></value>
+</string>
+<string>
+<key>400043_name</key>
+<value>Munición AWM .338 Magnum</value>
+</string>
+<string>
+<key>400043_desc</key>
+<value>Carga de 10 cartuchos especializada de 8.6x70 mm con munición centerfire de cuello de botella sin reborde. Se diseñó específicamente para el rifle AWM. </value>
+</string>
+<string>
+<key>400046_name</key>
+<value>P90 50 cartuchos</value>
+</string>
+<string>
+<key>400046_desc</key>
+<value>Cartuchos para fusil de asalto compacto P90.  Cargador de 50 cartuchos. </value>
+</string>
+<string>
+<key>400047_name</key>
+<value>Munición Bizon 64</value>
+</string>
+<string>
+<key>400047_desc</key>
+<value>Cargador de subfusil Bizon. El cargador contiene 64 cartuchos de munición 9x18 mm. </value>
+</string>
+<string>
+<key>400048_name</key>
+<value>Munición SVD</value>
+</string>
+<string>
+<key>400048_desc</key>
+<value>Cargador de 10 cartuchos de munición 7.62x54 mm para el SVD (Rifle de Francotirador Dragunov). </value>
+</string>
+<string>
+<key>400049_name</key>
+<value>Munición CZ Scorpion EVO-3 </value>
+</string>
+<string>
+<key>400049_desc</key>
+<value>30 cartuchos de munición 9x19 mm para el subfusil CZ Scorpion EVO-3. </value>
+</string>
+<string>
+<key>400050_name</key>
+<value>Tambor AA-12</value>
+</string>
+<string>
+<key>400050_desc</key>
+<value>Cargador de tambor con 20 cartuchos de calibre 12 para escopeta AA-12. </value>
+</string>
+<string>
+<key>400051_name</key>
+<value>EVO-3 IS</value>
+</string>
+<string>
+<key>400051_desc</key>
+<value></value>
+</string>
+<string>
+<key>400052_name</key>
+<value>Bizon IS</value>
+</string>
+<string>
+<key>400052_desc</key>
+<value></value>
+</string>
+<string>
+<key>400053_name</key>
+<value>USS-12 IS</value>
+</string>
+<string>
+<key>400053_desc</key>
+<value></value>
+</string>
+<string>
+<key>400054_name</key>
+<value>P90 IS</value>
+</string>
+<string>
+<key>400054_desc</key>
+<value></value>
+</string>
+<string>
+<key>400055_name</key>
+<value>Pecheneg IS</value>
+</string>
+<string>
+<key>400055_desc</key>
+<value></value>
+</string>
+<string>
+<key>400056_name</key>
+<value>PKM IS</value>
+</string>
+<string>
+<key>400056_desc</key>
+<value></value>
+</string>
+<string>
+<key>400058_name</key>
+<value>SIG516 IS</value>
+</string>
+<string>
+<key>400058_desc</key>
+<value></value>
+</string>
+<string>
+<key>400059_name</key>
+<value>TAR21 IS</value>
+</string>
+<string>
+<key>400059_desc</key>
+<value></value>
+</string>
+<string>
+<key>400060_name</key>
+<value>RPK IS</value>
+</string>
+<string>
+<key>400060_desc</key>
+<value></value>
+</string>
+<string>
+<key>400061_name</key>
+<value>RPO IS</value>
+</string>
+<string>
+<key>400061_desc</key>
+<value></value>
+</string>
+<string>
+<key>400062_name</key>
+<value>AN94 IS</value>
+</string>
+<string>
+<key>400062_desc</key>
+<value></value>
+</string>
+<string>
+<key>400065_name</key>
+<value>AT4 IS</value>
+</string>
+<string>
+<key>400065_desc</key>
+<value></value>
+</string>
+<string>
+<key>400066_name</key>
+<value>M4 IS2</value>
+</string>
+<string>
+<key>400066_desc</key>
+<value></value>
+</string>
+<string>
+<key>400069_name</key>
+<value>5.45 AK 45 </value>
+</string>
+<string>
+<key>400069_desc</key>
+<value>Este es un cargador de 45 cartuchos de 5.45x39 mm estándar para la familia de fusiles rusos AK74.</value>
+</string>
+<string>
+<key>400070_name</key>
+<value>Munición rifle de francotirador Winchester .308</value>
+</string>
+<string>
+<key>400070_desc</key>
+<value>Cargador para rifle de francotirador 7.62x51 mm OTAN, para uso con el Rifle de Francotirador Winchester .308. El cargador alberga 10 cartuchos. </value>
+</string>
+<string>
+<key>400071_name</key>
+<value>Carg. de 9 mm </value>
+</string>
+<string>
+<key>400071_desc</key>
+<value>Cargador de 13 cartuchos para munición de 9 mm para su uso con: pistolas B92, B93R y Jericho. </value>
+</string>
+<string>
+<key>400073_name</key>
+<value>Munición Saiga 10</value>
+</string>
+<string>
+<key>400073_desc</key>
+<value>Cargador con 10 cartuchos de calibre 12 para escopeta SAIGA. </value>
+</string>
+<string>
+<key>400074_name</key>
+<value>Bocacha estándar</value>
+</string>
+<string>
+<key>400074_desc</key>
+<value>Bocacha de edición especial estándar</value>
+</string>
+<string>
+<key>400079_name</key>
+<value>Carg. de MP5 10mm</value>
+</string>
+<string>
+<key>400079_desc</key>
+<value>Cargador Auto de 30 cartuchos de 10 mm para subfusil MP5/10.</value>
+</string>
+<string>
+<key>400080_name</key>
+<value>SAIGA IS</value>
+</string>
+<string>
+<key>400080_desc</key>
+<value></value>
+</string>
+<string>
+<key>400081_name</key>
+<value>XA5 IS</value>
+</string>
+<string>
+<key>400081_desc</key>
+<value></value>
+</string>
+<string>
+<key>400082_name</key>
+<value>M590 Is</value>
+</string>
+<string>
+<key>400082_desc</key>
+<value></value>
+</string>
+<string>
+<key>400083_name</key>
+<value>Veresk IS</value>
+</string>
+<string>
+<key>400083_desc</key>
+<value></value>
+</string>
+<string>
+<key>400084_name</key>
+<value>Munición SMG-20</value>
+</string>
+<string>
+<key>400084_desc</key>
+<value>cargadores de 20 cartuchos de 9x19 mm  Parabellum, especialmente diseñado para los smg Uzi y Veresk. </value>
+</string>
+<string>
+<key>400085_name</key>
+<value>Munición SMG-40</value>
+</string>
+<string>
+<key>400085_desc</key>
+<value>Cargador 40 cartuchos de 9x19 mm Parabellum, especialmente diseñado para los smg Uzi y Veresk. </value>
+</string>
+<string>
+<key>400086_name</key>
+<value>Munición Desert Eagle</value>
+</string>
+<string>
+<key>400086_desc</key>
+<value>Cargador de 7 cartuchos Action Express 0.50  para Desert Eagle.</value>
+</string>
+<string>
+<key>400087_name</key>
+<value>Carg. de 5.7 FN M240</value>
+</string>
+<string>
+<key>400087_desc</key>
+<value>Cargador redondo de ametralladora FN (M240). 20 cartuchos de munición 5.7 x 28 mm. </value>
+</string>
+<string>
+<key>400088_name</key>
+<value>Empuñadura 1 SMG</value>
+</string>
+<string>
+<key>400088_desc</key>
+<value>Empuñadura estándar para SMG. Estabiliza y reduce el retroceso</value>
+</string>
+<string>
+<key>400099_name</key>
+<value>Carg. G36 C</value>
+</string>
+<string>
+<key>400099_desc</key>
+<value>Este es un cargador de tambor de 100 cartuchos de 5.56x45 mm diseñado especialmente para el Fusil de Asalto G36. </value>
+</string>
+<string>
+<key>400100_name</key>
+<value>Tambor 5.45 AK</value>
+</string>
+<string>
+<key>400100_desc</key>
+<value>Tambor de 100 cartuchos para fusiles AK74 y RPK. </value>
+</string>
+<string>
+<key>400101_name</key>
+<value>Peine 7.62 AKM</value>
+</string>
+<string>
+<key>400101_desc</key>
+<value>Cargador para fusil de asalto AKM. 40 cartuchos de 7.62 x 39 mm. </value>
+</string>
+<string>
+<key>400119_name</key>
+<value>MASADA IS</value>
+</string>
+<string>
+<key>400119_desc</key>
+<value></value>
+</string>
+<string>
+<key>400121_name</key>
+<value>USS-12 IS</value>
+</string>
+<string>
+<key>400121_desc</key>
+<value></value>
+</string>
+<string>
+<key>400127_name</key>
+<value>M16 IS</value>
+</string>
+<string>
+<key>400127_desc</key>
+<value></value>
+</string>
+<string>
+<key>400128_name</key>
+<value>AKM IS</value>
+</string>
+<string>
+<key>400128_desc</key>
+<value></value>
+</string>
+<string>
+<key>400129_name</key>
+<value>AKS IS</value>
+</string>
+<string>
+<key>400129_desc</key>
+<value></value>
+</string>
+<string>
+<key>400133_name</key>
+<value>.50 BMG</value>
+</string>
+<string>
+<key>400133_desc</key>
+<value>Cartuchos antiblindaje 12.7 x 99 mm OTAN para el fusil M107A1. 5 cartuchos por cargador. </value>
+</string>
+<string>
+<key>400134_name</key>
+<value>UZI IS</value>
+</string>
+<string>
+<key>400134_desc</key>
+<value></value>
+</string>
+<string>
+<key>400135_name</key>
+<value>Munición .45 ACP Eagle Elite</value>
+</string>
+<string>
+<key>400135_desc</key>
+<value>Cargador con 10 cartuchos del .45 ACP para la pistola STI Eagle Elite. </value>
+</string>
+<string>
+<key>400136_name</key>
+<value>Munición de Calibre 12</value>
+</string>
+<string>
+<key>400136_desc</key>
+<value>8 cartuchos para la escopeta de calibre 12.</value>
+</string>
+<string>
+<key>400137_name</key>
+<value>calibre 2 x 12 </value>
+</string>
+<string>
+<key>400137_desc</key>
+<value>Munición para usar con la escopeta de doble cañón. </value>
+</string>
+<string>
+<key>400139_name</key>
+<value>Flecha explosiva</value>
+</string>
+<string>
+<key>400139_desc</key>
+<value>Dardo explosivo (flecha) para la ballesta. </value>
+</string>
+<string>
+<key>400140_name</key>
+<value>Flecha</value>
+</string>
+<string>
+<key>400140_desc</key>
+<value>Flecha afilada para usar con ballestas compuestas y otras armas neurobalísticas. </value>
+</string>
+<string>
+<key>400141_name</key>
+<value>Postas 2x </value>
+</string>
+<string>
+<key>400141_desc</key>
+<value>2 proyectiles para usar en escopetas convencionales.</value>
+</string>
+<string>
+<key>400142_name</key>
+<value>Postas 8x </value>
+</string>
+<string>
+<key>400142_desc</key>
+<value>2 postas para usar en escopetas estándar.</value>
+</string>
+<string>
+<key>400143_name</key>
+<value>Caja de munición M249</value>
+</string>
+<string>
+<key>400143_desc</key>
+<value>Caja de munición para la M249</value>
+</string>
+<string>
+<key>400144_name</key>
+<value>Peine calibre .22</value>
+</string>
+<string>
+<key>400144_desc</key>
+<value>Cargador con 10 cartuchos de calibre .22 para pistolas y fusiles Kruger. </value>
+</string>
+<string>
+<key>400145_name</key>
+<value>Cargador Anaconda</value>
+</string>
+<string>
+<key>400145_desc</key>
+<value>6 cartuchos para el Anaconda</value>
+</string>
+<string>
+<key>400146_name</key>
+<value>Cargador grande de fusil Kruger</value>
+</string>
+<string>
+<key>400146_desc</key>
+<value>Cargador con carga rotatoria de 30 cartuchos. </value>
+</string>
+<string>
+<key>400147_name</key>
+<value>Peine mediano para Fusil  Kruger</value>
+</string>
+<string>
+<key>400147_desc</key>
+<value>Cargador de carga rotatoria de 20 cartuchos. </value>
+</string>
+<string>
+<key>400148_name</key>
+<value>Peine de fusil convencional Kruger .22</value>
+</string>
+<string>
+<key>400148_desc</key>
+<value>Cargador de carga rotatoria de 10 cartuchos de clase estándar</value>
+</string>
+<string>
+<key>400149_name</key>
+<value>Fusil Kruger IS</value>
+</string>
+<string>
+<key>400149_desc</key>
+<value></value>
+</string>
+<string>
+<key>400150_name</key>
+<value>Peine Kruger Mini-14</value>
+</string>
+<string>
+<key>400150_desc</key>
+<value>Cargador de tamaño estándar para el Kruger Mini-14. </value>
+</string>
+<string>
+<key>400151_name</key>
+<value>Kruger Mini-14 IS</value>
+</string>
+<string>
+<key>400151_desc</key>
+<value></value>
+</string>
+<string>
+<key>400152_name</key>
+<value>Cargador de bengalas</value>
+</string>
+<string>
+<key>400152_desc</key>
+<value>Munición para pistola de bengalas</value>
+</string>
+<string>
+<key>400153_name</key>
+<value>Cargador Mosin estándar</value>
+</string>
+<string>
+<key>400153_desc</key>
+<value>Cargador de 5 cartuchos de alimentación interna estándar diseñado para su uso en el fusil Mosin. </value>
+</string>
+<string>
+<key>400154_name</key>
+<value>Cargador 1911 de calibre .40</value>
+</string>
+<string>
+<key>400154_desc</key>
+<value>Cargador extraíble monohilera de 7 cartuchos para la 1911. </value>
+</string>
+<string>
+<key>400155_name</key>
+<value>Mosin IS</value>
+</string>
+<string>
+<key>400155_desc</key>
+<value>Miras de acero para el fusil Mosin</value>
+</string>
+<string>
+<key>400156_name</key>
+<value>Silenciador para pistola</value>
+</string>
+<string>
+<key>400156_desc</key>
+<value>Disminuye el sonido de la pistola que se está disparando</value>
+</string>
+<string>
+<key>101002_name</key>
+<value>M16</value>
+</string>
+<string>
+<key>101002_desc</key>
+<value>El fusil M16 es un fusil de asalto de infantería convencional accionado por gas, adaptado para el calibre OTAN 5.56x45 mm. </value>
+</string>
+<string>
+<key>101004_name</key>
+<value>FN FiveSeven</value>
+</string>
+<string>
+<key>101004_desc</key>
+<value>La FN Five Seven es una pistola convencional que se diseñó para dispara cartuchos de 5.7. Es un arma eficaz contra objetivos de corto alcance. </value>
+</string>
+<string>
+<key>101005_name</key>
+<value>G36</value>
+</string>
+<string>
+<key>101005_desc</key>
+<value>El fusil de asalto MTAC X36 dispara cartuchos de 5.56 mm. Su alta velocidad de disparo y retroceso medio proporcionan una dispersión razonablemente ajustada sobre el impacto de objetivos hasta alcances medios. </value>
+</string>
+<string>
+<key>101022_name</key>
+<value>AK-74M</value>
+</string>
+<string>
+<key>101022_desc</key>
+<value>El rifle de asalto AK-74M es un diseño mejorado de AK 74 con una velocidad de disparo ligeramente aumentada. Dispara cartuchos de 5.45 x 39 mm con precisión a alcances medios. </value>
+</string>
+<string>
+<key>101032_name</key>
+<value>AKM</value>
+</string>
+<string>
+<key>101032_desc</key>
+<value>El AKM es un fusil de asalto que fue diseñado como una versión simplificada del fusil AK-47. Dispara cartuchos de 7.62 x 39 mm y es relativamente eficaz a alcances medios. </value>
+</string>
+<string>
+<key>101035_name</key>
+<value>AKS-74U</value>
+</string>
+<string>
+<key>101035_desc</key>
+<value>El AKS-74U es una versión acortada de una carabina accionada por gas del rifle de asalto AKS-74. Dispara cartuchos de 5.45 x 39 mm y es muy eficaz a alcances medios. </value>
+</string>
+<string>
+<key>101040_name</key>
+<value>M4 Semi</value>
+</string>
+<string>
+<key>101040_desc</key>
+<value>El fusil semiautomático M4 de uso civil, adaptado para el calibre OTAN 5.56 x 45 mm. </value>
+</string>
+<string>
+<key>101055_name</key>
+<value>M4</value>
+</string>
+<string>
+<key>101055_desc</key>
+<value>El M4 es un rifle de asalto versátil y ligero de estilo comando que funciona con gas y dispara eficazmente cartuchos de 5.56 x 45 mm  a alcances cercano y medio. </value>
+</string>
+<string>
+<key>101060_name</key>
+<value>PKM</value>
+</string>
+<string>
+<key>101060_desc</key>
+<value>La ametralladora PKM fue diseñada para disparar cartuchos 7.62 mm desde un sistema asociado y es bastante precisa contra objetivos a medio alcance. </value>
+</string>
+<string>
+<key>101063_name</key>
+<value>MP7</value>
+</string>
+<string>
+<key>101063_desc</key>
+<value>El subfusil RA TR7 es un arma de edición especial que dispara cartuchos estándar de 4.6 mm  desde un cargador de 30 cartuchos. Es eficaz a objetivos a corto alcance.</value>
+</string>
+<string>
+<key>101064_name</key>
+<value>UZI</value>
+</string>
+<string>
+<key>101064_desc</key>
+<value>El subfusil UZI edición especial es un diseño de cerrojo abierto Blowback que dispara cartuchos de 9 mm desde su cargador alojado en la empuñadura. </value>
+</string>
+<string>
+<key>101068_name</key>
+<value>SVD </value>
+</string>
+<string>
+<key>101068_desc</key>
+<value>El rifle de francotirador SVD fue diseñado para disparar cartuchos de 7.62 mm desde un peine de 10 cartuchos. Combinado con una Mira telecópica óptica de francotirador es extremadamente preciso. </value>
+</string>
+<string>
+<key>101084_name</key>
+<value>VSS VINTOREZ</value>
+</string>
+<string>
+<key>101084_desc</key>
+<value>El fusil de francotirador VSS Vintorez se diseñó para disparar un cartucho de 9 x 39 mm usando un sistema de fuego de cerrojo rotatorio accionado por gas. Está diseñado para ser eficaz a medio alcance. </value>
+</string>
+<string>
+<key>101085_name</key>
+<value>MAUSER SP66</value>
+</string>
+<string>
+<key>101085_desc</key>
+<value>El fusil de francotirador Mauser SP66 se diseñó para disparar cartuchos .308 a partir de un peine de 5 cartuchos. Es altamente preciso en alcances largos cuando se combina con una buena mira telescópica. </value>
+</string>
+<string>
+<key>101087_name</key>
+<value>AW Magnum</value>
+</string>
+<string>
+<key>101087_desc</key>
+<value>El rifle de francotirador AWM dispara un cartucho magnum hecho a medida de .338W con una precisión y efecto devastadores. Cada uno de sus cartuchos provoca una altísima cantidad de daño. </value>
+</string>
+<string>
+<key>101088_name</key>
+<value>M107</value>
+</string>
+<string>
+<key>101088_desc</key>
+<value>El rifle de francotirador M107 dispara cartuchos de calibre .50 que actúa con un efecto mortal a alcances máximos. Tiene un cargador de 5 cartuchos, lo que te permite una alta cadencia de tiro. </value>
+</string>
+<string>
+<key>101093_name</key>
+<value>RPK-74 </value>
+</string>
+<string>
+<key>101093_desc</key>
+<value>La ametralladora RPK-74 dispara un cartucho de 5.45 mm de gran velocidad que proporciona cadencia de tiro razonablemente precisa en objetivos que están por encima de medio alcance. </value>
+</string>
+<string>
+<key>101095_name</key>
+<value>FN M249 </value>
+</string>
+<string>
+<key>101095_desc</key>
+<value>La ametralladora FN M249 dispara cartuchos de 5.56 mm a partir de un sistema de cinta de municiones. Es altamente eficaz frente a objetivos a corto y medio alcance. </value>
+</string>
+<string>
+<key>101098_name</key>
+<value>SAIGA</value>
+</string>
+<string>
+<key>101098_desc</key>
+<value>La Saiga se desarrolló como una escopeta de calibre 12 con un tubo de almacenamiento de 8 cartuchos. Inflige una cantidad sustancial de daño en objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101103_name</key>
+<value>MP5/10</value>
+</string>
+<string>
+<key>101103_desc</key>
+<value>El subfusil MP5/10 fue diseñado para disparar eficazmente contra objetivos a corto alcance ráfagas automáticas de cartuchos de 10 mm a partir de un cargador de 30 cartuchos. </value>
+</string>
+<string>
+<key>101106_name</key>
+<value>Honey Badger</value>
+</string>
+<string>
+<key>101106_desc</key>
+<value>El subfusil Honey Badger dispara cartuchos de .300 con una cadencia de disparo media provocando gran cantidad de daño a objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101107_name</key>
+<value>FN P90 </value>
+</string>
+<string>
+<key>101107_desc</key>
+<value>El subfusil FN P90 está diseñado para disparar cartuchos de 9 mm a partir de un cargador de 50 cartuchos. Es muy eficaz contra objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101108_name</key>
+<value>EVO-3</value>
+</string>
+<string>
+<key>101108_desc</key>
+<value>El subfusil EVO-3 fue diseñado para disparar eficazmente munición de 9 mm desde un cargador con 30 cartuchos a objetivos de corto alcance a una velocidad de disparo muy alta. </value>
+</string>
+<string>
+<key>101109_name</key>
+<value>BIZON</value>
+</string>
+<string>
+<key>101109_desc</key>
+<value>El subfusil Bizon se diseñó para disparar cartuchos de 9 mm desde un cargador de 64 cartuchos proporcionando disparos precisos contra objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101111_name</key>
+<value>B92</value>
+</string>
+<string>
+<key>101111_desc</key>
+<value>La pistola B92 fue especialmente diseñada para disparar cartuchos de 9 mm y es razonablemente eficaz frente objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101112_name</key>
+<value>B93R </value>
+</string>
+<string>
+<key>101112_desc</key>
+<value>La pistola B93R fue diseñada para disparar cartuchos de 9 mm Parabellum desde un cargador de 13 cartuchos. Es un arma relativamente eficaz frente a objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101115_name</key>
+<value>Jericho 9 mm</value>
+</string>
+<string>
+<key>101115_desc</key>
+<value>El Jericho fue diseñado como una pistola automática universal que dispara cartuchos Parabellum de 9 mm y es altamente eficaz a corto alcance. </value>
+</string>
+<string>
+<key>101120_name</key>
+<value>Sig Sauer P226</value>
+</string>
+<string>
+<key>101120_desc</key>
+<value>La SIG P226 es una pistola de uso común de tamaño normal fabricada por SIG Sauer. Ha sido diseñada para disparar cartuchos de 9x19 mm lo que la hace un arma eficaz contra objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101158_name</key>
+<value>MOSSBERG 590</value>
+</string>
+<string>
+<key>101158_desc</key>
+<value>La Mossberg 590 es una escopeta de calibre 12 que tiene un tubo de almacenamiento de 8 cartuchos. Es conocida por infligir un daño extremadamente alto a corto alcance.</value>
+</string>
+<string>
+<key>101169_name</key>
+<value>MASADA</value>
+</string>
+<string>
+<key>101169_desc</key>
+<value>El Masada fue diseñado para maniobras de combate cercano y es un fusil de asalto accionado por gas que dispara un cartucho  5.56x45 mm OTAN. Es altamente eficaz a corto alcance. </value>
+</string>
+<string>
+<key>101172_name</key>
+<value>SIG SAUER 556</value>
+</string>
+<string>
+<key>101172_desc</key>
+<value>El 556 es un fusil de asalto con cerrojo rotatorio accionado por gas que dispara cartuchos de 5.56 x 45 mm y está diseñado para operaciones especiales. Es muy eficaz a alcance medio. </value>
+</string>
+<string>
+<key>101173_name</key>
+<value>IMI TAR-21</value>
+</string>
+<string>
+<key>101173_desc</key>
+<value>El TAR-21 es un fusil de asalto de diseño bullpup con cerrojo rotatorio accionado por gas que dispara cartuchos de 5.56 x 45 mm. Es extremadamente eficaz a corto y medio alcance. </value>
+</string>
+<string>
+<key>101180_name</key>
+<value>Desert Eagle</value>
+</string>
+<string>
+<key>101180_desc</key>
+<value>La pistola Desert Eagle fue diseñada para disparar cartuchos de calibre .50 y causa un daño considerable a objetivos a corto alcance. </value>
+</string>
+<string>
+<key>101183_name</key>
+<value>KT DECIDER</value>
+</string>
+<string>
+<key>101183_desc</key>
+<value>La KT Decider es una escopeta con diseño bullpup que tiene un cargador de 8 cartuchos.</value>
+</string>
+<string>
+<key>101193_name</key>
+<value>FN SCAR CQC</value>
+</string>
+<string>
+<key>101193_desc</key>
+<value>El SCAR 16 CQC es un fusil de asalto avanzado que dispara cartuchos estándar de 5.56x45 mm eficazmente a más de medio alcance.</value>
+</string>
+<string>
+<key>101197_name</key>
+<value>RA H23</value>
+</string>
+<string>
+<key>101197_desc</key>
+<value>La RA LMG36 está diseñada para disparar un cartucho estándar de 7.62 mm. Esta ametralladora proporciona una cantidad razonable de fuego preciso sobre objetivos a alcance medio. </value>
+</string>
+<string>
+<key>101200_name</key>
+<value>AA-12</value>
+</string>
+<string>
+<key>101200_desc</key>
+<value>La escopeta automática de calibre AA-12 está diseñada para disparar cartuchos de calibre 12 de un sistema de almacenamiento de 20 cartuchos. Provoca una cantidad razonable de daño por cartucho. </value>
+</string>
+<string>
+<key>101201_name</key>
+<value>VERESK SR-2</value>
+</string>
+<string>
+<key>101201_desc</key>
+<value>El subfusil MTAC Flasher se diseñó para disparar cartuchos convencionales de 9 mm a una alta velocidad de disparo con precisión razonable a objetivos de corto alcance. </value>
+</string>
+<string>
+<key>101210_name</key>
+<value>FN SCAR NIGHT STALKER</value>
+</string>
+<string>
+<key>101210_desc</key>
+<value>El Scar 17 CQC Nightstalker es un fusil de asalto que dispara cartuchos estándar de 5.56 x 45 mm de manera eficaz a alcance medio. </value>
+</string>
+<string>
+<key>101217_name</key>
+<value>MAUSER SRG DESERT</value>
+</string>
+<string>
+<key>101217_desc</key>
+<value>El rifle del francotirador Mauser SP66 Desert dispara un cartucho 0.308W. </value>
+</string>
+<string>
+<key>101224_name</key>
+<value>STI Eagle Elite .45 ACP</value>
+</string>
+<string>
+<key>101224_desc</key>
+<value>La pistola STI Eagle Elite es una versión mejorada de la STI Eagle y está diseñada para disparar eficazmente cartuchos de .45 ACP  a alcances cercanos. </value>
+</string>
+<string>
+<key>101246_name</key>
+<value>FN P90 S</value>
+</string>
+<string>
+<key>101246_desc</key>
+<value>El subfusil FN P90S es un arma altamente eficaz que lleva un único cargador de 50 cartuchos. Dispara cartuchos estándar de 5.56 mm.</value>
+</string>
+<string>
+<key>101247_name</key>
+<value>BLASER R93</value>
+</string>
+<string>
+<key>101247_desc</key>
+<value>El Blaser es un rifle de francotirador con sistema de carga de cerrojo diseñado para disparar cartuchos de .308W desde un peine de 10 cartuchos. Es un arma altamente precisa a alcances más largos. </value>
+</string>
+<string>
+<key>101256_name</key>
+<value>Antibióticos</value>
+</string>
+<string>
+<key>101256_desc</key>
+<value>Los antibióticos sin receta que ayudan en la curación de resfriados y otras dolencias menores. </value>
+</string>
+<string>
+<key>101261_name</key>
+<value>Vendajes </value>
+</string>
+<string>
+<key>101261_desc</key>
+<value>Vendajes comunes que curan heridas leves y detienen la hemorragia. </value>
+</string>
+<string>
+<key>101262_name</key>
+<value>Vendajes DX</value>
+</string>
+<string>
+<key>101262_desc</key>
+<value>Vendajes médicos que curan heridas moderadas y detienen la hemorragia.</value>
+</string>
+<string>
+<key>101267_name</key>
+<value>Cuchillo táctico</value>
+</string>
+<string>
+<key>101267_desc</key>
+<value>Un cuchillo estándar con una hoja compuesta de 8&quot;, este cuchillo se diseñó en 1985 para el ejército de los Estados Unidos y posteriormente se adaptó para otros países así como también para grupos de mercenarios por todo el mundo debido a su diseño compacto y capacidad letal. </value>
+</string>
+<string>
+<key>101278_name</key>
+<value>Bate</value>
+</string>
+<string>
+<key>101278_desc</key>
+<value>Práctico para aquellos momentos en los que necesitas barrer una zona de alguien o algo. </value>
+</string>
+<string>
+<key>101300_name</key>
+<value>Analgésicos</value>
+</string>
+<string>
+<key>101300_desc</key>
+<value>Los analgésicos sin receta que contrarrestan los efectos de dolor en el cuerpo. </value>
+</string>
+<string>
+<key>101301_name</key>
+<value>Repelente de zombis</value>
+</string>
+<string>
+<key>101301_desc</key>
+<value>Un spray en solución que cuando se aplica en la piel, se introduce en el torrente sanguíneo y enmascara el olor a sangre fresca. </value>
+</string>
+<string>
+<key>101302_name</key>
+<value>Vacuna C01</value>
+</string>
+<string>
+<key>101302_desc</key>
+<value>Una vacuna en fase experimental que cuando se inyecta en el torrente sanguíneo combate la infección y disminuye los niveles de toxicidad de la sangre. Sin embargo, su eficacia es baja si lo comparamos con las últimas vacunas desarrolladas. </value>
+</string>
+<string>
+<key>101303_name</key>
+<value>Vacunas C04</value>
+</string>
+<string>
+<key>101303_desc</key>
+<value>Una cura para la infección que se desarrolló solo en unas semanas después de los primeros indicios de la infección. Habiendo tenido solo unas semanas de producción antes de que los infectados tomaran el control, el suministro es muy bajo y la demanda es extremadamente alta para estas valiosas vacunas.</value>
+</string>
+<string>
+<key>101304_name</key>
+<value>Botiquín</value>
+</string>
+<string>
+<key>101304_desc</key>
+<value>Un botiquín de campaña convencional usado normalmente por Médicos para curar a los soldados heridos en el campo de batalla. Muy eficaz. </value>
+</string>
+<string>
+<key>101305_name</key>
+<value>Cápsula del tiempo</value>
+</string>
+<string>
+<key>101305_desc</key>
+<value>Escribe un mensaje y déjalo en cualquier parte del mundo para que otros lo encuentren. </value>
+</string>
+<string>
+<key>101306_name</key>
+<value>Linterna</value>
+</string>
+<string>
+<key>101306_desc</key>
+<value>Durante la noche, la linterna también ciega a otros jugadores y funciona como objeto romo de último recurso para reventar las cabezas de los infectados. </value>
+</string>
+<string>
+<key>101307_name</key>
+<value>Martillo</value>
+</string>
+<string>
+<key>101307_desc</key>
+<value>Tanto si martilleas clavos como cráneos de zombi, esta herramienta doméstica tiene muchos usos</value>
+</string>
+<string>
+<key>101308_name</key>
+<value>Hacha de mano</value>
+</string>
+<string>
+<key>101308_desc</key>
+<value>Conformado en frío, cabeza de acero forjado con diferentes tratamientos térmicos. Mango de Nogal Americano. Las esquinas puntiagudas atravesarán fácilmente el cráneo más grueso y el filo más afilado de la cuchilla se abrirá paso entre los huesos y la carne como si fueran mantequilla. </value>
+</string>
+<string>
+<key>101309_name</key>
+<value>Pico</value>
+</string>
+<string>
+<key>101309_desc</key>
+<value>Cincel plano de cabeza puntiaguda. Tiene todas las posibilidades de quedarse espetado en el cráneo. Difícil de usar en sitios estrechos. </value>
+</string>
+<string>
+<key>101310_name</key>
+<value>Granada de Fragmentación</value>
+</string>
+<string>
+<key>101310_desc</key>
+<value>La granada de fragmentación se usa para proyectar metralla cuando explota. Tira de la anilla y no olvides lanzarla muy lejos... ¡A cubierto!</value>
+</string>
+<string>
+<key>101311_name</key>
+<value>Luz química blanca</value>
+</string>
+<string>
+<key>101311_desc</key>
+<value>Barra luminiscente blanca.</value>
+</string>
+<string>
+<key>101312_name</key>
+<value>Bengala</value>
+</string>
+<string>
+<key>101312_desc</key>
+<value>Tira estos para alumbrar un área unos minutos, también es útil para mantener ocupados a los infectados. </value>
+</string>
+<string>
+<key>101313_name</key>
+<value>Bate con clavos</value>
+</string>
+<string>
+<key>101313_desc</key>
+<value>Simplemente tu bate de béisbol. Con clavos. Incisivo, seguro que deja marca. </value>
+</string>
+<string>
+<key>101314_name</key>
+<value>Bate metálico</value>
+</string>
+<string>
+<key>101314_desc</key>
+<value>De aluminio, nunca se oxida. Rebotan mejor las cabezas. No es apto para la aniquilación de las Grandes Ligas. </value>
+</string>
+<string>
+<key>101315_name</key>
+<value>Prismáticos</value>
+</string>
+<string>
+<key>101315_desc</key>
+<value>Una buena forma de comprobar si un área es segura antes de adentrarse, ten cuidado con los infectados y criminales. </value>
+</string>
+<string>
+<key>101316_name</key>
+<value>Valla de alambre de puas</value>
+</string>
+<string>
+<key>101316_desc</key>
+<value>Arrastra esto a la puerta para bloquear la entrada y quedarte a salvo dentro, ¡a menos que algo ya esté dentro contigo!</value>
+</string>
+<string>
+<key>101317_name</key>
+<value>Barricada defensiva de madera</value>
+</string>
+<string>
+<key>101317_desc</key>
+<value>Genial para bloquear las puertas y mantener alejados a los malditos infectados. </value>
+</string>
+<string>
+<key>101318_name</key>
+<value>Escudo antidisturbios</value>
+</string>
+<string>
+<key>101318_desc</key>
+<value>¡Es un escudo antidisturbios! Escóndete detrás para resguardarte. </value>
+</string>
+<string>
+<key>101319_name</key>
+<value>Telémetro</value>
+</string>
+<string>
+<key>101319_desc</key>
+<value>¿Necesitas saber a qué distancia está algo? El telémetro puede ser tu mejor aliado cuando te escondes furtivamente buscando objetos de supervivencia.</value>
+</string>
+<string>
+<key>101320_name</key>
+<value>Pistola de bengalas</value>
+</string>
+<string>
+<key>101320_desc</key>
+<value>Arma de fuego utilizada para lanzar bengalas, con frecuencia se usa como señal de socorro</value>
+</string>
+<string>
+<key>101321_name</key>
+<value>Cañon Doble</value>
+</string>
+<string>
+<key>101321_desc</key>
+<value>Escopeta recortada de cañón doble. Altamente eficaz a corto alcance. </value>
+</string>
+<string>
+<key>101322_name</key>
+<value>Ballesta compuesta</value>
+</string>
+<string>
+<key>101322_desc</key>
+<value>Ballesta de caza compuesta de fuerte tensión para muertes sigilosas. Utiliza flechas como munición. </value>
+</string>
+<string>
+<key>101323_name</key>
+<value>Bocina</value>
+</string>
+<string>
+<key>101323_desc</key>
+<value>¿Siguen atacando a tus amigos? Se el héroe y toca la bocina para hacer que los infectados te persigan en su lugar. </value>
+</string>
+<string>
+<key>101324_name</key>
+<value>Barricada de sacos de arena </value>
+</string>
+<string>
+<key>101324_desc</key>
+<value>Esto mantendrá alejados a los no muertos... por lo menos, hasta que aprendan a trepar. </value>
+</string>
+<string>
+<key>101348_name</key>
+<value>Compartimento personal</value>
+</string>
+<string>
+<key>101348_desc</key>
+<value>Unidad de almacenaje personal indentificable</value>
+</string>
+<string>
+<key>101352_name</key>
+<value>Bloque de puerta de madera</value>
+</string>
+<string>
+<key>101352_desc</key>
+<value>2 metros de alto. </value>
+</string>
+<string>
+<key>101353_name</key>
+<value>Bloque de pared de metal</value>
+</string>
+<string>
+<key>101353_desc</key>
+<value>2 metros de alto. </value>
+</string>
+<string>
+<key>101354_name</key>
+<value>Bloque de pared alta de ladrillo</value>
+</string>
+<string>
+<key>101354_desc</key>
+<value>Pieza de pared alta de ladrillo.</value>
+</string>
+<string>
+<key>101355_name</key>
+<value>Pieza de pared de madera, 2M</value>
+</string>
+<string>
+<key>101355_desc</key>
+<value>Pieza de pared de madera de 2 metros de alto. </value>
+</string>
+<string>
+<key>101356_name</key>
+<value>Pieza de pared corta de ladrillo </value>
+</string>
+<string>
+<key>101356_desc</key>
+<value>Pieza de pared corta de ladrillo.</value>
+</string>
+<string>
+<key>101357_name</key>
+<value>Bloque de granja</value>
+</string>
+<string>
+<key>101357_desc</key>
+<value></value>
+</string>
+<string>
+<key>101358_name</key>
+<value>Generador de energía industrial</value>
+</string>
+<string>
+<key>101358_desc</key>
+<value>Generador de energía de potencia industrial.</value>
+</string>
+<string>
+<key>101359_name</key>
+<value>Generador de energía pequeño</value>
+</string>
+<string>
+<key>101359_desc</key>
+<value>Generador de energía reducido. </value>
+</string>
+<string>
+<key>101360_name</key>
+<value>Purificador solar de agua</value>
+</string>
+<string>
+<key>101360_desc</key>
+<value>Purificador de agua de energía solar </value>
+</string>
+<string>
+<key>101361_name</key>
+<value>Luz identificable</value>
+</string>
+<string>
+<key>101361_desc</key>
+<value>Fuente de luz identificable móvil. </value>
+</string>
+<string>
+<key>101362_name</key>
+<value>Bolsas de Patatas Fritas bloque de granja</value>
+</string>
+<string>
+<key>101362_desc</key>
+<value></value>
+</string>
+<string>
+<key>101363_name</key>
+<value>Manzana bloque de granja</value>
+</string>
+<string>
+<key>101363_desc</key>
+<value></value>
+</string>
+<string>
+<key>101364_name</key>
+<value>Plátano bloque de granja</value>
+</string>
+<string>
+<key>101364_desc</key>
+<value></value>
+</string>
+<string>
+<key>101365_name</key>
+<value>Zanahoria bloque de granja</value>
+</string>
+<string>
+<key>101365_desc</key>
+<value></value>
+</string>
+<string>
+<key>101366_name</key>
+<value>Lechuga bloque de granja</value>
+</string>
+<string>
+<key>101366_desc</key>
+<value></value>
+</string>
+<string>
+<key>101367_name</key>
+<value>Piña bloque de granja</value>
+</string>
+<string>
+<key>101367_desc</key>
+<value></value>
+</string>
+<string>
+<key>101368_name</key>
+<value>Patata bloque de granja</value>
+</string>
+<string>
+<key>101368_desc</key>
+<value></value>
+</string>
+<string>
+<key>101369_name</key>
+<value>Tomate bloque de granja</value>
+</string>
+<string>
+<key>101369_desc</key>
+<value></value>
+</string>
+<string>
+<key>101370_name</key>
+<value>Sandía bloque de granja</value>
+</string>
+<string>
+<key>101370_desc</key>
+<value></value>
+</string>
+<string>
+<key>101371_name</key>
+<value>Cajon 2M de Puerta de Madera </value>
+</string>
+<string>
+<key>101371_desc</key>
+<value></value>
+</string>
+<string>
+<key>101372_name</key>
+<value>Cajón de Bloque de Granja</value>
+</string>
+<string>
+<key>101372_desc</key>
+<value></value>
+</string>
+<string>
+<key>101373_name</key>
+<value>Cajón de Bloque de luz</value>
+</string>
+<string>
+<key>101373_desc</key>
+<value></value>
+</string>
+<string>
+<key>101374_name</key>
+<value>Cajón de Bloque Generador de Energía</value>
+</string>
+<string>
+<key>101374_desc</key>
+<value></value>
+</string>
+<string>
+<key>101375_name</key>
+<value>Bloque Generador de Energía Industrial</value>
+</string>
+<string>
+<key>101375_desc</key>
+<value></value>
+</string>
+<string>
+<key>101376_name</key>
+<value>Cajón de bloque Energía Solar Térmica </value>
+</string>
+<string>
+<key>101376_desc</key>
+<value></value>
+</string>
+<string>
+<key>101377_name</key>
+<value>Cajón de Pared Corta de Ladrillo</value>
+</string>
+<string>
+<key>101377_desc</key>
+<value></value>
+</string>
+<string>
+<key>101378_name</key>
+<value>Cajón de pared Alta de Ladrillo</value>
+</string>
+<string>
+<key>101378_desc</key>
+<value></value>
+</string>
+<string>
+<key>101379_name</key>
+<value>Cajón de Bloque Pared de Metal 2M alta</value>
+</string>
+<string>
+<key>101379_desc</key>
+<value></value>
+</string>
+<string>
+<key>101380_name</key>
+<value>Cajón de bloque de Pared de Madera, 2M</value>
+</string>
+<string>
+<key>101380_desc</key>
+<value></value>
+</string>
+<string>
+<key>101381_name</key>
+<value>Navaja de mariposa</value>
+</string>
+<string>
+<key>101381_desc</key>
+<value>Una navaja con dos empuñaduras plegables contrarotativas en torno a la cuchilla de manera que cuando se cierra, la cuchilla se oculta. </value>
+</string>
+<string>
+<key>101382_name</key>
+<value>Palanca</value>
+</string>
+<string>
+<key>101382_desc</key>
+<value>Una herramienta doméstica multiusos, útil para construcción o para sobrevivir en situaciones apocalípticas</value>
+</string>
+<string>
+<key>101383_name</key>
+<value>Hacha de Bombero</value>
+</string>
+<string>
+<key>101383_desc</key>
+<value>El hacha de edición especial usado por los bomberos para introducirse en los edificios y apartar escombros peligrosos</value>
+</string>
+<string>
+<key>101384_name</key>
+<value>Sartén </value>
+</string>
+<string>
+<key>101384_desc</key>
+<value>Tanto si fríes un huevo como si despachurras una cara, la sartén doméstica común tiene muchas aplicaciones</value>
+</string>
+<string>
+<key>101385_name</key>
+<value>Tijeras de podar</value>
+</string>
+<string>
+<key>101385_desc</key>
+<value>Tanto si son para cortar setos como si son cabezas, estas tijeras seguramente te serán útiles. </value>
+</string>
+<string>
+<key>101386_name</key>
+<value>Palo de Golf</value>
+</string>
+<string>
+<key>101386_desc</key>
+<value>El más usado para golpes largos. ¡ADELANTE!</value>
+</string>
+<string>
+<key>101387_name</key>
+<value>Pistola de clavos</value>
+</string>
+<string>
+<key>101387_desc</key>
+<value>Habitualmente usada en la construcción, la pistola de clavos escupe clavos cuando se aplica correctamente. Se ha informado de resultados más catastróficos cuando se aplica fuera de su uso recomendado. </value>
+</string>
+<string>
+<key>101388_name</key>
+<value>Horquillo</value>
+</string>
+<string>
+<key>101388_desc</key>
+<value>Diseñado para mover paja económicamente, su diseño intimidatorio se ajusta a la perfección cuando ensartas a algún no muerto</value>
+</string>
+<string>
+<key>101389_name</key>
+<value>Porra de Policía</value>
+</string>
+<string>
+<key>101389_desc</key>
+<value>Usado por los agentes de la ley como ayuda en el combate cuerpo a cuerpo, normalmente para reducir a sospechosos rebeldes o que oponen resistencia</value>
+</string>
+<string>
+<key>101390_name</key>
+<value>Taladro Eléctrico</value>
+</string>
+<string>
+<key>101390_desc</key>
+<value>Funciona a pilas y de manera poco convencional, el taladro es bastante eficaz al despachar a los enemigos de la manera más grotesca</value>
+</string>
+<string>
+<key>101391_name</key>
+<value>Llave inglesa</value>
+</string>
+<string>
+<key>101391_desc</key>
+<value>Amada por los fontaneros de todo el mundo, esta pesada herramienta puede hundir fácilmente los cráneos de tus enemigos. </value>
+</string>
+<string>
+<key>101325_name</key>
+<value>Luz química azul</value>
+</string>
+<string>
+<key>101325_desc</key>
+<value>Barra luminiscente azul</value>
+</string>
+<string>
+<key>101326_name</key>
+<value>Luz química verde</value>
+</string>
+<string>
+<key>101326_desc</key>
+<value>Barra luminiscente verde. Color favorito de los desfasados.</value>
+</string>
+<string>
+<key>101327_name</key>
+<value>Luz química naranja</value>
+</string>
+<string>
+<key>101327_desc</key>
+<value>Barra luminiscente naranja. </value>
+</string>
+<string>
+<key>101328_name</key>
+<value>Luz química roja</value>
+</string>
+<string>
+<key>101328_desc</key>
+<value>Barra luminiscente roja.</value>
+</string>
+<string>
+<key>101329_name</key>
+<value>Luz química amarilla</value>
+</string>
+<string>
+<key>101329_desc</key>
+<value>Barra luminiscente amarilla. </value>
+</string>
+<string>
+<key>101330_name</key>
+<value>Kruger .22</value>
+</string>
+<string>
+<key>101330_desc</key>
+<value>Segura y relativamente común, el Kruger .22 de penetración más baja es un elemento básico casero, permitiendo una práctica a bajo precio con un control firme. </value>
+</string>
+<string>
+<key>101331_name</key>
+<value>Anaconda</value>
+</string>
+<string>
+<key>101331_desc</key>
+<value>Introducido en 1990, el Anaconda es un gran revólver de acción doble de calibre .44 que presenta un tambor de seis cartuchos. </value>
+</string>
+<string>
+<key>101332_name</key>
+<value>Fusil Kruger .22</value>
+</string>
+<string>
+<key>101332_desc</key>
+<value>Fusil largo semiautomático del .22 con cargador rotatorio extraible.</value>
+</string>
+<string>
+<key>101334_name</key>
+<value>Kruger Mini-14</value>
+</string>
+<string>
+<key>101334_desc</key>
+<value>El tamaño pequeño del Kruger lo hace idóneo para todas las situaciones donde la facilidad de maniobra sea una prioridad, ya sea en el rancho o en las profundidades del bosque. </value>
+</string>
+<string>
+<key>101335_name</key>
+<value>Bastón de Caramelo </value>
+</string>
+<string>
+<key>101335_desc</key>
+<value>Para Navidad, ¡matanza con todo tipo de lujos!</value>
+</string>
+<string>
+<key>101336_name</key>
+<value>Katana</value>
+</string>
+<string>
+<key>101336_desc</key>
+<value>Arma de los antiguos Samurai mortalmente afilada, realizada a mano para partir limpiamente a tu enemigo en dos. O tres...o cuatro....</value>
+</string>
+<string>
+<key>101337_name</key>
+<value>Katana Jokoto</value>
+</string>
+<string>
+<key>101337_desc</key>
+<value>Entre las espadas más antiguas, las Katanas Jokoto se fabricaron solo para la casta más y honorable de guerreros. Portar dicha espada implica una gran responsabilidad. </value>
+</string>
+<string>
+<key>101338_name</key>
+<value>Wakizashi</value>
+</string>
+<string>
+<key>101338_desc</key>
+<value>Más pequeña que su equivalente, la wakizashi está diseñada para combates más cercanos e incluso para hacerse el harakiri. </value>
+</string>
+<string>
+<key>101339_name</key>
+<value>Machete</value>
+</string>
+<string>
+<key>101339_desc</key>
+<value>Una cuchilla tosca pero afilada usada para apartar la maleza. </value>
+</string>
+<string>
+<key>101340_name</key>
+<value>MiniSaints</value>
+</string>
+<string>
+<key>101340_desc</key>
+<value>¡Cremosos, jugosos y deliciosos, los MiniSaints son un regalo exquisito del que toda la familia puede disfrutar! Se consumen mejor mientras ves una peli en familia, probablemente que implique perros y nieve. </value>
+</string>
+<string>
+<key>101341_name</key>
+<value>Mosin Nagant</value>
+</string>
+<string>
+<key>101341_desc</key>
+<value>Un fusil de cerrojo ruso con un cargador de alimentación interno, este fiable fusil se ha usado de manera generalizada en incontables guerras. </value>
+</string>
+<string>
+<key>101342_name</key>
+<value>1911</value>
+</string>
+<string>
+<key>101342_desc</key>
+<value>Pistola de servicio estándar de los Estados Unidos conocida por su mínimo retroceso y peso ligero. </value>
+</string>
+<string>
+<key>101343_name</key>
+<value>Puño de acero</value>
+</string>
+<string>
+<key>101343_desc</key>
+<value>Un clásico, probado y certificado. ¡Pon de rodillas a tus enemigos !</value>
+</string>
+<string>
+<key>101344_name</key>
+<value>Remos </value>
+</string>
+<string>
+<key>101344_desc</key>
+<value>Remo de madera</value>
+</string>
+<string>
+<key>101345_name</key>
+<value>Bate de criquet</value>
+</string>
+<string>
+<key>101345_desc</key>
+<value>¡Reparte algunas hostias y revienta algunos cráneos!</value>
+</string>
+<string>
+<key>101346_name</key>
+<value>Pala</value>
+</string>
+<string>
+<key>101346_desc</key>
+<value>Práctico Y letal</value>
+</string>
+<string>
+<key>101347_name</key>
+<value>Motosierra</value>
+</string>
+<string>
+<key>101347_desc</key>
+<value>Destripa igual a no muertos y a vivos con esta temible herramienta doméstica. </value>
+</string>
+<string>
+<key>20006_name</key>
+<value>Casco estilo K. </value>
+</string>
+<string>
+<key>20006_desc</key>
+<value>La clásica Cabeza de Tortuga está garantizada para protegerte el cerebro. (Bueno, por lo menos un poco) 
+Protección de Nivel 2.</value>
+</string>
+<string>
+<key>20015_name</key>
+<value>Guerrilla Personalizado</value>
+</string>
+<string>
+<key>20015_desc</key>
+<value>El equipo y el blindaje corporal personalizados de tipo guerrilla permiten una protección adecuada en condiciones de movimiento rápido. Protección de Nivel 2. </value>
+</string>
+<string>
+<key>20022_name</key>
+<value>Boina militar</value>
+</string>
+<string>
+<key>20022_desc</key>
+<value>Esta prenda de cabeza es toda una expresión de moda militar ¡que sobresale en una zona de combate!</value>
+</string>
+<string>
+<key>20023_name</key>
+<value>Sombrero Boonie</value>
+</string>
+<string>
+<key>20023_desc</key>
+<value>Este sombrero Jungle Boonie es ligero. Genial para camuflarse y protegerse del sol y de los bichos, pero no de balas. </value>
+</string>
+<string>
+<key>20025_name</key>
+<value>Sombra</value>
+</string>
+<string>
+<key>20025_desc</key>
+<value>Este equipo para la cabeza se diseñó no solo para hacerte parecer espeluznante sino también para proteger tu cara bonita. </value>
+</string>
+<string>
+<key>20032_name</key>
+<value>Máscara Negra</value>
+</string>
+<string>
+<key>20032_desc</key>
+<value>La aterradora Máscara Negra de la Muerte, sin lugar a dudas deja petrificados a tus enemigos. </value>
+</string>
+<string>
+<key>20033_name</key>
+<value>Careta de payaso</value>
+</string>
+<string>
+<key>20033_desc</key>
+<value>Para todos los bromistas de ahí fuera, os traemos la Máscara de Payaso. </value>
+</string>
+<string>
+<key>20034_name</key>
+<value>Máscara Jason</value>
+</string>
+<string>
+<key>20034_desc</key>
+<value>Ocultando un monstruo, esta máscara da un susto de muerte los que se la encuentran de cara. </value>
+</string>
+<string>
+<key>20035_name</key>
+<value>Máscara de calavera</value>
+</string>
+<string>
+<key>20035_desc</key>
+<value> ¡La Máscara de Calavera demuestra que sabes tomarte las cosas con humor!</value>
+</string>
+<string>
+<key>20036_name</key>
+<value>Máscara Lacerada</value>
+</string>
+<string>
+<key>20036_desc</key>
+<value>Aunque no es otra cara bonita más, ¡la Máscara Lacerada destaca sobre las demás! ¡Hazte con ella y asume la apariencia de un homicida!</value>
+</string>
+<string>
+<key>20041_name</key>
+<value>Boonie Desierto</value>
+</string>
+<string>
+<key>20041_desc</key>
+<value>El sombrero Boonie es genial para maniobras en el desierto, te protege del sol y de los insectos molestos. </value>
+</string>
+<string>
+<key>20042_name</key>
+<value>Sombrero Boonie verde</value>
+</string>
+<string>
+<key>20042_desc</key>
+<value>Aunque este sombrero boonie no sea antibalas, te mantendrá fresco y camuflado en parajes agrestes. </value>
+</string>
+<string>
+<key>20043_name</key>
+<value>Casco M9 negro</value>
+</string>
+<string>
+<key>20043_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este es negro. </value>
+</string>
+<string>
+<key>20046_name</key>
+<value>Casco M9 con gafas</value>
+</string>
+<string>
+<key>20046_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este va con gafas protectoras. </value>
+</string>
+<string>
+<key>20047_name</key>
+<value>Casco M9 Verde</value>
+</string>
+<string>
+<key>20047_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este es verde. </value>
+</string>
+<string>
+<key>20048_name</key>
+<value>Casco M9 Urban</value>
+</string>
+<string>
+<key>20048_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este con camuflaje Urban. </value>
+</string>
+<string>
+<key>20049_name</key>
+<value>Casco M9 Bosque 1</value>
+</string>
+<string>
+<key>20049_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este con esquema Especial Bosque. </value>
+</string>
+<string>
+<key>20050_name</key>
+<value>Casco M9 con gafas 1</value>
+</string>
+<string>
+<key>20050_desc</key>
+<value>El casco M9 proporciona un buen nivel de protección a la cabeza. Este va con gafas protectoras. </value>
+</string>
+<string>
+<key>20054_name</key>
+<value>IBA Arena</value>
+</string>
+<string>
+<key>20054_desc</key>
+<value>Equipo IBA edición Especial en tono Arena con protección de Nivel 2. </value>
+</string>
+<string>
+<key>20056_name</key>
+<value>MTV Bosque</value>
+</string>
+<string>
+<key>20056_desc</key>
+<value>Equipo MTV de edición limitada esquema Bosque con protección de Nivel 2. </value>
+</string>
+<string>
+<key>20059_name</key>
+<value>Equipo Ligero Jungla</value>
+</string>
+<string>
+<key>20059_desc</key>
+<value>Protección de Nivel 1 de peso ligero con esquema Selva. </value>
+</string>
+<string>
+<key>20067_name</key>
+<value>Gafas NVG</value>
+</string>
+<string>
+<key>20067_desc</key>
+<value>Casco de estilo K estándar equipado con NVG preparado para operaciones nocturnas. </value>
+</string>
+<string>
+<key>20096_name</key>
+<value>Sombrero Boonie de Cuero</value>
+</string>
+<string>
+<key>20096_desc</key>
+<value>Este es el sombrero Boonie que viene con un toque de distinción. Es completamente de cuero, lo que es la bomba, ¡pero no te librará de una!</value>
+</string>
+<string>
+<key>20097_name</key>
+<value>Casco de bombero</value>
+</string>
+<string>
+<key>20097_desc</key>
+<value>El casco tradicional de los bomberos ha salvado a muchos hombres durante muchos años. Pruébalo si quieres ser diferente en el campo de batalla. </value>
+</string>
+<string>
+<key>20098_name</key>
+<value>Casco Rígido de Obra</value>
+</string>
+<string>
+<key>20098_desc</key>
+<value>El casco rígido de obra tradicional es todo lo que necesitas para darte una vuelta por edificios antiguos y enseñarles a tus enemigos lo macho que eres! </value>
+</string>
+<string>
+<key>20171_name</key>
+<value></value>
+</string>
+<string>
+<key>20171_desc</key>
+<value></value>
+</string>
+<string>
+<key>20172_name</key>
+<value></value>
+</string>
+<string>
+<key>20172_desc</key>
+<value></value>
+</string>
+<string>
+<key>20173_name</key>
+<value></value>
+</string>
+<string>
+<key>20173_desc</key>
+<value></value>
+</string>
+<string>
+<key>20177_name</key>
+<value>Máscara de Gas</value>
+</string>
+<string>
+<key>20177_desc</key>
+<value>Máscara que te pones en la cara para protegerte de la inhalación de contaminantes y gases tóxicos transportados por el aire. </value>
+</string>
+<string>
+<key>20178_name</key>
+<value>Máscara de gas 2</value>
+</string>
+<string>
+<key>20178_desc</key>
+<value>Máscara que te pones en la cara para protegerte de la inhalación de contaminantes y gases tóxicos transportados por el aire. </value>
+</string>
+<string>
+<key>20187_name</key>
+<value>Visión nocturna militar</value>
+</string>
+<string>
+<key>20187_desc</key>
+<value>También conocidas como NVG. Estas mejoran la luz permitiendo al usuario ver casi en completa oscuridad. </value>
+</string>
+<string>
+<key>20188_name</key>
+<value>Visión nocturna civil</value>
+</string>
+<string>
+<key>20188_desc</key>
+<value>Visión nocturna para todos, estas gafas económicas te permiten ver por la noche mientras permaneces oculto en la oscuridad. </value>
+</string>
+<string>
+<key>20192_name</key>
+<value>¡Especial Halloween!</value>
+</string>
+<string>
+<key>20192_desc</key>
+<value>¡Muestra tu lado más escalofriante con estilo!</value>
+</string>
+<string>
+<key>20197_name</key>
+<value>Especial Navidad</value>
+</string>
+<string>
+<key>20197_desc</key>
+<value>Un detallito navideño.</value>
+</string>
+<string>
+<key>20198_name</key>
+<value>Gorros de elfo</value>
+</string>
+<string>
+<key>20198_desc</key>
+<value>¡Fabricando regalos para todos los chicos y chicas buenos!</value>
+</string>
+<string>
+<key>20199_name</key>
+<value>Capitán Jack Frost</value>
+</string>
+<string>
+<key>20199_desc</key>
+<value>Con una pipa de maíz y una nariz de botón...</value>
+</string>
+<string>
+<key>20200_name</key>
+<value>El saco de Papá Noel</value>
+</string>
+<string>
+<key>20200_desc</key>
+<value>¡Con regalos para todos! Bueno, principalmente zombis. Y proscritos.</value>
+</string>
+<string>
+<key>20170_name</key>
+<value>Personaje Zombi Básico</value>
+</string>
+<string>
+<key>20170_desc</key>
+<value></value>
+</string>
+<string>
+<key>20174_name</key>
+<value>Ex militar</value>
+</string>
+<string>
+<key>20174_desc</key>
+<value>Sirvió en el ejército antes de que la infección comenzara. Recio, con gran conocimiento sobre armas y un agudo instinto de supervivencia. </value>
+</string>
+<string>
+<key>20182_name</key>
+<value>Ex luchador extremo</value>
+</string>
+<string>
+<key>20182_desc</key>
+<value>Antes de la infección, este tío fue un luchador extremo, sus habilidades de lucha le vienen al pelo cuando blande armas cuerpo a cuerpo y sobrevive cuando las cosas se ponen chungas. </value>
+</string>
+<string>
+<key>20183_name</key>
+<value>Mujer_Zombi</value>
+</string>
+<string>
+<key>20183_desc</key>
+<value></value>
+</string>
+<string>
+<key>20184_name</key>
+<value>Cazador</value>
+</string>
+<string>
+<key>20184_desc</key>
+<value>En los años anteriores a la infección, esta mujer perfeccionó sus habilidades con armas neurobalísticas y de trampera. Es extremadamente ágil, la asesina silenciosa. </value>
+</string>
+<string>
+<key>20186_name</key>
+<value>Hombre zombi</value>
+</string>
+<string>
+<key>20186_desc</key>
+<value></value>
+</string>
+<string>
+<key>20189_name</key>
+<value>Rebelde sin causa</value>
+</string>
+<string>
+<key>20189_desc</key>
+<value>Este tío siempre ha tenido problemas con la ley. Jugador, ratero y mala gente en general, se le conoce por ser un lobo solitario del que no te puedes fiar. </value>
+</string>
+<string>
+<key>20190_name</key>
+<value>Militares Zombi</value>
+</string>
+<string>
+<key>20190_desc</key>
+<value></value>
+</string>
+<string>
+<key>20191_name</key>
+<value>Hombre Zombi 2</value>
+</string>
+<string>
+<key>20191_desc</key>
+<value></value>
+</string>
+<string>
+<key>20193_name</key>
+<value>Ciudadano de a pie</value>
+</string>
+<string>
+<key>20193_desc</key>
+<value>Antes de que todo cambiara, trabajó en la industria de los videojuegos creando shooters en primera persona. Es un sabelotodo pero no le se asusta a hacer lo que hay que hacer para sobrevivir. </value>
+</string>
+<string>
+<key>20194_name</key>
+<value>El Profesional</value>
+</string>
+<string>
+<key>20194_desc</key>
+<value>Escapó de la prisión donde estuvo metida una temporada por la dudosa muerte de su marido, su mano con la maquinaria la ha mantenido viva hasta ahora. </value>
+</string>
+<string>
+<key>20195_name</key>
+<value>RockNRollah</value>
+</string>
+<string>
+<key>20195_desc</key>
+<value>Sus días de Moshing le han proporcionado una bestialidad e intensidad inigualables. No le asusta meterse en el cuerpo a cuerpo ni con  zombis ni con proscritos. </value>
+</string>
+<string>
+<key>20175_name</key>
+<value>Mochila mediana</value>
+</string>
+<string>
+<key>20175_desc</key>
+<value>Mochila tamaño medio con mucho espacio y resistencia. </value>
+</string>
+<string>
+<key>20176_name</key>
+<value>Mochila pequeña</value>
+</string>
+<string>
+<key>20176_desc</key>
+<value>Una pequeña mochila que permite el almacenamiento de objetos y equipamiento esenciales. </value>
+</string>
+<string>
+<key>20179_name</key>
+<value>Mochila grande</value>
+</string>
+<string>
+<key>20179_desc</key>
+<value>Mochila de 24 objetos. Suficientemente grande para unas cuantas semanas de aventura. </value>
+</string>
+<string>
+<key>20180_name</key>
+<value>Macuto militar</value>
+</string>
+<string>
+<key>20180_desc</key>
+<value>La madre de todas las mochilas. ¡Lleva 32 objetos de una sola vez!</value>
+</string>
+<string>
+<key>20181_name</key>
+<value>Mochila de Osito Teddy</value>
+</string>
+<string>
+<key>20181_desc</key>
+<value>El accesorio favorito de Roman.</value>
+</string>
+<string>
+<key>20185_name</key>
+<value>Macuto ALICE</value>
+</string>
+<string>
+<key>20185_desc</key>
+<value>Mochila grande que se adapta a todo lo que necesites. Multi-propósito, equipo de transporte de pesos ligeros. </value>
+</string>
+<string>
+<key>301159_name</key>
+<value>REANIMACIÓN RÁPIDA</value>
+</string>
+<string>
+<key>301159_desc</key>
+<value></value>
+</string>
+<string>
+<key>301136_name</key>
+<value>ZOMBI - Dinero</value>
+</string>
+<string>
+<key>301136_desc</key>
+<value></value>
+</string>
+<string>
+<key>301158_name</key>
+<value>Lote premium</value>
+</string>
+<string>
+<key>301158_desc</key>
+<value></value>
+</string>
+<string>
+<key>301160_name</key>
+<value>Lote Navideño</value>
+</string>
+<string>
+<key>301160_desc</key>
+<value></value>
+</string>
+<string>
+<key>301161_name</key>
+<value>ARMA - Cuerpo a cuerpo doméstica</value>
+</string>
+<string>
+<key>301161_desc</key>
+<value></value>
+</string>
+<string>
+<key>301162_name</key>
+<value>ARMA - Cuerpo a cuerpo de caza</value>
+</string>
+<string>
+<key>301162_desc</key>
+<value></value>
+</string>
+<string>
+<key>301163_name</key>
+<value>ARMA - Cuerpo a cuerpo extremo</value>
+</string>
+<string>
+<key>301163_desc</key>
+<value></value>
+</string>
+<string>
+<key>301164_name</key>
+<value>ARMA - Armas de caza comunes </value>
+</string>
+<string>
+<key>301164_desc</key>
+<value></value>
+</string>
+<string>
+<key>301165_name</key>
+<value>ARMA - Munición de caza común</value>
+</string>
+<string>
+<key>301165_desc</key>
+<value></value>
+</string>
+<string>
+<key>301166_name</key>
+<value>PRODUCIR - Armas de Caza</value>
+</string>
+<string>
+<key>301166_desc</key>
+<value></value>
+</string>
+<string>
+<key>301167_name</key>
+<value>ARMAS - Escopetas de caza POCO COMUNES</value>
+</string>
+<string>
+<key>301167_desc</key>
+<value></value>
+</string>
+<string>
+<key>301168_name</key>
+<value>ARMA - Munición de Caza POCO COMÚN</value>
+</string>
+<string>
+<key>301168_desc</key>
+<value></value>
+</string>
+<string>
+<key>301170_name</key>
+<value>ARMA - Armas de Fuego Civiles comunes </value>
+</string>
+<string>
+<key>301170_desc</key>
+<value></value>
+</string>
+<string>
+<key>301171_name</key>
+<value>ARMA - Munición civil común </value>
+</string>
+<string>
+<key>301171_desc</key>
+<value></value>
+</string>
+<string>
+<key>301172_name</key>
+<value>PRODUCIR - Armas Civiles comunes </value>
+</string>
+<string>
+<key>301172_desc</key>
+<value></value>
+</string>
+<string>
+<key>301173_name</key>
+<value>ARMA - Armas Reglamentarias comunes</value>
+</string>
+<string>
+<key>301173_desc</key>
+<value></value>
+</string>
+<string>
+<key>301174_name</key>
+<value>ARMA - Munición reglamentaria común</value>
+</string>
+<string>
+<key>301174_desc</key>
+<value></value>
+</string>
+<string>
+<key>301175_name</key>
+<value>PRODUCIR - Armas reglamentarias</value>
+</string>
+<string>
+<key>301175_desc</key>
+<value></value>
+</string>
+<string>
+<key>301176_name</key>
+<value>ARMA - Armas de fuego reglamentarias POCO COMUNES</value>
+</string>
+<string>
+<key>301176_desc</key>
+<value></value>
+</string>
+<string>
+<key>301177_name</key>
+<value>ARMA - Munición reglamentaria POCO COMÚN</value>
+</string>
+<string>
+<key>301177_desc</key>
+<value></value>
+</string>
+<string>
+<key>301179_name</key>
+<value>ARMA - Armas Militares comunes</value>
+</string>
+<string>
+<key>301179_desc</key>
+<value></value>
+</string>
+<string>
+<key>301180_name</key>
+<value>ARMA - Munición militar común </value>
+</string>
+<string>
+<key>301180_desc</key>
+<value></value>
+</string>
+<string>
+<key>301181_name</key>
+<value>PRODUCIR - Armas Militares comunes </value>
+</string>
+<string>
+<key>301181_desc</key>
+<value></value>
+</string>
+<string>
+<key>301182_name</key>
+<value>ARMA - Armas de Fuego Militares POCO COMUNES </value>
+</string>
+<string>
+<key>301182_desc</key>
+<value></value>
+</string>
+<string>
+<key>301183_name</key>
+<value>ARMA - Munición Militar POCO COMÚN</value>
+</string>
+<string>
+<key>301183_desc</key>
+<value></value>
+</string>
+<string>
+<key>301184_name</key>
+<value>PRODUCIR - Armas Militares POCO COMUNES</value>
+</string>
+<string>
+<key>301184_desc</key>
+<value></value>
+</string>
+<string>
+<key>301185_name</key>
+<value>ARMA - Armas de Fuego de Proscrito comunes </value>
+</string>
+<string>
+<key>301185_desc</key>
+<value></value>
+</string>
+<string>
+<key>301186_name</key>
+<value>ARMA- Munición de Proscrito común</value>
+</string>
+<string>
+<key>301186_desc</key>
+<value></value>
+</string>
+<string>
+<key>301188_name</key>
+<value>ARMA - Cuerpo a Cuerpo Épica</value>
+</string>
+<string>
+<key>301188_desc</key>
+<value></value>
+</string>
+<string>
+<key>301192_name</key>
+<value>SUMINISTROS - Comida, aperitivos</value>
+</string>
+<string>
+<key>301192_desc</key>
+<value></value>
+</string>
+<string>
+<key>301193_name</key>
+<value>SUMINISTROS - Comida, poco común </value>
+</string>
+<string>
+<key>301193_desc</key>
+<value></value>
+</string>
+<string>
+<key>301194_name</key>
+<value>SUMINISTROS - Comida, ejército</value>
+</string>
+<string>
+<key>301194_desc</key>
+<value></value>
+</string>
+<string>
+<key>301195_name</key>
+<value>SUMINISTROS - Agua, pequeña</value>
+</string>
+<string>
+<key>301195_desc</key>
+<value></value>
+</string>
+<string>
+<key>301198_name</key>
+<value>SUMINISTROS - Médico, genérico</value>
+</string>
+<string>
+<key>301198_desc</key>
+<value></value>
+</string>
+<string>
+<key>301199_name</key>
+<value>SUMINISTROS - Médico, poco común</value>
+</string>
+<string>
+<key>301199_desc</key>
+<value></value>
+</string>
+<string>
+<key>301200_name</key>
+<value>SUMINISTROS - Infección </value>
+</string>
+<string>
+<key>301200_desc</key>
+<value></value>
+</string>
+<string>
+<key>301201_name</key>
+<value>EQUIPO - Blindaje, ligero</value>
+</string>
+<string>
+<key>301201_desc</key>
+<value></value>
+</string>
+<string>
+<key>301203_name</key>
+<value>EQUIPO - Blindaje, pesado</value>
+</string>
+<string>
+<key>301203_desc</key>
+<value></value>
+</string>
+<string>
+<key>301204_name</key>
+<value>SUMINISTROS - Equipo de Supervivencia</value>
+</string>
+<string>
+<key>301204_desc</key>
+<value></value>
+</string>
+<string>
+<key>301205_name</key>
+<value>EQUIPO - Fortificación </value>
+</string>
+<string>
+<key>301205_desc</key>
+<value></value>
+</string>
+<string>
+<key>301211_name</key>
+<value>PRODUCIR - Suministros civiles</value>
+</string>
+<string>
+<key>301211_desc</key>
+<value></value>
+</string>
+<string>
+<key>301213_name</key>
+<value>PRODUCIR - Vehículo civil</value>
+</string>
+<string>
+<key>301213_desc</key>
+<value></value>
+</string>
+<string>
+<key>301214_name</key>
+<value>PRODUCIR - Armas civiles</value>
+</string>
+<string>
+<key>301214_desc</key>
+<value></value>
+</string>
+<string>
+<key>301215_name</key>
+<value>PRODUCIR- Suministros de granja</value>
+</string>
+<string>
+<key>301215_desc</key>
+<value></value>
+</string>
+<string>
+<key>301216_name</key>
+<value>PRODUCIR - Armas de Granja</value>
+</string>
+<string>
+<key>301216_desc</key>
+<value></value>
+</string>
+<string>
+<key>301218_name</key>
+<value>PRODUCIR - Suministros médicos</value>
+</string>
+<string>
+<key>301218_desc</key>
+<value></value>
+</string>
+<string>
+<key>301219_name</key>
+<value>PRODUCIR - Suministros de almacén general</value>
+</string>
+<string>
+<key>301219_desc</key>
+<value></value>
+</string>
+<string>
+<key>301222_name</key>
+<value>PRODUCIR - Suministros militares</value>
+</string>
+<string>
+<key>301222_desc</key>
+<value></value>
+</string>
+<string>
+<key>301224_name</key>
+<value>PRODUCIR - Suministros urbanos</value>
+</string>
+<string>
+<key>301224_desc</key>
+<value></value>
+</string>
+<string>
+<key>301225_name</key>
+<value>PRODUCIR - Coche de policía</value>
+</string>
+<string>
+<key>301225_desc</key>
+<value></value>
+</string>
+<string>
+<key>301226_name</key>
+<value>PRODUCIR - Ambulancia</value>
+</string>
+<string>
+<key>301226_desc</key>
+<value></value>
+</string>
+<string>
+<key>301227_name</key>
+<value>PRODUCIR - Camión de bomberos</value>
+</string>
+<string>
+<key>301227_desc</key>
+<value></value>
+</string>
+<string>
+<key>301228_name</key>
+<value>PRODUCIR - Comida, restaurante</value>
+</string>
+<string>
+<key>301228_desc</key>
+<value></value>
+</string>
+<string>
+<key>301229_name</key>
+<value>GENERAR - Vehículo militar, punto de control</value>
+</string>
+<string>
+<key>301229_desc</key>
+<value></value>
+</string>
+<string>
+<key>301230_name</key>
+<value>GENERAR - Suministros de la Oficina de Correos</value>
+</string>
+<string>
+<key>301230_desc</key>
+<value></value>
+</string>
+<string>
+<key>301231_name</key>
+<value>PRODUCIR - Zona de obras</value>
+</string>
+<string>
+<key>301231_desc</key>
+<value></value>
+</string>
+<string>
+<key>301232_name</key>
+<value>PRODUCIR - Suministros reglamentarios</value>
+</string>
+<string>
+<key>301232_desc</key>
+<value></value>
+</string>
+<string>
+<key>301233_name</key>
+<value>PRODUCIR - Área de juego</value>
+</string>
+<string>
+<key>301233_desc</key>
+<value></value>
+</string>
+<string>
+<key>301236_name</key>
+<value>PRODUCIR - Campamento</value>
+</string>
+<string>
+<key>301236_desc</key>
+<value></value>
+</string>
+<string>
+<key>301242_name</key>
+<value>PRODUCIR - Suministros de caza</value>
+</string>
+<string>
+<key>301242_desc</key>
+<value></value>
+</string>
+<string>
+<key>301243_name</key>
+<value>ARMA - Cuerpo a cuerpo Ejército</value>
+</string>
+<string>
+<key>301243_desc</key>
+<value></value>
+</string>
+<string>
+<key>301244_name</key>
+<value>ARMA - Cuerpo a cuerpo reglamentaria</value>
+</string>
+<string>
+<key>301244_desc</key>
+<value></value>
+</string>
+<string>
+<key>301247_name</key>
+<value>EQUIPO - Accesorios de Arma</value>
+</string>
+<string>
+<key>301247_desc</key>
+<value></value>
+</string>
+<string>
+<key>301249_name</key>
+<value>SUMINISTROS - Zona de obras</value>
+</string>
+<string>
+<key>301249_desc</key>
+<value></value>
+</string>
+<string>
+<key>301250_name</key>
+<value>SUMINISTROS - Suministros para camión de bomberos </value>
+</string>
+<string>
+<key>301250_desc</key>
+<value></value>
+</string>
+<string>
+<key>301251_name</key>
+<value>SUMINISTROS - Suministros reglamentarios</value>
+</string>
+<string>
+<key>301251_desc</key>
+<value></value>
+</string>
+<string>
+<key>301252_name</key>
+<value>SUMINISTROS - Área de juego</value>
+</string>
+<string>
+<key>301252_desc</key>
+<value></value>
+</string>
+<string>
+<key>101283_name</key>
+<value>Bolsa de Patatas</value>
+</string>
+<string>
+<key>101283_desc</key>
+<value>Un bolsa de patatas fritas. Alivia el hambre menor. ¡Sabor BBQ!</value>
+</string>
+<string>
+<key>101284_name</key>
+<value>Saco de MRE</value>
+</string>
+<string>
+<key>101284_desc</key>
+<value>Alimentos Listos para Comer. ¡Extremadamente oportunos¡ Una MRE puede comerse fría al sacarla del envase pero siempre sabe mejor caliente. Cada ración reduce sustancialmente el hambre. ¡A ganar, a ganar, pollo para cenar!</value>
+</string>
+<string>
+<key>101285_name</key>
+<value>Avena instantánea</value>
+</string>
+<string>
+<key>101285_desc</key>
+<value>Una forma de entonarse para empezar el día. Jarabe de arce clásico y azúcar moreno. Alivia moderadamente la cantidad de hambre. </value>
+</string>
+<string>
+<key>101286_name</key>
+<value>Agua de Coco</value>
+</string>
+<string>
+<key>101286_desc</key>
+<value>Un envase de deliciosa agua de coco que cuando se consume alivia moderadamente la sed. </value>
+</string>
+<string>
+<key>101288_name</key>
+<value>Barrita de Chocolate</value>
+</string>
+<string>
+<key>101288_desc</key>
+<value>Una barrita de chocolate con leche. Lo más refinado para el sibarita del chocolate. Cada porción proporciona un sustento menor. </value>
+</string>
+<string>
+<key>101289_name</key>
+<value>Barrita de Muesli</value>
+</string>
+<string>
+<key>101289_desc</key>
+<value>Una barrita de muesli orgánica. Cada porción ayuda a disminuir el hambre. </value>
+</string>
+<string>
+<key>101290_name</key>
+<value>Bote de pasta</value>
+</string>
+<string>
+<key>101290_desc</key>
+<value>Un delicioso bote de Pasta con forma de O. Enriquecida con hierro y vitaminas. Bajo en azúcar y grasas. Apto para Vegetarianos. Sin Gluten. </value>
+</string>
+<string>
+<key>101291_name</key>
+<value>Lata de sopa</value>
+</string>
+<string>
+<key>101291_desc</key>
+<value>Una lata de sopa de tomate cremosa. No necesita agua. Mmmmmmm buena. Calma moderadamente el hambre. </value>
+</string>
+<string>
+<key>101292_name</key>
+<value>Lata de Jamón</value>
+</string>
+<string>
+<key>101292_desc</key>
+<value>Jamón curado despiezado a máquina en una lata de 5 onzas. Puede contener porciones de cerdo. Reduce moderadamente el hambre.</value>
+</string>
+<string>
+<key>101293_name</key>
+<value>Lata de Atún</value>
+</string>
+<string>
+<key>101293_desc</key>
+<value>Atún enlatado al natural, sabroso y sin grasa. En láminas o en lomos con un sabor fresco al que puedes hincarle el diente. Cada ración reduce moderadamente el hambre. </value>
+</string>
+<string>
+<key>101294_name</key>
+<value>Bebida energética</value>
+</string>
+<string>
+<key>101294_desc</key>
+<value>Un empujoncito de cafeína que cuando se consume calma moderadamente la sed.</value>
+</string>
+<string>
+<key>101295_name</key>
+<value>Electro-AID</value>
+</string>
+<string>
+<key>101295_desc</key>
+<value>Una bebida aromatizada con electrolitos que cuando se consume sofoca moderadamente la sed. </value>
+</string>
+<string>
+<key>101296_name</key>
+<value>Lata de Refresco</value>
+</string>
+<string>
+<key>101296_desc</key>
+<value>Un bebida con gas que cuando se consume calma moderadamente la sed. </value>
+</string>
+<string>
+<key>101297_name</key>
+<value>Zumo</value>
+</string>
+<string>
+<key>101297_desc</key>
+<value>Bebida saludable que cuando se consume calma moderadamente la sed.</value>
+</string>
+<string>
+<key>101298_name</key>
+<value>1 l de agua</value>
+</string>
+<string>
+<key>101298_desc</key>
+<value>Botella grande de agua que cuando se consume alivia considerablemente la sed. </value>
+</string>
+<string>
+<key>101299_name</key>
+<value>Agua 375 ml</value>
+</string>
+<string>
+<key>101299_desc</key>
+<value>Pequeña botella de agua que cuando se consume reduce moderadamente la sed. </value>
+</string>
+</strings>

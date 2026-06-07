@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--Grass File-->
+<grass density="0.6" fade_distance="0.8">
+	<chunk num_vars="1" mesh="Test_flower_01.sco" texture="Test_Flower_01_D.dds" density="300" mesh_scale="1" min_mesh_scaling="0.796316" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.578947" />
+	<chunk num_vars="1" mesh="Test_flower_02.sco" texture="Test_Flower_01_D.dds" density="300" mesh_scale="1" min_mesh_scaling="0.805789" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.568421" />
+	<chunk num_vars="1" mesh="Test_flower_02_V2.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="0.640789" min_mesh_scaling="0.796316" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.768421" />
+	<chunk num_vars="1" mesh="Test_flower_03.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="1.01926" min_mesh_scaling="0.796316" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.578947" />
+	<chunk num_vars="1" mesh="Test_flower_04.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="1" min_mesh_scaling="0.805789" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.647368" />
+	<chunk num_vars="1" mesh="Test_flower_04_V2.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="0.640789" min_mesh_scaling="0.853158" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.752632" />
+	<chunk num_vars="1" mesh="Test_flower_05.sco" texture="Test_Flower_01_D.dds" density="300" mesh_scale="1" min_mesh_scaling="0.805789" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.831579" />
+	<chunk num_vars="1" mesh="Test_flower_06.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="1" min_mesh_scaling="0.805789" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.763158" />
+	<chunk num_vars="1" mesh="Test_flower_06_V2.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="0.682842" min_mesh_scaling="0.853158" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.736842" />
+	<chunk num_vars="1" mesh="Test_flower_07.sco" texture="Test_Flower_01_D.dds" density="200" mesh_scale="1" min_mesh_scaling="0.815263" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.578947" />
+	<chunk num_vars="1" mesh="Test_flower_07_V2.sco" texture="Test_Flower_01_D.dds" density="100" mesh_scale="1" min_mesh_scaling="0.810526" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.457895" />
+	<chunk num_vars="1" mesh="Test_flower_08.sco" texture="Test_Flower_01_D.dds" density="100" mesh_scale="1" min_mesh_scaling="0.810526" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="0.505263" />
+	<chunk num_vars="1" mesh="Test_flower_08_V2.sco" texture="Test_Flower_01_D.dds" density="300" mesh_scale="1" min_mesh_scaling="0.801053" max_mesh_scaling="1" rot_var="0.542105" alpha_ref="60" tint_strength="1" />
+</grass>

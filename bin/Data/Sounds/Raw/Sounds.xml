@@ -1,0 +1,107 @@
+<Sounds>
+	<Sound id="100" onDemand="false" looped="false" is3d="false" file="data/sounds/game_start.ogg" minDist="1.0" maxDist="100.0"/>
+
+
+
+<!--Gun Shots-->
+
+	<Sound id="10000" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Rifle_AK74_7_62_single_shot.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10001" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/ak74_r.ogg" minDist="2.0" maxDist="10.0"/>
+	<Sound id="10002" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/rpg7_s.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10003" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/rpg7_r.ogg" minDist="2.0" maxDist="10.0"/>
+	<Sound id="10004" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_Glock22_40_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10005" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_KeltecP3AT_380_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10006" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_Revolver_38cal_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10007" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_Revolver_357_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10008" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_Taurus_PT92A_9mm_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10009" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Handgun_Titan_25_single_shot.ogg" minDist="10.0" maxDist="40.0"/>
+	<Sound id="10010" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Rifle_AK74_5_45_single_shot.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10011" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Rifle_M6_5_56_single_shot.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10012" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Rifle_Steven15b_22_single_shot.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10013" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Winchester1200_12_single_shot.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10014" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Machine_Gun_Large_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10015" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Machine_Gun_Medium_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10016" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Machine_Gun_Small_05.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10017" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Pistol_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10018" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Pistol_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10019" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Pistol_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10020" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Assault_Rifle_Small.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10021" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Assault_Rifle_Large.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10022" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Large_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10023" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Large_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10024" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Large_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10025" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Med.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10026" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Shotgun_Small.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10027" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Sniper_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10028" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Sniper_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10029" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Large_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10030" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Medium_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10031" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Medium_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10032" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Medium_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10033" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Medium_04.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10034" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Medium_05.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10035" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Silenced_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10036" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Submachine_Gun_Silenced_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10037" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Cartridge_Eject_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10038" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Cartridge_Eject_02.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10039" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Cartridge_Eject_03.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10040" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/AT4_01.ogg" minDist="10.0" maxDist="60.0"/>
+	<Sound id="10040" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/AT4_02.ogg" minDist="10.0" maxDist="60.0"/>
+
+
+
+<!--Hit SFX-->
+
+	<Sound id="11000" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/bullet_metal.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="11001" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Explode1.ogg" minDist="50.0" maxDist="250.0"/>
+	<Sound id="11002" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Hit_Sand.ogg" minDist="1.0" maxDist="3.0"/>
+	<Sound id="11003" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Hit_Wound2.ogg" minDist="1.0" maxDist="3.0"/>
+	<Sound id="11004" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Hit_Miss1.ogg" minDist="1.0" maxDist="5.0"/>
+	<Sound id="11005" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/Hit_Miss2.ogg" minDist="1.0" maxDist="5.0"/>
+
+
+
+<!--Footsteps-->
+
+	<Sound id="12000" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12001" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12002" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_03.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12003" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_04.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12004" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_05.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12005" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Concrete_06.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12006" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12007" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12008" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_03.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12009" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_04.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12010" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_05.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12011" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Dirt_06.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12012" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12013" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12014" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_03.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12015" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_04.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12016" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_05.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12017" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Grass_06.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12018" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12019" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12020" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_03.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12021" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_04.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12022" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_05.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12023" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_06.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12024" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_Alt_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12025" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Metal_Alt_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12026" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_01.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12027" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_02.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12028" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_03.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12029" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_04.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12030" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_05.ogg" minDist="5.0" maxDist="10.0"/>
+	<Sound id="12031" onDemand="false" looped="false" is3d="true" file="data/sounds/Footsteps/Footstep_Wood_06.ogg" minDist="5.0" maxDist="10.0"/>
+
+
+
+<!--Misc.-->
+
+
+	<Sound id="15000" onDemand="false" looped="false" is3d="true" file="data/sounds/resupply.ogg" minDist="2.0" maxDist="8.0"/>
+	<Sound id="15001" onDemand="false" looped="false" is3d="true" file="data/sounds/weapon/eject_brass02.ogg" minDist="1.0" maxDist="5.0"/>
+</Sounds>
+

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!--Grass File-->
+<grass density="0.514947" fade_distance="0.398947">
+	<chunk num_vars="1" mesh="wz_grass_006.sco" texture="wz_grass_02_d.dds" density="87" mesh_scale="1" min_mesh_scaling="1" max_mesh_scaling="1" rot_var="0" alpha_ref="63" tint_strength="1" />
+	<chunk num_vars="1" mesh="wz_grass_tall_001_lod1.sco" texture="WZ_Grass_01_D.dds" density="250" mesh_scale="1" min_mesh_scaling="1" max_mesh_scaling="1" rot_var="0" alpha_ref="63" tint_strength="1" />
+</grass>

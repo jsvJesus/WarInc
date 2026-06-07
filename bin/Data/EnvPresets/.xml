@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<!--Environment Settings File-->
+<root>
+	<atmosphere>
+		<cur_time val="21.2211" />
+		<sun_backlightintensity val="0.194737" />
+		<sun_backlightcolor_curve smooth="0">
+			<val t="0" x="176.479" y="156.265" z="131.387" />
+			<val t="1" x="231.677" y="193.582" z="190.473" />
+		</sun_backlightcolor_curve>
+		<sun_color_curve smooth="0">
+			<val t="0" x="0" y="0" z="0" />
+			<val t="0.075" x="98.7348" y="65.3049" z="27.9878" />
+			<val t="0.336111" x="255" y="236.341" z="209.909" />
+			<val t="0.680556" x="255" y="227.79" z="206.021" />
+			<val t="0.830556" x="255" y="206.021" z="177.256" />
+			<val t="0.95" x="70.747" y="38.0945" z="44.314" />
+			<val t="1" x="12.439" y="16.3262" z="25.6555" />
+		</sun_color_curve>
+		<moon_color_curve smooth="0">
+			<val t="0" x="1" y="1" z="1" />
+			<val t="0.0722222" x="11.6616" y="13.9939" z="17.8811" />
+			<val t="0.944444" x="10.8841" y="13.9939" z="15.5488" />
+			<val t="1" x="1" y="1" z="1" />
+		</moon_color_curve>
+		<moon_ambi_curve smooth="0">
+			<val t="0" x="21.7683" y="25.6555" z="24.878" />
+			<val t="1" x="26.4329" y="31.0976" z="26.4329" />
+		</moon_ambi_curve>
+		<sky_color_curve smooth="0">
+			<val t="0" x="17.8811" y="19.436" z="24.1006" />
+			<val t="0.111111" x="78.5213" y="80.8537" z="81.6311" />
+			<val t="0.841667" x="80.0762" y="85.5183" z="85.5183" />
+			<val t="1" x="13.9939" y="16.3262" z="18.6585" />
+		</sky_color_curve>
+		<lambda_col_curve smooth="0">
+			<val t="0" x="38.872" y="36.5396" z="35.7622" />
+			<val t="1" x="122.835" y="116.616" z="111.174" />
+		</lambda_col_curve>
+		<hg_g_curve smooth="0">
+			<val t="0" x="0.99" y="0.9993" z="0.9993" />
+			<val t="1" x="0.993595" y="0" z="0" />
+		</hg_g_curve>
+		<inscattering_multiplier_curve smooth="0">
+			<val t="0" x="0.727273" y="1" z="1" />
+			<val t="1" x="1.70248" y="1" z="1" />
+		</inscattering_multiplier_curve>
+		<beta_ray_multiplier_curve smooth="0">
+			<val t="0" x="5.3719" y="4" z="4" />
+			<val t="1" x="0" y="4" z="4" />
+		</beta_ray_multiplier_curve>
+		<beta_mie_multiplier_curve smooth="0">
+			<val t="0" x="0.00206611" y="0.0006" z="0.0006" />
+			<val t="1" x="0.00211672" y="0.0006" z="0.0006" />
+		</beta_mie_multiplier_curve>
+		<sun_intensity_curve smooth="0">
+			<val t="0" x="0.365062" y="1" z="1" />
+			<val t="1" x="0.365062" y="1" z="1" />
+		</sun_intensity_curve>
+		<turbitity_curve smooth="0">
+			<val t="0" x="0" y="1" z="1" />
+			<val t="1" x="4.54545" y="1" z="1" />
+		</turbitity_curve>
+		<fog_version val="2" />
+		<fog_color_curve smooth="0">
+			<val t="0" x="206.799" y="149.268" z="131.387" />
+			<val t="0.25" x="169.482" y="179.588" z="171.814" />
+			<val t="0.772222" x="167.149" y="174.146" z="174.146" />
+			<val t="1" x="237.896" y="208.354" z="163.262" />
+		</fog_color_curve>
+		<fog_new_range_curve smooth="0">
+			<val t="0" x="81.0563" y="76.7229" z="76.7229" />
+			<val t="1" x="99" y="29.9859" z="29.9859" />
+		</fog_new_range_curve>
+		<fog_distance_curve smooth="0">
+			<val t="0" x="2.44056" y="0" z="0" />
+			<val t="1" x="2.21591" y="1" z="1" />
+		</fog_distance_curve>
+		<fog_new_density_curve smooth="0">
+			<val t="0" x="0" y="0" z="0" />
+			<val t="1" x="0.00852966" y="0" z="0" />
+		</fog_new_density_curve>
+		<fog_height_curve smooth="0">
+			<val t="0" x="175.062" y="122.289" z="122.289" />
+			<val t="1" x="251.111" y="156.56" z="156.56" />
+		</fog_height_curve>
+		<aerial_density_curve smooth="0">
+			<val t="0" x="0" y="0" z="0" />
+			<val t="1" x="0.0879254" y="0.3" z="0.3" />
+		</aerial_density_curve>
+		<aerial_distance_curve smooth="0">
+			<val t="0" x="0.855531" y="0.9" z="0.9" />
+			<val t="1" x="1.17603" y="0.9" z="0.9" />
+		</aerial_distance_curve>
+		<skyfog_start val="1" />
+		<skyfog_end val="1" />
+		<skydome_wind_factor val="1" />
+		<skydome_clouds_scale val="1" />
+		<skydome_clouds_density val="0.5" />
+		<cloudfade_outstart_dist val="4000" />
+		<cloudfade_out_enddist val="7000" />
+		<sky_sunset_bumpness val="11.47" />
+		<sky_sunset_offset val="-0.0074" />
+		<sky_sunset_power val="3.17" />
+		<sky_sunset_startcoef val="0.3" />
+		<sky_clouds_fadestart val="2000" />
+		<sky_clouds_fadeend val="1000" />
+		<sun_elevation_angle val="14.2105" />
+		<sun_direction_angle val="-11.3684" />
+		<moon_longitude val="73" />
+		<moon_latitude val="34.1053" />
+		<sss_diffuse val="0" />
+		<sss_specular val="0" />
+		<sss_specpower val="100" />
+		<have_new_simple_fog val="1" />
+		<fog_max_height val="505.26" />
+		<aerial_mip_bias val="7.10526" />
+		<sun_intensity val="3.84211" />
+		<static_sky_tex_name_phase0 val="Data/SkyDome/wz_dawn_01.dds" />
+		<static_sky_tex_name_phase1 val="Data/SkyDome/sahara_01_d.dds" />
+		<static_sky_tex_name_phase2 val="Data/SkyDome/wz_sunset_01.dds" />
+		<static_sky_tex_name_phase3 val="Data/SkyDome/wz_night_01.dds" />
+		<static_sky_mesh_name val="Data/SkyDome/skydoome_01.sco" />
+		<static_sky_enable val="1" />
+		<static_sky_custom_mesh_enable val="1" />
+		<static_sky_planar_mapping val="0" />
+		<static_sky_dawn_start val="5.09737" />
+		<static_sky_dawn_end val="7" />
+		<static_sky_dusk_start val="19.2895" />
+		<static_sky_dusk_end val="21.9169" />
+		<static_texgenscale_x val="1e-005" />
+		<static_texgenscale_y val="1e-005" />
+		<static_texgetoffset_x val="0.5" />
+		<static_texgetoffset_y val="0.5" />
+		<rain_particles val="" />
+		<sunlight val="1" />
+		<sky_intensity val="2.36842" />
+		<particle_shading_coef val="0.668421" />
+		<wind_dir_x val="0" />
+		<wind_dir_z val="1" />
+		<wind_pattern_scale val="256" />
+		<wind_pattern_speed val="4" />
+	</atmosphere>
+</root>

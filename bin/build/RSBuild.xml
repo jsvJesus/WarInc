@@ -1,0 +1,52 @@
+<build>
+ <output dir="build\data"/>
+ 
+ <cdn url="http://localhost/wz/"/>
+
+ <!--  set base archive for incremental update -->
+ <!--  <base file="build\data\wz341D0505"/> -->
+
+ <!-- include EULA file -->
+ <include mask="eula-en.htm"/>
+ <include mask="eula-en.rtf"/>
+ <!-- excludes for this package files (just in case they was created in this dir -->
+ <exclude mask="WZ_*.bin"/>
+
+ <!-- excludes for debug files -->
+ <exclude mask="r3dlog.txt"/>
+ <exclude mask="MasterServer_ccu.txt"/>
+ <exclude mask="*.pdb"/>
+ <exclude mask="*.exp"/>
+ <exclude mask="*.lib"/>
+ <exclude mask="*.bat"/>
+ <exclude mask="*.vmp"/>
+ 
+ <!-- excludes for other binaries -->
+ <exclude mask="Studio*.*"/>
+ <exclude mask="MasterServer.*"/>
+ <exclude mask="WZ_GameServer.*"/>
+ <exclude mask="SupervisorServer.*"/>
+ <exclude mask="RSBuild.*"/>
+ <exclude mask="RSUpdate.*"/>
+ <exclude mask="WZAdmin.*"/>
+ <exclude mask="WarZ_unpack.exe"/>
+ <exclude mask="*.log"/>
+ <exclude mask="*.suo"/>
+ <exclude mask="*.bat"/>
+ <exclude mask="gameSettings.ini"/>
+ <exclude mask="local.ini"/>
+ <exclude mask="windows_error_report_mapping.xml"/>  
+ 
+ <!-- excludes for build directories -->
+ <exclude mask="1"/>
+ <exclude mask="build"/>
+ <exclude mask="logs"/>
+ <exclude mask="bin"/>
+ <exclude mask="server"/>
+ <exclude mask="tools"/>
+ <exclude mask="logs"/>
+ <exclude mask="logms"/>
+ <exclude mask="logss"/>
+ <exclude mask="logsv"/>
+
+</build>
